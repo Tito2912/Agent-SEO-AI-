@@ -4804,6 +4804,7 @@ def billing_page(
         plan_key = billing.effective_plan_key(db, user_id=str(user.id))
         limits = billing.plan_limits(db, user_id=str(user.id))
         sub = billing.subscription_for_user(db, user_id=str(user.id))
+        sub_active = bool(sub and str(getattr(sub, "status", "") or "").strip().lower() in billing.ACTIVE_SUB_STATUSES)
 
         used_pages = billing.usage_sum(db, user_id=str(user.id), metric="pages_crawled_month")
         used_ai = billing.usage_sum(db, user_id=str(user.id), metric="assistant_messages_month")
@@ -4838,6 +4839,7 @@ def billing_page(
             "plan_key": plan_key,
             "plan": plan,
             "subscription": sub,
+            "subscription_active": sub_active,
             "limits": limits,
             "limits_labels": {
                 "projects": _limit_label("projects"),
@@ -4873,6 +4875,18 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
     pk = (plan_key or "").strip().lower()
     if pk not in {"solo", "pro", "business"}:
         return RedirectResponse(url="/billing?canceled=1", status_code=303)
+    with DB.session() as db:
+        current = billing.effective_plan_key(db, user_id=str(user.id))
+        sub = billing.subscription_for_user(db, user_id=str(user.id))
+        sub_active = bool(sub and str(getattr(sub, "status", "") or "").strip().lower() in billing.ACTIVE_SUB_STATUSES)
+        if sub_active and current == pk:
+            return RedirectResponse(url="/billing?msg=Tu%20es%20d%C3%A9j%C3%A0%20sur%20ce%20plan.", status_code=303)
+        if sub_active and current != "free":
+            try:
+                url = billing.create_billing_portal_url(db, user_id=str(user.id), email=str(user.email))
+                return RedirectResponse(url=url, status_code=303)
+            except Exception as e:
+                return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
     try:
         with DB.session() as db:
             url = billing.create_checkout_session_url(db, user_id=str(user.id), email=str(user.email), plan_key=pk)

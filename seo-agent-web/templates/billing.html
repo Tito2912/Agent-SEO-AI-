@@ -98,6 +98,11 @@
 
     {% if not stripe_ready %}
       <p class="muted">Stripe n’est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
+    {% elif subscription_active %}
+      <p class="muted">
+        Tu as déjà un abonnement actif. Pour changer de plan (upgrade/downgrade) utilise
+        <strong>Gérer l’abonnement</strong>.
+      </p>
     {% else %}
       <div class="grid three">
         <div class="card">
@@ -114,7 +119,9 @@
             {% if prices.solo %}
               <form method="post" action="/billing/checkout" class="inline">
                 <input type="hidden" name="plan_key" value="solo" />
-                <button type="submit" class="btn primary">Choisir Solo</button>
+                <button type="submit" class="btn primary" {% if plan_key == 'solo' %}disabled{% endif %}>
+                  {% if plan_key == 'solo' %}Plan actuel{% else %}Choisir Solo{% endif %}
+                </button>
               </form>
             {% else %}
               <span class="muted small">Price ID manquant (Render env).</span>
@@ -136,7 +143,9 @@
             {% if prices.pro %}
               <form method="post" action="/billing/checkout" class="inline">
                 <input type="hidden" name="plan_key" value="pro" />
-                <button type="submit" class="btn primary">Choisir Pro</button>
+                <button type="submit" class="btn primary" {% if plan_key == 'pro' %}disabled{% endif %}>
+                  {% if plan_key == 'pro' %}Plan actuel{% else %}Choisir Pro{% endif %}
+                </button>
               </form>
             {% else %}
               <span class="muted small">Price ID manquant (Render env).</span>
@@ -158,7 +167,9 @@
             {% if prices.business %}
               <form method="post" action="/billing/checkout" class="inline">
                 <input type="hidden" name="plan_key" value="business" />
-                <button type="submit" class="btn primary">Choisir Business</button>
+                <button type="submit" class="btn primary" {% if plan_key == 'business' %}disabled{% endif %}>
+                  {% if plan_key == 'business' %}Plan actuel{% else %}Choisir Business{% endif %}
+                </button>
               </form>
             {% else %}
               <span class="muted small">Price ID manquant (Render env).</span>
