@@ -1,0 +1,330 @@
+{% extends "layout.html" %}
+{% block title %}{{ project.issue.label if project else issue_key }} — Issue{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <a href="/projects/{{ project.slug }}">{{ project.slug }}</a>
+    <span class="crumb-sep">/</span>
+    <a href="/projects/{{ project.slug }}/issues?crawl={{ project.timestamp }}">All issues</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">{{ project.issue.label }}</span>
+  {% else %}
+    <span class="crumb-current">{{ issue_key }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not project %}
+    <section class="card"><p>Issue introuvable: <span class="mono">{{ issue_key }}</span></p></section>
+  {% else %}
+    <div class="page-header">
+      <h1>{{ project.issue.label }}</h1>
+      <p class="muted">
+        <span class="badge {{ project.issue.severity }}">{{ project.issue.severity }}</span>
+        <span class="mono">{{ project.issue.key }}</span>
+        · <span class="mono">{{ project.timestamp }}</span>
+      </p>
+    </div>
+
+    <section class="card">
+      <div class="kv">
+        <div class="kv-item"><span class="muted">Category</span><div>{{ project.issue.category }}</div></div>
+        <div class="kv-item"><span class="muted">Count</span><div class="mono">{{ project.issue.count }}</div></div>
+        <div class="kv-item">
+          <span class="muted">Rapport</span>
+          <div>
+            <a href="/file?path={{ project.report_md }}">report.md</a> · <a href="/file?path={{ project.report_json }}">report.json</a>
+            · Exporter:
+            <a href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.csv?crawl={{ project.timestamp }}">CSV</a>
+            · <a href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.pdf?crawl={{ project.timestamp }}">PDF</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Correction recommandée</h2>
+        <div class="card-title-actions">
+          {% if fix_suggestion and fix_suggestion.priority %}
+            {% set p = fix_suggestion.priority %}
+            {% set badge = 'error' if p == 'high' else ('warning' if p == 'medium' else 'notice') %}
+            <span class="badge {{ badge }}">{{ p }}</span>
+          {% endif %}
+          {% if fix_suggestions_path %}
+            <a class="btn" href="/file?path={{ fix_suggestions_path }}">Plan complet (JSON)</a>
+          {% else %}
+            <form method="post" action="/projects/{{ project.slug }}/fix-suggestions/generate" class="inline">
+              <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
+              <button type="submit" class="btn">Générer le plan complet</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if fix_suggestion and fix_suggestion.why %}
+        <p class="muted">{{ fix_suggestion.why }}</p>
+      {% endif %}
+
+      <div class="grid two">
+        <div class="card">
+          <h3>Actions</h3>
+          {% if fix_suggestion and fix_suggestion.fix %}
+            <ul class="help-steps">
+              {% for step in fix_suggestion.fix %}
+                <li>{{ step }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">Aucune recommandation disponible.</p>
+          {% endif %}
+        </div>
+        <div class="card">
+          <h3>Vérifier</h3>
+          {% if fix_suggestion and fix_suggestion.verify %}
+            <ul class="help-steps">
+              {% for step in fix_suggestion.verify %}
+                <li>{{ step }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">—</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if fix_suggestion and fix_suggestion.sample_urls %}
+        <p class="muted small" style="margin-top: 10px;">Exemples (URLs impactées)</p>
+        <ul class="examples">
+          {% for u in fix_suggestion.sample_urls %}
+            <li class="mono"><a href="{{ u }}" target="_blank" rel="noreferrer">{{ u }}</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      {% if project.issue.kind %}
+        <div class="card-title-row">
+          <h2>Erreurs réelles</h2>
+          {% if project.issue.pagination %}
+            <span class="muted small mono">
+              {{ project.issue.pagination.total }} · page {{ project.issue.pagination.page }}/{{ project.issue.pagination.pages }}
+            </span>
+          {% endif %}
+        </div>
+
+        <form method="get" class="filters" style="margin-top: 8px;">
+          <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
+          <label class="grow">
+            Recherche
+            <input type="text" name="q" value="{{ q or '' }}" placeholder="URL, état, code, etc." />
+          </label>
+          <label>
+            Par page
+            <select name="per_page">
+              {% for n in [50, 100, 200, 500] %}
+                <option value="{{ n }}" {% if project.issue.pagination and (project.issue.pagination.per_page == n) %}selected{% endif %}>{{ n }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button type="submit" class="btn">Filtrer</button>
+        </form>
+
+        {% if project.issue.source %}
+          <p class="muted small" style="margin-top: 10px;">
+            Source: <a href="/file?path={{ project.issue.source }}">ouvrir le fichier</a>
+          </p>
+        {% endif %}
+
+        {% if not project.issue.rows %}
+          <p class="muted" style="margin-top: 10px;">Aucune ligne à afficher.</p>
+        {% else %}
+          {% if project.issue.kind == "gsc_url_inspection" %}
+            <div class="table-wrap" style="margin-top: 10px;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>URL</th>
+                    <th>Verdict</th>
+                    <th>Coverage</th>
+                    <th>Robots</th>
+                    <th>Indexing</th>
+                    <th>Fetch</th>
+                    <th>Détails</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in project.issue.rows %}
+                    <tr>
+                      <td class="mono"><a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a></td>
+                      <td class="mono">{{ row.verdict }}</td>
+                      <td class="mono">{{ row.coverage_state }}</td>
+                      <td class="mono">{{ row.robots_state }}</td>
+                      <td class="mono">{{ row.indexing_state }}</td>
+                      <td class="mono">{{ row.fetch_state }}</td>
+                      <td>
+                        <details class="logs-details">
+                          <summary class="muted small">voir</summary>
+                          <div class="kv">
+                            <div class="kv-item"><span class="muted">Google canonical</span><div class="mono">{{ row.google_canonical }}</div></div>
+                            <div class="kv-item"><span class="muted">User canonical</span><div class="mono">{{ row.user_canonical }}</div></div>
+                          </div>
+                        </details>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="table-wrap" style="margin-top: 10px;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Ligne</th>
+                    <th>Détails</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in project.issue.rows %}
+                    {% set url = row.get('url') or row.get('Url') or row.get('URL') or row.get('page') or row.get('Page') %}
+                    <tr>
+                      <td class="mono">
+                        {% if url and (url.startswith('http://') or url.startswith('https://')) %}
+                          <a href="{{ url }}" target="_blank" rel="noreferrer">{{ url }}</a>
+                        {% elif url %}
+                          {{ url }}
+                        {% else %}
+                          —
+                        {% endif %}
+                      </td>
+                      <td>
+                        <details class="logs-details">
+                          <summary class="muted small">voir</summary>
+                          <pre>{% for k, v in row.items() %}{{ k }}: {{ v }}{% if not loop.last %}{{ "\n" }}{% endif %}{% endfor %}</pre>
+                        </details>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+
+          {% if project.issue.pagination and project.issue.pagination.pages > 1 %}
+            {% set pag = project.issue.pagination %}
+            <div class="modal-actions between" style="margin-top: 12px;">
+              {% set prev = pag.page - 1 %}
+              {% set next = pag.page + 1 %}
+              <div>
+                {% if pag.page > 1 %}
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ prev }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">← Précédent</a>
+                {% else %}
+                  <span class="btn" style="opacity:.5; pointer-events:none;">← Précédent</span>
+                {% endif %}
+              </div>
+              <div class="muted small">Page <span class="mono">{{ pag.page }}</span> / <span class="mono">{{ pag.pages }}</span></div>
+              <div>
+                {% if pag.page < pag.pages %}
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ next }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">Suivant →</a>
+                {% else %}
+                  <span class="btn" style="opacity:.5; pointer-events:none;">Suivant →</span>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+        {% endif %}
+      {% else %}
+        <h2>Exemples</h2>
+        {% if not project.issue.examples %}
+          <p class="muted">Aucun exemple disponible.</p>
+        {% else %}
+          {% if project.issue.cwv %}
+          {% set m = project.issue.cwv.metric %}
+          {% set th = project.issue.cwv.thresholds %}
+          <p class="muted small">
+            {% if m == "lcp" %}
+              Seuils: bon ≤ {{ (th.good_max / 1000) if th.good_max else 2.5 }}s · amélioration ≤ {{ (th.ni_max / 1000) if th.ni_max else 4.0 }}s · médiocre &gt; {{ (th.ni_max / 1000) if th.ni_max else 4.0 }}s
+            {% elif m == "tbt" %}
+              Seuils: bon ≤ {{ th.good_max if th.good_max else 200 }}ms · amélioration ≤ {{ th.ni_max if th.ni_max else 600 }}ms · médiocre &gt; {{ th.ni_max if th.ni_max else 600 }}ms
+            {% elif m == "cls" %}
+              Seuils: bon ≤ {{ th.good_max if th.good_max else 0.1 }} · amélioration ≤ {{ th.ni_max if th.ni_max else 0.25 }} · médiocre &gt; {{ th.ni_max if th.ni_max else 0.25 }}
+            {% endif %}
+          </p>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>URL</th>
+                  <th>Status</th>
+                  <th class="num">Valeur</th>
+                  <th>Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in project.issue.cwv.rows %}
+                  {% set cat = row.category %}
+                  {% set badge = 'error' if cat == 'poor' else ('warning' if cat == 'ni' else 'notice') %}
+                  {% set label = 'à corriger' if cat == 'poor' else ('moyen' if cat == 'ni' else 'n/a') %}
+                  {% set v = row.value %}
+                  <tr>
+                    <td class="mono"><a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a></td>
+                    <td><span class="badge {{ badge }}">{{ label }}</span></td>
+                    <td class="num mono">
+                      {% if v is none %}
+                        —
+                      {% elif m == "lcp" %}
+                        {{ (v / 1000) | round(2) }}s
+                      {% elif m == "tbt" %}
+                        {{ v | round(0) }}ms
+                      {% elif m == "cls" %}
+                        {{ v | round(3) }}
+                      {% else %}
+                        {{ v }}
+                      {% endif %}
+                    </td>
+                    <td class="muted small">{{ row.source or "" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+	        {% else %}
+	          <ul class="examples">
+	            {% for ex in project.issue.examples %}
+	              {% if ex.startswith('http://') or ex.startswith('https://') %}
+	                {% if '->' in ex %}
+	                  {% set parts = ex.split('->', 1) %}
+	                  {% set src = parts[0].strip() %}
+	                  {% set tgt = parts[1].strip() %}
+	                  <li class="mono">
+	                    <a href="{{ src }}" target="_blank" rel="noreferrer">{{ src }}</a>
+	                    →
+	                    {% if tgt.startswith('http://') or tgt.startswith('https://') %}
+	                      <a href="{{ tgt }}" target="_blank" rel="noreferrer">{{ tgt }}</a>
+	                    {% else %}
+	                      <span class="muted">{{ tgt }}</span>
+	                    {% endif %}
+	                  </li>
+	                {% elif ' ' in ex %}
+	                  {% set url = ex.split(' ', 1)[0] %}
+	                  {% set tail = ex.split(' ', 1)[1] %}
+	                  <li class="mono"><a href="{{ url }}" target="_blank" rel="noreferrer">{{ url }}</a> <span class="muted">{{ tail }}</span></li>
+	                {% else %}
+	                  <li class="mono"><a href="{{ ex }}" target="_blank" rel="noreferrer">{{ ex }}</a></li>
+	                {% endif %}
+	              {% else %}
+	                <li class="mono">{{ ex }}</li>
+	              {% endif %}
+	            {% endfor %}
+	          </ul>
+		        {% endif %}
+		      {% endif %}
+	      {% endif %}
+	    </section>
+	  {% endif %}
+{% endblock %}

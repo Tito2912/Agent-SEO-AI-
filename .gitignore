@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.Python
+
+# Virtual envs
+venv/
+.venv/
+seo-agent-web/.venv/
+
+# Local secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# Common credential files / keys
+gen-lang-client-*.json
+*service_account*.json
+*service-account*.json
+*.pem
+
+# Generated outputs / artifacts
+seo-runs/
+seo-agent-web/data/jobs/
+seo-agent-web/data/projects.json
+dist/*.skill
+
+# Local scratch / experiments (do not commit)
+tmp*/
+tmp-*
+parity*.json
+/Capture d’écran*
+/*.zip
+
+# Example / dev sites (not required for SaaS deploy)
+avis-invest.com/
+
+# Parity harness output
+tools/parity/_runs/
+
+# Dev-only notes/tools (keep local, not in SaaS repo)
+agent-audit.md
+audit_report.md
+cleanup.ps1
+domains.json
+index.txt
+docs/
+tools/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

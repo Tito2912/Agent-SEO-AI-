@@ -1,0 +1,695 @@
+{% extends "layout.html" %}
+{% block title %}Projets — SEO Audit{% endblock %}
+
+{% block head_extra %}
+  {% if jobs %}
+    {% set ns = namespace(live=false) %}
+    {% for j in jobs %}
+      {% if j.status in ['queued', 'running'] %}
+        {% set ns.live = true %}
+      {% endif %}
+    {% endfor %}
+    {% if ns.live %}
+      <meta http-equiv="cache-control" content="no-store" />
+      <meta http-equiv="pragma" content="no-cache" />
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block crumbs %}
+  <span class="crumb-current">Site Audit</span>
+{% endblock %}
+
+{% block actions %}
+  <button type="button" class="btn primary" id="add-project-open">Nouveau projet</button>
+  {% if request.state.user and request.state.user.is_admin %}
+    <a class="btn" href="/automation">Lancer un audit multi-sites</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Site Audit</h1>
+    <p class="muted">Liste de projets (Postgres) + dernier crawl.</p>
+  </div>
+
+  {% if err %}
+    <section class="card">
+      <div class="card-title-row">
+        <h2><span class="badge error">erreur</span></h2>
+      </div>
+      <p class="muted small" style="margin:0;">{{ err }}</p>
+    </section>
+  {% elif msg %}
+    <section class="card">
+      <div class="card-title-row">
+        <h2><span class="badge ok">ok</span></h2>
+      </div>
+      <p class="muted small" style="margin:0;">{{ msg }}</p>
+    </section>
+  {% endif %}
+
+  <form id="batch-crawl-form" method="post" action="/projects/crawl-batch">
+    <input type="hidden" name="config_path" value="{{ config_path }}" />
+  </form>
+  <form id="delete-projects-form" method="post" action="/projects/delete"></form>
+
+  <section class="card">
+    {% if not projects %}
+      <p class="muted">Aucun projet trouvé. Lance un audit depuis <a href="/automation">Automation</a>.</p>
+    {% else %}
+      <div class="card-title-row">
+	        <h2>Sélection</h2>
+	        <div class="topbar-actions">
+	          <span class="muted small" id="batch-crawl-count">0 sélectionné</span>
+	          <button type="submit" form="batch-crawl-form" class="btn primary" id="batch-crawl-btn" disabled>
+	            Auditer la sélection
+	          </button>
+	          <button type="submit" form="delete-projects-form" class="btn danger" id="delete-projects-btn" disabled>
+	            Supprimer
+	          </button>
+	        </div>
+	      </div>
+	      <div class="table-wrap">
+	        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 42px;">
+                <label class="checkbox" style="justify-content:center;">
+                  <input type="checkbox" id="select-all-projects" />
+                </label>
+              </th>
+              <th>Projet</th>
+              <th>Dernier crawl</th>
+              <th>Health</th>
+              <th class="num">URLs crawled</th>
+              <th class="num">URLs avec erreurs</th>
+              <th>Issues</th>
+              <th></th>
+            </tr>
+          </thead>
+	          <tbody>
+	            {% for p in projects %}
+	              <tr data-project-slug="{{ p.slug }}">
+	                {% set live = (live_crawls.get(p.slug) if live_crawls else none) %}
+	                <td>
+                  <label class="checkbox" style="justify-content:center;">
+	                    <input
+	                      type="checkbox"
+	                      class="project-select"
+	                      value="{{ p.slug }}"
+	                    />
+	                  </label>
+	                </td>
+	                <td>
+	                    <div class="project">
+	                      <div class="project-title">
+	                      {% if p.timestamp %}
+	                        <a href="/projects/{{ p.slug }}?crawl={{ p.timestamp }}">{{ p.site_name }}</a>
+	                      {% else %}
+	                        <span style="font-weight:600;">{{ p.site_name }}</span>
+	                        <span class="badge notice" style="margin-left:8px;">nouveau</span>
+	                      {% endif %}
+	                      </div>
+	                      <div class="muted small">{{ p.base_url }}</div>
+	                    </div>
+	                  </td>
+                <td>
+	                  {% if p.timestamp %}
+	                    <div>{{ p.timestamp_label }}</div>
+	                    <div class="muted small">{{ p.timestamp }}</div>
+	                  {% else %}
+	                    <div class="muted">—</div>
+	                    <div class="muted small">Pas encore crawlé</div>
+		                  {% endif %}
+		                  <div class="row-crawl-slot" data-project-slug="{{ p.slug }}">
+		                    {% if live %}
+		                      {% set progress = live.progress if live.progress else none %}
+	                      {% if progress and progress.total %}
+	                        {% set cur = progress.current|int %}
+	                        {% set tot = progress.total|int %}
+	                        {% set pct = ((cur / tot) * 100) if tot else 0 %}
+	                      {% else %}
+	                        {% set cur = 0 %}
+	                        {% set tot = 0 %}
+	                        {% set pct = 0 %}
+	                      {% endif %}
+	                      {% set is_finalizing = live.status in ['queued', 'running'] and tot and cur >= tot and pct >= 100 %}
+	                      {% set pct_display = 99 if is_finalizing else (pct|round(0)) %}
+
+	                      <div class="row-crawl" data-job-id="{{ live.id }}" data-live="1" data-project-slug="{{ p.slug }}">
+	                        <div class="row-crawl-head">
+	                          <span class="pill {{ live.status }}" data-role="status">{{ live.status }}</span>
+	                          <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}—{% endif %}</span>
+	                        </div>
+	                        <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
+	                          <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
+	                        </div>
+	                      </div>
+	                    {% endif %}
+	                  </div>
+	                </td>
+	                <td>
+	                  {% if p.timestamp %}
+	                    {% set hcls = 'ok' if p.health_score >= 90 else ('warning' if p.health_score >= 70 else 'error') %}
+	                    <div class="health-inline">
+	                      <div class="mini-bar {{ hcls }}" style="--p: {{ p.health_score }};"></div>
+	                      <span class="mono">{{ p.health_score }}%</span>
+	                    </div>
+	                  {% else %}
+	                    <span class="muted">—</span>
+	                  {% endif %}
+	                </td>
+	                <td class="num mono">{% if p.timestamp %}{{ p.urls_crawled }}{% else %}—{% endif %}</td>
+	                <td class="num mono">
+	                  {% if p.timestamp %}
+	                    {% if p.urls_with_errors > 0 %}
+	                      <span class="badge error">{{ p.urls_with_errors }}</span>
+	                    {% else %}
+	                      <span class="badge ok">0</span>
+	                    {% endif %}
+	                  {% else %}
+	                    <span class="muted">—</span>
+	                  {% endif %}
+	                </td>
+	                <td>
+	                  {% if p.timestamp %}
+	                    <div class="issues-inline">
+	                      <span class="dot error"></span><span class="mono">{{ p.issues_distribution.error or 0 }}</span>
+	                      <span class="dot warning"></span><span class="mono">{{ p.issues_distribution.warning or 0 }}</span>
+	                      <span class="dot notice"></span><span class="mono">{{ p.issues_distribution.notice or 0 }}</span>
+	                    </div>
+	                  {% else %}
+	                    <span class="muted">—</span>
+	                  {% endif %}
+		                </td>
+		                <td class="actions">
+		                  <div style="display:flex; justify-content:flex-end; gap:8px; align-items:center;">
+		                    <a
+		                      class="icon-btn"
+		                      href="/projects/{{ p.slug }}/settings/crawl"
+		                      title="Paramètres crawl"
+		                      aria-label="Paramètres crawl"
+		                    >⚙</a>
+		                    <form method="post" action="/projects/{{ p.slug }}/crawl" class="crawl-start-form" data-slug="{{ p.slug }}">
+		                      <input type="hidden" name="config_path" value="{{ config_path }}" />
+		                      {% set live_running = live and live.status in ['queued','running'] %}
+		                      <button type="submit" class="btn primary" data-role="start-btn" {% if live_running %}disabled{% endif %}>
+		                        {% if live_running %}En cours{% else %}Start{% endif %}
+		                      </button>
+		                    </form>
+		                  </div>
+		                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+	  {% if projects %}
+		    <script>
+		      (() => {
+		        const selectAll = document.getElementById("select-all-projects");
+		        const boxes = Array.from(document.querySelectorAll("input.project-select"));
+		        const btn = document.getElementById("batch-crawl-btn");
+		        const delBtn = document.getElementById("delete-projects-btn");
+		        const countEl = document.getElementById("batch-crawl-count");
+		        const batchForm = document.getElementById("batch-crawl-form");
+		        const deleteForm = document.getElementById("delete-projects-form");
+		        const startForms = Array.from(document.querySelectorAll("form.crawl-start-form"));
+
+		        function selectedValues() {
+		          return boxes.filter((b) => b.checked).map((b) => b.value).filter(Boolean);
+		        }
+
+		        function cssEscape(value) {
+		          if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+		          return String(value || "").replace(/[^a-zA-Z0-9_-]/g, (m) => `\\${m}`);
+		        }
+
+		        function setFormSlugs(form) {
+		          if (!form) return;
+		          Array.from(form.querySelectorAll('input[name="slugs"]')).forEach((n) => n.remove());
+		          selectedValues().forEach((slug) => {
+		            const input = document.createElement("input");
+	            input.type = "hidden";
+	            input.name = "slugs";
+	            input.value = slug;
+		            form.appendChild(input);
+		          });
+		        }
+
+		        function upsertRowCrawl(slug, jobId, status) {
+		          const esc = cssEscape(slug);
+		          const slot = document.querySelector(`.row-crawl-slot[data-project-slug="${esc}"]`);
+		          if (!slot) return;
+
+		          let el = slot.querySelector(".row-crawl");
+		          if (!el) {
+		            el = document.createElement("div");
+		            el.className = "row-crawl";
+		            el.innerHTML = `
+		              <div class="row-crawl-head">
+		                <span class="pill queued" data-role="status">queued</span>
+		                <span class="mono small" data-role="progress-count">—</span>
+		              </div>
+		              <div class="progress slim crawl" data-role="progress-bar" style="display:none;">
+		                <div class="progress-fill" data-role="progress-fill" style="--p: 0;"></div>
+		              </div>
+		            `;
+		            slot.appendChild(el);
+		          }
+
+		          el.dataset.jobId = jobId;
+		          el.dataset.live = "1";
+		          el.dataset.projectSlug = slug;
+		          el.style.display = "";
+
+		          const statusText = status ? String(status) : "queued";
+		          const statusEl = el.querySelector('[data-role="status"]');
+		          if (statusEl) {
+		            statusEl.textContent = statusText;
+		            statusEl.className = `pill ${statusText}`;
+		          }
+
+		          const startBtn = document.querySelector(`form.crawl-start-form[data-slug="${esc}"] [data-role="start-btn"]`);
+		          if (startBtn) {
+		            startBtn.disabled = true;
+		            startBtn.textContent = "En cours";
+		          }
+		        }
+
+		        function render() {
+		          const checked = selectedValues().length;
+		          if (countEl) countEl.textContent = checked === 1 ? "1 sélectionné" : `${checked} sélectionnés`;
+		          if (btn) btn.disabled = checked === 0;
+	          if (delBtn) delBtn.disabled = checked === 0;
+	          if (selectAll) {
+	            selectAll.checked = checked > 0 && checked === boxes.length;
+	            selectAll.indeterminate = checked > 0 && checked < boxes.length;
+	          }
+	        }
+
+        if (selectAll) {
+          selectAll.addEventListener("change", () => {
+            const v = selectAll.checked;
+            boxes.forEach((b) => { b.checked = v; });
+            render();
+          });
+	        }
+	        boxes.forEach((b) => b.addEventListener("change", render));
+
+	        if (batchForm) {
+	          batchForm.addEventListener("submit", async (e) => {
+	            e.preventDefault();
+	            const slugs = selectedValues();
+	            if (!slugs.length) {
+	              render();
+	              return;
+	            }
+	            setFormSlugs(batchForm);
+
+	            const prevText = btn ? btn.textContent : "";
+	            if (btn) {
+	              btn.disabled = true;
+	              btn.textContent = "Démarrage…";
+	            }
+	            try {
+	              const res = await fetch(batchForm.action, {
+	                method: "POST",
+	                body: new FormData(batchForm),
+	                headers: { "Accept": "application/json", "X-Requested-With": "fetch" },
+	              });
+	              const data = await res.json().catch(() => null);
+	              if (!res.ok || !data || !data.ok) {
+	                const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
+	                throw new Error(msg);
+	              }
+	              const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+	              jobs.forEach((j) => {
+	                const s = String(j.slug || "").trim();
+	                const id = String(j.job_id || "").trim();
+	                const st = String(j.status || "").trim();
+	                if (s && id) upsertRowCrawl(s, id, st || "queued");
+	              });
+	              boxes.forEach((b) => { if (slugs.includes(b.value)) b.checked = false; });
+	            } catch (err) {
+	              alert(`Erreur: ${String(err && err.message ? err.message : err)}`);
+	            } finally {
+	              if (btn) btn.textContent = prevText || "Auditer la sélection";
+	              render();
+	            }
+	          });
+	        }
+	        startForms.forEach((form) => {
+	          form.addEventListener("submit", async (e) => {
+	            e.preventDefault();
+	            const slug = String(form.dataset.slug || "").trim();
+	            if (!slug) return;
+
+	            const startBtn = form.querySelector('[data-role="start-btn"]');
+	            const prevText = startBtn ? startBtn.textContent : "";
+	            if (startBtn) {
+	              startBtn.disabled = true;
+	              startBtn.textContent = "Démarrage…";
+	            }
+	            try {
+	              const res = await fetch(form.action, {
+	                method: "POST",
+	                body: new FormData(form),
+	                headers: { "Accept": "application/json", "X-Requested-With": "fetch" },
+	              });
+	              const data = await res.json().catch(() => null);
+	              if (!res.ok || !data || !data.ok) {
+	                const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
+	                throw new Error(msg);
+	              }
+	              upsertRowCrawl(slug, String(data.job_id || ""), String(data.status || "queued"));
+	            } catch (err) {
+	              if (startBtn) {
+	                startBtn.disabled = false;
+	                startBtn.textContent = prevText || "Start";
+	              }
+	              alert(`Erreur: ${String(err && err.message ? err.message : err)}`);
+	            }
+	          });
+	        });
+	        if (deleteForm) {
+	          deleteForm.addEventListener("submit", (e) => {
+	            const slugs = selectedValues();
+	            if (!slugs.length) {
+	              e.preventDefault();
+	              return;
+	            }
+	            const msg = slugs.length === 1
+	              ? `Supprimer le projet \"${slugs[0]}\" ?\\n\\nLes données seront déplacées dans seo-runs/_trash/.`
+	              : `Supprimer ${slugs.length} projets ?\\n\\nLes données seront déplacées dans seo-runs/_trash/.`;
+	            if (!confirm(msg)) {
+	              e.preventDefault();
+	              return;
+	            }
+	            setFormSlugs(deleteForm);
+	          });
+	        }
+	        render();
+	      })();
+	    </script>
+	  {% endif %}
+
+	  <dialog id="add-project-dialog" class="modal">
+	    <div class="modal-head">
+	      <h2>Ajouter un projet</h2>
+	      <form method="dialog">
+	        <button class="btn">Fermer</button>
+	      </form>
+	    </div>
+	    <div class="modal-body">
+	      <p class="muted small" style="margin-top:0;">
+	        Ajoute un site à la liste des projets (domaine ou URL).
+	      </p>
+
+	      <div class="tab-buttons" id="add-project-tabs">
+	        <button type="button" class="tab-btn active" data-tab="domain">Domaine</button>
+	        <button type="button" class="tab-btn" data-tab="url">URL</button>
+	        {% if request.state.user and request.state.user.is_admin %}
+	          <button type="button" class="tab-btn" data-tab="gsc">Google Search Console</button>
+	        {% endif %}
+	      </div>
+
+	      <div class="tab-panel active" data-panel="domain">
+	        <form method="post" action="/projects/add">
+	          <input type="hidden" name="mode" value="domain" />
+	          <label>
+	            Nom de domaine
+	            <input name="domain" placeholder="example.com" required />
+	          </label>
+	          <label>
+	            Nom (optionnel)
+	            <input name="site_name" placeholder="Nom affiché" />
+	          </label>
+	          <div class="modal-actions">
+	            <button type="submit" class="btn primary">Ajouter</button>
+	          </div>
+	        </form>
+	      </div>
+
+	      <div class="tab-panel" data-panel="url">
+	        <form method="post" action="/projects/add">
+	          <input type="hidden" name="mode" value="url" />
+	          <label>
+	            URL
+	            <input name="url" placeholder="https://example.com/" required />
+	          </label>
+	          <label>
+	            Nom (optionnel)
+	            <input name="site_name" placeholder="Nom affiché" />
+	          </label>
+	          <div class="modal-actions">
+	            <button type="submit" class="btn primary">Ajouter</button>
+	          </div>
+	        </form>
+	      </div>
+
+	      {% if request.state.user and request.state.user.is_admin %}
+	        <div class="tab-panel" data-panel="gsc">
+	          <form method="post" action="/projects/add" id="gsc-add-form">
+	            <input type="hidden" name="mode" value="gsc" />
+	            <div class="gsc-toolbar">
+	              <button type="button" class="btn" id="gsc-load">Charger les propriétés</button>
+	              <span class="muted small" id="gsc-status"></span>
+	            </div>
+	            <div class="gsc-list" id="gsc-list"></div>
+	            <div class="modal-actions">
+	              <span class="muted small" id="gsc-count">0 sélectionné</span>
+	              <button type="submit" class="btn primary" id="gsc-submit" disabled>Ajouter la sélection</button>
+	            </div>
+	          </form>
+	        </div>
+	      {% endif %}
+	    </div>
+	  </dialog>
+
+	  <script>
+	    (() => {
+	      const openBtn = document.getElementById("add-project-open");
+	      const dialog = document.getElementById("add-project-dialog");
+	      if (!openBtn || !dialog || typeof dialog.showModal !== "function") return;
+
+	      openBtn.addEventListener("click", () => dialog.showModal());
+
+	      const tabs = dialog.querySelectorAll(".tab-btn");
+	      const panels = dialog.querySelectorAll(".tab-panel");
+	      function activate(tab) {
+	        tabs.forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+	        panels.forEach((p) => p.classList.toggle("active", p.dataset.panel === tab));
+	      }
+	      tabs.forEach((b) => b.addEventListener("click", () => activate(b.dataset.tab)));
+
+	      // GSC import (admin only)
+	      const gscLoad = document.getElementById("gsc-load");
+	      const gscList = document.getElementById("gsc-list");
+	      const gscStatus = document.getElementById("gsc-status");
+	      const gscCount = document.getElementById("gsc-count");
+	      const gscSubmit = document.getElementById("gsc-submit");
+
+	      if (gscLoad && gscList && gscStatus && gscCount && gscSubmit) {
+	        function renderGscState() {
+	          const boxes = Array.from(gscList.querySelectorAll("input[type=checkbox][name=gsc_urls]"));
+	          const checked = boxes.filter((b) => b.checked).length;
+	          gscCount.textContent = checked === 1 ? "1 sélectionné" : `${checked} sélectionnés`;
+	          gscSubmit.disabled = checked === 0;
+	        }
+
+	        async function loadGsc() {
+	          gscStatus.textContent = "Chargement…";
+	          gscList.innerHTML = "";
+	          gscSubmit.disabled = true;
+	          try {
+	            const r = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" } });
+	            const data = await r.json();
+	            if (!data || !data.ok) {
+	              gscStatus.textContent = (data && data.error) ? data.error : "Erreur GSC";
+	              return;
+	            }
+	            const items = Array.isArray(data.properties) ? data.properties : [];
+	            if (items.length === 0) {
+	              gscStatus.textContent = "Aucune propriété accessible.";
+	              return;
+	            }
+	            gscStatus.textContent = `${items.length} propriétés`;
+
+	            const header = document.createElement("div");
+	            header.className = "gsc-selectall";
+	            header.innerHTML = `
+	              <label class="checkbox" style="justify-content:flex-start;">
+	                <input type="checkbox" id="gsc-select-all" />
+	                <span>Tout sélectionner</span>
+	              </label>
+	            `;
+	            gscList.appendChild(header);
+
+	            const selectAll = header.querySelector("#gsc-select-all");
+
+	            items.forEach((p) => {
+	              const label = document.createElement("label");
+	              label.className = "checkbox";
+	              const value = String(p.property_url || "").trim();
+	              const domain = String(p.domain || "").trim();
+	              label.innerHTML = `
+	                <input type="checkbox" name="gsc_urls" value="${value.replaceAll('"', '&quot;')}" />
+	                <span class="mono">${domain || value}</span>
+	                <span class="muted small">${value}</span>
+	              `;
+	              gscList.appendChild(label);
+	            });
+
+	            const boxes = Array.from(gscList.querySelectorAll("input[type=checkbox][name=gsc_urls]"));
+	            function syncSelectAll() {
+	              const checked = boxes.filter((b) => b.checked).length;
+	              if (selectAll) {
+	                selectAll.checked = checked > 0 && checked === boxes.length;
+	                selectAll.indeterminate = checked > 0 && checked < boxes.length;
+	              }
+	              renderGscState();
+	            }
+	            boxes.forEach((b) => b.addEventListener("change", syncSelectAll));
+	            if (selectAll) {
+	              selectAll.addEventListener("change", () => {
+	                const v = selectAll.checked;
+	                boxes.forEach((b) => { b.checked = v; });
+	                syncSelectAll();
+	              });
+	            }
+	            syncSelectAll();
+	          } catch (e) {
+	            gscStatus.textContent = String(e);
+	          }
+	        }
+
+	        gscLoad.addEventListener("click", loadGsc);
+	        renderGscState();
+	      }
+	    })();
+	  </script>
+
+	  {% if jobs %}
+	    <section class="card">
+      <div class="card-title-row">
+        <h2>Jobs récents</h2>
+        <a class="muted small" href="/jobs">Voir tous</a>
+      </div>
+      <div class="job-grid">
+        {% for j in jobs[:8] %}
+          <a
+            class="job-chip"
+            href="/jobs?job={{ j.id }}"
+            data-job-id="{{ j.id }}"
+            data-live="{{ '1' if j.status in ['queued', 'running'] else '0' }}"
+          >
+            <span class="mono">{{ j.id[:8] }}</span>
+            <span class="pill {{ j.status }}" data-role="status">{{ j.status }}</span>
+          </a>
+        {% endfor %}
+	      </div>
+	    </section>
+	  {% endif %}
+
+	  <script>
+	    (() => {
+	      const pollMs = 1000;
+	      let inFlight = false;
+
+	      const liveItems = () => Array.from(document.querySelectorAll('[data-job-id][data-live="1"]'));
+
+	      function pctDisplay(progress, status) {
+	        if (!progress || !progress.total) return { cur: 0, tot: 0, pct: 0 };
+	        const cur = Number(progress.current || 0);
+	        const tot = Number(progress.total || 0);
+	        const isLive = status === "queued" || status === "running";
+	        const isFinalizing = isLive && tot > 0 && cur >= tot;
+	        let pct = tot ? Math.round((cur / tot) * 100) : 0;
+	        if (isFinalizing && pct >= 100) pct = 99;
+	        return { cur, tot, pct };
+	      }
+
+	      function updateItem(el, data) {
+	        const status = (data && data.status) ? String(data.status) : "";
+	        const statusEl = el.querySelector('[data-role="status"]');
+	        if (statusEl) {
+	          statusEl.textContent = status;
+	          statusEl.className = `pill ${status}`;
+	        }
+
+	        const progress = data ? data.progress : null;
+	        const fill = el.querySelector('[data-role="progress-fill"]');
+	        const bar = el.querySelector('[data-role="progress-bar"]');
+	        const count = el.querySelector('[data-role="progress-count"]');
+	        if (fill && bar) {
+	          const { cur, tot, pct } = pctDisplay(progress, status);
+	          if (tot > 0) {
+	            fill.style.setProperty("--p", String(pct));
+	            bar.style.display = "";
+	            if (count) count.textContent = `${cur}/${tot}`;
+	          } else {
+	            bar.style.display = "none";
+	            if (count) count.textContent = "—";
+	          }
+	        }
+
+	        if (status === "done" || status === "failed") {
+	          el.dataset.live = "0";
+	          if (el.classList && el.classList.contains("row-crawl")) {
+	            el.style.display = "none";
+	          }
+	          const slug = el.dataset.projectSlug;
+	          if (slug) {
+	            const esc = (window.CSS && typeof window.CSS.escape === "function")
+	              ? window.CSS.escape(slug)
+	              : String(slug || "").replace(/[^a-zA-Z0-9_-]/g, (m) => `\\${m}`);
+	            const startBtn = document.querySelector(`form.crawl-start-form[data-slug="${esc}"] [data-role="start-btn"]`);
+	            if (startBtn) {
+	              startBtn.disabled = false;
+	              startBtn.textContent = "Start";
+	            }
+	          }
+	        }
+	      }
+
+	      async function pollJob(jobId, targets) {
+	        try {
+	          const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=1`, { cache: "no-store" });
+	          if (!res.ok) return;
+	          const data = await res.json();
+	          targets.forEach((el) => updateItem(el, data));
+	        } catch (_) {
+	          // ignore transient errors
+	        }
+	      }
+
+	      async function pollAll() {
+	        if (inFlight) return;
+	        const els = liveItems();
+	        if (!els.length) return;
+	        inFlight = true;
+	        try {
+	          const byId = new Map();
+	          els.forEach((el) => {
+	            const jobId = el.dataset.jobId;
+	            if (!jobId) return;
+	            const arr = byId.get(jobId) || [];
+	            arr.push(el);
+	            byId.set(jobId, arr);
+	          });
+	          await Promise.all(Array.from(byId.entries()).map(([jobId, targets]) => pollJob(jobId, targets)));
+	        } finally {
+	          inFlight = false;
+	        }
+	      }
+
+	      setInterval(pollAll, pollMs);
+	      pollAll();
+	    })();
+	  </script>
+	{% endblock %}

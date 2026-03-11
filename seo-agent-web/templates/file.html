@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block title %}Fichier — SEO Audit{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Fichier</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Fichier</h1>
+    <p class="muted mono">{{ path }}</p>
+  </div>
+
+  <section class="card">
+    <pre>{{ content }}</pre>
+  </section>
+{% endblock %}

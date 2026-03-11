@@ -1,0 +1,55 @@
+databases:
+  - name: seo-agent-db
+    ipAllowList: []
+
+services:
+  - type: web
+    name: seo-agent-web
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seo-agent-db
+          property: connectionString
+      - key: SEO_AGENT_DATA_DIR
+        value: /var/data/data
+      - key: SEO_AGENT_RUNS_DIR
+        value: /var/data/seo-runs
+      - key: SEO_AGENT_CONFIG_PATH
+        value: /app/seo-autopilot.yml
+      - key: SEO_AGENT_SECRET_KEY
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: SIGNUP_INVITE_CODE
+        sync: false
+      - key: SIGNUP_ALLOWLIST_EMAILS
+        sync: false
+      - key: SIGNUP_ALLOWLIST_DOMAINS
+        sync: false
+      - key: SIGNUP_DISABLED
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: PAGESPEED_API_KEY
+        sync: false
+      - key: BING_WEBMASTER_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_GEMINI_API_KEY
+        sync: false
+      - key: BETA_BASIC_AUTH_USER
+        sync: false
+      - key: BETA_BASIC_AUTH_PASS
+        sync: false

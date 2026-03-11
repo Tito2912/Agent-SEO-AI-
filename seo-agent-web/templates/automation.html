@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% block title %}Automation — SEO Audit{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Automation</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Automation</h1>
+    <p class="muted">Lancer l’autopilot (audit multi-sites, GSC, backlog) et consulter le résumé global.</p>
+  </div>
+
+  <section class="card">
+    <h2>Config</h2>
+    <p><span class="muted">Repo:</span> <span class="mono">{{ repo_root }}</span></p>
+    <p><span class="muted">Config:</span> <span class="mono">{{ config_path or "seo-autopilot.yml introuvable" }}</span></p>
+    {% if inventory %}
+      <p>
+        <span class="muted">Inventory CSV:</span>
+        <span class="mono">{{ inventory.path }}</span>
+        {% if inventory.exists %}
+          <span class="muted">—</span>
+          <span class="mono">{{ inventory.count }}</span>
+          <span class="muted">domaines</span>
+        {% else %}
+          <span class="pill failed">introuvable</span>
+        {% endif %}
+      </p>
+      {% if inventory.preview %}
+        <p class="muted small">Extrait: <span class="mono">{{ inventory.preview | join(", ") }}</span></p>
+      {% endif %}
+      {% if inventory.error %}
+        <p class="muted small">Erreur inventory: <span class="mono">{{ inventory.error }}</span></p>
+      {% endif %}
+    {% endif %}
+
+    {% if env_status and config_status %}
+      <p class="muted small">
+        PageSpeed: <span class="mono">{{ "on" if config_status.pagespeed_enabled else "off" }}</span>
+        · API key: <span class="mono">{{ "ok" if env_status.pagespeed_api_key_set else "missing" }}</span>
+        · GSC API: <span class="mono">{{ "on" if config_status.gsc_api_enabled else "off" }}</span>
+        · Credentials: <span class="mono">{% if env_status.gsc_credentials_set %}set{% else %}missing{% endif %}{% if env_status.gsc_credentials_set %} / {% if env_status.gsc_credentials_exists %}file ok{% else %}file missing{% endif %}{% endif %}</span>
+      </p>
+    {% endif %}
+    <form method="post" action="/run">
+      <label>Chemin config</label>
+      <input name="config_path" value="{{ config_path }}" />
+      <div class="row">
+        <label>Mode</label>
+        <div class="radios">
+          <label class="radio"><input type="radio" name="run_policy" value="verify" checked /> Vérifier (audit + GSC si configuré)</label>
+          <label class="radio"><input type="radio" name="run_policy" value="auto" /> Déployer auto (execute)</label>
+        </div>
+        <label class="checkbox">
+          <input type="checkbox" name="confirm_auto" value="yes" />
+          Je confirme l’exécution (déploiement auto)
+        </label>
+        <p class="muted small">Le mode auto n’est lancé que si le choix = auto + la case est cochée.</p>
+      </div>
+      <button type="submit" class="btn primary">Lancer audit multi-sites</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Dernier run global</h2>
+    {% if latest %}
+      <p><span class="muted">Timestamp:</span> <span class="mono">{{ latest.timestamp }}</span></p>
+      {% if latest.sites_summary_md %}
+        <p><a href="/file?path={{ latest.sites_summary_md }}">Sites summary</a></p>
+      {% endif %}
+      {% if latest.interlinking_md %}
+        <p><a href="/file?path={{ latest.interlinking_md }}">Interlinking plan</a></p>
+      {% endif %}
+      <p class="muted small">Dossier: <span class="mono">{{ latest.dir }}</span></p>
+    {% else %}
+      <p class="muted">Aucun run global trouvé (lance un audit).</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Jobs récents</h2>
+    {% if jobs %}
+      <div class="job-grid">
+        {% for j in jobs %}
+          <a class="job-chip" href="/jobs?job={{ j.id }}">
+            <span class="mono">{{ j.id[:8] }}</span>
+            <span class="pill {{ j.status }}">{{ j.status }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">Aucun job.</p>
+    {% endif %}
+  </section>
+{% endblock %}

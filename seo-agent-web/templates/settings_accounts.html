@@ -1,0 +1,359 @@
+{% extends "layout.html" %}
+{% block title %}Paramètres — Comptes & tokens{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Paramètres</span>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Comptes &amp; tokens</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Comptes &amp; tokens</h1>
+    <p class="muted">Configure les intégrations et accès nécessaires (GitHub, Netlify, GSC…).</p>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Sécurité &amp; stockage</h2>
+    </div>
+    <ul class="examples muted small" style="margin:0;">
+      <li>Les valeurs sont stockées localement sur ce serveur.</li>
+      <li>Les valeurs sont masquées dans l’interface.</li>
+      <li>Si tu modifies l’environnement du serveur, redémarre l’app pour appliquer les changements.</li>
+    </ul>
+  </section>
+
+  {% set groups = ["Intégrations", "AI", "Google"] %}
+
+  {% for group in groups %}
+    {% set group_items = items | selectattr("group", "equalto", group) | list %}
+    {% if group_items %}
+      <div class="settings-section">
+        <div class="settings-section-head">
+          <div>
+            <div class="settings-section-title">{{ group }}</div>
+            {% if group == "Intégrations" %}
+              <div class="muted small">Accès nécessaires au déploiement et à certaines APIs externes.</div>
+            {% elif group == "Google" %}
+              <div class="muted small">Connexion Search Console via OAuth (recommandé) ou service account.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="grid two">
+          {% for item in group_items %}
+            {% if item.key != "GOOGLE_APPLICATION_CREDENTIALS" %}
+              <section class="card setting-card">
+                <div class="setting-head">
+                  <div>
+                    <h2 class="setting-title">{{ item.label }}</h2>
+                    {% if item.hint %}<div class="muted small">{{ item.hint }}</div>{% endif %}
+                  </div>
+                  <div class="setting-actions">
+                    {% if item.help %}
+                      <button
+                        type="button"
+                        class="icon-btn"
+                        data-open-dialog="info-{{ item.key }}"
+                        aria-label="Aide {{ item.label }}"
+                        title="Aide"
+                      >
+                        i
+                      </button>
+                    {% endif %}
+                    {% if item.locked %}
+                      <span class="badge notice">système</span>
+                    {% elif item.configured %}
+                      <span class="badge ok">ok</span>
+                    {% else %}
+                      <span class="badge notice">à configurer</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="kv one setting-kv">
+                  <div class="kv-item"><span class="muted">Actif</span><div class="mono">{{ item.masked or "—" }}</div></div>
+                </div>
+
+                {% if item.locked %}
+                  <p class="muted small setting-note">
+                    Définie dans l’environnement système au démarrage du serveur (prioritaire). Modifie la variable côté système puis redémarre
+                    <span class="mono">uvicorn</span>.
+                  </p>
+                {% elif not item.editable %}
+                  <p class="muted small setting-note">Clé gérée par l’agent — non modifiable depuis cette page.</p>
+                {% else %}
+                  <details class="setting-details">
+                    <summary>Configurer</summary>
+                    <form method="post" action="/settings/accounts" class="setting-form">
+                      <input type="hidden" name="key" value="{{ item.key }}" />
+                      <label>
+                        Valeur
+                        <input type="password" name="value" placeholder="Coller la valeur…" autocomplete="new-password" />
+                      </label>
+                      <div class="modal-actions between">
+                        <button
+                          class="btn danger"
+                          type="submit"
+                          name="op"
+                          value="clear"
+                          onclick="return confirm('Supprimer cette valeur ?');"
+                        >
+                          Supprimer
+                        </button>
+                        <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+                      </div>
+                    </form>
+                  </details>
+
+                  {% if item.key == "BING_WEBMASTER_API_KEY" %}
+                    <div class="modal-actions between" style="margin-top: 10px;">
+                      <button class="btn" type="button" id="bing-test-btn">Tester</button>
+                      <div class="muted small" id="bing-test-result"></div>
+                    </div>
+                  {% endif %}
+                {% endif %}
+
+                {% if item.help %}
+                  <dialog id="info-{{ item.key }}" class="modal">
+                    <div class="modal-head">
+                      <h2>{{ item.help.title }}</h2>
+                      <form method="dialog">
+                        <button class="btn">Fermer</button>
+                      </form>
+                    </div>
+                    <div class="modal-body">
+                      {% if item.help.steps %}
+                        <ol class="help-steps">
+                          {% for s in item.help.steps %}
+                            <li>{{ s }}</li>
+                          {% endfor %}
+                        </ol>
+                      {% endif %}
+
+                      {% if item.help.links %}
+                        <div class="row">
+                          <div class="muted small" style="margin-bottom:6px;">Liens utiles</div>
+                          <ul class="help-links">
+                            {% for l in item.help.links %}
+                              <li>
+                                <a href="{{ l.url }}" target="_blank" rel="noreferrer">{{ l.label }}</a>
+                              </li>
+                            {% endfor %}
+                          </ul>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </dialog>
+                {% endif %}
+              </section>
+            {% endif %}
+          {% endfor %}
+
+          {% if group == "Google" %}
+            {% set cred = gsc.credentials if gsc and gsc.credentials else none %}
+            <section class="card setting-card span-2" id="gsc-card">
+              <div class="setting-head">
+                <div>
+                  <h2 class="setting-title">Google Search Console (GSC)</h2>
+                  <div class="muted small">Import GSC + métriques (nécessite un service account).</div>
+                </div>
+                <div class="setting-actions">
+                  {% if gsc and gsc.help %}
+                    <button
+                      type="button"
+                      class="icon-btn"
+                      data-open-dialog="info-GOOGLE_APPLICATION_CREDENTIALS"
+                      aria-label="Aide Google Search Console"
+                      title="Aide"
+                    >
+                      i
+                    </button>
+                  {% endif %}
+                  {% if cred and cred.exists %}
+                    <span class="badge ok">ok</span>
+                  {% else %}
+                    <span class="badge notice">à configurer</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="kv setting-kv">
+                <div class="kv-item">
+                  <span class="muted">Credentials</span>
+                  <div class="mono">{{ (cred.path if cred else "") or "—" }}</div>
+                </div>
+                <div class="kv-item">
+                  <span class="muted">Service account</span>
+                  <div class="mono">{{ (cred.client_email if cred else "") or "—" }}</div>
+                </div>
+                <div class="kv-item">
+                  <span class="muted">Projet</span>
+                  <div class="mono">{{ (cred.project_id if cred else "") or "—" }}</div>
+                </div>
+              </div>
+
+              <details class="setting-details" {% if not (cred and cred.exists) %}open{% endif %}>
+                <summary>Configurer</summary>
+                <div class="muted small" style="margin-top:10px;">
+                  Étapes : 1) choisir le JSON du service account 2) donner accès à la propriété dans GSC 3) tester.
+                </div>
+
+                <form method="post" action="/settings/accounts" id="gsc-form" class="setting-form">
+                  <input type="hidden" name="key" value="GOOGLE_APPLICATION_CREDENTIALS" />
+                  <label>
+                    Chemin du fichier JSON
+                    <input
+                      type="text"
+                      name="value"
+                      id="gsc-cred-input"
+                      placeholder="ex: gen-lang-client-....json"
+                      value="{{ (cred.path if cred else '') }}"
+                    />
+                  </label>
+
+                  {% if gsc and gsc.candidates %}
+                    <label>
+                      Détection automatique
+                      <select id="gsc-cred-select">
+                        <option value="">— choisir —</option>
+                        {% for p in gsc.candidates %}
+                          <option value="{{ p }}">{{ p }}</option>
+                        {% endfor %}
+                      </select>
+                    </label>
+                  {% endif %}
+
+                  <div class="modal-actions between">
+                    <button
+                      class="btn danger"
+                      type="submit"
+                      name="op"
+                      value="clear"
+                      onclick="return confirm('Supprimer les credentials GSC ?');"
+                    >
+                      Supprimer
+                    </button>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                      <button class="btn" type="button" id="gsc-test-btn">Tester</button>
+                      <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+                    </div>
+                  </div>
+                </form>
+
+                <div class="muted small" id="gsc-test-result" style="margin-top:10px;"></div>
+              </details>
+
+              {% if gsc and gsc.help %}
+                <dialog id="info-GOOGLE_APPLICATION_CREDENTIALS" class="modal">
+                  <div class="modal-head">
+                    <h2>{{ gsc.help.title }}</h2>
+                    <form method="dialog">
+                      <button class="btn">Fermer</button>
+                    </form>
+                  </div>
+                  <div class="modal-body">
+                    {% if gsc.help.steps %}
+                      <ol class="help-steps">
+                        {% for s in gsc.help.steps %}
+                          <li>{{ s }}</li>
+                        {% endfor %}
+                      </ol>
+                    {% endif %}
+
+                    {% if gsc.help.links %}
+                      <div class="row">
+                        <div class="muted small" style="margin-bottom:6px;">Liens utiles</div>
+                        <ul class="help-links">
+                          {% for l in gsc.help.links %}
+                            <li>
+                              <a href="{{ l.url }}" target="_blank" rel="noreferrer">{{ l.label }}</a>
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      </div>
+                    {% endif %}
+                  </div>
+                </dialog>
+              {% endif %}
+            </section>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  {% endfor %}
+
+  <script>
+    (() => {
+      const select = document.getElementById("gsc-cred-select");
+      const input = document.getElementById("gsc-cred-input");
+      if (select && input) {
+        select.addEventListener("change", () => {
+          const v = String(select.value || "").trim();
+          if (v) input.value = v;
+        });
+      }
+
+      const testBtn = document.getElementById("gsc-test-btn");
+      const out = document.getElementById("gsc-test-result");
+      async function testGsc() {
+        if (!out) return;
+        out.textContent = "Test en cours…";
+        try {
+          const r = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" }, cache: "no-store" });
+          const data = await r.json();
+          if (!data || !data.ok) {
+            out.textContent = (data && data.error) ? data.error : "Erreur GSC";
+            return;
+          }
+          const n = Array.isArray(data.properties) ? data.properties.length : 0;
+          out.textContent = `${n} propriétés accessibles.`;
+        } catch (e) {
+          out.textContent = String(e);
+        }
+      }
+      if (testBtn) testBtn.addEventListener("click", testGsc);
+
+      const bingTestBtn = document.getElementById("bing-test-btn");
+      const bingOut = document.getElementById("bing-test-result");
+      async function testBing() {
+        if (!bingOut) return;
+        bingOut.textContent = "Test en cours…";
+        try {
+          const r = await fetch("/api/bing/sites", { headers: { "Accept": "application/json" }, cache: "no-store" });
+          const data = await r.json();
+          if (!data || !data.ok) {
+            bingOut.textContent = (data && data.error) ? data.error : "Erreur Bing";
+            return;
+          }
+          const n = Array.isArray(data.sites) ? data.sites.length : 0;
+          bingOut.textContent = `${n} sites accessibles.`;
+        } catch (e) {
+          bingOut.textContent = String(e);
+        }
+      }
+      if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
+
+      // Help dialogs
+      document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
+        const id = btn.getAttribute("data-open-dialog");
+        if (!id) return;
+        const dlg = document.getElementById(id);
+        if (!dlg || typeof dlg.showModal !== "function") return;
+        btn.addEventListener("click", () => dlg.showModal());
+        dlg.addEventListener("click", (e) => {
+          const rect = dlg.getBoundingClientRect();
+          const inDialog =
+            rect.top <= e.clientY &&
+            e.clientY <= rect.top + rect.height &&
+            rect.left <= e.clientX &&
+            e.clientX <= rect.left + rect.width;
+          if (!inDialog) dlg.close();
+        });
+      });
+    })();
+  </script>
+{% endblock %}

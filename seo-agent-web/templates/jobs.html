@@ -1,0 +1,199 @@
+{% extends "layout.html" %}
+{% block title %}Jobs — SEO Audit{% endblock %}
+
+{% block head_extra %}
+  {% if jobs %}
+    {% set ns = namespace(live=false) %}
+    {% for j in jobs %}
+      {% if j.status in ['queued', 'running'] %}
+        {% set ns.live = true %}
+      {% endif %}
+    {% endfor %}
+    {% if ns.live %}
+      <meta http-equiv="cache-control" content="no-store" />
+      <meta http-equiv="pragma" content="no-cache" />
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Jobs</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Jobs</h1>
+    <p class="muted">Historique des crawls (mono-site) et audits (multi-sites).</p>
+  </div>
+
+  <section class="card">
+    {% if not jobs %}
+      <p class="muted">Aucun job.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table class="table compact" id="jobs-table">
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th>Status</th>
+              <th>Avancement</th>
+              <th class="num">Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for j in jobs %}
+              {% set is_live = j.status in ['queued', 'running'] %}
+              {% set progress = j.progress if j.progress else none %}
+              {% if progress and progress.total %}
+                {% set cur = progress.current|int %}
+                {% set tot = progress.total|int %}
+                {% set pct = ((cur / tot) * 100) if tot else 0 %}
+              {% else %}
+                {% set cur = 0 %}
+                {% set tot = 0 %}
+                {% set pct = 0 %}
+              {% endif %}
+              {% set is_finalizing = is_live and tot and cur >= tot and pct >= 100 %}
+              {% set pct_display = 99 if is_finalizing else (pct|round(0)) %}
+              <tr
+                class="{% if highlight_job_id and j.id == highlight_job_id %}highlight{% endif %}"
+                data-job-id="{{ j.id }}"
+                data-live="{{ '1' if is_live else '0' }}"
+              >
+                <td>
+                  {% if j.kind == 'crawl' and j.slug %}
+                    <div><a href="/projects/{{ j.slug }}">{{ j.slug }}</a></div>
+                    <div class="muted small mono">{{ j.id[:8] }}</div>
+                  {% elif j.kind == 'autopilot' %}
+                    <div>Multi-sites</div>
+                    <div class="muted small mono">{{ j.id[:8] }}</div>
+                  {% else %}
+                    <div class="mono">{{ j.id[:8] }}</div>
+                  {% endif %}
+                </td>
+                <td><span class="pill {{ j.status }}" data-role="status">{{ j.status }}</span></td>
+                <td>
+                  <div class="muted small mono" data-role="progress-text">
+                    {% if progress and progress.total %}
+                      {% if progress.type == 'crawl' %}
+                        {% if is_finalizing %}{{ cur }}/{{ tot }} pages · finalisation…{% else %}{{ cur }}/{{ tot }} pages · {{ pct_display }}%{% endif %}
+                      {% else %}
+                        {% if is_finalizing %}{{ cur }}/{{ tot }} · finalisation…{% else %}{{ cur }}/{{ tot }} · {{ pct_display }}%{% endif %}
+                      {% endif %}
+                      {% if progress.site %}
+                        — {{ progress.site }}
+                      {% endif %}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </div>
+                  <div
+                    class="progress slim {% if progress and progress.type == 'crawl' %}crawl{% endif %}"
+                    data-role="progress-bar"
+                    {% if not (progress and progress.total) %}style="display:none;"{% endif %}
+                  >
+                    <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
+                  </div>
+                </td>
+                <td class="num mono" data-role="ts">{{ j.timestamp_label }}</td>
+                <td class="actions"><a class="btn" href="/jobs/{{ j.id }}">Ouvrir</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if jobs %}
+    <script>
+      (() => {
+        const highlight = document.querySelector("tr.highlight[data-job-id]");
+        if (highlight && highlight.scrollIntoView) {
+          highlight.scrollIntoView({ block: "center" });
+        }
+
+        const liveRows = () => Array.from(document.querySelectorAll('tr[data-job-id][data-live="1"]'));
+        if (!liveRows().length) return;
+
+        const pollMs = 1000;
+
+        function formatShortDateFromRunTs(value) {
+          if (!value || !/^\d{8}-\d{6}$/.test(value)) return null;
+          const yy = value.slice(2, 4);
+          const mm = value.slice(4, 6);
+          const dd = value.slice(6, 8);
+          return `${dd}/${mm}/${yy}`;
+        }
+
+        async function pollOne(row) {
+          const jobId = row.dataset.jobId;
+          if (!jobId) return;
+          try {
+            const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=1`, { cache: "no-store" });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            const statusEl = row.querySelector('[data-role="status"]');
+            const progressText = row.querySelector('[data-role="progress-text"]');
+            const progressBar = row.querySelector('[data-role="progress-bar"]');
+            const progressFill = row.querySelector('[data-role="progress-fill"]');
+            const tsEl = row.querySelector('[data-role="ts"]');
+
+            if (statusEl) {
+              const status = (data && data.status) ? String(data.status) : "";
+              statusEl.textContent = status;
+              statusEl.className = `pill ${status}`;
+            }
+
+            if (tsEl && data && data.result && data.result.timestamp) {
+              const d = formatShortDateFromRunTs(String(data.result.timestamp || ""));
+              if (d) tsEl.textContent = d;
+            }
+
+            const progress = data ? data.progress : null;
+            if (progressText && progressBar && progressFill && progress && progress.total) {
+              const cur = Number(progress.current || 0);
+              const tot = Number(progress.total || 0);
+              const isLive = data && (data.status === "queued" || data.status === "running");
+              const isFinalizing = isLive && tot > 0 && cur >= tot;
+              let pct = tot ? Math.round((cur / tot) * 100) : 0;
+              if (isFinalizing && pct >= 100) pct = 99;
+              progressFill.style.setProperty("--p", String(pct));
+              const base = progress.type === "crawl" ? `${cur}/${tot} pages` : `${cur}/${tot}`;
+              const suffix = isFinalizing ? " · finalisation…" : ` · ${pct}%`;
+              const label = `${base}${suffix}`;
+              const site = progress.site ? ` — ${progress.site}` : "";
+              progressText.textContent = `${label}${site}`;
+              progressBar.style.display = "";
+            } else if (progressText && progressBar) {
+              progressText.textContent = "—";
+              progressBar.style.display = "none";
+            }
+
+            if (data && (data.status === "done" || data.status === "failed")) {
+              row.dataset.live = "0";
+            }
+          } catch (_) {
+            // ignore
+          }
+        }
+
+        async function pollAll() {
+          const rows = liveRows();
+          if (!rows.length) {
+            clearInterval(timer);
+            return;
+          }
+          await Promise.all(rows.map(pollOne));
+        }
+
+        const timer = setInterval(pollAll, pollMs);
+        pollAll();
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

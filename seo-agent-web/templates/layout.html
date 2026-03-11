@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{% block title %}SEO Audit{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <a href="/" class="brand-link">SEO Audit</a>
+          <div class="brand-sub">Dashboard</div>
+        </div>
+
+        <nav class="nav">
+          <a class="nav-item {% if request.url.path == '/' %}active{% endif %}" href="/">Projets</a>
+          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">Jobs</a>
+          {% if request.state.user and request.state.user.is_admin %}
+            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation"
+              >Automation</a
+            >
+
+            <div class="nav-section">Paramètres</div>
+            <a
+              class="nav-item {% if request.url.path.startswith('/settings') %}active{% endif %}"
+              href="/settings/accounts"
+              >Comptes &amp; tokens</a
+            >
+          {% endif %}
+
+		          {% if project and project.slug %}
+		            <div class="nav-section">Site</div>
+		            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}"
+		              >Overview</a
+		            >
+		            <a
+		              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}"
+		              href="/projects/{{ project.slug }}/settings/crawl"
+		              >Paramètres crawl</a
+		            >
+		            <a
+		              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}"
+		              href="/projects/{{ project.slug }}/performance"
+		              >Performance</a
+	            >
+	            <a
+	              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks') %}active{% endif %}"
+	              href="/projects/{{ project.slug }}/backlinks"
+	              >Backlinks</a
+	            >
+	            <a
+	              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"
+	              href="/projects/{{ project.slug }}/issues"
+	              >All issues</a
+	            >
+            <a
+              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}"
+              href="/projects/{{ project.slug }}/crawls"
+              >Crawl log</a
+            >
+          {% endif %}
+        </nav>
+
+        <div class="assistant-dock" id="assistant-dock">
+          <button
+            type="button"
+            class="assistant-launcher"
+            id="assistant-toggle"
+            aria-expanded="false"
+            aria-controls="assistant-panel"
+            title="Assistant"
+          >
+            <span class="assistant-launcher-icon" aria-hidden="true">
+              <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
+            </span>
+            <span class="assistant-launcher-text">
+              <span class="assistant-launcher-title">Assistant IA</span>
+              <span class="assistant-launcher-sub">Pose une question</span>
+            </span>
+            <span class="assistant-fab-dot" id="assistant-dot" aria-hidden="true"></span>
+          </button>
+
+          <section class="assistant-panel" id="assistant-panel" hidden aria-label="Chat assistant">
+            <header class="assistant-head">
+              <div class="assistant-head-left">
+                <span class="assistant-head-icon" aria-hidden="true">
+                  <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
+                </span>
+                <div class="assistant-head-text">
+                  <div class="assistant-title">Assistant IA</div>
+                  <div class="assistant-meta" id="assistant-meta">…</div>
+                </div>
+              </div>
+              <div class="assistant-head-actions">
+                <button type="button" class="assistant-clear" id="assistant-clear" aria-label="Effacer la conversation" title="Effacer">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path
+                      d="M9 3h6m-8 4h10m-9 0 .7 14h6.6L16 7"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button type="button" class="assistant-close" id="assistant-close" aria-label="Fermer">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path
+                      d="M7 7l10 10M17 7L7 17"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </header>
+            <div class="assistant-hero" aria-hidden="true">
+              <img class="assistant-hero-img" src="/static/assistant-bot.svg" alt="" />
+            </div>
+            <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
+            <form class="assistant-form" id="assistant-form">
+              <input
+                class="assistant-input"
+                id="assistant-input"
+                type="text"
+                autocomplete="off"
+                placeholder="Pose une question…"
+                maxlength="2000"
+              />
+              <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path
+                    d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z"
+                    fill="currentColor"
+                    opacity=".95"
+                  />
+                </svg>
+              </button>
+            </form>
+            <div class="assistant-foot muted small" id="assistant-foot"></div>
+          </section>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="crumbs">
+            {% block crumbs %}
+              <a href="/">Projets</a>
+            {% endblock %}
+          </div>
+          <div class="topbar-actions">
+            {% if request.state.user %}
+              <span class="muted small">{{ request.state.user.email }}</span>
+              <form method="post" action="/auth/logout" class="inline">
+                <button type="submit" class="btn">Se déconnecter</button>
+              </form>
+            {% endif %}
+            {% block actions %}{% endblock %}
+          </div>
+        </header>
+        <div class="content">{% block content %}{% endblock %}</div>
+      </main>
+    </div>
+
+    <script>
+      window.SEO_AUDIT_ASSISTANT_CONTEXT = {{ {
+        "path": request.url.path,
+        "project": {
+          "slug": (project.slug if project and project.slug else ""),
+          "site_name": (project.site_name if project and project.site_name else ""),
+          "base_url": (project.base_url if project and project.base_url else ""),
+        }
+      } | tojson }};
+    </script>
+    <script src="/static/chatbot.js" defer></script>
+  </body>
+</html>

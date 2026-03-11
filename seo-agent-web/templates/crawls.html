@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block title %}Crawls — {{ slug }}{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  <a href="/projects/{{ slug }}">{{ slug }}</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Crawl log</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Crawl log</h1>
+    <p class="muted"><span class="mono">{{ slug }}</span></p>
+  </div>
+
+  <section class="card">
+    {% if not crawls %}
+      <p class="muted">Aucun crawl trouvé.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table class="table compact">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ts in crawls %}
+              <tr>
+                <td class="mono">{{ ts }}</td>
+                <td class="actions">
+                  <a class="btn" href="/projects/{{ slug }}?crawl={{ ts }}">Ouvrir</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}
+

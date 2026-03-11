@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Créer un compte — SEO Audit</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="content">
+      <section class="card" style="max-width: 520px; margin: 60px auto;">
+        <div class="page-header" style="margin-bottom: 14px;">
+          <h1 style="margin: 0;">Créer un compte</h1>
+          <p class="muted" style="margin: 6px 0 0;">Ton compte te permet de gérer tes projets et tes crawls.</p>
+        </div>
+
+        {% if err %}
+          <section class="card" style="margin-bottom: 12px;">
+            <div class="card-title-row">
+              <h2><span class="badge error">erreur</span></h2>
+            </div>
+            <p class="muted small" style="margin:0;">{{ err }}</p>
+          </section>
+        {% endif %}
+
+        <form method="post" action="/auth/signup">
+          <input type="hidden" name="next" value="{{ next }}" />
+
+          {% if signup_disabled %}
+            <p class="muted small" style="margin: 0 0 10px;">Inscriptions fermées.</p>
+          {% endif %}
+
+          <label>
+            Email
+            <input name="email" type="email" autocomplete="email" required value="{{ email }}" />
+          </label>
+
+          <div class="row"></div>
+
+          {% if invite_required %}
+            <label>
+              Code d’invitation
+              <input name="invite_code" type="text" autocomplete="off" value="{{ invite_code }}" />
+            </label>
+            <div class="row"></div>
+          {% endif %}
+
+          <label>
+            Mot de passe
+            <input name="password" type="password" autocomplete="new-password" required minlength="10" />
+          </label>
+          <p class="muted small" style="margin: 8px 0 0;">Minimum 10 caractères.</p>
+
+          <div class="row" style="display:flex; gap: 10px; align-items: center;">
+            <button class="btn primary" type="submit" {% if signup_disabled %}disabled{% endif %}>Créer le compte</button>
+            <a class="btn" href="/auth/login?next={{ next_q }}">J’ai déjà un compte</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

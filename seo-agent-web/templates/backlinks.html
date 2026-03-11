@@ -1,0 +1,383 @@
+{% extends "layout.html" %}
+{% block title %}Backlinks — {{ project.site_name if project else slug }}{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">Backlinks</span>
+  {% else %}
+    <span class="crumb-current">{{ slug }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block actions %}
+  {% if project %}
+    <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+      <button type="submit" class="btn primary">New crawl</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not project %}
+    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+  {% else %}
+    {% set cur = project.current %}
+    <div class="page-header">
+      <h1>Backlinks &amp; netlinking</h1>
+      <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
+    </div>
+
+    {% if err %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2><span class="badge error">erreur</span></h2>
+        </div>
+        <p class="muted small" style="margin:0;">{{ err }}</p>
+      </section>
+    {% elif msg %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2><span class="badge ok">ok</span></h2>
+        </div>
+        <p class="muted small" style="margin:0;">{{ msg }}</p>
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <form method="get" class="filters">
+        <label>
+          Crawl
+          <select name="crawl">
+            {% for ts in project.crawls %}
+              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="btn">Appliquer</button>
+      </form>
+      <p class="muted small" style="margin: 10px 0 0;">
+        Cette page combine : 1) <strong>backlinks importés</strong> (CSV GSC/Bing/Ahrefs + API Ahrefs) 2) <strong>netlinking crawl</strong> (liens internes + liens sortants).
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Importer des backlinks (CSV)</h2>
+        <a class="muted small" href="/settings/accounts">Gérer Bing / GSC</a>
+      </div>
+      <form
+        method="post"
+        action="/projects/{{ project.slug }}/backlinks/import"
+        enctype="multipart/form-data"
+        class="filters"
+        style="align-items:flex-end;"
+      >
+        <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
+        <label>
+          Source
+          <select name="source">
+            <option value="gsc">Google Search Console (export Liens)</option>
+            <option value="bing">Bing Webmaster Tools (export Backlinks)</option>
+            <option value="ahrefs">Ahrefs (export Backlinks)</option>
+          </select>
+        </label>
+        <label class="grow">
+          Fichier CSV
+          <input type="file" name="file" accept=".csv,text/csv" required />
+        </label>
+        <button type="submit" class="btn primary">Importer</button>
+      </form>
+	      <ul class="examples muted small" style="margin-top:10px;">
+	        <li>GSC : Search Console → <strong>Liens</strong> → Exporter (sites / pages / ancres).</li>
+	        <li>Bing : Webmaster Tools → Backlinks → Télécharger tout / Exporter.</li>
+	        <li>Ahrefs : Site Explorer → Backlinks / Referring domains / Anchors → Export.</li>
+	      </ul>
+	      <p class="muted small" style="margin: 10px 0 0;">
+	        <span class="badge notice">bientôt</span>
+	        Synchronisation automatique des backlinks : prochainement disponible.
+	      </p>
+	    </section>
+
+    <div class="grid two">
+      {% for src in import_sources %}
+        {% set has = (src.backlinks.total or src.domains.total or src.pages.total or src.anchors.total) %}
+        <section class="card setting-card">
+          <div class="setting-head">
+            <div>
+              <h2 class="setting-title">{{ src.label }}</h2>
+              <div class="muted small">
+                {% if src.imported_via == "api" %}
+                  Sync API ({{ cur.timestamp }})
+                {% else %}
+                  Import CSV ({{ cur.timestamp }})
+                {% endif %}
+                {% if src.key == "ahrefs" and ahrefs_plan %}
+                  · Plan : <span class="mono">{{ ahrefs_plan }}</span>
+                {% endif %}
+                {% if src.last_imported_at %}
+                  · MAJ: <span class="mono">{{ src.last_imported_at }}</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="setting-actions">
+              {% if src.key == "ahrefs" %}
+                {% if ahrefs_configured %}
+                  {% if ahrefs_can_sync %}
+                    <form method="post" action="/projects/{{ project.slug }}/backlinks/ahrefs/sync" class="inline">
+                      <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
+                      <button class="btn" type="submit">Synchroniser</button>
+                    </form>
+                  {% else %}
+                    {% if ahrefs_plan %}
+                      <span class="badge notice">API: plan insuffisant</span>
+                    {% else %}
+                      <span class="badge notice">API: indisponible</span>
+                    {% endif %}
+                  {% endif %}
+                {% else %}
+                  <span class="muted small">Import CSV (sans clé)</span>
+                {% endif %}
+              {% endif %}
+              {% if has %}
+                <span class="badge ok">ok</span>
+              {% else %}
+                <span class="badge notice">—</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="kv setting-kv">
+            <div class="kv-item">
+              <span class="muted">Domaines référents</span>
+              <div class="mono">{{ src.domains.total }}</div>
+            </div>
+            <div class="kv-item">
+              <span class="muted">Liens (domaines)</span>
+              <div class="mono">{{ src.domains.links_total }}</div>
+            </div>
+            <div class="kv-item">
+              <span class="muted">Backlinks (détails)</span>
+              <div class="mono">{{ src.backlinks.total }}</div>
+            </div>
+          </div>
+
+          {% if has %}
+            <details class="setting-details">
+              <summary>Détails</summary>
+
+              {% if src.domains.rows %}
+                <div class="table-wrap" style="margin-top:12px;">
+                  <table class="table compact">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th class="num">Links</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for r in src.domains.rows %}
+                        <tr>
+                          <td class="mono">{{ r.domain }}</td>
+                          <td class="num mono">{{ r.links }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+
+              {% if src.pages.rows %}
+                <div class="table-wrap" style="margin-top:12px;">
+                  <table class="table compact">
+                    <thead>
+                      <tr>
+                        <th>Page</th>
+                        <th class="num">Links</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for r in src.pages.rows %}
+                        <tr>
+                          <td class="mono" style="word-break: break-word;">{{ r.url }}</td>
+                          <td class="num mono">{{ r.links }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+
+              {% if src.anchors.rows %}
+                <div class="table-wrap" style="margin-top:12px;">
+                  <table class="table compact">
+                    <thead>
+                      <tr>
+                        <th>Ancre</th>
+                        <th class="num">Links</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for r in src.anchors.rows %}
+                        <tr>
+                          <td class="mono" style="word-break: break-word;">{{ r.anchor }}</td>
+                          <td class="num mono">{{ r.links }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+
+              {% if src.backlinks.rows %}
+                <div class="table-wrap" style="margin-top:12px;">
+                  <table class="table compact">
+                    <thead>
+                      <tr>
+                        <th>Source</th>
+                        <th>Target</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for r in src.backlinks.rows %}
+                        <tr>
+                          <td class="mono" style="word-break: break-word;">{{ r.source_url }}</td>
+                          <td class="mono" style="word-break: break-word;">{{ r.target_url }}</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+
+              <form method="post" action="/projects/{{ project.slug }}/backlinks/clear" style="margin-top:12px;">
+                <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
+                <input type="hidden" name="source" value="{{ src.key }}" />
+                <input type="hidden" name="kind" value="all" />
+                <button class="btn danger" type="submit" onclick="return confirm('Supprimer l\\'import {{ src.label }} pour ce crawl ?');">
+                  Supprimer l’import
+                </button>
+              </form>
+            </details>
+          {% else %}
+	            {% if src.key == "ahrefs" %}
+	              <p class="muted small" style="margin: 10px 0 0;">
+	                Pas de données Ahrefs pour ce crawl.
+	                {% if ahrefs_configured %}
+	                  {% if ahrefs_can_sync %}
+	                    Clique « Synchroniser ».
+	                  {% else %}
+	                    {% if ahrefs_plan %}
+	                      Ton plan Ahrefs ne permet pas la synchro pour ce domaine (API complète = Enterprise).
+	                    {% else %}
+	                      Impossible de vérifier le plan Ahrefs pour le moment.
+	                    {% endif %}
+	                  {% endif %}
+	                {% else %}
+	                  Importe un CSV Ahrefs via le formulaire ci-dessus (Source = Ahrefs).
+	                  <span class="muted">Pour la synchro API : <span class="mono">AHREFS_API_TOKEN</span> dans <span class="mono">.env</span> (plan Enterprise).</span>
+	                {% endif %}
+	              </p>
+	            {% else %}
+	              <p class="muted small" style="margin: 10px 0 0;">Aucun import pour ce crawl.</p>
+	            {% endif %}
+          {% endif %}
+        </section>
+      {% endfor %}
+    </div>
+
+    {% if not report_ok %}
+      <section class="card">
+        <p class="muted" style="margin: 0;">Aucun rapport pour ce crawl.</p>
+      </section>
+    {% else %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Netlinking (crawl)</h2>
+          <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">Voir issues “Links”</a>
+        </div>
+        <div class="kv">
+          <div class="kv-item">
+            <span class="muted">Pages analysées</span>
+            <strong class="mono">{{ summary.pages_total }}</strong>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Pages orphelines (0 lien entrant)</span>
+            <strong class="mono">{{ summary.orphans_total }}</strong>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Domaines externes (liens sortants)</span>
+            <strong class="mono">{{ summary.external_domains }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="card">
+          <div class="card-title-row">
+            <h2>Top pages (liens internes entrants)</h2>
+            <span class="muted small">dofollow</span>
+          </div>
+          {% if not top_incoming %}
+            <p class="muted">Aucune donnée.</p>
+          {% else %}
+            <div class="table-wrap">
+              <table class="table compact">
+                <thead>
+                  <tr>
+                    <th>Page</th>
+                    <th class="num">Liens entrants</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in top_incoming %}
+                    <tr>
+                      <td class="mono" style="word-break: break-word;">
+                        <a href="{{ r.url }}" target="_blank" rel="noreferrer">{{ r.url }}</a>
+                      </td>
+                      <td class="num mono">{{ r.count }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </section>
+
+        <section class="card">
+          <div class="card-title-row">
+            <h2>Top domaines externes (liens sortants)</h2>
+            <span class="muted small">pages</span>
+          </div>
+          {% if not top_external_domains %}
+            <p class="muted">Aucun lien externe détecté.</p>
+          {% else %}
+            <div class="table-wrap">
+              <table class="table compact">
+                <thead>
+                  <tr>
+                    <th>Domaine</th>
+                    <th class="num">Liens</th>
+                    <th class="num">Pages</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for d in top_external_domains %}
+                    <tr>
+                      <td class="mono">{{ d.domain }}</td>
+                      <td class="num mono">{{ d.links }}</td>
+                      <td class="num mono">{{ d.pages }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock %}

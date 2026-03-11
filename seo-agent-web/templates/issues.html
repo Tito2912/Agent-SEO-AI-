@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+{% block title %}Issues — {{ project.site_name if project else slug }}{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">All issues</span>
+  {% else %}
+    <span class="crumb-current">{{ slug }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block actions %}
+  {% if project %}
+    <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+      <button type="submit" class="btn primary">New crawl</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not project %}
+    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+  {% else %}
+    {% set cur = project.current %}
+    <div class="page-header">
+      <h1>All issues</h1>
+      <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
+    </div>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Plan de corrections</h2>
+        {% if fix_suggestions_meta and fix_suggestions_meta.generated_at %}
+          <span class="muted small">Généré le <span class="mono">{{ fix_suggestions_meta.generated_at }}</span></span>
+        {% endif %}
+      </div>
+      <p class="muted small">
+        Génère des recommandations actionnables pour chaque issue (priorité, actions, vérifications). Pense à valider avant déploiement.
+      </p>
+      <form method="post" action="/projects/{{ project.slug }}/fix-suggestions/generate" class="inline">
+        <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
+        <button type="submit" class="btn">Générer / rafraîchir</button>
+        {% if fix_suggestions_path %}
+          <a class="btn" href="/file?path={{ fix_suggestions_path }}">Ouvrir JSON</a>
+        {% endif %}
+      </form>
+    </section>
+
+    <section class="card">
+      <form method="get" class="filters">
+        <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
+        {% if project.compare and project.compare.timestamp %}
+          <input type="hidden" name="compare" value="{{ project.compare.timestamp }}" />
+        {% endif %}
+
+        <label>
+          Severity
+          <select name="severity">
+            <option value="" {% if not severity %}selected{% endif %}>All</option>
+            <option value="error" {% if severity == 'error' %}selected{% endif %}>error</option>
+            <option value="warning" {% if severity == 'warning' %}selected{% endif %}>warning</option>
+            <option value="notice" {% if severity == 'notice' %}selected{% endif %}>notice</option>
+          </select>
+        </label>
+
+        <label>
+          Category
+          <select name="category">
+            <option value="" {% if not category %}selected{% endif %}>All</option>
+            {% for c in categories %}
+              <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="grow">
+          Search
+          <input name="q" value="{{ q }}" placeholder="title, canonical, sitemap..." />
+        </label>
+
+        <button type="submit" class="btn">Filtrer</button>
+
+        {% set export_qs = "crawl=" ~ cur.timestamp %}
+        {% if project.compare and project.compare.timestamp %}
+          {% set export_qs = export_qs ~ "&compare=" ~ project.compare.timestamp %}
+        {% endif %}
+        {% if severity %}
+          {% set export_qs = export_qs ~ "&severity=" ~ severity %}
+        {% endif %}
+        {% if category %}
+          {% set export_qs = export_qs ~ "&category=" ~ category %}
+        {% endif %}
+        {% if q %}
+          {% set export_qs = export_qs ~ "&q=" ~ (q | urlencode) %}
+        {% endif %}
+
+        <div class="muted small" style="margin-left:auto;">
+          Exporter:
+          <a href="/projects/{{ project.slug }}/export/issues.csv?{{ export_qs }}">CSV</a>
+          · <a href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}">PDF</a>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      {% if not issues %}
+        <p class="muted">Aucune issue pour ces filtres.</p>
+      {% else %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Issue</th>
+                <th>Category</th>
+                <th>Severity</th>
+                <th class="num">Count</th>
+                <th class="num">Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in issues %}
+                <tr>
+                  <td>
+                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
+                    <div class="muted small mono">{{ it.key }}</div>
+                  </td>
+		                  <td>{{ it.category }}</td>
+		                  <td><span class="badge {{ it.severity }}">{{ it.severity }}</span></td>
+		                  <td class="num mono">
+		                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
+		                  </td>
+		                  <td class="num mono">
+	                    {% if it.change is not none %}
+	                      {% if it.change > 0 %}
+	                        <span class="delta up">+{{ it.change }}</span>
+                      {% elif it.change < 0 %}
+                        <span class="delta down">{{ it.change }}</span>
+                      {% else %}
+                        <span class="muted">0</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,82 @@
+version: 1
+
+defaults:
+  crawl:
+    max_pages: 300
+    workers: 6
+    timeout_s: 15
+    ignore_robots: false
+    allow_subdomains: false
+    include_regex: null
+    exclude_regex: null
+    user_agent: "SEOAutopilot/1.0"
+    # Ahrefs-like: vérifier aussi les ressources internes (images/js/css) pour détecter assets cassés/redirect/tailles.
+    check_resources: true
+    max_resources: 250
+  gsc:
+    min_impressions: 200
+  gsc_api:
+    enabled: false
+    days: 28
+    search_type: "web"
+
+autopilot:
+  mode: "audit-only" # audit-only | execute
+  auto_deploy: false
+
+secrets:
+  env_files:
+    - ".env"
+  required_env: []
+
+output:
+  runs_dir: "seo-runs"
+
+# Maillage inter-sites (uniquement entre tes domaines)
+interlinking:
+  enabled: true
+  min_score: 0.18
+  per_page: 2
+  max_inbound: 15
+
+# Optionnel: importer automatiquement la liste de sites depuis un CSV (comme ton export OVH).
+# Le CSV peut contenir des infos perso (contacts) : ne pas le committer.
+inventory:
+  domains_csv: "domain-YYYY-MM-DD.csv"
+  delimiter: ";"
+  domain_column: "Nom du domaine ASCII"
+  scheme: "https"
+  try_www: true
+  include_domains: []
+  exclude_domains: []
+  max_domains: 200
+
+sites:
+  - name: "Mon site"
+    base_url: "https://example.com/"
+
+    # Optionnel: si tu as le code du site (Next.js, Laravel, custom, etc.)
+    repo_path: "/chemin/vers/ton/repo"
+
+    # Optionnel: chemins vers exports CSV GSC (Performance → requêtes/pages).
+    # Tu peux utiliser des variables d’environnement: ${GSC_QUERIES_CSV}
+    gsc_csv:
+      - "${GSC_QUERIES_CSV}"
+      - "${GSC_PAGES_CSV}"
+
+    # Optionnel: récupérer automatiquement via l’API GSC (service account).
+    # Voir `references/google.md` et variable env `GOOGLE_APPLICATION_CREDENTIALS`.
+    gsc_api:
+      enabled: false
+      property_url: "https://example.com/"
+      days: 28
+      search_type: "web"
+
+    # Optionnel: commandes de déploiement (si autopilot.mode=execute et --execute).
+    deploy:
+      working_dir: "/chemin/vers/ton/repo"
+      commands:
+        - "npm ci"
+        - "npm test"
+        - "npm run build"
+        - "npm run deploy"

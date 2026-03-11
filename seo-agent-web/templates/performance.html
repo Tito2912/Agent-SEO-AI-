@@ -1,0 +1,187 @@
+{% extends "layout.html" %}
+{% block title %}Performance — {{ project.site_name if project else slug }}{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">Performance</span>
+  {% else %}
+    <span class="crumb-current">{{ slug }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block actions %}
+  {% if project %}
+    <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+      <button type="submit" class="btn primary">New crawl</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not project %}
+    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+  {% else %}
+    {% set cur = project.current %}
+    <div class="page-header">
+      <h1>Performance</h1>
+      <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
+    </div>
+
+    <section class="card">
+      <form method="get" class="filters">
+        <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
+        <label>
+          Source
+          <select name="source">
+            <option value="gsc" {% if source == 'gsc' %}selected{% endif %}>GSC</option>
+            <option value="bing" {% if source == 'bing' %}selected{% endif %}>Bing</option>
+          </select>
+        </label>
+
+        <label>
+          Dimension
+          <select name="dim">
+            <option value="query" {% if dim == 'query' %}selected{% endif %}>Queries</option>
+            <option value="page" {% if dim == 'page' %}selected{% endif %}>Pages</option>
+          </select>
+        </label>
+
+        <label>
+          Crawl
+          <select name="crawl">
+            {% for ts in project.crawls %}
+              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="grow">
+          Recherche
+          <input name="q" value="{{ q }}" placeholder="{% if dim == 'page' %}url…{% else %}mot-clé…{% endif %}" />
+        </label>
+
+        <label>
+          Tri
+          <select name="sort">
+            <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>Clicks</option>
+            <option value="impressions" {% if sort == 'impressions' %}selected{% endif %}>Impressions</option>
+            <option value="ctr" {% if sort == 'ctr' %}selected{% endif %}>CTR</option>
+            <option value="position" {% if sort == 'position' %}selected{% endif %}>Position</option>
+          </select>
+        </label>
+
+        <label>
+          Ordre
+          <select name="dir">
+            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>desc</option>
+            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>asc</option>
+          </select>
+        </label>
+
+        <button type="submit" class="btn">Appliquer</button>
+      </form>
+    </section>
+
+    {% if not perf_ok %}
+      <section class="card">
+        <p class="muted" style="margin: 0;">
+          Données {{ source|upper }} indisponibles pour ce crawl.
+          {% if source == 'gsc' %}
+            Active <span class="mono">gsc_api.enabled: true</span> dans <span class="mono">seo-autopilot.yml</span> et configure
+            <span class="mono">GOOGLE_APPLICATION_CREDENTIALS</span>.
+          {% else %}
+            Active Bing dans les paramètres du crawl et configure <span class="mono">BING_WEBMASTER_API_KEY</span> (ou renseigne les exports CSV).
+          {% endif %}
+        </p>
+      </section>
+    {% else %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Résumé</h2>
+          {% if csv_path %}
+            <a class="muted small" href="/file?path={{ csv_path }}">Télécharger CSV</a>
+          {% endif %}
+        </div>
+        <div class="kv">
+          <div class="kv-item">
+            <span class="muted">Clicks</span>
+            <strong class="mono">{{ totals.clicks }}</strong>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Impressions</span>
+            <strong class="mono">{{ totals.impressions }}</strong>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Position moyenne</span>
+            <strong class="mono">{{ "%.2f"|format(totals.avg_position or 0) }}</strong>
+          </div>
+        </div>
+
+        {% if files %}
+          <p class="muted small" style="margin: 10px 0 0;">
+            Fichiers:
+            {% for f in files %}
+              <a href="/file?path={{ f.path }}">{{ f.label }}</a>{% if not loop.last %} · {% endif %}
+            {% endfor %}
+          </p>
+        {% endif %}
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>{% if dim == 'page' %}Pages{% else %}Requêtes{% endif %}</h2>
+          <span class="muted small">{{ total_rows }} résultats</span>
+        </div>
+
+        {% if not rows %}
+          <p class="muted">Aucun résultat pour ces filtres.</p>
+        {% else %}
+          <div class="table-wrap">
+            <table class="table compact">
+              <thead>
+                <tr>
+                  <th>{% if dim == 'page' %}Page{% else %}Mot-clé{% endif %}</th>
+                  <th class="num">Clicks</th>
+                  <th class="num">Impressions</th>
+                  <th class="num">CTR</th>
+                  <th class="num">Position</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in rows %}
+                  <tr>
+                    <td><span class="mono">{{ r.keyword }}</span></td>
+                    <td class="num mono">{{ r.clicks }}</td>
+                    <td class="num mono">{{ r.impressions }}</td>
+                    <td class="num mono">{{ "%.2f"|format((r.ctr or 0) * 100) }}%</td>
+                    <td class="num mono">{{ "%.2f"|format(r.position or 0) }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        {% if pages and pages > 1 %}
+          <div class="muted small" style="display:flex; justify-content:space-between; margin-top: 10px;">
+            <span>Page {{ page }} / {{ pages }}</span>
+            <span>
+              {% if page > 1 %}
+                <a href="?crawl={{ cur.timestamp }}&source={{ source }}&dim={{ dim }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}">Précédent</a>
+              {% endif %}
+              {% if page < pages %}
+                {% if page > 1 %} · {% endif %}
+                <a href="?crawl={{ cur.timestamp }}&source={{ source }}&dim={{ dim }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}">Suivant</a>
+              {% endif %}
+            </span>
+          </div>
+        {% endif %}
+      </section>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+

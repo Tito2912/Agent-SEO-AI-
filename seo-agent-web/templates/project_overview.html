@@ -1,0 +1,710 @@
+{% extends "layout.html" %}
+{% block title %}{{ project.site_name if project else slug }} — Overview{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <span class="crumb-current">{{ project.site_name }}</span>
+  {% else %}
+    <span class="crumb-current">{{ slug }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block actions %}
+  {% if project %}
+    <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+      <button type="submit" class="btn primary">New crawl</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not project %}
+    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+  {% else %}
+    {% set cur = project.current %}
+    {% set sum = cur.summary %}
+
+    <div class="page-header">
+      <h1>{{ project.site_name }}</h1>
+      <p class="muted">{{ project.base_url }}</p>
+    </div>
+
+    {% if live_job %}
+      <section
+        class="card"
+        id="live-job-card"
+        data-job-id="{{ live_job.id }}"
+        data-created-at="{{ live_job.created_at }}"
+        data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
+      >
+        <div class="card-title-row">
+          <h2>Crawl</h2>
+          <div class="muted small">
+            <span id="live-job-ts" class="mono"></span>
+            <span id="live-job-status" class="pill {{ live_job.status }}">{{ live_job.status }}</span>
+          </div>
+        </div>
+
+        <div id="live-job-progress" class="crawl-meter" style="display:none;">
+          <div class="crawl-meter-head">
+            <div class="crawl-meter-title">Exploration des pages</div>
+            <div class="crawl-meter-count mono" id="live-job-progress-count"></div>
+          </div>
+          <div class="progress slim crawl">
+            <div class="progress-fill" id="live-job-progress-fill" style="--p: 0;"></div>
+          </div>
+          <div class="muted small" id="live-job-progress-text"></div>
+        </div>
+
+        <div class="muted small log-line" id="live-job-logline"></div>
+
+        <details class="logs-details" id="live-job-logs-details" style="display:none;">
+          <summary class="muted small">Logs</summary>
+          <pre id="live-job-stdout"></pre>
+          <pre id="live-job-stderr"></pre>
+        </details>
+
+        <p class="muted small" style="margin: 10px 0 0;">
+          <a id="live-job-jobs-link" href="/jobs">Voir dans Jobs</a>
+        </p>
+      </section>
+    {% endif %}
+
+    <section class="card">
+      <form method="get" class="filters">
+        {% if live_job %}
+          <input type="hidden" name="job" value="{{ live_job.id }}" />
+        {% endif %}
+        <label>
+          Crawl
+          <select name="crawl">
+            {% for ts in project.crawls %}
+              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          Compare
+          <select name="compare">
+            <option value="">—</option>
+            {% for ts in project.crawls %}
+              <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>
+                {{ ts }}
+              </option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="btn">Appliquer</button>
+
+        <div class="muted small">
+          Rapport: <a href="/file?path={{ cur.report_md }}">report.md</a> · <a href="/file?path={{ cur.report_json }}">report.json</a>
+          · Télécharger: <a href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">PDF</a>
+          · <a href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">CSV</a>
+        </div>
+      </form>
+    </section>
+
+    {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
+    {% if cur.used_fallback %}
+      <section class="card">
+        <p class="muted">
+          Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n’a pas encore de rapport (en cours ou interrompu).
+          Affichage du dernier crawl terminé: <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
+          <a href="/jobs">Voir les jobs</a>.
+        </p>
+      </section>
+    {% elif cur.timestamp != latest_ts %}
+      <section class="card">
+        <p class="muted">
+          Tu consultes le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier crawl disponible:
+          <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
+        </p>
+      </section>
+    {% endif %}
+
+    {% if live_job %}
+      <script>
+        (() => {
+          const card = document.getElementById("live-job-card");
+          if (!card) return;
+
+          const jobId = card.dataset.jobId;
+          if (!jobId) return;
+
+          const createdAt = Number(card.dataset.createdAt || 0);
+          const runTs = String(card.dataset.runTs || "");
+
+          const pollMs = 1000;
+          const tail = 20000;
+
+          const tsEl = document.getElementById("live-job-ts");
+          const statusEl = document.getElementById("live-job-status");
+          const progressWrap = document.getElementById("live-job-progress");
+          const progressCount = document.getElementById("live-job-progress-count");
+          const progressFill = document.getElementById("live-job-progress-fill");
+          const progressText = document.getElementById("live-job-progress-text");
+          const logLineEl = document.getElementById("live-job-logline");
+          const logsDetails = document.getElementById("live-job-logs-details");
+          const stdoutEl = document.getElementById("live-job-stdout");
+          const stderrEl = document.getElementById("live-job-stderr");
+          const jobsLink = document.getElementById("live-job-jobs-link");
+
+          if (jobsLink) jobsLink.href = `/jobs?job=${encodeURIComponent(jobId)}`;
+
+          function formatShortDateFromRunTs(value) {
+            if (!value || !/^\d{8}-\d{6}$/.test(value)) return null;
+            const yy = value.slice(2, 4);
+            const mm = value.slice(4, 6);
+            const dd = value.slice(6, 8);
+            return `${dd}/${mm}/${yy}`;
+          }
+
+          function formatShortDateFromEpochSeconds(value) {
+            if (!Number.isFinite(value) || value <= 0) return "";
+            const d = new Date(value * 1000);
+            const dd = String(d.getDate()).padStart(2, "0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const yy = String(d.getFullYear()).slice(-2);
+            return `${dd}/${mm}/${yy}`;
+          }
+
+          const initialDate = formatShortDateFromRunTs(runTs) || formatShortDateFromEpochSeconds(createdAt);
+          if (tsEl) tsEl.textContent = initialDate;
+
+          function lastNonEmptyLine(value) {
+            if (!value || typeof value !== "string") return "";
+            const lines = value.split(/\r?\n/);
+            for (let i = lines.length - 1; i >= 0; i--) {
+              const line = String(lines[i] || "").trim();
+              if (line) return line;
+            }
+            return "";
+          }
+
+          function render(data) {
+            const status = (data && data.status) ? String(data.status) : "";
+            if (statusEl) {
+              statusEl.textContent = status;
+              statusEl.className = `pill ${status}`;
+            }
+
+            const resultTs = data && data.result ? data.result.timestamp : null;
+            const dateLabel = formatShortDateFromRunTs(String(resultTs || "")) || formatShortDateFromEpochSeconds(Number(data && data.created_at));
+            if (tsEl) tsEl.textContent = dateLabel;
+
+            const progress = data ? data.progress : null;
+            if (progressWrap && progressFill && progressText && progressCount && progress && progress.total) {
+              const cur = Number(progress.current || 0);
+              const tot = Number(progress.total || 0);
+              const isLive = status === "queued" || status === "running";
+              const isFinalizing = isLive && tot > 0 && cur >= tot;
+              let pct = tot ? Math.round((cur / tot) * 100) : 0;
+              if (isFinalizing && pct >= 100) pct = 99;
+              progressFill.style.setProperty("--p", String(pct));
+              progressCount.textContent = `${cur}/${tot}`;
+              progressText.textContent = isFinalizing ? `Pages explorées : ${cur}/${tot} · finalisation…` : `Pages explorées : ${cur}/${tot}`;
+              progressWrap.style.display = "";
+            } else if (progressWrap) {
+              progressWrap.style.display = "none";
+            }
+
+            const stdout = data && typeof data.stdout === "string" ? data.stdout : "";
+            const stderr = data && typeof data.stderr === "string" ? data.stderr : "";
+            const line = lastNonEmptyLine(stdout) || lastNonEmptyLine(stderr);
+            if (logLineEl) logLineEl.textContent = line ? line : "";
+
+            if (logsDetails && stdoutEl && stderrEl) {
+              const hasLogs = Boolean(stdout || stderr);
+              logsDetails.style.display = hasLogs ? "" : "none";
+              if (hasLogs) {
+                stdoutEl.textContent = stdout;
+                stderrEl.textContent = stderr;
+              }
+            }
+          }
+
+          async function poll() {
+            try {
+              const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=${tail}`, { cache: "no-store" });
+              if (!res.ok) return;
+              const data = await res.json();
+              render(data);
+
+              if (data && data.status === "done" && data.result && data.result.project_url) {
+                window.location.href = String(data.result.project_url);
+              }
+            } catch (_) {
+              // ignore
+            }
+          }
+
+          const timer = setInterval(poll, pollMs);
+          poll();
+        })();
+      </script>
+    {% endif %}
+
+    <div class="grid">
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Crawled URLs distribution</h2>
+          <span class="muted small mono">{{ sum.urls_crawled_distribution }}</span>
+        </div>
+        {% set total = sum.urls_crawled_distribution %}
+        {% set internal = sum.pages_crawled %}
+        {% set resources = sum.resources_crawled %}
+        {% set p_internal = ( (internal / total) * 100 ) if total else 100 %}
+        <div class="chart-row">
+          <div class="donut" style="--p: {{ p_internal|round(0) }}; --c1: var(--notice); --c2: #2a364f;">
+            <div class="donut-center">
+              <div class="donut-value mono">{{ total }}</div>
+              <div class="muted small">URLs</div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>Internal <span class="mono">{{ internal }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw:#2a364f;"></span>Resources <span class="mono">{{ resources }}</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>URLs découvertes</h2>
+          <span class="muted small mono">{{ sum.urls_discovered }}</span>
+        </div>
+        {% set found_total = sum.urls_discovered %}
+        {% set crawled = sum.pages_crawled %}
+        {% set uncrawled = sum.urls_uncrawled %}
+        {% set p_crawled = ( (crawled / found_total) * 100 ) if found_total else 100 %}
+        <div class="chart-row">
+          <div class="donut" style="--p: {{ p_crawled|round(0) }}; --c1: var(--ok); --c2: #2a364f;">
+            <div class="donut-center">
+              <div class="donut-value mono">{{ crawled }}</div>
+              <div class="muted small">Crawled</div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Crawled <span class="mono">{{ crawled }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw:#2a364f;"></span>Uncrawled <span class="mono">{{ uncrawled }}</span></div>
+          </div>
+        </div>
+        <p class="muted small">URLs trouvées: <span class="mono">{{ found_total }}</span></p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Health Score</h2>
+          <span class="badge {{ 'ok' if sum.health_score >= 90 else ('warning' if sum.health_score >= 70 else 'error') }}">{{ sum.health_score }}%</span>
+        </div>
+        {% set gcolor = 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') %}
+        <div class="gauge" style="--p: {{ sum.health_score }}; --c1: {{ gcolor }}; --c2: #2a364f;">
+          <div class="gauge-inner">
+            <div class="gauge-value mono">{{ sum.health_score }}</div>
+            <div class="muted small">/ 100</div>
+          </div>
+        </div>
+        <p class="muted small">Proportion d’URLs internes sans erreurs.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Issues distribution</h2>
+          <span class="muted small mono">{{ sum.issues_total }}</span>
+        </div>
+        {% set e = sum.issues_distribution.error or 0 %}
+        {% set w = sum.issues_distribution.warning or 0 %}
+        {% set n = sum.issues_distribution.notice or 0 %}
+        {% set m = [e, w, n]|max %}
+        <div class="bars">
+          <div class="bar-row">
+            <span class="bar-label">Errors</span>
+            <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / m) * 100)|round(0) if m else 0 }};"></div></div>
+            <span class="mono">{{ e }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Warnings</span>
+            <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / m) * 100)|round(0) if m else 0 }};"></div></div>
+            <span class="mono">{{ w }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Notices</span>
+            <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / m) * 100)|round(0) if m else 0 }};"></div></div>
+            <span class="mono">{{ n }}</span>
+          </div>
+        </div>
+        <p class="muted small"><a href="/projects/{{ project.slug }}/issues">Voir toutes les issues</a></p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Error distribution</h2>
+          <span class="muted small">URLs</span>
+        </div>
+        {% set err = sum.urls_with_errors %}
+        {% set ok = sum.urls_without_errors %}
+        {% set total = (err + ok) %}
+        {% set p = ( (err / total) * 100 ) if total else 0 %}
+        <div class="chart-row">
+          <div class="donut" style="--p: {{ p|round(0) }}; --c1: var(--err); --c2: #2a364f;">
+            <div class="donut-center">
+              <div class="donut-value mono">{{ err }}</div>
+              <div class="muted small">URLs with errors</div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Avec erreurs <span class="mono">{{ err }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw:#2a364f;"></span>Sans erreurs <span class="mono">{{ ok }}</span></div>
+          </div>
+        </div>
+      </section>
+
+      {% set ps = sum.pagespeed %}
+      {% set cwv = sum.cwv %}
+      <section class="card span-2">
+        <div class="card-title-row">
+          <h2>Core Web Vitals</h2>
+          {% if ps and ps.enabled %}
+            <span class="badge sm ok">on</span>
+          {% else %}
+            <span class="badge sm notice">off</span>
+          {% endif %}
+        </div>
+
+        {% if cwv %}
+          {% set psd = cwv.page_status if cwv.page_status else {} %}
+          {% set total_psd = (psd.good or 0) + (psd.ni or 0) + (psd.poor or 0) + (psd.na or 0) %}
+          {% set score = cwv.score if cwv.score is not none else 0 %}
+          {% if score == 0 and total_psd %}
+            {% set score = ((psd.good or 0) / total_psd * 100) | round(0) %}
+          {% endif %}
+          {% set score_badge = 'ok' if score >= 90 else ('warning' if score >= 70 else 'error') %}
+          {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
+
+          <div class="chart-row">
+            <div class="donut" style="--p: {{ score }}; --c1: {{ score_color }}; --c2: #2a364f;">
+              <div class="donut-center">
+                <div class="donut-value mono">{{ score }}%</div>
+                <div class="muted small">Score</div>
+              </div>
+            </div>
+            <div class="legend">
+              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Bon <span class="mono">{{ psd.good or 0 }}</span></div>
+              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--warn);"></span>Amélioration <span class="mono">{{ psd.ni or 0 }}</span></div>
+              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Médiocre <span class="mono">{{ psd.poor or 0 }}</span></div>
+              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>N/A <span class="mono">{{ psd.na or 0 }}</span></div>
+            </div>
+          </div>
+
+          <p class="muted small">
+            Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Strategy: <span class="mono">{{ cwv.strategy }}</span>
+          </p>
+
+          <div class="table-wrap">
+            <table class="table compact">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Status</th>
+                  <th class="num">Pages affectées</th>
+                  <th class="num">Bon</th>
+                  <th class="num">Moyen</th>
+                  <th class="num">Médiocre</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for key, label, issue_key in [('lcp','LCP','cwv_lcp_pages_to_fix'), ('tbt','TBT','cwv_tbt_pages_to_fix'), ('cls','CLS','cwv_cls_pages_to_fix')] %}
+                  {% set m = cwv.metrics[key] %}
+                  {% set affected = (m.ni or 0) + (m.poor or 0) %}
+                  {% set st = 'error' if (m.poor or 0) > 0 else ('warning' if (m.ni or 0) > 0 else ('ok' if (m.good or 0) > 0 else 'notice')) %}
+                  {% set st_label = 'à corriger' if st == 'error' else ('moyen' if st == 'warning' else ('bon' if st == 'ok' else 'n/a')) %}
+                  <tr>
+                    <td><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ label }}</a></td>
+                    <td><span class="badge {{ st }}">{{ st_label }}</span></td>
+                    <td class="num mono"><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ affected }}</a></td>
+                    <td class="num mono">{{ m.good }}</td>
+                    <td class="num mono">{{ m.ni }}</td>
+                    <td class="num mono">{{ m.poor }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          {% if ps and ps.enabled %}
+            <p class="muted">PageSpeed est activé, mais aucune métrique CWV n’est disponible sur ce crawl.</p>
+          {% else %}
+            <p class="muted">Active PageSpeed pour ajouter LCP/TBT/CLS (clé `PAGESPEED_API_KEY`).</p>
+          {% endif %}
+        {% endif %}
+      </section>
+
+      {% set gsc = sum.gsc %}
+      {% set bing = sum.bing %}
+      <div class="span-all">
+        <div class="grid two">
+          <section class="card">
+            {% set gsc_days = gsc.days if gsc and gsc.days else 28 %}
+            <div class="card-title-row">
+              <h2>Google Search Console</h2>
+              <div class="card-title-actions">
+                <div class="pill-select" title="Modifier la période dans Paramètres crawl">
+                  <label>Période</label>
+                  <select class="js-period" data-target="/projects/{{ project.slug }}/settings/crawl" data-param="prefill_gsc_days" data-anchor="gsc">
+                    {% for d in [7, 28, 90] %}
+                      <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                {% if gsc and gsc.ok %}
+                  <span class="badge ok">ok</span>
+                {% elif gsc and gsc.enabled %}
+                  <span class="badge warning">on</span>
+                {% else %}
+                  <span class="badge notice">off</span>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if gsc and gsc.ok %}
+              <p class="muted small">Property: <span class="mono">{{ gsc.property }}</span></p>
+              <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
+              {% set g_ctr = (gsc.totals.avg_ctr * 100) %}
+              {% set g_pos = gsc.totals.avg_position %}
+              {% set g_pos_score = ( (50 - (g_pos if g_pos < 50 else 50)) / 50 * 100 ) if g_pos else 0 %}
+              <div class="kpi-list">
+                <div class="kpi-row">
+                  <div class="kpi-label">Clicks</div>
+                  <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
+                  <div class="mono">{{ gsc.totals.clicks }}</div>
+                </div>
+                <div class="kpi-row">
+                  <div class="kpi-label">Impressions</div>
+                  <div class="kpi-bar" style="--p: 100;"><div></div></div>
+                  <div class="mono">{{ gsc.totals.impressions }}</div>
+                </div>
+                <div class="kpi-row">
+                  <div class="kpi-label">CTR</div>
+                  <div class="kpi-bar ok" style="--p: {{ (g_ctr if g_ctr < 100 else 100)|round(0) }};"><div></div></div>
+                  <div class="mono">{{ g_ctr|round(2) }}%</div>
+                </div>
+                <div class="kpi-row">
+                  <div class="kpi-label">Avg position</div>
+                  <div class="kpi-bar warn" style="--p: {{ g_pos_score|round(0) }};"><div></div></div>
+                  <div class="mono">{{ g_pos|round(2) }}</div>
+                </div>
+              </div>
+
+              {% if gsc.url_inspection and gsc.url_inspection.enabled %}
+                <div class="issue-chips">
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}">
+                    <span class="dot error"></span>Erreurs <span class="mono">{{ gsc.url_inspection.errors }}</span>
+                  </a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}">
+                    <span class="dot warning"></span>Avertissements <span class="mono">{{ gsc.url_inspection.warnings }}</span>
+                  </a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}">
+                    <span class="dot notice"></span>Avis <span class="mono">{{ gsc.url_inspection.notices }}</span>
+                  </a>
+                </div>
+                {% if gsc.url_inspection.json %}
+                  <p class="muted small" style="margin-top: 8px;">
+                    Détails: <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a>
+                  </p>
+                {% endif %}
+              {% endif %}
+
+              {% if gsc.queries_csv or gsc.pages_csv %}
+                <p class="muted small" style="margin-top: 8px;">
+                  CSV:
+                  {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
+                  {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
+                  {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
+                </p>
+              {% endif %}
+            {% elif gsc and gsc.enabled %}
+              <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
+              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres crawl</a></p>
+            {% else %}
+              <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+            {% endif %}
+          </section>
+
+          <section class="card">
+            {% set bing_days = bing.days if bing and bing.days else 28 %}
+            <div class="card-title-row">
+              <h2>Bing Webmaster Tools</h2>
+              <div class="card-title-actions">
+                <div class="pill-select" title="Modifier la période dans Paramètres crawl">
+                  <label>Période</label>
+                  <select class="js-period" data-target="/projects/{{ project.slug }}/settings/crawl" data-param="prefill_bing_days" data-anchor="bing">
+                    {% for d in [7, 28, 90] %}
+                      <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                {% if bing and bing.ok %}
+                  <span class="badge ok">ok</span>
+                {% elif bing and bing.enabled %}
+                  <span class="badge warning">on</span>
+                {% else %}
+                  <span class="badge notice">off</span>
+                {% endif %}
+              </div>
+            </div>
+
+            {% if bing and bing.ok %}
+              {% if bing.site_url %}
+                <p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>
+              {% endif %}
+              {% if bing.start_date and bing.end_date %}
+                <p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>
+              {% endif %}
+              {% set b_ctr = (bing.totals.avg_ctr * 100) %}
+              {% set b_pos = bing.totals.avg_position %}
+              {% set b_pos_score = ( (50 - (b_pos if b_pos < 50 else 50)) / 50 * 100 ) if b_pos else 0 %}
+              <div class="kpi-list">
+                <div class="kpi-row">
+                  <div class="kpi-label">Clicks</div>
+                  <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
+                  <div class="mono">{{ bing.totals.clicks }}</div>
+                </div>
+                <div class="kpi-row">
+                  <div class="kpi-label">Impressions</div>
+                  <div class="kpi-bar" style="--p: 100;"><div></div></div>
+                  <div class="mono">{{ bing.totals.impressions }}</div>
+                </div>
+                <div class="kpi-row">
+                  <div class="kpi-label">CTR</div>
+                  <div class="kpi-bar ok" style="--p: {{ (b_ctr if b_ctr < 100 else 100)|round(0) }};"><div></div></div>
+                  <div class="mono">{{ b_ctr|round(2) }}%</div>
+                </div>
+                <div class="kpi-row">
+                  <div class="kpi-label">Avg position</div>
+                  <div class="kpi-bar warn" style="--p: {{ b_pos_score|round(0) }};"><div></div></div>
+                  <div class="mono">{{ b_pos|round(2) }}</div>
+                </div>
+              </div>
+
+              <div class="issue-chips">
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}">
+                  <span class="dot warning"></span>Crawl issues <span class="mono">{{ bing.crawl_issues.rows }}</span>
+                </a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}">
+                  <span class="dot error"></span>Blocked URLs <span class="mono">{{ bing.blocked_urls.rows }}</span>
+                </a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}">
+                  <span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span>
+                </a>
+              </div>
+
+              {% if bing.queries_csv or bing.pages_csv %}
+                <p class="muted small" style="margin-top: 8px;">
+                  CSV:
+                  {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
+                  {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
+                  {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
+                </p>
+              {% endif %}
+            {% elif bing and bing.enabled %}
+              <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
+              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres crawl</a></p>
+            {% else %}
+              <p class="muted">Active Bing pour ajouter la performance + issues.</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+            {% endif %}
+          </section>
+        </div>
+      </div>
+
+      <section class="card span-2">
+        <div class="card-title-row">
+          <h2>Top issues</h2>
+          <span class="muted small">{{ cur.label }}</span>
+        </div>
+        {% if not sum.top_issues %}
+          <p class="muted">Aucune issue détectée.</p>
+        {% else %}
+          <div class="table-wrap">
+            <table class="table compact">
+              <thead>
+                <tr>
+                  <th>Issue</th>
+                  <th>Severity</th>
+                  <th class="num">Count</th>
+                  <th class="num">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in sum.top_issues %}
+                  <tr>
+	                    <td><a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a></td>
+	                    <td><span class="badge {{ it.severity }}">{{ it.severity }}</span></td>
+	                    <td class="num mono">
+	                      <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
+	                    </td>
+	                    <td class="num mono">
+	                      {% if it.change is not none %}
+	                        {% if it.change > 0 %}
+	                          <span class="delta up">+{{ it.change }}</span>
+                        {% elif it.change < 0 %}
+                          <span class="delta down">{{ it.change }}</span>
+                        {% else %}
+                          <span class="muted">0</span>
+    {% endif %}
+
+    <script>
+      (function () {
+        const selects = document.querySelectorAll(".js-period");
+        for (const el of selects) {
+          el.addEventListener("change", () => {
+            const target = el.getAttribute("data-target") || "";
+            const param = el.getAttribute("data-param") || "";
+            const anchor = el.getAttribute("data-anchor") || "";
+            if (!target || !param) return;
+            const val = el.value;
+            const url = new URL(target, window.location.origin);
+            url.searchParams.set(param, String(val));
+            window.location.href = url.toString() + (anchor ? ("#" + anchor) : "");
+          });
+        }
+      })();
+    </script>
+                      {% else %}
+                        <span class="muted">—</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="card span-2">
+        <div class="card-title-row">
+          <h2>Health score history</h2>
+          <span class="muted small">derniers crawls</span>
+        </div>
+        {% if not project.history %}
+          <p class="muted">Aucune donnée.</p>
+        {% else %}
+          <div class="history">
+            {% for h in project.history %}
+              <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
+                <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
+                <div class="history-bar-label mono">{{ h.health_score }}</div>
+                <div class="history-bar-ts muted small">{{ h.timestamp }}</div>
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  {% endif %}
+{% endblock %}

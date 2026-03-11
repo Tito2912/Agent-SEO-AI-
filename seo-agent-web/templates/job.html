@@ -1,0 +1,381 @@
+{% extends "layout.html" %}
+{% block title %}Job — SEO Audit{% endblock %}
+
+{% block head_extra %}
+  <meta http-equiv="cache-control" content="no-store" />
+  <meta http-equiv="pragma" content="no-cache" />
+{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  <a href="/jobs">Jobs</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Job</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Job</h1>
+    <p class="muted">Exécution autopilot</p>
+  </div>
+
+      {% if not job %}
+        <section class="card"><p>Job introuvable.</p></section>
+      {% else %}
+        <section class="card">
+          <h2>{{ job.id }}</h2>
+          <p>Status: <span id="job-status-pill" class="pill {{ job.status }}">{{ job.status }}</span></p>
+
+          {% set progress = job.progress if job.progress else none %}
+          {% if progress and progress.total %}
+            {% set cur = progress.current|int %}
+            {% set tot = progress.total|int %}
+            {% set pct = ((cur / tot) * 100) if tot else 0 %}
+          {% else %}
+            {% set cur = 0 %}
+            {% set tot = 0 %}
+            {% set pct = 0 %}
+          {% endif %}
+          {% if job.status in ['queued', 'running'] and tot and cur >= tot and pct >= 100 %}
+            {% set pct = 99 %}
+          {% endif %}
+
+          <div id="job-progress" {% if not (progress and progress.total) %}style="display:none;"{% endif %}>
+            <div class="progress-row">
+              <span class="muted small" id="progress-kind">
+                {% if progress and progress.type == 'crawl' %}
+                  Crawl:
+                {% elif progress and progress.type == 'autopilot' %}
+                  Sites:
+                {% else %}
+                  Progress:
+                {% endif %}
+              </span>
+              <span class="mono" id="progress-count">
+                {% if progress and progress.type == 'crawl' %}
+                  {{ cur }}/{{ tot }} pages
+                {% else %}
+                  {{ cur }}/{{ tot }}
+                {% endif %}
+              </span>
+              <span class="muted small" id="progress-site">
+                {% if progress and progress.type == 'autopilot' and progress.site %}
+                  — {{ progress.site }}
+                {% endif %}
+              </span>
+              <span class="muted small mono" id="progress-pct">{{ pct|round(0) }}%</span>
+            </div>
+            <div id="progress-bar" class="progress {% if progress and progress.type == 'crawl' %}crawl{% endif %}">
+              <div class="progress-fill" id="progress-fill" style="--p: {{ pct|round(0) }};"></div>
+            </div>
+          </div>
+          {% if job.command %}
+            <p class="muted">Commande: <span id="job-command" class="mono">{{ job.command }}</span></p>
+          {% endif %}
+          <p id="job-returncode" {% if job.returncode is none %}style="display:none;"{% endif %}>
+            Return code: <span class="mono" id="job-returncode-val">{{ job.returncode }}</span>
+          </p>
+        </section>
+
+        <section class="card">
+          <h2>Dernier run global</h2>
+          {% if latest %}
+            <p><span class="muted">Timestamp:</span> {{ latest.timestamp }}</p>
+            {% if latest.sites_summary_md %}
+              <p class="muted">Voir: {{ latest.sites_summary_md }}</p>
+            {% endif %}
+            {% if latest.interlinking_md %}
+              <p class="muted">Voir: {{ latest.interlinking_md }}</p>
+            {% endif %}
+          {% else %}
+            <p class="muted">Pas de run global détecté.</p>
+          {% endif %}
+        </section>
+
+        <section class="card">
+          <h2>stdout</h2>
+          <pre id="job-stdout">{{ job.stdout or "" }}</pre>
+        </section>
+        <section class="card">
+          <h2>stderr</h2>
+          <pre id="job-stderr">{{ job.stderr or "" }}</pre>
+        </section>
+
+        {% set result = job.result if job.result else none %}
+        <section class="card" id="job-result" {% if not result %}style="display:none;"{% endif %}>
+          <h2>Résultat</h2>
+          <p>
+            <a
+              id="job-result-link"
+              class="btn primary"
+              href="{% if result and result.type == 'crawl' %}{{ result.project_url }}{% elif result and result.type == 'autopilot' %}/{% else %}#{% endif %}"
+            >
+              {% if result and result.type == 'crawl' %}
+                Ouvrir le dashboard du crawl
+              {% elif result and result.type == 'autopilot' %}
+                Ouvrir les projets
+              {% else %}
+                Ouvrir
+              {% endif %}
+            </a>
+            <span id="job-result-ts" class="muted small mono">{{ result.timestamp if result and result.timestamp else '' }}</span>
+          </p>
+          <p id="job-result-files" class="muted small" style="display:none;">
+            <span id="job-result-files-label">Rapport:</span>
+            <a id="job-result-md" href="#">report.md</a>
+            <span id="job-result-files-sep"> · </span>
+            <a id="job-result-json" href="#">report.json</a>
+          </p>
+        </section>
+
+        {% if corrections_plan %}
+        <section class="card">
+          <h2>Plan de Corrections Proposé</h2>
+          <p>L'agent a identifié les corrections potentielles suivantes. Vérifiez-les avant de les appliquer.</p>
+
+          <form action="/jobs/{{ job.id }}/apply-corrections" method="post">
+            <input type="hidden" name="plan_path" value="{{ corrections_plan_path }}" />
+            
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Fichier</th>
+                    <th>URL</th>
+                    <th>Problème</th>
+                    <th>Valeur Actuelle</th>
+                    <th>Suggestion IA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for correction in corrections_plan %}
+                  <tr>
+                    <td class="mono">{{ correction.file_path }}</td>
+                    <td class="mono">{{ correction.url or "" }}</td>
+                    <td><span class="badge notice">{{ correction.issue_type }}</span></td>
+                    <td><pre>{{ correction.current_value }}</pre></td>
+                    <td><pre>{{ correction.suggested_value }}</pre></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <button type="submit" class="btn primary">Appliquer les corrections</button>
+          </form>
+        </section>
+        {% endif %}
+      {% endif %}
+
+      {% if job %}
+        <p id="job-live-note" class="muted small" {% if job.status not in ['queued', 'running'] %}style="display:none;"{% endif %}>
+          Mise à jour en temps réel…
+        </p>
+          <script>
+          (() => {
+            const jobId = "{{ job.id }}";
+            const pollMs = 1000;
+            const tail = 200000;
+            const shouldAutoRedirect = (() => {
+              try {
+                const params = new URLSearchParams(window.location.search);
+                return params.get("autoredirect") === "1";
+              } catch (_) {
+                return false;
+              }
+            })();
+            let hasRedirected = false;
+
+            const statusEl = document.getElementById("job-status-pill");
+            const rcRow = document.getElementById("job-returncode");
+            const rcVal = document.getElementById("job-returncode-val");
+            const stdoutEl = document.getElementById("job-stdout");
+            const stderrEl = document.getElementById("job-stderr");
+            const liveNote = document.getElementById("job-live-note");
+
+            const resultWrap = document.getElementById("job-result");
+            const resultLink = document.getElementById("job-result-link");
+            const resultTs = document.getElementById("job-result-ts");
+            const resultFiles = document.getElementById("job-result-files");
+            const resultFilesLabel = document.getElementById("job-result-files-label");
+            const resultFilesSep = document.getElementById("job-result-files-sep");
+            const resultMd = document.getElementById("job-result-md");
+            const resultJson = document.getElementById("job-result-json");
+
+            const progressWrap = document.getElementById("job-progress");
+            const pKind = document.getElementById("progress-kind");
+            const pCount = document.getElementById("progress-count");
+            const pSite = document.getElementById("progress-site");
+            const pPct = document.getElementById("progress-pct");
+            const pBar = document.getElementById("progress-bar");
+            const pFill = document.getElementById("progress-fill");
+
+            function renderProgress(progress, status) {
+              if (!progressWrap || !pKind || !pCount || !pSite || !pPct || !pFill) return;
+              if (!progress || !progress.total) {
+                progressWrap.style.display = "none";
+                return;
+              }
+
+              const cur = Number(progress.current || 0);
+              const tot = Number(progress.total || 0);
+              const isLive = status === "queued" || status === "running";
+              const isFinalizing = isLive && tot > 0 && cur >= tot;
+              let pct = tot ? Math.round((cur / tot) * 100) : 0;
+              if (isFinalizing && pct >= 100) pct = 99;
+
+              if (progress.type === "crawl") {
+                if (pBar) pBar.classList.add("crawl");
+                pKind.textContent = "Crawl:";
+                pCount.textContent = `${cur}/${tot} pages`;
+                pSite.textContent = isFinalizing ? "— finalisation…" : "";
+              } else if (progress.type === "autopilot") {
+                if (pBar) pBar.classList.remove("crawl");
+                pKind.textContent = "Sites:";
+                pCount.textContent = `${cur}/${tot}`;
+                const site = progress.site ? `— ${progress.site}` : "";
+                pSite.textContent = isFinalizing ? `${site}${site ? " · " : "— "}finalisation…` : site;
+              } else {
+                if (pBar) pBar.classList.remove("crawl");
+                pKind.textContent = "Progress:";
+                pCount.textContent = `${cur}/${tot}`;
+                pSite.textContent = isFinalizing ? "— finalisation…" : "";
+              }
+
+              pPct.textContent = `${pct}%`;
+              pFill.style.setProperty("--p", String(pct));
+              progressWrap.style.display = "";
+            }
+
+            function render(data) {
+              const status = (data && data.status) ? String(data.status) : "";
+              if (statusEl) {
+                statusEl.textContent = status;
+                statusEl.className = `pill ${status}`;
+              }
+
+              if (liveNote) {
+                liveNote.style.display = (status === "queued" || status === "running") ? "" : "none";
+              }
+
+              if (rcRow && rcVal) {
+                if (data && data.returncode !== null && data.returncode !== undefined) {
+                  rcVal.textContent = String(data.returncode);
+                  rcRow.style.display = "";
+                } else {
+                  rcRow.style.display = "none";
+                }
+              }
+
+              renderProgress(data ? data.progress : null, status);
+
+              const result = data && data.result ? data.result : null;
+              if (resultWrap) {
+                resultWrap.style.display = result ? "" : "none";
+              }
+              if (result && resultLink) {
+                if (result.type === "crawl" && result.project_url) {
+                  resultLink.href = String(result.project_url);
+                  resultLink.textContent = "Ouvrir le dashboard du crawl";
+                } else if (result.type === "autopilot") {
+                  resultLink.href = "/";
+                  resultLink.textContent = "Ouvrir les projets";
+                }
+              }
+              if (resultTs) {
+                resultTs.textContent = (result && result.timestamp) ? String(result.timestamp) : "";
+              }
+
+              if (resultFiles && resultFilesLabel && resultMd && resultJson) {
+                const showSep = (show) => {
+                  if (!resultFilesSep) return;
+                  resultFilesSep.style.display = show ? "" : "none";
+                };
+
+                if (result && result.type === "crawl" && result.report_md && result.report_json) {
+                  resultFilesLabel.textContent = "Rapport:";
+                  resultMd.textContent = "report.md";
+                  resultJson.textContent = "report.json";
+                  resultMd.href = `/file?path=${encodeURIComponent(String(result.report_md))}`;
+                  resultJson.href = `/file?path=${encodeURIComponent(String(result.report_json))}`;
+                  showSep(true);
+                  resultJson.style.display = "";
+                  resultFiles.style.display = "";
+                } else if (result && result.type === "autopilot" && (result.sites_summary_md || result.interlinking_md)) {
+                  resultFilesLabel.textContent = "Fichiers:";
+                  if (result.sites_summary_md) {
+                    resultMd.textContent = "sites-summary.md";
+                    resultMd.href = `/file?path=${encodeURIComponent(String(result.sites_summary_md))}`;
+                    resultMd.style.display = "";
+                  } else {
+                    resultMd.style.display = "none";
+                  }
+                  if (result.interlinking_md) {
+                    resultJson.textContent = "interlinking-plan.md";
+                    resultJson.href = `/file?path=${encodeURIComponent(String(result.interlinking_md))}`;
+                    resultJson.style.display = "";
+                    showSep(result.sites_summary_md);
+                  } else {
+                    resultJson.style.display = "none";
+                    showSep(false);
+                  }
+                  resultFiles.style.display = "";
+                } else {
+                  resultFiles.style.display = "none";
+                }
+              }
+
+              if (stdoutEl && typeof data.stdout === "string") stdoutEl.textContent = data.stdout;
+              if (stderrEl && typeof data.stderr === "string") stderrEl.textContent = data.stderr;
+            }
+
+            function inferJobKind(data) {
+              const resultType = data && data.result ? data.result.type : null;
+              if (resultType === "crawl" || resultType === "autopilot") return resultType;
+
+              if (Array.isArray(data && data.command)) {
+                const cmd = data.command.join(" ").toLowerCase();
+                if (cmd.includes("seo_audit.py")) return "crawl";
+                if (cmd.includes("seo_autopilot.py")) return "autopilot";
+              }
+              return null;
+            }
+
+            function redirectTarget(data) {
+              const kind = inferJobKind(data);
+              if (kind === "crawl") {
+                const url = data && data.result ? data.result.project_url : null;
+                return url ? String(url) : null;
+              }
+              if (kind === "autopilot") return "/";
+              return null;
+            }
+
+            async function poll() {
+              try {
+                const res = await fetch(`/api/jobs/${jobId}?tail=${tail}`, { cache: "no-store" });
+                if (!res.ok) return;
+                const data = await res.json();
+                render(data);
+                if (data && (data.status === "done" || data.status === "failed")) {
+                  clearInterval(timer);
+                }
+                if (!hasRedirected && shouldAutoRedirect && data && data.status === "done") {
+                  const target = redirectTarget(data);
+                  if (target) {
+                    hasRedirected = true;
+                    window.location.href = target;
+                  }
+                }
+              } catch (_) {
+                // Ignore transient failures (server reload, network hiccup, etc.)
+              }
+            }
+
+            const timer = setInterval(poll, pollMs);
+            poll();
+          })();
+        </script>
+      {% endif %}
+{% endblock %}

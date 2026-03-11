@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SEO Agent (local)</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>SEO Agent (local)</h1>
+        <p class="muted">Dashboard minimal pour lancer l’autopilot et lire les rapports.</p>
+      </header>
+
+      <section class="card">
+        <h2>Config</h2>
+        <p><span class="muted">Repo:</span> {{ repo_root }}</p>
+        <p><span class="muted">Config:</span> {{ config_path or "seo-autopilot.yml introuvable" }}</p>
+        <form method="post" action="/run">
+          <label>Chemin config</label>
+          <input name="config_path" value="{{ config_path }}" />
+          <div class="row">
+            <label>Mode</label>
+            <div class="radios">
+              <label class="radio"><input type="radio" name="run_policy" value="verify" checked /> Vérifier (audit only)</label>
+              <label class="radio"><input type="radio" name="run_policy" value="auto" /> Déployer auto (execute)</label>
+            </div>
+            <label class="checkbox">
+              <input type="checkbox" name="confirm_auto" value="yes" />
+              Je confirme l’exécution (déploiement auto)
+            </label>
+            <p class="muted">Le mode auto n’est lancé que si le choix = auto + la case est cochée.</p>
+          </div>
+          <button type="submit">Lancer audit multi-sites</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Dernier run global</h2>
+        {% if latest %}
+          <p><span class="muted">Timestamp:</span> {{ latest.timestamp }}</p>
+          {% if latest.sites_summary_md %}
+            <p><a href="/file?path={{ latest.sites_summary_md }}">Sites summary</a></p>
+          {% endif %}
+          {% if latest.interlinking_md %}
+            <p><a href="/file?path={{ latest.interlinking_md }}">Interlinking plan</a></p>
+          {% endif %}
+          <p class="muted">Dossier: {{ latest.dir }}</p>
+        {% else %}
+          <p class="muted">Aucun run global trouvé (lance un audit).</p>
+        {% endif %}
+      </section>
+
+      <section class="card">
+        <h2>Jobs récents</h2>
+        {% if jobs %}
+          <ul>
+            {% for j in jobs %}
+              <li>
+                <a href="/jobs?job={{ j.id }}">{{ j.id }}</a>
+                <span class="pill {{ j.status }}">{{ j.status }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">Aucun job.</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

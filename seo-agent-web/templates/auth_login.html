@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Connexion — SEO Audit</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="content">
+      <section class="card" style="max-width: 520px; margin: 60px auto;">
+        <div class="page-header" style="margin-bottom: 14px;">
+          <h1 style="margin: 0;">Connexion</h1>
+          <p class="muted" style="margin: 6px 0 0;">Accède à ton espace.</p>
+        </div>
+
+        {% if err %}
+          <section class="card" style="margin-bottom: 12px;">
+            <div class="card-title-row">
+              <h2><span class="badge error">erreur</span></h2>
+            </div>
+            <p class="muted small" style="margin:0;">{{ err }}</p>
+          </section>
+        {% endif %}
+
+        <form method="post" action="/auth/login">
+          <input type="hidden" name="next" value="{{ next }}" />
+
+          <label>
+            Email
+            <input name="email" type="email" autocomplete="email" required value="{{ email }}" />
+          </label>
+
+          <div class="row"></div>
+
+          <label>
+            Mot de passe
+            <input name="password" type="password" autocomplete="current-password" required />
+          </label>
+
+          <div class="row" style="display:flex; gap: 10px; align-items: center;">
+            <button class="btn primary" type="submit">Se connecter</button>
+            <a class="btn" href="/auth/signup?next={{ next_q }}">Créer un compte</a>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
+

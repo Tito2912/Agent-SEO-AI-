@@ -1,0 +1,427 @@
+{% extends "layout.html" %}
+{% block title %}Paramètres crawl — {{ project.site_name if project else slug }}{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Site Audit</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">Paramètres crawl</span>
+  {% else %}
+    <span class="crumb-current">{{ slug }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block actions %}
+  {% if project %}
+    <a class="btn" href="/projects/{{ slug }}">Retour</a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not project %}
+    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+  {% else %}
+    <div class="page-header">
+      <h1>Paramètres crawl</h1>
+      <p class="muted">{{ project.site_name }} · <span class="mono">{{ project.base_url }}</span></p>
+    </div>
+
+    {% if err %}
+      <section class="card">
+        <div class="card-title-row"><h2><span class="badge error">erreur</span></h2></div>
+        <p class="muted small" style="margin:0;">{{ err }}</p>
+      </section>
+    {% elif msg %}
+      <section class="card">
+        <div class="card-title-row"><h2><span class="badge ok">ok</span></h2></div>
+        <p class="muted small" style="margin:0;">{{ msg }}</p>
+      </section>
+    {% endif %}
+
+    <form method="post" action="/projects/{{ slug }}/settings/crawl">
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Général</h2>
+          <span class="muted small">Appliqué aux prochains crawls</span>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Pages max à crawler
+            <input type="number" name="max_pages" min="1" max="200000" value="{{ crawl.max_pages }}" />
+          </label>
+          <label>
+            Concurrence (workers)
+            <input type="number" name="workers" min="1" max="32" value="{{ crawl.workers }}" />
+          </label>
+          <label>
+            Timeout (secondes)
+            <input type="number" name="timeout_s" min="1" max="120" step="0.5" value="{{ crawl.timeout_s }}" />
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Crawl</h2>
+          <span class="muted small">Règles de découverte</span>
+        </div>
+
+        <label class="checkbox">
+          <input type="checkbox" name="allow_subdomains" {% if crawl.allow_subdomains %}checked{% endif %} />
+          <span>Inclure les sous-domaines</span>
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" name="ignore_robots" {% if crawl.ignore_robots %}checked{% endif %} />
+          <span>Ignorer robots.txt</span>
+          <span class="badge warning">risque</span>
+        </label>
+
+        <p class="muted small" style="margin: 10px 0 0;">
+          Par défaut, le crawl respecte <span class="mono">robots.txt</span>. Active l’option “Ignorer robots.txt” uniquement si tu sais ce que tu fais.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Modules</h2>
+          <span class="muted small">Active/désactive et règle chaque source</span>
+        </div>
+
+        <div class="modules-grid">
+          <section class="module-card">
+            <div class="module-head">
+              <div class="module-title">
+                <div class="module-name">Audit de site</div>
+                <div class="muted small">Indexabilité, contenu, liens, canonicals, erreurs HTTP…</div>
+              </div>
+              <span class="badge ok">on</span>
+            </div>
+            <p class="muted small" style="margin: 8px 0 0;">Ce module est toujours activé.</p>
+          </section>
+
+          <section class="module-card">
+            <div class="module-head">
+              <label class="checkbox">
+                <input type="checkbox" name="check_resources" {% if crawl.check_resources %}checked{% endif %} />
+                <span>Ressources (CSS/JS/images)</span>
+              </label>
+              {% if crawl.check_resources %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+            </div>
+            <div class="grid two module-body">
+              <label>
+                Max ressources / type
+                <input type="number" name="max_resources" min="0" max="20000" value="{{ crawl.max_resources }}" />
+              </label>
+            </div>
+          </section>
+
+          <section class="module-card">
+            <div class="module-head">
+              <label class="checkbox">
+                <input type="checkbox" name="pagespeed" {% if crawl.pagespeed %}checked{% endif %} />
+                <span>Core Web Vitals (PageSpeed)</span>
+              </label>
+              {% if crawl.pagespeed %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+            </div>
+            <div class="grid two module-body">
+              <label>
+                Strategy
+                <select name="pagespeed_strategy">
+                  <option value="mobile" {% if crawl.pagespeed_strategy == "mobile" %}selected{% endif %}>mobile</option>
+                  <option value="desktop" {% if crawl.pagespeed_strategy == "desktop" %}selected{% endif %}>desktop</option>
+                </select>
+              </label>
+              <label>
+                Max URLs
+                <input type="number" name="pagespeed_max_urls" min="0" max="1000" value="{{ crawl.pagespeed_max_urls }}" />
+              </label>
+              <label>
+                Timeout (s)
+                <input type="number" name="pagespeed_timeout_s" min="1" max="180" step="1" value="{{ crawl.pagespeed_timeout_s }}" />
+              </label>
+              <label>
+                Workers
+                <input type="number" name="pagespeed_workers" min="1" max="10" value="{{ crawl.pagespeed_workers }}" />
+              </label>
+            </div>
+            <p class="muted small" style="margin: 8px 0 0;">
+              Nécessite <span class="mono">PAGESPEED_API_KEY</span> (sinon le module est ignoré).
+            </p>
+          </section>
+
+          <section class="module-card" id="gsc">
+            <div class="module-head">
+              <label class="checkbox">
+                <input type="checkbox" name="gsc_enabled" {% if gsc.enabled %}checked{% endif %} />
+                <span>Google Search Console (GSC)</span>
+              </label>
+              {% if gsc.enabled %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+            </div>
+
+            <div class="grid two module-body">
+              <label>
+                Période (jours)
+                <input type="number" name="gsc_days" min="1" max="365" value="{{ gsc.days }}" />
+              </label>
+              <label>
+                Min impressions (issues)
+                <input type="number" name="gsc_min_impressions" min="0" max="1000000" value="{{ gsc.min_impressions }}" />
+              </label>
+              <label>
+                Search type
+                <select name="gsc_search_type">
+                  <option value="web" {% if gsc.search_type == "web" %}selected{% endif %}>web</option>
+                  <option value="image" {% if gsc.search_type == "image" %}selected{% endif %}>image</option>
+                  <option value="video" {% if gsc.search_type == "video" %}selected{% endif %}>video</option>
+                  <option value="news" {% if gsc.search_type == "news" %}selected{% endif %}>news</option>
+                  <option value="discover" {% if gsc.search_type == "discover" %}selected{% endif %}>discover</option>
+                </select>
+              </label>
+              <label class="span-2">
+                Property (optionnel)
+                <input type="text" name="gsc_property" value="{{ gsc.property_url }}" placeholder="ex: sc-domain:example.com ou https://example.com/" />
+              </label>
+            </div>
+
+            <div class="module-divider"></div>
+
+            <div class="module-head">
+              <label class="checkbox sub">
+                <input type="checkbox" name="gsc_inspection_enabled" {% if gsc.inspection_enabled %}checked{% endif %} {% if not gsc.enabled %}disabled{% endif %} />
+                <span>Issues Google (URL Inspection)</span>
+              </label>
+            </div>
+
+            <div class="grid two module-body">
+              <label>
+                Max URLs (inspection)
+                <input type="number" name="gsc_inspection_max_urls" min="0" max="200" value="{{ gsc.inspection_max_urls }}" />
+              </label>
+              <label>
+                Timeout (s)
+                <input type="number" name="gsc_inspection_timeout_s" min="1" max="120" step="1" value="{{ gsc.inspection_timeout_s }}" />
+              </label>
+              <label class="span-2">
+                Langue (optionnel)
+                <input type="text" name="gsc_inspection_language" value="{{ gsc.inspection_language }}" placeholder="ex: fr" />
+              </label>
+            </div>
+
+            <p class="muted small" style="margin: 8px 0 0;">
+              {% if gsc_oauth and gsc_oauth.configured %}
+                {% if gsc_oauth.connected %}
+                  <span class="badge ok">OAuth connecté</span>
+                {% else %}
+                  <span class="badge notice">OAuth non connecté</span>
+                {% endif %}
+                <span style="margin-left:6px;">(<a href="{{ gsc_oauth.settings_url }}">Paramètres</a>)</span>
+                <div class="modal-actions between" style="margin-top:10px; gap:10px; align-items:center;">
+                  <a class="btn {% if gsc_oauth.connected %}{% else %}primary{% endif %}" href="/projects/{{ slug }}/gsc/oauth/connect">
+                    {% if gsc_oauth.connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
+                  </a>
+                  {% if gsc_oauth.connected %}
+                    <button
+                      type="submit"
+                      class="btn danger"
+                      formmethod="post"
+                      formaction="/projects/{{ slug }}/gsc/oauth/disconnect"
+                      onclick="return confirm('Déconnecter Google pour ce projet ?');"
+                    >
+                      Déconnecter
+                    </button>
+                  {% endif %}
+                  <button type="button" class="btn" id="gsc-oauth-test-btn">Tester</button>
+                  <span class="muted small" id="gsc-oauth-test-result"></span>
+                </div>
+              {% else %}
+                <span class="badge notice">OAuth à configurer</span>
+                <span style="margin-left:6px;">
+                  Configure <span class="mono">GOOGLE_OAUTH_CLIENT_ID</span>, <span class="mono">GOOGLE_OAUTH_CLIENT_SECRET</span>, <span class="mono">PUBLIC_BASE_URL</span> et <span class="mono">SEO_AGENT_SECRET_KEY</span> dans
+                  <a href="{{ (gsc_oauth.settings_url if gsc_oauth else '/settings/accounts') }}">Paramètres</a>.
+                </span>
+              {% endif %}
+            </p>
+          </section>
+
+          <section class="module-card" id="bing">
+            <div class="module-head">
+              <label class="checkbox">
+                <input type="checkbox" name="bing_enabled" {% if bing.enabled %}checked{% endif %} />
+                <span>Bing Webmaster Tools</span>
+              </label>
+              {% if bing.enabled %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+            </div>
+
+            <div class="grid two module-body">
+              <label>
+                Min impressions (issues)
+                <input type="number" name="bing_min_impressions" min="0" max="1000000" value="{{ bing.min_impressions }}" />
+              </label>
+              <label>
+                Période (jours)
+                <input type="number" name="bing_days" min="1" max="365" value="{{ bing.days }}" />
+              </label>
+              <label class="span-2">
+                siteUrl (optionnel)
+                <input type="text" name="bing_site_url" value="{{ bing.site_url }}" placeholder="ex: https://example.com/" />
+              </label>
+              <label>
+                UrlInfo (max URLs)
+                <input type="number" name="bing_urlinfo_max" min="0" max="50" value="{{ bing.urlinfo_max }}" />
+              </label>
+            </div>
+
+            <div class="module-divider"></div>
+
+            <label class="checkbox sub">
+              <input type="checkbox" name="bing_fetch_crawl_issues" {% if bing.fetch_crawl_issues %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
+              <span>Récupérer Crawl Issues (API)</span>
+            </label>
+            <label class="checkbox sub">
+              <input type="checkbox" name="bing_fetch_blocked_urls" {% if bing.fetch_blocked_urls %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
+              <span>Récupérer Blocked URLs (API)</span>
+            </label>
+            <label class="checkbox sub">
+              <input type="checkbox" name="bing_fetch_sitemaps" {% if bing.fetch_sitemaps %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
+              <span>Récupérer Sitemaps (API)</span>
+            </label>
+
+            <div class="grid two module-body">
+              <label class="span-2">
+                CSV queries (optionnel)
+                <input type="text" name="bing_queries_csv" value="{{ bing.queries_csv }}" placeholder="/chemin/vers/bing-queries.csv" />
+              </label>
+              <label class="span-2">
+                CSV pages (optionnel)
+                <input type="text" name="bing_pages_csv" value="{{ bing.pages_csv }}" placeholder="/chemin/vers/bing-pages.csv" />
+              </label>
+            </div>
+
+            <p class="muted small" style="margin: 8px 0 0;">
+              Utilise l’API si <span class="mono">BING_WEBMASTER_API_KEY</span> est configuré, sinon les exports CSV.
+            </p>
+          </section>
+
+          <section class="module-card">
+            <div class="module-head">
+              <label class="checkbox">
+                <input type="checkbox" name="ai_keywords" {% if crawl.ai_keywords %}checked{% endif %} />
+                <span>Recherche mots-clés IA</span>
+              </label>
+              <span class="badge notice">bientôt</span>
+            </div>
+          </section>
+
+          <section class="module-card">
+            <div class="module-head">
+              <label class="checkbox">
+                <input type="checkbox" name="backlinks_research" {% if crawl.backlinks_research %}checked{% endif %} />
+                <span>Recherche backlinks</span>
+              </label>
+              <span class="badge notice">bientôt</span>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <details class="setting-details">
+        <summary>Avancé</summary>
+        <div class="setting-form">
+          <div class="grid two">
+            <label>
+              User-Agent
+              <input type="text" name="user_agent" value="{{ crawl.user_agent }}" />
+            </label>
+
+            <label>
+              Inclure (regex)
+              <input type="text" name="include_regex" value="{{ crawl.include_regex }}" placeholder="ex: ^https://example.com/..." />
+            </label>
+
+            <label>
+              Exclure (regex)
+              <input type="text" name="exclude_regex" value="{{ crawl.exclude_regex }}" placeholder="ex: /cart|/checkout" />
+            </label>
+
+            <label>
+              Profondeur max (anti-traps)
+              <input type="number" name="max_depth" min="0" max="50" value="{{ crawl.max_depth }}" />
+            </label>
+
+            <label>
+              Délai min / host (s)
+              <input type="number" name="min_delay_s" min="0" max="10" step="0.05" value="{{ crawl.min_delay_s }}" />
+            </label>
+
+            <label class="checkbox span-2">
+              <input type="checkbox" name="respect_robots_crawl_delay" {% if crawl.respect_robots_crawl_delay %}checked{% endif %} />
+              <span>Respecter Crawl-delay (robots.txt)</span>
+            </label>
+
+            <label class="checkbox span-2">
+              <input type="checkbox" name="follow_nofollow" {% if crawl.follow_nofollow %}checked{% endif %} />
+              <span>Suivre les liens rel=nofollow/sponsored/ugc</span>
+            </label>
+
+            <label>
+              Longueur URL max
+              <input type="number" name="max_url_length" min="128" max="8192" value="{{ crawl.max_url_length }}" />
+            </label>
+
+            <label>
+              Max query params
+              <input type="number" name="max_query_params" min="0" max="100" value="{{ crawl.max_query_params }}" />
+            </label>
+
+            <label class="span-2">
+              Strip params (séparés par virgules)
+              <input type="text" name="strip_params" value="{{ (crawl.strip_params | join(', ')) if crawl.strip_params else '' }}" placeholder="ex: utm_source, utm_medium, gclid, fbclid" />
+            </label>
+
+            <label class="span-2">
+              Deny param regex
+              <input type="text" name="deny_param_regex" value="{{ crawl.deny_param_regex }}" placeholder="ex: (utm_|gclid|fbclid|ref|session|sort|filter)" />
+            </label>
+
+            <p class="muted small" style="margin: 0;">
+              Astuce: utilise “Inclure/Exclure (regex)” pour limiter le crawl (ex: blog uniquement).
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <div class="modal-actions between" style="margin-top: 12px;">
+        <a class="btn" href="/projects/{{ slug }}">Retour</a>
+        <button type="submit" class="btn primary">Enregistrer</button>
+      </div>
+    </form>
+
+    <script>
+      (() => {
+        const testBtn = document.getElementById("gsc-oauth-test-btn");
+        const out = document.getElementById("gsc-oauth-test-result");
+        async function testOauth() {
+          if (!out) return;
+          out.textContent = "Test en cours…";
+          try {
+            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, { headers: { "Accept": "application/json" }, cache: "no-store" });
+            const data = await r.json();
+            if (!data || !data.ok) {
+              out.textContent = (data && data.error) ? data.error : "Erreur GSC OAuth";
+              return;
+            }
+            const n = Array.isArray(data.properties) ? data.properties.length : 0;
+            out.textContent = `${n} propriétés accessibles.`;
+          } catch (e) {
+            out.textContent = String(e);
+          }
+        }
+        if (testBtn) testBtn.addEventListener("click", testOauth);
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

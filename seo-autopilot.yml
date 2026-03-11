@@ -1,0 +1,82 @@
+version: 1
+
+defaults:
+  crawl:
+    max_pages: 300
+    workers: 6
+    timeout_s: 15
+    ignore_robots: false
+    allow_subdomains: true
+    # Crawl traps / frontier controls
+    max_depth: 10
+    follow_nofollow: false
+    max_url_length: 2048
+    max_query_params: 12
+    strip_params: []
+    deny_param_regex: null
+    # Politeness
+    min_delay_s: 0.0
+    respect_robots_crawl_delay: false
+    include_regex: null
+    exclude_regex: null
+    user_agent: "SEOAutopilot/1.0"
+    # Ahrefs-like: vérifier aussi les ressources internes (images/js/css) pour détecter assets cassés/redirect/tailles.
+    check_resources: true
+    max_resources: 250
+    # PageSpeed (Core Web Vitals) via Google PageSpeed Insights API
+    pagespeed: true
+    pagespeed_strategy: "mobile" # mobile | desktop
+    pagespeed_max_urls: 50
+    pagespeed_timeout_s: 60
+    pagespeed_workers: 2
+  gsc:
+    min_impressions: 200
+  bing:
+    enabled: true
+    min_impressions: 200
+    days: 28
+    fetch_crawl_issues: true
+    fetch_blocked_urls: true
+    urlinfo_max: 0
+  gsc_api:
+    enabled: true
+    days: 28
+    search_type: "web"
+    inspection_enabled: true
+    inspection_max_urls: 10
+    inspection_timeout_s: 30
+    inspection_language: "fr"
+
+autopilot:
+  mode: "audit-only" # audit-only | execute
+  auto_deploy: false
+
+secrets:
+  env_files:
+    - ".env"
+    - ".env.gsc"
+    - ".env.local"
+  required_env: []
+
+output:
+  runs_dir: "seo-runs"
+
+interlinking:
+  enabled: true
+  min_score: 0.18
+  per_page: 2
+  max_inbound: 15
+
+inventory:
+  domains_csv: "domain-2025-12-29_07_29_31.csv"
+  delimiter: ";"
+  domain_column: "Nom du domaine ASCII"
+  scheme: "https"
+  include_domains: []
+  exclude_domains: []
+  max_domains: 200
+
+# Optionnel: si tu veux surcharger/configurer site par site, ajoute des entrées ici.
+sites:
+  - name: "creativeai-tools.com"
+    base_url: "https://creativeai-tools.com/"

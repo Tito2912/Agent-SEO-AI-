@@ -1,0 +1,37 @@
+.git
+.gitignore
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+venv/
+.venv/
+seo-agent-web/.venv/
+
+seo-runs/
+seo-agent-web/data/
+
+tmp-*/
+dist/
+
+.env
+.env.*
+*.skill
+gen-lang-client-*.json
+
+*.zip
+Capture d’écran*
+parity*.json
+tmp-*.json
+
+# Dev-only notes/tools/sites (not needed in image)
+agent-audit.md
+audit_report.md
+cleanup.ps1
+domains.json
+index.txt
+docs/
+tools/
+avis-invest.com/
