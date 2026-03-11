@@ -21,12 +21,24 @@ except ImportError:  # pragma: no cover
 
 ACTIVE_SUB_STATUSES: set[str] = {"active", "trialing"}
 
+PLAN_ORDER: dict[str, int] = {"free": 0, "solo": 1, "pro": 2, "business": 3}
+
 def _stripe_obj_id(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, dict):
         return str(value.get("id") or "").strip()
     return str(value or "").strip()
+
+def _stripe_to_dict(obj: Any) -> dict[str, Any]:
+    if not obj:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    try:
+        return obj.to_dict_recursive()
+    except Exception:
+        return {}
 
 
 def _env(name: str) -> str:
@@ -99,6 +111,26 @@ def plan_for_price_id(price_id: str) -> str:
         return "pro"
     if pid == _env("STRIPE_PRICE_ID_BUSINESS"):
         return "business"
+    return ""
+
+def plan_rank(plan_key: str) -> int:
+    return int(PLAN_ORDER.get(str(plan_key or "").strip().lower(), 0))
+
+
+def _stripe_subscription_item_id(stripe_subscription: dict[str, Any]) -> str:
+    items = stripe_subscription.get("items") if isinstance(stripe_subscription.get("items"), dict) else {}
+    data = items.get("data") if isinstance(items.get("data"), list) else []
+    if data and isinstance(data[0], dict):
+        return str(data[0].get("id") or "").strip()
+    return ""
+
+
+def _stripe_subscription_price_id(stripe_subscription: dict[str, Any]) -> str:
+    items = stripe_subscription.get("items") if isinstance(stripe_subscription.get("items"), dict) else {}
+    data = items.get("data") if isinstance(items.get("data"), list) else []
+    if data and isinstance(data[0], dict):
+        price = data[0].get("price") if isinstance(data[0].get("price"), dict) else {}
+        return str(price.get("id") or "").strip()
     return ""
 
 
@@ -425,6 +457,155 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str) -> str:
     return url
 
 
+def _stripe_schedule_id_for_subscription(stripe_subscription: dict[str, Any]) -> str:
+    # Stripe currently uses `schedule` on subscriptions when a schedule is attached.
+    # Keep a fallback for older/alternate payloads.
+    return _stripe_obj_id(stripe_subscription.get("schedule") or stripe_subscription.get("subscription_schedule"))
+
+
+def _release_schedule_if_any(stripe_subscription: dict[str, Any]) -> None:
+    sid = _stripe_schedule_id_for_subscription(stripe_subscription)
+    if not sid:
+        return
+    try:
+        stripe.SubscriptionSchedule.release(sid)  # type: ignore[attr-defined]
+    except Exception:
+        # If release fails (already released/canceled), keep going.
+        return
+
+
+def change_plan_now(db: Session, *, user_id: str, target_plan_key: str) -> BillingSubscription | None:
+    stripe_init()
+    if not stripe_enabled():
+        raise RuntimeError("stripe_not_configured")
+
+    uid = (user_id or "").strip()
+    pk = (target_plan_key or "").strip().lower()
+    if pk not in {"solo", "pro", "business"}:
+        raise RuntimeError("invalid_plan")
+
+    price_id = price_id_for_plan(pk)
+    if not price_id:
+        raise RuntimeError("stripe_price_missing")
+
+    sub_row = subscription_for_user(db, user_id=uid)
+    if not sub_row or str(getattr(sub_row, "status", "") or "").strip().lower() not in ACTIVE_SUB_STATUSES:
+        raise RuntimeError("no_active_subscription")
+    sub_id = str(getattr(sub_row, "stripe_subscription_id", "") or "").strip()
+    if not sub_id:
+        raise RuntimeError("missing_subscription_id")
+
+    stripe_sub = _stripe_to_dict(stripe.Subscription.retrieve(sub_id))  # type: ignore[attr-defined]
+    if not stripe_sub:
+        raise RuntimeError("stripe_subscription_retrieve_failed")
+
+    # If a schedule exists (previous downgrade), release it before doing an immediate change.
+    _release_schedule_if_any(stripe_sub)
+
+    item_id = _stripe_subscription_item_id(stripe_sub)
+    if not item_id:
+        raise RuntimeError("stripe_subscription_item_missing")
+
+    updated = stripe.Subscription.modify(  # type: ignore[attr-defined]
+        sub_id,
+        cancel_at_period_end=False,
+        proration_behavior="create_prorations",
+        items=[{"id": item_id, "price": price_id}],
+        metadata={"user_id": uid, "plan_key": pk},
+    )
+    updated_dict = _stripe_to_dict(updated)
+    if not updated_dict:
+        return sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+    return upsert_subscription(db, stripe_subscription=updated_dict)
+
+
+def schedule_plan_change_at_period_end(
+    db: Session, *, user_id: str, target_plan_key: str
+) -> tuple[BillingSubscription | None, datetime | None]:
+    """
+    Schedule a plan change at the end of the current billing period.
+    Returns (subscription_row, effective_at_datetime).
+    """
+    stripe_init()
+    if not stripe_enabled():
+        raise RuntimeError("stripe_not_configured")
+
+    uid = (user_id or "").strip()
+    pk = (target_plan_key or "").strip().lower()
+    if pk not in {"solo", "pro", "business"}:
+        raise RuntimeError("invalid_plan")
+
+    price_id = price_id_for_plan(pk)
+    if not price_id:
+        raise RuntimeError("stripe_price_missing")
+
+    sub_row = subscription_for_user(db, user_id=uid)
+    if not sub_row or str(getattr(sub_row, "status", "") or "").strip().lower() not in ACTIVE_SUB_STATUSES:
+        raise RuntimeError("no_active_subscription")
+    sub_id = str(getattr(sub_row, "stripe_subscription_id", "") or "").strip()
+    if not sub_id:
+        raise RuntimeError("missing_subscription_id")
+
+    stripe_sub = _stripe_to_dict(stripe.Subscription.retrieve(sub_id))  # type: ignore[attr-defined]
+    if not stripe_sub:
+        raise RuntimeError("stripe_subscription_retrieve_failed")
+
+    if bool(stripe_sub.get("cancel_at_period_end") or False):
+        raise RuntimeError("subscription_canceling")
+
+    current_price_id = _stripe_subscription_price_id(stripe_sub)
+    if not current_price_id:
+        raise RuntimeError("stripe_subscription_price_missing")
+
+    current_period_end = stripe_sub.get("current_period_end")
+    try:
+        cpe_ts = int(current_period_end)
+    except Exception:
+        cpe_ts = 0
+    effective_at = datetime.fromtimestamp(cpe_ts, tz=UTC) if cpe_ts > 0 else None
+    if not effective_at:
+        raise RuntimeError("stripe_subscription_period_end_missing")
+
+    # Create or retrieve schedule.
+    schedule_id = _stripe_schedule_id_for_subscription(stripe_sub)
+    schedule: dict[str, Any] = {}
+    if schedule_id:
+        schedule = _stripe_to_dict(stripe.SubscriptionSchedule.retrieve(schedule_id))  # type: ignore[attr-defined]
+    if not schedule:
+        created = stripe.SubscriptionSchedule.create(from_subscription=sub_id)  # type: ignore[attr-defined]
+        schedule = _stripe_to_dict(created)
+        schedule_id = str(schedule.get("id") or "").strip()
+    if not schedule_id:
+        raise RuntimeError("stripe_schedule_create_failed")
+
+    phases = schedule.get("phases") if isinstance(schedule.get("phases"), list) else []
+    phase0 = phases[0] if phases and isinstance(phases[0], dict) else {}
+    start_date = int(phase0.get("start_date") or stripe_sub.get("current_period_start") or 0)
+    end_date = int(phase0.get("end_date") or cpe_ts or 0)
+    if start_date <= 0 or end_date <= 0:
+        raise RuntimeError("stripe_schedule_phase_dates_missing")
+
+    stripe.SubscriptionSchedule.modify(  # type: ignore[attr-defined]
+        schedule_id,
+        end_behavior="release",
+        phases=[
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+                "items": [{"price": current_price_id, "quantity": 1}],
+            },
+            {
+                "start_date": end_date,
+                "iterations": 1,
+                "items": [{"price": price_id, "quantity": 1}],
+            },
+        ],
+    )
+
+    # Sync so we persist the `schedule` id into stripe_data (useful for future upgrades).
+    return sync_subscription_from_stripe(db, stripe_subscription_id=sub_id), effective_at
+
+
 def sync_from_checkout_session(db: Session, *, session_id: str) -> BillingSubscription | None:
     stripe_init()
     if not stripe_enabled():
@@ -433,11 +614,7 @@ def sync_from_checkout_session(db: Session, *, session_id: str) -> BillingSubscr
     if not sid:
         return None
     sess = stripe.checkout.Session.retrieve(sid)  # type: ignore[attr-defined]
-    if not isinstance(sess, dict):
-        try:
-            sess = sess.to_dict_recursive()
-        except Exception:
-            sess = {}
+    sess = _stripe_to_dict(sess)
     sub_id = _stripe_obj_id(sess.get("subscription"))
     customer_id = _stripe_obj_id(sess.get("customer"))
     meta = sess.get("metadata") if isinstance(sess.get("metadata"), dict) else {}

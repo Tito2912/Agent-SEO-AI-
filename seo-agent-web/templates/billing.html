@@ -93,17 +93,14 @@
   <div class="card">
     <div class="card-title-row">
       <h2>Changer de plan</h2>
-      <span class="muted small">Upgrade instantané</span>
+      <span class="muted small">Upgrade instantané · Downgrade fin de période</span>
     </div>
 
     {% if not stripe_ready %}
       <p class="muted">Stripe n’est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
-    {% elif subscription_active %}
-      <p class="muted">
-        Tu as déjà un abonnement actif. Pour changer de plan (upgrade/downgrade) utilise
-        <strong>Gérer l’abonnement</strong>.
-      </p>
     {% else %}
+      {% set rank = {'free': 0, 'solo': 1, 'pro': 2, 'business': 3} %}
+      {% set current_rank = rank.get(plan_key, 0) %}
       <div class="grid three">
         <div class="card">
           <div class="card-title-row">
@@ -120,7 +117,15 @@
               <form method="post" action="/billing/checkout" class="inline">
                 <input type="hidden" name="plan_key" value="solo" />
                 <button type="submit" class="btn primary" {% if plan_key == 'solo' %}disabled{% endif %}>
-                  {% if plan_key == 'solo' %}Plan actuel{% else %}Choisir Solo{% endif %}
+                  {% if plan_key == 'solo' %}
+                    Plan actuel
+                  {% elif subscription_active and rank.get('solo', 0) > current_rank %}
+                    Upgrade
+                  {% elif subscription_active %}
+                    Downgrade fin de période
+                  {% else %}
+                    Choisir Solo
+                  {% endif %}
                 </button>
               </form>
             {% else %}
@@ -144,7 +149,15 @@
               <form method="post" action="/billing/checkout" class="inline">
                 <input type="hidden" name="plan_key" value="pro" />
                 <button type="submit" class="btn primary" {% if plan_key == 'pro' %}disabled{% endif %}>
-                  {% if plan_key == 'pro' %}Plan actuel{% else %}Choisir Pro{% endif %}
+                  {% if plan_key == 'pro' %}
+                    Plan actuel
+                  {% elif subscription_active and rank.get('pro', 0) > current_rank %}
+                    Upgrade
+                  {% elif subscription_active %}
+                    Downgrade fin de période
+                  {% else %}
+                    Choisir Pro
+                  {% endif %}
                 </button>
               </form>
             {% else %}
@@ -168,7 +181,15 @@
               <form method="post" action="/billing/checkout" class="inline">
                 <input type="hidden" name="plan_key" value="business" />
                 <button type="submit" class="btn primary" {% if plan_key == 'business' %}disabled{% endif %}>
-                  {% if plan_key == 'business' %}Plan actuel{% else %}Choisir Business{% endif %}
+                  {% if plan_key == 'business' %}
+                    Plan actuel
+                  {% elif subscription_active and rank.get('business', 0) > current_rank %}
+                    Upgrade
+                  {% elif subscription_active %}
+                    Downgrade fin de période
+                  {% else %}
+                    Choisir Business
+                  {% endif %}
                 </button>
               </form>
             {% else %}

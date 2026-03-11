@@ -4883,8 +4883,15 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
             return RedirectResponse(url="/billing?msg=Tu%20es%20d%C3%A9j%C3%A0%20sur%20ce%20plan.", status_code=303)
         if sub_active and current != "free":
             try:
-                url = billing.create_billing_portal_url(db, user_id=str(user.id), email=str(user.email))
-                return RedirectResponse(url=url, status_code=303)
+                if billing.plan_rank(pk) > billing.plan_rank(current):
+                    billing.change_plan_now(db, user_id=str(user.id), target_plan_key=pk)
+                    return RedirectResponse(url=f"/billing?msg={quote('Plan mis à jour.')}", status_code=303)
+                _, effective_at = billing.schedule_plan_change_at_period_end(db, user_id=str(user.id), target_plan_key=pk)
+                if effective_at:
+                    msg = f"Downgrade planifié pour le {effective_at.strftime('%d/%m/%Y')}."
+                else:
+                    msg = "Downgrade planifié en fin de période."
+                return RedirectResponse(url=f"/billing?msg={quote(msg)}", status_code=303)
             except Exception as e:
                 return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
     try:
