@@ -570,9 +570,34 @@ def schedule_plan_change_at_period_end(
         raise RuntimeError("stripe_schedule_create_failed")
 
     phases = schedule.get("phases") if isinstance(schedule.get("phases"), list) else []
-    phase0 = phases[0] if phases and isinstance(phases[0], dict) else {}
-    start_date = int(phase0.get("start_date") or stripe_sub.get("current_period_start") or 0)
-    end_date_raw = phase0.get("end_date") or stripe_sub.get("current_period_end") or 0
+    phase_current = schedule.get("current_phase") if isinstance(schedule.get("current_phase"), dict) else {}
+    if not phase_current:
+        now_ts = int(datetime.now(UTC).timestamp())
+        for ph in phases:
+            if not isinstance(ph, dict):
+                continue
+            try:
+                s = int(ph.get("start_date") or 0)
+            except Exception:
+                continue
+            if s <= 0:
+                continue
+            end_raw = ph.get("end_date")
+            try:
+                e = int(end_raw) if end_raw is not None else 0
+            except Exception:
+                e = 0
+            if e and s <= now_ts < e:
+                phase_current = ph
+                break
+            if not e and s <= now_ts:
+                phase_current = ph
+                break
+        if not phase_current and phases and isinstance(phases[0], dict):
+            phase_current = phases[0]
+
+    start_date = int(phase_current.get("start_date") or stripe_sub.get("current_period_start") or 0)
+    end_date_raw = phase_current.get("end_date") or stripe_sub.get("current_period_end") or 0
     try:
         end_date = int(end_date_raw)
     except Exception:
