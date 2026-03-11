@@ -7,15 +7,15 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="content">
-      <section class="card" style="max-width: 520px; margin: 60px auto;">
-        <div class="page-header" style="margin-bottom: 14px;">
-          <h1 style="margin: 0;">Connexion</h1>
-          <p class="muted" style="margin: 6px 0 0;">Accède à ton espace.</p>
+    <main class="auth-shell">
+      <section class="card auth-card">
+        <div class="page-header">
+          <h1>Connexion</h1>
+          <p class="muted">Accède à ton espace.</p>
         </div>
 
         {% if err %}
-          <section class="card" style="margin-bottom: 12px;">
+          <section class="card">
             <div class="card-title-row">
               <h2><span class="badge error">erreur</span></h2>
             </div>
@@ -38,7 +38,7 @@
             <input name="password" type="password" autocomplete="current-password" required />
           </label>
 
-          <div class="row" style="display:flex; gap: 10px; align-items: center;">
+          <div class="row-actions">
             <button class="btn primary" type="submit">Se connecter</button>
             <a class="btn" href="/auth/signup?next={{ next_q }}">Créer un compte</a>
           </div>
@@ -47,4 +47,3 @@
     </main>
   </body>
 </html>
-

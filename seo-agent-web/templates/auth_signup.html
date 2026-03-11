@@ -7,15 +7,15 @@
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <main class="content">
-      <section class="card" style="max-width: 520px; margin: 60px auto;">
-        <div class="page-header" style="margin-bottom: 14px;">
-          <h1 style="margin: 0;">Créer un compte</h1>
-          <p class="muted" style="margin: 6px 0 0;">Ton compte te permet de gérer tes projets et tes crawls.</p>
+    <main class="auth-shell">
+      <section class="card auth-card">
+        <div class="page-header">
+          <h1>Créer un compte</h1>
+          <p class="muted">Ton compte te permet de gérer tes projets et tes crawls.</p>
         </div>
 
         {% if err %}
-          <section class="card" style="margin-bottom: 12px;">
+          <section class="card">
             <div class="card-title-row">
               <h2><span class="badge error">erreur</span></h2>
             </div>
@@ -51,7 +51,7 @@
           </label>
           <p class="muted small" style="margin: 8px 0 0;">Minimum 10 caractères.</p>
 
-          <div class="row" style="display:flex; gap: 10px; align-items: center;">
+          <div class="row-actions">
             <button class="btn primary" type="submit" {% if signup_disabled %}disabled{% endif %}>Créer le compte</button>
             <a class="btn" href="/auth/login?next={{ next_q }}">J’ai déjà un compte</a>
           </div>

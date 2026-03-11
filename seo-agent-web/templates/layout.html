@@ -165,7 +165,9 @@
             {% block actions %}{% endblock %}
           </div>
         </header>
-        <div class="content">{% block content %}{% endblock %}</div>
+        <div class="content">
+          <div class="content-inner">{% block content %}{% endblock %}</div>
+        </div>
       </main>
     </div>
 
