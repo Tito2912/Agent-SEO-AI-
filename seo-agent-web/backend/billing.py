@@ -557,15 +557,6 @@ def schedule_plan_change_at_period_end(
     if not current_price_id:
         raise RuntimeError("stripe_subscription_price_missing")
 
-    current_period_end = stripe_sub.get("current_period_end")
-    try:
-        cpe_ts = int(current_period_end)
-    except Exception:
-        cpe_ts = 0
-    effective_at = datetime.fromtimestamp(cpe_ts, tz=UTC) if cpe_ts > 0 else None
-    if not effective_at:
-        raise RuntimeError("stripe_subscription_period_end_missing")
-
     # Create or retrieve schedule.
     schedule_id = _stripe_schedule_id_for_subscription(stripe_sub)
     schedule: dict[str, Any] = {}
@@ -581,9 +572,15 @@ def schedule_plan_change_at_period_end(
     phases = schedule.get("phases") if isinstance(schedule.get("phases"), list) else []
     phase0 = phases[0] if phases and isinstance(phases[0], dict) else {}
     start_date = int(phase0.get("start_date") or stripe_sub.get("current_period_start") or 0)
-    end_date = int(phase0.get("end_date") or cpe_ts or 0)
+    end_date_raw = phase0.get("end_date") or stripe_sub.get("current_period_end") or 0
+    try:
+        end_date = int(end_date_raw)
+    except Exception:
+        end_date = 0
     if start_date <= 0 or end_date <= 0:
         raise RuntimeError("stripe_schedule_phase_dates_missing")
+
+    effective_at = datetime.fromtimestamp(end_date, tz=UTC)
 
     stripe.SubscriptionSchedule.modify(  # type: ignore[attr-defined]
         schedule_id,
