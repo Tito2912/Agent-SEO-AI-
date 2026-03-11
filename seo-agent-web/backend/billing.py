@@ -21,6 +21,13 @@ except ImportError:  # pragma: no cover
 
 ACTIVE_SUB_STATUSES: set[str] = {"active", "trialing"}
 
+def _stripe_obj_id(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, dict):
+        return str(value.get("id") or "").strip()
+    return str(value or "").strip()
+
 
 def _env(name: str) -> str:
     return str(os.environ.get(name) or "").strip()
@@ -425,14 +432,14 @@ def sync_from_checkout_session(db: Session, *, session_id: str) -> BillingSubscr
     sid = (session_id or "").strip()
     if not sid:
         return None
-    sess = stripe.checkout.Session.retrieve(sid, expand=["subscription"])  # type: ignore[attr-defined]
+    sess = stripe.checkout.Session.retrieve(sid)  # type: ignore[attr-defined]
     if not isinstance(sess, dict):
         try:
             sess = sess.to_dict_recursive()
         except Exception:
             sess = {}
-    sub_id = str(sess.get("subscription") or "").strip()
-    customer_id = str(sess.get("customer") or "").strip()
+    sub_id = _stripe_obj_id(sess.get("subscription"))
+    customer_id = _stripe_obj_id(sess.get("customer"))
     meta = sess.get("metadata") if isinstance(sess.get("metadata"), dict) else {}
     uid = str(meta.get("user_id") or "").strip() or str(sess.get("client_reference_id") or "").strip()
     if uid and customer_id:
@@ -466,8 +473,8 @@ def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
         return
 
     if etype == "checkout.session.completed":
-        customer_id = str(obj.get("customer") or "").strip()
-        sub_id = str(obj.get("subscription") or "").strip()
+        customer_id = _stripe_obj_id(obj.get("customer"))
+        sub_id = _stripe_obj_id(obj.get("subscription"))
         meta = obj.get("metadata") if isinstance(obj.get("metadata"), dict) else {}
         uid = str(meta.get("user_id") or "").strip() or str(obj.get("client_reference_id") or "").strip()
         if uid and customer_id:
