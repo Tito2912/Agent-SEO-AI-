@@ -618,7 +618,6 @@ def schedule_plan_change_at_period_end(
             },
             {
                 "start_date": end_date,
-                "iterations": 1,
                 "items": [{"price": price_id, "quantity": 1}],
             },
         ],
