@@ -23,6 +23,9 @@ gen-lang-client-*.json
 # Generated outputs / artifacts
 seo-runs/
 seo-agent-web/data/jobs/
+seo-agent-web/data/*.db
+seo-agent-web/data/*.sqlite
+seo-agent-web/data/*.sqlite3
 seo-agent-web/data/projects.json
 dist/*.skill
 

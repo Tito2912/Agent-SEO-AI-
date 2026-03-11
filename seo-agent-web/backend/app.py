@@ -28,7 +28,7 @@ from urllib.parse import quote, urlencode, urlsplit, urlunsplit
 
 import requests
 import yaml
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 try:
     from bs4 import BeautifulSoup  # type: ignore
@@ -54,14 +54,21 @@ except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import fix_suggestions  # type: ignore
 
+try:
+    # When running as `uvicorn backend.app:app` (recommended).
+    from . import billing as billing  # type: ignore
+except ImportError:
+    # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
+    import billing  # type: ignore
+
 
 try:
     from .db import Database  # type: ignore
-    from .models import Project, User  # type: ignore
+    from .models import JobRecord, Project, User  # type: ignore
     from . import auth as auth  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
-    from models import Project, User  # type: ignore
+    from models import JobRecord, Project, User  # type: ignore
     import auth as auth  # type: ignore
 
 
@@ -147,7 +154,7 @@ def _job_lock(job_id: str) -> threading.Lock:
     with _JOB_LOCKS_GUARD:
         lock = _JOB_LOCKS.get(job_id)
         if lock is None:
-            lock = threading.Lock()
+            lock = threading.RLock()
             _JOB_LOCKS[job_id] = lock
         return lock
 
@@ -2578,6 +2585,7 @@ class Job:
     id: str
     status: str  # queued | running | done | failed
     created_at: float
+    updated_at: float | None = None
     started_at: float | None = None
     finished_at: float | None = None
     pid: int | None = None
@@ -2588,41 +2596,140 @@ class Job:
     stderr: str | None = None
     progress: dict[str, Any] | None = None
     result: dict[str, Any] | None = None
+    attempts: int = 0
+    max_attempts: int = 1
+    run_after: float | None = None
+    worker_id: str | None = None
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False, indent=2)
 
 
 def _job_path(job_id: str) -> Path:
+    # Legacy (file-based jobs). Still used as a fallback import path for older deployments.
     return JOBS_DIR / f"{job_id}.json"
 
 
 def _save_job(job: Job) -> None:
-    # Atomic write to avoid partial reads while a job is being updated (polling can hit mid-write).
     lock = _job_lock(job.id)
     with lock:
-        path = _job_path(job.id)
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        payload = job.to_json() + "\n"
-        try:
-            tmp_path.write_text(payload, encoding="utf-8")
-            os.replace(tmp_path, path)
-        except Exception:
-            # Best-effort fallback (still protected by lock to avoid corrupt reads in this process).
-            path.write_text(payload, encoding="utf-8")
+        now = time.time()
+        if job.updated_at is None:
+            job.updated_at = now
+        else:
+            job.updated_at = now
+
+        result = job.result if isinstance(job.result, dict) else {}
+        owner_id = str(result.get("user_id") or "").strip()
+        slug = str(result.get("slug") or "").strip()
+        kind = str(result.get("type") or "").strip().lower()
+        if not kind:
+            kind = _job_kind_from_command(job.command) or ""
+
+        with DB.session() as db:
+            row = db.get(JobRecord, str(job.id))
+            if row is None:
+                if not owner_id:
+                    # Cannot create a DB job without an owner (FK). Keep it in-memory only.
+                    return
+                row = JobRecord(
+                    id=str(job.id),
+                    owner_user_id=owner_id,
+                    slug=slug,
+                    kind=kind,
+                    status=str(job.status),
+                    created_at=float(job.created_at),
+                    updated_at=float(job.updated_at or now),
+                    started_at=job.started_at,
+                    finished_at=job.finished_at,
+                    pid=job.pid,
+                    config_path=job.config_path,
+                    command=job.command,
+                    returncode=job.returncode,
+                    stdout=job.stdout,
+                    stderr=job.stderr,
+                    progress=job.progress,
+                    result=result if isinstance(result, dict) else None,
+                    attempts=int(job.attempts or 0),
+                    max_attempts=int(job.max_attempts or 1),
+                    run_after=job.run_after,
+                    worker_id=job.worker_id,
+                )
+                db.add(row)
+                db.commit()
+                return
+
+            # Update existing row.
+            if owner_id:
+                row.owner_user_id = owner_id
+            if slug:
+                row.slug = slug
+            if kind:
+                row.kind = kind
+            row.status = str(job.status)
+            row.updated_at = float(job.updated_at or now)
+            row.created_at = float(job.created_at)
+            row.started_at = job.started_at
+            row.finished_at = job.finished_at
+            row.pid = job.pid
+            row.config_path = job.config_path
+            row.command = job.command
+            row.returncode = job.returncode
+            row.stdout = job.stdout
+            row.stderr = job.stderr
+            row.progress = job.progress
+            row.result = result if isinstance(result, dict) else None
+            row.attempts = int(job.attempts or 0)
+            row.max_attempts = int(job.max_attempts or 1)
+            row.run_after = job.run_after
+            row.worker_id = job.worker_id
+            db.add(row)
+            db.commit()
 
 
 def _load_job(job_id: str) -> Job | None:
-    path = _job_path(job_id)
+    jid = str(job_id or "").strip()
+    if not jid:
+        return None
+    with DB.session() as db:
+        row = db.get(JobRecord, jid)
+        if row:
+            return Job(
+                id=str(row.id),
+                status=str(row.status),
+                created_at=float(row.created_at),
+                updated_at=float(row.updated_at) if row.updated_at is not None else None,
+                started_at=row.started_at,
+                finished_at=row.finished_at,
+                pid=row.pid,
+                config_path=row.config_path,
+                command=row.command,
+                returncode=row.returncode,
+                stdout=row.stdout,
+                stderr=row.stderr,
+                progress=row.progress,
+                result=row.result,
+                attempts=int(row.attempts or 0),
+                max_attempts=int(row.max_attempts or 1),
+                run_after=row.run_after,
+                worker_id=row.worker_id,
+            )
+
+    # Legacy fallback (older deployments).
+    path = _job_path(jid)
     if not path.exists():
         return None
-    lock = _job_lock(job_id)
+    lock = _job_lock(jid)
     with lock:
-        # A job file can be replaced while being polled; retry briefly to avoid 500s in the UI.
         for attempt in range(3):
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-                return Job(**data)
+                job = Job(**data)
+                try:
+                    _save_job(job)
+                except Exception:
+                    pass
+                return job
             except json.JSONDecodeError:
                 if attempt == 2:
                     return None
@@ -2632,17 +2739,314 @@ def _load_job(job_id: str) -> Job | None:
 
 
 def _list_jobs(limit: int = 25) -> list[Job]:
-    items: list[tuple[float, Job]] = []
-    for path in JOBS_DIR.glob("*.json"):
+    with DB.session() as db:
+        rows = list(db.scalars(select(JobRecord).order_by(JobRecord.created_at.desc()).limit(int(limit))))
+
+    jobs: list[Job] = []
+    for row in rows:
+        job = Job(
+            id=str(row.id),
+            status=str(row.status),
+            created_at=float(row.created_at),
+            updated_at=float(row.updated_at) if row.updated_at is not None else None,
+            started_at=row.started_at,
+            finished_at=row.finished_at,
+            pid=row.pid,
+            config_path=row.config_path,
+            command=row.command,
+            returncode=row.returncode,
+            stdout=row.stdout,
+            stderr=row.stderr,
+            progress=row.progress,
+            result=row.result,
+            attempts=int(row.attempts or 0),
+            max_attempts=int(row.max_attempts or 1),
+            run_after=row.run_after,
+            worker_id=row.worker_id,
+        )
+        _finalize_stale_job(job)
+        jobs.append(job)
+    return jobs
+
+
+_WORKER_STOP = threading.Event()
+_WORKER_STARTED_GUARD = threading.Lock()
+_WORKER_STARTED = False
+_WORKER_THREADS: list[threading.Thread] = []
+
+
+def _worker_enabled() -> bool:
+    return not _env_bool("SEO_AGENT_DISABLE_WORKER")
+
+
+def _worker_concurrency() -> int:
+    raw = str(os.environ.get("SEO_AGENT_WORKER_CONCURRENCY") or "").strip()
+    try:
+        v = int(raw) if raw else 1
+    except Exception:
+        v = 1
+    return max(1, min(4, v))
+
+
+def _claim_next_job_id(*, worker_id: str) -> str | None:
+    now = time.time()
+    with DB.session() as db:
+        q = (
+            select(JobRecord.id)
+            .where(JobRecord.status == "queued")
+            .where((JobRecord.run_after == None) | (JobRecord.run_after <= now))  # noqa: E711
+            .order_by(JobRecord.created_at.asc())
+            .limit(1)
+        )
         try:
-            job = Job(**json.loads(path.read_text(encoding="utf-8")))
-            # Opportunistic cleanup: if the server restarted mid-run, jobs can remain stuck as "running".
-            _finalize_stale_job(job)
-            items.append((job.created_at, job))
+            q = q.with_for_update(skip_locked=True)
         except Exception:
+            pass
+
+        jid = db.scalar(q)
+        if not jid:
+            return None
+
+        res = db.execute(
+            update(JobRecord)
+            .where(JobRecord.id == str(jid), JobRecord.status == "queued")
+            .values(
+                status="running",
+                started_at=now,
+                updated_at=now,
+                worker_id=str(worker_id),
+                attempts=(JobRecord.attempts + 1),
+            )
+        )
+        if getattr(res, "rowcount", 0) != 1:
+            db.rollback()
+            return None
+        db.commit()
+        return str(jid)
+
+
+def _execute_queued_job(job_id: str) -> None:
+    job = _load_job(job_id)
+    if not job:
+        return
+    result = job.result if isinstance(job.result, dict) else {}
+    jtype = str(result.get("type") or "").strip().lower()
+
+    if jtype == "crawl":
+        user_id = str(result.get("user_id") or "").strip()
+        slug = str(result.get("slug") or "").strip()
+        cfg = Path(job.config_path).expanduser() if job.config_path else None
+        if cfg and not cfg.is_absolute():
+            cfg = (REPO_ROOT / cfg).resolve()
+        _run_crawl_job(job.id, user_id, slug, cfg)
+        return
+
+    if jtype == "autopilot":
+        cfg = Path(job.config_path).expanduser() if job.config_path else None
+        if not cfg:
+            job.status = "failed"
+            job.returncode = 2
+            job.stderr = (job.stderr or "") + "\n[WORKER] Missing config_path\n"
+            job.finished_at = time.time()
+            _save_job(job)
+            return
+        if not cfg.is_absolute():
+            cfg = (REPO_ROOT / cfg).resolve()
+        extra_args = result.get("extra_args") if isinstance(result, dict) else None
+        extra = extra_args if isinstance(extra_args, list) and all(isinstance(x, str) for x in extra_args) else None
+        _run_autopilot_job(job.id, cfg, extra)
+        return
+
+    job.status = "failed"
+    job.returncode = 2
+    job.stderr = (job.stderr or "") + f"\n[WORKER] Unknown job type: {jtype or 'unknown'}\n"
+    job.finished_at = time.time()
+    _save_job(job)
+
+
+def _job_worker_loop(worker_id: str) -> None:
+    while not _WORKER_STOP.is_set():
+        try:
+            jid = _claim_next_job_id(worker_id=worker_id)
+        except Exception as e:
+            print(f"[WORKER] claim error: {type(e).__name__}: {e}")
+            _WORKER_STOP.wait(1.0)
             continue
-    items.sort(key=lambda x: x[0], reverse=True)
-    return [j for _t, j in items[:limit]]
+
+        if not jid:
+            _WORKER_STOP.wait(1.0)
+            continue
+
+        try:
+            _execute_queued_job(jid)
+        except Exception as e:
+            try:
+                job = _load_job(jid)
+                if job:
+                    job.status = "failed"
+                    job.returncode = job.returncode if job.returncode is not None else 1
+                    job.stderr = _trim_log((job.stderr or "") + f"\n[WORKER] {type(e).__name__}: {e}\n")
+                    job.finished_at = time.time()
+                    _save_job(job)
+            except Exception:
+                pass
+
+
+def _start_job_worker() -> None:
+    global _WORKER_STARTED
+    if not _worker_enabled():
+        return
+    with _WORKER_STARTED_GUARD:
+        if _WORKER_STARTED:
+            return
+        _WORKER_STARTED = True
+        base = uuid.uuid4().hex[:8]
+        n = _worker_concurrency()
+        for idx in range(n):
+            wid = f"{base}-{idx+1}"
+            t = threading.Thread(target=_job_worker_loop, args=(wid,), daemon=True)
+            t.start()
+            _WORKER_THREADS.append(t)
+
+
+_RETENTION_STARTED_GUARD = threading.Lock()
+_RETENTION_STARTED = False
+
+
+def _env_int(name: str, default: int = 0) -> int:
+    raw = str(os.environ.get(name) or "").strip()
+    if not raw:
+        return int(default)
+    try:
+        return int(raw)
+    except Exception:
+        return int(default)
+
+
+def _retention_cutoff_s(*, days_env: str) -> float | None:
+    days = _env_int(days_env, 0)
+    if days <= 0:
+        return None
+    return time.time() - (float(days) * 86400.0)
+
+
+def _cleanup_old_jobs() -> None:
+    cutoff = _retention_cutoff_s(days_env="SEO_AGENT_JOBS_RETENTION_DAYS")
+    if cutoff is None:
+        return
+    try:
+        with DB.session() as db:
+            rows = db.execute(
+                select(JobRecord.id).where(
+                    JobRecord.created_at < float(cutoff),
+                    JobRecord.status.in_(["done", "failed", "canceled"]),
+                )
+            ).all()
+            if not rows:
+                return
+            ids = [str(r[0]) for r in rows if r and r[0]]
+            if not ids:
+                return
+            db.execute(update(JobRecord).where(JobRecord.id.in_(ids)).values(stdout=None, stderr=None, progress=None))
+            db.commit()
+    except Exception as e:
+        print(f"[RETENTION] jobs cleanup error: {type(e).__name__}: {e}")
+
+
+def _cleanup_old_runs() -> None:
+    cutoff = _retention_cutoff_s(days_env="SEO_AGENT_RUNS_RETENTION_DAYS")
+    if cutoff is None:
+        return
+    root = DEFAULT_RUNS_DIR
+    if not root.exists() or not root.is_dir():
+        return
+
+    cutoff_dt = datetime.fromtimestamp(float(cutoff))
+
+    def _is_old_ts(name: str) -> bool:
+        try:
+            dt = dash.parse_timestamp(name)
+            return bool(dt and dt < cutoff_dt)
+        except Exception:
+            return False
+
+    removed = 0
+    try:
+        for user_dir in root.iterdir():
+            if not user_dir.is_dir():
+                continue
+            for slug_dir in user_dir.iterdir():
+                if not slug_dir.is_dir():
+                    continue
+                for run_dir in slug_dir.iterdir():
+                    if not run_dir.is_dir():
+                        continue
+                    if _is_old_ts(run_dir.name):
+                        try:
+                            shutil.rmtree(str(run_dir))
+                            removed += 1
+                        except Exception:
+                            continue
+    except Exception as e:
+        print(f"[RETENTION] runs cleanup error: {type(e).__name__}: {e}")
+        return
+
+    if removed:
+        print(f"[RETENTION] removed runs: {removed}")
+
+
+def _retention_loop() -> None:
+    # Run quickly on boot, then every few hours.
+    while not _WORKER_STOP.is_set():
+        _cleanup_old_jobs()
+        _cleanup_old_runs()
+        _WORKER_STOP.wait(float(os.getenv("SEO_AGENT_RETENTION_EVERY_SECONDS", "21600")))  # 6h
+
+
+def _start_retention() -> None:
+    global _RETENTION_STARTED
+    if _retention_cutoff_s(days_env="SEO_AGENT_JOBS_RETENTION_DAYS") is None and _retention_cutoff_s(
+        days_env="SEO_AGENT_RUNS_RETENTION_DAYS"
+    ) is None:
+        return
+    with _RETENTION_STARTED_GUARD:
+        if _RETENTION_STARTED:
+            return
+        _RETENTION_STARTED = True
+        t = threading.Thread(target=_retention_loop, daemon=True)
+        t.start()
+
+
+_SENTRY_READY = False
+
+
+def _init_sentry() -> None:
+    global _SENTRY_READY
+    if _SENTRY_READY:
+        return
+    dsn = _safe_env("SENTRY_DSN")
+    if not dsn:
+        return
+    try:
+        import sentry_sdk  # type: ignore
+        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware  # type: ignore
+
+        raw_rate = str(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.05"))
+        try:
+            rate = float(raw_rate)
+        except Exception:
+            rate = 0.05
+
+        sentry_sdk.init(
+            dsn=dsn,
+            traces_sample_rate=max(0.0, min(1.0, rate)),
+            environment=str(os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RENDER_SERVICE_NAME") or "prod"),
+            release=str(os.getenv("RENDER_GIT_COMMIT") or ""),
+        )
+        app.add_middleware(SentryAsgiMiddleware)  # type: ignore[name-defined]
+        _SENTRY_READY = True
+    except Exception as e:
+        print(f"[SENTRY] init error: {type(e).__name__}: {e}")
 
 
 _LOG_LIMIT_CHARS = 200_000
@@ -2765,6 +3169,85 @@ def _normalize_completed_job(job: Job) -> None:
         job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
 
 
+def _finalize_crawl_billing_after_stale(job: Job, *, actual_pages_crawled: int | None) -> None:
+    """
+    Best-effort billing reconciliation for crawl jobs finalized by `_finalize_stale_job`.
+
+    Normal flow:
+      - enqueue reserves `quota_reserved_pages` (usage +planned)
+      - `_run_crawl_job` refunds/adjusts based on actual pages crawled in finally block
+
+    When a server crashes/restarts mid-run, the finally block may never run. This keeps quotas consistent.
+    """
+    try:
+        result = job.result if isinstance(job.result, dict) else {}
+        if not isinstance(result, dict):
+            return
+        if str(result.get("type") or "").strip().lower() != "crawl":
+            return
+
+        if bool(result.get("skip_billing") or False):
+            return
+
+        owner_id = str(result.get("user_id") or "").strip()
+        if not owner_id:
+            return
+        slug = str(result.get("slug") or "").strip()
+
+        try:
+            reserved_pages = int(result.get("quota_reserved_pages") or 0)
+        except Exception:
+            reserved_pages = 0
+
+        if job.status == "done":
+            if not isinstance(actual_pages_crawled, int) or actual_pages_crawled < 0:
+                return
+            if reserved_pages > 0:
+                delta = int(actual_pages_crawled) - int(reserved_pages)
+                if delta != 0:
+                    with DB.session() as db:
+                        billing.usage_add(
+                            db,
+                            user_id=owner_id,
+                            metric="pages_crawled_month",
+                            amount=int(delta),
+                            meta={
+                                "kind": "crawl_adjust_stale",
+                                "job_id": str(job.id),
+                                "slug": slug,
+                                "reserved_pages": int(reserved_pages),
+                                "actual_pages_crawled": int(actual_pages_crawled),
+                            },
+                        )
+            elif actual_pages_crawled > 0:
+                with DB.session() as db:
+                    billing.usage_add(
+                        db,
+                        user_id=owner_id,
+                        metric="pages_crawled_month",
+                        amount=int(actual_pages_crawled),
+                        meta={"kind": "crawl_usage_stale", "job_id": str(job.id), "slug": slug},
+                    )
+            return
+
+        if reserved_pages > 0:
+            with DB.session() as db:
+                billing.usage_add(
+                    db,
+                    user_id=owner_id,
+                    metric="pages_crawled_month",
+                    amount=-int(reserved_pages),
+                    meta={"kind": "crawl_refund_stale", "job_id": str(job.id), "slug": slug},
+                )
+            try:
+                result["quota_reserved_pages"] = 0
+                job.result = result
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"[BILLING] stale billing reconcile error: {type(e).__name__}: {e}")
+
+
 def _finalize_stale_job(job: Job) -> bool:
     """
     Best-effort: finalize jobs that are marked running/queued but have finished artifacts on disk.
@@ -2772,195 +3255,236 @@ def _finalize_stale_job(job: Job) -> bool:
     This happens when the server (uvicorn reload / crash) is restarted while a subprocess keeps running
     or has already completed, leaving the job JSON stuck.
     """
-    if job.status not in {"queued", "running"}:
+    if job.status not in {"queued", "running", "cancel_requested"}:
         return False
     # Do not interfere with jobs launched by this server process.
     if _is_job_active(job.id):
         return False
-    kind = _job_kind_from_command(job.command)
-    if kind == "autopilot":
-        started_at = job.started_at or job.created_at or 0.0
-        age_s = max(0.0, time.time() - float(started_at))
-        stale_after_s = float(os.getenv("SEO_AGENT_STALE_AUTOPILOT_JOB_SECONDS", "3600"))  # 1h
-        if _pid_is_alive(job.pid):
-            return False
-        if age_s < stale_after_s:
-            return False
 
-        stdout = job.stdout or ""
-        stderr = job.stderr or ""
+    # Prevent double-finalization inside a single process (and avoid duplicate quota reconciliation).
+    lock = _job_lock(job.id)
+    with lock:
+        cur_status = _job_db_status(job.id)
+        if cur_status and cur_status not in {"queued", "running", "cancel_requested"}:
+            return False
+        if cur_status:
+            job.status = cur_status
 
-        # If the last run ended with an exception, fail fast.
-        if "Traceback" in stdout or "Traceback" in stderr:
+        kind = _job_kind_from_command(job.command)
+        if kind == "autopilot":
+            started_at = job.started_at or job.created_at or 0.0
+            age_s = max(0.0, time.time() - float(started_at))
+            stale_after_s = float(os.getenv("SEO_AGENT_STALE_AUTOPILOT_JOB_SECONDS", "3600"))  # 1h
+            if _pid_is_alive(job.pid):
+                return False
+
+            if job.status == "cancel_requested":
+                job.status = "canceled"
+                job.returncode = job.returncode if job.returncode is not None else 130
+                job.finished_at = job.finished_at if job.finished_at is not None else time.time()
+                job.stderr = _trim_log((job.stderr or "") + "\n[STALE] Job annulé après redémarrage.\n")
+                _save_job(job)
+                return True
+
+            if age_s < stale_after_s:
+                return False
+
+            stdout = job.stdout or ""
+            stderr = job.stderr or ""
+
+            # If the last run ended with an exception, fail fast.
+            if "Traceback" in stdout or "Traceback" in stderr:
+                job.status = "failed"
+                job.returncode = job.returncode if job.returncode is not None else 1
+                job.finished_at = job.finished_at if job.finished_at is not None else time.time()
+                if not (job.stderr or "").strip():
+                    job.stderr = "[STALE] Autopilot job marqué en échec (Traceback détecté)."
+                _save_job(job)
+                return True
+
+            progress = job.progress if isinstance(job.progress, dict) else {}
+            cur = int(progress.get("current") or 0) if isinstance(progress.get("current"), (int, float, str)) else 0
+            total = int(progress.get("total") or 0) if isinstance(progress.get("total"), (int, float, str)) else 0
+
+            # If progress indicates completion, mark as done and attach latest artifacts.
+            if total > 0 and cur >= total:
+                job.status = "done"
+                job.returncode = job.returncode if job.returncode is not None else 0
+                job.finished_at = job.finished_at if job.finished_at is not None else time.time()
+                latest = _load_latest_global_summary(DEFAULT_RUNS_DIR) if DEFAULT_RUNS_DIR.exists() else None
+                job.result = {
+                    "type": "autopilot",
+                    "automation_url": "/automation",
+                    "timestamp": latest.get("timestamp") if latest else None,
+                    "sites_summary_md": str(latest["sites_summary_md"]) if latest and latest.get("sites_summary_md") else None,
+                    "interlinking_md": str(latest["interlinking_md"]) if latest and latest.get("interlinking_md") else None,
+                }
+                _save_job(job)
+                return True
+
+            # Otherwise: job is stale and incomplete.
             job.status = "failed"
             job.returncode = job.returncode if job.returncode is not None else 1
             job.finished_at = job.finished_at if job.finished_at is not None else time.time()
             if not (job.stderr or "").strip():
-                job.stderr = "[STALE] Autopilot job marqué en échec (Traceback détecté)."
+                job.stderr = f"[STALE] Autopilot job marqué en échec (âge={int(age_s)}s)."
             _save_job(job)
             return True
 
-        progress = job.progress if isinstance(job.progress, dict) else {}
-        cur = int(progress.get("current") or 0) if isinstance(progress.get("current"), (int, float, str)) else 0
-        total = int(progress.get("total") or 0) if isinstance(progress.get("total"), (int, float, str)) else 0
-
-        # If progress indicates completion, mark as done and attach latest artifacts.
-        if total > 0 and cur >= total:
-            job.status = "done"
-            job.returncode = job.returncode if job.returncode is not None else 0
-            job.finished_at = job.finished_at if job.finished_at is not None else time.time()
-            latest = _load_latest_global_summary(DEFAULT_RUNS_DIR) if DEFAULT_RUNS_DIR.exists() else None
-            job.result = {
-                "type": "autopilot",
-                "automation_url": "/automation",
-                "timestamp": latest.get("timestamp") if latest else None,
-                "sites_summary_md": str(latest["sites_summary_md"]) if latest and latest.get("sites_summary_md") else None,
-                "interlinking_md": str(latest["interlinking_md"]) if latest and latest.get("interlinking_md") else None,
-            }
-            _save_job(job)
-            return True
-
-        # Otherwise: job is stale and incomplete.
-        job.status = "failed"
-        job.returncode = job.returncode if job.returncode is not None else 1
-        job.finished_at = job.finished_at if job.finished_at is not None else time.time()
-        if not (job.stderr or "").strip():
-            job.stderr = f"[STALE] Autopilot job marqué en échec (âge={int(age_s)}s)."
-        _save_job(job)
-        return True
-
-    if kind != "crawl":
-        return False
-
-    out_dir = _command_arg(job.command, "--output-dir")
-    report_path: Path | None = None
-    if out_dir:
-        report_path = _path_from_any_os(out_dir) / "report.json"
-    elif isinstance(job.result, dict) and isinstance(job.result.get("report_json"), str):
-        report_path = _path_from_any_os(str(job.result.get("report_json") or ""))
-    if not report_path:
-        return False
-
-    try:
-        report_path = report_path.expanduser()
-        if not report_path.is_absolute():
-            report_path = (REPO_ROOT / report_path).resolve()
-        else:
-            report_path = report_path.resolve()
-    except Exception:
-        return False
-
-    if not report_path.exists() or not report_path.is_file():
-        # If the job process is still alive, keep it as running/queued.
-        if _pid_is_alive(job.pid):
+        if kind != "crawl":
             return False
 
-        # If the job has been "running" for a long time and there are still no artifacts,
-        # treat it as stale to avoid projects being stuck "En cours" forever after a crash/reload.
-        started_at = job.started_at or job.created_at or 0.0
-        age_s = max(0.0, time.time() - float(started_at))
+        out_dir = _command_arg(job.command, "--output-dir")
+        report_path: Path | None = None
+        if out_dir:
+            report_path = _path_from_any_os(out_dir) / "report.json"
+        elif isinstance(job.result, dict) and isinstance(job.result.get("report_json"), str):
+            report_path = _path_from_any_os(str(job.result.get("report_json") or ""))
+        if not report_path:
+            return False
 
-        # Heuristic: if output dir exists but is empty, it's extremely likely the process never wrote anything.
-        out_dir_path = _path_from_any_os(out_dir) if out_dir else report_path.parent
-        is_empty_dir = False
         try:
-            if out_dir_path.exists() and out_dir_path.is_dir():
-                is_empty_dir = next(out_dir_path.iterdir(), None) is None
+            report_path = report_path.expanduser()
+            if not report_path.is_absolute():
+                report_path = (REPO_ROOT / report_path).resolve()
+            else:
+                report_path = report_path.resolve()
         except Exception:
+            return False
+
+        if not report_path.exists() or not report_path.is_file():
+            # If the job process is still alive, keep it as running/queued.
+            if _pid_is_alive(job.pid):
+                return False
+
+            # If the job has been "running" for a long time and there are still no artifacts,
+            # treat it as stale to avoid projects being stuck "En cours" forever after a crash/reload.
+            started_at = job.started_at or job.created_at or 0.0
+            age_s = max(0.0, time.time() - float(started_at))
+
+            # Heuristic: if output dir exists but is empty, it's extremely likely the process never wrote anything.
+            out_dir_path = _path_from_any_os(out_dir) if out_dir else report_path.parent
             is_empty_dir = False
-
-        progress = job.progress if isinstance(job.progress, dict) else {}
-        progress_done = bool(progress.get("done"))
-        if not progress_done:
             try:
-                cur = int(progress.get("current") or 0)
-                total = int(progress.get("total") or 0)
-                progress_done = total > 0 and cur >= total
+                if out_dir_path.exists() and out_dir_path.is_dir():
+                    is_empty_dir = next(out_dir_path.iterdir(), None) is None
             except Exception:
-                progress_done = False
-        crawl_done_logged = bool(_CRAWL_DONE_RE.search(job.stdout or ""))
+                is_empty_dir = False
 
-        stale_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_JOB_SECONDS", "43200"))  # 12h fallback
-        empty_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_EMPTY_SECONDS", "300"))  # 5m
-        done_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_DONE_SECONDS", "900"))  # 15m
+            progress = job.progress if isinstance(job.progress, dict) else {}
+            progress_done = bool(progress.get("done"))
+            if not progress_done:
+                try:
+                    cur = int(progress.get("current") or 0)
+                    total = int(progress.get("total") or 0)
+                    progress_done = total > 0 and cur >= total
+                except Exception:
+                    progress_done = False
+            crawl_done_logged = bool(_CRAWL_DONE_RE.search(job.stdout or ""))
 
-        # Fast-path: empty dir or crawl completed but no report => likely interrupted.
-        if is_empty_dir and age_s < empty_after_s:
-            return False
-        if (progress_done or crawl_done_logged) and age_s < done_after_s:
-            return False
-        if (not is_empty_dir) and (not (progress_done or crawl_done_logged)) and age_s < stale_after_s:
-            return False
+            stale_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_JOB_SECONDS", "43200"))  # 12h fallback
+            empty_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_EMPTY_SECONDS", "300"))  # 5m
+            done_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_DONE_SECONDS", "900"))  # 15m
 
-        job.status = "failed"
-        job.returncode = job.returncode if job.returncode is not None else 1
-        job.finished_at = job.finished_at if job.finished_at is not None else time.time()
-        if not (job.stderr or "").strip():
-            reason = "aucun report.json trouvé après redémarrage"
-            if is_empty_dir:
-                reason = "dossier de sortie vide (job probablement interrompu)"
-            elif progress_done or crawl_done_logged:
-                reason = "crawl terminé mais aucun report.json (job probablement interrompu)"
-            job.stderr = f"[STALE] Job marqué en échec: {reason} (âge={int(age_s)}s)."
-        _save_job(job)
-        return True
+            # Fast-path: empty dir or crawl completed but no report => likely interrupted.
+            if is_empty_dir and age_s < empty_after_s:
+                return False
+            if (progress_done or crawl_done_logged) and age_s < done_after_s:
+                return False
+            if (not is_empty_dir) and (not (progress_done or crawl_done_logged)) and age_s < stale_after_s:
+                return False
 
-    try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-    except Exception:
-        return False
-    if not isinstance(report, dict):
-        return False
+            if job.status == "cancel_requested":
+                job.status = "canceled"
+                job.returncode = job.returncode if job.returncode is not None else 130
+            else:
+                job.status = "failed"
+                job.returncode = job.returncode if job.returncode is not None else 1
+            job.finished_at = job.finished_at if job.finished_at is not None else time.time()
+            if not (job.stderr or "").strip():
+                reason = "aucun report.json trouvé après redémarrage"
+                if is_empty_dir:
+                    reason = "dossier de sortie vide (job probablement interrompu)"
+                elif progress_done or crawl_done_logged:
+                    reason = "crawl terminé mais aucun report.json (job probablement interrompu)"
+                if job.status == "canceled":
+                    job.stderr = f"[STALE] Job annulé: {reason} (âge={int(age_s)}s)."
+                else:
+                    job.stderr = f"[STALE] Job marqué en échec: {reason} (âge={int(age_s)}s)."
+            _finalize_crawl_billing_after_stale(job, actual_pages_crawled=None)
+            _save_job(job)
+            return True
 
-    meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
-    pages_crawled = meta.get("pages_crawled")
-    if not isinstance(pages_crawled, int) or pages_crawled < 0:
-        # Backward/forward compatibility: accept a few alternative meta keys.
-        for k in ("pages", "pages_seen", "urls_discovered"):
-            v = meta.get(k)
-            if isinstance(v, int) and v >= 0:
-                pages_crawled = v
-                break
-    if not isinstance(pages_crawled, int) or pages_crawled < 0:
-        return False
-
-    # Looks complete enough: finalize as done.
-    changed = False
-    if job.status != "done":
-        job.status = "done"
-        changed = True
-    if job.returncode is None:
-        job.returncode = 0
-        changed = True
-    if job.finished_at is None:
         try:
-            job.finished_at = float(report_path.stat().st_mtime)
+            report = json.loads(report_path.read_text(encoding="utf-8"))
         except Exception:
-            job.finished_at = time.time()
-        changed = True
-    before_progress = job.progress
-    job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
-    if before_progress != job.progress:
-        changed = True
+            return False
+        if not isinstance(report, dict):
+            return False
 
-    # Ensure result has file pointers for the UI.
-    if not isinstance(job.result, dict):
-        job.result = {"type": "crawl"}
-        changed = True
-    if isinstance(job.result, dict):
-        if not job.result.get("report_json"):
-            job.result["report_json"] = str(report_path)
+        meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
+        pages_crawled = meta.get("pages_crawled")
+        if not isinstance(pages_crawled, int) or pages_crawled < 0:
+            # Backward/forward compatibility: accept a few alternative meta keys.
+            for k in ("pages", "pages_seen", "urls_discovered"):
+                v = meta.get(k)
+                if isinstance(v, int) and v >= 0:
+                    pages_crawled = v
+                    break
+        if not isinstance(pages_crawled, int) or pages_crawled < 0:
+            return False
+
+        # Looks complete enough: finalize as done.
+        changed = False
+        if job.status != "done":
+            job.status = "done"
             changed = True
-        md_path = report_path.parent / "report.md"
-        if md_path.exists() and not job.result.get("report_md"):
-            job.result["report_md"] = str(md_path)
+        if job.returncode is None:
+            job.returncode = 0
+            changed = True
+        if job.finished_at is None:
+            try:
+                job.finished_at = float(report_path.stat().st_mtime)
+            except Exception:
+                job.finished_at = time.time()
+            changed = True
+        before_progress = job.progress
+        job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
+        if before_progress != job.progress:
             changed = True
 
-    if changed:
-        _save_job(job)
-    return changed
+        # Ensure result has file pointers for the UI.
+        if not isinstance(job.result, dict):
+            job.result = {"type": "crawl"}
+            changed = True
+        if isinstance(job.result, dict):
+            if not job.result.get("report_json"):
+                job.result["report_json"] = str(report_path)
+                changed = True
+            md_path = report_path.parent / "report.md"
+            if md_path.exists() and not job.result.get("report_md"):
+                job.result["report_md"] = str(md_path)
+                changed = True
 
-def _run_subprocess_streaming(job: Job, cmd: list[str], cwd: Path, job_kind: str) -> int:
+        if changed:
+            _finalize_crawl_billing_after_stale(job, actual_pages_crawled=int(pages_crawled))
+            _save_job(job)
+        return changed
+
+
+def _job_db_status(job_id: str) -> str:
+    jid = str(job_id or "").strip()
+    if not jid:
+        return ""
+    try:
+        with DB.session() as db:
+            v = db.scalar(select(JobRecord.status).where(JobRecord.id == jid))
+            return str(v or "").strip()
+    except Exception:
+        return ""
+
+
+def _run_subprocess_streaming(job: Job, cmd: list[str], cwd: Path, job_kind: str, timeout_s: float | None = None) -> int:
     env = os.environ.copy()
     env.setdefault("PYTHONUNBUFFERED", "1")
 
@@ -3014,14 +3538,70 @@ def _run_subprocess_streaming(job: Job, cmd: list[str], cwd: Path, job_kind: str
         t.start()
         threads.append(t)
 
-    returncode = proc.wait()
+    timed_out = False
+    canceled = False
+    start = time.monotonic()
+    poll_s = 0.5
+    while True:
+        try:
+            returncode = proc.wait(timeout=poll_s)
+            break
+        except subprocess.TimeoutExpired:
+            pass
+
+        # Cancellation check (DB). Keep it reasonably cheap.
+        if not canceled:
+            st = _job_db_status(job.id)
+            if st == "cancel_requested":
+                canceled = True
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+
+        # Timeout check.
+        if timeout_s and timeout_s > 0 and (time.monotonic() - start) >= float(timeout_s):
+            timed_out = True
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            try:
+                returncode = proc.wait(timeout=10)
+            except Exception:
+                returncode = 124
+            break
+
+        if canceled:
+            # Give the process a moment to exit gracefully; then force-kill.
+            try:
+                returncode = proc.wait(timeout=5)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                try:
+                    returncode = proc.wait(timeout=10)
+                except Exception:
+                    returncode = 130
+            break
+
     for t in threads:
         t.join(timeout=2)
 
     with lock:
         job.pid = None
+        if timed_out:
+            job.stderr = _trim_log((job.stderr or "") + f"\n[TIMEOUT] Timeout après {int(timeout_s or 0)}s.\n")
+        if canceled:
+            job.status = "canceled"
+            job.stderr = _trim_log((job.stderr or "") + "\n[CANCEL] Job annulé.\n")
         maybe_save(force=True)
-    return int(returncode)
+    try:
+        return int(returncode)
+    except Exception:
+        return 1
 
 
 def _run_autopilot_job(job_id: str, config_path: Path, extra_args: list[str] | None) -> None:
@@ -3044,11 +3624,20 @@ def _run_autopilot_job(job_id: str, config_path: Path, extra_args: list[str] | N
     _save_job(job)
 
     try:
-        returncode = _run_subprocess_streaming(job, cmd, cwd=REPO_ROOT, job_kind="autopilot")
+        raw_timeout = str(os.getenv("SEO_AGENT_AUTOPILOT_JOB_TIMEOUT_SECONDS", "10800"))  # 3h
+        try:
+            timeout_s = float(raw_timeout)
+        except Exception:
+            timeout_s = 10800.0
+        if timeout_s <= 0:
+            timeout_s = None
+
+        returncode = _run_subprocess_streaming(job, cmd, cwd=REPO_ROOT, job_kind="autopilot", timeout_s=timeout_s)
         job.returncode = returncode
         job.finished_at = time.time()
-        job.status = "done" if returncode == 0 else "failed"
-        if returncode == 0:
+        if job.status != "canceled":
+            job.status = "done" if returncode == 0 else "failed"
+        if returncode == 0 and job.status != "canceled":
             latest = _load_latest_global_summary(DEFAULT_RUNS_DIR) if DEFAULT_RUNS_DIR.exists() else None
             job.result = {
                 "type": "autopilot",
@@ -3330,6 +3919,21 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     if not job:
         _mark_job_active(job_id, False)
         return
+    initial_result = dict(job.result) if isinstance(job.result, dict) else {}
+    reserved_pages = 0
+    override_max_pages: int | None = None
+    skip_billing = bool(initial_result.get("skip_billing") or False)
+    try:
+        reserved_pages = int(initial_result.get("quota_reserved_pages") or 0)
+    except Exception:
+        reserved_pages = 0
+    try:
+        ov = initial_result.get("override_max_pages")
+        override_max_pages = int(ov) if ov is not None else None
+    except Exception:
+        override_max_pages = None
+    actual_pages_crawled: int | None = None
+
     job.status = "running"
     job.started_at = time.time()
 
@@ -3407,6 +4011,8 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     (site_dir / "run.json").write_text(json.dumps(run_meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
     max_pages = int(crawl_cfg.get("max_pages") or 300)
+    if isinstance(override_max_pages, int) and override_max_pages > 0:
+        max_pages = min(max_pages, int(override_max_pages))
     workers = int(crawl_cfg.get("workers") or 6)
     timeout_s = float(crawl_cfg.get("timeout_s") or 15)
     ignore_robots = bool(crawl_cfg.get("ignore_robots") or False)
@@ -3554,7 +4160,15 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     _save_job(job)
 
     try:
-        returncode = _run_subprocess_streaming(job, cmd, cwd=REPO_ROOT, job_kind="crawl")
+        raw_timeout = str(os.getenv("SEO_AGENT_CRAWL_JOB_TIMEOUT_SECONDS", "21600"))  # 6h
+        try:
+            timeout_s = float(raw_timeout)
+        except Exception:
+            timeout_s = 21600.0
+        if timeout_s <= 0:
+            timeout_s = None
+
+        returncode = _run_subprocess_streaming(job, cmd, cwd=REPO_ROOT, job_kind="crawl", timeout_s=timeout_s)
         job.returncode = returncode
         if returncode == 0:
             report_path = audit_dir / "report.json"
@@ -3566,6 +4180,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
                 pages_crawled = meta.get("pages_crawled")
                 if isinstance(pages_crawled, int) and pages_crawled >= 0:
+                    actual_pages_crawled = int(pages_crawled)
                     job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
             job.result = {
                 "type": "crawl",
@@ -3577,7 +4192,8 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 "report_json": str((audit_dir / "report.json").resolve()),
             }
         job.finished_at = time.time()
-        job.status = "done" if returncode == 0 else "failed"
+        if job.status != "canceled":
+            job.status = "done" if returncode == 0 else "failed"
         _save_job(job)
     except Exception as e:
         job.returncode = 1
@@ -3586,6 +4202,45 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         job.status = "failed"
         _save_job(job)
     finally:
+        try:
+            if (not skip_billing) and reserved_pages > 0:
+                if job.status == "done" and isinstance(actual_pages_crawled, int) and actual_pages_crawled >= 0:
+                    delta = int(actual_pages_crawled) - int(reserved_pages)
+                    if delta != 0:
+                        with DB.session() as db:
+                            billing.usage_add(
+                                db,
+                                user_id=str(user_id),
+                                metric="pages_crawled_month",
+                                amount=int(delta),
+                                meta={
+                                    "kind": "crawl_adjust",
+                                    "job_id": job_id,
+                                    "slug": slug,
+                                    "reserved_pages": int(reserved_pages),
+                                    "actual_pages_crawled": int(actual_pages_crawled),
+                                },
+                        )
+                elif job.status != "done":
+                    with DB.session() as db:
+                        billing.usage_add(
+                            db,
+                            user_id=str(user_id),
+                            metric="pages_crawled_month",
+                            amount=-int(reserved_pages),
+                            meta={"kind": "crawl_refund", "job_id": job_id, "slug": slug},
+                        )
+            elif (not skip_billing) and isinstance(actual_pages_crawled, int) and actual_pages_crawled > 0:
+                with DB.session() as db:
+                    billing.usage_add(
+                        db,
+                        user_id=str(user_id),
+                        metric="pages_crawled_month",
+                        amount=int(actual_pages_crawled),
+                        meta={"kind": "crawl_usage", "job_id": job_id, "slug": slug},
+                    )
+        except Exception as e:
+            print(f"[BILLING] usage update error: {type(e).__name__}: {e}")
         _mark_job_active(job_id, False)
 
 
@@ -3615,7 +4270,7 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
     if not expected:
         return await call_next(request)
 
-    if request.url.path in {"/healthz"}:
+    if request.url.path in {"/healthz", "/stripe/webhook"}:
         return await call_next(request)
 
     auth = str(request.headers.get("authorization") or "")
@@ -3638,6 +4293,14 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
 @app.on_event("startup")
 def _startup() -> None:
     DB.create_tables()
+    _init_sentry()
+    _start_job_worker()
+    _start_retention()
+
+
+@app.on_event("shutdown")
+def _shutdown() -> None:
+    _WORKER_STOP.set()
 
 
 def _normalize_email(value: str) -> str:
@@ -3685,7 +4348,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
     request.state.user = _load_user_from_session(request)
 
     path = request.url.path
-    if path.startswith("/static/") or path in {"/healthz", "/auth/login", "/auth/signup"}:
+    if path.startswith("/static/") or path in {"/healthz", "/auth/login", "/auth/signup", "/stripe/webhook"}:
         return await call_next(request)
 
     if not request.state.user:
@@ -4111,6 +4774,147 @@ def auth_logout() -> RedirectResponse:
     return resp
 
 
+@app.get("/billing", response_class=HTMLResponse)
+def billing_page(
+    request: Request,
+    success: str | None = None,
+    canceled: str | None = None,
+    session_id: str | None = None,
+    msg: str | None = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)  # type: ignore[return-value]
+
+    stripe_ready = billing.stripe_enabled()
+    catalog = billing.plan_catalog()
+    msg_out = "Paiement confirmé." if success else ("Paiement annulé." if canceled else "")
+    if not msg_out and msg:
+        msg_out = str(msg).strip()
+    err_out = str(err or "").strip()
+
+    with DB.session() as db:
+        if stripe_ready and session_id:
+            try:
+                billing.sync_from_checkout_session(db, session_id=session_id)
+            except Exception as e:
+                err_out = str(e).strip() or "Erreur sync Stripe"
+
+        plan_key = billing.effective_plan_key(db, user_id=str(user.id))
+        limits = billing.plan_limits(db, user_id=str(user.id))
+        sub = billing.subscription_for_user(db, user_id=str(user.id))
+
+        used_pages = billing.usage_sum(db, user_id=str(user.id), metric="pages_crawled_month")
+        used_ai = billing.usage_sum(db, user_id=str(user.id), metric="assistant_messages_month")
+        projects_count = int(
+            db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
+        )
+
+    def _limit_label(key: str) -> str:
+        v = limits.get(key)
+        if not isinstance(v, int) or v <= 0:
+            return "—"
+        return str(v)
+
+    def _pct(used: int, key: str) -> int:
+        v = limits.get(key)
+        if not isinstance(v, int) or v <= 0:
+            return 0
+        try:
+            pct = int(round((float(used) / float(v)) * 100))
+            return max(0, min(100, pct))
+        except Exception:
+            return 0
+
+    plan = catalog.get(plan_key, catalog["free"])
+    resp = templates.TemplateResponse(
+        "billing.html",
+        {
+            "request": request,
+            "stripe_ready": stripe_ready,
+            "msg": msg_out,
+            "err": err_out,
+            "plan_key": plan_key,
+            "plan": plan,
+            "subscription": sub,
+            "limits": limits,
+            "limits_labels": {
+                "projects": _limit_label("projects"),
+                "pages_crawled_month": _limit_label("pages_crawled_month"),
+                "assistant_messages_month": _limit_label("assistant_messages_month"),
+            },
+            "usage": {
+                "projects": projects_count,
+                "pages_crawled_month": used_pages,
+                "assistant_messages_month": used_ai,
+            },
+            "usage_pct": {
+                "pages_crawled_month": _pct(used_pages, "pages_crawled_month"),
+                "assistant_messages_month": _pct(used_ai, "assistant_messages_month"),
+            },
+            "catalog": catalog,
+            "prices": {
+                "solo": billing.price_id_for_plan("solo"),
+                "pro": billing.price_id_for_plan("pro"),
+                "business": billing.price_id_for_plan("business"),
+            },
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/billing/checkout")
+def billing_checkout(request: Request, plan_key: str = Form(default="")) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+    pk = (plan_key or "").strip().lower()
+    if pk not in {"solo", "pro", "business"}:
+        return RedirectResponse(url="/billing?canceled=1", status_code=303)
+    try:
+        with DB.session() as db:
+            url = billing.create_checkout_session_url(db, user_id=str(user.id), email=str(user.email), plan_key=pk)
+        return RedirectResponse(url=url, status_code=303)
+    except Exception as e:
+        return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
+
+
+@app.post("/billing/portal")
+def billing_portal(request: Request) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+    try:
+        with DB.session() as db:
+            url = billing.create_billing_portal_url(db, user_id=str(user.id), email=str(user.email))
+        return RedirectResponse(url=url, status_code=303)
+    except Exception as e:
+        return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
+
+
+@app.post("/stripe/webhook")
+async def stripe_webhook(request: Request) -> JSONResponse:
+    payload = await request.body()
+    sig = str(request.headers.get("stripe-signature") or "").strip()
+    if not sig:
+        return JSONResponse({"ok": False, "error": "missing_signature"}, status_code=400)
+    try:
+        event = billing.construct_webhook_event(payload=payload, sig_header=sig)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e) or "invalid_signature"}, status_code=400)
+
+    with DB.session() as db:
+        try:
+            billing.handle_stripe_event(db, event=event)
+        except Exception as e:
+            print(f"[STRIPE] webhook error: {type(e).__name__}: {e}")
+            return JSONResponse({"ok": False, "error": "webhook_handler_error"}, status_code=500)
+
+    return JSONResponse({"ok": True})
+
+
 @app.get("/", response_class=HTMLResponse)
 def projects(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
@@ -4161,7 +4965,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
         ]
     live_crawls: dict[str, dict[str, Any]] = {}
     for j in jobs:
-        if j.status not in {"queued", "running"}:
+        if j.status not in {"queued", "running", "cancel_requested"}:
             continue
         result = j.result if isinstance(j.result, dict) else None
         if not result or result.get("type") != "crawl":
@@ -4341,8 +5145,22 @@ def add_project(
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
 
+    projects_limit: int | None = None
+    remaining_new: int | None = None
+    if not bool(getattr(user, "is_admin", False)):
+        with DB.session() as db:
+            limits = billing.plan_limits(db, user_id=str(user.id))
+            v = limits.get("projects")
+            if isinstance(v, int) and v > 0:
+                projects_limit = int(v)
+                projects_count = int(
+                    db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
+                )
+                remaining_new = max(0, projects_limit - projects_count)
+
     if mode == "gsc":
         skipped = 0
+        capped = False
         for raw in gsc_urls or []:
             v = str(raw or "").strip()
             if not v:
@@ -4359,10 +5177,21 @@ def add_project(
             if validation_err:
                 skipped += 1
                 continue
+            if remaining_new is not None:
+                slug_guess = _slug_from_base_url(base) or ""
+                exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
+                if (not exists) and remaining_new <= 0:
+                    capped = True
+                    skipped += 1
+                    continue
+                if not exists:
+                    remaining_new -= 1
             slug = _db_upsert_project(user_id=user.id, base_url=base, site_name="")
             if slug:
                 created.append(slug)
         msg = f"{len(created)} projet(s) ajouté(s)." if created else "Aucun projet ajouté."
+        if capped:
+            msg = "Limite de sites atteinte pour ton plan. Va sur Abonnement pour upgrade."
         if skipped and not created:
             msg = "Aucun projet ajouté (certains hôtes sont refusés)."
         return RedirectResponse(url=f"/?msg={quote(msg)}", status_code=303)
@@ -4375,6 +5204,14 @@ def add_project(
     validation_err = _validate_public_crawl_target(base)
     if validation_err:
         return RedirectResponse(url=f"/?err={quote(validation_err)}", status_code=303)
+
+    if remaining_new is not None:
+        slug_guess = _slug_from_base_url(base) or ""
+        exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
+        if (not exists) and remaining_new <= 0:
+            return RedirectResponse(
+                url=f"/?err={quote('Limite de sites atteinte pour ton plan. Upgrade: Abonnement.')}", status_code=303
+            )
     slug = _db_upsert_project(user_id=user.id, base_url=base, site_name=site_name)
     if slug:
         created.append(slug)
@@ -4438,10 +5275,28 @@ async def assistant_chat(request: Request) -> JSONResponse:
     except Exception:
         return JSONResponse({"ok": False, "error": "Invalid JSON"}, status_code=400)
 
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+
     message = payload.get("message") if isinstance(payload, dict) else None
     if not isinstance(message, str) or not message.strip():
         return JSONResponse({"ok": False, "error": "Missing message"}, status_code=400)
     message = message.strip()[:2000]
+
+    if not bool(getattr(user, "is_admin", False)):
+        with DB.session() as db:
+            ok, remaining = billing.ensure_within_quota(
+                db,
+                user_id=str(getattr(user, "id", "")),
+                metric="assistant_messages_month",
+                planned_amount=1,
+            )
+            if not ok:
+                msg = "Quota Assistant IA mensuel atteint. Va sur Abonnement pour upgrade."
+                return JSONResponse(
+                    {"ok": False, "error": msg, "billing_url": "/billing", "remaining": remaining}, status_code=402
+                )
 
     history = _assistant_clean_history(payload.get("history") if isinstance(payload, dict) else None)
     context = payload.get("context") if isinstance(payload, dict) else None
@@ -4476,6 +5331,18 @@ async def assistant_chat(request: Request) -> JSONResponse:
         print(f"[ASSISTANT] {provider} error: {type(e).__name__}: {e}")
         err = str(e).strip() or "Erreur assistant"
         return JSONResponse({"ok": False, "error": err, "provider": provider}, status_code=502)
+
+    try:
+        with DB.session() as db:
+            billing.usage_add(
+                db,
+                user_id=str(getattr(user, "id", "")),
+                metric="assistant_messages_month",
+                amount=1,
+                meta={"kind": "assistant_chat", "provider": provider, "model": model},
+            )
+    except Exception as e:
+        print(f"[BILLING] assistant usage error: {type(e).__name__}: {e}")
 
     return JSONResponse({"ok": True, "reply": reply, "provider": provider, "model": model})
 
@@ -4921,7 +5788,7 @@ def run(
     confirm_auto: str | None = Form(default=None),
     site: str | None = Form(default=None),
 ) -> RedirectResponse:
-    _ = _require_admin(request)
+    user = _require_admin(request)
     cfg = Path(config_path).expanduser()
     if not cfg.is_absolute():
         cfg = (REPO_ROOT / cfg).resolve()
@@ -4941,6 +5808,13 @@ def run(
         extra_args.extend(["--mode", "execute", "--auto-deploy", "--execute"])
 
     job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
+    job.result = {
+        "type": "autopilot",
+        "user_id": str(getattr(user, "id", "")),
+        "run_policy": run_policy,
+        "site": site or "",
+        "extra_args": extra_args,
+    }
     # Pre-fill command so the Jobs UI can immediately categorize the job.
     script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_autopilot.py"
     cmd_preview = [sys.executable, "-u", str(script), "--config", str(cfg)]
@@ -4948,12 +5822,6 @@ def run(
         cmd_preview.extend(extra_args)
     job.command = cmd_preview
     _save_job(job)
-
-    # Use a thread to avoid blocking request (BackgroundTasks runs after response but still in-process).
-    thread = threading.Thread(
-        target=_run_autopilot_job, args=(job.id, cfg, extra_args if extra_args else None), daemon=True
-    )
-    thread.start()
     return RedirectResponse(url=f"/jobs?job={job.id}", status_code=303)
 
 
@@ -4963,18 +5831,64 @@ def crawl_project(
     slug: str,
     config_path: str = Form(default=str(DEFAULT_CONFIG)),
 ) -> Response:
-    _ = _db_project_or_404(request, slug)
+    proj = _db_project_or_404(request, slug)
     cfg = Path(config_path).expanduser()
     if not cfg.is_absolute():
         cfg = (REPO_ROOT / cfg).resolve()
 
     user = getattr(request.state, "user", None)
-    job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
-    job.result = {"type": "crawl", "slug": slug, "user_id": str(getattr(user, "id", ""))}
-    _save_job(job)
+    project_settings = proj.settings if isinstance(proj.settings, dict) else {}
+    crawl_cfg, _, _ = _effective_project_crawl_settings(
+        slug, config_path=(cfg if cfg.exists() else None), project_settings=project_settings
+    )
+    requested_max_pages = int(crawl_cfg.get("max_pages") or 300)
+    planned_pages = max(0, requested_max_pages)
+    override_max_pages: int | None = None
 
-    thread = threading.Thread(target=_run_crawl_job, args=(job.id, str(getattr(user, "id", "")), slug, cfg), daemon=True)
-    thread.start()
+    job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
+    job.result = {
+        "type": "crawl",
+        "slug": slug,
+        "user_id": str(getattr(user, "id", "")),
+        "requested_max_pages": requested_max_pages,
+    }
+    # Pre-fill command so the Jobs UI can categorize immediately.
+    script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
+    job.command = [sys.executable, "-u", str(script)]
+
+    if not bool(getattr(user, "is_admin", False)):
+        with DB.session() as db:
+            ok, remaining = billing.ensure_within_quota(
+                db, user_id=str(getattr(user, "id", "")), metric="pages_crawled_month", planned_amount=planned_pages
+            )
+            if (not ok) and isinstance(remaining, int) and remaining > 0:
+                planned_pages = int(remaining)
+                override_max_pages = int(remaining)
+            elif not ok:
+                msg = "Quota crawl mensuel atteint. Va sur Abonnement pour upgrade."
+                if _client_wants_json(request):
+                    return JSONResponse({"ok": False, "error": msg, "billing_url": "/billing"}, status_code=402)
+                return RedirectResponse(url=f"/projects/{slug}?err={quote(msg)}", status_code=303)
+
+            billing.usage_add(
+                db,
+                user_id=str(getattr(user, "id", "")),
+                metric="pages_crawled_month",
+                amount=int(planned_pages),
+                meta={
+                    "kind": "crawl_reserve",
+                    "job_id": job.id,
+                    "slug": slug,
+                    "requested_max_pages": requested_max_pages,
+                },
+            )
+
+        if override_max_pages:
+            job.result["override_max_pages"] = int(override_max_pages)
+        job.result["quota_reserved_pages"] = int(planned_pages)
+    else:
+        job.result["skip_billing"] = True
+    _save_job(job)
     if _client_wants_json(request):
         return JSONResponse({"ok": True, "slug": slug, "job_id": job.id, "status": job.status})
     return RedirectResponse(url=f"/projects/{slug}?job={job.id}", status_code=303)
@@ -5013,20 +5927,84 @@ def crawl_projects_batch(
 
     job_ids: list[str] = []
     jobs: list[dict[str, str]] = []
-    for slug in allowed:
-        job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
-        job.result = {"type": "crawl", "slug": slug, "user_id": str(getattr(user, "id", ""))}
-        _save_job(job)
-        thread = threading.Thread(target=_run_crawl_job, args=(job.id, str(getattr(user, "id", "")), slug, cfg), daemon=True)
-        thread.start()
-        job_ids.append(job.id)
-        jobs.append({"slug": slug, "job_id": job.id, "status": job.status})
+    is_admin = bool(getattr(user, "is_admin", False))
+    capped_any = False
+    if is_admin:
+        for slug in allowed:
+            job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
+            job.result = {"type": "crawl", "slug": slug, "user_id": str(getattr(user, "id", "")), "skip_billing": True}
+            script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
+            job.command = [sys.executable, "-u", str(script)]
+            _save_job(job)
+            job_ids.append(job.id)
+            jobs.append({"slug": slug, "job_id": job.id, "status": job.status})
+    else:
+        with DB.session() as db:
+            for slug in allowed:
+                proj = _db_project(str(getattr(user, "id", "")), slug)
+                project_settings = proj.settings if (proj and isinstance(proj.settings, dict)) else {}
+                crawl_cfg, _, _ = _effective_project_crawl_settings(
+                    slug, config_path=(cfg if cfg.exists() else None), project_settings=project_settings
+                )
+                requested_max_pages = int(crawl_cfg.get("max_pages") or 300)
+                planned_pages = max(0, requested_max_pages)
+                override_max_pages: int | None = None
+
+                ok, remaining = billing.ensure_within_quota(
+                    db, user_id=str(getattr(user, "id", "")), metric="pages_crawled_month", planned_amount=planned_pages
+                )
+                if (not ok) and isinstance(remaining, int) and remaining > 0:
+                    planned_pages = int(remaining)
+                    override_max_pages = int(remaining)
+                    capped_any = True
+                elif not ok:
+                    capped_any = True
+                    break
+
+                job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
+                job.result = {
+                    "type": "crawl",
+                    "slug": slug,
+                    "user_id": str(getattr(user, "id", "")),
+                    "requested_max_pages": requested_max_pages,
+                    "quota_reserved_pages": int(planned_pages),
+                }
+                if override_max_pages:
+                    job.result["override_max_pages"] = int(override_max_pages)
+                script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
+                job.command = [sys.executable, "-u", str(script)]
+
+                billing.usage_add(
+                    db,
+                    user_id=str(getattr(user, "id", "")),
+                    metric="pages_crawled_month",
+                    amount=int(planned_pages),
+                    meta={
+                        "kind": "crawl_reserve",
+                        "job_id": job.id,
+                        "slug": slug,
+                        "requested_max_pages": requested_max_pages,
+                    },
+                )
+
+                _save_job(job)
+                job_ids.append(job.id)
+                jobs.append({"slug": slug, "job_id": job.id, "status": job.status})
 
     if _client_wants_json(request):
-        return JSONResponse({"ok": True, "jobs": jobs})
+        if not jobs:
+            return JSONResponse(
+                {"ok": False, "error": "Quota crawl mensuel atteint.", "billing_url": "/billing"}, status_code=402
+            )
+        return JSONResponse({"ok": True, "jobs": jobs, "capped": capped_any})
 
-    if len(allowed) == 1:
-        return RedirectResponse(url=f"/projects/{allowed[0]}?job={job_ids[0]}", status_code=303)
+    if not jobs:
+        return RedirectResponse(url=f"/?err={quote('Quota crawl mensuel atteint. Va sur Abonnement pour upgrade.')}", status_code=303)
+
+    if len(jobs) == 1:
+        return RedirectResponse(url=f"/projects/{jobs[0]['slug']}?job={job_ids[0]}", status_code=303)
+    if capped_any and jobs:
+        return RedirectResponse(url=f"/jobs?job={job_ids[0]}&msg={quote('Quota atteint: certains crawls ont été ignorés.')}", status_code=303)
     return RedirectResponse(url=f"/jobs?job={job_ids[0]}", status_code=303)
 
 
@@ -6960,6 +7938,102 @@ def job_detail(request: Request, job_id: str) -> HTMLResponse:
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@app.post("/jobs/{job_id}/cancel")
+def job_cancel(request: Request, job_id: str) -> RedirectResponse:
+    job = _load_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    user = getattr(request.state, "user", None)
+    is_admin = bool(getattr(user, "is_admin", False))
+    result = job.result if isinstance(job.result, dict) else {}
+    owner_id = str(result.get("user_id") or "").strip()
+    if (not is_admin) and owner_id != str(getattr(user, "id", "")):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status in {"done", "failed", "canceled"}:
+        return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+
+    # If the job is still queued, cancel immediately and refund any reserved quota.
+    if job.status == "queued":
+        try:
+            reserved = int(result.get("quota_reserved_pages") or 0) if isinstance(result, dict) else 0
+        except Exception:
+            reserved = 0
+        skip_billing = bool(result.get("skip_billing") or False) if isinstance(result, dict) else False
+        if reserved > 0 and (not skip_billing) and owner_id:
+            with DB.session() as db:
+                billing.usage_add(
+                    db,
+                    user_id=owner_id,
+                    metric="pages_crawled_month",
+                    amount=-int(reserved),
+                    meta={"kind": "crawl_cancel_refund", "job_id": job_id, "reserved_pages": int(reserved)},
+                )
+            try:
+                if isinstance(job.result, dict):
+                    job.result["quota_reserved_pages"] = 0
+            except Exception:
+                pass
+        job.status = "canceled"
+        job.returncode = 0
+        job.finished_at = time.time()
+        _save_job(job)
+        return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+
+    # If running: request cancellation. The subprocess loop polls DB status and will terminate.
+    job.status = "cancel_requested"
+    _save_job(job)
+    return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+
+
+@app.post("/jobs/{job_id}/retry")
+def job_retry(request: Request, job_id: str) -> RedirectResponse:
+    job = _load_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    user = getattr(request.state, "user", None)
+    is_admin = bool(getattr(user, "is_admin", False))
+    result = job.result if isinstance(job.result, dict) else {}
+    owner_id = str(result.get("user_id") or "").strip()
+    if (not is_admin) and owner_id != str(getattr(user, "id", "")):
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status not in {"failed", "canceled"}:
+        return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+
+    jtype = str(result.get("type") or "").strip().lower()
+    if jtype == "crawl":
+        slug = str(result.get("slug") or "").strip()
+        if not slug:
+            return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+        # Reuse the standard crawl enqueue path (includes quota checks).
+        resp = crawl_project(request, slug, config_path=(job.config_path or str(DEFAULT_CONFIG)))  # type: ignore[misc]
+        return resp if isinstance(resp, RedirectResponse) else RedirectResponse(url=f"/projects/{slug}", status_code=303)
+
+    if jtype == "autopilot":
+        _ = _require_admin(request)
+        cfg = Path(job.config_path or "").expanduser() if job.config_path else None
+        if not cfg:
+            return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+        if not cfg.is_absolute():
+            cfg = (REPO_ROOT / cfg).resolve()
+        extra_args = result.get("extra_args") if isinstance(result, dict) else None
+        extra = extra_args if isinstance(extra_args, list) and all(isinstance(x, str) for x in extra_args) else []
+        new_job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
+        new_job.result = {"type": "autopilot", "user_id": str(getattr(user, "id", "")), "extra_args": extra}
+        script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_autopilot.py"
+        cmd_preview = [sys.executable, "-u", str(script), "--config", str(cfg)]
+        if extra:
+            cmd_preview.extend(extra)
+        new_job.command = cmd_preview
+        _save_job(new_job)
+        return RedirectResponse(url=f"/jobs?job={new_job.id}", status_code=303)
+
+    return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
 
 @app.get("/api/jobs/{job_id}", response_class=JSONResponse)

@@ -5,7 +5,7 @@
   {% if jobs %}
     {% set ns = namespace(live=false) %}
     {% for j in jobs %}
-      {% if j.status in ['queued', 'running'] %}
+      {% if j.status in ['queued', 'running', 'cancel_requested'] %}
         {% set ns.live = true %}
       {% endif %}
     {% endfor %}
@@ -45,7 +45,7 @@
           </thead>
           <tbody>
             {% for j in jobs %}
-              {% set is_live = j.status in ['queued', 'running'] %}
+              {% set is_live = j.status in ['queued', 'running', 'cancel_requested'] %}
               {% set progress = j.progress if j.progress else none %}
               {% if progress and progress.total %}
                 {% set cur = progress.current|int %}
@@ -158,7 +158,7 @@
             if (progressText && progressBar && progressFill && progress && progress.total) {
               const cur = Number(progress.current || 0);
               const tot = Number(progress.total || 0);
-              const isLive = data && (data.status === "queued" || data.status === "running");
+              const isLive = data && (data.status === "queued" || data.status === "running" || data.status === "cancel_requested");
               const isFinalizing = isLive && tot > 0 && cur >= tot;
               let pct = tot ? Math.round((cur / tot) * 100) : 0;
               if (isFinalizing && pct >= 100) pct = 99;
@@ -174,7 +174,7 @@
               progressBar.style.display = "none";
             }
 
-            if (data && (data.status === "done" || data.status === "failed")) {
+            if (data && (data.status === "done" || data.status === "failed" || data.status === "canceled")) {
               row.dataset.live = "0";
             }
           } catch (_) {

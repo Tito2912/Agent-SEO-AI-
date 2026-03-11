@@ -27,6 +27,19 @@
           <h2>{{ job.id }}</h2>
           <p>Status: <span id="job-status-pill" class="pill {{ job.status }}">{{ job.status }}</span></p>
 
+          <div class="row-actions">
+            {% if job.status in ['queued', 'running', 'cancel_requested'] %}
+              <form method="post" action="/jobs/{{ job.id }}/cancel" class="inline">
+                <button type="submit" class="btn danger">Annuler</button>
+              </form>
+            {% endif %}
+            {% if job.status in ['failed', 'canceled'] %}
+              <form method="post" action="/jobs/{{ job.id }}/retry" class="inline">
+                <button type="submit" class="btn primary">Relancer</button>
+              </form>
+            {% endif %}
+          </div>
+
           {% set progress = job.progress if job.progress else none %}
           {% if progress and progress.total %}
             {% set cur = progress.current|int %}
@@ -169,7 +182,7 @@
       {% endif %}
 
       {% if job %}
-        <p id="job-live-note" class="muted small" {% if job.status not in ['queued', 'running'] %}style="display:none;"{% endif %}>
+        <p id="job-live-note" class="muted small" {% if job.status not in ['queued', 'running', 'cancel_requested'] %}style="display:none;"{% endif %}>
           Mise à jour en temps réel…
         </p>
           <script>
@@ -220,7 +233,7 @@
 
               const cur = Number(progress.current || 0);
               const tot = Number(progress.total || 0);
-              const isLive = status === "queued" || status === "running";
+              const isLive = status === "queued" || status === "running" || status === "cancel_requested";
               const isFinalizing = isLive && tot > 0 && cur >= tot;
               let pct = tot ? Math.round((cur / tot) * 100) : 0;
               if (isFinalizing && pct >= 100) pct = 99;
@@ -256,7 +269,7 @@
               }
 
               if (liveNote) {
-                liveNote.style.display = (status === "queued" || status === "running") ? "" : "none";
+                liveNote.style.display = (status === "queued" || status === "running" || status === "cancel_requested") ? "" : "none";
               }
 
               if (rcRow && rcVal) {
@@ -358,7 +371,7 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 render(data);
-                if (data && (data.status === "done" || data.status === "failed")) {
+                if (data && (data.status === "done" || data.status === "failed" || data.status === "canceled")) {
                   clearInterval(timer);
                 }
                 if (!hasRedirected && shouldAutoRedirect && data && data.status === "done") {

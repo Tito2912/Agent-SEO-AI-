@@ -18,6 +18,7 @@
         <nav class="nav">
           <a class="nav-item {% if request.url.path == '/' %}active{% endif %}" href="/">Projets</a>
           <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">Jobs</a>
+          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">Abonnement</a>
           {% if request.state.user and request.state.user.is_admin %}
             <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation"
               >Automation</a

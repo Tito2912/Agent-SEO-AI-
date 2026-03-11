@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+
+{% block title %}Abonnement — SEO Audit{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Abonnement</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Abonnement</h1>
+    <p class="muted">Gère ton plan, tes quotas et ta facturation.</p>
+  </div>
+
+  {% if msg %}
+    <div class="card"><strong>{{ msg }}</strong></div>
+  {% endif %}
+  {% if err %}
+    <div class="card"><strong>Erreur :</strong> {{ err }}</div>
+  {% endif %}
+
+  <div class="grid two">
+    <div class="card">
+      <div class="card-title-row">
+        <h2>Plan actuel</h2>
+        <span class="badge notice">{{ plan.label }}</span>
+      </div>
+
+      <div class="muted">Prix : <strong>{{ plan.price_label }}</strong></div>
+
+      {% if subscription %}
+        <div class="row muted small">
+          Statut : <span class="mono">{{ subscription.status }}</span>
+          {% if subscription.cancel_at_period_end %} · Annulation en fin de période{% endif %}
+        </div>
+        {% if subscription.current_period_end %}
+          <div class="row muted small">Renouvellement : {{ subscription.current_period_end.strftime("%d/%m/%Y") }}</div>
+        {% endif %}
+      {% else %}
+        <div class="row muted small">Aucun abonnement actif.</div>
+      {% endif %}
+
+      <div class="row-actions">
+        {% if stripe_ready %}
+          <form method="post" action="/billing/portal" class="inline">
+            <button type="submit" class="btn">Gérer l’abonnement</button>
+          </form>
+        {% else %}
+          <span class="muted small">Stripe n’est pas configuré sur ce déploiement.</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title-row">
+        <h2>Quotas</h2>
+        <span class="muted small">Mensuel</span>
+      </div>
+
+      <div class="kv one">
+        <div class="kv-item">
+          <span>Sites</span>
+          <strong>{{ usage.projects }}</strong> <span class="muted">/ {{ limits_labels.projects }}</span>
+        </div>
+
+        <div class="kv-item">
+          <span>Pages crawled</span>
+          <div class="progress-row">
+            <strong>{{ usage.pages_crawled_month }}</strong>
+            <span class="muted">/ {{ limits_labels.pages_crawled_month }}</span>
+          </div>
+          <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="kv-item">
+          <span>Assistant IA</span>
+          <div class="progress-row">
+            <strong>{{ usage.assistant_messages_month }}</strong>
+            <span class="muted">/ {{ limits_labels.assistant_messages_month }}</span>
+          </div>
+          <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};">
+            <div class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title-row">
+      <h2>Changer de plan</h2>
+      <span class="muted small">Upgrade instantané</span>
+    </div>
+
+    {% if not stripe_ready %}
+      <p class="muted">Stripe n’est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
+    {% else %}
+      <div class="grid three">
+        <div class="card">
+          <div class="card-title-row">
+            <h2>{{ catalog.solo.label }}</h2>
+            <span class="badge notice">{{ catalog.solo.price_label }}</span>
+          </div>
+          <ul class="examples">
+            {% for f in catalog.solo.features %}
+              <li>{{ f }}</li>
+            {% endfor %}
+          </ul>
+          <div class="row-actions">
+            {% if prices.solo %}
+              <form method="post" action="/billing/checkout" class="inline">
+                <input type="hidden" name="plan_key" value="solo" />
+                <button type="submit" class="btn primary">Choisir Solo</button>
+              </form>
+            {% else %}
+              <span class="muted small">Price ID manquant (Render env).</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <h2>{{ catalog.pro.label }}</h2>
+            <span class="badge notice">{{ catalog.pro.price_label }}</span>
+          </div>
+          <ul class="examples">
+            {% for f in catalog.pro.features %}
+              <li>{{ f }}</li>
+            {% endfor %}
+          </ul>
+          <div class="row-actions">
+            {% if prices.pro %}
+              <form method="post" action="/billing/checkout" class="inline">
+                <input type="hidden" name="plan_key" value="pro" />
+                <button type="submit" class="btn primary">Choisir Pro</button>
+              </form>
+            {% else %}
+              <span class="muted small">Price ID manquant (Render env).</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <h2>{{ catalog.business.label }}</h2>
+            <span class="badge notice">{{ catalog.business.price_label }}</span>
+          </div>
+          <ul class="examples">
+            {% for f in catalog.business.features %}
+              <li>{{ f }}</li>
+            {% endfor %}
+          </ul>
+          <div class="row-actions">
+            {% if prices.business %}
+              <form method="post" action="/billing/checkout" class="inline">
+                <input type="hidden" name="plan_key" value="business" />
+                <button type="submit" class="btn primary">Choisir Business</button>
+              </form>
+            {% else %}
+              <span class="muted small">Price ID manquant (Render env).</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

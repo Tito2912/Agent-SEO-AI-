@@ -53,3 +53,33 @@ services:
         sync: false
       - key: BETA_BASIC_AUTH_PASS
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID_SOLO
+        sync: false
+      - key: STRIPE_PRICE_ID_PRO
+        sync: false
+      - key: STRIPE_PRICE_ID_BUSINESS
+        sync: false
+      - key: SEO_AGENT_DISABLE_WORKER
+        sync: false
+      - key: SEO_AGENT_WORKER_CONCURRENCY
+        value: "1"
+      - key: SEO_AGENT_CRAWL_JOB_TIMEOUT_SECONDS
+        value: "21600"
+      - key: SEO_AGENT_AUTOPILOT_JOB_TIMEOUT_SECONDS
+        value: "10800"
+      - key: SEO_AGENT_JOBS_RETENTION_DAYS
+        sync: false
+      - key: SEO_AGENT_RUNS_RETENTION_DAYS
+        sync: false
+      - key: SEO_AGENT_RETENTION_EVERY_SECONDS
+        value: "21600"
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.05"
+      - key: SENTRY_ENVIRONMENT
+        value: "prod"

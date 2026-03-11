@@ -248,8 +248,10 @@ pre {
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-left: 8px; border: 1px solid var(--border-2); }
 .pill.queued { background: rgba(195, 162, 90, .12); border-color: rgba(195, 162, 90, .22); }
 .pill.running { background: rgba(var(--accent-rgb), .12); border-color: rgba(var(--accent-rgb), .22); }
+.pill.cancel_requested { background: rgba(251, 191, 36, .10); border-color: rgba(251, 191, 36, .22); }
 .pill.done { background: rgba(79, 163, 138, .12); border-color: rgba(79, 163, 138, .22); }
 .pill.failed { background: rgba(192, 107, 127, .12); border-color: rgba(192, 107, 127, .22); }
+.pill.canceled { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.14); color: rgba(255,255,255,.72); }
 
 .badge {
   display: inline-flex;
