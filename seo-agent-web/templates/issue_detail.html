@@ -19,6 +19,25 @@
   {% if not project %}
     <section class="card"><p>Anomalie introuvable: <span class="mono">{{ issue_key }}</span></p></section>
   {% else %}
+    {% set cat_labels = {
+      'Internal pages': 'Pages internes',
+      'Indexability': 'Indexabilité',
+      'Redirects': 'Redirections',
+      'Content': 'Contenu',
+      'Duplicates': 'Doublons',
+      'Localization': 'Localisation',
+      'Sitemaps': 'Sitemaps',
+      'Security': 'Sécurité',
+      'Resources': 'Ressources',
+      'Images': 'Images',
+      'JavaScript': 'JavaScript',
+      'CSS': 'CSS',
+      'Links': 'Liens',
+      'Social tags': 'Balises sociales',
+      'Performance': 'Performance',
+      'Usability and performance': 'UX & performance',
+      'Other': 'Autres'
+    } %}
     <div class="page-header">
       <h1>{{ project.issue.label }}</h1>
       <p class="muted">
@@ -31,7 +50,7 @@
 
     <section class="card">
       <div class="kv">
-        <div class="kv-item"><span class="muted">Catégorie</span><div>{{ project.issue.category }}</div></div>
+        <div class="kv-item"><span class="muted">Catégorie</span><div>{{ cat_labels.get(project.issue.category, project.issue.category) }}</div></div>
         <div class="kv-item"><span class="muted">Occurrences</span><div class="mono">{{ project.issue.count }}</div></div>
         <div class="kv-item">
           <span class="muted">Rapport</span>
@@ -52,7 +71,8 @@
           {% if fix_suggestion and fix_suggestion.priority %}
             {% set p = fix_suggestion.priority %}
             {% set badge = 'error' if p == 'high' else ('warning' if p == 'medium' else 'notice') %}
-            <span class="badge {{ badge }}">{{ p }}</span>
+            {% set p_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(p, p) %}
+            <span class="badge {{ badge }}">{{ p_label }}</span>
           {% endif %}
           {% if fix_suggestions_path %}
             <a class="btn" href="/file?path={{ fix_suggestions_path }}">Plan complet (JSON)</a>

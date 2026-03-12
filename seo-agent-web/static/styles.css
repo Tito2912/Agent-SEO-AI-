@@ -1,5 +1,6 @@
 :root {
   /* Modern dark UI tokens */
+  color-scheme: dark;
   --bg: #050507;
   --panel: rgba(10, 10, 12, .88);
   --panel-2: rgba(7, 7, 10, .92);
@@ -232,6 +233,7 @@ input:focus, select:focus { outline: none; box-shadow: var(--ring); border-color
 input[type="checkbox"], input[type="radio"] {
   width: auto;
   padding: 0;
+  accent-color: var(--accent);
 }
 
 label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -599,20 +601,20 @@ pre {
   list-style: none;
   cursor: pointer;
   user-select: none;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(255,255,255,.03);
+  padding: 8px 10px;
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: rgba(255,255,255,.025);
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 10px;
   font-weight: 800;
-  width: 100%;
+  font-size: 13px;
 }
 .setting-details summary::-webkit-details-marker { display: none; }
 .setting-details summary::after { content: "▾"; color: var(--muted); }
-.setting-details[open] summary { background: rgba(var(--accent-rgb), .10); border-color: rgba(var(--accent-rgb), .22); }
+.setting-details[open] summary { background: rgba(var(--accent-rgb), .10); border-color: rgba(var(--accent-rgb), .26); }
 .setting-details[open] summary::after { content: "▴"; }
 
 .setting-form { margin-top: 12px; }

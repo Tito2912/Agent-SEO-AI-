@@ -26,6 +26,25 @@
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     {% set cur = project.current %}
+    {% set cat_labels = {
+      'Internal pages': 'Pages internes',
+      'Indexability': 'Indexabilité',
+      'Redirects': 'Redirections',
+      'Content': 'Contenu',
+      'Duplicates': 'Doublons',
+      'Localization': 'Localisation',
+      'Sitemaps': 'Sitemaps',
+      'Security': 'Sécurité',
+      'Resources': 'Ressources',
+      'Images': 'Images',
+      'JavaScript': 'JavaScript',
+      'CSS': 'CSS',
+      'Links': 'Liens',
+      'Social tags': 'Balises sociales',
+      'Performance': 'Performance',
+      'Usability and performance': 'UX & performance',
+      'Other': 'Autres'
+    } %}
     <div class="page-header">
       <h1>Anomalies</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
@@ -72,7 +91,7 @@
           <select name="category">
             <option value="" {% if not category %}selected{% endif %}>Toutes</option>
             {% for c in categories %}
-              <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>
+              <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ cat_labels.get(c, c) }}</option>
             {% endfor %}
           </select>
         </label>
@@ -128,12 +147,12 @@
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
                     <div class="muted small mono">{{ it.key }}</div>
                   </td>
-                  <td>{{ it.category }}</td>
+                  <td>{{ cat_labels.get(it.category, it.category) }}</td>
                   {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
                   <td><span class="badge {{ it.severity }}">{{ sev_label }}</span></td>
-		                  <td class="num mono">
-		                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
-		                  </td>
+                  <td class="num mono">
+                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
+                  </td>
 		                  <td class="num mono">
 	                    {% if it.change is not none %}
 	                      {% if it.change > 0 %}

@@ -26,7 +26,7 @@
     </ul>
   </section>
 
-  {% set groups = ["Intégrations", "AI", "Google"] %}
+  {% set groups = ["Intégrations", "IA", "Google"] %}
 
   {% for group in groups %}
     {% set group_items = items | selectattr("group", "equalto", group) | list %}
@@ -37,6 +37,8 @@
             <div class="settings-section-title">{{ group }}</div>
             {% if group == "Intégrations" %}
               <div class="muted small">Accès nécessaires au déploiement et à certaines APIs externes.</div>
+            {% elif group == "IA" %}
+              <div class="muted small">Clés API et modèles utilisés pour l’assistant et les suggestions IA.</div>
             {% elif group == "Google" %}
               <div class="muted small">Connexion Search Console via OAuth (recommandé) ou service account.</div>
             {% endif %}

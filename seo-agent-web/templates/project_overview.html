@@ -142,8 +142,10 @@
 
               <div class="muted small">
                 Occurrences: <span class="mono">{{ a.count }}</span>
-                · Priorité: <span class="mono">{{ a.priority }}</span>
-                · Effort: <span class="mono">{{ a.effort }}</span>
+                {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
+                {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
+                · Priorité: <span class="mono">{{ priority_label }}</span>
+                · Effort: <span class="mono">{{ effort_label }}</span>
               </div>
 
               {% if a.why %}

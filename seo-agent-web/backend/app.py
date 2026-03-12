@@ -4375,12 +4375,12 @@ async def healthz() -> dict[str, str]:
 _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     "GITHUB_TOKEN": {
         "label": "GitHub",
-        "hint": "Personal Access Token",
+        "hint": "Token d’accès personnel (PAT)",
         "group": "Intégrations",
         "order": 10,
         "editable": True,
         "help": {
-            "title": "GitHub — Personal Access Token (PAT)",
+            "title": "GitHub — Token d’accès personnel (PAT)",
             "steps": [
                 "Ouvre GitHub → Settings → Developer settings → Personal access tokens.",
                 "Génère un nouveau token (choisis une expiration).",
@@ -4392,12 +4392,12 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     },
     "NETLIFY_TOKEN": {
         "label": "Netlify",
-        "hint": "Personal access token",
+        "hint": "Token d’accès personnel",
         "group": "Intégrations",
         "order": 20,
         "editable": True,
         "help": {
-            "title": "Netlify — Personal access token",
+            "title": "Netlify — Token d’accès personnel",
             "steps": [
                 "Ouvre Netlify → User settings → Applications → Personal access tokens.",
                 "Crée un nouveau token et copie-le.",
@@ -4413,7 +4413,7 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     },
     "BING_WEBMASTER_API_KEY": {
         "label": "Bing",
-        "hint": "Bing Webmaster Tools · API key (optionnel)",
+        "hint": "Bing Webmaster Tools · clé API (optionnel)",
         "group": "Intégrations",
         "order": 25,
         "editable": True,
@@ -4431,7 +4431,7 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     },
     "PAGESPEED_API_KEY": {
         "label": "PageSpeed",
-        "hint": "Google PageSpeed Insights API key",
+        "hint": "Google PageSpeed Insights · clé API",
         "group": "Intégrations",
         "order": 30,
         "editable": True,
@@ -4448,12 +4448,12 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     },
     "SEO_AUDIT_ASSISTANT_PROVIDER": {
         "label": "Assistant",
-        "hint": "Provider (auto | gemini | openai)",
-        "group": "AI",
+        "hint": "Fournisseur (auto | gemini | openai)",
+        "group": "IA",
         "order": 10,
         "editable": True,
         "help": {
-            "title": "Assistant — choix du provider",
+            "title": "Assistant — choix du fournisseur",
             "steps": [
                 "Valeurs possibles: auto, gemini, openai.",
                 "En mode auto: Gemini est utilisé si une clé est configurée, sinon OpenAI.",
@@ -4462,12 +4462,12 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     },
     "OPENAI_API_KEY": {
         "label": "OpenAI",
-        "hint": "API key",
-        "group": "AI",
+        "hint": "Clé API",
+        "group": "IA",
         "order": 20,
         "editable": True,
         "help": {
-            "title": "OpenAI — API key",
+            "title": "OpenAI — clé API",
             "steps": [
                 "Crée une clé dans ton tableau de bord OpenAI.",
                 "Dans cette page: clique « Configurer », colle la valeur puis « Enregistrer ».",
@@ -4475,20 +4475,20 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         },
     },
     "SEO_AUDIT_ASSISTANT_OPENAI_MODEL": {
-        "label": "OpenAI model",
+        "label": "Modèle OpenAI",
         "hint": "ex: gpt-5.1-mini",
-        "group": "AI",
+        "group": "IA",
         "order": 21,
         "editable": True,
     },
     "GOOGLE_GEMINI_API_KEY": {
         "label": "Gemini",
-        "hint": "Google AI Studio · API key",
-        "group": "AI",
+        "hint": "Google AI Studio · clé API",
+        "group": "IA",
         "order": 30,
         "editable": True,
         "help": {
-            "title": "Gemini — API key (Google AI Studio)",
+            "title": "Gemini — clé API (Google AI Studio)",
             "steps": [
                 "Crée une clé dans Google AI Studio.",
                 "Dans cette page: clique « Configurer », colle la valeur puis « Enregistrer ».",
@@ -4496,20 +4496,20 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         },
     },
     "SEO_AUDIT_ASSISTANT_GEMINI_MODEL": {
-        "label": "Gemini model",
+        "label": "Modèle Gemini",
         "hint": "ex: gemini-1.5-flash",
-        "group": "AI",
+        "group": "IA",
         "order": 31,
         "editable": True,
     },
     "GOOGLE_APPLICATION_CREDENTIALS": {
         "label": "Google Search Console (GSC)",
-        "hint": "Service account JSON path",
+        "hint": "Chemin du JSON (service account)",
         "group": "Google",
         "order": 60,
         "editable": True,
         "help": {
-            "title": "Google Search Console — Service account",
+            "title": "Google Search Console — service account",
             "steps": [
                 "Dans Google Cloud Console, active l’API « Google Search Console API ».",
                 "Crée un Service Account puis génère une clé au format JSON (à télécharger).",
@@ -4521,13 +4521,13 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         },
     },
     "GOOGLE_OAUTH_CLIENT_ID": {
-        "label": "Google OAuth client_id",
-        "hint": "OAuth 2.0 Client ID (web app)",
+        "label": "Google OAuth — Client ID",
+        "hint": "Client ID OAuth 2.0 (appli web)",
         "group": "Google",
         "order": 40,
         "editable": True,
         "help": {
-            "title": "Google OAuth (GSC) — client_id/client_secret",
+            "title": "Google OAuth (GSC) — Client ID / Client secret",
             "steps": [
                 "Dans Google Cloud Console, active l’API « Google Search Console API ».",
                 "Configure l’écran de consentement OAuth.",
@@ -4539,14 +4539,14 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         },
     },
     "GOOGLE_OAUTH_CLIENT_SECRET": {
-        "label": "Google OAuth client_secret",
-        "hint": "OAuth 2.0 Client secret",
+        "label": "Google OAuth — Client secret",
+        "hint": "Client secret OAuth 2.0",
         "group": "Google",
         "order": 41,
         "editable": True,
     },
     "PUBLIC_BASE_URL": {
-        "label": "Public base URL",
+        "label": "URL publique (PUBLIC_BASE_URL)",
         "hint": "ex: https://app.example.com (pour OAuth)",
         "group": "Google",
         "order": 42,
