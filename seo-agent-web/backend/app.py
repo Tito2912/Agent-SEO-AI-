@@ -6059,6 +6059,7 @@ def project_overview(
 
     live_job: dict[str, Any] | None = None
     job_id = (job or "").strip()
+    j = None
     if job_id:
         j = _load_job(job_id)
         if j:
@@ -6069,6 +6070,7 @@ def project_overview(
                 owner_id = str(result.get("user_id") or "").strip()
                 if owner_id != str(getattr(user, "id", "")):
                     j = None
+
         if j:
             # Guardrail: only attach the job if it looks like it belongs to this project crawl.
             job_slug = j.result.get("slug") if isinstance(j.result, dict) else None
@@ -6082,6 +6084,31 @@ def project_overview(
                     "progress": j.progress,
                     "result": j.result,
                 }
+
+    user = getattr(request.state, "user", None)
+    is_admin = bool(getattr(user, "is_admin", False))
+    plan_key = "free"
+    if user and not is_admin:
+        with DB.session() as db:
+            plan_key = billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+
+    fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
+
+    top_actions: list[fix_pack.TopAction] = []
+    try:
+        cur = data.get("current") if isinstance(data.get("current"), dict) else {}
+        ts = str(cur.get("timestamp") or "").strip()
+        report = dash.load_report_json(runs_dir, slug, ts) if ts else None
+        if report:
+            top_actions = fix_pack.top_actions(
+                report,
+                site_name=str(data.get("site_name") or slug),
+                base_url=str(data.get("base_url") or ""),
+                limit=3,
+            )
+    except Exception as e:
+        print(f"[FIX_PACK] top actions error: {type(e).__name__}: {e}")
+
     resp = templates.TemplateResponse(
         "project_overview.html",
         {
@@ -6089,6 +6116,9 @@ def project_overview(
             "project": data,
             "slug": slug,
             "live_job": live_job,
+            "top_actions": top_actions,
+            "fix_pack_unlocked": bool(fix_pack_unlocked),
+            "plan_key": plan_key,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -6501,6 +6531,21 @@ def export_project_report_pdf(request: Request, slug: str, crawl: str | None = N
 @app.get("/projects/{slug}/export/fix-pack.zip")
 def export_project_fix_pack_zip(request: Request, slug: str, crawl: str | None = None) -> Response:
     _ = _db_project_or_404(request, slug)
+
+    user = getattr(request.state, "user", None)
+    is_admin = bool(getattr(user, "is_admin", False))
+    plan_key = "free"
+    if user and not is_admin:
+        with DB.session() as db:
+            plan_key = billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+
+    fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
+    if not fix_pack_unlocked:
+        msg = "Fix pack disponible à partir de Solo. Va sur Abonnement pour upgrade."
+        if _client_wants_json(request):
+            return JSONResponse({"ok": False, "error": msg, "billing_url": "/billing"}, status_code=402)
+        return RedirectResponse(url=f"/billing?msg={quote(msg)}", status_code=303)
+
     runs_dir = _runs_dir_for_request(request)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not data:

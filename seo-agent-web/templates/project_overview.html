@@ -103,9 +103,79 @@
           Rapport: <a href="/file?path={{ cur.report_md }}">report.md</a> · <a href="/file?path={{ cur.report_json }}">report.json</a>
           · Télécharger: <a href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">PDF</a>
           · <a href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">CSV</a>
-          · Fix pack: <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">ZIP</a>
+          · Fix pack:
+          {% if fix_pack_unlocked %}
+            <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">ZIP</a>
+          {% else %}
+            <a href="/billing">Débloquer (Solo+)</a>
+          {% endif %}
         </div>
       </form>
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Top 3 actions</h2>
+        <div class="muted small">
+          {% if fix_pack_unlocked %}
+            Fix pack débloqué · <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">Télécharger ZIP</a>
+          {% else %}
+            Aperçu · <a href="/billing">Débloquer Fix Pack (Solo+)</a>
+          {% endif %}
+        </div>
+      </div>
+      <p class="muted small">Priorisation automatique (impact/effort) basée sur les issues détectées.</p>
+
+      {% if not top_actions %}
+        <p class="muted">Aucune action prioritaire détectée pour ce crawl.</p>
+      {% else %}
+        <div class="grid">
+          {% for a in top_actions %}
+            <div class="card">
+              <div class="card-title-row">
+                <h2 style="margin:0;">
+                  <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
+                </h2>
+                <span class="badge {{ a.severity }}">{{ a.severity }}</span>
+              </div>
+
+              <div class="muted small">
+                Count: <span class="mono">{{ a.count }}</span>
+                · Priority: <span class="mono">{{ a.priority }}</span>
+                · Effort: <span class="mono">{{ a.effort }}</span>
+              </div>
+
+              {% if a.why %}
+                <p class="muted small" style="margin-top: 10px;">
+                  {% if fix_pack_unlocked %}
+                    {{ a.why }}
+                  {% else %}
+                    {{ a.why | truncate(180, True, '…') }}
+                  {% endif %}
+                </p>
+              {% endif %}
+
+              {% if fix_pack_unlocked %}
+                {% if a.fix %}
+                  <div class="muted small" style="margin-top: 10px; font-weight: 800;">Actions recommandées</div>
+                  <ul class="examples">
+                    {% for step in a.fix[:4] %}
+                      <li>{{ step }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+                <div class="row-actions" style="margin-top: 12px;">
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">Voir le détail</a>
+                </div>
+              {% else %}
+                <div class="row-actions" style="margin-top: 12px;">
+                  <a class="btn primary" href="/billing">Débloquer</a>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
     </section>
 
     {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
