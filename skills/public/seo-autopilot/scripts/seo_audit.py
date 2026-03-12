@@ -1382,6 +1382,62 @@ def _gsc_summarize_rows(rows: list[dict[str, Any]], *, dim: str) -> dict[str, An
     }
 
 
+def _gsc_daily_series(rows: list[dict[str, Any]], *, start_date: dt.date, end_date: dt.date) -> list[dict[str, Any]]:
+    def as_int(value: Any) -> int:
+        if isinstance(value, bool):
+            return 0
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(round(value))
+        if isinstance(value, str):
+            try:
+                return int(float(value))
+            except ValueError:
+                return 0
+        return 0
+
+    def as_float(value: Any) -> float:
+        if isinstance(value, bool):
+            return 0.0
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return 0.0
+        return 0.0
+
+    by_date: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        keys = r.get("keys") if isinstance(r.get("keys"), list) else []
+        key = str(keys[0]) if keys else ""
+        if key:
+            by_date[key] = r
+
+    out: list[dict[str, Any]] = []
+    d = start_date
+    while d <= end_date:
+        key = d.isoformat()
+        r = by_date.get(key) or {}
+        clicks = as_int(r.get("clicks"))
+        impressions = as_int(r.get("impressions"))
+        out.append(
+            {
+                "date": key,
+                "clicks": clicks,
+                "impressions": impressions,
+                "ctr": as_float(r.get("ctr")),
+                "position": as_float(r.get("position")),
+            }
+        )
+        d = d + dt.timedelta(days=1)
+    return out
+
+
 def _run_gsc_api(config: CrawlConfig) -> dict[str, Any]:
     if not config.gsc_api_enabled:
         return {"enabled": False, "reason": "disabled_in_config"}
@@ -1434,11 +1490,33 @@ def _run_gsc_api(config: CrawlConfig) -> dict[str, Any]:
                 row_limit=int(config.gsc_row_limit),
                 timeout_s=float(config.gsc_timeout_s),
             )
+            rows_d: list[dict[str, Any]] = []
+            try:
+                rows_d = gsc_fetch.fetch_gsc(
+                    credentials_path=cred_path.resolve(),
+                    property_url=prop,
+                    start_date=start_date,
+                    end_date=end_date,
+                    dimensions=["date"],
+                    search_type=str(config.gsc_search_type),
+                    row_limit=max(500, int(days) + 10),
+                    timeout_s=float(config.gsc_timeout_s),
+                )
+            except Exception:
+                rows_d = []
 
             queries_csv = Path(output_dir) / "gsc-queries.csv"
             pages_csv = Path(output_dir) / "gsc-pages.csv"
             gsc_fetch.write_csv(queries_csv, rows_q, dimensions=["query"])
             gsc_fetch.write_csv(pages_csv, rows_p, dimensions=["page"])
+
+            daily_csv = Path(output_dir) / "gsc-daily.csv"
+            try:
+                if rows_d:
+                    gsc_fetch.write_csv(daily_csv, rows_d, dimensions=["date"])
+            except Exception:
+                pass
+            daily_series = _gsc_daily_series(rows_d, start_date=start_date, end_date=end_date) if rows_d else []
 
             pages_items = _perf_items_from_api_rows(rows_p, dim="page")
             gsc_min_impr = max(0, int(getattr(config, "gsc_min_impressions", 0) or 0))
@@ -1574,6 +1652,8 @@ def _run_gsc_api(config: CrawlConfig) -> dict[str, Any]:
                 "end_date": end_date.isoformat(),
                 "queries_csv": str(queries_csv.resolve()),
                 "pages_csv": str(pages_csv.resolve()),
+                "daily_csv": str(daily_csv.resolve()) if daily_csv.exists() else "",
+                "daily": daily_series,
                 "queries": _gsc_summarize_rows(rows_q, dim="query"),
                 "pages": _gsc_summarize_rows(rows_p, dim="page"),
                 "min_impressions": gsc_min_impr,
@@ -1707,6 +1787,85 @@ def _bing_extract_rows(payload: Any) -> list[dict[str, Any]]:
         if isinstance(v, list) and v and isinstance(v[0], dict):
             return [r for r in v if isinstance(r, dict)]
     return []
+
+
+def _bing_date_iso(value: Any) -> str:
+    if isinstance(value, str):
+        v = value.strip()
+        if not v:
+            return ""
+        # Common format: /Date(1399014000000-0700)/
+        m = re.search(r"Date\\((\\d+)([+-]\\d+)?\\)", v)
+        if m:
+            try:
+                ms = int(m.group(1))
+                d = dt.datetime.fromtimestamp(ms / 1000.0, tz=dt.timezone.utc).date()
+                return d.isoformat()
+            except Exception:
+                return ""
+        try:
+            return dt.date.fromisoformat(v).isoformat()
+        except Exception:
+            return ""
+    if isinstance(value, (int, float)) and float(value) > 0:
+        # Heuristic: treat values > 10^12 as ms since epoch, otherwise seconds.
+        try:
+            ts = float(value)
+            if ts > 1e12:
+                ts = ts / 1000.0
+            d = dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc).date()
+            return d.isoformat()
+        except Exception:
+            return ""
+    return ""
+
+
+def _bing_rank_traffic_series(
+    rows: list[dict[str, Any]], *, start_date: dt.date, end_date: dt.date
+) -> list[dict[str, Any]]:
+    def as_int(value: Any) -> int:
+        if isinstance(value, bool):
+            return 0
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(round(value))
+        if isinstance(value, str):
+            try:
+                return int(float(value))
+            except ValueError:
+                return 0
+        return 0
+
+    by_date: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        d = _bing_date_iso(r.get("Date") or r.get("date") or "")
+        if not d:
+            continue
+        clicks = as_int(r.get("Clicks") if "Clicks" in r else r.get("clicks"))
+        impressions = as_int(r.get("Impressions") if "Impressions" in r else r.get("impressions"))
+        by_date[d] = {"clicks": clicks, "impressions": impressions}
+
+    out: list[dict[str, Any]] = []
+    d = start_date
+    while d <= end_date:
+        key = d.isoformat()
+        node = by_date.get(key) or {}
+        clicks = int(node.get("clicks") or 0)
+        impressions = int(node.get("impressions") or 0)
+        out.append(
+            {
+                "date": key,
+                "clicks": clicks,
+                "impressions": impressions,
+                "ctr": (clicks / impressions) if impressions else 0.0,
+                "position": 0.0,
+            }
+        )
+        d = d + dt.timedelta(days=1)
+    return out
 
 
 def _bing_call(method: str, *, params: dict[str, Any], timeout_s: float) -> Any:
@@ -1976,6 +2135,17 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             (Path(out_dir) / "bing-page-stats.json").write_text(
                 json.dumps(payload_p, ensure_ascii=False, indent=2), encoding="utf-8"
             )
+            daily_series: list[dict[str, Any]] = []
+            daily_json_path = Path(out_dir) / "bing-rank-traffic-stats.json"
+            try:
+                payload_daily = _bing_call(
+                    "GetRankAndTrafficStats", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=float(config.bing_timeout_s)
+                )
+                daily_json_path.write_text(json.dumps(payload_daily, ensure_ascii=False, indent=2), encoding="utf-8")
+                daily_rows = _bing_extract_rows(payload_daily)
+                daily_series = _bing_rank_traffic_series(daily_rows, start_date=start_date, end_date=end_date) if daily_rows else []
+            except Exception:
+                daily_series = []
             queries_csv = Path(out_dir) / "bing-queries.csv"
             pages_csv = Path(out_dir) / "bing-pages.csv"
             _write_simple_csv(queries_csv, q_items, dim="query")
@@ -1993,6 +2163,8 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
                 "end_date": end_date.isoformat(),
                 "queries_csv": str(queries_csv.resolve()),
                 "pages_csv": str(pages_csv.resolve()),
+                "daily_json": str(daily_json_path.resolve()) if daily_json_path.exists() else "",
+                "daily": daily_series,
                 "queries": _summarize_perf_items(q_items, dim="query"),
                 "pages": _summarize_perf_items(p_items, dim="page"),
                 "min_impressions": max(0, int(config.bing_min_impressions)),

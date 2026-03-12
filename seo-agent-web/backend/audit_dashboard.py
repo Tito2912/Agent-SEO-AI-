@@ -1265,6 +1265,8 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         "end_date": str(gsc_meta.get("end_date") or ""),
         "queries_csv": str(gsc_meta.get("queries_csv") or ""),
         "pages_csv": str(gsc_meta.get("pages_csv") or ""),
+        "daily_csv": str(gsc_meta.get("daily_csv") or ""),
+        "daily": [],
         "url_inspection": {},
         "totals": {},
     }
@@ -1279,6 +1281,40 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
             "pages_clicks": int(pages_node.get("total_clicks") or 0),
             "pages_impressions": int(pages_node.get("total_impressions") or 0),
         }
+        daily_rows = gsc_meta.get("daily") if isinstance(gsc_meta.get("daily"), list) else []
+        normalized_daily: list[dict[str, Any]] = []
+        for r in daily_rows[:400]:
+            if not isinstance(r, dict):
+                continue
+            date = str(r.get("date") or "").strip()
+            if not date:
+                continue
+            try:
+                clicks = int(r.get("clicks") or 0)
+            except Exception:
+                clicks = 0
+            try:
+                impressions = int(r.get("impressions") or 0)
+            except Exception:
+                impressions = 0
+            try:
+                ctr = float(r.get("ctr") or 0.0)
+            except Exception:
+                ctr = 0.0
+            try:
+                position = float(r.get("position") or 0.0)
+            except Exception:
+                position = 0.0
+            normalized_daily.append(
+                {
+                    "date": date,
+                    "clicks": clicks,
+                    "impressions": impressions,
+                    "ctr": ctr,
+                    "position": position,
+                }
+            )
+        gsc_summary["daily"] = normalized_daily
         insp = gsc_meta.get("url_inspection") if isinstance(gsc_meta.get("url_inspection"), dict) else {}
         if isinstance(insp, dict) and insp.get("enabled"):
             gsc_summary["url_inspection"] = {
@@ -1303,6 +1339,8 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         "end_date": str(bing_meta.get("end_date") or ""),
         "queries_csv": str(bing_meta.get("queries_csv") or ""),
         "pages_csv": str(bing_meta.get("pages_csv") or ""),
+        "daily_json": str(bing_meta.get("daily_json") or ""),
+        "daily": [],
         "totals": {},
         "crawl_issues": {},
         "blocked_urls": {},
@@ -1320,6 +1358,40 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
             "pages_clicks": int(pages_node.get("total_clicks") or 0),
             "pages_impressions": int(pages_node.get("total_impressions") or 0),
         }
+        daily_rows = bing_meta.get("daily") if isinstance(bing_meta.get("daily"), list) else []
+        normalized_daily: list[dict[str, Any]] = []
+        for r in daily_rows[:400]:
+            if not isinstance(r, dict):
+                continue
+            date = str(r.get("date") or "").strip()
+            if not date:
+                continue
+            try:
+                clicks = int(r.get("clicks") or 0)
+            except Exception:
+                clicks = 0
+            try:
+                impressions = int(r.get("impressions") or 0)
+            except Exception:
+                impressions = 0
+            try:
+                ctr = float(r.get("ctr") or 0.0)
+            except Exception:
+                ctr = 0.0
+            try:
+                position = float(r.get("position") or 0.0)
+            except Exception:
+                position = 0.0
+            normalized_daily.append(
+                {
+                    "date": date,
+                    "clicks": clicks,
+                    "impressions": impressions,
+                    "ctr": ctr,
+                    "position": position,
+                }
+            )
+        bing_summary["daily"] = normalized_daily
         ci = bing_meta.get("crawl_issues") if isinstance(bing_meta.get("crawl_issues"), dict) else {}
         bu = bing_meta.get("blocked_urls") if isinstance(bing_meta.get("blocked_urls"), dict) else {}
         sm = bing_meta.get("sitemaps") if isinstance(bing_meta.get("sitemaps"), dict) else {}
