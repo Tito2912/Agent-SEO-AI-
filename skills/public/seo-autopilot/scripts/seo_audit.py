@@ -1849,8 +1849,23 @@ def _bing_rank_traffic_series(
         by_date[d] = {"clicks": clicks, "impressions": impressions}
 
     out: list[dict[str, Any]] = []
-    d = start_date
-    while d <= end_date:
+    available_dates: list[dt.date] = []
+    for k in by_date.keys():
+        try:
+            available_dates.append(dt.date.fromisoformat(k))
+        except Exception:
+            continue
+
+    effective_start = start_date
+    effective_end = end_date
+    if available_dates:
+        effective_start = max(start_date, min(available_dates))
+        effective_end = min(end_date, max(available_dates))
+    if effective_end < effective_start:
+        return []
+
+    d = effective_start
+    while d <= effective_end:
         key = d.isoformat()
         node = by_date.get(key) or {}
         clicks = int(node.get("clicks") or 0)
