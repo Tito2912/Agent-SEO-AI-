@@ -13,9 +13,9 @@
   --accent-rgb: 214, 178, 106;
   --chart-muted: rgba(255, 255, 255, .09);
   --link: var(--accent);
-  --ok: #22c55e;
-  --warn: #fbbf24;
-  --err: #fb7185;
+  --ok: #4fa38a;
+  --warn: #c3a25a;
+  --err: #c06b7f;
   --notice: var(--accent-2);
 
   --radius-lg: 18px;
