@@ -56,6 +56,13 @@ except ImportError:
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
+    from . import fix_pack as fix_pack  # type: ignore
+except ImportError:
+    # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
+    import fix_pack  # type: ignore
+
+try:
+    # When running as `uvicorn backend.app:app` (recommended).
     from . import billing as billing  # type: ignore
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -6489,6 +6496,35 @@ def export_project_report_pdf(request: Request, slug: str, crawl: str | None = N
     title = f"Rapport - {data.get('site_name') or slug} - {ts}"
     pdf = _text_to_pdf_bytes(content_text, title=title, wrap_width=110)
     return _download_response(pdf, media_type="application/pdf", filename=filename)
+
+
+@app.get("/projects/{slug}/export/fix-pack.zip")
+def export_project_fix_pack_zip(request: Request, slug: str, crawl: str | None = None) -> Response:
+    _ = _db_project_or_404(request, slug)
+    runs_dir = _runs_dir_for_request(request)
+    data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
+    if not data:
+        raise HTTPException(status_code=404, detail="Projet introuvable")
+
+    cur = data.get("current") if isinstance(data.get("current"), dict) else {}
+    ts = str(cur.get("timestamp") or "").strip()
+    if not ts:
+        raise HTTPException(status_code=400, detail="Timestamp manquant")
+
+    report = dash.load_report_json(runs_dir, slug, ts)
+    if not report:
+        raise HTTPException(status_code=404, detail="report.json introuvable")
+
+    content = fix_pack.build_fix_pack_zip_bytes(
+        runs_dir=runs_dir,
+        slug=slug,
+        timestamp=ts,
+        site_name=str(data.get("site_name") or slug),
+        base_url=str(data.get("base_url") or ""),
+        report=report,
+    )
+    filename = f"{slug}-{ts}-fix-pack.zip"
+    return _download_response(content, media_type="application/zip", filename=filename)
 
 
 @app.get("/projects/{slug}/export/issues.csv")

@@ -103,6 +103,7 @@
           Rapport: <a href="/file?path={{ cur.report_md }}">report.md</a> · <a href="/file?path={{ cur.report_json }}">report.json</a>
           · Télécharger: <a href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">PDF</a>
           · <a href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">CSV</a>
+          · Fix pack: <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">ZIP</a>
         </div>
       </form>
     </section>
