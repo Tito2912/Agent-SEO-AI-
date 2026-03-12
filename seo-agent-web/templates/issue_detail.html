@@ -1,13 +1,13 @@
 {% extends "layout.html" %}
-{% block title %}{{ project.issue.label if project else issue_key }} — Issue{% endblock %}
+{% block title %}{{ project.issue.label if project else issue_key }} — Anomalie{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.slug }}</a>
     <span class="crumb-sep">/</span>
-    <a href="/projects/{{ project.slug }}/issues?crawl={{ project.timestamp }}">All issues</a>
+    <a href="/projects/{{ project.slug }}/issues?crawl={{ project.timestamp }}">Anomalies</a>
     <span class="crumb-sep">/</span>
     <span class="crumb-current">{{ project.issue.label }}</span>
   {% else %}
@@ -17,12 +17,13 @@
 
 {% block content %}
   {% if not project %}
-    <section class="card"><p>Issue introuvable: <span class="mono">{{ issue_key }}</span></p></section>
+    <section class="card"><p>Anomalie introuvable: <span class="mono">{{ issue_key }}</span></p></section>
   {% else %}
     <div class="page-header">
       <h1>{{ project.issue.label }}</h1>
       <p class="muted">
-        <span class="badge {{ project.issue.severity }}">{{ project.issue.severity }}</span>
+        {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(project.issue.severity, project.issue.severity) %}
+        <span class="badge {{ project.issue.severity }}">{{ sev_label }}</span>
         <span class="mono">{{ project.issue.key }}</span>
         · <span class="mono">{{ project.timestamp }}</span>
       </p>
@@ -30,8 +31,8 @@
 
     <section class="card">
       <div class="kv">
-        <div class="kv-item"><span class="muted">Category</span><div>{{ project.issue.category }}</div></div>
-        <div class="kv-item"><span class="muted">Count</span><div class="mono">{{ project.issue.count }}</div></div>
+        <div class="kv-item"><span class="muted">Catégorie</span><div>{{ project.issue.category }}</div></div>
+        <div class="kv-item"><span class="muted">Occurrences</span><div class="mono">{{ project.issue.count }}</div></div>
         <div class="kv-item">
           <span class="muted">Rapport</span>
           <div>
@@ -109,29 +110,29 @@
       {% if project.issue.kind %}
         <div class="card-title-row">
           <h2>Erreurs réelles</h2>
-          {% if project.issue.pagination %}
-            <span class="muted small mono">
-              {{ project.issue.pagination.total }} · page {{ project.issue.pagination.page }}/{{ project.issue.pagination.pages }}
-            </span>
-          {% endif %}
-        </div>
+        {% if project.issue.pagination %}
+          <span class="muted small mono">
+            {{ project.issue.pagination.total }} · page {{ project.issue.pagination.page }}/{{ project.issue.pagination.pages }}
+          </span>
+        {% endif %}
+      </div>
 
-        <form method="get" class="filters" style="margin-top: 8px;">
-          <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
-          <label class="grow">
-            Recherche
-            <input type="text" name="q" value="{{ q or '' }}" placeholder="URL, état, code, etc." />
-          </label>
-          <label>
-            Par page
-            <select name="per_page">
-              {% for n in [50, 100, 200, 500] %}
-                <option value="{{ n }}" {% if project.issue.pagination and (project.issue.pagination.per_page == n) %}selected{% endif %}>{{ n }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <button type="submit" class="btn">Filtrer</button>
-        </form>
+      <form method="get" class="filters" style="margin-top: 8px;">
+        <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
+        <label class="grow">
+          Recherche
+          <input type="text" name="q" value="{{ q or '' }}" placeholder="URL, état, code, etc." />
+        </label>
+        <label>
+          Par page
+          <select name="per_page">
+            {% for n in [50, 100, 200, 500] %}
+              <option value="{{ n }}" {% if project.issue.pagination and (project.issue.pagination.per_page == n) %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="btn">Appliquer</button>
+      </form>
 
         {% if project.issue.source %}
           <p class="muted small" style="margin-top: 10px;">
@@ -149,10 +150,10 @@
                   <tr>
                     <th>URL</th>
                     <th>Verdict</th>
-                    <th>Coverage</th>
+                    <th>Couverture</th>
                     <th>Robots</th>
-                    <th>Indexing</th>
-                    <th>Fetch</th>
+                    <th>Indexation</th>
+                    <th>Récupération</th>
                     <th>Détails</th>
                   </tr>
                 </thead>
@@ -260,7 +261,7 @@
               <thead>
                 <tr>
                   <th>URL</th>
-                  <th>Status</th>
+                  <th>Statut</th>
                   <th class="num">Valeur</th>
                   <th>Source</th>
                 </tr>

@@ -1,13 +1,13 @@
 {% extends "layout.html" %}
-{% block title %}Issues — {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}Anomalies — {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">All issues</span>
+    <span class="crumb-current">Anomalies</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -16,7 +16,7 @@
 {% block actions %}
   {% if project %}
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">New crawl</button>
+      <button type="submit" class="btn primary">Nouveau crawl</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -27,7 +27,7 @@
   {% else %}
     {% set cur = project.current %}
     <div class="page-header">
-      <h1>All issues</h1>
+      <h1>Anomalies</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
     </div>
 
@@ -39,13 +39,13 @@
         {% endif %}
       </div>
       <p class="muted small">
-        Génère des recommandations actionnables pour chaque issue (priorité, actions, vérifications). Pense à valider avant déploiement.
+        Génère des recommandations actionnables pour chaque anomalie (priorité, actions, vérifications). Pensez à valider avant déploiement.
       </p>
       <form method="post" action="/projects/{{ project.slug }}/fix-suggestions/generate" class="inline">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
-        <button type="submit" class="btn">Générer / rafraîchir</button>
+        <button type="submit" class="btn">Générer / mettre à jour</button>
         {% if fix_suggestions_path %}
-          <a class="btn" href="/file?path={{ fix_suggestions_path }}">Ouvrir JSON</a>
+          <a class="btn" href="/file?path={{ fix_suggestions_path }}">Ouvrir le JSON</a>
         {% endif %}
       </form>
     </section>
@@ -58,19 +58,19 @@
         {% endif %}
 
         <label>
-          Severity
+          Criticité
           <select name="severity">
-            <option value="" {% if not severity %}selected{% endif %}>All</option>
-            <option value="error" {% if severity == 'error' %}selected{% endif %}>error</option>
-            <option value="warning" {% if severity == 'warning' %}selected{% endif %}>warning</option>
-            <option value="notice" {% if severity == 'notice' %}selected{% endif %}>notice</option>
+            <option value="" {% if not severity %}selected{% endif %}>Toutes</option>
+            <option value="error" {% if severity == 'error' %}selected{% endif %}>Erreurs</option>
+            <option value="warning" {% if severity == 'warning' %}selected{% endif %}>Avertissements</option>
+            <option value="notice" {% if severity == 'notice' %}selected{% endif %}>Infos</option>
           </select>
         </label>
 
         <label>
-          Category
+          Catégorie
           <select name="category">
-            <option value="" {% if not category %}selected{% endif %}>All</option>
+            <option value="" {% if not category %}selected{% endif %}>Toutes</option>
             {% for c in categories %}
               <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ c }}</option>
             {% endfor %}
@@ -78,11 +78,11 @@
         </label>
 
         <label class="grow">
-          Search
-          <input name="q" value="{{ q }}" placeholder="title, canonical, sitemap..." />
+          Recherche
+          <input name="q" value="{{ q }}" placeholder="titre, canonical, sitemap…" />
         </label>
 
-        <button type="submit" class="btn">Filtrer</button>
+        <button type="submit" class="btn">Appliquer</button>
 
         {% set export_qs = "crawl=" ~ cur.timestamp %}
         {% if project.compare and project.compare.timestamp %}
@@ -108,17 +108,17 @@
 
     <section class="card">
       {% if not issues %}
-        <p class="muted">Aucune issue pour ces filtres.</p>
+        <p class="muted">Aucune anomalie pour ces filtres.</p>
       {% else %}
         <div class="table-wrap">
           <table class="table compact">
             <thead>
               <tr>
-                <th>Issue</th>
-                <th>Category</th>
-                <th>Severity</th>
-                <th class="num">Count</th>
-                <th class="num">Change</th>
+                <th>Anomalie</th>
+                <th>Catégorie</th>
+                <th>Criticité</th>
+                <th class="num">Occurrences</th>
+                <th class="num">Évolution</th>
               </tr>
             </thead>
             <tbody>
@@ -128,8 +128,9 @@
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
                     <div class="muted small mono">{{ it.key }}</div>
                   </td>
-		                  <td>{{ it.category }}</td>
-		                  <td><span class="badge {{ it.severity }}">{{ it.severity }}</span></td>
+                  <td>{{ it.category }}</td>
+                  {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
+                  <td><span class="badge {{ it.severity }}">{{ sev_label }}</span></td>
 		                  <td class="num mono">
 		                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
 		                  </td>

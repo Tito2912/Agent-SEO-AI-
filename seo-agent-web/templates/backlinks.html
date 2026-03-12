@@ -2,7 +2,7 @@
 {% block title %}Backlinks — {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
@@ -16,7 +16,7 @@
 {% block actions %}
   {% if project %}
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">New crawl</button>
+      <button type="submit" class="btn primary">Nouveau crawl</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -32,19 +32,15 @@
     </div>
 
     {% if err %}
-      <section class="card">
-        <div class="card-title-row">
-          <h2><span class="badge error">erreur</span></h2>
-        </div>
-        <p class="muted small" style="margin:0;">{{ err }}</p>
-      </section>
+      <div class="alert error">
+        <span class="badge error">erreur</span>
+        <p class="muted small">{{ err }}</p>
+      </div>
     {% elif msg %}
-      <section class="card">
-        <div class="card-title-row">
-          <h2><span class="badge ok">ok</span></h2>
-        </div>
-        <p class="muted small" style="margin:0;">{{ msg }}</p>
-      </section>
+      <div class="alert ok">
+        <span class="badge ok">ok</span>
+        <p class="muted small">{{ msg }}</p>
+      </div>
     {% endif %}
 
     <section class="card">
@@ -174,8 +170,8 @@
                   <table class="table compact">
                     <thead>
                       <tr>
-                        <th>Domain</th>
-                        <th class="num">Links</th>
+                        <th>Domaine</th>
+                        <th class="num">Liens</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -196,7 +192,7 @@
                     <thead>
                       <tr>
                         <th>Page</th>
-                        <th class="num">Links</th>
+                        <th class="num">Liens</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -217,7 +213,7 @@
                     <thead>
                       <tr>
                         <th>Ancre</th>
-                        <th class="num">Links</th>
+                        <th class="num">Liens</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -297,7 +293,7 @@
       <section class="card">
         <div class="card-title-row">
           <h2>Netlinking (crawl)</h2>
-          <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">Voir issues “Links”</a>
+          <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">Voir anomalies “Liens”</a>
         </div>
         <div class="kv">
           <div class="kv-item">

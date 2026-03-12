@@ -11,14 +11,20 @@
 {% block content %}
   <div class="page-header">
     <h1>Abonnement</h1>
-    <p class="muted">Gère ton plan, tes quotas et ta facturation.</p>
+    <p class="muted">Gérez votre plan, vos quotas et votre facturation.</p>
   </div>
 
   {% if msg %}
-    <div class="card"><strong>{{ msg }}</strong></div>
+    <div class="alert ok">
+      <span class="badge ok">ok</span>
+      <p class="muted small">{{ msg }}</p>
+    </div>
   {% endif %}
   {% if err %}
-    <div class="card"><strong>Erreur :</strong> {{ err }}</div>
+    <div class="alert error">
+      <span class="badge error">erreur</span>
+      <p class="muted small">{{ err }}</p>
+    </div>
   {% endif %}
 
   <div class="grid two">
@@ -31,8 +37,17 @@
       <div class="muted">Prix : <strong>{{ plan.price_label }}</strong></div>
 
       {% if subscription %}
+        {% set sub_status = {
+          'active': 'actif',
+          'trialing': 'essai',
+          'past_due': 'paiement en attente',
+          'canceled': 'annulé',
+          'unpaid': 'impayé',
+          'incomplete': 'incomplet',
+          'incomplete_expired': 'expiré'
+        }.get(subscription.status, subscription.status) %}
         <div class="row muted small">
-          Statut : <span class="mono">{{ subscription.status }}</span>
+          Statut : <span class="mono">{{ sub_status }}</span>
           {% if subscription.cancel_at_period_end %} · Annulation en fin de période{% endif %}
         </div>
         {% if subscription.current_period_end %}
@@ -66,7 +81,7 @@
         </div>
 
         <div class="kv-item">
-          <span>Pages crawled</span>
+          <span>Pages crawlées</span>
           <div class="progress-row">
             <strong>{{ usage.pages_crawled_month }}</strong>
             <span class="muted">/ {{ limits_labels.pages_crawled_month }}</span>

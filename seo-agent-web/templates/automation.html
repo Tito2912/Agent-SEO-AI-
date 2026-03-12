@@ -1,25 +1,25 @@
 {% extends "layout.html" %}
-{% block title %}Automation — SEO Audit{% endblock %}
+{% block title %}Automatisation — SEO Audit{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Automation</span>
+  <span class="crumb-current">Automatisation</span>
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Automation</h1>
-    <p class="muted">Lancer l’autopilot (audit multi-sites, GSC, backlog) et consulter le résumé global.</p>
+    <h1>Automatisation</h1>
+    <p class="muted">Lancez l’autopilot (audit multi-sites, GSC, backlog) et consultez le résumé global.</p>
   </div>
 
   <section class="card">
-    <h2>Config</h2>
-    <p><span class="muted">Repo:</span> <span class="mono">{{ repo_root }}</span></p>
-    <p><span class="muted">Config:</span> <span class="mono">{{ config_path or "seo-autopilot.yml introuvable" }}</span></p>
+    <h2>Configuration</h2>
+    <p><span class="muted">Dépôt:</span> <span class="mono">{{ repo_root }}</span></p>
+    <p><span class="muted">Fichier:</span> <span class="mono">{{ config_path or "seo-autopilot.yml introuvable" }}</span></p>
     {% if inventory %}
       <p>
-        <span class="muted">Inventory CSV:</span>
+        <span class="muted">Inventaire (CSV):</span>
         <span class="mono">{{ inventory.path }}</span>
         {% if inventory.exists %}
           <span class="muted">—</span>
@@ -33,16 +33,16 @@
         <p class="muted small">Extrait: <span class="mono">{{ inventory.preview | join(", ") }}</span></p>
       {% endif %}
       {% if inventory.error %}
-        <p class="muted small">Erreur inventory: <span class="mono">{{ inventory.error }}</span></p>
+        <p class="muted small">Erreur d’inventaire: <span class="mono">{{ inventory.error }}</span></p>
       {% endif %}
     {% endif %}
 
     {% if env_status and config_status %}
       <p class="muted small">
-        PageSpeed: <span class="mono">{{ "on" if config_status.pagespeed_enabled else "off" }}</span>
-        · API key: <span class="mono">{{ "ok" if env_status.pagespeed_api_key_set else "missing" }}</span>
-        · GSC API: <span class="mono">{{ "on" if config_status.gsc_api_enabled else "off" }}</span>
-        · Credentials: <span class="mono">{% if env_status.gsc_credentials_set %}set{% else %}missing{% endif %}{% if env_status.gsc_credentials_set %} / {% if env_status.gsc_credentials_exists %}file ok{% else %}file missing{% endif %}{% endif %}</span>
+        PageSpeed: <span class="mono">{{ "activé" if config_status.pagespeed_enabled else "désactivé" }}</span>
+        · Clé API: <span class="mono">{{ "ok" if env_status.pagespeed_api_key_set else "manquante" }}</span>
+        · API GSC: <span class="mono">{{ "activé" if config_status.gsc_api_enabled else "désactivé" }}</span>
+        · Credentials: <span class="mono">{% if env_status.gsc_credentials_set %}défini{% else %}manquant{% endif %}{% if env_status.gsc_credentials_set %} / {% if env_status.gsc_credentials_exists %}fichier ok{% else %}fichier manquant{% endif %}{% endif %}</span>
       </p>
     {% endif %}
     <form method="post" action="/run">
@@ -81,13 +81,13 @@
   </section>
 
   <section class="card">
-    <h2>Jobs récents</h2>
+    <h2>Exécutions récentes</h2>
     {% if jobs %}
       <div class="job-grid">
         {% for j in jobs %}
           <a class="job-chip" href="/jobs?job={{ j.id }}">
             <span class="mono">{{ j.id[:8] }}</span>
-            <span class="pill {{ j.status }}">{{ j.status }}</span>
+            <span class="pill {{ j.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
           </a>
         {% endfor %}
       </div>

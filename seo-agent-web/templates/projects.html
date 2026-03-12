@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block crumbs %}
-  <span class="crumb-current">Site Audit</span>
+  <span class="crumb-current">Projets</span>
 {% endblock %}
 
 {% block actions %}
@@ -29,24 +29,20 @@
 
 {% block content %}
   <div class="page-header">
-    <h1>Site Audit</h1>
-    <p class="muted">Liste de projets (Postgres) + dernier crawl.</p>
+    <h1>Projets</h1>
+    <p class="muted">Suivez vos sites, lancez des crawls et surveillez l’état de santé.</p>
   </div>
 
   {% if err %}
-    <section class="card">
-      <div class="card-title-row">
-        <h2><span class="badge error">erreur</span></h2>
-      </div>
-      <p class="muted small" style="margin:0;">{{ err }}</p>
-    </section>
+    <div class="alert error">
+      <span class="badge error">erreur</span>
+      <p class="muted small">{{ err }}</p>
+    </div>
   {% elif msg %}
-    <section class="card">
-      <div class="card-title-row">
-        <h2><span class="badge ok">ok</span></h2>
-      </div>
-      <p class="muted small" style="margin:0;">{{ msg }}</p>
-    </section>
+    <div class="alert ok">
+      <span class="badge ok">ok</span>
+      <p class="muted small">{{ msg }}</p>
+    </div>
   {% endif %}
 
   <form id="batch-crawl-form" method="post" action="/projects/crawl-batch">
@@ -56,7 +52,10 @@
 
   <section class="card">
     {% if not projects %}
-      <p class="muted">Aucun projet trouvé. Lance un audit depuis <a href="/automation">Automation</a>.</p>
+      <p class="muted">
+        Aucun projet pour l’instant.
+        Cliquez sur <strong>Nouveau projet</strong> pour ajouter un site{% if request.state.user and request.state.user.is_admin %}, ou lancez un audit multi-sites depuis <a href="/automation">Automatisation</a>{% endif %}.
+      </p>
     {% else %}
       <div class="card-title-row">
 	        <h2>Sélection</h2>
@@ -81,10 +80,10 @@
               </th>
               <th>Projet</th>
               <th>Dernier crawl</th>
-              <th>Health</th>
-              <th class="num">URLs crawled</th>
+              <th>Santé</th>
+              <th class="num">URLs crawlées</th>
               <th class="num">URLs avec erreurs</th>
-              <th>Issues</th>
+              <th>Anomalies</th>
               <th></th>
             </tr>
           </thead>
@@ -139,7 +138,7 @@
 
 	                      <div class="row-crawl" data-job-id="{{ live.id }}" data-live="1" data-project-slug="{{ p.slug }}">
 	                        <div class="row-crawl-head">
-	                          <span class="pill {{ live.status }}" data-role="status">{{ live.status }}</span>
+	                          <span class="pill {{ live.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live.status, live.status) }}</span>
 	                          <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}—{% endif %}</span>
 	                        </div>
 	                        <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
@@ -188,14 +187,14 @@
 		                    <a
 		                      class="icon-btn"
 		                      href="/projects/{{ p.slug }}/settings/crawl"
-		                      title="Paramètres crawl"
-		                      aria-label="Paramètres crawl"
+		                      title="Paramètres de crawl"
+		                      aria-label="Paramètres de crawl"
 		                    >⚙</a>
 		                    <form method="post" action="/projects/{{ p.slug }}/crawl" class="crawl-start-form" data-slug="{{ p.slug }}">
 		                      <input type="hidden" name="config_path" value="{{ config_path }}" />
 		                      {% set live_running = live and live.status in ['queued','running'] %}
 		                      <button type="submit" class="btn primary" data-role="start-btn" {% if live_running %}disabled{% endif %}>
-		                        {% if live_running %}En cours{% else %}Start{% endif %}
+		                        {% if live_running %}En cours{% else %}Démarrer{% endif %}
 		                      </button>
 		                    </form>
 		                  </div>
@@ -252,7 +251,7 @@
 		            el.className = "row-crawl";
 		            el.innerHTML = `
 		              <div class="row-crawl-head">
-		                <span class="pill queued" data-role="status">queued</span>
+		                <span class="pill queued" data-role="status">en attente</span>
 		                <span class="mono small" data-role="progress-count">—</span>
 		              </div>
 		              <div class="progress slim crawl" data-role="progress-bar" style="display:none;">
@@ -260,6 +259,18 @@
 		              </div>
 		            `;
 		            slot.appendChild(el);
+		          }
+
+		          function statusLabel(status) {
+		            const map = {
+		              queued: "en attente",
+		              running: "en cours",
+		              cancel_requested: "annulation…",
+		              done: "terminé",
+		              failed: "échec",
+		              canceled: "annulé",
+		            };
+		            return map[status] || status;
 		          }
 
 		          el.dataset.jobId = jobId;
@@ -270,7 +281,7 @@
 		          const statusText = status ? String(status) : "queued";
 		          const statusEl = el.querySelector('[data-role="status"]');
 		          if (statusEl) {
-		            statusEl.textContent = statusText;
+		            statusEl.textContent = statusLabel(statusText);
 		            statusEl.className = `pill ${statusText}`;
 		          }
 
@@ -370,7 +381,7 @@
 	            } catch (err) {
 	              if (startBtn) {
 	                startBtn.disabled = false;
-	                startBtn.textContent = prevText || "Start";
+	                startBtn.textContent = prevText || "Démarrer";
 	              }
 	              alert(`Erreur: ${String(err && err.message ? err.message : err)}`);
 	            }
@@ -577,7 +588,7 @@
 	  {% if jobs %}
 	    <section class="card">
       <div class="card-title-row">
-        <h2>Jobs récents</h2>
+        <h2>Exécutions récentes</h2>
         <a class="muted small" href="/jobs">Voir tous</a>
       </div>
       <div class="job-grid">
@@ -589,7 +600,7 @@
             data-live="{{ '1' if j.status in ['queued', 'running'] else '0' }}"
           >
             <span class="mono">{{ j.id[:8] }}</span>
-            <span class="pill {{ j.status }}" data-role="status">{{ j.status }}</span>
+            <span class="pill {{ j.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
           </a>
         {% endfor %}
 	      </div>
@@ -614,11 +625,23 @@
 	        return { cur, tot, pct };
 	      }
 
+	      function statusLabel(status) {
+	        const map = {
+	          queued: "en attente",
+	          running: "en cours",
+	          cancel_requested: "annulation…",
+	          done: "terminé",
+	          failed: "échec",
+	          canceled: "annulé",
+	        };
+	        return map[status] || status;
+	      }
+
 	      function updateItem(el, data) {
 	        const status = (data && data.status) ? String(data.status) : "";
 	        const statusEl = el.querySelector('[data-role="status"]');
 	        if (statusEl) {
-	          statusEl.textContent = status;
+	          statusEl.textContent = statusLabel(status);
 	          statusEl.className = `pill ${status}`;
 	        }
 
@@ -651,7 +674,7 @@
 	            const startBtn = document.querySelector(`form.crawl-start-form[data-slug="${esc}"] [data-role="start-btn"]`);
 	            if (startBtn) {
 	              startBtn.disabled = false;
-	              startBtn.textContent = "Start";
+	              startBtn.textContent = "Démarrer";
 	            }
 	          }
 	        }

@@ -10,13 +10,13 @@
     <main class="container">
       <header class="header">
         <h1>SEO Agent (local)</h1>
-        <p class="muted">Dashboard minimal pour lancer l’autopilot et lire les rapports.</p>
+        <p class="muted">Tableau de bord minimal pour lancer l’autopilot et lire les rapports.</p>
       </header>
 
       <section class="card">
-        <h2>Config</h2>
-        <p><span class="muted">Repo:</span> {{ repo_root }}</p>
-        <p><span class="muted">Config:</span> {{ config_path or "seo-autopilot.yml introuvable" }}</p>
+        <h2>Configuration</h2>
+        <p><span class="muted">Dépôt:</span> {{ repo_root }}</p>
+        <p><span class="muted">Fichier:</span> {{ config_path or "seo-autopilot.yml introuvable" }}</p>
         <form method="post" action="/run">
           <label>Chemin config</label>
           <input name="config_path" value="{{ config_path }}" />
@@ -53,13 +53,13 @@
       </section>
 
       <section class="card">
-        <h2>Jobs récents</h2>
+        <h2>Exécutions récentes</h2>
         {% if jobs %}
           <ul>
             {% for j in jobs %}
               <li>
                 <a href="/jobs?job={{ j.id }}">{{ j.id }}</a>
-                <span class="pill {{ j.status }}">{{ j.status }}</span>
+                <span class="pill {{ j.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
               </li>
             {% endfor %}
           </ul>

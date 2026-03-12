@@ -1,13 +1,13 @@
 {% extends "layout.html" %}
-{% block title %}Paramètres crawl — {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}Paramètres de crawl — {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Paramètres crawl</span>
+    <span class="crumb-current">Paramètres de crawl</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -24,20 +24,20 @@
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     <div class="page-header">
-      <h1>Paramètres crawl</h1>
+      <h1>Paramètres de crawl</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ project.base_url }}</span></p>
     </div>
 
     {% if err %}
-      <section class="card">
-        <div class="card-title-row"><h2><span class="badge error">erreur</span></h2></div>
-        <p class="muted small" style="margin:0;">{{ err }}</p>
-      </section>
+      <div class="alert error">
+        <span class="badge error">erreur</span>
+        <p class="muted small">{{ err }}</p>
+      </div>
     {% elif msg %}
-      <section class="card">
-        <div class="card-title-row"><h2><span class="badge ok">ok</span></h2></div>
-        <p class="muted small" style="margin:0;">{{ msg }}</p>
-      </section>
+      <div class="alert ok">
+        <span class="badge ok">ok</span>
+        <p class="muted small">{{ msg }}</p>
+      </div>
     {% endif %}
 
     <form method="post" action="/projects/{{ slug }}/settings/crawl">
@@ -81,7 +81,7 @@
         </label>
 
         <p class="muted small" style="margin: 10px 0 0;">
-          Par défaut, le crawl respecte <span class="mono">robots.txt</span>. Active l’option “Ignorer robots.txt” uniquement si tu sais ce que tu fais.
+          Par défaut, le crawl respecte <span class="mono">robots.txt</span>. Activez l’option “Ignorer robots.txt” uniquement si vous savez ce que vous faites.
         </p>
       </section>
 
@@ -98,7 +98,7 @@
                 <div class="module-name">Audit de site</div>
                 <div class="muted small">Indexabilité, contenu, liens, canonicals, erreurs HTTP…</div>
               </div>
-              <span class="badge ok">on</span>
+              <span class="badge ok">activé</span>
             </div>
             <p class="muted small" style="margin: 8px 0 0;">Ce module est toujours activé.</p>
           </section>
@@ -109,7 +109,7 @@
                 <input type="checkbox" name="check_resources" {% if crawl.check_resources %}checked{% endif %} />
                 <span>Ressources (CSS/JS/images)</span>
               </label>
-              {% if crawl.check_resources %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+              {% if crawl.check_resources %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
             </div>
             <div class="grid two module-body">
               <label>
@@ -125,18 +125,18 @@
                 <input type="checkbox" name="pagespeed" {% if crawl.pagespeed %}checked{% endif %} />
                 <span>Core Web Vitals (PageSpeed)</span>
               </label>
-              {% if crawl.pagespeed %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+              {% if crawl.pagespeed %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
             </div>
             <div class="grid two module-body">
               <label>
-                Strategy
+                Stratégie
                 <select name="pagespeed_strategy">
                   <option value="mobile" {% if crawl.pagespeed_strategy == "mobile" %}selected{% endif %}>mobile</option>
                   <option value="desktop" {% if crawl.pagespeed_strategy == "desktop" %}selected{% endif %}>desktop</option>
                 </select>
               </label>
               <label>
-                Max URLs
+                URLs max
                 <input type="number" name="pagespeed_max_urls" min="0" max="1000" value="{{ crawl.pagespeed_max_urls }}" />
               </label>
               <label>
@@ -144,7 +144,7 @@
                 <input type="number" name="pagespeed_timeout_s" min="1" max="180" step="1" value="{{ crawl.pagespeed_timeout_s }}" />
               </label>
               <label>
-                Workers
+                Parallélisme (workers)
                 <input type="number" name="pagespeed_workers" min="1" max="10" value="{{ crawl.pagespeed_workers }}" />
               </label>
             </div>
@@ -159,7 +159,7 @@
                 <input type="checkbox" name="gsc_enabled" {% if gsc.enabled %}checked{% endif %} />
                 <span>Google Search Console (GSC)</span>
               </label>
-              {% if gsc.enabled %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+              {% if gsc.enabled %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
             </div>
 
             <div class="grid two module-body">
@@ -168,11 +168,11 @@
                 <input type="number" name="gsc_days" min="1" max="365" value="{{ gsc.days }}" />
               </label>
               <label>
-                Min impressions (issues)
+                Impressions min (anomalies)
                 <input type="number" name="gsc_min_impressions" min="0" max="1000000" value="{{ gsc.min_impressions }}" />
               </label>
               <label>
-                Search type
+                Type de recherche
                 <select name="gsc_search_type">
                   <option value="web" {% if gsc.search_type == "web" %}selected{% endif %}>web</option>
                   <option value="image" {% if gsc.search_type == "image" %}selected{% endif %}>image</option>
@@ -182,7 +182,7 @@
                 </select>
               </label>
               <label class="span-2">
-                Property (optionnel)
+                Propriété (optionnel)
                 <input type="text" name="gsc_property" value="{{ gsc.property_url }}" placeholder="ex: sc-domain:example.com ou https://example.com/" />
               </label>
             </div>
@@ -192,13 +192,13 @@
             <div class="module-head">
               <label class="checkbox sub">
                 <input type="checkbox" name="gsc_inspection_enabled" {% if gsc.inspection_enabled %}checked{% endif %} {% if not gsc.enabled %}disabled{% endif %} />
-                <span>Issues Google (URL Inspection)</span>
+                <span>Anomalies Google (URL Inspection)</span>
               </label>
             </div>
 
             <div class="grid two module-body">
               <label>
-                Max URLs (inspection)
+                URLs max (inspection)
                 <input type="number" name="gsc_inspection_max_urls" min="0" max="200" value="{{ gsc.inspection_max_urls }}" />
               </label>
               <label>
@@ -253,7 +253,7 @@
                 <input type="checkbox" name="bing_enabled" {% if bing.enabled %}checked{% endif %} />
                 <span>Bing Webmaster Tools</span>
               </label>
-              {% if bing.enabled %}<span class="badge ok">on</span>{% else %}<span class="badge notice">off</span>{% endif %}
+              {% if bing.enabled %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
             </div>
 
             <div class="grid two module-body">

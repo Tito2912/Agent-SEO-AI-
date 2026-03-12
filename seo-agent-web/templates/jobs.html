@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Jobs — SEO Audit{% endblock %}
+{% block title %}Exécutions — SEO Audit{% endblock %}
 
 {% block head_extra %}
   {% if jobs %}
@@ -17,15 +17,15 @@
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Jobs</span>
+  <span class="crumb-current">Exécutions</span>
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Jobs</h1>
-    <p class="muted">Historique des crawls (mono-site) et audits (multi-sites).</p>
+    <h1>Exécutions</h1>
+    <p class="muted">Historique des crawls (mono-site) et des audits (multi-sites).</p>
   </div>
 
   <section class="card">
@@ -37,7 +37,7 @@
           <thead>
             <tr>
               <th>Site</th>
-              <th>Status</th>
+              <th>Statut</th>
               <th>Avancement</th>
               <th class="num">Date</th>
               <th></th>
@@ -74,7 +74,7 @@
                     <div class="mono">{{ j.id[:8] }}</div>
                   {% endif %}
                 </td>
-                <td><span class="pill {{ j.status }}" data-role="status">{{ j.status }}</span></td>
+                <td><span class="pill {{ j.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span></td>
                 <td>
                   <div class="muted small mono" data-role="progress-text">
                     {% if progress and progress.total %}
@@ -121,6 +121,18 @@
 
         const pollMs = 1000;
 
+        function statusLabel(status) {
+          const map = {
+            queued: "en attente",
+            running: "en cours",
+            cancel_requested: "annulation…",
+            done: "terminé",
+            failed: "échec",
+            canceled: "annulé",
+          };
+          return map[status] || status;
+        }
+
         function formatShortDateFromRunTs(value) {
           if (!value || !/^\d{8}-\d{6}$/.test(value)) return null;
           const yy = value.slice(2, 4);
@@ -145,7 +157,7 @@
 
             if (statusEl) {
               const status = (data && data.status) ? String(data.status) : "";
-              statusEl.textContent = status;
+              statusEl.textContent = statusLabel(status);
               statusEl.className = `pill ${status}`;
             }
 

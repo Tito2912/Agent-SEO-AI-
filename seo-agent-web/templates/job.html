@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Job — SEO Audit{% endblock %}
+{% block title %}Exécution — SEO Audit{% endblock %}
 
 {% block head_extra %}
   <meta http-equiv="cache-control" content="no-store" />
@@ -7,17 +7,17 @@
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
-  <a href="/jobs">Jobs</a>
+  <a href="/jobs">Exécutions</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Job</span>
+  <span class="crumb-current">Exécution</span>
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Job</h1>
-    <p class="muted">Exécution autopilot</p>
+    <h1>Exécution</h1>
+    <p class="muted">Suivi et détails d’exécution.</p>
   </div>
 
       {% if not job %}
@@ -25,7 +25,7 @@
       {% else %}
         <section class="card">
           <h2>{{ job.id }}</h2>
-          <p>Status: <span id="job-status-pill" class="pill {{ job.status }}">{{ job.status }}</span></p>
+          <p>Statut : <span id="job-status-pill" class="pill {{ job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(job.status, job.status) }}</span></p>
 
           <div class="row-actions">
             {% if job.status in ['queued', 'running', 'cancel_requested'] %}
@@ -62,7 +62,7 @@
                 {% elif progress and progress.type == 'autopilot' %}
                   Sites:
                 {% else %}
-                  Progress:
+                  Avancement:
                 {% endif %}
               </span>
               <span class="mono" id="progress-count">
@@ -87,14 +87,14 @@
             <p class="muted">Commande: <span id="job-command" class="mono">{{ job.command }}</span></p>
           {% endif %}
           <p id="job-returncode" {% if job.returncode is none %}style="display:none;"{% endif %}>
-            Return code: <span class="mono" id="job-returncode-val">{{ job.returncode }}</span>
+            Code de retour: <span class="mono" id="job-returncode-val">{{ job.returncode }}</span>
           </p>
         </section>
 
         <section class="card">
           <h2>Dernier run global</h2>
           {% if latest %}
-            <p><span class="muted">Timestamp:</span> {{ latest.timestamp }}</p>
+            <p><span class="muted">Horodatage:</span> {{ latest.timestamp }}</p>
             {% if latest.sites_summary_md %}
               <p class="muted">Voir: {{ latest.sites_summary_md }}</p>
             {% endif %}
@@ -224,6 +224,18 @@
             const pBar = document.getElementById("progress-bar");
             const pFill = document.getElementById("progress-fill");
 
+            function statusLabel(status) {
+              const map = {
+                queued: "en attente",
+                running: "en cours",
+                cancel_requested: "annulation…",
+                done: "terminé",
+                failed: "échec",
+                canceled: "annulé",
+              };
+              return map[status] || status;
+            }
+
             function renderProgress(progress, status) {
               if (!progressWrap || !pKind || !pCount || !pSite || !pPct || !pFill) return;
               if (!progress || !progress.total) {
@@ -264,7 +276,7 @@
             function render(data) {
               const status = (data && data.status) ? String(data.status) : "";
               if (statusEl) {
-                statusEl.textContent = status;
+                statusEl.textContent = statusLabel(status);
                 statusEl.className = `pill ${status}`;
               }
 

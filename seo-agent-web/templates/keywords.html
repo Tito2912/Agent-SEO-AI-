@@ -2,7 +2,7 @@
 {% block title %}Mots-clés — {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
@@ -16,7 +16,7 @@
 {% block actions %}
   {% if project %}
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">New crawl</button>
+      <button type="submit" class="btn primary">Nouveau crawl</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -50,7 +50,7 @@
         <label>
           Tri
           <select name="sort">
-            <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>Clicks</option>
+            <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>Clics</option>
             <option value="impressions" {% if sort == 'impressions' %}selected{% endif %}>Impressions</option>
             <option value="ctr" {% if sort == 'ctr' %}selected{% endif %}>CTR</option>
             <option value="position" {% if sort == 'position' %}selected{% endif %}>Position</option>
@@ -60,8 +60,8 @@
         <label>
           Ordre
           <select name="dir">
-            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>desc</option>
-            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>asc</option>
+            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>Décroissant</option>
+            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>Croissant</option>
           </select>
         </label>
 
@@ -87,7 +87,7 @@
         </div>
         <div class="kv">
           <div class="kv-item">
-            <span class="muted">Clicks</span>
+            <span class="muted">Clics</span>
             <strong class="mono">{{ totals.clicks }}</strong>
           </div>
           <div class="kv-item">
@@ -115,7 +115,7 @@
               <thead>
                 <tr>
                   <th>Mot-clé</th>
-                  <th class="num">Clicks</th>
+                  <th class="num">Clics</th>
                   <th class="num">Impressions</th>
                   <th class="num">CTR</th>
                   <th class="num">Position</th>

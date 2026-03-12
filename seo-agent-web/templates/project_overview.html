@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
-{% block title %}{{ project.site_name if project else slug }} — Overview{% endblock %}
+{% block title %}{{ project.site_name if project else slug }} — Vue d’ensemble{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Site Audit</a>
+  <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <span class="crumb-current">{{ project.site_name }}</span>
@@ -14,7 +14,7 @@
 {% block actions %}
   {% if project %}
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">New crawl</button>
+      <button type="submit" class="btn primary">Nouveau crawl</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -43,7 +43,7 @@
           <h2>Crawl</h2>
           <div class="muted small">
             <span id="live-job-ts" class="mono"></span>
-            <span id="live-job-status" class="pill {{ live_job.status }}">{{ live_job.status }}</span>
+            <span id="live-job-status" class="pill {{ live_job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live_job.status, live_job.status) }}</span>
           </div>
         </div>
 
@@ -67,7 +67,7 @@
         </details>
 
         <p class="muted small" style="margin: 10px 0 0;">
-          <a id="live-job-jobs-link" href="/jobs">Voir dans Jobs</a>
+          <a id="live-job-jobs-link" href="/jobs">Voir dans Exécutions</a>
         </p>
       </section>
     {% endif %}
@@ -87,7 +87,7 @@
         </label>
 
         <label>
-          Compare
+          Comparer
           <select name="compare">
             <option value="">—</option>
             {% for ts in project.crawls %}
@@ -100,10 +100,10 @@
         <button type="submit" class="btn">Appliquer</button>
 
         <div class="muted small">
-          Rapport: <a href="/file?path={{ cur.report_md }}">report.md</a> · <a href="/file?path={{ cur.report_json }}">report.json</a>
-          · Télécharger: <a href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">PDF</a>
+          Rapports: <a href="/file?path={{ cur.report_md }}">report.md</a> · <a href="/file?path={{ cur.report_json }}">report.json</a>
+          · Exports: <a href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">PDF</a>
           · <a href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">CSV</a>
-          · Fix pack:
+          · Fix Pack:
           {% if fix_pack_unlocked %}
             <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">ZIP</a>
           {% else %}
@@ -136,12 +136,13 @@
                 <h2 style="margin:0;">
                   <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
                 </h2>
-                <span class="badge {{ a.severity }}">{{ a.severity }}</span>
+                {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
+                <span class="badge {{ a.severity }}">{{ sev_label }}</span>
               </div>
 
               <div class="muted small">
-                Count: <span class="mono">{{ a.count }}</span>
-                · Priority: <span class="mono">{{ a.priority }}</span>
+                Occurrences: <span class="mono">{{ a.count }}</span>
+                · Priorité: <span class="mono">{{ a.priority }}</span>
                 · Effort: <span class="mono">{{ a.effort }}</span>
               </div>
 
@@ -190,7 +191,7 @@
     {% elif cur.timestamp != latest_ts %}
       <section class="card">
         <p class="muted">
-          Tu consultes le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier crawl disponible:
+          Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier crawl disponible:
           <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
         </p>
       </section>
@@ -257,8 +258,19 @@
 
           function render(data) {
             const status = (data && data.status) ? String(data.status) : "";
+            function statusLabel(status) {
+              const map = {
+                queued: "en attente",
+                running: "en cours",
+                cancel_requested: "annulation…",
+                done: "terminé",
+                failed: "échec",
+                canceled: "annulé",
+              };
+              return map[status] || status;
+            }
             if (statusEl) {
-              statusEl.textContent = status;
+              statusEl.textContent = statusLabel(status);
               statusEl.className = `pill ${status}`;
             }
 
@@ -321,7 +333,7 @@
     <div class="grid">
       <section class="card">
         <div class="card-title-row">
-          <h2>Crawled URLs distribution</h2>
+          <h2>Répartition des URLs crawlées</h2>
           <span class="muted small mono">{{ sum.urls_crawled_distribution }}</span>
         </div>
         {% set total = sum.urls_crawled_distribution %}
@@ -329,15 +341,15 @@
         {% set resources = sum.resources_crawled %}
         {% set p_internal = ( (internal / total) * 100 ) if total else 100 %}
         <div class="chart-row">
-          <div class="donut" style="--p: {{ p_internal|round(0) }}; --c1: var(--notice); --c2: #2a364f;">
+          <div class="donut" style="--p: {{ p_internal|round(0) }}; --c1: var(--notice); --c2: var(--chart-muted);">
             <div class="donut-center">
               <div class="donut-value mono">{{ total }}</div>
               <div class="muted small">URLs</div>
             </div>
           </div>
           <div class="legend">
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>Internal <span class="mono">{{ internal }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw:#2a364f;"></span>Resources <span class="mono">{{ resources }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>Internes <span class="mono">{{ internal }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Ressources <span class="mono">{{ resources }}</span></div>
           </div>
         </div>
       </section>
@@ -352,15 +364,15 @@
         {% set uncrawled = sum.urls_uncrawled %}
         {% set p_crawled = ( (crawled / found_total) * 100 ) if found_total else 100 %}
         <div class="chart-row">
-          <div class="donut" style="--p: {{ p_crawled|round(0) }}; --c1: var(--ok); --c2: #2a364f;">
+          <div class="donut" style="--p: {{ p_crawled|round(0) }}; --c1: var(--ok); --c2: var(--chart-muted);">
             <div class="donut-center">
               <div class="donut-value mono">{{ crawled }}</div>
-              <div class="muted small">Crawled</div>
+              <div class="muted small">Explorées</div>
             </div>
           </div>
           <div class="legend">
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Crawled <span class="mono">{{ crawled }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw:#2a364f;"></span>Uncrawled <span class="mono">{{ uncrawled }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Explorées <span class="mono">{{ crawled }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Non explorées <span class="mono">{{ uncrawled }}</span></div>
           </div>
         </div>
         <p class="muted small">URLs trouvées: <span class="mono">{{ found_total }}</span></p>
@@ -368,11 +380,11 @@
 
       <section class="card">
         <div class="card-title-row">
-          <h2>Health Score</h2>
+          <h2>Score de santé</h2>
           <span class="badge {{ 'ok' if sum.health_score >= 90 else ('warning' if sum.health_score >= 70 else 'error') }}">{{ sum.health_score }}%</span>
         </div>
         {% set gcolor = 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') %}
-        <div class="gauge" style="--p: {{ sum.health_score }}; --c1: {{ gcolor }}; --c2: #2a364f;">
+        <div class="gauge" style="--p: {{ sum.health_score }}; --c1: {{ gcolor }}; --c2: var(--chart-muted);">
           <div class="gauge-inner">
             <div class="gauge-value mono">{{ sum.health_score }}</div>
             <div class="muted small">/ 100</div>
@@ -383,7 +395,7 @@
 
       <section class="card">
         <div class="card-title-row">
-          <h2>Issues distribution</h2>
+          <h2>Répartition des anomalies</h2>
           <span class="muted small mono">{{ sum.issues_total }}</span>
         </div>
         {% set e = sum.issues_distribution.error or 0 %}
@@ -392,27 +404,27 @@
         {% set m = [e, w, n]|max %}
         <div class="bars">
           <div class="bar-row">
-            <span class="bar-label">Errors</span>
+            <span class="bar-label">Erreurs</span>
             <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / m) * 100)|round(0) if m else 0 }};"></div></div>
             <span class="mono">{{ e }}</span>
           </div>
           <div class="bar-row">
-            <span class="bar-label">Warnings</span>
+            <span class="bar-label">Avertissements</span>
             <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / m) * 100)|round(0) if m else 0 }};"></div></div>
             <span class="mono">{{ w }}</span>
           </div>
           <div class="bar-row">
-            <span class="bar-label">Notices</span>
+            <span class="bar-label">Infos</span>
             <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / m) * 100)|round(0) if m else 0 }};"></div></div>
             <span class="mono">{{ n }}</span>
           </div>
         </div>
-        <p class="muted small"><a href="/projects/{{ project.slug }}/issues">Voir toutes les issues</a></p>
+        <p class="muted small"><a href="/projects/{{ project.slug }}/issues">Voir toutes les anomalies</a></p>
       </section>
 
       <section class="card">
         <div class="card-title-row">
-          <h2>Error distribution</h2>
+          <h2>Répartition des erreurs</h2>
           <span class="muted small">URLs</span>
         </div>
         {% set err = sum.urls_with_errors %}
@@ -420,15 +432,15 @@
         {% set total = (err + ok) %}
         {% set p = ( (err / total) * 100 ) if total else 0 %}
         <div class="chart-row">
-          <div class="donut" style="--p: {{ p|round(0) }}; --c1: var(--err); --c2: #2a364f;">
+          <div class="donut" style="--p: {{ p|round(0) }}; --c1: var(--err); --c2: var(--chart-muted);">
             <div class="donut-center">
               <div class="donut-value mono">{{ err }}</div>
-              <div class="muted small">URLs with errors</div>
+              <div class="muted small">URLs en erreur</div>
             </div>
           </div>
           <div class="legend">
             <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Avec erreurs <span class="mono">{{ err }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw:#2a364f;"></span>Sans erreurs <span class="mono">{{ ok }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Sans erreurs <span class="mono">{{ ok }}</span></div>
           </div>
         </div>
       </section>
@@ -439,9 +451,9 @@
         <div class="card-title-row">
           <h2>Core Web Vitals</h2>
           {% if ps and ps.enabled %}
-            <span class="badge sm ok">on</span>
+            <span class="badge sm ok">activé</span>
           {% else %}
-            <span class="badge sm notice">off</span>
+            <span class="badge sm notice">désactivé</span>
           {% endif %}
         </div>
 
@@ -456,7 +468,7 @@
           {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
 
           <div class="chart-row">
-            <div class="donut" style="--p: {{ score }}; --c1: {{ score_color }}; --c2: #2a364f;">
+            <div class="donut" style="--p: {{ score }}; --c1: {{ score_color }}; --c2: var(--chart-muted);">
               <div class="donut-center">
                 <div class="donut-value mono">{{ score }}%</div>
                 <div class="muted small">Score</div>
@@ -471,15 +483,15 @@
           </div>
 
           <p class="muted small">
-            Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Strategy: <span class="mono">{{ cwv.strategy }}</span>
+            Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Stratégie: <span class="mono">{{ cwv.strategy }}</span>
           </p>
 
           <div class="table-wrap">
             <table class="table compact">
               <thead>
                 <tr>
-                  <th>Metric</th>
-                  <th>Status</th>
+                  <th>Métrique</th>
+                  <th>Statut</th>
                   <th class="num">Pages affectées</th>
                   <th class="num">Bon</th>
                   <th class="num">Moyen</th>
@@ -522,7 +534,7 @@
             <div class="card-title-row">
               <h2>Google Search Console</h2>
               <div class="card-title-actions">
-                <div class="pill-select" title="Modifier la période dans Paramètres crawl">
+                <div class="pill-select" title="Modifier la période dans Paramètres de crawl">
                   <label>Période</label>
                   <select class="js-period" data-target="/projects/{{ project.slug }}/settings/crawl" data-param="prefill_gsc_days" data-anchor="gsc">
                     {% for d in [7, 28, 90] %}
@@ -533,22 +545,22 @@
                 {% if gsc and gsc.ok %}
                   <span class="badge ok">ok</span>
                 {% elif gsc and gsc.enabled %}
-                  <span class="badge warning">on</span>
+                  <span class="badge warning">activé</span>
                 {% else %}
-                  <span class="badge notice">off</span>
+                  <span class="badge notice">désactivé</span>
                 {% endif %}
               </div>
             </div>
 
             {% if gsc and gsc.ok %}
-              <p class="muted small">Property: <span class="mono">{{ gsc.property }}</span></p>
+              <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
               <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
               {% set g_ctr = (gsc.totals.avg_ctr * 100) %}
               {% set g_pos = gsc.totals.avg_position %}
               {% set g_pos_score = ( (50 - (g_pos if g_pos < 50 else 50)) / 50 * 100 ) if g_pos else 0 %}
               <div class="kpi-list">
                 <div class="kpi-row">
-                  <div class="kpi-label">Clicks</div>
+                  <div class="kpi-label">Clics</div>
                   <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
                   <div class="mono">{{ gsc.totals.clicks }}</div>
                 </div>
@@ -563,7 +575,7 @@
                   <div class="mono">{{ g_ctr|round(2) }}%</div>
                 </div>
                 <div class="kpi-row">
-                  <div class="kpi-label">Avg position</div>
+                  <div class="kpi-label">Position moyenne</div>
                   <div class="kpi-bar warn" style="--p: {{ g_pos_score|round(0) }};"><div></div></div>
                   <div class="mono">{{ g_pos|round(2) }}</div>
                 </div>
@@ -598,7 +610,7 @@
               {% endif %}
             {% elif gsc and gsc.enabled %}
               <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
-              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres crawl</a></p>
+              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
             {% else %}
               <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
               <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
@@ -610,7 +622,7 @@
             <div class="card-title-row">
               <h2>Bing Webmaster Tools</h2>
               <div class="card-title-actions">
-                <div class="pill-select" title="Modifier la période dans Paramètres crawl">
+                <div class="pill-select" title="Modifier la période dans Paramètres de crawl">
                   <label>Période</label>
                   <select class="js-period" data-target="/projects/{{ project.slug }}/settings/crawl" data-param="prefill_bing_days" data-anchor="bing">
                     {% for d in [7, 28, 90] %}
@@ -621,9 +633,9 @@
                 {% if bing and bing.ok %}
                   <span class="badge ok">ok</span>
                 {% elif bing and bing.enabled %}
-                  <span class="badge warning">on</span>
+                  <span class="badge warning">activé</span>
                 {% else %}
-                  <span class="badge notice">off</span>
+                  <span class="badge notice">désactivé</span>
                 {% endif %}
               </div>
             </div>
@@ -640,7 +652,7 @@
               {% set b_pos_score = ( (50 - (b_pos if b_pos < 50 else 50)) / 50 * 100 ) if b_pos else 0 %}
               <div class="kpi-list">
                 <div class="kpi-row">
-                  <div class="kpi-label">Clicks</div>
+                  <div class="kpi-label">Clics</div>
                   <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
                   <div class="mono">{{ bing.totals.clicks }}</div>
                 </div>
@@ -655,7 +667,7 @@
                   <div class="mono">{{ b_ctr|round(2) }}%</div>
                 </div>
                 <div class="kpi-row">
-                  <div class="kpi-label">Avg position</div>
+                  <div class="kpi-label">Position moyenne</div>
                   <div class="kpi-bar warn" style="--p: {{ b_pos_score|round(0) }};"><div></div></div>
                   <div class="mono">{{ b_pos|round(2) }}</div>
                 </div>
@@ -663,10 +675,10 @@
 
               <div class="issue-chips">
                 <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}">
-                  <span class="dot warning"></span>Crawl issues <span class="mono">{{ bing.crawl_issues.rows }}</span>
+                  <span class="dot warning"></span>Problèmes de crawl <span class="mono">{{ bing.crawl_issues.rows }}</span>
                 </a>
                 <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}">
-                  <span class="dot error"></span>Blocked URLs <span class="mono">{{ bing.blocked_urls.rows }}</span>
+                  <span class="dot error"></span>URLs bloquées <span class="mono">{{ bing.blocked_urls.rows }}</span>
                 </a>
                 <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}">
                   <span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span>
@@ -683,9 +695,9 @@
               {% endif %}
             {% elif bing and bing.enabled %}
               <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
-              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres crawl</a></p>
+              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
             {% else %}
-              <p class="muted">Active Bing pour ajouter la performance + issues.</p>
+              <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
               <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
             {% endif %}
           </section>
@@ -694,27 +706,28 @@
 
       <section class="card span-2">
         <div class="card-title-row">
-          <h2>Top issues</h2>
+          <h2>Principales anomalies</h2>
           <span class="muted small">{{ cur.label }}</span>
         </div>
         {% if not sum.top_issues %}
-          <p class="muted">Aucune issue détectée.</p>
+          <p class="muted">Aucune anomalie détectée.</p>
         {% else %}
           <div class="table-wrap">
             <table class="table compact">
               <thead>
                 <tr>
-                  <th>Issue</th>
-                  <th>Severity</th>
-                  <th class="num">Count</th>
-                  <th class="num">Change</th>
+                  <th>Anomalie</th>
+                  <th>Criticité</th>
+                  <th class="num">Occurrences</th>
+                  <th class="num">Évolution</th>
                 </tr>
               </thead>
               <tbody>
                 {% for it in sum.top_issues %}
                   <tr>
 	                    <td><a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a></td>
-	                    <td><span class="badge {{ it.severity }}">{{ it.severity }}</span></td>
+                      {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
+	                    <td><span class="badge {{ it.severity }}">{{ sev_label }}</span></td>
 	                    <td class="num mono">
 	                      <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
 	                    </td>
@@ -759,7 +772,7 @@
 
       <section class="card span-2">
         <div class="card-title-row">
-          <h2>Health score history</h2>
+          <h2>Historique du score de santé</h2>
           <span class="muted small">derniers crawls</span>
         </div>
         {% if not project.history %}

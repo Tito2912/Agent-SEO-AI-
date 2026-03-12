@@ -12,17 +12,15 @@
       <aside class="sidebar">
         <div class="brand">
           <a href="/" class="brand-link">SEO Audit</a>
-          <div class="brand-sub">Dashboard</div>
+          <div class="brand-sub">Tableau de bord</div>
         </div>
 
         <nav class="nav">
           <a class="nav-item {% if request.url.path == '/' %}active{% endif %}" href="/">Projets</a>
-          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">Jobs</a>
+          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">Exécutions</a>
           <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">Abonnement</a>
           {% if request.state.user and request.state.user.is_admin %}
-            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation"
-              >Automation</a
-            >
+            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation">Automatisation</a>
 
             <div class="nav-section">Paramètres</div>
             <a
@@ -32,35 +30,35 @@
             >
           {% endif %}
 
-		          {% if project and project.slug %}
-		            <div class="nav-section">Site</div>
-		            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}"
-		              >Overview</a
-		            >
-		            <a
-		              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}"
-		              href="/projects/{{ project.slug }}/settings/crawl"
-		              >Paramètres crawl</a
-		            >
-		            <a
-		              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}"
-		              href="/projects/{{ project.slug }}/performance"
-		              >Performance</a
-	            >
-	            <a
-	              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks') %}active{% endif %}"
-	              href="/projects/{{ project.slug }}/backlinks"
-	              >Backlinks</a
-	            >
-	            <a
-	              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"
-	              href="/projects/{{ project.slug }}/issues"
-	              >All issues</a
-	            >
+          {% if project and project.slug %}
+            <div class="nav-section">Site</div>
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}"
+              >Vue d’ensemble</a
+            >
+            <a
+              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}"
+              href="/projects/{{ project.slug }}/settings/crawl"
+              >Paramètres de crawl</a
+            >
+            <a
+              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}"
+              href="/projects/{{ project.slug }}/performance"
+              >Performance</a
+            >
+            <a
+              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks') %}active{% endif %}"
+              href="/projects/{{ project.slug }}/backlinks"
+              >Backlinks</a
+            >
+            <a
+              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"
+              href="/projects/{{ project.slug }}/issues"
+              >Anomalies</a
+            >
             <a
               class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}"
               href="/projects/{{ project.slug }}/crawls"
-              >Crawl log</a
+              >Historique des crawls</a
             >
           {% endif %}
         </nav>
