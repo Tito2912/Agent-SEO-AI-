@@ -563,31 +563,6 @@
               {% if gsc and gsc.ok %}
                 <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
                 <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
-                {% set g_ctr = (gsc.totals.avg_ctr * 100) %}
-                {% set g_pos = gsc.totals.avg_position %}
-                {% set g_pos_score = ( (50 - (g_pos if g_pos < 50 else 50)) / 50 * 100 ) if g_pos else 0 %}
-                <div class="kpi-list">
-                  <div class="kpi-row">
-                    <div class="kpi-label">Clics</div>
-                    <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
-                    <div class="mono">{{ gsc.totals.clicks }}</div>
-                  </div>
-                  <div class="kpi-row">
-                    <div class="kpi-label">Impressions</div>
-                    <div class="kpi-bar" style="--p: 100;"><div></div></div>
-                    <div class="mono">{{ gsc.totals.impressions }}</div>
-                  </div>
-                  <div class="kpi-row">
-                    <div class="kpi-label">CTR</div>
-                    <div class="kpi-bar ok" style="--p: {{ (g_ctr if g_ctr < 100 else 100)|round(0) }};"><div></div></div>
-                    <div class="mono">{{ g_ctr|round(2) }}%</div>
-                  </div>
-                  <div class="kpi-row">
-                    <div class="kpi-label">Position moyenne</div>
-                    <div class="kpi-bar warn" style="--p: {{ g_pos_score|round(0) }};"><div></div></div>
-                    <div class="mono">{{ g_pos|round(2) }}</div>
-                  </div>
-                </div>
 
                 {% if gsc.url_inspection and gsc.url_inspection.enabled %}
                   <div class="issue-chips">
@@ -630,15 +605,32 @@
               <div
                 id="gsc-live-widget"
                 class="ts-widget"
-                data-default-metric="clicks"
+                data-default-metrics="clicks,impressions"
+                data-max-metrics="2"
                 {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}data-series-id="gsc-daily-series"{% endif %}
                 {% if live_gsc.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}
               >
-                <div class="ts-controls" aria-label="Tendance Google Search Console">
-                  <button type="button" class="seg active" data-metric="clicks">Clics</button>
-                  <button type="button" class="seg" data-metric="impressions">Impressions</button>
-                  <button type="button" class="seg" data-metric="ctr">CTR</button>
-                  <button type="button" class="seg" data-metric="position">Position</button>
+                <div class="ts-metrics" aria-label="Métriques Google Search Console">
+                  <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">Clics</span>
+                    <span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "—" }}</span>
+                  </button>
+                  <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">Impressions</span>
+                    <span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "—" }}</span>
+                  </button>
+                  <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">CTR moyen</span>
+                    <span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}—{% endif %}</span>
+                  </button>
+                  <button type="button" class="ts-metric" data-metric="position" aria-pressed="false">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">Position moyenne</span>
+                    <span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}—{% endif %}</span>
+                  </button>
                 </div>
                 <div class="ts-chart">
                   <canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas>
@@ -682,31 +674,6 @@
                 {% if bing.start_date and bing.end_date %}
                   <p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>
                 {% endif %}
-                {% set b_ctr = (bing.totals.avg_ctr * 100) %}
-                {% set b_pos = bing.totals.avg_position %}
-                {% set b_pos_score = ( (50 - (b_pos if b_pos < 50 else 50)) / 50 * 100 ) if b_pos else 0 %}
-                <div class="kpi-list">
-                  <div class="kpi-row">
-                    <div class="kpi-label">Clics</div>
-                    <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
-                    <div class="mono">{{ bing.totals.clicks }}</div>
-                  </div>
-                  <div class="kpi-row">
-                    <div class="kpi-label">Impressions</div>
-                    <div class="kpi-bar" style="--p: 100;"><div></div></div>
-                    <div class="mono">{{ bing.totals.impressions }}</div>
-                  </div>
-                  <div class="kpi-row">
-                    <div class="kpi-label">CTR</div>
-                    <div class="kpi-bar ok" style="--p: {{ (b_ctr if b_ctr < 100 else 100)|round(0) }};"><div></div></div>
-                    <div class="mono">{{ b_ctr|round(2) }}%</div>
-                  </div>
-                  <div class="kpi-row">
-                    <div class="kpi-label">Position moyenne</div>
-                    <div class="kpi-bar warn" style="--p: {{ b_pos_score|round(0) }};"><div></div></div>
-                    <div class="mono">{{ b_pos|round(2) }}</div>
-                  </div>
-                </div>
 
                 <div class="issue-chips">
                   <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}">
@@ -741,14 +708,27 @@
               <div
                 id="bing-live-widget"
                 class="ts-widget"
-                data-default-metric="clicks"
+                data-default-metrics="clicks,impressions"
+                data-max-metrics="2"
                 {% if bing and bing.daily and (bing.daily|length) >= 2 %}data-series-id="bing-daily-series"{% endif %}
                 {% if live_bing.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}
               >
-                <div class="ts-controls" aria-label="Tendance Bing Webmaster Tools">
-                  <button type="button" class="seg active" data-metric="clicks">Clics</button>
-                  <button type="button" class="seg" data-metric="impressions">Impressions</button>
-                  <button type="button" class="seg" data-metric="ctr">CTR</button>
+                <div class="ts-metrics" aria-label="Métriques Bing Webmaster Tools">
+                  <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">Clics</span>
+                    <span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "—" }}</span>
+                  </button>
+                  <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">Impressions</span>
+                    <span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "—" }}</span>
+                  </button>
+                  <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
+                    <span class="ts-metric-check">✓</span>
+                    <span class="ts-metric-label">CTR moyen</span>
+                    <span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}—{% endif %}</span>
+                  </button>
                 </div>
                 <div class="ts-chart">
                   <canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas>

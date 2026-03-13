@@ -1,5 +1,11 @@
 (() => {
   const widgetStates = new WeakMap();
+  const METRIC_CONFIG = {
+    clicks: { colorVar: "--ts-clicks", fallback: "#6f8ff2" },
+    impressions: { colorVar: "--ts-impressions", fallback: "#7352d9" },
+    ctr: { colorVar: "--ts-ctr", fallback: "#5fa99a" },
+    position: { colorVar: "--ts-position", fallback: "#b89454" },
+  };
 
   function initPeriodSelects() {
     const selects = document.querySelectorAll(".js-period");
@@ -22,33 +28,6 @@
     return v || fallback;
   }
 
-  function hexToRgb(hex) {
-    const v = String(hex || "").trim();
-    if (!v.startsWith("#")) return null;
-    const h = v.slice(1);
-    if (h.length === 3) {
-      return {
-        r: parseInt(h[0] + h[0], 16),
-        g: parseInt(h[1] + h[1], 16),
-        b: parseInt(h[2] + h[2], 16),
-      };
-    }
-    if (h.length === 6) {
-      return {
-        r: parseInt(h.slice(0, 2), 16),
-        g: parseInt(h.slice(2, 4), 16),
-        b: parseInt(h.slice(4, 6), 16),
-      };
-    }
-    return null;
-  }
-
-  function withAlpha(color, alpha) {
-    const rgb = hexToRgb(color);
-    if (!rgb) return color;
-    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-  }
-
   function formatDateLabel(isoDate) {
     const parts = String(isoDate || "").split("-");
     if (parts.length !== 3) return String(isoDate || "");
@@ -60,6 +39,16 @@
     if (metric === "ctr") return `${(value * 100).toFixed(1)}%`;
     if (metric === "position") return value.toFixed(1);
     return String(Math.round(value));
+  }
+
+  function formatMetricValue(metric, value) {
+    if (!Number.isFinite(value)) return "—";
+    if (metric === "ctr") return `${(value * 100).toFixed(1)}%`;
+    if (metric === "position") return value > 0 ? value.toFixed(1) : "—";
+    return new Intl.NumberFormat("fr-FR", {
+      notation: value >= 1000 ? "compact" : "standard",
+      maximumFractionDigits: value >= 1000 ? 1 : 0,
+    }).format(Math.round(value));
   }
 
   function parseSeries(raw) {
@@ -87,6 +76,55 @@
     }
   }
 
+  function computeTotals(points) {
+    if (!Array.isArray(points) || !points.length) {
+      return { clicks: NaN, impressions: NaN, ctr: NaN, position: NaN };
+    }
+    let clicks = 0;
+    let impressions = 0;
+    let weightedPosition = 0;
+    let weightedPositionImpressions = 0;
+    let fallbackPosition = 0;
+    let fallbackPositionCount = 0;
+
+    for (const point of points) {
+      const pointClicks = Number(point.clicks || 0);
+      const pointImpressions = Number(point.impressions || 0);
+      const pointPosition = Number(point.position || 0);
+      if (Number.isFinite(pointClicks)) clicks += pointClicks;
+      if (Number.isFinite(pointImpressions)) impressions += pointImpressions;
+      if (Number.isFinite(pointPosition) && pointPosition > 0) {
+        if (Number.isFinite(pointImpressions) && pointImpressions > 0) {
+          weightedPosition += pointPosition * pointImpressions;
+          weightedPositionImpressions += pointImpressions;
+        } else {
+          fallbackPosition += pointPosition;
+          fallbackPositionCount += 1;
+        }
+      }
+    }
+
+    return {
+      clicks,
+      impressions,
+      ctr: impressions > 0 ? clicks / impressions : 0,
+      position: weightedPositionImpressions > 0
+        ? weightedPosition / weightedPositionImpressions
+        : (fallbackPositionCount > 0 ? fallbackPosition / fallbackPositionCount : NaN),
+    };
+  }
+
+  function updateMetricCards(widget, totals) {
+    const cards = widget.querySelectorAll(".ts-metric[data-metric]");
+    for (const card of cards) {
+      const metric = String(card.getAttribute("data-metric") || "").trim();
+      if (!metric) continue;
+      const valueEl = card.querySelector(`[data-value-for="${metric}"]`);
+      if (!valueEl) continue;
+      valueEl.textContent = formatMetricValue(metric, Number(totals?.[metric]));
+    }
+  }
+
   function setWidgetMeta(widget, text) {
     const meta = widget.querySelector("[data-ts-meta]");
     if (meta) meta.textContent = String(text || "");
@@ -111,63 +149,104 @@
     state.canvas.hidden = false;
   }
 
-  function drawLineChart(canvas, points, metric) {
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    if (!w || !h) return;
+  function metricColor(metric) {
+    const config = METRIC_CONFIG[metric] || METRIC_CONFIG.clicks;
+    return cssVar(config.colorVar, config.fallback);
+  }
+
+  function computeMetricScale(metric, points) {
+    const rawValues = points.map((point) => Number(point[metric] ?? 0));
+    const finite = rawValues.filter((value) => Number.isFinite(value));
+    let min = finite.length ? Math.min(...finite) : 0;
+    let max = finite.length ? Math.max(...finite) : 1;
+
+    if (metric === "ctr") {
+      min = 0;
+      max = Math.min(1, Math.max(0.05, max * 1.1));
+    } else if (metric === "clicks" || metric === "impressions" || metric === "position") {
+      min = 0;
+      max = Math.max(1, max * 1.1);
+    } else {
+      min = Math.min(0, min);
+      max = max === min ? min + 1 : max * 1.1;
+    }
+
+    if (max <= min) max = min + 1;
+    return { min, max };
+  }
+
+  function xTicks(points, count) {
+    if (!points.length) return [];
+    if (points.length <= count) return points.map((point, index) => ({ point, index }));
+    const indexes = [];
+    for (let i = 0; i < count; i += 1) {
+      indexes.push(Math.round((i * (points.length - 1)) / Math.max(1, count - 1)));
+    }
+    return Array.from(new Set(indexes)).map((index) => ({ point: points[index], index }));
+  }
+
+  function drawAxisLabels(ctx, side, metric, scale, width, padL, padR, padT, innerH, textMuted) {
+    ctx.fillStyle = textMuted;
+    ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = side === "left" ? "right" : "left";
+    const x = side === "left" ? padL - 8 : width - padR + 8;
+    ctx.fillText(formatY(metric, scale.max), x, padT + 10);
+    ctx.fillText(formatY(metric, scale.min), x, padT + innerH);
+  }
+
+  function drawMetricLine(ctx, points, metric, xAt, yAt) {
+    ctx.strokeStyle = metricColor(metric);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < points.length; i += 1) {
+      const value = Number(points[i][metric] ?? 0);
+      const x = xAt(i);
+      const y = yAt(Number.isFinite(value) ? value : 0);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function drawLineChart(canvas, points, metrics) {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (!width || !height) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(w * dpr);
-    canvas.height = Math.floor(h * dpr);
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0, 0, width, height);
 
-    const padL = 44;
-    const padR = 12;
-    const padT = 12;
-    const padB = 22;
-    const innerW = Math.max(1, w - padL - padR);
-    const innerH = Math.max(1, h - padT - padB);
+    const visibleMetrics = (Array.isArray(metrics) ? metrics : [metrics]).filter(Boolean);
+    const primaryMetric = visibleMetrics[0] || "clicks";
+    const secondaryMetric = visibleMetrics[1] || null;
+    const primaryScale = computeMetricScale(primaryMetric, points);
+    const secondaryScale = secondaryMetric ? computeMetricScale(secondaryMetric, points) : null;
 
-    const rawValues = points.map((p) => Number(p[metric] ?? 0));
-    const finite = rawValues.filter((x) => Number.isFinite(x));
-    let vMin = finite.length ? Math.min(...finite) : 0;
-    let vMax = finite.length ? Math.max(...finite) : 1;
-
-    if (metric === "ctr") {
-      vMin = 0;
-      vMax = Math.min(1, Math.max(0.05, vMax * 1.1));
-    } else if (metric === "clicks" || metric === "impressions") {
-      vMin = 0;
-      vMax = Math.max(1, vMax * 1.1);
-    } else {
-      vMin = Math.min(0, vMin);
-      vMax = vMax === vMin ? vMin + 1 : vMax * 1.1;
-    }
-    if (vMax <= vMin) vMax = vMin + 1;
+    const padL = 54;
+    const padR = secondaryScale ? 54 : 16;
+    const padT = 16;
+    const padB = 30;
+    const innerW = Math.max(1, width - padL - padR);
+    const innerH = Math.max(1, height - padT - padB);
 
     const chartMuted = cssVar("--chart-muted", "rgba(255,255,255,.09)");
     const border = cssVar("--border", "rgba(255,255,255,.08)");
     const textMuted = cssVar("--muted", "rgba(255,255,255,.64)");
 
-    const colors = {
-      clicks: cssVar("--accent", "#d6b26a"),
-      impressions: cssVar("--accent-2", "#f1d18a"),
-      ctr: cssVar("--ok", "#4fa38a"),
-      position: cssVar("--warn", "#c3a25a"),
-    };
-    const lineColor = colors[metric] || colors.clicks;
-
     ctx.strokeStyle = chartMuted;
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
+    for (let i = 0; i <= 4; i += 1) {
       const y = padT + (innerH * i) / 4;
       ctx.beginPath();
       ctx.moveTo(padL, y);
-      ctx.lineTo(w - padR, y);
+      ctx.lineTo(width - padR, y);
       ctx.stroke();
     }
 
@@ -175,52 +254,37 @@
     ctx.lineWidth = 1;
     ctx.strokeRect(padL, padT, innerW, innerH);
 
-    const xAt = (i) => padL + (innerW * i) / Math.max(1, points.length - 1);
-    const yAt = (v) => padT + innerH * (1 - (v - vMin) / (vMax - vMin));
+    const xAt = (index) => padL + (innerW * index) / Math.max(1, points.length - 1);
+    const primaryY = (value) => padT + innerH * (1 - (value - primaryScale.min) / (primaryScale.max - primaryScale.min));
 
-    const grad = ctx.createLinearGradient(0, padT, 0, padT + innerH);
-    grad.addColorStop(0, withAlpha(lineColor, 0.22));
-    grad.addColorStop(1, withAlpha(lineColor, 0.02));
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    for (let i = 0; i < points.length; i++) {
-      const v = Number(points[i][metric] ?? 0);
-      const x = xAt(i);
-      const y = yAt(Number.isFinite(v) ? v : 0);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.lineTo(xAt(points.length - 1), padT + innerH);
-    ctx.lineTo(xAt(0), padT + innerH);
-    ctx.closePath();
-    ctx.fill();
+    drawMetricLine(ctx, points, primaryMetric, xAt, primaryY);
+    drawAxisLabels(ctx, "left", primaryMetric, primaryScale, width, padL, padR, padT, innerH, textMuted);
 
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i = 0; i < points.length; i++) {
-      const v = Number(points[i][metric] ?? 0);
-      const x = xAt(i);
-      const y = yAt(Number.isFinite(v) ? v : 0);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+    if (secondaryMetric && secondaryScale) {
+      const secondaryY = (value) => padT + innerH * (1 - (value - secondaryScale.min) / (secondaryScale.max - secondaryScale.min));
+      drawMetricLine(ctx, points, secondaryMetric, xAt, secondaryY);
+      drawAxisLabels(ctx, "right", secondaryMetric, secondaryScale, width, padL, padR, padT, innerH, textMuted);
     }
-    ctx.stroke();
 
     ctx.fillStyle = textMuted;
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
-    ctx.textBaseline = "middle";
-    ctx.textAlign = "right";
-    ctx.fillText(formatY(metric, vMax), padL - 8, padT + 10);
-    ctx.fillText(formatY(metric, vMin), padL - 8, padT + innerH);
-
-    const startLabel = formatDateLabel(points[0].date);
-    const endLabel = formatDateLabel(points[points.length - 1].date);
     ctx.textBaseline = "alphabetic";
-    ctx.textAlign = "left";
-    ctx.fillText(startLabel, padL, h - 6);
-    ctx.textAlign = "right";
-    ctx.fillText(endLabel, w - padR, h - 6);
+    for (const tick of xTicks(points, 6)) {
+      const x = xAt(tick.index);
+      ctx.textAlign = tick.index === 0 ? "left" : (tick.index === points.length - 1 ? "right" : "center");
+      ctx.fillText(formatDateLabel(tick.point.date), x, height - 8);
+    }
+  }
+
+  function syncMetricButtons(widget) {
+    const state = widgetStates.get(widget);
+    if (!state) return;
+    for (const button of state.buttons) {
+      const metric = String(button.dataset.metric || "").trim();
+      const active = state.metrics.includes(metric);
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    }
   }
 
   function renderWidget(widget) {
@@ -232,16 +296,26 @@
       return;
     }
     setWidgetReady(widget);
-    drawLineChart(state.canvas, points, state.metric);
+    drawLineChart(state.canvas, points, state.metrics);
   }
 
-  function setActiveMetric(widget, metric) {
+  function toggleMetric(widget, metric) {
     const state = widgetStates.get(widget);
-    if (!state) return;
-    state.metric = metric;
-    for (const button of state.buttons) {
-      button.classList.toggle("active", String(button.dataset.metric || "") === metric);
+    if (!state || !metric) return;
+    const isActive = state.metrics.includes(metric);
+    let nextMetrics = [...state.metrics];
+
+    if (isActive) {
+      if (nextMetrics.length === 1) return;
+      nextMetrics = nextMetrics.filter((item) => item !== metric);
+    } else {
+      const maxMetrics = Math.max(1, Number(state.maxMetrics || 2));
+      const kept = nextMetrics.length >= maxMetrics ? nextMetrics.slice(nextMetrics.length - (maxMetrics - 1)) : nextMetrics;
+      nextMetrics = [...kept.filter((item) => item !== metric), metric];
     }
+
+    state.metrics = state.metricOrder.filter((item) => nextMetrics.includes(item));
+    syncMetricButtons(widget);
     renderWidget(widget);
   }
 
@@ -306,9 +380,11 @@
     const nextPoints = parseSeries(data && data.daily);
     if (response.ok && nextPoints.length >= 2) {
       state.points = nextPoints;
+      state.totals = computeTotals(nextPoints);
       state.emptyMessage = "";
       const summaryBlock = widget.closest(".card")?.querySelector("[data-summary-block][data-summary-fallback='true']");
       if (summaryBlock) summaryBlock.hidden = true;
+      updateMetricCards(widget, state.totals);
       setWidgetMeta(widget, liveMetaText(data || {}));
       renderWidget(widget);
       return;
@@ -324,25 +400,36 @@
       const canvas = widget.querySelector("canvas.ts-canvas");
       if (!canvas) continue;
 
-      const buttons = Array.from(widget.querySelectorAll("button.seg[data-metric]"));
-      const defaultMetric = (widget.getAttribute("data-default-metric") || "").trim() || (buttons[0] ? String(buttons[0].dataset.metric || "") : "clicks");
+      const buttons = Array.from(widget.querySelectorAll("button[data-metric]"));
+      const metricOrder = buttons.map((button) => String(button.dataset.metric || "").trim()).filter(Boolean);
+      const maxMetrics = Math.max(1, Number(widget.getAttribute("data-max-metrics") || 2));
+      const defaultMetrics = String(widget.getAttribute("data-default-metrics") || "")
+        .split(",")
+        .map((metric) => metric.trim())
+        .filter((metric) => metricOrder.includes(metric))
+        .slice(0, maxMetrics);
       const inlinePoints = readInlineSeries(widget);
+      const inlineTotals = computeTotals(inlinePoints);
 
       const state = {
         canvas,
         buttons,
-        metric: defaultMetric || "clicks",
+        metricOrder,
+        maxMetrics,
+        metrics: defaultMetrics.length ? defaultMetrics : metricOrder.slice(0, Math.min(2, metricOrder.length)),
         points: inlinePoints,
+        totals: inlineTotals,
         emptyMessage: inlinePoints.length ? "" : "Chargement du graphique…",
         requestId: 0,
       };
       widgetStates.set(widget, state);
+      if (inlinePoints.length) updateMetricCards(widget, inlineTotals);
 
       for (const button of buttons) {
         button.addEventListener("click", () => {
           const metric = String(button.dataset.metric || "").trim();
           if (!metric) return;
-          setActiveMetric(widget, metric);
+          toggleMetric(widget, metric);
         });
       }
 
@@ -362,7 +449,8 @@
         setWidgetMeta(widget, "Dernier crawl enregistré.");
       }
 
-      setActiveMetric(widget, state.metric);
+      syncMetricButtons(widget);
+      renderWidget(widget);
 
       if (widget.getAttribute("data-live-url")) {
         fetchLiveSeries(widget);
