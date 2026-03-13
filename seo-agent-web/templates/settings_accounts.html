@@ -26,7 +26,7 @@
     </ul>
   </section>
 
-  {% set groups = ["Intégrations", "IA", "Google"] %}
+  {% set groups = ["Google", "Intégrations"] %}
 
   {% for group in groups %}
     {% set group_items = items | selectattr("group", "equalto", group) | list %}
@@ -37,15 +37,91 @@
             <div class="settings-section-title">{{ group }}</div>
             {% if group == "Intégrations" %}
               <div class="muted small">Accès nécessaires au déploiement et à certaines APIs externes.</div>
-            {% elif group == "IA" %}
-              <div class="muted small">Clés API et modèles utilisés pour l’assistant et les suggestions IA.</div>
             {% elif group == "Google" %}
-              <div class="muted small">Connexion Search Console via OAuth (recommandé) ou service account.</div>
+              <div class="muted small">Connexion Search Console par projet via OAuth, puis fallback possible en service account.</div>
             {% endif %}
           </div>
         </div>
 
         <div class="grid two">
+          {% if group == "Google" %}
+            <section class="card setting-card span-2" id="gsc-oauth-card">
+              <div class="setting-head">
+                <div>
+                  <h2 class="setting-title">Connexion Google Search Console</h2>
+                  <div class="muted small">La connexion Google se fait projet par projet. C’est le chemin recommandé pour GSC live et les imports.</div>
+                </div>
+                <div class="setting-actions">
+                  {% if gsc_oauth and gsc_oauth.configured %}
+                    <span class="badge ok">oauth prêt</span>
+                  {% else %}
+                    <span class="badge notice">oauth à configurer</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              {% if gsc_oauth and gsc_oauth.configured %}
+                {% if gsc_oauth.projects %}
+                  <div class="oauth-project-list">
+                    {% for p in gsc_oauth.projects %}
+                      <div class="oauth-project-item">
+                        <div>
+                          <div class="oauth-project-title">{{ p.site_name }}</div>
+                          <div class="muted small">{{ p.base_url or p.slug }}</div>
+                        </div>
+                        <div class="oauth-project-actions">
+                          {% if p.gsc_enabled %}
+                            {% if p.oauth_connected %}
+                              <span class="badge ok">connecté</span>
+                            {% else %}
+                              <span class="badge notice">non connecté</span>
+                            {% endif %}
+                          {% else %}
+                            <span class="badge warning">gsc désactivé</span>
+                          {% endif %}
+                          <a class="btn {% if not p.oauth_connected %}primary{% endif %}" href="{{ p.connect_url }}">
+                            {% if p.oauth_connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
+                          </a>
+                          <a class="btn" href="{{ p.crawl_settings_url }}">Paramètres crawl</a>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="muted">Aucun projet disponible. Crée d’abord un projet pour connecter Google Search Console.</p>
+                {% endif %}
+              {% else %}
+                <div class="oauth-checklist">
+                  <div class="oauth-check-item">
+                    <span class="mono">GOOGLE_OAUTH_CLIENT_ID</span>
+                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.client_id %}ok{% else %}notice{% endif %}">
+                      {% if gsc_oauth and gsc_oauth.settings_ready.client_id %}ok{% else %}manquant{% endif %}
+                    </span>
+                  </div>
+                  <div class="oauth-check-item">
+                    <span class="mono">GOOGLE_OAUTH_CLIENT_SECRET</span>
+                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.client_secret %}ok{% else %}notice{% endif %}">
+                      {% if gsc_oauth and gsc_oauth.settings_ready.client_secret %}ok{% else %}manquant{% endif %}
+                    </span>
+                  </div>
+                  <div class="oauth-check-item">
+                    <span class="mono">PUBLIC_BASE_URL</span>
+                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.public_base_url %}ok{% else %}notice{% endif %}">
+                      {% if gsc_oauth and gsc_oauth.settings_ready.public_base_url %}ok{% else %}manquant{% endif %}
+                    </span>
+                  </div>
+                  <div class="oauth-check-item">
+                    <span class="mono">SEO_AGENT_SECRET_KEY</span>
+                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.secret_key %}ok{% else %}notice{% endif %}">
+                      {% if gsc_oauth and gsc_oauth.settings_ready.secret_key %}ok{% else %}manquant{% endif %}
+                    </span>
+                  </div>
+                </div>
+                <p class="muted small setting-note">Renseigne ces variables ci-dessous, puis recharge la page pour afficher les boutons « Connecter Google » projet par projet.</p>
+              {% endif %}
+            </section>
+          {% endif %}
+
           {% for item in group_items %}
             {% if item.key != "GOOGLE_APPLICATION_CREDENTIALS" %}
               <section class="card setting-card">
@@ -160,8 +236,8 @@
             <section class="card setting-card span-2" id="gsc-card">
               <div class="setting-head">
                 <div>
-                  <h2 class="setting-title">Google Search Console (GSC)</h2>
-                  <div class="muted small">Import GSC + métriques (nécessite un service account).</div>
+                  <h2 class="setting-title">Google Search Console — service account</h2>
+                  <div class="muted small">Option avancée. Utilise OAuth ci-dessus en priorité. Le service account reste utile comme fallback technique.</div>
                 </div>
                 <div class="setting-actions">
                   {% if gsc and gsc.help %}

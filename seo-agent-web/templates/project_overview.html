@@ -594,7 +594,13 @@
                 {% endif %}
               {% elif gsc and gsc.enabled %}
                 <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
-                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+                <p class="muted small">
+                  {% if gsc.reason == "missing_credentials" %}
+                    <a href="/projects/{{ project.slug }}/gsc/oauth/connect">Connecter Google</a>
+                    ·
+                  {% endif %}
+                  <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
+                </p>
               {% else %}
                 <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
                 <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>

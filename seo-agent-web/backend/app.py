@@ -5059,6 +5059,14 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     },
 }
 
+_INTERNAL_SETTINGS_KEYS: set[str] = {
+    "SEO_AUDIT_ASSISTANT_PROVIDER",
+    "OPENAI_API_KEY",
+    "SEO_AUDIT_ASSISTANT_OPENAI_MODEL",
+    "GOOGLE_GEMINI_API_KEY",
+    "SEO_AUDIT_ASSISTANT_GEMINI_MODEL",
+}
+
 
 @app.get("/auth/login", response_class=HTMLResponse)
 def auth_login(request: Request, next: str | None = None) -> Response:
@@ -5504,10 +5512,12 @@ def settings_root() -> RedirectResponse:
 
 @app.get("/settings/accounts", response_class=HTMLResponse)
 def settings_accounts(request: Request) -> HTMLResponse:
-    _ = _require_admin(request)
+    user = _require_admin(request)
     items: list[dict[str, Any]] = []
     group_order = {"Intégrations": 10, "AI": 20, "Google": 30, "Autres": 90}
     for key, meta in _SETTINGS_ENV_KEYS.items():
+        if key in _INTERNAL_SETTINGS_KEYS:
+            continue
         value, src = _env_effective_value(key)
         order = int(meta.get("order") or 9999) if isinstance(meta, dict) else 9999
         group = str(meta.get("group") or "Autres") if isinstance(meta, dict) else "Autres"
@@ -5584,12 +5594,52 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 candidates.append(rel)
     candidates = sorted(set([c for c in candidates if c]))
 
+    with DB.session() as db:
+        db_projects = list(
+            db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
+        )
+
+    client_id, client_secret = _google_oauth_client()
+    oauth_ready = bool(client_id and client_secret and _safe_env("SEO_AGENT_SECRET_KEY"))
+    gsc_projects: list[dict[str, Any]] = []
+    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
+    for proj in db_projects:
+        slug = str(proj.slug or "").strip()
+        if not slug:
+            continue
+        _, effective_gsc, _ = _effective_project_crawl_settings(
+            slug,
+            config_path=config_path,
+            project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
+        )
+        gsc_projects.append(
+            {
+                "slug": slug,
+                "site_name": str(proj.site_name or slug),
+                "base_url": str(proj.base_url or ""),
+                "gsc_enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
+                "oauth_connected": _gsc_oauth_connected(str(user.id), slug),
+                "connect_url": f"/projects/{slug}/gsc/oauth/connect",
+                "crawl_settings_url": f"/projects/{slug}/settings/crawl#gsc",
+            }
+        )
+
     resp = templates.TemplateResponse(
         "settings_accounts.html",
         {
             "request": request,
             "items": items,
             "gsc": {"credentials": cred_info, "candidates": candidates, "help": _SETTINGS_ENV_KEYS.get("GOOGLE_APPLICATION_CREDENTIALS", {}).get("help")},
+            "gsc_oauth": {
+                "configured": oauth_ready,
+                "settings_ready": {
+                    "client_id": bool(client_id),
+                    "client_secret": bool(client_secret),
+                    "public_base_url": bool(_safe_env("PUBLIC_BASE_URL") or _safe_env("GOOGLE_OAUTH_REDIRECT_URI")),
+                    "secret_key": bool(_safe_env("SEO_AGENT_SECRET_KEY")),
+                },
+                "projects": gsc_projects,
+            },
             "project": None,
         },
     )
@@ -5609,6 +5659,8 @@ def settings_accounts_save(
     op = (op or "").strip().lower()
     if key not in _SETTINGS_ENV_KEYS:
         raise HTTPException(status_code=400, detail="Invalid key")
+    if key in _INTERNAL_SETTINGS_KEYS:
+        raise HTTPException(status_code=403, detail="Key is internal")
     if not bool(_SETTINGS_ENV_KEYS.get(key, {}).get("editable", True)):
         raise HTTPException(status_code=403, detail="Key is read-only")
 
@@ -5761,7 +5813,6 @@ def assistant_meta() -> JSONResponse:
                 "openai": {"configured": openai_ok, "model": _assistant_model("openai")},
                 "gemini": {"configured": gemini_ok, "model": _assistant_model("gemini")},
             },
-            "settings_url": "/settings/accounts",
         }
     )
 
@@ -5805,8 +5856,7 @@ async def assistant_chat(request: Request) -> JSONResponse:
         return JSONResponse(
             {
                 "ok": False,
-                "error": "Assistant non configuré (clé API manquante).",
-                "settings_url": "/settings/accounts",
+                "error": "Assistant temporairement indisponible.",
             },
             status_code=400,
         )
@@ -6693,7 +6743,7 @@ def project_crawl_settings(
         "connected": _gsc_oauth_connected(str(getattr(user, "id", "")), slug),
         "redirect_uri": _google_oauth_redirect_uri(request) if (client_id and client_secret) else "",
         "scope": _GOOGLE_OAUTH_SCOPE,
-        "settings_url": "/settings/accounts",
+        "settings_url": "/settings/accounts#gsc-oauth-card",
     }
     resp = templates.TemplateResponse(
         "crawl_settings.html",

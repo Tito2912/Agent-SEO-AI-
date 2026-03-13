@@ -682,6 +682,47 @@ pre {
 .setting-title { margin: 0; font-size: 16px; }
 .setting-kv { margin-top: 10px; }
 .setting-note { margin: 10px 0 0; }
+.oauth-project-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.oauth-project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,.02);
+}
+.oauth-project-title {
+  font-weight: 800;
+  font-size: 15px;
+}
+.oauth-project-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.oauth-checklist {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.oauth-check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.02);
+}
 
 .icon-btn {
   appearance: none;
@@ -729,6 +770,17 @@ pre {
 .setting-form { margin-top: 12px; }
 
 .modal-actions.between { justify-content: space-between; }
+
+@media (max-width: 820px) {
+  .oauth-project-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .oauth-project-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
 
 .chart-row { display: flex; gap: 16px; align-items: center; }
 .legend { display: flex; flex-direction: column; gap: 8px; }

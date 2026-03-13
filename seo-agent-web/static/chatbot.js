@@ -158,8 +158,7 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
     if (meta && meta.configured === false) {
-      const settingsUrl = meta.settings_url || "/settings/accounts";
-      footEl.innerHTML = `Non configuré. Configure une clé dans <a href="${escapeHtml(settingsUrl)}">Comptes &amp; tokens</a>.`;
+      footEl.textContent = "Assistant temporairement indisponible.";
     } else {
       footEl.textContent = "";
     }
