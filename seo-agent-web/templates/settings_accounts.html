@@ -122,8 +122,117 @@
             </section>
           {% endif %}
 
+          {% if group == "Intégrations" and bing_item %}
+            <section class="card setting-card span-2" id="bing-connect-card">
+              <div class="setting-head">
+                <div>
+                  <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
+                  <div class="muted small">Bing utilise une clé API globale, puis l’activation se fait projet par projet dans les paramètres de crawl.</div>
+                </div>
+                <div class="setting-actions">
+                  {% if bing_item.locked %}
+                    <span class="badge notice">système</span>
+                  {% elif bing_item.configured %}
+                    <span class="badge ok">clé prête</span>
+                  {% else %}
+                    <span class="badge notice">clé à configurer</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="kv one setting-kv">
+                <div class="kv-item">
+                  <span class="muted">Clé active</span>
+                  <div class="mono">{{ bing_item.masked or "—" }}</div>
+                </div>
+              </div>
+
+              {% if bing_projects %}
+                <div class="oauth-project-list">
+                  {% for p in bing_projects %}
+                    <div class="oauth-project-item">
+                      <div>
+                        <div class="oauth-project-title">{{ p.site_name }}</div>
+                        <div class="muted small">{{ p.base_url or p.slug }}</div>
+                      </div>
+                      <div class="oauth-project-actions">
+                        {% if p.bing_enabled %}
+                          <span class="badge ok">bing activé</span>
+                        {% else %}
+                          <span class="badge notice">bing désactivé</span>
+                        {% endif %}
+                        <a class="btn" href="{{ p.crawl_settings_url }}">Paramètres crawl</a>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              {% if bing_item.locked %}
+                <p class="muted small setting-note">La clé Bing est définie au niveau système. Modifie la variable serveur puis redémarre l’application.</p>
+              {% else %}
+                <details class="setting-details" {% if not bing_item.configured %}open{% endif %}>
+                  <summary>Configurer la clé Bing</summary>
+                  <form method="post" action="/settings/accounts" class="setting-form">
+                    <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
+                    <label>
+                      Clé API
+                      <input type="password" name="value" placeholder="Coller la clé Bing Webmaster…" autocomplete="new-password" />
+                    </label>
+                    <div class="modal-actions between">
+                      <button
+                        class="btn danger"
+                        type="submit"
+                        name="op"
+                        value="clear"
+                        onclick="return confirm('Supprimer la clé Bing ?');"
+                      >
+                        Supprimer
+                      </button>
+                      <div style="display:flex; gap:10px; align-items:center;">
+                        <button class="btn" type="button" id="bing-test-btn">Tester</button>
+                        <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+                      </div>
+                    </div>
+                  </form>
+                </details>
+              {% endif %}
+
+              {% if bing_item.configured %}
+                <div class="modal-actions between" style="margin-top: 10px;">
+                  <button class="btn" type="button" id="bing-test-btn">Tester la connexion</button>
+                  <div class="muted small" id="bing-test-result"></div>
+                </div>
+              {% else %}
+                <div class="muted small" id="bing-test-result" style="margin-top:10px;"></div>
+              {% endif %}
+
+              {% if bing_item.help %}
+                <details class="setting-details">
+                  <summary>Aide Bing</summary>
+                  <div class="setting-form">
+                    {% if bing_item.help.steps %}
+                      <ol class="help-steps">
+                        {% for s in bing_item.help.steps %}
+                          <li>{{ s }}</li>
+                        {% endfor %}
+                      </ol>
+                    {% endif %}
+                    {% if bing_item.help.links %}
+                      <ul class="help-links" style="margin-top:10px;">
+                        {% for l in bing_item.help.links %}
+                          <li><a href="{{ l.url }}" target="_blank" rel="noreferrer">{{ l.label }}</a></li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </div>
+                </details>
+              {% endif %}
+            </section>
+          {% endif %}
+
           {% for item in group_items %}
-            {% if item.key != "GOOGLE_APPLICATION_CREDENTIALS" %}
+            {% if item.key not in ["GOOGLE_APPLICATION_CREDENTIALS", "BING_WEBMASTER_API_KEY"] %}
               <section class="card setting-card">
                 <div class="setting-head">
                   <div>
@@ -187,12 +296,6 @@
                     </form>
                   </details>
 
-                  {% if item.key == "BING_WEBMASTER_API_KEY" %}
-                    <div class="modal-actions between" style="margin-top: 10px;">
-                      <button class="btn" type="button" id="bing-test-btn">Tester</button>
-                      <div class="muted small" id="bing-test-result"></div>
-                    </div>
-                  {% endif %}
                 {% endif %}
 
                 {% if item.help %}

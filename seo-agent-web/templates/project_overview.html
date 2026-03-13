@@ -703,7 +703,13 @@
                 {% endif %}
               {% elif bing and bing.enabled %}
                 <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
-                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+                <p class="muted small">
+                  {% if bing.reason == "missing_api_key" %}
+                    <a href="/settings/accounts#bing-connect-card">Configurer Bing</a>
+                    ·
+                  {% endif %}
+                  <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
+                </p>
               {% else %}
                 <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
                 <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>

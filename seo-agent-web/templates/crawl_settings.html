@@ -304,6 +304,11 @@
             <p class="muted small" style="margin: 8px 0 0;">
               Utilise l’API si <span class="mono">BING_WEBMASTER_API_KEY</span> est configuré, sinon les exports CSV.
             </p>
+            {% if not bing_api_ready %}
+              <p class="muted small" style="margin: 8px 0 0;">
+                <a href="/settings/accounts#bing-connect-card">Configurer la clé Bing</a> pour activer les données live et les imports API.
+              </p>
+            {% endif %}
           </section>
 
           <section class="module-card">

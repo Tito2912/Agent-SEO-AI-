@@ -5594,6 +5594,17 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 candidates.append(rel)
     candidates = sorted(set([c for c in candidates if c]))
 
+    bing_value, bing_src = _env_effective_value("BING_WEBMASTER_API_KEY")
+    bing_item = {
+        "key": "BING_WEBMASTER_API_KEY",
+        "configured": bool(bing_value),
+        "masked": _mask_secret(bing_value),
+        "locked": bing_src == "os",
+        "editable": bool(_SETTINGS_ENV_KEYS.get("BING_WEBMASTER_API_KEY", {}).get("editable", True)),
+        "hint": str(_SETTINGS_ENV_KEYS.get("BING_WEBMASTER_API_KEY", {}).get("hint") or ""),
+        "help": _SETTINGS_ENV_KEYS.get("BING_WEBMASTER_API_KEY", {}).get("help"),
+    }
+
     with DB.session() as db:
         db_projects = list(
             db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
@@ -5602,12 +5613,13 @@ def settings_accounts(request: Request) -> HTMLResponse:
     client_id, client_secret = _google_oauth_client()
     oauth_ready = bool(client_id and client_secret and _safe_env("SEO_AGENT_SECRET_KEY"))
     gsc_projects: list[dict[str, Any]] = []
+    bing_projects: list[dict[str, Any]] = []
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
     for proj in db_projects:
         slug = str(proj.slug or "").strip()
         if not slug:
             continue
-        _, effective_gsc, _ = _effective_project_crawl_settings(
+        _, effective_gsc, effective_bing = _effective_project_crawl_settings(
             slug,
             config_path=config_path,
             project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
@@ -5623,12 +5635,23 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 "crawl_settings_url": f"/projects/{slug}/settings/crawl#gsc",
             }
         )
+        bing_projects.append(
+            {
+                "slug": slug,
+                "site_name": str(proj.site_name or slug),
+                "base_url": str(proj.base_url or ""),
+                "bing_enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
+                "crawl_settings_url": f"/projects/{slug}/settings/crawl#bing",
+            }
+        )
 
     resp = templates.TemplateResponse(
         "settings_accounts.html",
         {
             "request": request,
             "items": items,
+            "bing_item": bing_item,
+            "bing_projects": bing_projects,
             "gsc": {"credentials": cred_info, "candidates": candidates, "help": _SETTINGS_ENV_KEYS.get("GOOGLE_APPLICATION_CREDENTIALS", {}).get("help")},
             "gsc_oauth": {
                 "configured": oauth_ready,
@@ -6745,6 +6768,7 @@ def project_crawl_settings(
         "scope": _GOOGLE_OAUTH_SCOPE,
         "settings_url": "/settings/accounts#gsc-oauth-card",
     }
+    bing_api_ready = bool(_safe_env("BING_WEBMASTER_API_KEY"))
     resp = templates.TemplateResponse(
         "crawl_settings.html",
         {
@@ -6757,6 +6781,7 @@ def project_crawl_settings(
             "gsc": gsc,
             "gsc_oauth": gsc_oauth,
             "bing": bing,
+            "bing_api_ready": bing_api_ready,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
