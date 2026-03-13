@@ -533,16 +533,18 @@
 
       {% set gsc = sum.gsc %}
       {% set bing = sum.bing %}
+      {% set live_gsc = live_series.gsc if live_series and live_series.gsc else {} %}
+      {% set live_bing = live_series.bing if live_series and live_series.bing else {} %}
       <div class="span-all">
         <div class="grid two">
           <section class="card">
-            {% set gsc_days = gsc.days if gsc and gsc.days else 28 %}
+            {% set gsc_days = live_gsc.days if live_gsc and live_gsc.days else (gsc.days if gsc and gsc.days else 28) %}
             <div class="card-title-row">
               <h2>Google Search Console</h2>
               <div class="card-title-actions">
-                <div class="pill-select" title="Modifier la période dans Paramètres de crawl">
+                <div class="pill-select" title="Période du graphique live">
                   <label>Période</label>
-                  <select class="js-period" data-target="/projects/{{ project.slug }}/settings/crawl" data-param="prefill_gsc_days" data-anchor="gsc">
+                  <select class="js-ts-days" data-widget-id="gsc-live-widget">
                     {% for d in [7, 28, 90] %}
                       <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
                     {% endfor %}
@@ -557,96 +559,107 @@
                 {% endif %}
               </div>
             </div>
-
-            {% if gsc and gsc.ok %}
-              <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
-              <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
-              {% set g_ctr = (gsc.totals.avg_ctr * 100) %}
-	              {% set g_pos = gsc.totals.avg_position %}
-	              {% set g_pos_score = ( (50 - (g_pos if g_pos < 50 else 50)) / 50 * 100 ) if g_pos else 0 %}
-	              <div class="kpi-list">
-                <div class="kpi-row">
-                  <div class="kpi-label">Clics</div>
-                  <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
-                  <div class="mono">{{ gsc.totals.clicks }}</div>
-                </div>
-                <div class="kpi-row">
-                  <div class="kpi-label">Impressions</div>
-                  <div class="kpi-bar" style="--p: 100;"><div></div></div>
-                  <div class="mono">{{ gsc.totals.impressions }}</div>
-                </div>
-                <div class="kpi-row">
-                  <div class="kpi-label">CTR</div>
-                  <div class="kpi-bar ok" style="--p: {{ (g_ctr if g_ctr < 100 else 100)|round(0) }};"><div></div></div>
-                  <div class="mono">{{ g_ctr|round(2) }}%</div>
-                </div>
-                <div class="kpi-row">
-                  <div class="kpi-label">Position moyenne</div>
-                  <div class="kpi-bar warn" style="--p: {{ g_pos_score|round(0) }};"><div></div></div>
-	                  <div class="mono">{{ g_pos|round(2) }}</div>
-	                </div>
-	              </div>
-
-                {% if gsc.daily and (gsc.daily|length) >= 2 %}
-                  <div class="ts-widget" data-series-id="gsc-daily-series" data-default-metric="clicks">
-                    <div class="ts-controls" aria-label="Tendance Google Search Console">
-                      <button type="button" class="seg active" data-metric="clicks">Clics</button>
-                      <button type="button" class="seg" data-metric="impressions">Impressions</button>
-                      <button type="button" class="seg" data-metric="ctr">CTR</button>
-                      <button type="button" class="seg" data-metric="position">Position</button>
-                    </div>
-                    <div class="ts-chart">
-                      <canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas>
-                    </div>
-                    <script type="application/json" id="gsc-daily-series">{{ gsc.daily | tojson }}</script>
+            <div class="search-source-summary" data-summary-block {% if not (gsc and gsc.ok) %}data-summary-fallback="true"{% endif %}>
+              {% if gsc and gsc.ok %}
+                <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
+                <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
+                {% set g_ctr = (gsc.totals.avg_ctr * 100) %}
+                {% set g_pos = gsc.totals.avg_position %}
+                {% set g_pos_score = ( (50 - (g_pos if g_pos < 50 else 50)) / 50 * 100 ) if g_pos else 0 %}
+                <div class="kpi-list">
+                  <div class="kpi-row">
+                    <div class="kpi-label">Clics</div>
+                    <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
+                    <div class="mono">{{ gsc.totals.clicks }}</div>
                   </div>
+                  <div class="kpi-row">
+                    <div class="kpi-label">Impressions</div>
+                    <div class="kpi-bar" style="--p: 100;"><div></div></div>
+                    <div class="mono">{{ gsc.totals.impressions }}</div>
+                  </div>
+                  <div class="kpi-row">
+                    <div class="kpi-label">CTR</div>
+                    <div class="kpi-bar ok" style="--p: {{ (g_ctr if g_ctr < 100 else 100)|round(0) }};"><div></div></div>
+                    <div class="mono">{{ g_ctr|round(2) }}%</div>
+                  </div>
+                  <div class="kpi-row">
+                    <div class="kpi-label">Position moyenne</div>
+                    <div class="kpi-bar warn" style="--p: {{ g_pos_score|round(0) }};"><div></div></div>
+                    <div class="mono">{{ g_pos|round(2) }}</div>
+                  </div>
+                </div>
+
+                {% if gsc.url_inspection and gsc.url_inspection.enabled %}
+                  <div class="issue-chips">
+                    <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}">
+                      <span class="dot error"></span>Erreurs <span class="mono">{{ gsc.url_inspection.errors }}</span>
+                    </a>
+                    <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}">
+                      <span class="dot warning"></span>Avertissements <span class="mono">{{ gsc.url_inspection.warnings }}</span>
+                    </a>
+                    <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}">
+                      <span class="dot notice"></span>Avis <span class="mono">{{ gsc.url_inspection.notices }}</span>
+                    </a>
+                  </div>
+                  {% if gsc.url_inspection.json %}
+                    <p class="muted small" style="margin-top: 8px;">
+                      Détails: <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a>
+                    </p>
+                  {% endif %}
                 {% endif %}
 
-	              {% if gsc.url_inspection and gsc.url_inspection.enabled %}
-	                <div class="issue-chips">
-	                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}">
-                    <span class="dot error"></span>Erreurs <span class="mono">{{ gsc.url_inspection.errors }}</span>
-                  </a>
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}">
-                    <span class="dot warning"></span>Avertissements <span class="mono">{{ gsc.url_inspection.warnings }}</span>
-                  </a>
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}">
-                    <span class="dot notice"></span>Avis <span class="mono">{{ gsc.url_inspection.notices }}</span>
-                  </a>
-                </div>
-                {% if gsc.url_inspection.json %}
+                {% if gsc.queries_csv or gsc.pages_csv %}
                   <p class="muted small" style="margin-top: 8px;">
-                    Détails: <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a>
+                    CSV:
+                    {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
+                    {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
+                    {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
+                    {% if gsc.daily_csv %} · <a href="/file?path={{ gsc.daily_csv }}">gsc-daily.csv</a>{% endif %}
                   </p>
                 {% endif %}
+              {% elif gsc and gsc.enabled %}
+                <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
+                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+              {% else %}
+                <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
+                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
               {% endif %}
+            </div>
 
-	              {% if gsc.queries_csv or gsc.pages_csv %}
-	                <p class="muted small" style="margin-top: 8px;">
-	                  CSV:
-	                  {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
-	                  {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
-	                  {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
-                    {% if gsc.daily_csv %} · <a href="/file?path={{ gsc.daily_csv }}">gsc-daily.csv</a>{% endif %}
-	                </p>
-	              {% endif %}
-            {% elif gsc and gsc.enabled %}
-              <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
-              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
-            {% else %}
-              <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+            {% if live_gsc.enabled or (gsc and gsc.daily and (gsc.daily|length) >= 2) %}
+              <div
+                id="gsc-live-widget"
+                class="ts-widget"
+                data-default-metric="clicks"
+                {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}data-series-id="gsc-daily-series"{% endif %}
+                {% if live_gsc.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}
+              >
+                <div class="ts-controls" aria-label="Tendance Google Search Console">
+                  <button type="button" class="seg active" data-metric="clicks">Clics</button>
+                  <button type="button" class="seg" data-metric="impressions">Impressions</button>
+                  <button type="button" class="seg" data-metric="ctr">CTR</button>
+                  <button type="button" class="seg" data-metric="position">Position</button>
+                </div>
+                <div class="ts-chart">
+                  <canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas>
+                  <div class="ts-empty">Chargement du graphique live…</div>
+                </div>
+                <div class="ts-meta muted small" data-ts-meta></div>
+                {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}
+                  <script type="application/json" id="gsc-daily-series">{{ gsc.daily | tojson }}</script>
+                {% endif %}
+              </div>
             {% endif %}
           </section>
 
           <section class="card">
-            {% set bing_days = bing.days if bing and bing.days else 28 %}
+            {% set bing_days = live_bing.days if live_bing and live_bing.days else (bing.days if bing and bing.days else 28) %}
             <div class="card-title-row">
               <h2>Bing Webmaster Tools</h2>
               <div class="card-title-actions">
-                <div class="pill-select" title="Modifier la période dans Paramètres de crawl">
+                <div class="pill-select" title="Période du graphique live">
                   <label>Période</label>
-                  <select class="js-period" data-target="/projects/{{ project.slug }}/settings/crawl" data-param="prefill_bing_days" data-anchor="bing">
+                  <select class="js-ts-days" data-widget-id="bing-live-widget">
                     {% for d in [7, 28, 90] %}
                       <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
                     {% endfor %}
@@ -661,80 +674,91 @@
                 {% endif %}
               </div>
             </div>
-
-            {% if bing and bing.ok %}
-              {% if bing.site_url %}
-                <p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>
-              {% endif %}
-              {% if bing.start_date and bing.end_date %}
-                <p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>
-              {% endif %}
-	              {% set b_ctr = (bing.totals.avg_ctr * 100) %}
-	              {% set b_pos = bing.totals.avg_position %}
-	              {% set b_pos_score = ( (50 - (b_pos if b_pos < 50 else 50)) / 50 * 100 ) if b_pos else 0 %}
-	              <div class="kpi-list">
-                <div class="kpi-row">
-                  <div class="kpi-label">Clics</div>
-                  <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
-                  <div class="mono">{{ bing.totals.clicks }}</div>
-                </div>
-                <div class="kpi-row">
-                  <div class="kpi-label">Impressions</div>
-                  <div class="kpi-bar" style="--p: 100;"><div></div></div>
-                  <div class="mono">{{ bing.totals.impressions }}</div>
-                </div>
-                <div class="kpi-row">
-                  <div class="kpi-label">CTR</div>
-                  <div class="kpi-bar ok" style="--p: {{ (b_ctr if b_ctr < 100 else 100)|round(0) }};"><div></div></div>
-                  <div class="mono">{{ b_ctr|round(2) }}%</div>
-                </div>
-                <div class="kpi-row">
-                  <div class="kpi-label">Position moyenne</div>
-                  <div class="kpi-bar warn" style="--p: {{ b_pos_score|round(0) }};"><div></div></div>
-	                  <div class="mono">{{ b_pos|round(2) }}</div>
-	                </div>
-	              </div>
-
-                {% if bing.daily and (bing.daily|length) >= 2 %}
-                  <div class="ts-widget" data-series-id="bing-daily-series" data-default-metric="clicks">
-                    <div class="ts-controls" aria-label="Tendance Bing Webmaster Tools">
-                      <button type="button" class="seg active" data-metric="clicks">Clics</button>
-                      <button type="button" class="seg" data-metric="impressions">Impressions</button>
-                      <button type="button" class="seg" data-metric="ctr">CTR</button>
-                    </div>
-                    <div class="ts-chart">
-                      <canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas>
-                    </div>
-                    <script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>
-                  </div>
+            <div class="search-source-summary" data-summary-block>
+              {% if bing and bing.ok %}
+                {% if bing.site_url %}
+                  <p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>
                 {% endif %}
+                {% if bing.start_date and bing.end_date %}
+                  <p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>
+                {% endif %}
+                {% set b_ctr = (bing.totals.avg_ctr * 100) %}
+                {% set b_pos = bing.totals.avg_position %}
+                {% set b_pos_score = ( (50 - (b_pos if b_pos < 50 else 50)) / 50 * 100 ) if b_pos else 0 %}
+                <div class="kpi-list">
+                  <div class="kpi-row">
+                    <div class="kpi-label">Clics</div>
+                    <div class="kpi-bar ok" style="--p: 100;"><div></div></div>
+                    <div class="mono">{{ bing.totals.clicks }}</div>
+                  </div>
+                  <div class="kpi-row">
+                    <div class="kpi-label">Impressions</div>
+                    <div class="kpi-bar" style="--p: 100;"><div></div></div>
+                    <div class="mono">{{ bing.totals.impressions }}</div>
+                  </div>
+                  <div class="kpi-row">
+                    <div class="kpi-label">CTR</div>
+                    <div class="kpi-bar ok" style="--p: {{ (b_ctr if b_ctr < 100 else 100)|round(0) }};"><div></div></div>
+                    <div class="mono">{{ b_ctr|round(2) }}%</div>
+                  </div>
+                  <div class="kpi-row">
+                    <div class="kpi-label">Position moyenne</div>
+                    <div class="kpi-bar warn" style="--p: {{ b_pos_score|round(0) }};"><div></div></div>
+                    <div class="mono">{{ b_pos|round(2) }}</div>
+                  </div>
+                </div>
 
-	              <div class="issue-chips">
-	                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}">
-	                  <span class="dot warning"></span>Problèmes de crawl <span class="mono">{{ bing.crawl_issues.rows }}</span>
-                </a>
-                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}">
-                  <span class="dot error"></span>URLs bloquées <span class="mono">{{ bing.blocked_urls.rows }}</span>
-                </a>
-                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}">
-                  <span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span>
-                </a>
-              </div>
+                <div class="issue-chips">
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}">
+                    <span class="dot warning"></span>Problèmes de crawl <span class="mono">{{ bing.crawl_issues.rows }}</span>
+                  </a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}">
+                    <span class="dot error"></span>URLs bloquées <span class="mono">{{ bing.blocked_urls.rows }}</span>
+                  </a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}">
+                    <span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span>
+                  </a>
+                </div>
 
-              {% if bing.queries_csv or bing.pages_csv %}
-                <p class="muted small" style="margin-top: 8px;">
-                  CSV:
-                  {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
-                  {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
-                  {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
-                </p>
+                {% if bing.queries_csv or bing.pages_csv %}
+                  <p class="muted small" style="margin-top: 8px;">
+                    CSV:
+                    {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
+                    {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
+                    {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
+                  </p>
+                {% endif %}
+              {% elif bing and bing.enabled %}
+                <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
+                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+              {% else %}
+                <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
+                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
               {% endif %}
-            {% elif bing and bing.enabled %}
-              <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
-              <p class="muted small"><a href="/settings/accounts">Vérifier Comptes &amp; tokens</a> · <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
-            {% else %}
-              <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+            </div>
+
+            {% if live_bing.enabled or (bing and bing.daily and (bing.daily|length) >= 2) %}
+              <div
+                id="bing-live-widget"
+                class="ts-widget"
+                data-default-metric="clicks"
+                {% if bing and bing.daily and (bing.daily|length) >= 2 %}data-series-id="bing-daily-series"{% endif %}
+                {% if live_bing.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}
+              >
+                <div class="ts-controls" aria-label="Tendance Bing Webmaster Tools">
+                  <button type="button" class="seg active" data-metric="clicks">Clics</button>
+                  <button type="button" class="seg" data-metric="impressions">Impressions</button>
+                  <button type="button" class="seg" data-metric="ctr">CTR</button>
+                </div>
+                <div class="ts-chart">
+                  <canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas>
+                  <div class="ts-empty">Chargement du graphique live…</div>
+                </div>
+                <div class="ts-meta muted small" data-ts-meta></div>
+                {% if bing and bing.daily and (bing.daily|length) >= 2 %}
+                  <script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>
+                {% endif %}
+              </div>
             {% endif %}
           </section>
         </div>

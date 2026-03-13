@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import base64
+import datetime as dt
 import io
 import hashlib
 import hmac
 import html
+import importlib.util
 import ipaddress
 import json
 import math
@@ -80,6 +82,8 @@ except ImportError:
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+AUTOPILOT_SCRIPTS_DIR = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts"
+_GSC_FETCH_MODULE: Any | None = None
 
 def _env_path(name: str, default: Path) -> Path:
     raw = str(os.environ.get(name) or "").strip().strip('"').strip("'")
@@ -2233,6 +2237,472 @@ def _normalize_base_url(value: str) -> str | None:
         netloc = f"{host}:{parts.port}"
     # Use root as crawl base_url (Ahrefs-like).
     return urlunsplit((scheme, netloc, "/", "", ""))
+
+
+def _root_url(url: str) -> str:
+    parts = urlsplit(url)
+    return urlunsplit((parts.scheme, parts.netloc, "", "", ""))
+
+
+def _resolve_repo_path(raw: str) -> Path | None:
+    value = str(raw or "").strip().strip('"').strip("'")
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = (REPO_ROOT / path).resolve()
+    return path
+
+
+def _load_gsc_fetch_module() -> Any:
+    global _GSC_FETCH_MODULE
+    if _GSC_FETCH_MODULE is not None:
+        return _GSC_FETCH_MODULE
+
+    module_path = (AUTOPILOT_SCRIPTS_DIR / "gsc_fetch.py").resolve()
+    if not module_path.exists():
+        raise RuntimeError(f"Module introuvable: {module_path}")
+
+    spec = importlib.util.spec_from_file_location("seo_agent_gsc_fetch", str(module_path))
+    if not spec or not spec.loader:
+        raise RuntimeError("Impossible de charger gsc_fetch.py")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    _GSC_FETCH_MODULE = module
+    return module
+
+
+def _to_int(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(round(value))
+    if isinstance(value, str):
+        try:
+            return int(float(value))
+        except ValueError:
+            return 0
+    return 0
+
+
+def _to_float(value: Any) -> float:
+    if isinstance(value, bool):
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
+def _timeseries_totals(points: list[dict[str, Any]]) -> dict[str, Any]:
+    clicks = sum(_to_int(p.get("clicks")) for p in points if isinstance(p, dict))
+    impressions = sum(_to_int(p.get("impressions")) for p in points if isinstance(p, dict))
+    ctr = (clicks / impressions) if impressions else 0.0
+
+    weighted_positions: list[tuple[float, int]] = []
+    fallback_positions: list[float] = []
+    for p in points:
+        if not isinstance(p, dict):
+            continue
+        pos = _to_float(p.get("position"))
+        if pos <= 0:
+            continue
+        impr = _to_int(p.get("impressions"))
+        if impr > 0:
+            weighted_positions.append((pos, impr))
+        else:
+            fallback_positions.append(pos)
+
+    avg_position = 0.0
+    if weighted_positions:
+        total_weight = sum(weight for _, weight in weighted_positions)
+        if total_weight > 0:
+            avg_position = sum(pos * weight for pos, weight in weighted_positions) / total_weight
+    elif fallback_positions:
+        avg_position = sum(fallback_positions) / len(fallback_positions)
+
+    return {
+        "clicks": clicks,
+        "impressions": impressions,
+        "avg_ctr": ctr,
+        "avg_position": avg_position,
+    }
+
+
+def _gsc_property_candidates(base_url: str, configured: str | None) -> list[str]:
+    candidates: list[str] = []
+    if isinstance(configured, str) and configured.strip():
+        candidates.append(configured.strip())
+
+    host = (urlsplit(base_url).hostname or "").strip().lower()
+    host_no_www = host[4:] if host.startswith("www.") else host
+    if host_no_www:
+        candidates.append(f"sc-domain:{host_no_www}")
+
+    root = _root_url(base_url).strip()
+    if root:
+        candidates.append(root if root.endswith("/") else f"{root}/")
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        out.append(candidate)
+    return out
+
+
+def _gsc_daily_series(rows: list[dict[str, Any]], *, start_date: dt.date, end_date: dt.date) -> list[dict[str, Any]]:
+    by_date: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        keys = row.get("keys") if isinstance(row.get("keys"), list) else []
+        key = str(keys[0]) if keys else ""
+        if key:
+            by_date[key] = row
+
+    out: list[dict[str, Any]] = []
+    cur = start_date
+    while cur <= end_date:
+        key = cur.isoformat()
+        row = by_date.get(key) or {}
+        clicks = _to_int(row.get("clicks"))
+        impressions = _to_int(row.get("impressions"))
+        out.append(
+            {
+                "date": key,
+                "clicks": clicks,
+                "impressions": impressions,
+                "ctr": _to_float(row.get("ctr")),
+                "position": _to_float(row.get("position")),
+            }
+        )
+        cur = cur + dt.timedelta(days=1)
+    return out
+
+
+def _gsc_live_credentials_path(*, user_id: str, slug: str) -> tuple[Path | None, str]:
+    oauth_path = _gsc_oauth_token_path(user_id, slug)
+    if oauth_path.exists():
+        return oauth_path, "oauth"
+
+    env_creds = _resolve_repo_path(_safe_env("GOOGLE_APPLICATION_CREDENTIALS"))
+    if env_creds and env_creds.exists():
+        return env_creds, "service_account"
+
+    return None, ""
+
+
+def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: dict[str, Any], days: int) -> dict[str, Any]:
+    enabled = bool(gsc_cfg.get("enabled")) if "enabled" in gsc_cfg else True
+    if not enabled:
+        return {"ok": False, "enabled": False, "reason": "disabled"}
+
+    credentials_path, auth_mode = _gsc_live_credentials_path(user_id=user_id, slug=slug)
+    if not credentials_path:
+        return {"ok": False, "enabled": True, "reason": "missing_credentials"}
+
+    gsc_fetch = _load_gsc_fetch_module()
+
+    today = dt.datetime.now(dt.timezone.utc).date()
+    end_date = today - dt.timedelta(days=3)
+    if end_date < dt.date(2000, 1, 1):
+        end_date = today
+    days = max(1, min(int(days or 28), 365))
+    start_date = end_date - dt.timedelta(days=days - 1)
+    search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
+
+    last_error = ""
+    for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
+        try:
+            rows = gsc_fetch.fetch_gsc(
+                credentials_path=credentials_path.resolve(),
+                property_url=property_url,
+                start_date=start_date,
+                end_date=end_date,
+                dimensions=["date"],
+                search_type=search_type,
+                row_limit=max(500, days + 10),
+                timeout_s=30.0,
+            )
+        except Exception as e:
+            last_error = f"{type(e).__name__}: {e}"
+            continue
+
+        daily = _gsc_daily_series(rows if isinstance(rows, list) else [], start_date=start_date, end_date=end_date)
+        return {
+            "ok": True,
+            "enabled": True,
+            "source": "gsc",
+            "live": True,
+            "auth_mode": auth_mode,
+            "property": property_url,
+            "days": days,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "daily": daily,
+            "totals": _timeseries_totals(daily),
+            "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+        }
+
+    return {
+        "ok": False,
+        "enabled": True,
+        "source": "gsc",
+        "reason": "request_failed",
+        "error": last_error or "gsc_request_failed",
+    }
+
+
+def _bing_site_candidates(base_url: str, configured: str | None) -> list[str]:
+    candidates: list[str] = []
+    if isinstance(configured, str) and configured.strip():
+        candidates.append(configured.strip())
+    root = _root_url(base_url).strip()
+    if root:
+        candidates.append(root if root.endswith("/") else f"{root}/")
+        candidates.append(root.rstrip("/"))
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        out.append(candidate)
+    return out
+
+
+def _bing_extract_rows(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ("d", "Data", "data", "Result", "result", "Results", "results"):
+        node = payload.get(key)
+        if isinstance(node, list):
+            return [row for row in node if isinstance(row, dict)]
+        if isinstance(node, dict):
+            for value in node.values():
+                if isinstance(value, list) and value and isinstance(value[0], dict):
+                    return [row for row in value if isinstance(row, dict)]
+    for value in payload.values():
+        if isinstance(value, list) and value and isinstance(value[0], dict):
+            return [row for row in value if isinstance(row, dict)]
+    return []
+
+
+def _bing_date_iso(value: Any) -> str:
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return ""
+        match = re.search(r"Date\((\d+)([+-]\d+)?\)", raw)
+        if match:
+            try:
+                ms = int(match.group(1))
+                return dt.datetime.fromtimestamp(ms / 1000.0, tz=dt.timezone.utc).date().isoformat()
+            except Exception:
+                return ""
+        try:
+            return dt.date.fromisoformat(raw).isoformat()
+        except Exception:
+            return ""
+    if isinstance(value, (int, float)) and float(value) > 0:
+        try:
+            ts = float(value)
+            if ts > 1e12:
+                ts = ts / 1000.0
+            return dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc).date().isoformat()
+        except Exception:
+            return ""
+    return ""
+
+
+def _bing_rank_traffic_series(rows: list[dict[str, Any]], *, start_date: dt.date, end_date: dt.date) -> list[dict[str, Any]]:
+    by_date: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        day = _bing_date_iso(row.get("Date") or row.get("date") or "")
+        if not day:
+            continue
+        by_date[day] = {
+            "clicks": _to_int(row.get("Clicks") if "Clicks" in row else row.get("clicks")),
+            "impressions": _to_int(row.get("Impressions") if "Impressions" in row else row.get("impressions")),
+        }
+
+    available_dates: list[dt.date] = []
+    for key in by_date.keys():
+        try:
+            available_dates.append(dt.date.fromisoformat(key))
+        except Exception:
+            continue
+
+    effective_start = start_date
+    effective_end = end_date
+    if available_dates:
+        effective_start = max(start_date, min(available_dates))
+        effective_end = min(end_date, max(available_dates))
+    if effective_end < effective_start:
+        return []
+
+    out: list[dict[str, Any]] = []
+    cur = effective_start
+    while cur <= effective_end:
+        key = cur.isoformat()
+        node = by_date.get(key) or {}
+        clicks = _to_int(node.get("clicks"))
+        impressions = _to_int(node.get("impressions"))
+        out.append(
+            {
+                "date": key,
+                "clicks": clicks,
+                "impressions": impressions,
+                "ctr": (clicks / impressions) if impressions else 0.0,
+                "position": 0.0,
+            }
+        )
+        cur = cur + dt.timedelta(days=1)
+    return out
+
+
+def _bing_call(method: str, *, params: dict[str, Any], timeout_s: float) -> Any:
+    response = requests.get(f"https://www.bing.com/webmaster/api.svc/json/{method}", params=params, timeout=timeout_s)
+    content_type = response.headers.get("content-type", "")
+    if not content_type.startswith("application/json"):
+        raise RuntimeError(f"Non-JSON response for {method} (HTTP {response.status_code})")
+    data = response.json()
+    if isinstance(data, dict) and isinstance(data.get("ErrorCode"), int) and int(data.get("ErrorCode")) != 0:
+        raise RuntimeError(str(data.get("Message") or f"bing_api_error:{data.get('ErrorCode')}"))
+    return data
+
+
+def _bing_pick_site_url(*, base_url: str, api_key: str, timeout_s: float, configured: str | None = None) -> tuple[str | None, list[str], str | None]:
+    try:
+        payload = _bing_call("GetUserSites", params={"apikey": api_key}, timeout_s=timeout_s)
+    except Exception as e:
+        return None, [], f"{type(e).__name__}: {e}"
+
+    rows = _bing_extract_rows(payload)
+    sites: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        for key in ("Url", "url", "SiteUrl", "siteUrl", "site_url"):
+            value = row.get(key)
+            if isinstance(value, str) and value.startswith(("http://", "https://")):
+                sites.append(value.strip())
+                break
+
+    if not sites:
+        blob = json.dumps(payload, ensure_ascii=False)
+        sites = [site for site in re.findall(r"https?://[^\s\"\\\\]+", blob) if site.startswith(("http://", "https://"))]
+
+    candidates = {candidate.rstrip("/").lower() for candidate in _bing_site_candidates(base_url, configured)}
+    host = (urlsplit(base_url).hostname or "").strip().lower()
+    host_no_www = host[4:] if host.startswith("www.") else host
+
+    def score(site_url: str) -> tuple[int, int]:
+        root = _root_url(site_url).rstrip("/").lower()
+        site_host = (urlsplit(site_url).hostname or "").lower()
+        points = 0
+        if root in candidates:
+            points += 3
+        if site_host == host:
+            points += 2
+        if host_no_www and site_host == host_no_www:
+            points += 2
+        if site_url.endswith("/"):
+            points += 1
+        return points, len(site_url)
+
+    best = sorted(sites, key=lambda site: (-score(site)[0], score(site)[1]))[0] if sites else None
+    return best, sites, None
+
+
+def _fetch_bing_live_series(*, base_url: str, bing_cfg: dict[str, Any], days: int) -> dict[str, Any]:
+    enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
+    if not enabled:
+        return {"ok": False, "enabled": False, "reason": "disabled"}
+
+    api_key = _safe_env("BING_WEBMASTER_API_KEY")
+    if not api_key:
+        return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_api_key"}
+
+    timeout_s = 20.0
+    configured_site_url = str(bing_cfg.get("site_url") or "").strip()
+    site_url = configured_site_url or ""
+    user_sites: list[str] = []
+    if not site_url:
+        site_url, user_sites, sites_error = _bing_pick_site_url(
+            base_url=base_url,
+            api_key=api_key,
+            timeout_s=timeout_s,
+            configured=configured_site_url,
+        )
+        if not site_url:
+            return {
+                "ok": False,
+                "enabled": True,
+                "source": "bing",
+                "reason": "site_not_found",
+                "error": sites_error or "bing_site_not_found",
+                "user_sites": user_sites[:50],
+            }
+
+    today = dt.datetime.now(dt.timezone.utc).date()
+    end_date = today - dt.timedelta(days=3)
+    days = max(1, min(int(days or 28), 365))
+    start_date = end_date - dt.timedelta(days=days - 1)
+
+    try:
+        payload = _bing_call("GetRankAndTrafficStats", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=timeout_s)
+        rows = _bing_extract_rows(payload)
+    except Exception as e:
+        return {
+            "ok": False,
+            "enabled": True,
+            "source": "bing",
+            "reason": "request_failed",
+            "error": f"{type(e).__name__}: {e}",
+        }
+
+    daily = _bing_rank_traffic_series(rows, start_date=start_date, end_date=end_date)
+    if not daily:
+        return {
+            "ok": False,
+            "enabled": True,
+            "source": "bing",
+            "reason": "no_data",
+            "site_url": site_url,
+            "days": days,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+
+    return {
+        "ok": True,
+        "enabled": True,
+        "source": "bing",
+        "live": True,
+        "site_url": site_url,
+        "days": days,
+        "start_date": daily[0]["date"],
+        "end_date": daily[-1]["date"],
+        "daily": daily,
+        "totals": _timeseries_totals(daily),
+        "data_delay_hint": "Bing Webmaster Tools peut avoir un léger décalage.",
+    }
 
 
 def _validate_public_crawl_target(base_url: str) -> str | None:
@@ -5692,6 +6162,44 @@ def bing_sites(request: Request) -> JSONResponse:
     return JSONResponse({"ok": True, "sites": sites[:200]})
 
 
+@app.get("/api/projects/{slug}/search-series")
+def project_search_series(request: Request, slug: str, source: str, days: int | None = None) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    _, gsc_cfg, bing_cfg = _effective_project_crawl_settings(
+        slug,
+        config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
+        project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
+    )
+
+    source_key = str(source or "").strip().lower()
+    requested_days = max(1, min(int(days or 28), 365))
+    user = getattr(request.state, "user", None)
+
+    if source_key == "gsc":
+        payload = _fetch_gsc_live_series(
+            user_id=str(getattr(user, "id", "")),
+            slug=slug,
+            base_url=str(proj.base_url or ""),
+            gsc_cfg=gsc_cfg,
+            days=requested_days,
+        )
+        status_code = 200 if payload.get("ok") else 400
+    elif source_key == "bing":
+        payload = _fetch_bing_live_series(
+            base_url=str(proj.base_url or ""),
+            bing_cfg=bing_cfg,
+            days=requested_days,
+        )
+        status_code = 200 if payload.get("ok") else 400
+    else:
+        payload = {"ok": False, "error": "source must be gsc or bing"}
+        status_code = 400
+
+    resp = JSONResponse(payload, status_code=status_code)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.get("/automation", response_class=HTMLResponse)
 def automation(request: Request) -> HTMLResponse:
     _ = _require_admin(request)
@@ -6040,7 +6548,7 @@ def crawl_projects_batch(
 def project_overview(
     request: Request, slug: str, crawl: str | None = None, compare: str | None = None, job: str | None = None
 ) -> HTMLResponse:
-    _ = _db_project_or_404(request, slug)
+    proj_row = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_for_request(request)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
@@ -6087,6 +6595,25 @@ def project_overview(
 
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
+    _, effective_gsc, effective_bing = _effective_project_crawl_settings(
+        slug,
+        config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
+        project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
+    )
+    gsc_creds_path, gsc_auth_mode = _gsc_live_credentials_path(user_id=str(getattr(user, "id", "")), slug=slug)
+    live_series = {
+        "gsc": {
+            "enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
+            "days": int(effective_gsc.get("days") or 28),
+            "credentials_ready": bool(gsc_creds_path and gsc_creds_path.exists()),
+            "auth_mode": gsc_auth_mode,
+        },
+        "bing": {
+            "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
+            "days": int(effective_bing.get("days") or 28),
+            "api_ready": bool(_safe_env("BING_WEBMASTER_API_KEY")),
+        },
+    }
     plan_key = "free"
     if user and not is_admin:
         with DB.session() as db:
@@ -6119,6 +6646,7 @@ def project_overview(
             "top_actions": top_actions,
             "fix_pack_unlocked": bool(fix_pack_unlocked),
             "plan_key": plan_key,
+            "live_series": live_series,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
