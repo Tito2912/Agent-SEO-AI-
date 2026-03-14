@@ -288,12 +288,13 @@ pre {
   font-size: 12px;
   font-weight: 700;
   text-transform: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 .badge.sm { padding: 2px 8px; font-size: 11px; font-weight: 700; }
-.badge.ok { background: rgba(79, 163, 138, .12); border-color: rgba(79, 163, 138, .22); color: var(--text); }
-.badge.warning { background: rgba(195, 162, 90, .12); border-color: rgba(195, 162, 90, .22); color: var(--text); }
-.badge.notice { background: rgba(var(--accent-rgb), .12); border-color: rgba(var(--accent-rgb), .22); color: var(--text); }
-.badge.error { background: rgba(192, 107, 127, .12); border-color: rgba(192, 107, 127, .22); color: var(--text); }
+.badge.ok { background: rgba(79, 163, 138, .18); border-color: rgba(79, 163, 138, .32); color: #edf8f4; }
+.badge.warning { background: rgba(195, 162, 90, .18); border-color: rgba(195, 162, 90, .32); color: #fbf4df; }
+.badge.notice { background: rgba(var(--accent-rgb), .18); border-color: rgba(var(--accent-rgb), .34); color: #fff5dd; }
+.badge.error { background: rgba(192, 107, 127, .18); border-color: rgba(192, 107, 127, .30); color: #fff0f4; }
 .badge.error, .badge.warning, .badge.notice { text-transform: lowercase; }
 .badge.error { }
 .badge.warning { }
@@ -675,11 +676,11 @@ pre {
 
 .settings-section { margin-top: 16px; }
 .settings-section-head { margin: 18px 0 10px; }
-.settings-section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.settings-section-title { font-size: 11px; color: rgba(241, 209, 138, .92); text-transform: uppercase; letter-spacing: .08em; }
 
 .setting-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .setting-actions { display: inline-flex; align-items: center; gap: 8px; }
-.setting-title { margin: 0; font-size: 16px; }
+.setting-title { margin: 0; font-size: 16px; color: #f2ead8; letter-spacing: .01em; }
 .setting-kv { margin-top: 10px; }
 .setting-note { margin: 10px 0 0; }
 .oauth-project-list {
@@ -700,7 +701,9 @@ pre {
 .oauth-project-title {
   font-weight: 800;
   font-size: 15px;
+  color: #f5efe1;
 }
+.setting-card h3 { color: rgba(241, 209, 138, .94); letter-spacing: .01em; }
 .oauth-project-actions {
   display: inline-flex;
   align-items: center;
