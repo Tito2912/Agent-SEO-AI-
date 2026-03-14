@@ -1,0 +1,273 @@
+{% extends "layout.html" %}
+{% block title %}Paramètres — Système{% endblock %}
+
+{% macro setting_card(item, action="/settings/system") -%}
+  <section class="card setting-card">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">{{ item.label }}</h2>
+        {% if item.hint %}<div class="muted small">{{ item.hint }}</div>{% endif %}
+      </div>
+      <div class="setting-actions">
+        {% if item.help %}
+          <button
+            type="button"
+            class="icon-btn"
+            data-open-dialog="info-{{ item.key }}"
+            aria-label="Aide {{ item.label }}"
+            title="Aide"
+          >
+            i
+          </button>
+        {% endif %}
+        {% if item.locked %}
+          <span class="badge notice">système</span>
+        {% elif item.configured %}
+          <span class="badge ok">ok</span>
+        {% else %}
+          <span class="badge notice">à configurer</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="kv one setting-kv">
+      <div class="kv-item">
+        <span class="muted">Actif</span>
+        <div class="mono">{{ item.masked or "—" }}</div>
+      </div>
+    </div>
+
+    {% if item.locked %}
+      <p class="muted small setting-note">Variable fournie par l’environnement système au démarrage du serveur.</p>
+    {% else %}
+      <details class="setting-details">
+        <summary>Configurer</summary>
+        <form method="post" action="{{ action }}" class="setting-form">
+          <input type="hidden" name="key" value="{{ item.key }}" />
+          <label>
+            Valeur
+            <input type="password" name="value" placeholder="Coller la valeur…" autocomplete="new-password" />
+          </label>
+          <div class="modal-actions between">
+            <button
+              class="btn danger"
+              type="submit"
+              name="op"
+              value="clear"
+              onclick="return confirm('Supprimer cette valeur système ?');"
+            >
+              Supprimer
+            </button>
+            <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+          </div>
+        </form>
+      </details>
+    {% endif %}
+
+    {% if item.help %}
+      <dialog id="info-{{ item.key }}" class="modal">
+        <div class="modal-head">
+          <h2>{{ item.help.title }}</h2>
+          <form method="dialog">
+            <button class="btn">Fermer</button>
+          </form>
+        </div>
+        <div class="modal-body">
+          {% if item.help.steps %}
+            <ol class="help-steps">
+              {% for step in item.help.steps %}
+                <li>{{ step }}</li>
+              {% endfor %}
+            </ol>
+          {% endif %}
+          {% if item.help.links %}
+            <div class="row">
+              <div class="muted small" style="margin-bottom:6px;">Liens utiles</div>
+              <ul class="help-links">
+                {% for link in item.help.links %}
+                  <li><a href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.label }}</a></li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      </dialog>
+    {% endif %}
+  </section>
+{%- endmacro %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Paramètres</span>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Système</span>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Paramètres système</h1>
+    <p class="muted">Configuration interne de la plateforme. Cette page n’est pas exposée aux utilisatrices.</p>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Portée</h2>
+    </div>
+    <ul class="examples muted small" style="margin:0;">
+      <li>OAuth Google plateforme, secrets d’application et fournisseurs IA.</li>
+      <li>Fallbacks plateforme utilisés quand un compte utilisateur n’a pas sa propre connexion.</li>
+      <li>Les clés système restent séparées de la page utilisateur <span class="mono">/settings/accounts</span>.</li>
+    </ul>
+  </section>
+
+  {% for section in sections %}
+    <div class="settings-section" id="{{ section.id }}">
+      <div class="settings-section-head">
+        <div>
+          <div class="settings-section-title">{{ section.title }}</div>
+          <div class="muted small">{{ section.description }}</div>
+        </div>
+      </div>
+
+      <div class="grid two">
+        {% if section.id == "gsc-service-account-system" %}
+          {% set cred = gsc.credentials if gsc and gsc.credentials else none %}
+          <section class="card setting-card span-2">
+            <div class="setting-head">
+              <div>
+                <h2 class="setting-title">Google Search Console — service account</h2>
+                <div class="muted small">Utilisé uniquement en fallback technique.</div>
+              </div>
+              <div class="setting-actions">
+                {% if cred and cred.exists %}
+                  <span class="badge ok">ok</span>
+                {% else %}
+                  <span class="badge notice">à configurer</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="kv setting-kv">
+              <div class="kv-item">
+                <span class="muted">Credentials</span>
+                <div class="mono">{{ (cred.path if cred else "") or "—" }}</div>
+              </div>
+              <div class="kv-item">
+                <span class="muted">Service account</span>
+                <div class="mono">{{ (cred.client_email if cred else "") or "—" }}</div>
+              </div>
+              <div class="kv-item">
+                <span class="muted">Projet</span>
+                <div class="mono">{{ (cred.project_id if cred else "") or "—" }}</div>
+              </div>
+            </div>
+
+            <details class="setting-details" {% if not (cred and cred.exists) %}open{% endif %}>
+              <summary>Configurer</summary>
+              <form method="post" action="/settings/system" id="gsc-form" class="setting-form">
+                <input type="hidden" name="key" value="GOOGLE_APPLICATION_CREDENTIALS" />
+                <label>
+                  Chemin du fichier JSON
+                  <input
+                    type="text"
+                    name="value"
+                    id="gsc-cred-input"
+                    placeholder="ex: seo-agent-web/data/google-service-account.json"
+                    value="{{ (cred.path if cred else '') }}"
+                  />
+                </label>
+                {% if gsc and gsc.candidates %}
+                  <label>
+                    Détection automatique
+                    <select id="gsc-cred-select">
+                      <option value="">— choisir —</option>
+                      {% for path in gsc.candidates %}
+                        <option value="{{ path }}">{{ path }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                {% endif %}
+                <div class="modal-actions between">
+                  <button
+                    class="btn danger"
+                    type="submit"
+                    name="op"
+                    value="clear"
+                    onclick="return confirm('Supprimer les credentials GSC système ?');"
+                  >
+                    Supprimer
+                  </button>
+                  <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn" type="button" id="gsc-test-btn">Tester</button>
+                    <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+                  </div>
+                </div>
+              </form>
+              <div class="muted small" id="gsc-test-result" style="margin-top:10px;"></div>
+            </details>
+          </section>
+        {% endif %}
+
+        {% for item in section.items %}
+          {% if not (section.id == "gsc-service-account-system" and item.key == "GOOGLE_APPLICATION_CREDENTIALS") %}
+            {{ setting_card(item) }}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+
+  <script>
+    (() => {
+      const select = document.getElementById("gsc-cred-select");
+      const input = document.getElementById("gsc-cred-input");
+      if (select && input) {
+        select.addEventListener("change", () => {
+          const value = String(select.value || "").trim();
+          if (value) input.value = value;
+        });
+      }
+
+      const testBtn = document.getElementById("gsc-test-btn");
+      const output = document.getElementById("gsc-test-result");
+      async function testGsc() {
+        if (!output) return;
+        output.textContent = "Test en cours…";
+        try {
+          const response = await fetch("/api/gsc/properties", {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await response.json();
+          if (!data || !data.ok) {
+            output.textContent = data && data.error ? data.error : "Erreur GSC";
+            return;
+          }
+          const count = Array.isArray(data.properties) ? data.properties.length : 0;
+          output.textContent = `${count} propriétés accessibles.`;
+        } catch (error) {
+          output.textContent = String(error);
+        }
+      }
+      if (testBtn) testBtn.addEventListener("click", testGsc);
+
+      document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
+        const id = btn.getAttribute("data-open-dialog");
+        if (!id) return;
+        const dialog = document.getElementById(id);
+        if (!dialog || typeof dialog.showModal !== "function") return;
+        btn.addEventListener("click", () => dialog.showModal());
+        dialog.addEventListener("click", (event) => {
+          const rect = dialog.getBoundingClientRect();
+          const inside =
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width;
+          if (!inside) dialog.close();
+        });
+      });
+    })();
+  </script>
+{% endblock %}

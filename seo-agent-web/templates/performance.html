@@ -91,10 +91,12 @@
         <p class="muted" style="margin: 0;">
           Données {{ source|upper }} indisponibles pour ce crawl.
           {% if source == 'gsc' %}
-            Active <span class="mono">gsc_api.enabled: true</span> dans <span class="mono">seo-autopilot.yml</span> et configure
-            <span class="mono">GOOGLE_APPLICATION_CREDENTIALS</span>.
+            Active Google dans les paramètres du crawl puis connecte ton compte depuis
+            <a href="/settings/accounts#gsc-oauth-card">Comptes &amp; connexions</a>.
           {% else %}
-            Active Bing dans les paramètres du crawl et configure <span class="mono">BING_WEBMASTER_API_KEY</span> (ou renseigne les exports CSV).
+            Active Bing dans les paramètres du crawl et connecte ta clé depuis
+            <a href="/settings/accounts#bing-connect-card">Comptes &amp; connexions</a>
+            (ou renseigne les exports CSV).
           {% endif %}
         </p>
       </section>

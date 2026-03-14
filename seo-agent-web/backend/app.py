@@ -73,11 +73,11 @@ except ImportError:
 
 try:
     from .db import Database  # type: ignore
-    from .models import JobRecord, Project, User  # type: ignore
+    from .models import JobRecord, Project, User, UserConnection  # type: ignore
     from . import auth as auth  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
-    from models import JobRecord, Project, User  # type: ignore
+    from models import JobRecord, Project, User, UserConnection  # type: ignore
     import auth as auth  # type: ignore
 
 
@@ -108,6 +108,13 @@ GSC_OAUTH_DIR.mkdir(parents=True, exist_ok=True)
 DB = Database(data_dir=DATA_DIR)
 
 _PROJECTS_LOCK = threading.Lock()
+
+_USER_CONNECTION_KEYS: set[str] = {
+    "GITHUB_TOKEN",
+    "NETLIFY_TOKEN",
+    "BING_WEBMASTER_API_KEY",
+    "PAGESPEED_API_KEY",
+}
 
 
 def _runs_dir_for_user(user_id: str) -> Path:
@@ -299,6 +306,128 @@ def _env_list(name: str) -> list[str]:
         return []
     parts = [p.strip() for p in re.split(r"[,\n;]+", raw) if p and p.strip()]
     return [p for p in parts if p]
+
+
+def _project_meta(settings: dict[str, Any] | None) -> dict[str, Any]:
+    node = settings if isinstance(settings, dict) else {}
+    meta = node.get("_meta")
+    return dict(meta) if isinstance(meta, dict) else {}
+
+
+def _project_visible_in_connections(project: Project) -> bool:
+    meta = _project_meta(project.settings if isinstance(project.settings, dict) else {})
+    if bool(meta.get("hide_from_connections")):
+        return False
+    import_source = str(meta.get("import_source") or "").strip().lower()
+    return import_source not in {"legacy_registry", "legacy_import"}
+
+def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tuple[str, str]:
+    normalized_key = str(key or "").strip()
+    if not normalized_key:
+        return "", "none"
+
+    own_session = db is None
+    session = db
+    try:
+        if session is None:
+            session_ctx = DB.session()
+            session = session_ctx.__enter__()
+        else:
+            session_ctx = None
+
+        row = session.scalar(
+            select(UserConnection).where(
+                UserConnection.user_id == str(user_id),
+                UserConnection.key == normalized_key,
+            )
+        )
+        value = str(getattr(row, "secret_value", "") or "").strip()
+        if value:
+            return value, "user"
+        system_value = _safe_env(normalized_key)
+        if system_value:
+            return system_value, "system"
+        return "", "none"
+    finally:
+        if own_session and session is not None:
+            session_ctx.__exit__(None, None, None)
+
+
+def _upsert_user_connection(*, user_id: str, key: str, value: str) -> None:
+    with DB.session() as db:
+        row = db.scalar(
+            select(UserConnection).where(
+                UserConnection.user_id == str(user_id),
+                UserConnection.key == str(key),
+            )
+        )
+        if row:
+            row.secret_value = str(value)
+            db.add(row)
+        else:
+            db.add(
+                UserConnection(
+                    user_id=str(user_id),
+                    key=str(key),
+                    secret_value=str(value),
+                    meta={},
+                )
+            )
+        db.commit()
+
+
+def _delete_user_connection(*, user_id: str, key: str) -> None:
+    with DB.session() as db:
+        row = db.scalar(
+            select(UserConnection).where(
+                UserConnection.user_id == str(user_id),
+                UserConnection.key == str(key),
+            )
+        )
+        if row:
+            db.delete(row)
+            db.commit()
+
+
+def _build_user_connection_item(*, user_id: str, key: str, db) -> dict[str, Any]:
+    meta = _SETTINGS_ENV_KEYS.get(key) or {}
+    value, source = _effective_user_connection_value(user_id=str(user_id), key=key, db=db)
+    configured = bool(value)
+    has_user_value = source == "user"
+    source_label = {
+        "user": "mon compte",
+        "system": "plateforme",
+        "none": "non configuré",
+    }.get(source, "non configuré")
+    masked = _mask_secret(value) if has_user_value else ("fourni par la plateforme" if source == "system" else "—")
+    return {
+        "key": key,
+        "label": str(meta.get("label") or key),
+        "hint": str(meta.get("hint") or ""),
+        "configured": configured,
+        "masked": masked,
+        "source": source,
+        "source_label": source_label,
+        "has_user_value": has_user_value,
+        "help": meta.get("help"),
+        "group": str(meta.get("group") or "Autres"),
+    }
+
+
+def _build_env_setting_item(key: str) -> dict[str, Any]:
+    meta = _SETTINGS_ENV_KEYS.get(key) or {}
+    value, src = _env_effective_value(key)
+    return {
+        "key": key,
+        "label": str(meta.get("label") or key),
+        "hint": str(meta.get("hint") or ""),
+        "configured": bool(value),
+        "masked": _mask_secret(value) if key != "GOOGLE_APPLICATION_CREDENTIALS" else (value or ""),
+        "source": src,
+        "locked": src == "os",
+        "editable": bool(meta.get("editable", True)),
+        "help": meta.get("help"),
+    }
 
 
 def _google_oauth_client() -> tuple[str, str]:
@@ -1034,7 +1163,7 @@ def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
         "sur le SEO (technique, contenu, netlinking, analytics), ET sur des questions générales si besoin. "
         "Tu n’es pas limité au SEO.\n"
         "Connaissance produit (si pertinent):\n"
-        "- Navigation: Projets, Jobs, Automation, Paramètres > Comptes & tokens.\n"
+        "- Navigation: Projets, Jobs, Automation, Paramètres > Comptes & connexions.\n"
         "- Par projet: Overview, Paramètres crawl, Performance, Backlinks, All issues, Crawl log.\n"
         "- Intégrations possibles: Google Search Console (API), Bing, PageSpeed Insights, Ahrefs.\n"
         "Règles:\n"
@@ -2630,12 +2759,12 @@ def _bing_pick_site_url(*, base_url: str, api_key: str, timeout_s: float, config
     return best, sites, None
 
 
-def _fetch_bing_live_series(*, base_url: str, bing_cfg: dict[str, Any], days: int) -> dict[str, Any]:
+def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, Any], days: int) -> dict[str, Any]:
     enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
     if not enabled:
         return {"ok": False, "enabled": False, "reason": "disabled"}
 
-    api_key = _safe_env("BING_WEBMASTER_API_KEY")
+    api_key, api_source = _effective_user_connection_value(user_id=str(user_id), key="BING_WEBMASTER_API_KEY")
     if not api_key:
         return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_api_key"}
 
@@ -2695,6 +2824,7 @@ def _fetch_bing_live_series(*, base_url: str, bing_cfg: dict[str, Any], days: in
         "enabled": True,
         "source": "bing",
         "live": True,
+        "auth_source": api_source,
         "site_url": site_url,
         "days": days,
         "start_date": daily[0]["date"],
@@ -2863,10 +2993,20 @@ def _db_upsert_project(*, user_id: str, base_url: str, site_name: str | None = N
         if existing:
             existing.base_url = base
             existing.site_name = name
+            current_settings = existing.settings if isinstance(existing.settings, dict) else {}
+            meta = _project_meta(current_settings)
+            if not meta:
+                existing.settings = {**current_settings, "_meta": {"created_via": "ui", "hide_from_connections": False}}
             db.add(existing)
             db.commit()
             return slug
-        proj = Project(owner_user_id=str(user_id), slug=slug, base_url=base, site_name=name, settings={})
+        proj = Project(
+            owner_user_id=str(user_id),
+            slug=slug,
+            base_url=base,
+            site_name=name,
+            settings={"_meta": {"created_via": "ui", "hide_from_connections": False}},
+        )
         db.add(proj)
         try:
             db.commit()
@@ -2881,6 +3021,7 @@ def _import_legacy_projects_for_user(user_id: str) -> int:
     if not reg:
         return 0
     imported = 0
+    touched_existing = 0
     with DB.session() as db:
         for slug, node in reg.items():
             if not isinstance(slug, str) or not isinstance(node, dict):
@@ -2897,6 +3038,16 @@ def _import_legacy_projects_for_user(user_id: str) -> int:
                 select(Project).where(Project.owner_user_id == str(user_id), Project.slug == slug_final)
             )
             if existing:
+                current_settings = existing.settings if isinstance(existing.settings, dict) else {}
+                meta = _project_meta(current_settings)
+                has_legacy_payload = any(isinstance(node.get(name), dict) for name in ("crawl", "gsc_api", "bing"))
+                if (not meta) and has_legacy_payload:
+                    existing.settings = {
+                        **current_settings,
+                        "_meta": {"import_source": "legacy_registry", "hide_from_connections": True},
+                    }
+                    db.add(existing)
+                    touched_existing += 1
                 continue
 
             settings: dict[str, Any] = {}
@@ -2909,6 +3060,7 @@ def _import_legacy_projects_for_user(user_id: str) -> int:
             bing = node.get("bing")
             if isinstance(bing, dict):
                 settings["bing"] = bing
+            settings["_meta"] = {"import_source": "legacy_registry", "hide_from_connections": True}
 
             db.add(
                 Project(
@@ -2920,7 +3072,7 @@ def _import_legacy_projects_for_user(user_id: str) -> int:
                 )
             )
             imported += 1
-        if imported:
+        if imported or touched_existing:
             db.commit()
     return imported
 
@@ -3961,9 +4113,20 @@ def _job_db_status(job_id: str) -> str:
         return ""
 
 
-def _run_subprocess_streaming(job: Job, cmd: list[str], cwd: Path, job_kind: str, timeout_s: float | None = None) -> int:
+def _run_subprocess_streaming(
+    job: Job,
+    cmd: list[str],
+    cwd: Path,
+    job_kind: str,
+    timeout_s: float | None = None,
+    env_extra: dict[str, str] | None = None,
+) -> int:
     env = os.environ.copy()
     env.setdefault("PYTHONUNBUFFERED", "1")
+    if isinstance(env_extra, dict):
+        for key, value in env_extra.items():
+            if str(value or "").strip():
+                env[str(key)] = str(value)
 
     proc = subprocess.Popen(
         cmd,
@@ -4527,6 +4690,13 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     bing_fetch_sitemaps = bool(bing_cfg.get("fetch_sitemaps")) if "fetch_sitemaps" in bing_cfg else True
 
     script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
+    env_extra: dict[str, str] = {}
+    pagespeed_api_key, _pagespeed_source = _effective_user_connection_value(user_id=str(user_id), key="PAGESPEED_API_KEY")
+    if pagespeed_api_key:
+        env_extra["PAGESPEED_API_KEY"] = pagespeed_api_key
+    bing_api_key, _bing_source = _effective_user_connection_value(user_id=str(user_id), key="BING_WEBMASTER_API_KEY")
+    if bing_api_key:
+        env_extra["BING_WEBMASTER_API_KEY"] = bing_api_key
     cmd = [
         sys.executable,
         "-u",
@@ -4645,7 +4815,14 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         if timeout_s <= 0:
             timeout_s = None
 
-        returncode = _run_subprocess_streaming(job, cmd, cwd=REPO_ROOT, job_kind="crawl", timeout_s=timeout_s)
+        returncode = _run_subprocess_streaming(
+            job,
+            cmd,
+            cwd=REPO_ROOT,
+            job_kind="crawl",
+            timeout_s=timeout_s,
+            env_extra=env_extra,
+        )
         job.returncode = returncode
         if returncode == 0:
             report_path = audit_dir / "report.json"
@@ -5512,42 +5689,160 @@ def settings_root() -> RedirectResponse:
 
 @app.get("/settings/accounts", response_class=HTMLResponse)
 def settings_accounts(request: Request) -> HTMLResponse:
-    user = _require_admin(request)
-    items: list[dict[str, Any]] = []
-    group_order = {"Intégrations": 10, "AI": 20, "Google": 30, "Autres": 90}
-    for key, meta in _SETTINGS_ENV_KEYS.items():
-        if key in _INTERNAL_SETTINGS_KEYS:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
+    client_id, client_secret = _google_oauth_client()
+    oauth_ready = bool(client_id and client_secret and _safe_env("SEO_AGENT_SECRET_KEY"))
+    if bool(getattr(user, "is_admin", False)):
+        _import_legacy_projects_for_user(str(user.id))
+
+    with DB.session() as db:
+        connection_items = {
+            key: _build_user_connection_item(user_id=str(user.id), key=key, db=db) for key in sorted(_USER_CONNECTION_KEYS)
+        }
+        db_projects = list(
+            db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
+        )
+
+    visible_projects = [proj for proj in db_projects if _project_visible_in_connections(proj)]
+
+    gsc_projects: list[dict[str, Any]] = []
+    bing_projects: list[dict[str, Any]] = []
+    for proj in visible_projects:
+        slug = str(proj.slug or "").strip()
+        if not slug:
             continue
-        value, src = _env_effective_value(key)
-        order = int(meta.get("order") or 9999) if isinstance(meta, dict) else 9999
-        group = str(meta.get("group") or "Autres") if isinstance(meta, dict) else "Autres"
-        editable = bool(meta.get("editable", True)) if isinstance(meta, dict) else True
-        locked = src == "os"
-        source_label = "système" if src == "os" else ("—" if src == "none" else src)
-        items.append(
+        _, effective_gsc, effective_bing = _effective_project_crawl_settings(
+            slug,
+            config_path=config_path,
+            project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
+        )
+        gsc_projects.append(
             {
-                "key": key,
-                "label": meta.get("label") or key,
-                "hint": meta.get("hint") or "",
-                "configured": bool(value),
-                "masked": _mask_secret(value) if key != "GOOGLE_APPLICATION_CREDENTIALS" else (value or ""),
-                "source": src,
-                "source_label": source_label,
-                "locked": locked,
-                "editable": editable,
-                "target_file": str(_env_target_path(key).name),
-                "group": group,
-                "order": order,
-                "help": meta.get("help") if isinstance(meta, dict) else None,
+                "slug": slug,
+                "site_name": str(proj.site_name or slug),
+                "base_url": str(proj.base_url or ""),
+                "gsc_enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
+                "oauth_connected": _gsc_oauth_connected(str(user.id), slug),
+                "connect_url": f"/projects/{slug}/gsc/oauth/connect",
+                "crawl_settings_url": f"/projects/{slug}/settings/crawl#gsc",
             }
         )
-    items.sort(
-        key=lambda it: (
-            int(group_order.get(str(it.get("group") or "Autres"), 90)),
-            int(it.get("order") or 9999),
-            str(it.get("label") or ""),
+        bing_projects.append(
+            {
+                "slug": slug,
+                "site_name": str(proj.site_name or slug),
+                "base_url": str(proj.base_url or ""),
+                "bing_enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
+                "crawl_settings_url": f"/projects/{slug}/settings/crawl#bing",
+            }
         )
+
+    resp = templates.TemplateResponse(
+        "settings_accounts.html",
+        {
+            "request": request,
+            "project": None,
+            "is_admin": bool(getattr(user, "is_admin", False)),
+            "search_items": [
+                connection_items["BING_WEBMASTER_API_KEY"],
+                connection_items["PAGESPEED_API_KEY"],
+            ],
+            "deploy_items": [
+                connection_items["GITHUB_TOKEN"],
+                connection_items["NETLIFY_TOKEN"],
+            ],
+            "bing_item": connection_items["BING_WEBMASTER_API_KEY"],
+            "bing_projects": bing_projects,
+            "gsc_oauth": {
+                "configured": oauth_ready,
+                "projects": gsc_projects,
+                "system_url": "/settings/system#gsc-oauth-system",
+            },
+        },
     )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/settings/accounts")
+def settings_accounts_save(
+    request: Request,
+    key: str = Form(default=""),
+    op: str = Form(default="save"),
+    value: str = Form(default=""),
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    key = (key or "").strip()
+    op = (op or "").strip().lower()
+    if key not in _USER_CONNECTION_KEYS:
+        raise HTTPException(status_code=400, detail="Invalid key")
+    try:
+        if op == "clear":
+            _delete_user_connection(user_id=str(user.id), key=key)
+        else:
+            v = (value or "").strip()
+            if not v:
+                return RedirectResponse(url="/settings/accounts", status_code=303)
+            _upsert_user_connection(user_id=str(user.id), key=key, value=v)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
+
+    return RedirectResponse(url="/settings/accounts", status_code=303)
+
+
+@app.get("/settings/system", response_class=HTMLResponse)
+def settings_system(request: Request) -> HTMLResponse:
+    _ = _require_admin(request)
+
+    system_sections = [
+        {
+            "id": "gsc-oauth-system",
+            "title": "OAuth Google — plateforme",
+            "description": "Configuration interne requise pour autoriser les clientes à connecter Google Search Console.",
+            "items": [
+                _build_env_setting_item("GOOGLE_OAUTH_CLIENT_ID"),
+                _build_env_setting_item("GOOGLE_OAUTH_CLIENT_SECRET"),
+                _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("GOOGLE_OAUTH_REDIRECT_URI"),
+                _build_env_setting_item("SEO_AGENT_SECRET_KEY"),
+            ],
+        },
+        {
+            "id": "gsc-service-account-system",
+            "title": "Search Console — fallback technique",
+            "description": "Service account utilisé uniquement en secours ou pour les opérations internes.",
+            "items": [_build_env_setting_item("GOOGLE_APPLICATION_CREDENTIALS")],
+        },
+        {
+            "id": "assistant-system",
+            "title": "Assistant IA",
+            "description": "Réglages internes non exposés aux utilisateurs.",
+            "items": [
+                _build_env_setting_item("SEO_AUDIT_ASSISTANT_PROVIDER"),
+                _build_env_setting_item("OPENAI_API_KEY"),
+                _build_env_setting_item("SEO_AUDIT_ASSISTANT_OPENAI_MODEL"),
+                _build_env_setting_item("GOOGLE_GEMINI_API_KEY"),
+                _build_env_setting_item("SEO_AUDIT_ASSISTANT_GEMINI_MODEL"),
+            ],
+        },
+        {
+            "id": "platform-fallbacks-system",
+            "title": "Clés plateforme — fallback",
+            "description": "Valeurs par défaut utilisées si une utilisatrice n’a pas connecté sa propre intégration.",
+            "items": [
+                _build_env_setting_item("GITHUB_TOKEN"),
+                _build_env_setting_item("NETLIFY_TOKEN"),
+                _build_env_setting_item("BING_WEBMASTER_API_KEY"),
+                _build_env_setting_item("PAGESPEED_API_KEY"),
+            ],
+        },
+    ]
 
     cred_value, cred_src = _env_effective_value("GOOGLE_APPLICATION_CREDENTIALS")
     cred_path: Path | None = None
@@ -5594,84 +5889,25 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 candidates.append(rel)
     candidates = sorted(set([c for c in candidates if c]))
 
-    bing_value, bing_src = _env_effective_value("BING_WEBMASTER_API_KEY")
-    bing_item = {
-        "key": "BING_WEBMASTER_API_KEY",
-        "configured": bool(bing_value),
-        "masked": _mask_secret(bing_value),
-        "locked": bing_src == "os",
-        "editable": bool(_SETTINGS_ENV_KEYS.get("BING_WEBMASTER_API_KEY", {}).get("editable", True)),
-        "hint": str(_SETTINGS_ENV_KEYS.get("BING_WEBMASTER_API_KEY", {}).get("hint") or ""),
-        "help": _SETTINGS_ENV_KEYS.get("BING_WEBMASTER_API_KEY", {}).get("help"),
-    }
-
-    with DB.session() as db:
-        db_projects = list(
-            db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
-        )
-
-    client_id, client_secret = _google_oauth_client()
-    oauth_ready = bool(client_id and client_secret and _safe_env("SEO_AGENT_SECRET_KEY"))
-    gsc_projects: list[dict[str, Any]] = []
-    bing_projects: list[dict[str, Any]] = []
-    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
-    for proj in db_projects:
-        slug = str(proj.slug or "").strip()
-        if not slug:
-            continue
-        _, effective_gsc, effective_bing = _effective_project_crawl_settings(
-            slug,
-            config_path=config_path,
-            project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
-        )
-        gsc_projects.append(
-            {
-                "slug": slug,
-                "site_name": str(proj.site_name or slug),
-                "base_url": str(proj.base_url or ""),
-                "gsc_enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
-                "oauth_connected": _gsc_oauth_connected(str(user.id), slug),
-                "connect_url": f"/projects/{slug}/gsc/oauth/connect",
-                "crawl_settings_url": f"/projects/{slug}/settings/crawl#gsc",
-            }
-        )
-        bing_projects.append(
-            {
-                "slug": slug,
-                "site_name": str(proj.site_name or slug),
-                "base_url": str(proj.base_url or ""),
-                "bing_enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
-                "crawl_settings_url": f"/projects/{slug}/settings/crawl#bing",
-            }
-        )
-
     resp = templates.TemplateResponse(
-        "settings_accounts.html",
+        "settings_system.html",
         {
             "request": request,
-            "items": items,
-            "bing_item": bing_item,
-            "bing_projects": bing_projects,
-            "gsc": {"credentials": cred_info, "candidates": candidates, "help": _SETTINGS_ENV_KEYS.get("GOOGLE_APPLICATION_CREDENTIALS", {}).get("help")},
-            "gsc_oauth": {
-                "configured": oauth_ready,
-                "settings_ready": {
-                    "client_id": bool(client_id),
-                    "client_secret": bool(client_secret),
-                    "public_base_url": bool(_safe_env("PUBLIC_BASE_URL") or _safe_env("GOOGLE_OAUTH_REDIRECT_URI")),
-                    "secret_key": bool(_safe_env("SEO_AGENT_SECRET_KEY")),
-                },
-                "projects": gsc_projects,
-            },
             "project": None,
+            "sections": system_sections,
+            "gsc": {
+                "credentials": cred_info,
+                "candidates": candidates,
+                "help": _SETTINGS_ENV_KEYS.get("GOOGLE_APPLICATION_CREDENTIALS", {}).get("help"),
+            },
         },
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 
-@app.post("/settings/accounts")
-def settings_accounts_save(
+@app.post("/settings/system")
+def settings_system_save(
     request: Request,
     key: str = Form(default=""),
     op: str = Form(default="save"),
@@ -5682,8 +5918,6 @@ def settings_accounts_save(
     op = (op or "").strip().lower()
     if key not in _SETTINGS_ENV_KEYS:
         raise HTTPException(status_code=400, detail="Invalid key")
-    if key in _INTERNAL_SETTINGS_KEYS:
-        raise HTTPException(status_code=403, detail="Key is internal")
     if not bool(_SETTINGS_ENV_KEYS.get(key, {}).get("editable", True)):
         raise HTTPException(status_code=403, detail="Key is read-only")
 
@@ -5694,13 +5928,13 @@ def settings_accounts_save(
         else:
             v = (value or "").strip()
             if not v:
-                return RedirectResponse(url="/settings/accounts", status_code=303)
+                return RedirectResponse(url="/settings/system", status_code=303)
             _write_env_key(target, key, v)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
 
     _apply_effective_env(key)
-    return RedirectResponse(url="/settings/accounts", status_code=303)
+    return RedirectResponse(url="/settings/system", status_code=303)
 
 
 @app.post("/projects/add")
@@ -6203,8 +6437,14 @@ def gsc_properties(request: Request) -> JSONResponse:
 
 @app.get("/api/bing/sites")
 def bing_sites(request: Request) -> JSONResponse:
-    _ = _require_admin(request)
-    api_key = (os.environ.get("BING_WEBMASTER_API_KEY") or "").strip()
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+
+    api_key, _source = _effective_user_connection_value(
+        user_id=str(getattr(user, "id", "")),
+        key="BING_WEBMASTER_API_KEY",
+    )
     if not api_key:
         return JSONResponse({"ok": False, "error": "BING_WEBMASTER_API_KEY not set"}, status_code=400)
 
@@ -6259,6 +6499,7 @@ def project_search_series(request: Request, slug: str, source: str, days: int | 
         status_code = 200 if payload.get("ok") else 400
     elif source_key == "bing":
         payload = _fetch_bing_live_series(
+            user_id=str(getattr(user, "id", "")),
             base_url=str(proj.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
@@ -6684,7 +6925,9 @@ def project_overview(
         "bing": {
             "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
             "days": int(effective_bing.get("days") or 28),
-            "api_ready": bool(_safe_env("BING_WEBMASTER_API_KEY")),
+            "api_ready": bool(
+                _effective_user_connection_value(user_id=str(getattr(user, "id", "")), key="BING_WEBMASTER_API_KEY")[0]
+            ),
         },
     }
     plan_key = "free"
@@ -6767,8 +7010,11 @@ def project_crawl_settings(
         "redirect_uri": _google_oauth_redirect_uri(request) if (client_id and client_secret) else "",
         "scope": _GOOGLE_OAUTH_SCOPE,
         "settings_url": "/settings/accounts#gsc-oauth-card",
+        "system_url": "/settings/system#gsc-oauth-system",
     }
-    bing_api_ready = bool(_safe_env("BING_WEBMASTER_API_KEY"))
+    bing_api_ready = bool(
+        _effective_user_connection_value(user_id=str(getattr(user, "id", "")), key="BING_WEBMASTER_API_KEY")[0]
+    )
     resp = templates.TemplateResponse(
         "crawl_settings.html",
         {

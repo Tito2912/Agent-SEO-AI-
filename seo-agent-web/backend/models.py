@@ -49,6 +49,25 @@ class Project(Base):
     owner: Mapped[User] = relationship(back_populates="projects")
 
 
+class UserConnection(Base):
+    __tablename__ = "user_connections"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_connections_user_key"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    key: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    secret_value: Mapped[str] = mapped_column(Text, nullable=False)
+    meta: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class BillingCustomer(Base):
     __tablename__ = "billing_customers"
 

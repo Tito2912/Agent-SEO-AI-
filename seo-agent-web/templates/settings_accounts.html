@@ -1,538 +1,359 @@
 {% extends "layout.html" %}
-{% block title %}Paramètres — Comptes & tokens{% endblock %}
+{% block title %}Paramètres — Comptes & connexions{% endblock %}
+
+{% macro help_dialog(item) -%}
+  {% if item.help %}
+    <dialog id="info-{{ item.key }}" class="modal">
+      <div class="modal-head">
+        <h2>{{ item.help.title }}</h2>
+        <form method="dialog">
+          <button class="btn">Fermer</button>
+        </form>
+      </div>
+      <div class="modal-body">
+        {% if item.help.steps %}
+          <ol class="help-steps">
+            {% for step in item.help.steps %}
+              <li>{{ step }}</li>
+            {% endfor %}
+          </ol>
+        {% endif %}
+        {% if item.help.links %}
+          <div class="row">
+            <div class="muted small" style="margin-bottom:6px;">Liens utiles</div>
+            <ul class="help-links">
+              {% for link in item.help.links %}
+                <li><a href="{{ link.url }}" target="_blank" rel="noreferrer">{{ link.label }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </dialog>
+  {% endif %}
+{%- endmacro %}
+
+{% macro connection_card(item, action_label="Connecter mon compte") -%}
+  <section class="card setting-card">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">{{ item.label }}</h2>
+        {% if item.hint %}<div class="muted small">{{ item.hint }}</div>{% endif %}
+      </div>
+      <div class="setting-actions">
+        {% if item.help %}
+          <button
+            type="button"
+            class="icon-btn"
+            data-open-dialog="info-{{ item.key }}"
+            aria-label="Aide {{ item.label }}"
+            title="Aide"
+          >
+            i
+          </button>
+        {% endif %}
+        {% if item.source == "user" %}
+          <span class="badge ok">connecté</span>
+        {% elif item.source == "system" %}
+          <span class="badge notice">plateforme</span>
+        {% else %}
+          <span class="badge notice">à configurer</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="kv setting-kv">
+      <div class="kv-item">
+        <span class="muted">Source</span>
+        <div class="mono">{{ item.source_label }}</div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Actif</span>
+        <div class="mono">{{ item.masked or "—" }}</div>
+      </div>
+    </div>
+
+    {% if item.source == "system" %}
+      <p class="muted small setting-note">
+        Une clé plateforme est disponible. Tu peux brancher ton propre compte pour l’utiliser à la place.
+      </p>
+    {% endif %}
+
+    <details class="setting-details" {% if item.source == "none" %}open{% endif %}>
+      <summary>{{ action_label }}</summary>
+      <form method="post" action="/settings/accounts" class="setting-form">
+        <input type="hidden" name="key" value="{{ item.key }}" />
+        <label>
+          Valeur
+          <input type="password" name="value" placeholder="Coller la valeur…" autocomplete="new-password" />
+        </label>
+        <div class="modal-actions between">
+          {% if item.has_user_value %}
+            <button
+              class="btn danger"
+              type="submit"
+              name="op"
+              value="clear"
+              onclick="return confirm('Supprimer cette connexion personnelle ?');"
+            >
+              Supprimer ma clé
+            </button>
+          {% else %}
+            <span></span>
+          {% endif %}
+          <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+        </div>
+      </form>
+    </details>
+
+    {{ help_dialog(item) }}
+  </section>
+{%- endmacro %}
 
 {% block crumbs %}
   <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   <span class="crumb-current">Paramètres</span>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Comptes &amp; tokens</span>
+  <span class="crumb-current">Comptes &amp; connexions</span>
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Comptes &amp; tokens</h1>
-    <p class="muted">Configure les intégrations et accès nécessaires (GitHub, Netlify, GSC…).</p>
+    <h1>Comptes &amp; connexions</h1>
+    <p class="muted">Connecte tes comptes utilisateurs. Les réglages système internes sont séparés.</p>
   </div>
+
+  {% if is_admin %}
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Zone admin</h2>
+        <a class="btn" href="/settings/system">Ouvrir les paramètres système</a>
+      </div>
+      <p class="muted small" style="margin:0;">
+        Cette page reste orientée utilisatrice. Les secrets internes de la plateforme sont déplacés dans <span class="mono">/settings/system</span>.
+      </p>
+    </section>
+  {% endif %}
 
   <section class="card">
     <div class="card-title-row">
       <h2>Sécurité &amp; stockage</h2>
     </div>
     <ul class="examples muted small" style="margin:0;">
-      <li>Les valeurs sont stockées localement sur ce serveur.</li>
-      <li>Les valeurs sont masquées dans l’interface.</li>
-      <li>Si vous modifiez l’environnement du serveur, redémarrez l’app pour appliquer les changements.</li>
+      <li>Les connexions utilisateur sont stockées côté serveur et masquées dans l’interface.</li>
+      <li>Les paramètres internes de la plateforme ne sont plus exposés ici.</li>
+      <li>Les projets masqués/importés n’apparaissent pas dans cette page.</li>
     </ul>
   </section>
 
-  {% set groups = ["Google", "Intégrations"] %}
+  <div class="settings-section">
+    <div class="settings-section-head">
+      <div>
+        <div class="settings-section-title">Search &amp; Analytics</div>
+        <div class="muted small">Connexions Google, Bing et PageSpeed utilisées par tes projets.</div>
+      </div>
+    </div>
 
-  {% for group in groups %}
-    {% set group_items = items | selectattr("group", "equalto", group) | list %}
-    {% if group_items %}
-      <div class="settings-section">
-        <div class="settings-section-head">
+    <div class="grid two">
+      <section class="card setting-card span-2" id="gsc-oauth-card">
+        <div class="setting-head">
           <div>
-            <div class="settings-section-title">{{ group }}</div>
-            {% if group == "Intégrations" %}
-              <div class="muted small">Accès nécessaires au déploiement et à certaines APIs externes.</div>
-            {% elif group == "Google" %}
-              <div class="muted small">Connexion Search Console par projet via OAuth, puis fallback possible en service account.</div>
+            <h2 class="setting-title">Connexion Google Search Console</h2>
+            <div class="muted small">Connexion projet par projet via OAuth. C’est le chemin recommandé pour les données live et les imports GSC.</div>
+          </div>
+          <div class="setting-actions">
+            {% if gsc_oauth.configured %}
+              <span class="badge ok">oauth prêt</span>
+            {% else %}
+              <span class="badge notice">indisponible</span>
             {% endif %}
           </div>
         </div>
 
-        <div class="grid two">
-          {% if group == "Google" %}
-            <section class="card setting-card span-2" id="gsc-oauth-card">
-              <div class="setting-head">
-                <div>
-                  <h2 class="setting-title">Connexion Google Search Console</h2>
-                  <div class="muted small">La connexion Google se fait projet par projet. C’est le chemin recommandé pour GSC live et les imports.</div>
-                </div>
-                <div class="setting-actions">
-                  {% if gsc_oauth and gsc_oauth.configured %}
-                    <span class="badge ok">oauth prêt</span>
-                  {% else %}
-                    <span class="badge notice">oauth à configurer</span>
-                  {% endif %}
-                </div>
-              </div>
-
-              {% if gsc_oauth and gsc_oauth.configured %}
-                {% if gsc_oauth.projects %}
-                  <div class="oauth-project-list">
-                    {% for p in gsc_oauth.projects %}
-                      <div class="oauth-project-item">
-                        <div>
-                          <div class="oauth-project-title">{{ p.site_name }}</div>
-                          <div class="muted small">{{ p.base_url or p.slug }}</div>
-                        </div>
-                        <div class="oauth-project-actions">
-                          {% if p.gsc_enabled %}
-                            {% if p.oauth_connected %}
-                              <span class="badge ok">connecté</span>
-                            {% else %}
-                              <span class="badge notice">non connecté</span>
-                            {% endif %}
-                          {% else %}
-                            <span class="badge warning">gsc désactivé</span>
-                          {% endif %}
-                          <a class="btn {% if not p.oauth_connected %}primary{% endif %}" href="{{ p.connect_url }}">
-                            {% if p.oauth_connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
-                          </a>
-                          <a class="btn" href="{{ p.crawl_settings_url }}">Paramètres crawl</a>
-                        </div>
-                      </div>
-                    {% endfor %}
-                  </div>
-                {% else %}
-                  <p class="muted">Aucun projet disponible. Crée d’abord un projet pour connecter Google Search Console.</p>
-                {% endif %}
-              {% else %}
-                <div class="oauth-checklist">
-                  <div class="oauth-check-item">
-                    <span class="mono">GOOGLE_OAUTH_CLIENT_ID</span>
-                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.client_id %}ok{% else %}notice{% endif %}">
-                      {% if gsc_oauth and gsc_oauth.settings_ready.client_id %}ok{% else %}manquant{% endif %}
-                    </span>
-                  </div>
-                  <div class="oauth-check-item">
-                    <span class="mono">GOOGLE_OAUTH_CLIENT_SECRET</span>
-                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.client_secret %}ok{% else %}notice{% endif %}">
-                      {% if gsc_oauth and gsc_oauth.settings_ready.client_secret %}ok{% else %}manquant{% endif %}
-                    </span>
-                  </div>
-                  <div class="oauth-check-item">
-                    <span class="mono">PUBLIC_BASE_URL</span>
-                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.public_base_url %}ok{% else %}notice{% endif %}">
-                      {% if gsc_oauth and gsc_oauth.settings_ready.public_base_url %}ok{% else %}manquant{% endif %}
-                    </span>
-                  </div>
-                  <div class="oauth-check-item">
-                    <span class="mono">SEO_AGENT_SECRET_KEY</span>
-                    <span class="badge {% if gsc_oauth and gsc_oauth.settings_ready.secret_key %}ok{% else %}notice{% endif %}">
-                      {% if gsc_oauth and gsc_oauth.settings_ready.secret_key %}ok{% else %}manquant{% endif %}
-                    </span>
-                  </div>
-                </div>
-                <p class="muted small setting-note">Renseigne ces variables ci-dessous, puis recharge la page pour afficher les boutons « Connecter Google » projet par projet.</p>
-              {% endif %}
-            </section>
-          {% endif %}
-
-          {% if group == "Intégrations" and bing_item %}
-            <section class="card setting-card span-2" id="bing-connect-card">
-              <div class="setting-head">
-                <div>
-                  <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
-                  <div class="muted small">Bing utilise une clé API globale, puis l’activation se fait projet par projet dans les paramètres de crawl.</div>
-                </div>
-                <div class="setting-actions">
-                  {% if bing_item.locked %}
-                    <span class="badge notice">système</span>
-                  {% elif bing_item.configured %}
-                    <span class="badge ok">clé prête</span>
-                  {% else %}
-                    <span class="badge notice">clé à configurer</span>
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="kv one setting-kv">
-                <div class="kv-item">
-                  <span class="muted">Clé active</span>
-                  <div class="mono">{{ bing_item.masked or "—" }}</div>
-                </div>
-              </div>
-
-              {% if bing_projects %}
-                <div class="oauth-project-list">
-                  {% for p in bing_projects %}
-                    <div class="oauth-project-item">
-                      <div>
-                        <div class="oauth-project-title">{{ p.site_name }}</div>
-                        <div class="muted small">{{ p.base_url or p.slug }}</div>
-                      </div>
-                      <div class="oauth-project-actions">
-                        {% if p.bing_enabled %}
-                          <span class="badge ok">bing activé</span>
-                        {% else %}
-                          <span class="badge notice">bing désactivé</span>
-                        {% endif %}
-                        <a class="btn" href="{{ p.crawl_settings_url }}">Paramètres crawl</a>
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
-              {% endif %}
-
-              {% if bing_item.locked %}
-                <p class="muted small setting-note">La clé Bing est définie au niveau système. Modifie la variable serveur puis redémarre l’application.</p>
-              {% else %}
-                <details class="setting-details" {% if not bing_item.configured %}open{% endif %}>
-                  <summary>Configurer la clé Bing</summary>
-                  <form method="post" action="/settings/accounts" class="setting-form">
-                    <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
-                    <label>
-                      Clé API
-                      <input type="password" name="value" placeholder="Coller la clé Bing Webmaster…" autocomplete="new-password" />
-                    </label>
-                    <div class="modal-actions between">
-                      <button
-                        class="btn danger"
-                        type="submit"
-                        name="op"
-                        value="clear"
-                        onclick="return confirm('Supprimer la clé Bing ?');"
-                      >
-                        Supprimer
-                      </button>
-                      <div style="display:flex; gap:10px; align-items:center;">
-                        <button class="btn" type="button" id="bing-test-btn">Tester</button>
-                        <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-                      </div>
-                    </div>
-                  </form>
-                </details>
-              {% endif %}
-
-              {% if bing_item.configured %}
-                <div class="modal-actions between" style="margin-top: 10px;">
-                  <button class="btn" type="button" id="bing-test-btn">Tester la connexion</button>
-                  <div class="muted small" id="bing-test-result"></div>
-                </div>
-              {% else %}
-                <div class="muted small" id="bing-test-result" style="margin-top:10px;"></div>
-              {% endif %}
-
-              {% if bing_item.help %}
-                <details class="setting-details">
-                  <summary>Aide Bing</summary>
-                  <div class="setting-form">
-                    {% if bing_item.help.steps %}
-                      <ol class="help-steps">
-                        {% for s in bing_item.help.steps %}
-                          <li>{{ s }}</li>
-                        {% endfor %}
-                      </ol>
-                    {% endif %}
-                    {% if bing_item.help.links %}
-                      <ul class="help-links" style="margin-top:10px;">
-                        {% for l in bing_item.help.links %}
-                          <li><a href="{{ l.url }}" target="_blank" rel="noreferrer">{{ l.label }}</a></li>
-                        {% endfor %}
-                      </ul>
-                    {% endif %}
-                  </div>
-                </details>
-              {% endif %}
-            </section>
-          {% endif %}
-
-          {% for item in group_items %}
-            {% if item.key not in ["GOOGLE_APPLICATION_CREDENTIALS", "BING_WEBMASTER_API_KEY"] %}
-              <section class="card setting-card">
-                <div class="setting-head">
+        {% if gsc_oauth.configured %}
+          {% if gsc_oauth.projects %}
+            <div class="oauth-project-list">
+              {% for project_item in gsc_oauth.projects %}
+                <div class="oauth-project-item">
                   <div>
-                    <h2 class="setting-title">{{ item.label }}</h2>
-                    {% if item.hint %}<div class="muted small">{{ item.hint }}</div>{% endif %}
+                    <div class="oauth-project-title">{{ project_item.site_name }}</div>
+                    <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
                   </div>
-                  <div class="setting-actions">
-                    {% if item.help %}
-                      <button
-                        type="button"
-                        class="icon-btn"
-                        data-open-dialog="info-{{ item.key }}"
-                        aria-label="Aide {{ item.label }}"
-                        title="Aide"
-                      >
-                        i
-                      </button>
-                    {% endif %}
-                    {% if item.locked %}
-                      <span class="badge notice">système</span>
-                    {% elif item.configured %}
-                      <span class="badge ok">ok</span>
+                  <div class="oauth-project-actions">
+                    {% if project_item.oauth_connected %}
+                      <span class="badge ok">connecté</span>
+                    {% elif project_item.gsc_enabled %}
+                      <span class="badge notice">non connecté</span>
                     {% else %}
-                      <span class="badge notice">à configurer</span>
+                      <span class="badge notice">gsc désactivé</span>
                     {% endif %}
+                    <a class="btn {% if not project_item.oauth_connected and project_item.gsc_enabled %}primary{% endif %}" href="{{ project_item.connect_url }}">
+                      {% if project_item.oauth_connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
+                    </a>
+                    <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
                   </div>
                 </div>
-
-                <div class="kv one setting-kv">
-                  <div class="kv-item"><span class="muted">Actif</span><div class="mono">{{ item.masked or "—" }}</div></div>
-                </div>
-
-                {% if item.locked %}
-                  <p class="muted small setting-note">
-                    Définie dans l’environnement système au démarrage du serveur (prioritaire). Modifie la variable côté système puis redémarre
-                    <span class="mono">uvicorn</span>.
-                  </p>
-                {% elif not item.editable %}
-                  <p class="muted small setting-note">Clé gérée par l’agent — non modifiable depuis cette page.</p>
-                {% else %}
-                  <details class="setting-details">
-                    <summary>Configurer</summary>
-                    <form method="post" action="/settings/accounts" class="setting-form">
-                      <input type="hidden" name="key" value="{{ item.key }}" />
-                      <label>
-                        Valeur
-                        <input type="password" name="value" placeholder="Coller la valeur…" autocomplete="new-password" />
-                      </label>
-                      <div class="modal-actions between">
-                        <button
-                          class="btn danger"
-                          type="submit"
-                          name="op"
-                          value="clear"
-                          onclick="return confirm('Supprimer cette valeur ?');"
-                        >
-                          Supprimer
-                        </button>
-                        <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-                      </div>
-                    </form>
-                  </details>
-
-                {% endif %}
-
-                {% if item.help %}
-                  <dialog id="info-{{ item.key }}" class="modal">
-                    <div class="modal-head">
-                      <h2>{{ item.help.title }}</h2>
-                      <form method="dialog">
-                        <button class="btn">Fermer</button>
-                      </form>
-                    </div>
-                    <div class="modal-body">
-                      {% if item.help.steps %}
-                        <ol class="help-steps">
-                          {% for s in item.help.steps %}
-                            <li>{{ s }}</li>
-                          {% endfor %}
-                        </ol>
-                      {% endif %}
-
-                      {% if item.help.links %}
-                        <div class="row">
-                          <div class="muted small" style="margin-bottom:6px;">Liens utiles</div>
-                          <ul class="help-links">
-                            {% for l in item.help.links %}
-                              <li>
-                                <a href="{{ l.url }}" target="_blank" rel="noreferrer">{{ l.label }}</a>
-                              </li>
-                            {% endfor %}
-                          </ul>
-                        </div>
-                      {% endif %}
-                    </div>
-                  </dialog>
-                {% endif %}
-              </section>
-            {% endif %}
-          {% endfor %}
-
-          {% if group == "Google" %}
-            {% set cred = gsc.credentials if gsc and gsc.credentials else none %}
-            <section class="card setting-card span-2" id="gsc-card">
-              <div class="setting-head">
-                <div>
-                  <h2 class="setting-title">Google Search Console — service account</h2>
-                  <div class="muted small">Option avancée. Utilise OAuth ci-dessus en priorité. Le service account reste utile comme fallback technique.</div>
-                </div>
-                <div class="setting-actions">
-                  {% if gsc and gsc.help %}
-                    <button
-                      type="button"
-                      class="icon-btn"
-                      data-open-dialog="info-GOOGLE_APPLICATION_CREDENTIALS"
-                      aria-label="Aide Google Search Console"
-                      title="Aide"
-                    >
-                      i
-                    </button>
-                  {% endif %}
-                  {% if cred and cred.exists %}
-                    <span class="badge ok">ok</span>
-                  {% else %}
-                    <span class="badge notice">à configurer</span>
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="kv setting-kv">
-                <div class="kv-item">
-                  <span class="muted">Credentials</span>
-                  <div class="mono">{{ (cred.path if cred else "") or "—" }}</div>
-                </div>
-                <div class="kv-item">
-                  <span class="muted">Service account</span>
-                  <div class="mono">{{ (cred.client_email if cred else "") or "—" }}</div>
-                </div>
-                <div class="kv-item">
-                  <span class="muted">Projet</span>
-                  <div class="mono">{{ (cred.project_id if cred else "") or "—" }}</div>
-                </div>
-              </div>
-
-              <details class="setting-details" {% if not (cred and cred.exists) %}open{% endif %}>
-                <summary>Configurer</summary>
-                <div class="muted small" style="margin-top:10px;">
-                  Étapes : 1) choisir le JSON du service account 2) donner accès à la propriété dans GSC 3) tester.
-                </div>
-
-                <form method="post" action="/settings/accounts" id="gsc-form" class="setting-form">
-                  <input type="hidden" name="key" value="GOOGLE_APPLICATION_CREDENTIALS" />
-                  <label>
-                    Chemin du fichier JSON
-                    <input
-                      type="text"
-                      name="value"
-                      id="gsc-cred-input"
-                      placeholder="ex: gen-lang-client-....json"
-                      value="{{ (cred.path if cred else '') }}"
-                    />
-                  </label>
-
-                  {% if gsc and gsc.candidates %}
-                    <label>
-                      Détection automatique
-                      <select id="gsc-cred-select">
-                        <option value="">— choisir —</option>
-                        {% for p in gsc.candidates %}
-                          <option value="{{ p }}">{{ p }}</option>
-                        {% endfor %}
-                      </select>
-                    </label>
-                  {% endif %}
-
-                  <div class="modal-actions between">
-                    <button
-                      class="btn danger"
-                      type="submit"
-                      name="op"
-                      value="clear"
-                      onclick="return confirm('Supprimer les credentials GSC ?');"
-                    >
-                      Supprimer
-                    </button>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                      <button class="btn" type="button" id="gsc-test-btn">Tester</button>
-                      <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-                    </div>
-                  </div>
-                </form>
-
-                <div class="muted small" id="gsc-test-result" style="margin-top:10px;"></div>
-              </details>
-
-              {% if gsc and gsc.help %}
-                <dialog id="info-GOOGLE_APPLICATION_CREDENTIALS" class="modal">
-                  <div class="modal-head">
-                    <h2>{{ gsc.help.title }}</h2>
-                    <form method="dialog">
-                      <button class="btn">Fermer</button>
-                    </form>
-                  </div>
-                  <div class="modal-body">
-                    {% if gsc.help.steps %}
-                      <ol class="help-steps">
-                        {% for s in gsc.help.steps %}
-                          <li>{{ s }}</li>
-                        {% endfor %}
-                      </ol>
-                    {% endif %}
-
-                    {% if gsc.help.links %}
-                      <div class="row">
-                        <div class="muted small" style="margin-bottom:6px;">Liens utiles</div>
-                        <ul class="help-links">
-                          {% for l in gsc.help.links %}
-                            <li>
-                              <a href="{{ l.url }}" target="_blank" rel="noreferrer">{{ l.label }}</a>
-                            </li>
-                          {% endfor %}
-                        </ul>
-                      </div>
-                    {% endif %}
-                  </div>
-                </dialog>
-              {% endif %}
-            </section>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="muted small setting-note">Aucun projet éligible n’est affiché dans cette section.</p>
           {% endif %}
+        {% else %}
+          <p class="muted small setting-note">
+            La connexion Google n’est pas encore disponible sur cette plateforme.
+            {% if is_admin %}
+              <a href="{{ gsc_oauth.system_url }}">Configurer OAuth côté système</a>.
+            {% endif %}
+          </p>
+        {% endif %}
+      </section>
+
+      <section class="card setting-card span-2" id="bing-connect-card">
+        <div class="setting-head">
+          <div>
+            <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
+            <div class="muted small">La clé Bing est liée à ton compte puis utilisée sur les projets où Bing est activé.</div>
+          </div>
+          <div class="setting-actions">
+            {% if bing_item.source == "user" %}
+              <span class="badge ok">connecté</span>
+            {% elif bing_item.source == "system" %}
+              <span class="badge notice">plateforme</span>
+            {% else %}
+              <span class="badge notice">à configurer</span>
+            {% endif %}
+          </div>
         </div>
+
+        <div class="kv setting-kv">
+          <div class="kv-item">
+            <span class="muted">Source</span>
+            <div class="mono">{{ bing_item.source_label }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Actif</span>
+            <div class="mono">{{ bing_item.masked or "—" }}</div>
+          </div>
+        </div>
+
+        {% if bing_projects %}
+          <div class="oauth-project-list">
+            {% for project_item in bing_projects %}
+              <div class="oauth-project-item">
+                <div>
+                  <div class="oauth-project-title">{{ project_item.site_name }}</div>
+                  <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
+                </div>
+                <div class="oauth-project-actions">
+                  {% if project_item.bing_enabled %}
+                    <span class="badge ok">bing activé</span>
+                  {% else %}
+                    <span class="badge notice">bing désactivé</span>
+                  {% endif %}
+                  <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <details class="setting-details" {% if bing_item.source == "none" %}open{% endif %}>
+          <summary>Connecter Bing</summary>
+          <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
+            <label>
+              Clé API Bing
+              <input type="password" name="value" placeholder="Coller la clé Bing Webmaster…" autocomplete="new-password" />
+            </label>
+            <div class="modal-actions between">
+              {% if bing_item.has_user_value %}
+                <button
+                  class="btn danger"
+                  type="submit"
+                  name="op"
+                  value="clear"
+                  onclick="return confirm('Supprimer ta clé Bing ?');"
+                >
+                  Supprimer ma clé
+                </button>
+              {% else %}
+                <span></span>
+              {% endif %}
+              <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn" type="button" id="bing-test-btn">Tester</button>
+                <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+              </div>
+            </div>
+          </form>
+        </details>
+
+        <div class="muted small" id="bing-test-result" style="margin-top:10px;"></div>
+        {{ help_dialog(bing_item) }}
+      </section>
+
+      {% for item in search_items if item.key != "BING_WEBMASTER_API_KEY" %}
+        {{ connection_card(item) }}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-head">
+      <div>
+        <div class="settings-section-title">Déploiement</div>
+        <div class="muted small">Tokens personnels pour GitHub et Netlify.</div>
       </div>
-    {% endif %}
-  {% endfor %}
+    </div>
+
+    <div class="grid two">
+      {% for item in deploy_items %}
+        {{ connection_card(item) }}
+      {% endfor %}
+    </div>
+  </div>
 
   <script>
     (() => {
-      const select = document.getElementById("gsc-cred-select");
-      const input = document.getElementById("gsc-cred-input");
-      if (select && input) {
-        select.addEventListener("change", () => {
-          const v = String(select.value || "").trim();
-          if (v) input.value = v;
-        });
-      }
-
-      const testBtn = document.getElementById("gsc-test-btn");
-      const out = document.getElementById("gsc-test-result");
-      async function testGsc() {
-        if (!out) return;
-        out.textContent = "Test en cours…";
-        try {
-          const r = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" }, cache: "no-store" });
-          const data = await r.json();
-          if (!data || !data.ok) {
-            out.textContent = (data && data.error) ? data.error : "Erreur GSC";
-            return;
-          }
-          const n = Array.isArray(data.properties) ? data.properties.length : 0;
-          out.textContent = `${n} propriétés accessibles.`;
-        } catch (e) {
-          out.textContent = String(e);
-        }
-      }
-      if (testBtn) testBtn.addEventListener("click", testGsc);
-
       const bingTestBtn = document.getElementById("bing-test-btn");
       const bingOut = document.getElementById("bing-test-result");
+
       async function testBing() {
         if (!bingOut) return;
         bingOut.textContent = "Test en cours…";
         try {
-          const r = await fetch("/api/bing/sites", { headers: { "Accept": "application/json" }, cache: "no-store" });
-          const data = await r.json();
+          const response = await fetch("/api/bing/sites", {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await response.json();
           if (!data || !data.ok) {
-            bingOut.textContent = (data && data.error) ? data.error : "Erreur Bing";
+            bingOut.textContent = data && data.error ? data.error : "Erreur Bing";
             return;
           }
-          const n = Array.isArray(data.sites) ? data.sites.length : 0;
-          bingOut.textContent = `${n} sites accessibles.`;
-        } catch (e) {
-          bingOut.textContent = String(e);
+          const count = Array.isArray(data.sites) ? data.sites.length : 0;
+          bingOut.textContent = `${count} sites accessibles.`;
+        } catch (error) {
+          bingOut.textContent = String(error);
         }
       }
+
       if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
 
-      // Help dialogs
       document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
         const id = btn.getAttribute("data-open-dialog");
         if (!id) return;
-        const dlg = document.getElementById(id);
-        if (!dlg || typeof dlg.showModal !== "function") return;
-        btn.addEventListener("click", () => dlg.showModal());
-        dlg.addEventListener("click", (e) => {
-          const rect = dlg.getBoundingClientRect();
-          const inDialog =
-            rect.top <= e.clientY &&
-            e.clientY <= rect.top + rect.height &&
-            rect.left <= e.clientX &&
-            e.clientX <= rect.left + rect.width;
-          if (!inDialog) dlg.close();
+        const dialog = document.getElementById(id);
+        if (!dialog || typeof dialog.showModal !== "function") return;
+        btn.addEventListener("click", () => dialog.showModal());
+        dialog.addEventListener("click", (event) => {
+          const rect = dialog.getBoundingClientRect();
+          const inside =
+            rect.top <= event.clientY &&
+            event.clientY <= rect.top + rect.height &&
+            rect.left <= event.clientX &&
+            event.clientX <= rect.left + rect.width;
+          if (!inside) dialog.close();
         });
       });
     })();

@@ -149,7 +149,7 @@
               </label>
             </div>
             <p class="muted small" style="margin: 8px 0 0;">
-              Nécessite <span class="mono">PAGESPEED_API_KEY</span> (sinon le module est ignoré).
+              Nécessite une clé PageSpeed connectée sur le compte ou fournie par la plateforme (sinon le module est ignoré).
             </p>
           </section>
 
@@ -240,8 +240,12 @@
               {% else %}
                 <span class="badge notice">OAuth à configurer</span>
                 <span style="margin-left:6px;">
-                  Configure <span class="mono">GOOGLE_OAUTH_CLIENT_ID</span>, <span class="mono">GOOGLE_OAUTH_CLIENT_SECRET</span>, <span class="mono">PUBLIC_BASE_URL</span> et <span class="mono">SEO_AGENT_SECRET_KEY</span> dans
-                  <a href="{{ (gsc_oauth.settings_url if gsc_oauth else '/settings/accounts') }}">Paramètres</a>.
+                  La connexion Google n’est pas encore disponible pour ce projet.
+                  {% if request.state.user and request.state.user.is_admin %}
+                    <a href="{{ (gsc_oauth.system_url if gsc_oauth else '/settings/system') }}">Configurer OAuth plateforme</a>.
+                  {% else %}
+                    Contacte l’administrateur de la plateforme.
+                  {% endif %}
                 </span>
               {% endif %}
             </p>
@@ -302,11 +306,11 @@
             </div>
 
             <p class="muted small" style="margin: 8px 0 0;">
-              Utilise l’API si <span class="mono">BING_WEBMASTER_API_KEY</span> est configuré, sinon les exports CSV.
+              Utilise l’API si une clé Bing est connectée sur ce compte, sinon les exports CSV.
             </p>
             {% if not bing_api_ready %}
               <p class="muted small" style="margin: 8px 0 0;">
-                <a href="/settings/accounts#bing-connect-card">Configurer la clé Bing</a> pour activer les données live et les imports API.
+                <a href="/settings/accounts#bing-connect-card">Connecter Bing</a> pour activer les données live et les imports API.
               </p>
             {% endif %}
           </section>

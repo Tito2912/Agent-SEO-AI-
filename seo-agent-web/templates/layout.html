@@ -21,12 +21,18 @@
           <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">Abonnement</a>
           {% if request.state.user and request.state.user.is_admin %}
             <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation">Automatisation</a>
-
-            <div class="nav-section">Paramètres</div>
+          {% endif %}
+          <div class="nav-section">Paramètres</div>
+          <a
+            class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}"
+            href="/settings/accounts"
+            >Comptes &amp; connexions</a
+          >
+          {% if request.state.user and request.state.user.is_admin %}
             <a
-              class="nav-item {% if request.url.path.startswith('/settings') %}active{% endif %}"
-              href="/settings/accounts"
-              >Comptes &amp; tokens</a
+              class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}"
+              href="/settings/system"
+              >Système</a
             >
           {% endif %}
 
