@@ -157,6 +157,12 @@
 
     <div class="grid two">
       <section class="card setting-card span-2" id="gsc-oauth-card">
+        {% set gsc_connected = namespace(count=0) %}
+        {% for project_item in gsc_oauth.projects %}
+          {% if project_item.oauth_connected %}
+            {% set gsc_connected.count = gsc_connected.count + 1 %}
+          {% endif %}
+        {% endfor %}
         <div class="setting-head">
           <div>
             <h2 class="setting-title">Connexion Google Search Console</h2>
@@ -174,6 +180,23 @@
         {% if gsc_oauth.configured %}
           {% if gsc_oauth.projects %}
             <div class="muted small setting-note">Projets configurés dans l’app</div>
+            {% if gsc_connected.count %}
+              <div class="gsc-toolbar">
+                <select id="gsc-project-picker" aria-label="Projet Google connecté">
+                  {% for project_item in gsc_oauth.projects %}
+                    {% if project_item.oauth_connected %}
+                      <option
+                        value="{{ project_item.properties_url }}"
+                        data-project-name="{{ project_item.site_name }}"
+                      >
+                        {{ project_item.site_name }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+                <button type="button" class="btn primary" id="gsc-load-properties">Voir les propriétés</button>
+              </div>
+            {% endif %}
             <div class="oauth-project-list">
               {% for project_item in gsc_oauth.projects %}
                 <div class="oauth-project-item">
@@ -190,14 +213,6 @@
                       <span class="badge notice">gsc désactivé</span>
                     {% endif %}
                     {% if project_item.oauth_connected %}
-                      <button
-                        type="button"
-                        class="btn primary js-gsc-load"
-                        data-properties-url="{{ project_item.properties_url }}"
-                        data-project-name="{{ project_item.site_name }}"
-                      >
-                        Voir les propriétés
-                      </button>
                       <a class="btn" href="{{ project_item.connect_url }}">Relancer OAuth</a>
                     {% else %}
                       <a class="btn primary" href="{{ project_item.connect_url }}">Connecter Google</a>
@@ -210,7 +225,7 @@
             <div class="setting-note">
               <div class="card-title-row" style="margin-top:16px;">
                 <h3 style="margin:0; font-size:15px;">Propriétés Google importables</h3>
-                <span class="muted small" id="gsc-properties-status">Choisis un projet connecté pour charger ses propriétés.</span>
+                <span class="muted small" id="gsc-properties-status">Choisis un projet connecté ci-dessus pour charger ses propriétés.</span>
               </div>
               <div class="oauth-project-list" id="gsc-properties-list"></div>
             </div>
@@ -358,7 +373,8 @@
       const bingSitesList = document.getElementById("bing-sites-list");
       const gscStatus = document.getElementById("gsc-properties-status");
       const gscList = document.getElementById("gsc-properties-list");
-      const gscButtons = Array.from(document.querySelectorAll(".js-gsc-load"));
+      const gscProjectPicker = document.getElementById("gsc-project-picker");
+      const gscLoadBtn = document.getElementById("gsc-load-properties");
 
       function escapeHtml(value) {
         return String(value || "")
@@ -470,10 +486,12 @@
         }
       }
 
-      async function loadGscProperties(button) {
-        if (!gscStatus || !gscList || !button) return;
-        const url = String(button.dataset.propertiesUrl || "").trim();
-        const name = String(button.dataset.projectName || "").trim();
+      async function loadGscProperties() {
+        if (!gscStatus || !gscList || !gscProjectPicker) return;
+        const selectedOption = gscProjectPicker.selectedOptions && gscProjectPicker.selectedOptions[0];
+        if (!selectedOption) return;
+        const url = String(selectedOption.value || "").trim();
+        const name = String(selectedOption.dataset.projectName || selectedOption.textContent || "").trim();
         if (!url) return;
         gscStatus.textContent = `Chargement des propriétés pour ${name || "ce projet"}…`;
         gscList.innerHTML = "";
@@ -497,9 +515,7 @@
 
       if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
       if (bingLoadSitesBtn) bingLoadSitesBtn.addEventListener("click", loadBingSites);
-      gscButtons.forEach((button) => {
-        button.addEventListener("click", () => loadGscProperties(button));
-      });
+      if (gscLoadBtn) gscLoadBtn.addEventListener("click", loadGscProperties);
 
       document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
         const id = btn.getAttribute("data-open-dialog");
