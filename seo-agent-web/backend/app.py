@@ -26,7 +26,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import requests
 import yaml
@@ -2977,6 +2977,21 @@ def _db_project(user_id: str, slug: str) -> Project | None:
         return db.scalar(select(Project).where(Project.owner_user_id == u, Project.slug == s))
 
 
+def _db_project_lookup_by_base_url(user_id: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    u = (user_id or "").strip()
+    if not u:
+        return out
+    with DB.session() as db:
+        projects = list(db.scalars(select(Project).where(Project.owner_user_id == u)))
+    for project in projects:
+        base = _normalize_base_url(str(getattr(project, "base_url", "") or ""))
+        slug = str(getattr(project, "slug", "") or "").strip()
+        if base and slug:
+            out[base] = slug
+    return out
+
+
 def _db_upsert_project(*, user_id: str, base_url: str, site_name: str | None = None) -> str | None:
     base = _normalize_base_url(base_url)
     if not base:
@@ -4971,6 +4986,18 @@ def _safe_next_path(next_path: str | None) -> str:
     return n
 
 
+def _path_with_flash(path: str, *, msg: str | None = None, err: str | None = None) -> str:
+    target = _safe_next_path(path)
+    parts = urlsplit(target)
+    params = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k not in {"msg", "err"}]
+    if msg:
+        params.append(("msg", str(msg)))
+    if err:
+        params.append(("err", str(err)))
+    query = urlencode(params)
+    return urlunsplit(("", "", parts.path or "/", query, parts.fragment))
+
+
 def _load_user_from_session(request: Request) -> User | None:
     secret = _safe_env("SEO_AGENT_SECRET_KEY")
     if not secret:
@@ -5707,6 +5734,7 @@ def settings_accounts(request: Request) -> HTMLResponse:
         )
 
     visible_projects = [proj for proj in db_projects if _project_visible_in_connections(proj)]
+    gsc_return_to = "/settings/accounts#gsc-oauth-card"
 
     gsc_projects: list[dict[str, Any]] = []
     bing_projects: list[dict[str, Any]] = []
@@ -5726,8 +5754,9 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 "base_url": str(proj.base_url or ""),
                 "gsc_enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
                 "oauth_connected": _gsc_oauth_connected(str(user.id), slug),
-                "connect_url": f"/projects/{slug}/gsc/oauth/connect",
+                "connect_url": f"/projects/{slug}/gsc/oauth/connect?{urlencode({'next': gsc_return_to})}",
                 "crawl_settings_url": f"/projects/{slug}/settings/crawl#gsc",
+                "properties_url": f"/api/projects/{slug}/gsc/properties",
             }
         )
         bing_projects.append(
@@ -5940,8 +5969,11 @@ def add_project(
     url: str = Form(default=""),
     site_name: str = Form(default=""),
     gsc_urls: list[str] = Form(default=[]),
+    bulk_urls: list[str] = Form(default=[]),
+    next: str = Form(default="/"),
 ) -> RedirectResponse:
     mode = (mode or "").strip().lower()
+    next_path = _safe_next_path(next)
     created: list[str] = []
     user = getattr(request.state, "user", None)
     if not user:
@@ -5960,10 +5992,11 @@ def add_project(
                 )
                 remaining_new = max(0, projects_limit - projects_count)
 
-    if mode == "gsc":
+    if mode in {"gsc", "bing", "bulk"}:
         skipped = 0
         capped = False
-        for raw in gsc_urls or []:
+        source_urls = list(gsc_urls or []) + list(bulk_urls or [])
+        for raw in source_urls:
             v = str(raw or "").strip()
             if not v:
                 continue
@@ -5996,28 +6029,29 @@ def add_project(
             msg = "Limite de sites atteinte pour ton plan. Va sur Abonnement pour upgrade."
         if skipped and not created:
             msg = "Aucun projet ajouté (certains hôtes sont refusés)."
-        return RedirectResponse(url=f"/?msg={quote(msg)}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(next_path, msg=msg), status_code=303)
 
     raw = domain if mode == "domain" else url
     base = _normalize_base_url(raw)
     if not base:
-        return RedirectResponse(url=f"/?err={quote('URL invalide.')}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(next_path, err="URL invalide."), status_code=303)
 
     validation_err = _validate_public_crawl_target(base)
     if validation_err:
-        return RedirectResponse(url=f"/?err={quote(validation_err)}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(next_path, err=validation_err), status_code=303)
 
     if remaining_new is not None:
         slug_guess = _slug_from_base_url(base) or ""
         exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
         if (not exists) and remaining_new <= 0:
             return RedirectResponse(
-                url=f"/?err={quote('Limite de sites atteinte pour ton plan. Upgrade: Abonnement.')}", status_code=303
+                url=_path_with_flash(next_path, err="Limite de sites atteinte pour ton plan. Upgrade: Abonnement."),
+                status_code=303,
             )
     slug = _db_upsert_project(user_id=user.id, base_url=base, site_name=site_name)
     if slug:
         created.append(slug)
-    return RedirectResponse(url=f"/?msg={quote('Projet ajouté.')}", status_code=303)
+    return RedirectResponse(url=_path_with_flash(next_path, msg="Projet ajouté."), status_code=303)
 
 
 @app.post("/projects/delete")
@@ -6148,20 +6182,23 @@ async def assistant_chat(request: Request) -> JSONResponse:
 
 
 @app.get("/projects/{slug}/gsc/oauth/connect")
-def project_gsc_oauth_connect(request: Request, slug: str) -> RedirectResponse:
+def project_gsc_oauth_connect(request: Request, slug: str, next: str | None = None) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
     client_id, client_secret = _google_oauth_client()
+    return_to = _safe_next_path(next)
     if not client_id or not client_secret:
         return RedirectResponse(
-            url=f"/projects/{slug}/settings/crawl?err={quote('Google OAuth non configuré (client id/secret).')}",
+            url=_path_with_flash(return_to or f"/projects/{slug}/settings/crawl", err="Google OAuth non configuré (client id/secret)."),
             status_code=303,
         )
 
     try:
-        state = _oauth_state_encode({"slug": slug, "ts": int(time.time()), "nonce": uuid.uuid4().hex})
+        state = _oauth_state_encode(
+            {"slug": slug, "ts": int(time.time()), "nonce": uuid.uuid4().hex, "next": return_to}
+        )
     except Exception as e:
         return RedirectResponse(
-            url=f"/projects/{slug}/settings/crawl?err={quote(str(e) or 'OAuth state error')}",
+            url=_path_with_flash(return_to or f"/projects/{slug}/settings/crawl", err=(str(e) or "OAuth state error")),
             status_code=303,
         )
 
@@ -6190,6 +6227,8 @@ def google_oauth_callback(
 ) -> RedirectResponse:
     payload = _oauth_state_decode(state or "")
     slug = str(payload.get("slug") if isinstance(payload, dict) else "" or "").strip()
+    return_to = _safe_next_path(payload.get("next") if isinstance(payload, dict) else None)
+    fallback_target = return_to or f"/projects/{slug}/settings/crawl"
     if not slug:
         return RedirectResponse(url=f"/settings/accounts?err={quote('OAuth state invalide.')}", status_code=303)
     user = getattr(request.state, "user", None)
@@ -6200,7 +6239,7 @@ def google_oauth_callback(
     try:
         if isinstance(ts, int) and ts > 0 and (time.time() - ts) > 20 * 60:
             return RedirectResponse(
-                url=f"/projects/{slug}/settings/crawl?err={quote('OAuth expiré. Relance la connexion Google.')}",
+                url=_path_with_flash(fallback_target, err="OAuth expiré. Relance la connexion Google."),
                 status_code=303,
             )
     except Exception:
@@ -6210,18 +6249,18 @@ def google_oauth_callback(
         details = (error_description or error).strip()
         if len(details) > 200:
             details = details[:200] + "…"
-        return RedirectResponse(url=f"/projects/{slug}/settings/crawl?err={quote(details)}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(fallback_target, err=details), status_code=303)
 
     if not code:
         return RedirectResponse(
-            url=f"/projects/{slug}/settings/crawl?err={quote('Code OAuth manquant.')}",
+            url=_path_with_flash(fallback_target, err="Code OAuth manquant."),
             status_code=303,
         )
 
     client_id, client_secret = _google_oauth_client()
     if not client_id or not client_secret:
         return RedirectResponse(
-            url=f"/projects/{slug}/settings/crawl?err={quote('Google OAuth non configuré (client id/secret).')}",
+            url=_path_with_flash(fallback_target, err="Google OAuth non configuré (client id/secret)."),
             status_code=303,
         )
 
@@ -6237,12 +6276,12 @@ def google_oauth_callback(
         msg = f"OAuth token exchange failed: {type(e).__name__}: {e}"
         if len(msg) > 250:
             msg = msg[:250] + "…"
-        return RedirectResponse(url=f"/projects/{slug}/settings/crawl?err={quote(msg)}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(fallback_target, err=msg), status_code=303)
 
     refresh_token = str(token_data.get("refresh_token") or "").strip()
     if not refresh_token:
         missing_msg = "Google n'a pas renvoyé de refresh_token. Réessaie (prompt=consent) ou révoque l'accès puis reconnecte."
-        return RedirectResponse(url=f"/projects/{slug}/settings/crawl?err={quote(missing_msg)}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(fallback_target, err=missing_msg), status_code=303)
 
     scope = str(token_data.get("scope") or _GOOGLE_OAUTH_SCOPE).strip() or _GOOGLE_OAUTH_SCOPE
     try:
@@ -6251,12 +6290,9 @@ def google_oauth_callback(
         msg = f"SaveError: {type(e).__name__}: {e}"
         if len(msg) > 200:
             msg = msg[:200] + "…"
-        return RedirectResponse(url=f"/projects/{slug}/settings/crawl?err={quote(msg)}", status_code=303)
+        return RedirectResponse(url=_path_with_flash(fallback_target, err=msg), status_code=303)
 
-    return RedirectResponse(
-        url=f"/projects/{slug}/settings/crawl?msg={quote('Google connecté (OAuth).')}",
-        status_code=303,
-    )
+    return RedirectResponse(url=_path_with_flash(fallback_target, msg="Google connecté (OAuth)."), status_code=303)
 
 
 @app.post("/projects/{slug}/gsc/oauth/disconnect")
@@ -6274,6 +6310,7 @@ def project_gsc_oauth_disconnect(request: Request, slug: str) -> RedirectRespons
 def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
     _ = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
+    user_id = str(getattr(user, "id", "") or "")
     token = _gsc_oauth_refresh_token(str(getattr(user, "id", "")), slug)
     if not token:
         return JSONResponse({"ok": False, "error": "Google OAuth non connecté pour ce projet."}, status_code=400)
@@ -6315,6 +6352,7 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
     if not isinstance(entries, list):
         entries = []
 
+    existing_by_base = _db_project_lookup_by_base_url(user_id)
     props: list[dict[str, Any]] = []
     for it in entries:
         if not isinstance(it, dict):
@@ -6338,7 +6376,17 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
             domain = site_url
             suggested = _normalize_base_url(site_url) or ""
 
-        props.append({"property_url": site_url, "permission": perm, "domain": domain, "suggested_base_url": suggested})
+        existing_slug = existing_by_base.get(suggested or "")
+        props.append(
+            {
+                "property_url": site_url,
+                "permission": perm,
+                "domain": domain,
+                "suggested_base_url": suggested,
+                "already_imported": bool(existing_slug),
+                "project_slug": existing_slug or "",
+            }
+        )
 
     props.sort(key=lambda p: (p.get("domain") or p.get("property_url") or "").lower())
     return JSONResponse({"ok": True, "properties": props})
@@ -6436,12 +6484,18 @@ def bing_sites(request: Request) -> JSONResponse:
     if not user:
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
 
-    api_key, _source = _effective_user_connection_value(
-        user_id=str(getattr(user, "id", "")),
+    user_id = str(getattr(user, "id", "") or "")
+    api_key, source = _effective_user_connection_value(
+        user_id=user_id,
         key="BING_WEBMASTER_API_KEY",
     )
     if not api_key:
         return JSONResponse({"ok": False, "error": "BING_WEBMASTER_API_KEY not set"}, status_code=400)
+    if source != "user":
+        return JSONResponse(
+            {"ok": False, "error": "Connecte ta propre clé Bing pour lister et importer tes sites."},
+            status_code=400,
+        )
 
     try:
         r = requests.get(
@@ -6467,7 +6521,22 @@ def bing_sites(request: Request) -> JSONResponse:
     except Exception:
         pass
 
-    return JSONResponse({"ok": True, "sites": sites[:200]})
+    existing_by_base = _db_project_lookup_by_base_url(user_id)
+    items: list[dict[str, Any]] = []
+    for site_url in sites[:200]:
+        base = _normalize_base_url(site_url) or ""
+        existing_slug = existing_by_base.get(base)
+        items.append(
+            {
+                "site_url": site_url,
+                "import_base_url": base,
+                "domain": (urlsplit(base).hostname or "").lower() if base else "",
+                "already_imported": bool(existing_slug),
+                "project_slug": existing_slug or "",
+            }
+        )
+
+    return JSONResponse({"ok": True, "sites": items})
 
 
 @app.get("/api/projects/{slug}/search-series")

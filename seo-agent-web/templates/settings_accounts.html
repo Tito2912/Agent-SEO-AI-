@@ -151,7 +151,7 @@
     <div class="settings-section-head">
       <div>
         <div class="settings-section-title">Search &amp; Analytics</div>
-        <div class="muted small">Connexions Google et Bing utilisées par tes projets.</div>
+        <div class="muted small">Google = connexion OAuth projet par projet. Bing = clé API au niveau du compte, puis activation par projet.</div>
       </div>
     </div>
 
@@ -173,6 +173,7 @@
 
         {% if gsc_oauth.configured %}
           {% if gsc_oauth.projects %}
+            <div class="muted small setting-note">Projets configurés dans l’app</div>
             <div class="oauth-project-list">
               {% for project_item in gsc_oauth.projects %}
                 <div class="oauth-project-item">
@@ -182,19 +183,36 @@
                   </div>
                   <div class="oauth-project-actions">
                     {% if project_item.oauth_connected %}
-                      <span class="badge ok">connecté</span>
+                      <span class="badge ok">oauth connecté</span>
                     {% elif project_item.gsc_enabled %}
                       <span class="badge notice">non connecté</span>
                     {% else %}
                       <span class="badge notice">gsc désactivé</span>
                     {% endif %}
-                    <a class="btn {% if not project_item.oauth_connected and project_item.gsc_enabled %}primary{% endif %}" href="{{ project_item.connect_url }}">
-                      {% if project_item.oauth_connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
-                    </a>
+                    {% if project_item.oauth_connected %}
+                      <button
+                        type="button"
+                        class="btn primary js-gsc-load"
+                        data-properties-url="{{ project_item.properties_url }}"
+                        data-project-name="{{ project_item.site_name }}"
+                      >
+                        Voir les propriétés
+                      </button>
+                      <a class="btn" href="{{ project_item.connect_url }}">Relancer OAuth</a>
+                    {% else %}
+                      <a class="btn primary" href="{{ project_item.connect_url }}">Connecter Google</a>
+                    {% endif %}
                     <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
                   </div>
                 </div>
               {% endfor %}
+            </div>
+            <div class="setting-note">
+              <div class="card-title-row" style="margin-top:16px;">
+                <h3 style="margin:0; font-size:15px;">Propriétés Google importables</h3>
+                <span class="muted small" id="gsc-properties-status">Choisis un projet connecté pour charger ses propriétés.</span>
+              </div>
+              <div class="oauth-project-list" id="gsc-properties-list"></div>
             </div>
           {% else %}
             <p class="muted small setting-note">Aucun projet éligible n’est affiché dans cette section.</p>
@@ -213,13 +231,13 @@
         <div class="setting-head">
           <div>
             <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
-            <div class="muted small">La clé Bing est liée à ton compte puis utilisée sur les projets où Bing est activé.</div>
+            <div class="muted small">La clé Bing est liée à ton compte. L’état des projets ci-dessous indique seulement si le module Bing est activé dans leur crawl.</div>
           </div>
           <div class="setting-actions">
             {% if bing_item.source == "user" %}
-              <span class="badge ok">connecté</span>
+              <span class="badge ok">clé connectée</span>
             {% elif bing_item.source == "system" %}
-              <span class="badge notice">plateforme</span>
+              <span class="badge notice">clé plateforme</span>
             {% else %}
               <span class="badge notice">à configurer</span>
             {% endif %}
@@ -238,6 +256,7 @@
         </div>
 
         {% if bing_projects %}
+          <div class="muted small setting-note">Projets configurés dans l’app</div>
           <div class="oauth-project-list">
             {% for project_item in bing_projects %}
               <div class="oauth-project-item">
@@ -246,16 +265,27 @@
                   <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
                 </div>
                 <div class="oauth-project-actions">
-                  {% if project_item.bing_enabled %}
-                    <span class="badge ok">bing activé</span>
+                  {% if project_item.bing_enabled and bing_item.source == "user" %}
+                    <span class="badge ok">module prêt</span>
+                  {% elif project_item.bing_enabled and bing_item.source == "system" %}
+                    <span class="badge notice">clé plateforme</span>
+                  {% elif project_item.bing_enabled %}
+                    <span class="badge error">clé manquante</span>
                   {% else %}
-                    <span class="badge notice">bing désactivé</span>
+                    <span class="badge notice">module désactivé</span>
                   {% endif %}
                   <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
                 </div>
               </div>
             {% endfor %}
           </div>
+        {% endif %}
+
+        <p class="muted small setting-note">
+          Un projet peut avoir Bing activé dans son crawl, tout en restant inutilisable si aucune clé Bing n’est connectée.
+        </p>
+        {% if bing_item.source == "system" %}
+          <p class="muted small setting-note">La clé plateforme peut servir au crawl, mais l’import des sites Bing nécessite ta propre clé.</p>
         {% endif %}
 
         <details class="setting-details" {% if bing_item.source == "none" %}open{% endif %}>
@@ -289,6 +319,16 @@
         </details>
 
         <div class="muted small" id="bing-test-result" style="margin-top:10px;"></div>
+        <div class="setting-note">
+          <div class="card-title-row" style="margin-top:16px;">
+            <h3 style="margin:0; font-size:15px;">Sites Bing importables</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn" type="button" id="bing-load-sites">Charger les sites Bing</button>
+              <span class="muted small" id="bing-sites-status">Charge les sites accessibles depuis ta clé Bing.</span>
+            </div>
+          </div>
+          <div class="oauth-project-list" id="bing-sites-list"></div>
+        </div>
         {{ help_dialog(bing_item) }}
       </section>
     </div>
@@ -313,6 +353,80 @@
     (() => {
       const bingTestBtn = document.getElementById("bing-test-btn");
       const bingOut = document.getElementById("bing-test-result");
+      const bingLoadSitesBtn = document.getElementById("bing-load-sites");
+      const bingSitesStatus = document.getElementById("bing-sites-status");
+      const bingSitesList = document.getElementById("bing-sites-list");
+      const gscStatus = document.getElementById("gsc-properties-status");
+      const gscList = document.getElementById("gsc-properties-list");
+      const gscButtons = Array.from(document.querySelectorAll(".js-gsc-load"));
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function importFormHtml({ url, next, label = "Importer", siteName = "" }) {
+        const siteNameInput = siteName
+          ? `<input type="hidden" name="site_name" value="${escapeHtml(siteName)}" />`
+          : "";
+        return `
+          <form method="post" action="/projects/add" style="display:inline-flex; gap:8px; align-items:center;">
+            <input type="hidden" name="mode" value="url" />
+            <input type="hidden" name="url" value="${escapeHtml(url)}" />
+            <input type="hidden" name="next" value="${escapeHtml(next)}" />
+            ${siteNameInput}
+            <button class="btn primary" type="submit">${escapeHtml(label)}</button>
+          </form>
+        `;
+      }
+
+      function renderImportRows(container, items, kind) {
+        if (!container) return;
+        container.innerHTML = "";
+        if (!Array.isArray(items) || items.length === 0) {
+          container.innerHTML = `<div class="muted small setting-note">Aucun site importable détecté.</div>`;
+          return;
+        }
+        const next = kind === "gsc" ? "/settings/accounts#gsc-oauth-card" : "/settings/accounts#bing-connect-card";
+        items.forEach((item) => {
+          const title = kind === "gsc"
+            ? (item.domain || item.property_url || item.suggested_base_url || "Propriété")
+            : (item.domain || item.site_url || item.import_base_url || "Site");
+          const subtitle = kind === "gsc"
+            ? (item.property_url || item.suggested_base_url || "")
+            : (item.site_url || item.import_base_url || "");
+          const importUrl = kind === "gsc"
+            ? String(item.suggested_base_url || "").trim()
+            : String(item.import_base_url || "").trim();
+          const row = document.createElement("div");
+          row.className = "oauth-project-item";
+
+          let actions = "";
+          if (item.already_imported && item.project_slug) {
+            actions = `
+              <span class="badge ok">déjà importé</span>
+              <a class="btn" href="/projects/${encodeURIComponent(item.project_slug)}">Ouvrir le projet</a>
+            `;
+          } else if (importUrl) {
+            actions = importFormHtml({ url: importUrl, next, siteName: title });
+          } else {
+            actions = `<span class="badge notice">non importable</span>`;
+          }
+
+          row.innerHTML = `
+            <div>
+              <div class="oauth-project-title">${escapeHtml(title)}</div>
+              <div class="muted small">${escapeHtml(subtitle)}</div>
+            </div>
+            <div class="oauth-project-actions">${actions}</div>
+          `;
+          container.appendChild(row);
+        });
+      }
 
       async function testBing() {
         if (!bingOut) return;
@@ -334,7 +448,58 @@
         }
       }
 
+      async function loadBingSites() {
+        if (!bingSitesStatus || !bingSitesList) return;
+        bingSitesStatus.textContent = "Chargement…";
+        bingSitesList.innerHTML = "";
+        try {
+          const response = await fetch("/api/bing/sites", {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await response.json();
+          if (!data || !data.ok) {
+            bingSitesStatus.textContent = data && data.error ? data.error : "Erreur Bing";
+            return;
+          }
+          const items = Array.isArray(data.sites) ? data.sites : [];
+          bingSitesStatus.textContent = `${items.length} site(s) détecté(s).`;
+          renderImportRows(bingSitesList, items, "bing");
+        } catch (error) {
+          bingSitesStatus.textContent = String(error);
+        }
+      }
+
+      async function loadGscProperties(button) {
+        if (!gscStatus || !gscList || !button) return;
+        const url = String(button.dataset.propertiesUrl || "").trim();
+        const name = String(button.dataset.projectName || "").trim();
+        if (!url) return;
+        gscStatus.textContent = `Chargement des propriétés pour ${name || "ce projet"}…`;
+        gscList.innerHTML = "";
+        try {
+          const response = await fetch(url, {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await response.json();
+          if (!data || !data.ok) {
+            gscStatus.textContent = data && data.error ? data.error : "Erreur Google Search Console";
+            return;
+          }
+          const items = Array.isArray(data.properties) ? data.properties : [];
+          gscStatus.textContent = `${items.length} propriété(s) détectée(s) pour ${name || "ce projet"}.`;
+          renderImportRows(gscList, items, "gsc");
+        } catch (error) {
+          gscStatus.textContent = String(error);
+        }
+      }
+
       if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
+      if (bingLoadSitesBtn) bingLoadSitesBtn.addEventListener("click", loadBingSites);
+      gscButtons.forEach((button) => {
+        button.addEventListener("click", () => loadGscProperties(button));
+      });
 
       document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
         const id = btn.getAttribute("data-open-dialog");
