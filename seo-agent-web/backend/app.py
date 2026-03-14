@@ -113,7 +113,6 @@ _USER_CONNECTION_KEYS: set[str] = {
     "GITHUB_TOKEN",
     "NETLIFY_TOKEN",
     "BING_WEBMASTER_API_KEY",
-    "PAGESPEED_API_KEY",
 }
 
 
@@ -4691,7 +4690,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
 
     script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
     env_extra: dict[str, str] = {}
-    pagespeed_api_key, _pagespeed_source = _effective_user_connection_value(user_id=str(user_id), key="PAGESPEED_API_KEY")
+    pagespeed_api_key = str(os.environ.get("PAGESPEED_API_KEY") or "").strip()
     if pagespeed_api_key:
         env_extra["PAGESPEED_API_KEY"] = pagespeed_api_key
     bing_api_key, _bing_source = _effective_user_connection_value(user_id=str(user_id), key="BING_WEBMASTER_API_KEY")
@@ -5747,10 +5746,6 @@ def settings_accounts(request: Request) -> HTMLResponse:
             "request": request,
             "project": None,
             "is_admin": bool(getattr(user, "is_admin", False)),
-            "search_items": [
-                connection_items["BING_WEBMASTER_API_KEY"],
-                connection_items["PAGESPEED_API_KEY"],
-            ],
             "deploy_items": [
                 connection_items["GITHUB_TOKEN"],
                 connection_items["NETLIFY_TOKEN"],
@@ -5834,7 +5829,7 @@ def settings_system(request: Request) -> HTMLResponse:
         {
             "id": "platform-fallbacks-system",
             "title": "Clés plateforme — fallback",
-            "description": "Valeurs par défaut utilisées si une utilisatrice n’a pas connecté sa propre intégration.",
+            "description": "Valeurs plateforme utilisées en fallback pour GitHub/Netlify/Bing et en interne pour PageSpeed.",
             "items": [
                 _build_env_setting_item("GITHUB_TOKEN"),
                 _build_env_setting_item("NETLIFY_TOKEN"),

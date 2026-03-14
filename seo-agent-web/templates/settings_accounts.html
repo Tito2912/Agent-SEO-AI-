@@ -151,7 +151,7 @@
     <div class="settings-section-head">
       <div>
         <div class="settings-section-title">Search &amp; Analytics</div>
-        <div class="muted small">Connexions Google, Bing et PageSpeed utilisées par tes projets.</div>
+        <div class="muted small">Connexions Google et Bing utilisées par tes projets.</div>
       </div>
     </div>
 
@@ -291,10 +291,6 @@
         <div class="muted small" id="bing-test-result" style="margin-top:10px;"></div>
         {{ help_dialog(bing_item) }}
       </section>
-
-      {% for item in search_items if item.key != "BING_WEBMASTER_API_KEY" %}
-        {{ connection_card(item) }}
-      {% endfor %}
     </div>
   </div>
 
