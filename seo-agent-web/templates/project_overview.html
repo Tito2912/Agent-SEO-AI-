@@ -37,6 +37,7 @@
         class="card"
         id="live-job-card"
         data-job-id="{{ live_job.id }}"
+        data-status="{{ live_job.status }}"
         data-created-at="{{ live_job.created_at }}"
         data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
       >
@@ -232,6 +233,7 @@
           const jobId = card.dataset.jobId;
           if (!jobId) return;
 
+          const initialStatus = String(card.dataset.status || "");
           const createdAt = Number(card.dataset.createdAt || 0);
           const runTs = String(card.dataset.runTs || "");
 
@@ -251,6 +253,10 @@
           const jobsLink = document.getElementById("live-job-jobs-link");
 
           if (jobsLink) jobsLink.href = `/jobs?job=${encodeURIComponent(jobId)}`;
+
+          function isLiveStatus(status) {
+            return status === "queued" || status === "running" || status === "cancel_requested";
+          }
 
           function formatShortDateFromRunTs(value) {
             if (!value || !/^\d{8}-\d{6}$/.test(value)) return null;
@@ -342,15 +348,27 @@
               const data = await res.json();
               render(data);
 
-              if (data && data.status === "done" && data.result && data.result.project_url) {
-                window.location.href = String(data.result.project_url);
+              if (
+                isLiveStatus(initialStatus) &&
+                data &&
+                data.status === "done" &&
+                data.result &&
+                data.result.project_url
+              ) {
+                const targetUrl = new URL(String(data.result.project_url), window.location.origin);
+                const currentUrl = new URL(window.location.href);
+                if (targetUrl.pathname !== currentUrl.pathname || targetUrl.search !== currentUrl.search) {
+                  window.location.href = targetUrl.toString();
+                }
               }
             } catch (_) {
               // ignore
             }
           }
 
-          const timer = setInterval(poll, pollMs);
+          if (isLiveStatus(initialStatus)) {
+            setInterval(poll, pollMs);
+          }
           poll();
         })();
       </script>
