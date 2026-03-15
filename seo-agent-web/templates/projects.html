@@ -91,6 +91,7 @@
 	            {% for p in projects %}
 	              <tr data-project-slug="{{ p.slug }}">
 	                {% set live = (live_crawls.get(p.slug) if live_crawls else none) %}
+                  {% set recent_job = (recent_crawl_jobs.get(p.slug) if recent_crawl_jobs else none) %}
 	                <td>
                   <label class="checkbox" style="justify-content:center;">
 	                    <input
@@ -103,10 +104,14 @@
 	                <td>
 	                    <div class="project">
 	                      <div class="project-title">
-	                      {% if p.timestamp %}
+                        {% if p.timestamp %}
 	                        <a href="/projects/{{ p.slug }}?crawl={{ p.timestamp }}">{{ p.site_name }}</a>
-	                      {% else %}
-	                        <span style="font-weight:600;">{{ p.site_name }}</span>
+                        {% elif recent_job %}
+                          <a href="/projects/{{ p.slug }}?job={{ recent_job.id }}">{{ p.site_name }}</a>
+                        {% else %}
+	                        <a href="/projects/{{ p.slug }}">{{ p.site_name }}</a>
+                        {% endif %}
+	                      {% if not p.timestamp %}
 	                        <span class="badge notice" style="margin-left:8px;">nouveau</span>
 	                      {% endif %}
 	                      </div>
@@ -119,7 +124,15 @@
 	                    <div class="muted small">{{ p.timestamp }}</div>
 	                  {% else %}
 	                    <div class="muted">—</div>
+                      {% if recent_job and recent_job.status == 'failed' %}
+	                    <div class="muted small">Dernière tentative en échec</div>
+                      {% elif recent_job and recent_job.status == 'done' %}
+                      <div class="muted small">Crawl terminé, page à actualiser</div>
+                      {% elif recent_job and recent_job.status in ['queued', 'running', 'cancel_requested'] %}
+                      <div class="muted small">Crawl en cours</div>
+                      {% else %}
 	                    <div class="muted small">Pas encore crawlé</div>
+                      {% endif %}
 		                  {% endif %}
 		                  <div class="row-crawl-slot" data-project-slug="{{ p.slug }}">
 		                    {% if live %}
@@ -145,6 +158,31 @@
 	                          <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
 	                        </div>
 	                      </div>
+                        {% elif recent_job and recent_job.status in ['failed', 'canceled', 'done'] %}
+                          {% set progress = recent_job.progress if recent_job.progress else none %}
+                          {% if progress and progress.total %}
+                            {% set cur = progress.current|int %}
+                            {% set tot = progress.total|int %}
+                            {% set pct_display = ((cur / tot) * 100)|round(0) if tot else 0 %}
+                          {% else %}
+                            {% set cur = 0 %}
+                            {% set tot = 0 %}
+                            {% set pct_display = 0 %}
+                          {% endif %}
+                          <div class="row-crawl" data-job-id="{{ recent_job.id }}" data-live="0" data-project-slug="{{ p.slug }}">
+                            <div class="row-crawl-head">
+                              <span class="pill {{ recent_job.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(recent_job.status, recent_job.status) }}</span>
+                              <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}—{% endif %}</span>
+                            </div>
+                            <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
+                              <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
+                            </div>
+                          </div>
+                          {% if recent_job.status == 'failed' %}
+                            <div class="muted small" style="margin-top:6px;">
+                              <a href="/projects/{{ p.slug }}?job={{ recent_job.id }}">Voir l’erreur</a>
+                            </div>
+                          {% endif %}
 	                    {% endif %}
 	                  </div>
 	                </td>
@@ -661,11 +699,8 @@
 	          }
 	        }
 
-	        if (status === "done" || status === "failed") {
+	        if (status === "done" || status === "failed" || status === "canceled") {
 	          el.dataset.live = "0";
-	          if (el.classList && el.classList.contains("row-crawl")) {
-	            el.style.display = "none";
-	          }
 	          const slug = el.dataset.projectSlug;
 	          if (slug) {
 	            const esc = (window.CSS && typeof window.CSS.escape === "function")
@@ -674,7 +709,7 @@
 	            const startBtn = document.querySelector(`form.crawl-start-form[data-slug="${esc}"] [data-role="start-btn"]`);
 	            if (startBtn) {
 	              startBtn.disabled = false;
-	              startBtn.textContent = "Démarrer";
+	              startBtn.textContent = status === "failed" ? "Réessayer" : "Démarrer";
 	            }
 	          }
 	        }

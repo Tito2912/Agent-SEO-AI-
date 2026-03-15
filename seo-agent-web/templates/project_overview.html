@@ -27,9 +27,6 @@
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
-    {% set cur = project.current %}
-    {% set sum = cur.summary %}
-
     <div class="page-header">
       <h1>{{ project.site_name }}</h1>
       <p class="muted">{{ project.base_url }}</p>
@@ -75,6 +72,29 @@
         </p>
       </section>
     {% endif %}
+
+    {% if not project.current %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Premier crawl</h2>
+          <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
+        </div>
+        <p class="muted" style="margin:0 0 12px;">Aucun crawl terminé pour ce projet.</p>
+        {% if live_job and live_job.status == 'failed' %}
+          <p class="muted small" style="margin:0 0 14px;">
+            Le dernier crawl a échoué. Ouvre les logs ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l’erreur complète.
+          </p>
+        {% endif %}
+        <div class="topbar-actions">
+          <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+            <button type="submit" class="btn primary">Lancer le premier crawl</button>
+          </form>
+          <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">Voir les exécutions</a>
+        </div>
+      </section>
+    {% else %}
+    {% set cur = project.current %}
+    {% set sum = cur.summary %}
 
     <section class="card">
       <form method="get" class="filters">
@@ -824,5 +844,6 @@
         {% endif %}
       </section>
     </div>
+    {% endif %}
   {% endif %}
 {% endblock %}

@@ -5673,14 +5673,23 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             if isinstance(j.result, dict) and str(j.result.get("user_id") or "") == str(getattr(user, "id", ""))
         ]
     live_crawls: dict[str, dict[str, Any]] = {}
+    recent_crawl_jobs: dict[str, dict[str, Any]] = {}
     for j in jobs:
-        if j.status not in {"queued", "running", "cancel_requested"}:
-            continue
         result = j.result if isinstance(j.result, dict) else None
         if not result or result.get("type") != "crawl":
             continue
         slug = str(result.get("slug") or "").strip()
         if not slug:
+            continue
+        if slug not in recent_crawl_jobs:
+            recent_crawl_jobs[slug] = {
+                "id": j.id,
+                "status": j.status,
+                "created_at": j.created_at,
+                "progress": j.progress,
+                "error": ((str(j.stderr or "").strip().splitlines() or [""])[-1])[:240],
+            }
+        if j.status not in {"queued", "running", "cancel_requested"}:
             continue
         existing = live_crawls.get(slug)
         if existing and float(existing.get("created_at") or 0) >= float(j.created_at or 0):
@@ -5700,6 +5709,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             "projects": projects,
             "jobs": jobs,
             "live_crawls": live_crawls,
+            "recent_crawl_jobs": recent_crawl_jobs,
             "msg": (msg or "").strip(),
             "err": (err or "").strip(),
         },
@@ -6929,19 +6939,6 @@ def project_overview(
     proj_row = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_for_request(request)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
-    if not data:
-        resp = templates.TemplateResponse(
-            "project_overview.html",
-            {
-                "request": request,
-                "project": None,
-                "slug": slug,
-                "live_job": None,
-            },
-            status_code=404,
-        )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
 
     live_job: dict[str, Any] | None = None
     job_id = (job or "").strip()
@@ -6970,6 +6967,38 @@ def project_overview(
                     "progress": j.progress,
                     "result": j.result,
                 }
+    if not live_job:
+        user = getattr(request.state, "user", None)
+        is_admin = bool(getattr(user, "is_admin", False))
+        for candidate in _list_jobs(limit=100):
+            result = candidate.result if isinstance(candidate.result, dict) else {}
+            if result.get("type") != "crawl":
+                continue
+            if str(result.get("slug") or "").strip() != slug:
+                continue
+            if not is_admin and str(result.get("user_id") or "").strip() != str(getattr(user, "id", "")):
+                continue
+            live_job = {
+                "id": candidate.id,
+                "status": candidate.status,
+                "created_at": candidate.created_at,
+                "started_at": candidate.started_at,
+                "finished_at": candidate.finished_at,
+                "progress": candidate.progress,
+                "result": candidate.result,
+            }
+            break
+
+    if not data:
+        data = {
+            "slug": slug,
+            "site_name": str(proj_row.site_name or slug),
+            "base_url": str(proj_row.base_url or ""),
+            "crawls": [],
+            "current": None,
+            "compare": None,
+            "history": [],
+        }
 
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
