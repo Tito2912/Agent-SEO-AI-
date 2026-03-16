@@ -742,7 +742,7 @@
               {% elif bing and bing.enabled %}
                 <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
                 <p class="muted small">
-                  {% if bing.reason == "missing_api_key" %}
+                  {% if bing.reason in ["missing_api_key", "missing_credentials"] %}
                     <a href="/settings/accounts#bing-connect-card">Connecter Bing</a>
                     ·
                   {% endif %}

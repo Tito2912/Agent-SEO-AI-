@@ -84,6 +84,7 @@ class CrawlConfig:
     bing_days: int = 28
     bing_timeout_s: float = 30.0
     bing_api_key: str | None = None
+    bing_access_token: str | None = None
     bing_fetch_crawl_issues: bool = True
     bing_fetch_blocked_urls: bool = True
     bing_fetch_sitemaps: bool = True
@@ -1883,9 +1884,26 @@ def _bing_rank_traffic_series(
     return out
 
 
-def _bing_call(method: str, *, params: dict[str, Any], timeout_s: float) -> Any:
+def _bing_call(
+    method: str,
+    *,
+    params: dict[str, Any],
+    timeout_s: float,
+    api_key: str = "",
+    access_token: str = "",
+) -> Any:
     base = "https://www.bing.com/webmaster/api.svc/json"
-    resp = requests.get(f"{base}/{method}", params=params, timeout=timeout_s)
+    request_params = dict(params or {})
+    headers: dict[str, str] = {}
+    token = str(access_token or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        key = str(api_key or "").strip()
+        if not key:
+            raise RuntimeError("bing_credentials_missing")
+        request_params["apikey"] = key
+    resp = requests.get(f"{base}/{method}", params=request_params, headers=headers, timeout=timeout_s)
     ct = resp.headers.get("content-type", "")
     if ct.startswith("application/json"):
         data = resp.json()
@@ -1897,9 +1915,15 @@ def _bing_call(method: str, *, params: dict[str, Any], timeout_s: float) -> Any:
     return data
 
 
-def _bing_pick_site_url(*, base_url: str, api_key: str, timeout_s: float) -> tuple[str | None, list[str], str | None]:
+def _bing_pick_site_url(
+    *,
+    base_url: str,
+    timeout_s: float,
+    api_key: str = "",
+    access_token: str = "",
+) -> tuple[str | None, list[str], str | None]:
     try:
-        payload = _bing_call("GetUserSites", params={"apikey": api_key}, timeout_s=timeout_s)
+        payload = _bing_call("GetUserSites", params={}, timeout_s=timeout_s, api_key=api_key, access_token=access_token)
     except Exception as e:
         return None, [], f"{type(e).__name__}: {e}"
 
@@ -2002,8 +2026,9 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
         return {"enabled": False, "reason": "disabled_in_config"}
 
     api_key = (config.bing_api_key or os.environ.get("BING_WEBMASTER_API_KEY") or "").strip().strip('"').strip("'")
-    if not api_key:
-        return {"enabled": True, "ok": False, "reason": "missing_api_key"}
+    access_token = (config.bing_access_token or os.environ.get("BING_WEBMASTER_ACCESS_TOKEN") or "").strip().strip('"').strip("'")
+    if not api_key and not access_token:
+        return {"enabled": True, "ok": False, "reason": "missing_credentials"}
 
     out_dir = (config.bing_output_dir or "").strip() or os.path.join(config.output_dir, "bing")
     Path(out_dir).mkdir(parents=True, exist_ok=True)
@@ -2022,7 +2047,10 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
     sites_err: str | None = None
     if not config.bing_site_url:
         auto_site_url, user_sites, sites_err = _bing_pick_site_url(
-            base_url=config.base_url, api_key=api_key, timeout_s=float(config.bing_timeout_s)
+            base_url=config.base_url,
+            timeout_s=float(config.bing_timeout_s),
+            api_key=api_key,
+            access_token=access_token,
         )
         if auto_site_url:
             candidates = [auto_site_url, *[c for c in candidates if c != auto_site_url]]
@@ -2033,10 +2061,21 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
                 "siteUrl": site_url,
                 "startDate": start_date.isoformat(),
                 "endDate": end_date.isoformat(),
-                "apikey": api_key,
             }
-            payload_q = _bing_call("GetQueryStats", params=params, timeout_s=float(config.bing_timeout_s))
-            payload_p = _bing_call("GetPageStats", params=params, timeout_s=float(config.bing_timeout_s))
+            payload_q = _bing_call(
+                "GetQueryStats",
+                params=params,
+                timeout_s=float(config.bing_timeout_s),
+                api_key=api_key,
+                access_token=access_token,
+            )
+            payload_p = _bing_call(
+                "GetPageStats",
+                params=params,
+                timeout_s=float(config.bing_timeout_s),
+                api_key=api_key,
+                access_token=access_token,
+            )
             last_payload = {"queries": payload_q, "pages": payload_p}
 
             rows_q = _bing_extract_rows(payload_q)
@@ -2052,7 +2091,11 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             if config.bing_fetch_crawl_issues:
                 try:
                     payload_ci = _bing_call(
-                        "GetCrawlIssues", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=float(config.bing_timeout_s)
+                        "GetCrawlIssues",
+                        params={"siteUrl": site_url},
+                        timeout_s=float(config.bing_timeout_s),
+                        api_key=api_key,
+                        access_token=access_token,
                     )
                     crawl_issues = _bing_extract_rows(payload_ci)
                     (Path(out_dir) / "bing-crawl-issues.json").write_text(
@@ -2064,7 +2107,11 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             if config.bing_fetch_blocked_urls:
                 try:
                     payload_bu = _bing_call(
-                        "GetBlockedUrls", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=float(config.bing_timeout_s)
+                        "GetBlockedUrls",
+                        params={"siteUrl": site_url},
+                        timeout_s=float(config.bing_timeout_s),
+                        api_key=api_key,
+                        access_token=access_token,
                     )
                     blocked_urls = _bing_extract_rows(payload_bu)
                     (Path(out_dir) / "bing-blocked-urls.json").write_text(
@@ -2076,7 +2123,11 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             if config.bing_fetch_sitemaps:
                 try:
                     payload_sm = _bing_call(
-                        "GetSitemaps", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=float(config.bing_timeout_s)
+                        "GetSitemaps",
+                        params={"siteUrl": site_url},
+                        timeout_s=float(config.bing_timeout_s),
+                        api_key=api_key,
+                        access_token=access_token,
                     )
                     sitemaps_api = _bing_extract_rows(payload_sm)
                     (Path(out_dir) / "bing-sitemaps.json").write_text(
@@ -2088,7 +2139,11 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             quota_summary: dict[str, Any] | None = None
             try:
                 payload_quota = _bing_call(
-                    "GetUrlSubmissionQuota", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=float(config.bing_timeout_s)
+                    "GetUrlSubmissionQuota",
+                    params={"siteUrl": site_url},
+                    timeout_s=float(config.bing_timeout_s),
+                    api_key=api_key,
+                    access_token=access_token,
                 )
                 (Path(out_dir) / "bing-url-submission-quota.json").write_text(
                     json.dumps(payload_quota, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -2119,8 +2174,10 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
                     try:
                         payload_ui = _bing_call(
                             "GetUrlInfo",
-                            params={"apikey": api_key, "siteUrl": site_url, "url": page_url},
+                            params={"siteUrl": site_url, "url": page_url},
                             timeout_s=float(config.bing_timeout_s),
+                            api_key=api_key,
+                            access_token=access_token,
                         )
                         # UrlInfo often wrapped in {d:{...}}
                         info_rows = _bing_extract_rows(payload_ui)
@@ -2154,7 +2211,11 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
             daily_json_path = Path(out_dir) / "bing-rank-traffic-stats.json"
             try:
                 payload_daily = _bing_call(
-                    "GetRankAndTrafficStats", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=float(config.bing_timeout_s)
+                    "GetRankAndTrafficStats",
+                    params={"siteUrl": site_url},
+                    timeout_s=float(config.bing_timeout_s),
+                    api_key=api_key,
+                    access_token=access_token,
                 )
                 daily_json_path.write_text(json.dumps(payload_daily, ensure_ascii=False, indent=2), encoding="utf-8")
                 daily_rows = _bing_extract_rows(payload_daily)
@@ -2170,6 +2231,7 @@ def _run_bing_api(config: CrawlConfig) -> dict[str, Any]:
                 "enabled": True,
                 "ok": True,
                 "reason": "api",
+                "auth_mode": "oauth" if access_token else "api_key",
                 "site_url": site_url,
                 "user_sites": user_sites[:50],
                 "user_sites_error": sites_err,
@@ -6870,6 +6932,7 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
         bing_days=max(1, int(args.bing_days)),
         bing_timeout_s=max(1.0, float(args.bing_timeout)),
         bing_api_key=(str(args.bing_api_key).strip() if isinstance(args.bing_api_key, str) and str(args.bing_api_key).strip() else None),
+        bing_access_token=((os.environ.get("BING_WEBMASTER_ACCESS_TOKEN") or "").strip() or None),
         bing_fetch_crawl_issues=(not bool(args.bing_no_crawl_issues)),
         bing_fetch_blocked_urls=(not bool(args.bing_no_blocked_urls)),
         bing_fetch_sitemaps=(not bool(args.bing_no_sitemaps)),
@@ -7113,7 +7176,9 @@ def main(argv: list[str]) -> int:
     if config.bing_enabled:
         print("[BING] Fetching Bing data…", flush=True)
         # Prefer API when an API key is available; otherwise fallback to CSV mode.
-        if (config.bing_api_key or os.environ.get("BING_WEBMASTER_API_KEY") or "").strip():
+        if (config.bing_api_key or os.environ.get("BING_WEBMASTER_API_KEY") or "").strip() or (
+            config.bing_access_token or os.environ.get("BING_WEBMASTER_ACCESS_TOKEN") or ""
+        ).strip():
             bing_meta = _run_bing_api(config)
         else:
             bing_meta = _run_bing_csv(config)

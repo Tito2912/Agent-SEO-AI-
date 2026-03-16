@@ -136,6 +136,10 @@ _ACTIVE_JOBS: set[str] = set()
 
 
 _GOOGLE_OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters"
+_GITHUB_OAUTH_SCOPE = "read:user user:email repo"
+_BING_OAUTH_SCOPE = "webmaster.manage offline_access"
+
+_BING_OAUTH_CONNECTION_KEY = "BING_OAUTH_REFRESH_TOKEN"
 
 
 def _mark_job_active(job_id: str, active: bool) -> None:
@@ -352,7 +356,7 @@ def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tupl
             session_ctx.__exit__(None, None, None)
 
 
-def _upsert_user_connection(*, user_id: str, key: str, value: str) -> None:
+def _upsert_user_connection(*, user_id: str, key: str, value: str, meta: dict[str, Any] | None = None) -> None:
     with DB.session() as db:
         row = db.scalar(
             select(UserConnection).where(
@@ -362,6 +366,8 @@ def _upsert_user_connection(*, user_id: str, key: str, value: str) -> None:
         )
         if row:
             row.secret_value = str(value)
+            if meta is not None:
+                row.meta = dict(meta)
             db.add(row)
         else:
             db.add(
@@ -369,7 +375,7 @@ def _upsert_user_connection(*, user_id: str, key: str, value: str) -> None:
                     user_id=str(user_id),
                     key=str(key),
                     secret_value=str(value),
-                    meta={},
+                    meta=(dict(meta) if meta is not None else {}),
                 )
             )
         db.commit()
@@ -386,6 +392,81 @@ def _delete_user_connection(*, user_id: str, key: str) -> None:
         if row:
             db.delete(row)
             db.commit()
+
+
+def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
+    own_session = db is None
+    session = db
+    try:
+        if session is None:
+            session_ctx = DB.session()
+            session = session_ctx.__enter__()
+        else:
+            session_ctx = None
+
+        oauth_row = _user_connection_row(user_id=str(user_id), key=_BING_OAUTH_CONNECTION_KEY, db=session)
+        oauth_meta = _connection_meta(oauth_row)
+        refresh_token = str(getattr(oauth_row, "secret_value", "") or "").strip() if oauth_row else ""
+        if refresh_token:
+            access_token = str(oauth_meta.get("access_token") or "").strip()
+            expires_at = float(oauth_meta.get("expires_at") or 0.0) if oauth_meta.get("expires_at") else 0.0
+            if (not access_token) or expires_at <= (time.time() + 60):
+                client_id, client_secret = _bing_oauth_client()
+                if client_id and client_secret:
+                    token_data = _bing_oauth_refresh_token_data(
+                        refresh_token=refresh_token,
+                        client_id=client_id,
+                        client_secret=client_secret,
+                    )
+                    access_token = str(token_data.get("access_token") or "").strip()
+                    if access_token:
+                        expires_in = int(token_data.get("expires_in") or 3600)
+                        oauth_meta = {
+                            **oauth_meta,
+                            "auth_type": "oauth",
+                            "access_token": access_token,
+                            "expires_at": time.time() + max(60, expires_in),
+                            "scope": str(token_data.get("scope") or oauth_meta.get("scope") or "").strip(),
+                            "token_type": str(token_data.get("token_type") or oauth_meta.get("token_type") or "Bearer"),
+                            "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                        }
+                        oauth_row.meta = oauth_meta
+                        session.add(oauth_row)
+                        session.commit()
+            if access_token:
+                return {
+                    "mode": "oauth",
+                    "source": "user",
+                    "token": access_token,
+                    "refresh_token": refresh_token,
+                    "meta": oauth_meta,
+                    "masked": _mask_secret(access_token),
+                    "source_label": "mon compte",
+                }
+
+        api_key, source = _effective_user_connection_value(user_id=str(user_id), key="BING_WEBMASTER_API_KEY", db=session)
+        if api_key:
+            return {
+                "mode": "api_key",
+                "source": source,
+                "token": api_key,
+                "refresh_token": "",
+                "meta": {},
+                "masked": _mask_secret(api_key) if source == "user" else "fourni par la plateforme",
+                "source_label": "mon compte" if source == "user" else ("plateforme" if source == "system" else "non configuré"),
+            }
+        return {
+            "mode": "none",
+            "source": "none",
+            "token": "",
+            "refresh_token": "",
+            "meta": {},
+            "masked": "—",
+            "source_label": "non configuré",
+        }
+    finally:
+        if own_session and session is not None:
+            session_ctx.__exit__(None, None, None)
 
 
 def _build_user_connection_item(*, user_id: str, key: str, db) -> dict[str, Any]:
@@ -410,6 +491,55 @@ def _build_user_connection_item(*, user_id: str, key: str, db) -> dict[str, Any]
         "has_user_value": has_user_value,
         "help": meta.get("help"),
         "group": str(meta.get("group") or "Autres"),
+    }
+
+
+def _build_github_connection_state(*, user_id: str, db) -> dict[str, Any]:
+    item = _build_user_connection_item(user_id=user_id, key="GITHUB_TOKEN", db=db)
+    row = _user_connection_row(user_id=user_id, key="GITHUB_TOKEN", db=db)
+    meta = _connection_meta(row)
+    auth_type = str(meta.get("auth_type") or ("manual" if item.get("has_user_value") else "")).strip().lower()
+    ready = bool(_github_oauth_client()[0] and _github_oauth_client()[1] and _safe_env("SEO_AGENT_SECRET_KEY"))
+    account_label = str(meta.get("login") or meta.get("name") or "").strip()
+    return {
+        **item,
+        "ready": ready,
+        "auth_type": auth_type,
+        "is_oauth": auth_type == "oauth" and item.get("source") == "user",
+        "is_manual": auth_type == "manual" and item.get("source") == "user",
+        "account_label": account_label,
+        "avatar_url": str(meta.get("avatar_url") or "").strip(),
+    }
+
+
+def _build_netlify_connection_state(*, user_id: str, db) -> dict[str, Any]:
+    item = _build_user_connection_item(user_id=user_id, key="NETLIFY_TOKEN", db=db)
+    row = _user_connection_row(user_id=user_id, key="NETLIFY_TOKEN", db=db)
+    meta = _connection_meta(row)
+    auth_type = str(meta.get("auth_type") or ("manual" if item.get("has_user_value") else "")).strip().lower()
+    ready = bool(_netlify_oauth_client_id() and _safe_env("SEO_AGENT_SECRET_KEY"))
+    account_label = str(meta.get("full_name") or meta.get("email") or meta.get("id") or "").strip()
+    return {
+        **item,
+        "ready": ready,
+        "auth_type": auth_type,
+        "is_oauth": auth_type == "oauth" and item.get("source") == "user",
+        "is_manual": auth_type == "manual" and item.get("source") == "user",
+        "account_label": account_label,
+    }
+
+
+def _build_bing_connection_state(*, user_id: str, db) -> dict[str, Any]:
+    auth = _effective_bing_connection(user_id=user_id, db=db)
+    ready = bool(_bing_oauth_client()[0] and _bing_oauth_client()[1] and _safe_env("SEO_AGENT_SECRET_KEY"))
+    account_label = str(auth.get("meta", {}).get("account_name") or auth.get("meta", {}).get("user_id") or "").strip()
+    return {
+        **auth,
+        "ready": ready,
+        "is_oauth": auth.get("mode") == "oauth" and auth.get("source") == "user",
+        "is_manual": auth.get("mode") == "api_key" and auth.get("source") == "user",
+        "account_label": account_label,
+        "manual_item": _build_user_connection_item(user_id=user_id, key="BING_WEBMASTER_API_KEY", db=db),
     }
 
 
@@ -458,6 +588,26 @@ def _google_oauth_redirect_uri(request: Request) -> str:
     return f"{_public_base_url(request)}/oauth/google/callback"
 
 
+def _provider_oauth_redirect_uri(request: Request, provider: str) -> str:
+    key = f"{str(provider or '').strip().upper()}_OAUTH_REDIRECT_URI"
+    configured = _safe_env(key).rstrip("/")
+    if configured:
+        return configured
+    return f"{_public_base_url(request)}/oauth/{str(provider or '').strip().lower()}/callback"
+
+
+def _github_oauth_client() -> tuple[str, str]:
+    return _safe_env("GITHUB_OAUTH_CLIENT_ID"), _safe_env("GITHUB_OAUTH_CLIENT_SECRET")
+
+
+def _netlify_oauth_client_id() -> str:
+    return _safe_env("NETLIFY_OAUTH_CLIENT_ID")
+
+
+def _bing_oauth_client() -> tuple[str, str]:
+    return _safe_env("BING_OAUTH_CLIENT_ID"), _safe_env("BING_OAUTH_CLIENT_SECRET")
+
+
 def _oauth_state_secret() -> bytes:
     secret = _safe_env("SEO_AGENT_SECRET_KEY")
     if not secret:
@@ -503,6 +653,35 @@ def _oauth_state_decode(state: str) -> dict[str, Any] | None:
     except Exception:
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _user_connection_row(*, user_id: str, key: str, db=None) -> UserConnection | None:
+    normalized_key = str(key or "").strip()
+    if not normalized_key:
+        return None
+
+    own_session = db is None
+    session = db
+    try:
+        if session is None:
+            session_ctx = DB.session()
+            session = session_ctx.__enter__()
+        else:
+            session_ctx = None
+        return session.scalar(
+            select(UserConnection).where(
+                UserConnection.user_id == str(user_id),
+                UserConnection.key == normalized_key,
+            )
+        )
+    finally:
+        if own_session and session is not None:
+            session_ctx.__exit__(None, None, None)
+
+
+def _connection_meta(row: UserConnection | None) -> dict[str, Any]:
+    data = getattr(row, "meta", None) if row is not None else None
+    return dict(data) if isinstance(data, dict) else {}
 
 
 def _gsc_oauth_token_path(user_id: str, slug: str) -> Path:
@@ -621,6 +800,126 @@ def _google_oauth_revoke_token(token: str, *, timeout_s: float = 10.0) -> None:
         requests.post("https://oauth2.googleapis.com/revoke", params={"token": t}, timeout=timeout_s)
     except Exception:
         return
+
+
+def _github_oauth_exchange_code(
+    *,
+    code: str,
+    redirect_uri: str,
+    client_id: str,
+    client_secret: str,
+    timeout_s: float = 30.0,
+) -> dict[str, Any]:
+    resp = requests.post(
+        "https://github.com/login/oauth/access_token",
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "code": code,
+            "redirect_uri": redirect_uri,
+        },
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    data = resp.json()
+    if not isinstance(data, dict):
+        raise RuntimeError("Invalid GitHub token response")
+    if data.get("error"):
+        raise RuntimeError(str(data.get("error_description") or data.get("error") or "github_oauth_error"))
+    return data
+
+
+def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = None, timeout_s: float = 30.0) -> Any:
+    resp = requests.get(
+        f"https://api.github.com{path}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "seo-agent-web",
+        },
+        params=params or {},
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    try:
+        return resp.json()
+    except Exception as e:
+        raise RuntimeError(f"GitHub JSON decode error: {e}") from e
+
+
+def _netlify_api_get(path: str, *, token: str, params: dict[str, Any] | None = None, timeout_s: float = 30.0) -> Any:
+    resp = requests.get(
+        f"https://api.netlify.com{path}",
+        headers={"Authorization": f"Bearer {token}"},
+        params=params or {},
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    try:
+        return resp.json()
+    except Exception as e:
+        raise RuntimeError(f"Netlify JSON decode error: {e}") from e
+
+
+def _bing_oauth_exchange_code(
+    *,
+    code: str,
+    redirect_uri: str,
+    client_id: str,
+    client_secret: str,
+    timeout_s: float = 30.0,
+) -> dict[str, Any]:
+    resp = requests.post(
+        "https://www.bing.com/webmasters/oauth/token",
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+        },
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    data = resp.json()
+    if not isinstance(data, dict):
+        raise RuntimeError("Invalid Bing token response")
+    if data.get("error"):
+        raise RuntimeError(str(data.get("error_description") or data.get("error") or "bing_oauth_error"))
+    return data
+
+
+def _bing_oauth_refresh_token_data(
+    *,
+    refresh_token: str,
+    client_id: str,
+    client_secret: str,
+    timeout_s: float = 20.0,
+) -> dict[str, Any]:
+    resp = requests.post(
+        "https://www.bing.com/webmasters/oauth/token",
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        },
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    data = resp.json()
+    if not isinstance(data, dict):
+        raise RuntimeError("Invalid Bing refresh response")
+    if data.get("error"):
+        raise RuntimeError(str(data.get("error_description") or data.get("error") or "bing_oauth_refresh_error"))
+    return data
 
 
 def _mask_secret(value: str | None) -> str:
@@ -2704,8 +3003,30 @@ def _bing_rank_traffic_series(rows: list[dict[str, Any]], *, start_date: dt.date
     return out
 
 
-def _bing_call(method: str, *, params: dict[str, Any], timeout_s: float) -> Any:
-    response = requests.get(f"https://www.bing.com/webmaster/api.svc/json/{method}", params=params, timeout=timeout_s)
+def _bing_call(
+    method: str,
+    *,
+    params: dict[str, Any],
+    timeout_s: float,
+    api_key: str = "",
+    access_token: str = "",
+) -> Any:
+    request_params = dict(params or {})
+    headers: dict[str, str] = {}
+    token = str(access_token or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        key = str(api_key or "").strip()
+        if not key:
+            raise RuntimeError("bing_credentials_missing")
+        request_params["apikey"] = key
+    response = requests.get(
+        f"https://www.bing.com/webmaster/api.svc/json/{method}",
+        params=request_params,
+        headers=headers,
+        timeout=timeout_s,
+    )
     content_type = response.headers.get("content-type", "")
     if not content_type.startswith("application/json"):
         raise RuntimeError(f"Non-JSON response for {method} (HTTP {response.status_code})")
@@ -2715,9 +3036,16 @@ def _bing_call(method: str, *, params: dict[str, Any], timeout_s: float) -> Any:
     return data
 
 
-def _bing_pick_site_url(*, base_url: str, api_key: str, timeout_s: float, configured: str | None = None) -> tuple[str | None, list[str], str | None]:
+def _bing_pick_site_url(
+    *,
+    base_url: str,
+    timeout_s: float,
+    configured: str | None = None,
+    api_key: str = "",
+    access_token: str = "",
+) -> tuple[str | None, list[str], str | None]:
     try:
-        payload = _bing_call("GetUserSites", params={"apikey": api_key}, timeout_s=timeout_s)
+        payload = _bing_call("GetUserSites", params={}, timeout_s=timeout_s, api_key=api_key, access_token=access_token)
     except Exception as e:
         return None, [], f"{type(e).__name__}: {e}"
 
@@ -2763,9 +3091,10 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
     if not enabled:
         return {"ok": False, "enabled": False, "reason": "disabled"}
 
-    api_key, api_source = _effective_user_connection_value(user_id=str(user_id), key="BING_WEBMASTER_API_KEY")
-    if not api_key:
-        return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_api_key"}
+    auth = _effective_bing_connection(user_id=str(user_id))
+    token = str(auth.get("token") or "").strip()
+    if not token:
+        return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_credentials"}
 
     timeout_s = 20.0
     configured_site_url = str(bing_cfg.get("site_url") or "").strip()
@@ -2774,9 +3103,10 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
     if not site_url:
         site_url, user_sites, sites_error = _bing_pick_site_url(
             base_url=base_url,
-            api_key=api_key,
             timeout_s=timeout_s,
             configured=configured_site_url,
+            api_key=(token if auth.get("mode") == "api_key" else ""),
+            access_token=(token if auth.get("mode") == "oauth" else ""),
         )
         if not site_url:
             return {
@@ -2786,6 +3116,7 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
                 "reason": "site_not_found",
                 "error": sites_error or "bing_site_not_found",
                 "user_sites": user_sites[:50],
+                "auth_mode": str(auth.get("mode") or ""),
             }
 
     today = dt.datetime.now(dt.timezone.utc).date()
@@ -2794,7 +3125,13 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
     start_date = end_date - dt.timedelta(days=days - 1)
 
     try:
-        payload = _bing_call("GetRankAndTrafficStats", params={"apikey": api_key, "siteUrl": site_url}, timeout_s=timeout_s)
+        payload = _bing_call(
+            "GetRankAndTrafficStats",
+            params={"siteUrl": site_url},
+            timeout_s=timeout_s,
+            api_key=(token if auth.get("mode") == "api_key" else ""),
+            access_token=(token if auth.get("mode") == "oauth" else ""),
+        )
         rows = _bing_extract_rows(payload)
     except Exception as e:
         return {
@@ -2803,6 +3140,7 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
             "source": "bing",
             "reason": "request_failed",
             "error": f"{type(e).__name__}: {e}",
+            "auth_mode": str(auth.get("mode") or ""),
         }
 
     daily = _bing_rank_traffic_series(rows, start_date=start_date, end_date=end_date)
@@ -2816,6 +3154,7 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
             "days": days,
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
+            "auth_mode": str(auth.get("mode") or ""),
         }
 
     return {
@@ -2823,7 +3162,8 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
         "enabled": True,
         "source": "bing",
         "live": True,
-        "auth_source": api_source,
+        "auth_source": str(auth.get("source") or ""),
+        "auth_mode": str(auth.get("mode") or ""),
         "site_url": site_url,
         "days": days,
         "start_date": daily[0]["date"],
@@ -2831,6 +3171,7 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
         "daily": daily,
         "totals": _timeseries_totals(daily),
         "data_delay_hint": "Bing Webmaster Tools peut avoir un léger décalage.",
+        "source_label": str(auth.get("source_label") or "bing"),
     }
 
 
@@ -4708,9 +5049,12 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     pagespeed_api_key = str(os.environ.get("PAGESPEED_API_KEY") or "").strip()
     if pagespeed_api_key:
         env_extra["PAGESPEED_API_KEY"] = pagespeed_api_key
-    bing_api_key, _bing_source = _effective_user_connection_value(user_id=str(user_id), key="BING_WEBMASTER_API_KEY")
-    if bing_api_key:
-        env_extra["BING_WEBMASTER_API_KEY"] = bing_api_key
+    bing_auth = _effective_bing_connection(user_id=str(user_id))
+    if str(bing_auth.get("token") or "").strip():
+        if bing_auth.get("mode") == "oauth":
+            env_extra["BING_WEBMASTER_ACCESS_TOKEN"] = str(bing_auth.get("token") or "")
+        elif bing_auth.get("mode") == "api_key":
+            env_extra["BING_WEBMASTER_API_KEY"] = str(bing_auth.get("token") or "")
     cmd = [
         sys.executable,
         "-u",
@@ -5101,6 +5445,90 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             ],
             "links": [{"label": "Ouvrir Bing Webmaster Tools", "url": "https://www.bing.com/webmasters/"}],
         },
+    },
+    "GITHUB_OAUTH_CLIENT_ID": {
+        "label": "GitHub OAuth — Client ID",
+        "hint": "Application OAuth GitHub",
+        "group": "GitHub",
+        "order": 11,
+        "editable": True,
+        "help": {
+            "title": "GitHub OAuth — Client ID / Client secret",
+            "steps": [
+                "Dans GitHub, crée une OAuth App.",
+                "Ajoute comme Homepage URL: <PUBLIC_BASE_URL>.",
+                "Ajoute comme Authorization callback URL: <PUBLIC_BASE_URL>/oauth/github/callback.",
+                "Copie le client ID et le client secret ici.",
+            ],
+            "links": [{"label": "GitHub · OAuth Apps", "url": "https://github.com/settings/developers"}],
+        },
+    },
+    "GITHUB_OAUTH_CLIENT_SECRET": {
+        "label": "GitHub OAuth — Client secret",
+        "hint": "Secret OAuth GitHub",
+        "group": "GitHub",
+        "order": 12,
+        "editable": True,
+    },
+    "GITHUB_OAUTH_REDIRECT_URI": {
+        "label": "GitHub OAuth redirect URI",
+        "hint": "override (optionnel)",
+        "group": "GitHub",
+        "order": 13,
+        "editable": True,
+    },
+    "NETLIFY_OAUTH_CLIENT_ID": {
+        "label": "Netlify OAuth — Client ID",
+        "hint": "Application OAuth Netlify",
+        "group": "Netlify",
+        "order": 21,
+        "editable": True,
+        "help": {
+            "title": "Netlify OAuth — Client ID",
+            "steps": [
+                "Dans Netlify, crée une application OAuth.",
+                "Ajoute comme Redirect URI: <PUBLIC_BASE_URL>/oauth/netlify/callback.",
+                "Copie le client ID ici.",
+            ],
+            "links": [{"label": "Netlify · OAuth applications", "url": "https://app.netlify.com/user/applications"}],
+        },
+    },
+    "NETLIFY_OAUTH_REDIRECT_URI": {
+        "label": "Netlify OAuth redirect URI",
+        "hint": "override (optionnel)",
+        "group": "Netlify",
+        "order": 22,
+        "editable": True,
+    },
+    "BING_OAUTH_CLIENT_ID": {
+        "label": "Bing OAuth — Client ID",
+        "hint": "Application OAuth Bing Webmaster",
+        "group": "Bing",
+        "order": 26,
+        "editable": True,
+        "help": {
+            "title": "Bing Webmaster OAuth — Client ID / Client secret",
+            "steps": [
+                "Dans Bing Webmaster Tools, crée une application OAuth.",
+                "Ajoute comme Redirect URI: <PUBLIC_BASE_URL>/oauth/bing/callback.",
+                "Copie le client ID et le client secret ici.",
+            ],
+            "links": [{"label": "Bing Webmaster Tools", "url": "https://www.bing.com/webmasters/"}],
+        },
+    },
+    "BING_OAUTH_CLIENT_SECRET": {
+        "label": "Bing OAuth — Client secret",
+        "hint": "Secret OAuth Bing Webmaster",
+        "group": "Bing",
+        "order": 27,
+        "editable": True,
+    },
+    "BING_OAUTH_REDIRECT_URI": {
+        "label": "Bing OAuth redirect URI",
+        "hint": "override (optionnel)",
+        "group": "Bing",
+        "order": 28,
+        "editable": True,
     },
     "PAGESPEED_API_KEY": {
         "label": "PageSpeed",
@@ -5736,9 +6164,9 @@ def settings_accounts(request: Request) -> HTMLResponse:
         _import_legacy_projects_for_user(str(user.id))
 
     with DB.session() as db:
-        connection_items = {
-            key: _build_user_connection_item(user_id=str(user.id), key=key, db=db) for key in sorted(_USER_CONNECTION_KEYS)
-        }
+        github_oauth = _build_github_connection_state(user_id=str(user.id), db=db)
+        netlify_oauth = _build_netlify_connection_state(user_id=str(user.id), db=db)
+        bing_oauth = _build_bing_connection_state(user_id=str(user.id), db=db)
         db_projects = list(
             db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
         )
@@ -5785,11 +6213,27 @@ def settings_accounts(request: Request) -> HTMLResponse:
             "request": request,
             "project": None,
             "is_admin": bool(getattr(user, "is_admin", False)),
-            "deploy_items": [
-                connection_items["GITHUB_TOKEN"],
-                connection_items["NETLIFY_TOKEN"],
-            ],
-            "bing_item": connection_items["BING_WEBMASTER_API_KEY"],
+            "github_oauth": {
+                **github_oauth,
+                "connect_url": "/oauth/github/connect?next=/settings/accounts#github-connect-card",
+                "disconnect_url": "/oauth/github/disconnect",
+                "repos_url": "/api/github/repos",
+                "system_url": "/settings/system#github-oauth-system",
+            },
+            "netlify_oauth": {
+                **netlify_oauth,
+                "connect_url": "/oauth/netlify/connect?next=/settings/accounts#netlify-connect-card",
+                "disconnect_url": "/oauth/netlify/disconnect",
+                "sites_url": "/api/netlify/sites",
+                "system_url": "/settings/system#netlify-oauth-system",
+            },
+            "bing_oauth": {
+                **bing_oauth,
+                "connect_url": "/oauth/bing/connect?next=/settings/accounts#bing-connect-card",
+                "disconnect_url": "/oauth/bing/disconnect",
+                "sites_url": "/api/bing/sites",
+                "system_url": "/settings/system#bing-oauth-system",
+            },
             "bing_projects": bing_projects,
             "gsc_oauth": {
                 "configured": oauth_ready,
@@ -5823,7 +6267,9 @@ def settings_accounts_save(
             v = (value or "").strip()
             if not v:
                 return RedirectResponse(url="/settings/accounts", status_code=303)
-            _upsert_user_connection(user_id=str(user.id), key=key, value=v)
+            if key == "BING_WEBMASTER_API_KEY":
+                _delete_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY)
+            _upsert_user_connection(user_id=str(user.id), key=key, value=v, meta={"auth_type": "manual"})
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
 
@@ -5844,6 +6290,41 @@ def settings_system(request: Request) -> HTMLResponse:
                 _build_env_setting_item("GOOGLE_OAUTH_CLIENT_SECRET"),
                 _build_env_setting_item("PUBLIC_BASE_URL"),
                 _build_env_setting_item("GOOGLE_OAUTH_REDIRECT_URI"),
+                _build_env_setting_item("SEO_AGENT_SECRET_KEY"),
+            ],
+        },
+        {
+            "id": "github-oauth-system",
+            "title": "OAuth GitHub — plateforme",
+            "description": "Configuration interne requise pour connecter les comptes GitHub des utilisatrices.",
+            "items": [
+                _build_env_setting_item("GITHUB_OAUTH_CLIENT_ID"),
+                _build_env_setting_item("GITHUB_OAUTH_CLIENT_SECRET"),
+                _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("GITHUB_OAUTH_REDIRECT_URI"),
+                _build_env_setting_item("SEO_AGENT_SECRET_KEY"),
+            ],
+        },
+        {
+            "id": "netlify-oauth-system",
+            "title": "OAuth Netlify — plateforme",
+            "description": "Configuration interne requise pour connecter les comptes Netlify des utilisatrices.",
+            "items": [
+                _build_env_setting_item("NETLIFY_OAUTH_CLIENT_ID"),
+                _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("NETLIFY_OAUTH_REDIRECT_URI"),
+                _build_env_setting_item("SEO_AGENT_SECRET_KEY"),
+            ],
+        },
+        {
+            "id": "bing-oauth-system",
+            "title": "OAuth Bing — plateforme",
+            "description": "Configuration interne requise pour connecter les comptes Bing Webmaster Tools des utilisatrices.",
+            "items": [
+                _build_env_setting_item("BING_OAUTH_CLIENT_ID"),
+                _build_env_setting_item("BING_OAUTH_CLIENT_SECRET"),
+                _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("BING_OAUTH_REDIRECT_URI"),
                 _build_env_setting_item("SEO_AGENT_SECRET_KEY"),
             ],
         },
@@ -6316,6 +6797,397 @@ def project_gsc_oauth_disconnect(request: Request, slug: str) -> RedirectRespons
     return RedirectResponse(url=f"/projects/{slug}/settings/crawl?msg={quote('Google déconnecté.')}", status_code=303)
 
 
+@app.get("/oauth/github/connect")
+def github_oauth_connect(request: Request, next: str | None = None) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    client_id, client_secret = _github_oauth_client()
+    return_to = _safe_next_path(next or "/settings/accounts#github-connect-card")
+    if not client_id or not client_secret:
+        return RedirectResponse(
+            url=_path_with_flash(return_to, err="GitHub OAuth non configuré (client id/secret)."),
+            status_code=303,
+        )
+    try:
+        state = _oauth_state_encode(
+            {
+                "provider": "github",
+                "user_id": str(user.id),
+                "ts": int(time.time()),
+                "nonce": uuid.uuid4().hex,
+                "next": return_to,
+            }
+        )
+    except Exception as e:
+        return RedirectResponse(url=_path_with_flash(return_to, err=str(e) or "OAuth state error"), status_code=303)
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": _provider_oauth_redirect_uri(request, "github"),
+        "scope": _GITHUB_OAUTH_SCOPE,
+        "state": state,
+    }
+    return RedirectResponse(url=f"https://github.com/login/oauth/authorize?{urlencode(params)}", status_code=303)
+
+
+@app.get("/oauth/github/callback")
+def github_oauth_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    payload = _oauth_state_decode(state or "")
+    return_to = _safe_next_path(payload.get("next") if isinstance(payload, dict) else "/settings/accounts#github-connect-card")
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    if not isinstance(payload, dict) or payload.get("provider") != "github" or str(payload.get("user_id") or "") != str(user.id):
+        return RedirectResponse(url=_path_with_flash(return_to, err="OAuth state invalide."), status_code=303)
+    if error:
+        return RedirectResponse(
+            url=_path_with_flash(return_to, err=(error_description or error or "GitHub OAuth refusé")[:240]),
+            status_code=303,
+        )
+    if not code:
+        return RedirectResponse(url=_path_with_flash(return_to, err="Code OAuth GitHub manquant."), status_code=303)
+
+    client_id, client_secret = _github_oauth_client()
+    if not client_id or not client_secret:
+        return RedirectResponse(url=_path_with_flash(return_to, err="GitHub OAuth non configuré."), status_code=303)
+
+    try:
+        token_data = _github_oauth_exchange_code(
+            code=str(code),
+            redirect_uri=_provider_oauth_redirect_uri(request, "github"),
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+        access_token = str(token_data.get("access_token") or "").strip()
+        if not access_token:
+            raise RuntimeError("Missing access_token")
+        profile = _github_api_get("/user", token=access_token)
+        meta = {
+            "auth_type": "oauth",
+            "login": str(profile.get("login") or "").strip() if isinstance(profile, dict) else "",
+            "name": str(profile.get("name") or "").strip() if isinstance(profile, dict) else "",
+            "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
+            "html_url": str(profile.get("html_url") or "").strip() if isinstance(profile, dict) else "",
+            "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+            "scope": str(token_data.get("scope") or "").strip(),
+        }
+        _upsert_user_connection(user_id=str(user.id), key="GITHUB_TOKEN", value=access_token, meta=meta)
+    except Exception as e:
+        return RedirectResponse(url=_path_with_flash(return_to, err=f"GitHub OAuth: {type(e).__name__}: {e}"), status_code=303)
+    return RedirectResponse(url=_path_with_flash(return_to, msg="GitHub connecté."), status_code=303)
+
+
+@app.post("/oauth/github/disconnect")
+def github_oauth_disconnect(request: Request, next: str = Form(default="/settings/accounts#github-connect-card")) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    _delete_user_connection(user_id=str(user.id), key="GITHUB_TOKEN")
+    return RedirectResponse(url=_path_with_flash(next, msg="GitHub déconnecté."), status_code=303)
+
+
+@app.get("/api/github/repos")
+def github_repos(request: Request) -> JSONResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    if not token:
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    if source != "user":
+        return JSONResponse({"ok": False, "error": "Connecte ton propre compte GitHub pour lister tes dépôts."}, status_code=400)
+    try:
+        repos: list[dict[str, Any]] = []
+        page = 1
+        while page <= 3:
+            payload = _github_api_get(
+                "/user/repos",
+                token=token,
+                params={"per_page": 100, "page": page, "sort": "updated", "affiliation": "owner,collaborator,organization_member"},
+            )
+            if not isinstance(payload, list) or not payload:
+                break
+            for repo in payload:
+                if not isinstance(repo, dict):
+                    continue
+                repos.append(
+                    {
+                        "full_name": str(repo.get("full_name") or "").strip(),
+                        "name": str(repo.get("name") or "").strip(),
+                        "private": bool(repo.get("private")),
+                        "default_branch": str(repo.get("default_branch") or "").strip(),
+                        "html_url": str(repo.get("html_url") or "").strip(),
+                        "homepage": str(repo.get("homepage") or "").strip(),
+                    }
+                )
+            if len(payload) < 100:
+                break
+            page += 1
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"GitHubError: {type(e).__name__}: {e}"}, status_code=400)
+    return JSONResponse({"ok": True, "repos": repos})
+
+
+@app.get("/oauth/netlify/connect")
+def netlify_oauth_connect(request: Request, next: str | None = None) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    client_id = _netlify_oauth_client_id()
+    return_to = _safe_next_path(next or "/settings/accounts#netlify-connect-card")
+    if not client_id:
+        return RedirectResponse(url=_path_with_flash(return_to, err="Netlify OAuth non configuré (client id)."), status_code=303)
+    try:
+        state = _oauth_state_encode(
+            {
+                "provider": "netlify",
+                "user_id": str(user.id),
+                "ts": int(time.time()),
+                "nonce": uuid.uuid4().hex,
+                "next": return_to,
+            }
+        )
+    except Exception as e:
+        return RedirectResponse(url=_path_with_flash(return_to, err=str(e) or "OAuth state error"), status_code=303)
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": _provider_oauth_redirect_uri(request, "netlify"),
+        "response_type": "token",
+        "state": state,
+    }
+    return RedirectResponse(url=f"https://app.netlify.com/authorize?{urlencode(params)}", status_code=303)
+
+
+@app.get("/oauth/netlify/callback", response_class=HTMLResponse)
+def netlify_oauth_callback_page(request: Request) -> HTMLResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    resp = templates.TemplateResponse(
+        "oauth_fragment_callback.html",
+        {
+            "request": request,
+            "provider_label": "Netlify",
+            "complete_url": "/oauth/netlify/callback/complete",
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/oauth/netlify/callback/complete")
+def netlify_oauth_complete(
+    request: Request,
+    access_token: str = Form(default=""),
+    state: str = Form(default=""),
+    error: str = Form(default=""),
+    error_description: str = Form(default=""),
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    payload = _oauth_state_decode(state or "")
+    return_to = _safe_next_path(payload.get("next") if isinstance(payload, dict) else "/settings/accounts#netlify-connect-card")
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    if not isinstance(payload, dict) or payload.get("provider") != "netlify" or str(payload.get("user_id") or "") != str(user.id):
+        return RedirectResponse(url=_path_with_flash(return_to, err="OAuth state invalide."), status_code=303)
+    if error:
+        return RedirectResponse(
+            url=_path_with_flash(return_to, err=(error_description or error or "Netlify OAuth refusé")[:240]),
+            status_code=303,
+        )
+    token = str(access_token or "").strip()
+    if not token:
+        return RedirectResponse(url=_path_with_flash(return_to, err="Token Netlify manquant."), status_code=303)
+    try:
+        profile = _netlify_api_get("/api/v1/user", token=token)
+        meta = {
+            "auth_type": "oauth",
+            "id": str(profile.get("id") or "").strip() if isinstance(profile, dict) else "",
+            "full_name": str(profile.get("full_name") or "").strip() if isinstance(profile, dict) else "",
+            "email": str(profile.get("email") or "").strip() if isinstance(profile, dict) else "",
+            "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
+            "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        }
+        _upsert_user_connection(user_id=str(user.id), key="NETLIFY_TOKEN", value=token, meta=meta)
+    except Exception as e:
+        return RedirectResponse(url=_path_with_flash(return_to, err=f"Netlify OAuth: {type(e).__name__}: {e}"), status_code=303)
+    return RedirectResponse(url=_path_with_flash(return_to, msg="Netlify connecté."), status_code=303)
+
+
+@app.post("/oauth/netlify/disconnect")
+def netlify_oauth_disconnect(request: Request, next: str = Form(default="/settings/accounts#netlify-connect-card")) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    _delete_user_connection(user_id=str(user.id), key="NETLIFY_TOKEN")
+    return RedirectResponse(url=_path_with_flash(next, msg="Netlify déconnecté."), status_code=303)
+
+
+@app.get("/api/netlify/sites")
+def netlify_sites(request: Request) -> JSONResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="NETLIFY_TOKEN")
+    if not token:
+        return JSONResponse({"ok": False, "error": "Netlify non connecté."}, status_code=400)
+    if source != "user":
+        return JSONResponse({"ok": False, "error": "Connecte ton propre compte Netlify pour lister tes sites."}, status_code=400)
+
+    try:
+        sites: list[dict[str, Any]] = []
+        page = 1
+        while page <= 5:
+            payload = _netlify_api_get("/api/v1/sites", token=token, params={"per_page": 100, "page": page})
+            if not isinstance(payload, list) or not payload:
+                break
+            for site in payload:
+                if not isinstance(site, dict):
+                    continue
+                custom_domains = [str(v or "").strip() for v in (site.get("custom_domain") and [site.get("custom_domain")] or []) if str(v or "").strip()]
+                custom_domains.extend([str(v or "").strip() for v in (site.get("domain_aliases") or []) if str(v or "").strip()])
+                primary_url = ""
+                for domain in custom_domains:
+                    normalized = _normalize_base_url(domain)
+                    if normalized:
+                        primary_url = normalized
+                        break
+                if not primary_url:
+                    primary_url = _normalize_base_url(str(site.get("ssl_url") or site.get("url") or "")) or ""
+                sites.append(
+                    {
+                        "site_id": str(site.get("id") or "").strip(),
+                        "site_url": primary_url,
+                        "site_name": str(site.get("name") or primary_url or "").strip(),
+                        "admin_url": str(site.get("admin_url") or "").strip(),
+                    }
+                )
+            if len(payload) < 100:
+                break
+            page += 1
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"NetlifyError: {type(e).__name__}: {e}"}, status_code=400)
+
+    existing_by_base = _db_project_lookup_by_base_url(str(user.id))
+    items: list[dict[str, Any]] = []
+    for site in sites:
+        base = str(site.get("site_url") or "").strip()
+        existing_slug = existing_by_base.get(base)
+        items.append(
+            {
+                "site_url": base,
+                "import_base_url": base,
+                "domain": (urlsplit(base).hostname or "").lower() if base else "",
+                "already_imported": bool(existing_slug),
+                "project_slug": existing_slug or "",
+                "site_name": str(site.get("site_name") or "").strip(),
+            }
+        )
+    return JSONResponse({"ok": True, "sites": items})
+
+
+@app.get("/oauth/bing/connect")
+def bing_oauth_connect(request: Request, next: str | None = None) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    client_id, client_secret = _bing_oauth_client()
+    return_to = _safe_next_path(next or "/settings/accounts#bing-connect-card")
+    if not client_id or not client_secret:
+        return RedirectResponse(url=_path_with_flash(return_to, err="Bing OAuth non configuré (client id/secret)."), status_code=303)
+    try:
+        state = _oauth_state_encode(
+            {
+                "provider": "bing",
+                "user_id": str(user.id),
+                "ts": int(time.time()),
+                "nonce": uuid.uuid4().hex,
+                "next": return_to,
+            }
+        )
+    except Exception as e:
+        return RedirectResponse(url=_path_with_flash(return_to, err=str(e) or "OAuth state error"), status_code=303)
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": _provider_oauth_redirect_uri(request, "bing"),
+        "response_type": "code",
+        "scope": _BING_OAUTH_SCOPE,
+        "state": state,
+    }
+    return RedirectResponse(url=f"https://www.bing.com/webmasters/oauth/authorize?{urlencode(params)}", status_code=303)
+
+
+@app.get("/oauth/bing/callback")
+def bing_oauth_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    payload = _oauth_state_decode(state or "")
+    return_to = _safe_next_path(payload.get("next") if isinstance(payload, dict) else "/settings/accounts#bing-connect-card")
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    if not isinstance(payload, dict) or payload.get("provider") != "bing" or str(payload.get("user_id") or "") != str(user.id):
+        return RedirectResponse(url=_path_with_flash(return_to, err="OAuth state invalide."), status_code=303)
+    if error:
+        return RedirectResponse(
+            url=_path_with_flash(return_to, err=(error_description or error or "Bing OAuth refusé")[:240]),
+            status_code=303,
+        )
+    if not code:
+        return RedirectResponse(url=_path_with_flash(return_to, err="Code OAuth Bing manquant."), status_code=303)
+
+    client_id, client_secret = _bing_oauth_client()
+    if not client_id or not client_secret:
+        return RedirectResponse(url=_path_with_flash(return_to, err="Bing OAuth non configuré."), status_code=303)
+    try:
+        token_data = _bing_oauth_exchange_code(
+            code=str(code),
+            redirect_uri=_provider_oauth_redirect_uri(request, "bing"),
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+        refresh_token = str(token_data.get("refresh_token") or "").strip()
+        access_token = str(token_data.get("access_token") or "").strip()
+        if not refresh_token or not access_token:
+            raise RuntimeError("Missing refresh_token/access_token")
+        expires_in = int(token_data.get("expires_in") or 3600)
+        meta = {
+            "auth_type": "oauth",
+            "access_token": access_token,
+            "expires_at": time.time() + max(60, expires_in),
+            "scope": str(token_data.get("scope") or "").strip(),
+            "token_type": str(token_data.get("token_type") or "Bearer").strip(),
+            "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        }
+        _upsert_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY, value=refresh_token, meta=meta)
+        _delete_user_connection(user_id=str(user.id), key="BING_WEBMASTER_API_KEY")
+    except Exception as e:
+        return RedirectResponse(url=_path_with_flash(return_to, err=f"Bing OAuth: {type(e).__name__}: {e}"), status_code=303)
+    return RedirectResponse(url=_path_with_flash(return_to, msg="Bing connecté."), status_code=303)
+
+
+@app.post("/oauth/bing/disconnect")
+def bing_oauth_disconnect(request: Request, next: str = Form(default="/settings/accounts#bing-connect-card")) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    _delete_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY)
+    return RedirectResponse(url=_path_with_flash(next, msg="Bing déconnecté."), status_code=303)
+
+
 @app.get("/api/projects/{slug}/gsc/properties")
 def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
     _ = _db_project_or_404(request, slug)
@@ -6495,22 +7367,26 @@ def bing_sites(request: Request) -> JSONResponse:
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
 
     user_id = str(getattr(user, "id", "") or "")
-    api_key, source = _effective_user_connection_value(
-        user_id=user_id,
-        key="BING_WEBMASTER_API_KEY",
-    )
-    if not api_key:
-        return JSONResponse({"ok": False, "error": "BING_WEBMASTER_API_KEY not set"}, status_code=400)
-    if source != "user":
+    auth = _effective_bing_connection(user_id=user_id)
+    if not auth.get("token"):
+        return JSONResponse({"ok": False, "error": "Bing non connecté."}, status_code=400)
+    if auth.get("source") != "user":
         return JSONResponse(
-            {"ok": False, "error": "Connecte ta propre clé Bing pour lister et importer tes sites."},
+            {"ok": False, "error": "Connecte ton propre compte Bing pour lister et importer tes sites."},
             status_code=400,
         )
 
     try:
+        params: dict[str, Any] = {}
+        headers: dict[str, str] = {}
+        if auth.get("mode") == "oauth":
+            headers["Authorization"] = f"Bearer {auth.get('token')}"
+        else:
+            params["apikey"] = str(auth.get("token") or "")
         r = requests.get(
             "https://www.bing.com/webmaster/api.svc/json/GetUserSites",
-            params={"apikey": api_key},
+            params=params,
+            headers=headers,
             timeout=20,
         )
         data = r.json() if r.headers.get("content-type", "").startswith("application/json") else None
@@ -7018,9 +7894,7 @@ def project_overview(
         "bing": {
             "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
             "days": int(effective_bing.get("days") or 28),
-            "api_ready": bool(
-                _effective_user_connection_value(user_id=str(getattr(user, "id", "")), key="BING_WEBMASTER_API_KEY")[0]
-            ),
+            "credentials_ready": bool(_effective_bing_connection(user_id=str(getattr(user, "id", ""))).get("token")),
         },
     }
     plan_key = "free"
@@ -7105,9 +7979,8 @@ def project_crawl_settings(
         "settings_url": "/settings/accounts#gsc-oauth-card",
         "system_url": "/settings/system#gsc-oauth-system",
     }
-    bing_api_ready = bool(
-        _effective_user_connection_value(user_id=str(getattr(user, "id", "")), key="BING_WEBMASTER_API_KEY")[0]
-    )
+    bing_auth = _effective_bing_connection(user_id=str(getattr(user, "id", "")))
+    bing_api_ready = bool(bing_auth.get("token"))
     resp = templates.TemplateResponse(
         "crawl_settings.html",
         {
@@ -7121,6 +7994,7 @@ def project_crawl_settings(
             "gsc_oauth": gsc_oauth,
             "bing": bing,
             "bing_api_ready": bing_api_ready,
+            "bing_auth_mode": str(bing_auth.get("mode") or ""),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -8984,6 +9858,34 @@ def job_detail(request: Request, job_id: str) -> HTMLResponse:
     return resp
 
 
+def _cancel_queued_job(job: Job) -> None:
+    """Cancels a queued job and refunds any reserved quota."""
+    result = job.result if isinstance(job.result, dict) else {}
+    owner_id = str(result.get("user_id") or "").strip()
+    try:
+        reserved = int(result.get("quota_reserved_pages") or 0)
+    except Exception:
+        reserved = 0
+    skip_billing = bool(result.get("skip_billing") or False)
+
+    if reserved > 0 and (not skip_billing) and owner_id:
+        with DB.session() as db:
+            billing.usage_add(
+                db,
+                user_id=owner_id,
+                metric="pages_crawled_month",
+                amount=-int(reserved),
+                meta={"kind": "crawl_cancel_refund", "job_id": job.id, "reserved_pages": int(reserved)},
+            )
+        if isinstance(job.result, dict):
+            job.result["quota_reserved_pages"] = 0
+
+    job.status = "canceled"
+    job.returncode = 0
+    job.finished_at = time.time()
+    _save_job(job)
+
+
 @app.post("/jobs/{job_id}/cancel")
 def job_cancel(request: Request, job_id: str) -> RedirectResponse:
     job = _load_job(job_id)
@@ -9000,31 +9902,8 @@ def job_cancel(request: Request, job_id: str) -> RedirectResponse:
     if job.status in {"done", "failed", "canceled"}:
         return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
-    # If the job is still queued, cancel immediately and refund any reserved quota.
     if job.status == "queued":
-        try:
-            reserved = int(result.get("quota_reserved_pages") or 0) if isinstance(result, dict) else 0
-        except Exception:
-            reserved = 0
-        skip_billing = bool(result.get("skip_billing") or False) if isinstance(result, dict) else False
-        if reserved > 0 and (not skip_billing) and owner_id:
-            with DB.session() as db:
-                billing.usage_add(
-                    db,
-                    user_id=owner_id,
-                    metric="pages_crawled_month",
-                    amount=-int(reserved),
-                    meta={"kind": "crawl_cancel_refund", "job_id": job_id, "reserved_pages": int(reserved)},
-                )
-            try:
-                if isinstance(job.result, dict):
-                    job.result["quota_reserved_pages"] = 0
-            except Exception:
-                pass
-        job.status = "canceled"
-        job.returncode = 0
-        job.finished_at = time.time()
-        _save_job(job)
+        _cancel_queued_job(job)
         return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
     # If running: request cancellation. The subprocess loop polls DB status and will terminate.
@@ -9109,7 +9988,12 @@ def job_api(request: Request, job_id: str, tail: int = 20_000) -> JSONResponse:
 def _apply_corrections_worker(plan_path_str: str):
     """
     Reads a corrections plan and applies the changes to the target files.
+
     NOTE: This is a blocking operation and should be run in a background thread/process.
+    WARNING: This function directly modifies files on the filesystem. This is powerful but
+    inherently risky. For a more robust and safer workflow, consider changing this
+    to generate a Git branch with the changes and open a pull request. This would
+    provide a clear, reviewable audit trail before any changes go live.
     """
     try:
         plan_path = _resolve_path_under_root(plan_path_str, DEFAULT_RUNS_DIR)

@@ -39,6 +39,24 @@ services:
         sync: false
       - key: GOOGLE_OAUTH_CLIENT_SECRET
         sync: false
+      - key: GOOGLE_OAUTH_REDIRECT_URI
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_OAUTH_REDIRECT_URI
+        sync: false
+      - key: NETLIFY_OAUTH_CLIENT_ID
+        sync: false
+      - key: NETLIFY_OAUTH_REDIRECT_URI
+        sync: false
+      - key: BING_OAUTH_CLIENT_ID
+        sync: false
+      - key: BING_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: BING_OAUTH_REDIRECT_URI
+        sync: false
       - key: PUBLIC_BASE_URL
         sync: false
       - key: PAGESPEED_API_KEY

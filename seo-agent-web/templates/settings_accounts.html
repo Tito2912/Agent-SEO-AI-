@@ -151,7 +151,7 @@
     <div class="settings-section-head">
       <div>
         <div class="settings-section-title">Search &amp; Analytics</div>
-        <div class="muted small">Google = connexion OAuth projet par projet. Bing = clé API au niveau du compte, puis activation par projet.</div>
+        <div class="muted small">Google = connexion OAuth projet par projet. Bing = connexion compte au niveau utilisateur, puis activation par projet.</div>
       </div>
     </div>
 
@@ -246,15 +246,19 @@
         <div class="setting-head">
           <div>
             <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
-            <div class="muted small">La clé Bing est liée à ton compte. L’état des projets ci-dessous indique seulement si le module Bing est activé dans leur crawl.</div>
+            <div class="muted small">Connexion compte prioritaire via OAuth. La clé API reste disponible uniquement en fallback avancé.</div>
           </div>
           <div class="setting-actions">
-            {% if bing_item.source == "user" %}
-              <span class="badge ok">clé connectée</span>
-            {% elif bing_item.source == "system" %}
-              <span class="badge notice">clé plateforme</span>
+            {% if bing_oauth.is_oauth %}
+              <span class="badge ok">compte connecté</span>
+            {% elif bing_oauth.is_manual %}
+              <span class="badge notice">clé manuelle</span>
+            {% elif bing_oauth.source == "system" %}
+              <span class="badge notice">fallback plateforme</span>
+            {% elif bing_oauth.ready %}
+              <span class="badge ok">oauth disponible</span>
             {% else %}
-              <span class="badge notice">à configurer</span>
+              <span class="badge notice">oauth indisponible</span>
             {% endif %}
           </div>
         </div>
@@ -262,12 +266,56 @@
         <div class="kv setting-kv">
           <div class="kv-item">
             <span class="muted">Source</span>
-            <div class="mono">{{ bing_item.source_label }}</div>
+            <div class="mono">{{ bing_oauth.source_label }}</div>
           </div>
           <div class="kv-item">
             <span class="muted">Actif</span>
-            <div class="mono">{{ bing_item.masked or "—" }}</div>
+            <div class="mono">{{ bing_oauth.masked or "—" }}</div>
           </div>
+          <div class="kv-item">
+            <span class="muted">Mode</span>
+            <div class="mono">
+              {% if bing_oauth.is_oauth %}
+                oauth compte
+              {% elif bing_oauth.is_manual %}
+                clé api manuelle
+              {% elif bing_oauth.source == "system" %}
+                fallback plateforme
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if bing_oauth.account_label %}
+          <p class="muted small setting-note">Compte Bing : <span class="mono">{{ bing_oauth.account_label }}</span></p>
+        {% endif %}
+
+        <div class="oauth-project-actions" style="margin-top:12px;">
+          {% if bing_oauth.ready %}
+            <a class="btn {% if not bing_oauth.is_oauth %}primary{% endif %}" href="{{ bing_oauth.connect_url }}">
+              {% if bing_oauth.is_oauth %}Reconnecter Bing{% else %}Connecter Bing{% endif %}
+            </a>
+          {% elif is_admin %}
+            <a class="btn" href="{{ bing_oauth.system_url }}">Configurer OAuth plateforme</a>
+          {% else %}
+            <span class="muted small">Connexion Bing indisponible pour le moment.</span>
+          {% endif %}
+          {% if bing_oauth.is_oauth %}
+            <form method="post" action="{{ bing_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="next" value="/settings/accounts#bing-connect-card" />
+              <button
+                class="btn danger"
+                type="submit"
+                onclick="return confirm('Déconnecter Bing pour ce compte ?');"
+              >
+                Déconnecter
+              </button>
+            </form>
+          {% endif %}
+          <button class="btn" type="button" id="bing-test-btn">Tester</button>
+          <span class="muted small" id="bing-test-result"></span>
         </div>
 
         {% if bing_projects %}
@@ -280,12 +328,12 @@
                   <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
                 </div>
                 <div class="oauth-project-actions">
-                  {% if project_item.bing_enabled and bing_item.source == "user" %}
+                  {% if project_item.bing_enabled and bing_oauth.source == "user" %}
                     <span class="badge ok">module prêt</span>
-                  {% elif project_item.bing_enabled and bing_item.source == "system" %}
-                    <span class="badge notice">clé plateforme</span>
+                  {% elif project_item.bing_enabled and bing_oauth.source == "system" %}
+                    <span class="badge notice">fallback plateforme</span>
                   {% elif project_item.bing_enabled %}
-                    <span class="badge error">clé manquante</span>
+                    <span class="badge error">compte manquant</span>
                   {% else %}
                     <span class="badge notice">module désactivé</span>
                   {% endif %}
@@ -296,15 +344,8 @@
           </div>
         {% endif %}
 
-        <p class="muted small setting-note">
-          Un projet peut avoir Bing activé dans son crawl, tout en restant inutilisable si aucune clé Bing n’est connectée.
-        </p>
-        {% if bing_item.source == "system" %}
-          <p class="muted small setting-note">La clé plateforme peut servir au crawl, mais l’import des sites Bing nécessite ta propre clé.</p>
-        {% endif %}
-
-        <details class="setting-details" {% if bing_item.source == "none" %}open{% endif %}>
-          <summary>Connecter Bing</summary>
+        <details class="setting-details" {% if bing_oauth.source == "none" and not bing_oauth.ready %}open{% endif %}>
+          <summary>Mode avancé : clé API manuelle</summary>
           <form method="post" action="/settings/accounts" class="setting-form">
             <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
             <label>
@@ -312,7 +353,7 @@
               <input type="password" name="value" placeholder="Coller la clé Bing Webmaster…" autocomplete="new-password" />
             </label>
             <div class="modal-actions between">
-              {% if bing_item.has_user_value %}
+              {% if bing_oauth.manual_item.has_user_value %}
                 <button
                   class="btn danger"
                   type="submit"
@@ -325,26 +366,22 @@
               {% else %}
                 <span></span>
               {% endif %}
-              <div style="display:flex; gap:10px; align-items:center;">
-                <button class="btn" type="button" id="bing-test-btn">Tester</button>
-                <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-              </div>
+              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
             </div>
           </form>
         </details>
 
-        <div class="muted small" id="bing-test-result" style="margin-top:10px;"></div>
         <div class="setting-note">
           <div class="card-title-row" style="margin-top:16px;">
             <h3 style="margin:0; font-size:15px;">Sites Bing importables</h3>
             <div style="display:flex; gap:8px; align-items:center;">
               <button class="btn" type="button" id="bing-load-sites">Charger les sites Bing</button>
-              <span class="muted small" id="bing-sites-status">Charge les sites accessibles depuis ta clé Bing.</span>
+              <span class="muted small" id="bing-sites-status">Charge les sites accessibles depuis ton compte Bing.</span>
             </div>
           </div>
           <div class="oauth-project-list" id="bing-sites-list"></div>
         </div>
-        {{ help_dialog(bing_item) }}
+        {{ help_dialog(bing_oauth.manual_item) }}
       </section>
     </div>
   </div>
@@ -353,14 +390,210 @@
     <div class="settings-section-head">
       <div>
         <div class="settings-section-title">Déploiement</div>
-        <div class="muted small">Tokens personnels pour GitHub et Netlify.</div>
+        <div class="muted small">Connecte tes comptes GitHub et Netlify. Les tokens manuels restent disponibles en fallback avancé.</div>
       </div>
     </div>
 
     <div class="grid two">
-      {% for item in deploy_items %}
-        {{ connection_card(item) }}
-      {% endfor %}
+      <section class="card setting-card" id="github-connect-card">
+        <div class="setting-head">
+          <div>
+            <h2 class="setting-title">GitHub</h2>
+            <div class="muted small">Compte utilisé pour sélectionner les dépôts et préparer les flux de fix/deploy.</div>
+          </div>
+          <div class="setting-actions">
+            {% if github_oauth.is_oauth %}
+              <span class="badge ok">compte connecté</span>
+            {% elif github_oauth.is_manual %}
+              <span class="badge notice">token manuel</span>
+            {% elif github_oauth.source == "system" %}
+              <span class="badge notice">fallback plateforme</span>
+            {% elif github_oauth.ready %}
+              <span class="badge ok">oauth disponible</span>
+            {% else %}
+              <span class="badge notice">oauth indisponible</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="kv setting-kv">
+          <div class="kv-item">
+            <span class="muted">Source</span>
+            <div class="mono">{{ github_oauth.source_label }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Actif</span>
+            <div class="mono">{{ github_oauth.masked or "—" }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Compte</span>
+            <div class="mono">{{ github_oauth.account_label or "—" }}</div>
+          </div>
+        </div>
+
+        <div class="oauth-project-actions" style="margin-top:12px;">
+          {% if github_oauth.ready %}
+            <a class="btn {% if not github_oauth.is_oauth %}primary{% endif %}" href="{{ github_oauth.connect_url }}">
+              {% if github_oauth.is_oauth %}Reconnecter GitHub{% else %}Connecter GitHub{% endif %}
+            </a>
+          {% elif is_admin %}
+            <a class="btn" href="{{ github_oauth.system_url }}">Configurer OAuth plateforme</a>
+          {% else %}
+            <span class="muted small">Connexion GitHub indisponible pour le moment.</span>
+          {% endif %}
+          {% if github_oauth.source == "user" %}
+            <form method="post" action="{{ github_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="next" value="/settings/accounts#github-connect-card" />
+              <button
+                class="btn danger"
+                type="submit"
+                onclick="return confirm('Déconnecter GitHub pour ce compte ?');"
+              >
+                Déconnecter
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        <details class="setting-details">
+          <summary>Mode avancé : token manuel</summary>
+          <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="key" value="GITHUB_TOKEN" />
+            <label>
+              Token GitHub
+              <input type="password" name="value" placeholder="Coller le token GitHub…" autocomplete="new-password" />
+            </label>
+            <div class="modal-actions between">
+              {% if github_oauth.has_user_value %}
+                <button
+                  class="btn danger"
+                  type="submit"
+                  name="op"
+                  value="clear"
+                  onclick="return confirm('Supprimer ce token GitHub ?');"
+                >
+                  Supprimer mon token
+                </button>
+              {% else %}
+                <span></span>
+              {% endif %}
+              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+            </div>
+          </form>
+        </details>
+
+        <div class="setting-note">
+          <div class="card-title-row" style="margin-top:16px;">
+            <h3 style="margin:0; font-size:15px;">Dépôts GitHub accessibles</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn" type="button" id="github-load-repos">Charger les dépôts</button>
+              <span class="muted small" id="github-repos-status">Charge les dépôts accessibles depuis ton compte GitHub.</span>
+            </div>
+          </div>
+          <div class="oauth-project-list" id="github-repos-list"></div>
+        </div>
+        {{ help_dialog(github_oauth) }}
+      </section>
+
+      <section class="card setting-card" id="netlify-connect-card">
+        <div class="setting-head">
+          <div>
+            <h2 class="setting-title">Netlify</h2>
+            <div class="muted small">Compte utilisé pour lister les sites et préparer les workflows de déploiement.</div>
+          </div>
+          <div class="setting-actions">
+            {% if netlify_oauth.is_oauth %}
+              <span class="badge ok">compte connecté</span>
+            {% elif netlify_oauth.is_manual %}
+              <span class="badge notice">token manuel</span>
+            {% elif netlify_oauth.source == "system" %}
+              <span class="badge notice">fallback plateforme</span>
+            {% elif netlify_oauth.ready %}
+              <span class="badge ok">oauth disponible</span>
+            {% else %}
+              <span class="badge notice">oauth indisponible</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="kv setting-kv">
+          <div class="kv-item">
+            <span class="muted">Source</span>
+            <div class="mono">{{ netlify_oauth.source_label }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Actif</span>
+            <div class="mono">{{ netlify_oauth.masked or "—" }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Compte</span>
+            <div class="mono">{{ netlify_oauth.account_label or "—" }}</div>
+          </div>
+        </div>
+
+        <div class="oauth-project-actions" style="margin-top:12px;">
+          {% if netlify_oauth.ready %}
+            <a class="btn {% if not netlify_oauth.is_oauth %}primary{% endif %}" href="{{ netlify_oauth.connect_url }}">
+              {% if netlify_oauth.is_oauth %}Reconnecter Netlify{% else %}Connecter Netlify{% endif %}
+            </a>
+          {% elif is_admin %}
+            <a class="btn" href="{{ netlify_oauth.system_url }}">Configurer OAuth plateforme</a>
+          {% else %}
+            <span class="muted small">Connexion Netlify indisponible pour le moment.</span>
+          {% endif %}
+          {% if netlify_oauth.source == "user" %}
+            <form method="post" action="{{ netlify_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="next" value="/settings/accounts#netlify-connect-card" />
+              <button
+                class="btn danger"
+                type="submit"
+                onclick="return confirm('Déconnecter Netlify pour ce compte ?');"
+              >
+                Déconnecter
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        <details class="setting-details">
+          <summary>Mode avancé : token manuel</summary>
+          <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="key" value="NETLIFY_TOKEN" />
+            <label>
+              Token Netlify
+              <input type="password" name="value" placeholder="Coller le token Netlify…" autocomplete="new-password" />
+            </label>
+            <div class="modal-actions between">
+              {% if netlify_oauth.has_user_value %}
+                <button
+                  class="btn danger"
+                  type="submit"
+                  name="op"
+                  value="clear"
+                  onclick="return confirm('Supprimer ce token Netlify ?');"
+                >
+                  Supprimer mon token
+                </button>
+              {% else %}
+                <span></span>
+              {% endif %}
+              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+            </div>
+          </form>
+        </details>
+
+        <div class="setting-note">
+          <div class="card-title-row" style="margin-top:16px;">
+            <h3 style="margin:0; font-size:15px;">Sites Netlify accessibles</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn" type="button" id="netlify-load-sites">Charger les sites</button>
+              <span class="muted small" id="netlify-sites-status">Charge les sites accessibles depuis ton compte Netlify.</span>
+            </div>
+          </div>
+          <div class="oauth-project-list" id="netlify-sites-list"></div>
+        </div>
+        {{ help_dialog(netlify_oauth) }}
+      </section>
     </div>
   </div>
 
@@ -371,6 +604,12 @@
       const bingLoadSitesBtn = document.getElementById("bing-load-sites");
       const bingSitesStatus = document.getElementById("bing-sites-status");
       const bingSitesList = document.getElementById("bing-sites-list");
+      const githubLoadReposBtn = document.getElementById("github-load-repos");
+      const githubReposStatus = document.getElementById("github-repos-status");
+      const githubReposList = document.getElementById("github-repos-list");
+      const netlifyLoadSitesBtn = document.getElementById("netlify-load-sites");
+      const netlifySitesStatus = document.getElementById("netlify-sites-status");
+      const netlifySitesList = document.getElementById("netlify-sites-list");
       const gscStatus = document.getElementById("gsc-properties-status");
       const gscList = document.getElementById("gsc-properties-list");
       const gscProjectPicker = document.getElementById("gsc-project-picker");
@@ -407,7 +646,12 @@
           container.innerHTML = `<div class="muted small setting-note">Aucun site importable détecté.</div>`;
           return;
         }
-        const next = kind === "gsc" ? "/settings/accounts#gsc-oauth-card" : "/settings/accounts#bing-connect-card";
+        const nextByKind = {
+          gsc: "/settings/accounts#gsc-oauth-card",
+          bing: "/settings/accounts#bing-connect-card",
+          netlify: "/settings/accounts#netlify-connect-card",
+        };
+        const next = nextByKind[kind] || "/settings/accounts";
         items.forEach((item) => {
           const title = kind === "gsc"
             ? (item.domain || item.property_url || item.suggested_base_url || "Propriété")
@@ -439,6 +683,30 @@
               <div class="muted small">${escapeHtml(subtitle)}</div>
             </div>
             <div class="oauth-project-actions">${actions}</div>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      function renderRepoRows(container, repos) {
+        if (!container) return;
+        container.innerHTML = "";
+        if (!Array.isArray(repos) || repos.length === 0) {
+          container.innerHTML = `<div class="muted small setting-note">Aucun dépôt accessible détecté.</div>`;
+          return;
+        }
+        repos.forEach((repo) => {
+          const row = document.createElement("div");
+          row.className = "oauth-project-item";
+          row.innerHTML = `
+            <div>
+              <div class="oauth-project-title">${escapeHtml(repo.full_name || repo.name || "Repository")}</div>
+              <div class="muted small">${escapeHtml(repo.default_branch ? `branche ${repo.default_branch}` : "")}</div>
+            </div>
+            <div class="oauth-project-actions">
+              <span class="badge ${repo.private ? "notice" : "ok"}">${repo.private ? "privé" : "public"}</span>
+              ${repo.html_url ? `<a class="btn" href="${escapeHtml(repo.html_url)}" target="_blank" rel="noreferrer">Ouvrir GitHub</a>` : ""}
+            </div>
           `;
           container.appendChild(row);
         });
@@ -486,6 +754,50 @@
         }
       }
 
+      async function loadGithubRepos() {
+        if (!githubReposStatus || !githubReposList) return;
+        githubReposStatus.textContent = "Chargement…";
+        githubReposList.innerHTML = "";
+        try {
+          const response = await fetch("/api/github/repos", {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await response.json();
+          if (!data || !data.ok) {
+            githubReposStatus.textContent = data && data.error ? data.error : "Erreur GitHub";
+            return;
+          }
+          const repos = Array.isArray(data.repos) ? data.repos : [];
+          githubReposStatus.textContent = `${repos.length} dépôt(s) détecté(s).`;
+          renderRepoRows(githubReposList, repos);
+        } catch (error) {
+          githubReposStatus.textContent = String(error);
+        }
+      }
+
+      async function loadNetlifySites() {
+        if (!netlifySitesStatus || !netlifySitesList) return;
+        netlifySitesStatus.textContent = "Chargement…";
+        netlifySitesList.innerHTML = "";
+        try {
+          const response = await fetch("/api/netlify/sites", {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+          const data = await response.json();
+          if (!data || !data.ok) {
+            netlifySitesStatus.textContent = data && data.error ? data.error : "Erreur Netlify";
+            return;
+          }
+          const items = Array.isArray(data.sites) ? data.sites : [];
+          netlifySitesStatus.textContent = `${items.length} site(s) détecté(s).`;
+          renderImportRows(netlifySitesList, items, "netlify");
+        } catch (error) {
+          netlifySitesStatus.textContent = String(error);
+        }
+      }
+
       async function loadGscProperties() {
         if (!gscStatus || !gscList || !gscProjectPicker) return;
         const selectedOption = gscProjectPicker.selectedOptions && gscProjectPicker.selectedOptions[0];
@@ -515,6 +827,8 @@
 
       if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
       if (bingLoadSitesBtn) bingLoadSitesBtn.addEventListener("click", loadBingSites);
+      if (githubLoadReposBtn) githubLoadReposBtn.addEventListener("click", loadGithubRepos);
+      if (netlifyLoadSitesBtn) netlifyLoadSitesBtn.addEventListener("click", loadNetlifySites);
       if (gscLoadBtn) gscLoadBtn.addEventListener("click", loadGscProperties);
 
       document.querySelectorAll("[data-open-dialog]").forEach((btn) => {
