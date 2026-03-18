@@ -898,6 +898,72 @@ pre {
 .kv-item { padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,.02); }
 .kv-item > span { display: block; font-size: 12px; margin-bottom: 6px; }
 
+.app-surfaces {
+  --app-panel: linear-gradient(180deg, rgba(16, 16, 20, .84), rgba(9, 9, 12, .95));
+  --app-card: linear-gradient(180deg, rgba(22, 22, 28, .90), rgba(13, 13, 17, .97));
+  --app-inset: linear-gradient(180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .024));
+  --app-section: linear-gradient(180deg, rgba(20, 20, 25, .70), rgba(11, 11, 15, .48));
+}
+
+.app-surfaces .page-header h1 {
+  color: #f4e6c2;
+}
+
+.app-surfaces > .card,
+.app-surfaces > section.card {
+  background: var(--app-panel);
+  border-color: rgba(255, 255, 255, .075);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025), var(--shadow-sm);
+}
+
+.app-surfaces .grid > .card,
+.app-surfaces .grid > section.card,
+.app-surfaces .modules-grid > .module-card,
+.app-surfaces .setting-card {
+  background: var(--app-card);
+  border-color: rgba(255, 255, 255, .08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .03), var(--shadow-sm);
+}
+
+.app-surfaces .table-wrap,
+.app-surfaces .kv-item,
+.app-surfaces .job-chip,
+.app-surfaces .oauth-project-item,
+.app-surfaces .oauth-check-item,
+.app-surfaces .gsc-list,
+.app-surfaces .module-card,
+.app-surfaces .setting-details summary,
+.app-surfaces pre {
+  background: var(--app-inset);
+  border-color: rgba(255, 255, 255, .08);
+}
+
+.app-surfaces .card h2,
+.app-surfaces .setting-title,
+.app-surfaces .setting-card h3,
+.app-surfaces .module-name {
+  color: #f1dbab;
+}
+
+.app-surfaces .settings-section {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, .05);
+  background: var(--app-section);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+}
+
+.app-surfaces .settings-section-head {
+  margin: 0 0 16px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+
+.app-surfaces .settings-section-title {
+  color: #d9bc7d;
+}
+
 .account-connections-page {
   --account-panel: linear-gradient(180deg, rgba(18, 18, 22, .88), rgba(10, 10, 13, .94));
   --account-setting-card: linear-gradient(180deg, var(--surface-card-2), rgba(14, 14, 18, .97));
