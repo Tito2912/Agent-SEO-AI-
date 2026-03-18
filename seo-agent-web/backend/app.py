@@ -8339,7 +8339,7 @@ def project_issue_detail(
             status_code=404,
         )
         resp.headers["Cache-Control"] = "no-store"
-    return resp
+        return resp
 
     ts = str(data.get("timestamp") or "").strip()
     fix_path_obj = _fix_suggestions_path(runs_dir, slug, ts) if ts else None
