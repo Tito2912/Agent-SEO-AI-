@@ -530,6 +530,12 @@
             <div class="mono">{{ netlify_oauth.account_label or "—" }}</div>
           </div>
         </div>
+        {% if netlify_oauth.is_oauth %}
+          <div class="muted small" style="margin-top:10px;">
+            Le token OAuth Netlify n’est pas conservé. L’app génère puis stocke un PAT serveur
+            {% if netlify_oauth.pat_expires_at %} valable jusqu’au {{ netlify_oauth.pat_expires_at[:10] }}{% endif %}.
+          </div>
+        {% endif %}
 
         <div class="oauth-project-actions" style="margin-top:12px;">
           {% if netlify_oauth.ready %}

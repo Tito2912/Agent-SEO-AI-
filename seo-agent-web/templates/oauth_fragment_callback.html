@@ -55,6 +55,10 @@
         const hash = String(window.location.hash || "").replace(/^#/, "");
         const params = new URLSearchParams(hash);
         const query = new URLSearchParams(String(window.location.search || ""));
+        if (window.location.hash) {
+          const cleanUrl = `${window.location.pathname}${window.location.search || ""}`;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
         document.getElementById("oauth-access-token").value = String(params.get("access_token") || "");
         document.getElementById("oauth-state").value = String(params.get("state") || query.get("state") || "");
         document.getElementById("oauth-error").value = String(params.get("error") || "");

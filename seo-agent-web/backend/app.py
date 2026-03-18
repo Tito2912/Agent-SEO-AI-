@@ -138,6 +138,7 @@ _ACTIVE_JOBS: set[str] = set()
 _GOOGLE_OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters"
 _GITHUB_OAUTH_SCOPE = "read:user user:email repo"
 _BING_OAUTH_SCOPE = "webmaster.manage offline_access"
+_NETLIFY_PAT_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 365
 
 _BING_OAUTH_CONNECTION_KEY = "BING_OAUTH_REFRESH_TOKEN"
 
@@ -519,6 +520,7 @@ def _build_netlify_connection_state(*, user_id: str, db) -> dict[str, Any]:
     auth_type = str(meta.get("auth_type") or ("manual" if item.get("has_user_value") else "")).strip().lower()
     ready = bool(_netlify_oauth_client_id() and _safe_env("SEO_AGENT_SECRET_KEY"))
     account_label = str(meta.get("full_name") or meta.get("email") or meta.get("id") or "").strip()
+    token_kind = str(meta.get("token_kind") or "").strip().lower()
     return {
         **item,
         "ready": ready,
@@ -526,6 +528,9 @@ def _build_netlify_connection_state(*, user_id: str, db) -> dict[str, Any]:
         "is_oauth": auth_type == "oauth" and item.get("source") == "user",
         "is_manual": auth_type == "manual" and item.get("source") == "user",
         "account_label": account_label,
+        "token_kind": token_kind,
+        "is_hardened": token_kind in {"pat", "personal_access_token"},
+        "pat_expires_at": str(meta.get("pat_expires_at") or "").strip(),
     }
 
 
@@ -864,6 +869,91 @@ def _netlify_api_get(path: str, *, token: str, params: dict[str, Any] | None = N
         return resp.json()
     except Exception as e:
         raise RuntimeError(f"Netlify JSON decode error: {e}") from e
+
+
+def _netlify_api_post(
+    path: str,
+    *,
+    token: str,
+    json_body: dict[str, Any] | None = None,
+    timeout_s: float = 30.0,
+) -> Any:
+    resp = requests.post(
+        f"https://api.netlify.com{path}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        json=(json_body or {}),
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"HTTP {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    try:
+        return resp.json()
+    except Exception as e:
+        raise RuntimeError(f"Netlify JSON decode error: {e}") from e
+
+
+def _netlify_pat_name(*, user_id: str) -> str:
+    safe_user = re.sub(r"[^a-z0-9]+", "-", str(user_id or "").strip().lower())[:24].strip("-") or "user"
+    stamp = datetime.utcnow().strftime("%Y%m%d")
+    return f"seo-agent-web-{safe_user}-{stamp}"
+
+
+def _netlify_create_personal_access_token(*, oauth_token: str, user_id: str) -> tuple[str, dict[str, Any]]:
+    payload = _netlify_api_post(
+        "/api/v1/oauth/applications/create_token",
+        token=oauth_token,
+        json_body={
+            "administrator_id": None,
+            "expires_in": _NETLIFY_PAT_EXPIRES_IN_SECONDS,
+            "grant_saml": False,
+            "name": _netlify_pat_name(user_id=user_id),
+        },
+    )
+    if not isinstance(payload, dict):
+        raise RuntimeError("Réponse Netlify invalide pendant la création du PAT.")
+    pat_token = str(payload.get("access_token") or payload.get("token") or payload.get("personal_access_token") or "").strip()
+    if not pat_token:
+        raise RuntimeError("PAT Netlify manquant dans la réponse OAuth.")
+    return pat_token, payload
+
+
+def _netlify_store_hardened_token(*, user_id: str, oauth_token: str) -> dict[str, Any]:
+    pat_token, pat_payload = _netlify_create_personal_access_token(oauth_token=oauth_token, user_id=user_id)
+    profile = _netlify_api_get("/api/v1/user", token=pat_token)
+    created_at = datetime.utcnow()
+    expires_at = created_at + timedelta(seconds=_NETLIFY_PAT_EXPIRES_IN_SECONDS)
+    meta = {
+        "auth_type": "oauth",
+        "token_kind": "personal_access_token",
+        "id": str(profile.get("id") or "").strip() if isinstance(profile, dict) else "",
+        "full_name": str(profile.get("full_name") or "").strip() if isinstance(profile, dict) else "",
+        "email": str(profile.get("email") or "").strip() if isinstance(profile, dict) else "",
+        "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
+        "connected_at": created_at.isoformat(timespec="seconds") + "Z",
+        "pat_name": str(pat_payload.get("name") or _netlify_pat_name(user_id=user_id)).strip(),
+        "pat_created_at": created_at.isoformat(timespec="seconds") + "Z",
+        "pat_expires_at": expires_at.isoformat(timespec="seconds") + "Z",
+        "pat_expires_in": _NETLIFY_PAT_EXPIRES_IN_SECONDS,
+    }
+    _upsert_user_connection(user_id=str(user_id), key="NETLIFY_TOKEN", value=pat_token, meta=meta)
+    return meta
+
+
+def _ensure_hardened_netlify_connection(*, user_id: str, db=None) -> tuple[str, str]:
+    token, source = _effective_user_connection_value(user_id=str(user_id), key="NETLIFY_TOKEN", db=db)
+    if not token or source != "user":
+        return token, source
+    row = _user_connection_row(user_id=str(user_id), key="NETLIFY_TOKEN", db=db)
+    meta = _connection_meta(row)
+    auth_type = str(meta.get("auth_type") or "").strip().lower()
+    token_kind = str(meta.get("token_kind") or "").strip().lower()
+    if auth_type == "oauth" and token_kind not in {"pat", "personal_access_token"}:
+        _netlify_store_hardened_token(user_id=str(user_id), oauth_token=token)
+        return _effective_user_connection_value(user_id=str(user_id), key="NETLIFY_TOKEN", db=db)
+    return token, source
 
 
 def _bing_oauth_exchange_code(
@@ -6162,6 +6252,7 @@ def settings_accounts(request: Request) -> HTMLResponse:
     oauth_ready = bool(client_id and client_secret and _safe_env("SEO_AGENT_SECRET_KEY"))
     if bool(getattr(user, "is_admin", False)):
         _import_legacy_projects_for_user(str(user.id))
+    _ensure_hardened_netlify_connection(user_id=str(user.id))
 
     with DB.session() as db:
         github_oauth = _build_github_connection_state(user_id=str(user.id), db=db)
@@ -7007,19 +7098,10 @@ def netlify_oauth_complete(
     if not token:
         return RedirectResponse(url=_path_with_flash(return_to, err="Token Netlify manquant."), status_code=303)
     try:
-        profile = _netlify_api_get("/api/v1/user", token=token)
-        meta = {
-            "auth_type": "oauth",
-            "id": str(profile.get("id") or "").strip() if isinstance(profile, dict) else "",
-            "full_name": str(profile.get("full_name") or "").strip() if isinstance(profile, dict) else "",
-            "email": str(profile.get("email") or "").strip() if isinstance(profile, dict) else "",
-            "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
-            "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        }
-        _upsert_user_connection(user_id=str(user.id), key="NETLIFY_TOKEN", value=token, meta=meta)
+        _netlify_store_hardened_token(user_id=str(user.id), oauth_token=token)
     except Exception as e:
         return RedirectResponse(url=_path_with_flash(return_to, err=f"Netlify OAuth: {type(e).__name__}: {e}"), status_code=303)
-    return RedirectResponse(url=_path_with_flash(return_to, msg="Netlify connecté."), status_code=303)
+    return RedirectResponse(url=_path_with_flash(return_to, msg="Netlify connecté (PAT serveur généré)."), status_code=303)
 
 
 @app.post("/oauth/netlify/disconnect")
@@ -7036,7 +7118,7 @@ def netlify_sites(request: Request) -> JSONResponse:
     user = getattr(request.state, "user", None)
     if not user:
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="NETLIFY_TOKEN")
+    token, source = _ensure_hardened_netlify_connection(user_id=str(user.id))
     if not token:
         return JSONResponse({"ok": False, "error": "Netlify non connecté."}, status_code=400)
     if source != "user":
