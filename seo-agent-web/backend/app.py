@@ -530,7 +530,9 @@ def _build_netlify_connection_state(*, user_id: str, db) -> dict[str, Any]:
         "account_label": account_label,
         "token_kind": token_kind,
         "is_hardened": token_kind in {"pat", "personal_access_token"},
+        "is_oauth_fallback": token_kind == "oauth_access_token",
         "pat_expires_at": str(meta.get("pat_expires_at") or "").strip(),
+        "pat_upgrade_error": str(meta.get("pat_upgrade_error") or "").strip(),
     }
 
 
@@ -942,6 +944,23 @@ def _netlify_store_hardened_token(*, user_id: str, oauth_token: str) -> dict[str
     return meta
 
 
+def _netlify_store_oauth_token_fallback(*, user_id: str, oauth_token: str, upgrade_error: str | None = None) -> dict[str, Any]:
+    profile = _netlify_api_get("/api/v1/user", token=oauth_token)
+    meta = {
+        "auth_type": "oauth",
+        "token_kind": "oauth_access_token",
+        "id": str(profile.get("id") or "").strip() if isinstance(profile, dict) else "",
+        "full_name": str(profile.get("full_name") or "").strip() if isinstance(profile, dict) else "",
+        "email": str(profile.get("email") or "").strip() if isinstance(profile, dict) else "",
+        "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
+        "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+    }
+    if upgrade_error:
+        meta["pat_upgrade_error"] = str(upgrade_error)[:500]
+    _upsert_user_connection(user_id=str(user_id), key="NETLIFY_TOKEN", value=oauth_token, meta=meta)
+    return meta
+
+
 def _ensure_hardened_netlify_connection(*, user_id: str, db=None) -> tuple[str, str]:
     token, source = _effective_user_connection_value(user_id=str(user_id), key="NETLIFY_TOKEN", db=db)
     if not token or source != "user":
@@ -950,8 +969,11 @@ def _ensure_hardened_netlify_connection(*, user_id: str, db=None) -> tuple[str, 
     meta = _connection_meta(row)
     auth_type = str(meta.get("auth_type") or "").strip().lower()
     token_kind = str(meta.get("token_kind") or "").strip().lower()
-    if auth_type == "oauth" and token_kind not in {"pat", "personal_access_token"}:
-        _netlify_store_hardened_token(user_id=str(user_id), oauth_token=token)
+    if auth_type == "oauth" and token_kind in {"", "legacy", "oauth"}:
+        try:
+            _netlify_store_hardened_token(user_id=str(user_id), oauth_token=token)
+        except Exception:
+            _netlify_store_oauth_token_fallback(user_id=str(user_id), oauth_token=token)
         return _effective_user_connection_value(user_id=str(user_id), key="NETLIFY_TOKEN", db=db)
     return token, source
 
@@ -7099,9 +7121,20 @@ def netlify_oauth_complete(
         return RedirectResponse(url=_path_with_flash(return_to, err="Token Netlify manquant."), status_code=303)
     try:
         _netlify_store_hardened_token(user_id=str(user.id), oauth_token=token)
+        message = "Netlify connecté (PAT serveur généré)."
     except Exception as e:
-        return RedirectResponse(url=_path_with_flash(return_to, err=f"Netlify OAuth: {type(e).__name__}: {e}"), status_code=303)
-    return RedirectResponse(url=_path_with_flash(return_to, msg="Netlify connecté (PAT serveur généré)."), status_code=303)
+        try:
+            _netlify_store_oauth_token_fallback(user_id=str(user.id), oauth_token=token, upgrade_error=str(e))
+            message = "Netlify connecté (fallback token OAuth ; génération PAT refusée)."
+        except Exception as fallback_error:
+            return RedirectResponse(
+                url=_path_with_flash(
+                    return_to,
+                    err=f"Netlify OAuth: {type(fallback_error).__name__}: {fallback_error}",
+                ),
+                status_code=303,
+            )
+    return RedirectResponse(url=_path_with_flash(return_to, msg=message), status_code=303)
 
 
 @app.post("/oauth/netlify/disconnect")

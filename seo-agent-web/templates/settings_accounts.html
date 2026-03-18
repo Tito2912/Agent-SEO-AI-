@@ -502,7 +502,11 @@
             <div class="muted small">Compte utilisé pour lister les sites et préparer les workflows de déploiement.</div>
           </div>
           <div class="setting-actions">
-            {% if netlify_oauth.is_oauth %}
+            {% if netlify_oauth.is_hardened %}
+              <span class="badge ok">compte connecté</span>
+            {% elif netlify_oauth.is_oauth_fallback %}
+              <span class="badge notice">connecté · fallback oauth</span>
+            {% elif netlify_oauth.is_oauth %}
               <span class="badge ok">compte connecté</span>
             {% elif netlify_oauth.is_manual %}
               <span class="badge notice">token manuel</span>
@@ -530,10 +534,17 @@
             <div class="mono">{{ netlify_oauth.account_label or "—" }}</div>
           </div>
         </div>
-        {% if netlify_oauth.is_oauth %}
+        {% if netlify_oauth.is_hardened %}
           <div class="muted small" style="margin-top:10px;">
             Le token OAuth Netlify n’est pas conservé. L’app génère puis stocke un PAT serveur
             {% if netlify_oauth.pat_expires_at %} valable jusqu’au {{ netlify_oauth.pat_expires_at[:10] }}{% endif %}.
+          </div>
+        {% elif netlify_oauth.is_oauth_fallback %}
+          <div class="muted small" style="margin-top:10px;">
+            Netlify est connecté via le token OAuth direct.
+            {% if netlify_oauth.pat_upgrade_error %}
+              La génération automatique du PAT a été refusée par Netlify.
+            {% endif %}
           </div>
         {% endif %}
 
