@@ -173,33 +173,42 @@
                 · Effort: <span class="mono">{{ effort_label }}</span>
               </div>
 
-              {% if a.why %}
-                <p class="muted small" style="margin-top: 10px;">
-                  {% if fix_pack_unlocked %}
-                    {{ a.why }}
-                  {% else %}
-                    {{ a.why | truncate(180, True, '…') }}
-                  {% endif %}
-                </p>
+              {% if a.why or (fix_pack_unlocked and a.fix) %}
+                <details class="top-action-details">
+                  <summary>
+                    <span class="top-action-toggle-closed">Afficher le contenu</span>
+                    <span class="top-action-toggle-open">Masquer le contenu</span>
+                  </summary>
+                  <div class="top-action-details-body">
+                    {% if a.why %}
+                      <p class="muted small top-action-copy">
+                        {% if fix_pack_unlocked %}
+                          {{ a.why }}
+                        {% else %}
+                          {{ a.why | truncate(180, True, '…') }}
+                        {% endif %}
+                      </p>
+                    {% endif %}
+
+                    {% if fix_pack_unlocked and a.fix %}
+                      <div class="muted small top-action-label">Actions recommandées</div>
+                      <ul class="examples">
+                        {% for step in a.fix[:4] %}
+                          <li>{{ step }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </div>
+                </details>
               {% endif %}
 
-              {% if fix_pack_unlocked %}
-                {% if a.fix %}
-                  <div class="muted small" style="margin-top: 10px; font-weight: 800;">Actions recommandées</div>
-                  <ul class="examples">
-                    {% for step in a.fix[:4] %}
-                      <li>{{ step }}</li>
-                    {% endfor %}
-                  </ul>
-                {% endif %}
-                <div class="row-actions" style="margin-top: 12px;">
+              <div class="row-actions" style="margin-top: 12px;">
+                {% if fix_pack_unlocked %}
                   <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">Voir le détail</a>
-                </div>
-              {% else %}
-                <div class="row-actions" style="margin-top: 12px;">
+                {% else %}
                   <a class="btn primary" href="/billing">Débloquer</a>
-                </div>
-              {% endif %}
+                {% endif %}
+              </div>
             </div>
           {% endfor %}
         </div>

@@ -1081,6 +1081,72 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, .55); }
 .gsc-list .checkbox { justify-content: flex-start; gap: 10px; }
 .gsc-selectall { padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
 
+.top-action-details {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .018));
+  overflow: hidden;
+}
+
+.top-action-details summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #f1dbab;
+}
+
+.top-action-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.top-action-details summary::after {
+  content: "▾";
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.top-action-details[open] summary {
+  background: rgba(var(--accent-rgb), .08);
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.top-action-details[open] summary::after {
+  content: "▴";
+}
+
+.top-action-toggle-open {
+  display: none;
+}
+
+.top-action-details[open] .top-action-toggle-closed {
+  display: none;
+}
+
+.top-action-details[open] .top-action-toggle-open {
+  display: inline;
+}
+
+.top-action-details-body {
+  padding: 12px;
+}
+
+.top-action-copy {
+  margin: 0;
+}
+
+.top-action-label {
+  margin-top: 12px;
+  font-weight: 800;
+}
+
 @media (max-width: 980px) {
   .sidebar { display: none; }
   .grid { grid-template-columns: 1fr; }
