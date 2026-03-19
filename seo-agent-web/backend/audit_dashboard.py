@@ -8,7 +8,12 @@ from functools import lru_cache
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
+
+try:
+    from . import object_store as object_store  # type: ignore
+except ImportError:
+    import object_store  # type: ignore
 
 
 Severity = str  # "error" | "warning" | "notice"
@@ -29,6 +34,25 @@ NON_ISSUE_KEYS: set[str] = {
     "cwv_tbt_pages_to_fix",
     "cwv_cls_pages_to_fix",
 }
+
+_RUNS_LOCALIZER: Callable[[Path], bool] | None = None
+
+
+def register_runs_localizer(localizer: Callable[[Path], bool] | None) -> None:
+    global _RUNS_LOCALIZER
+    _RUNS_LOCALIZER = localizer
+
+
+def _ensure_local(path: Path) -> bool:
+    if path.exists():
+        return True
+    localizer = _RUNS_LOCALIZER
+    if localizer is None:
+        return False
+    try:
+        return bool(localizer(path))
+    except Exception:
+        return False
 
 
 def _comparable_meta(cur: dict[str, Any], prev: dict[str, Any]) -> bool:
@@ -810,6 +834,7 @@ def format_timestamp(value: str) -> str:
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
+    _ensure_local(path)
     try:
         import json
 
@@ -835,17 +860,25 @@ def list_project_slugs(runs_dir: Path) -> list[str]:
 
 def list_project_crawls(runs_dir: Path, slug: str) -> list[str]:
     base = runs_dir / slug
+    items: set[str] = set()
     if not base.exists():
-        return []
+        for name in object_store.list_runs_subdirs(runs_dir, base):
+            if re.fullmatch(r"\d{8}-\d{6}", name):
+                items.add(name)
+        if not items:
+            return []
     items: list[str] = []
-    for p in base.iterdir():
-        if not p.is_dir():
-            continue
-        # expected: YYYYMMDD-HHMMSS
-        if re.fullmatch(r"\d{8}-\d{6}", p.name):
-            items.append(p.name)
-    items.sort()
-    return items
+    if base.exists():
+        for p in base.iterdir():
+            if not p.is_dir():
+                continue
+            # expected: YYYYMMDD-HHMMSS
+            if re.fullmatch(r"\d{8}-\d{6}", p.name):
+                items.append(p.name)
+    for name in object_store.list_runs_subdirs(runs_dir, base):
+        if re.fullmatch(r"\d{8}-\d{6}", name):
+            items.append(name)
+    return sorted(set(items))
 
 
 def _select_crawl_timestamp_with_report(
@@ -1559,6 +1592,7 @@ def issue_detail(
     current_ts, _ = _select_crawl_timestamp_with_report(runs_dir, slug, requested=requested_ts)
     if not current_ts:
         return None
+    _ensure_local(runs_dir / slug / current_ts)
 
     report = load_report_json(runs_dir, slug, current_ts)
     if not report:
@@ -1586,6 +1620,7 @@ def issue_detail(
                 p = p.resolve()
         except Exception:
             pass
+        _ensure_local(p)
         if not p.exists() or not p.is_file():
             return []
         try:
@@ -1738,23 +1773,31 @@ def issue_detail(
             raw = json.loads(issue_rows_path.read_text(encoding="utf-8"))
         except Exception:
             raw = None
-        rows: list[dict[str, Any]] = []
-        if isinstance(raw, list):
-            for it in raw:
-                if isinstance(it, dict):
-                    rows.append(it)
-                else:
-                    s = str(it)
-                    row = {"value": s}
-                    if s.startswith(("http://", "https://")):
-                        row["url"] = s
-                    rows.append(row)
-        if rows:
-            special_kind = "crawl_issue_rows"
-            if q_norm:
-                rows = [r for r in rows if q_norm in json.dumps(r, ensure_ascii=False).lower()]
-            special_rows = rows
-            special_source = str(issue_rows_path)
+    elif issue_rows_path:
+        _ensure_local(issue_rows_path)
+        try:
+            raw = json.loads(issue_rows_path.read_text(encoding="utf-8")) if issue_rows_path.exists() else None
+        except Exception:
+            raw = None
+    else:
+        raw = None
+    rows: list[dict[str, Any]] = []
+    if isinstance(raw, list):
+        for it in raw:
+            if isinstance(it, dict):
+                rows.append(it)
+            else:
+                s = str(it)
+                row = {"value": s}
+                if s.startswith(("http://", "https://")):
+                    row["url"] = s
+                rows.append(row)
+    if issue_rows_path and rows:
+        special_kind = "crawl_issue_rows"
+        if q_norm:
+            rows = [r for r in rows if q_norm in json.dumps(r, ensure_ascii=False).lower()]
+        special_rows = rows
+        special_source = str(issue_rows_path)
 
     if issue_key in {"gsc_indexing_errors", "gsc_indexing_warnings", "gsc_indexing_notices"}:
         meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}

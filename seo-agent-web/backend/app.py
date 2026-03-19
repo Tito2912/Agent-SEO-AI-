@@ -72,6 +72,13 @@ except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
 
+try:
+    # When running as `uvicorn backend.app:app` (recommended).
+    from . import object_store as object_store  # type: ignore
+except ImportError:
+    # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
+    import object_store  # type: ignore
+
 
 try:
     from .db import Database  # type: ignore
@@ -139,6 +146,74 @@ def _runs_dir_for_request(request: Request) -> Path:
         return DEFAULT_RUNS_DIR
     return _runs_dir_for_user(str(user.id))
 
+
+def _run_tree_candidates(path: Path) -> list[Path]:
+    root = DEFAULT_RUNS_DIR.resolve()
+    try:
+        rel = path.resolve().relative_to(root)
+    except Exception:
+        return []
+    parts = rel.parts
+    if not parts:
+        return []
+    candidates: list[Path] = []
+    for idx, part in enumerate(parts):
+        if _RUN_TS_RE.fullmatch(part):
+            candidates.append(root.joinpath(*parts[: idx + 1]))
+            if idx > 0:
+                candidates.append(root.joinpath(*parts[:idx]))
+            break
+    if not candidates:
+        candidates.append(path.resolve())
+    out: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(candidate)
+    return out
+
+
+def _ensure_runs_artifact_local(path: Path) -> bool:
+    try:
+        target = path.resolve()
+    except Exception:
+        return False
+    if target.exists():
+        return True
+    root = DEFAULT_RUNS_DIR.resolve()
+    try:
+        target.relative_to(root)
+    except Exception:
+        return False
+    if object_store.restore_runs_file(root, target):
+        return True
+    if object_store.restore_runs_tree(root, target):
+        return True
+    for candidate in _run_tree_candidates(target):
+        if object_store.restore_runs_tree(root, candidate) and (target.exists() or candidate.exists()):
+            return True
+    return target.exists()
+
+
+def _sync_runs_path_to_object_store(path: Path) -> None:
+    try:
+        object_store.upload_runs_path(DEFAULT_RUNS_DIR, path.resolve())
+    except Exception as e:
+        print(f"[S3] upload error for {path}: {type(e).__name__}: {e}")
+
+
+def _delete_runs_path_from_object_store(path: Path, *, recursive: bool = False) -> None:
+    try:
+        object_store.delete_runs_path(DEFAULT_RUNS_DIR, path.resolve(), recursive=recursive)
+    except Exception as e:
+        print(f"[S3] delete error for {path}: {type(e).__name__}: {e}")
+
+
+dash.register_runs_localizer(_ensure_runs_artifact_local)
+
 _JOB_LOCKS_GUARD = threading.Lock()
 _JOB_LOCKS: dict[str, threading.Lock] = {}
 
@@ -152,6 +227,7 @@ _BING_OAUTH_SCOPE = "webmaster.manage offline_access"
 _NETLIFY_PAT_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 365
 
 _BING_OAUTH_CONNECTION_KEY = "BING_OAUTH_REFRESH_TOKEN"
+_RUN_TS_RE = re.compile(r"\d{8}-\d{6}")
 
 
 def _mark_job_active(job_id: str, active: bool) -> None:
@@ -1705,6 +1781,8 @@ def _ai_suggestions_path(runs_dir: Path, slug: str, ts: str) -> Path:
 def _load_ai_suggestions(runs_dir: Path, slug: str, ts: str) -> dict[str, Any]:
     path = _ai_suggestions_path(runs_dir, slug, ts)
     if not path.exists():
+        _ensure_runs_artifact_local(path)
+    if not path.exists():
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -1724,6 +1802,7 @@ def _save_ai_suggestions(runs_dir: Path, slug: str, ts: str, issues: dict[str, A
             "issues": issues,
         }
         path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        _sync_runs_path_to_object_store(path)
     except Exception:
         # Best-effort cache only; never fail PDF generation because of it.
         return
@@ -1735,6 +1814,8 @@ def _fix_suggestions_path(runs_dir: Path, slug: str, ts: str) -> Path:
 
 def _load_fix_suggestions_meta(runs_dir: Path, slug: str, ts: str) -> dict[str, Any] | None:
     path = _fix_suggestions_path(runs_dir, slug, ts)
+    if not path.exists():
+        _ensure_runs_artifact_local(path)
     if not path.exists() or not path.is_file():
         return None
     try:
@@ -1747,6 +1828,8 @@ def _load_fix_suggestions_meta(runs_dir: Path, slug: str, ts: str) -> dict[str, 
 
 def _load_fix_suggestion_for_issue(runs_dir: Path, slug: str, ts: str, issue_key: str) -> dict[str, Any] | None:
     path = _fix_suggestions_path(runs_dir, slug, ts)
+    if not path.exists():
+        _ensure_runs_artifact_local(path)
     if not path.exists() or not path.is_file():
         return None
     try:
@@ -4090,6 +4173,7 @@ def _cleanup_old_runs() -> None:
                         continue
                     if _is_old_ts(run_dir.name):
                         try:
+                            _delete_runs_path_from_object_store(run_dir, recursive=True)
                             shutil.rmtree(str(run_dir))
                             removed += 1
                         except Exception:
@@ -5337,6 +5421,11 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         job.status = "failed"
         _save_job(job)
     finally:
+        try:
+            if site_dir.exists() and site_dir.is_dir():
+                _sync_runs_path_to_object_store(site_dir)
+        except Exception as e:
+            print(f"[S3] crawl sync error: {type(e).__name__}: {e}")
         try:
             if (not skip_billing) and reserved_pages > 0:
                 if job.status == "done" and isinstance(actual_pages_crawled, int) and actual_pages_crawled >= 0:
@@ -8201,6 +8290,8 @@ def view_file(request: Request, path: str) -> HTMLResponse:
     allowed_roots = [DEFAULT_RUNS_DIR.resolve(), DATA_DIR.resolve()] if is_admin else [_runs_dir_for_request(request).resolve()]
     if not any(raw_path.is_relative_to(root) for root in allowed_roots):
         return HTMLResponse("Path not allowed", status_code=403)
+    if not raw_path.exists():
+        _ensure_runs_artifact_local(raw_path)
     if not raw_path.exists() or not raw_path.is_file():
         return HTMLResponse("File not found", status_code=404)
 
@@ -8926,6 +9017,7 @@ def project_generate_fix_suggestions(request: Request, slug: str, crawl: str | N
     path = _fix_suggestions_path(runs_dir, slug, ts)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _sync_runs_path_to_object_store(path)
 
     return RedirectResponse(url=f"/projects/{slug}/issues?crawl={quote(ts)}", status_code=303)
 
@@ -8954,6 +9046,8 @@ def project_issue_detail(
 
     ts = str(data.get("timestamp") or "").strip()
     fix_path_obj = _fix_suggestions_path(runs_dir, slug, ts) if ts else None
+    if fix_path_obj and not fix_path_obj.exists():
+        _ensure_runs_artifact_local(fix_path_obj)
     fix_path = str(fix_path_obj) if (fix_path_obj and fix_path_obj.exists()) else ""
     fix_suggestion = _load_fix_suggestion_for_issue(runs_dir, slug, ts, issue_key) if ts else None
     if not fix_suggestion:
@@ -10280,6 +10374,8 @@ async def backlinks_import(
             ),
             encoding="utf-8",
         )
+        _sync_runs_path_to_object_store(csv_path)
+        _sync_runs_path_to_object_store(json_path)
     except Exception as e:
         msg = f"{type(e).__name__}: {e}"
         return RedirectResponse(url=f"/projects/{slug}/backlinks?crawl={quote(ts)}&err={quote(msg)}", status_code=303)
@@ -10318,6 +10414,7 @@ def backlinks_clear(
         for p in backlinks_dir.glob(pattern):
             try:
                 p.unlink()
+                _delete_runs_path_from_object_store(p)
             except Exception:
                 pass
 
@@ -10479,9 +10576,12 @@ def backlinks_ahrefs_sync(
     run_dir = (runs_dir / slug / ts).resolve()
     backlinks_dir = run_dir / "backlinks"
     backlinks_dir.mkdir(parents=True, exist_ok=True)
+    domains_path = backlinks_dir / "ahrefs_domains.json"
+    anchors_path = backlinks_dir / "ahrefs_anchors.json"
+    backlinks_path = backlinks_dir / "ahrefs_backlinks.json"
 
     try:
-        (backlinks_dir / "ahrefs_domains.json").write_text(
+        domains_path.write_text(
             json.dumps(
                 {"meta": {**common_meta, "kind": "domains", "rows": len(domains_rows)}, "rows": domains_rows},
                 ensure_ascii=False,
@@ -10489,7 +10589,7 @@ def backlinks_ahrefs_sync(
             ),
             encoding="utf-8",
         )
-        (backlinks_dir / "ahrefs_anchors.json").write_text(
+        anchors_path.write_text(
             json.dumps(
                 {"meta": {**common_meta, "kind": "anchors", "rows": len(anchors_rows)}, "rows": anchors_rows},
                 ensure_ascii=False,
@@ -10497,7 +10597,7 @@ def backlinks_ahrefs_sync(
             ),
             encoding="utf-8",
         )
-        (backlinks_dir / "ahrefs_backlinks.json").write_text(
+        backlinks_path.write_text(
             json.dumps(
                 {"meta": {**common_meta, "kind": "backlinks", "rows": len(backlinks_rows)}, "rows": backlinks_rows},
                 ensure_ascii=False,
@@ -10505,6 +10605,9 @@ def backlinks_ahrefs_sync(
             ),
             encoding="utf-8",
         )
+        _sync_runs_path_to_object_store(domains_path)
+        _sync_runs_path_to_object_store(anchors_path)
+        _sync_runs_path_to_object_store(backlinks_path)
     except Exception as e:
         msg = f"{type(e).__name__}: {e}"
         return RedirectResponse(url=f"/projects/{slug}/backlinks?crawl={quote(ts)}&err={quote(msg)}", status_code=303)

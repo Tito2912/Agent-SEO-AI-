@@ -25,6 +25,18 @@ services:
         value: /app/seo-autopilot.yml
       - key: SEO_AGENT_SECRET_KEY
         generateValue: true
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_PREFIX
+        value: seo-runs
       - key: BOOTSTRAP_ADMIN_EMAIL
         sync: false
       - key: SIGNUP_INVITE_CODE
