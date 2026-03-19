@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}SEO Audit{% endblock %}</title>
     <link rel="stylesheet" href="/static/styles.css" />
     {% block head_extra %}{% endblock %}
@@ -164,6 +165,7 @@
             {% if request.state.user %}
               <span class="muted small">{{ request.state.user.email }}</span>
               <form method="post" action="/auth/logout" class="inline">
+                <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                 <button type="submit" class="btn">Se déconnecter</button>
               </form>
             {% endif %}
@@ -176,6 +178,71 @@
       </main>
     </div>
 
+    <script>
+      (() => {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = meta ? String(meta.content || "").trim() : "";
+        if (!csrfToken) return;
+        const safeMethods = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+        function sameOrigin(urlLike) {
+          try {
+            return new URL(String(urlLike || ""), window.location.href).origin === window.location.origin;
+          } catch (error) {
+            return false;
+          }
+        }
+
+        function effectiveFormMethod(form, submitter) {
+          const raw =
+            (submitter && submitter.getAttribute && submitter.getAttribute("formmethod")) ||
+            form.getAttribute("method") ||
+            "get";
+          return String(raw || "get").trim().toUpperCase();
+        }
+
+        function ensureFormToken(form, submitter) {
+          if (!(form instanceof HTMLFormElement)) return;
+          if (safeMethods.has(effectiveFormMethod(form, submitter))) return;
+          if (!sameOrigin(form.getAttribute("action") || window.location.href)) return;
+          let input = form.querySelector('input[name="_csrf"]');
+          if (!(input instanceof HTMLInputElement)) {
+            input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "_csrf";
+            form.appendChild(input);
+          }
+          input.value = csrfToken;
+        }
+
+        document.querySelectorAll("form").forEach((form) => ensureFormToken(form, null));
+        document.addEventListener(
+          "submit",
+          (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+            ensureFormToken(form, event.submitter || null);
+          },
+          true
+        );
+
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
+          const urlValue =
+            typeof input === "string" || input instanceof URL ? String(input) : (input && input.url) || "";
+          if (!sameOrigin(urlValue) || safeMethods.has(method)) {
+            return originalFetch(input, init);
+          }
+          const headers = new Headers((init && init.headers) || (input && input.headers) || undefined);
+          if (!headers.has("X-CSRF-Token")) headers.set("X-CSRF-Token", csrfToken);
+          const nextInit = Object.assign({}, init || {});
+          nextInit.headers = headers;
+          if (!nextInit.credentials) nextInit.credentials = "same-origin";
+          return originalFetch(input, nextInit);
+        };
+      })();
+    </script>
     <script>
       window.SEO_AUDIT_ASSISTANT_CONTEXT = {{ {
         "path": request.url.path,

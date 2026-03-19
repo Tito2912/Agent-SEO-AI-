@@ -12,6 +12,7 @@ import json
 import math
 import os
 import re
+import secrets
 import shutil
 import socket
 import subprocess
@@ -22,6 +23,7 @@ import textwrap
 import unicodedata
 import uuid
 import csv
+from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -73,11 +75,11 @@ except ImportError:
 
 try:
     from .db import Database  # type: ignore
-    from .models import JobRecord, Project, User, UserConnection  # type: ignore
+    from .models import AuditLog, JobRecord, Project, User, UserConnection  # type: ignore
     from . import auth as auth  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
-    from models import JobRecord, Project, User, UserConnection  # type: ignore
+    from models import AuditLog, JobRecord, Project, User, UserConnection  # type: ignore
     import auth as auth  # type: ignore
 
 
@@ -114,6 +116,15 @@ _USER_CONNECTION_KEYS: set[str] = {
     "NETLIFY_TOKEN",
     "BING_WEBMASTER_API_KEY",
 }
+
+_CSRF_COOKIE_NAME = "seo_agent_csrf"
+_CSRF_FORM_FIELD = "_csrf"
+_CSRF_HEADER_NAME = "x-csrf-token"
+_CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook"}
+
+_RATE_LIMIT_LOCK = threading.Lock()
+_RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
 
 
 def _runs_dir_for_user(user_id: str) -> Path:
@@ -5442,6 +5453,155 @@ def _safe_next_path(next_path: str | None) -> str:
     return n
 
 
+def _request_is_secure(request: Request) -> bool:
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip().lower()
+    return proto == "https"
+
+
+def _set_lax_cookie(
+    response: Response,
+    *,
+    request: Request,
+    name: str,
+    value: str,
+    max_age: int = auth.SESSION_TTL_S,
+    httponly: bool = True,
+) -> None:
+    response.set_cookie(
+        name,
+        value,
+        max_age=max_age,
+        httponly=httponly,
+        samesite="lax",
+        secure=_request_is_secure(request),
+        path="/",
+    )
+
+
+def _sanitize_csrf_token(value: str | None) -> str:
+    token = str(value or "").strip()
+    if not token:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9._~-]{20,256}", token):
+        return ""
+    return token
+
+
+def _issue_csrf_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+async def _request_csrf_submission_token(request: Request) -> str:
+    header_token = _sanitize_csrf_token(request.headers.get(_CSRF_HEADER_NAME))
+    if header_token:
+        return header_token
+    content_type = (request.headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+    if content_type in {"application/x-www-form-urlencoded", "multipart/form-data"}:
+        try:
+            form = await request.form()
+        except Exception:
+            return ""
+        return _sanitize_csrf_token(form.get(_CSRF_FORM_FIELD))
+    return ""
+
+
+def _csrf_failure_response(request: Request, *, token_to_set: str = "") -> Response:
+    message = "CSRF invalide. Recharge la page puis réessaie."
+    if request.url.path.startswith("/api/") or _client_wants_json(request):
+        response: Response = JSONResponse({"ok": False, "error": message}, status_code=403)
+    else:
+        response = HTMLResponse(message, status_code=403)
+    response.headers["Cache-Control"] = "no-store"
+    if token_to_set:
+        _set_lax_cookie(response, request=request, name=_CSRF_COOKIE_NAME, value=token_to_set)
+    return response
+
+
+def _request_client_ip(request: Request) -> str:
+    candidates: list[str] = []
+    xff = str(request.headers.get("x-forwarded-for") or "").strip()
+    if xff:
+        candidates.extend(part.strip() for part in xff.split(","))
+    xri = str(request.headers.get("x-real-ip") or "").strip()
+    if xri:
+        candidates.append(xri)
+    if request.client and request.client.host:
+        candidates.append(str(request.client.host))
+    for raw in candidates:
+        try:
+            return str(ipaddress.ip_address(raw))
+        except Exception:
+            continue
+    return ""
+
+
+def _rate_limit_retry_after(*, bucket: str, subject: str, limit: int, window_s: int) -> int | None:
+    normalized_bucket = str(bucket or "").strip()
+    normalized_subject = str(subject or "").strip()
+    if not normalized_bucket or not normalized_subject or limit <= 0 or window_s <= 0:
+        return None
+    key = f"{normalized_bucket}:{normalized_subject}"
+    now = time.monotonic()
+    with _RATE_LIMIT_LOCK:
+        queue = _RATE_LIMIT_BUCKETS.get(key)
+        if queue is None:
+            queue = deque()
+            _RATE_LIMIT_BUCKETS[key] = queue
+        cutoff = now - float(window_s)
+        while queue and queue[0] <= cutoff:
+            queue.popleft()
+        if len(queue) >= int(limit):
+            retry_after = max(1, int(math.ceil(float(window_s) - (now - queue[0]))))
+            return retry_after
+        queue.append(now)
+    return None
+
+
+def _format_retry_after(retry_after_s: int) -> str:
+    retry_after = max(1, int(retry_after_s))
+    if retry_after >= 60:
+        minutes = int(math.ceil(retry_after / 60.0))
+        return f"{minutes} min"
+    return f"{retry_after}s"
+
+
+def _audit_log(
+    request: Request,
+    *,
+    action: str,
+    status: str = "ok",
+    user: User | None = None,
+    actor_email: str = "",
+    target_type: str = "",
+    target_id: str = "",
+    meta: dict[str, Any] | None = None,
+) -> None:
+    action_value = str(action or "").strip()
+    if not action_value:
+        return
+    actor = user or getattr(request.state, "user", None)
+    actor_id = str(getattr(actor, "id", "") or "").strip() or None
+    email_value = str(actor_email or getattr(actor, "email", "") or "").strip().lower() or None
+    payload = dict(meta) if isinstance(meta, dict) else {}
+    row = AuditLog(
+        actor_user_id=actor_id,
+        actor_email=email_value,
+        action=action_value[:128],
+        status=(str(status or "").strip().lower() or "ok")[:32],
+        target_type=(str(target_type or "").strip() or None),
+        target_id=(str(target_id or "").strip() or None),
+        ip_address=_request_client_ip(request) or None,
+        user_agent=(str(request.headers.get("user-agent") or "").strip()[:512] or None),
+        meta=payload,
+    )
+    try:
+        with DB.session() as db:
+            db.add(row)
+            db.commit()
+    except Exception as e:
+        print(f"[AUDIT] {action_value} error: {type(e).__name__}: {e}")
+
+
 def _path_with_flash(path: str, *, msg: str | None = None, err: str | None = None) -> str:
     target = _safe_next_path(path)
     parts = urlsplit(target)
@@ -5494,6 +5654,25 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         return RedirectResponse(url=f"/auth/login?next={quote(next_url)}", status_code=303)
 
     return await call_next(request)
+
+
+@app.middleware("http")
+async def csrf_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    cookie_token = _sanitize_csrf_token(request.cookies.get(_CSRF_COOKIE_NAME))
+    csrf_token = cookie_token or _issue_csrf_token()
+    request.state.csrf_token = csrf_token
+    request.state.csrf_cookie_name = _CSRF_COOKIE_NAME
+    needs_cookie_set = csrf_token != cookie_token
+
+    if request.method.upper() not in _CSRF_SAFE_METHODS and request.url.path not in _CSRF_EXEMPT_PATHS:
+        submitted_token = await _request_csrf_submission_token(request)
+        if not cookie_token or not submitted_token or not hmac.compare_digest(cookie_token, submitted_token):
+            return _csrf_failure_response(request, token_to_set=(csrf_token if needs_cookie_set else ""))
+
+    response = await call_next(request)
+    if needs_cookie_set:
+        _set_lax_cookie(response, request=request, name=_CSRF_COOKIE_NAME, value=csrf_token)
+    return response
 
 
 @app.get("/healthz")
@@ -5838,16 +6017,43 @@ def auth_login_submit(
 
     e = _normalize_email(email)
     n = _safe_next_path(next)
+
+    def _login_error(message: str, status_code: int) -> Response:
+        resp = templates.TemplateResponse(
+            "auth_login.html",
+            {
+                "request": request,
+                "next": n,
+                "next_q": quote(n),
+                "err": message,
+                "email": e,
+            },
+            status_code=status_code,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
+    ip = _request_client_ip(request) or "unknown"
+    retry_ip = _rate_limit_retry_after(bucket="auth_login_ip", subject=ip, limit=20, window_s=10 * 60)
+    retry_email = _rate_limit_retry_after(bucket="auth_login_email", subject=(e or "missing"), limit=10, window_s=10 * 60)
+    retry_after = max(v for v in [retry_ip, retry_email] if isinstance(v, int)) if any(
+        isinstance(v, int) for v in [retry_ip, retry_email]
+    ) else None
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="auth.login",
+            status="rate_limited",
+            actor_email=e,
+            meta={"retry_after_s": retry_after},
+        )
+        return _login_error(f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}.", 429)
+
     with DB.session() as db:
         user = db.scalar(select(User).where(User.email == e))
         if not user or not auth.verify_password(password, user.password_hash):
-            resp = templates.TemplateResponse(
-                "auth_login.html",
-                {"request": request, "next": n, "next_q": quote(n), "err": "Identifiants invalides.", "email": e},
-                status_code=401,
-            )
-            resp.headers["Cache-Control"] = "no-store"
-            return resp
+            _audit_log(request, action="auth.login", status="invalid_credentials", actor_email=e)
+            return _login_error("Identifiants invalides.", 401)
 
     if bool(getattr(user, "is_admin", False)):
         _import_legacy_projects_for_user(str(user.id))
@@ -5867,6 +6073,7 @@ def auth_login_submit(
         secure=secure_cookie,
         path="/",
     )
+    _audit_log(request, action="auth.login", status="ok", user=user)
     return resp
 
 
@@ -5917,8 +6124,45 @@ def auth_signup_submit(
     allowlist_configured = bool(allow_emails or allow_domains)
     bootstrap_admin_email = _normalize_email(_safe_env("BOOTSTRAP_ADMIN_EMAIL"))
     n = _safe_next_path(next)
+    ip = _request_client_ip(request) or "unknown"
+    retry_ip = _rate_limit_retry_after(bucket="auth_signup_ip", subject=ip, limit=10, window_s=60 * 60)
+    retry_email = _rate_limit_retry_after(bucket="auth_signup_email", subject=(e or "missing"), limit=5, window_s=60 * 60)
+    retry_after = max(v for v in [retry_ip, retry_email] if isinstance(v, int)) if any(
+        isinstance(v, int) for v in [retry_ip, retry_email]
+    ) else None
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="auth.signup",
+            status="rate_limited",
+            actor_email=e,
+            meta={"retry_after_s": retry_after},
+        )
+        resp = templates.TemplateResponse(
+            "auth_signup.html",
+            {
+                "request": request,
+                "next": n,
+                "next_q": quote(n),
+                "err": f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}.",
+                "email": e,
+                "invite_required": invite_required,
+                "invite_code": invite_code_clean,
+                "signup_disabled": signup_disabled,
+            },
+            status_code=429,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
 
     def _signup_error(msg: str, status_code: int = 400) -> Response:
+        _audit_log(
+            request,
+            action="auth.signup",
+            status="rejected",
+            actor_email=e,
+            meta={"reason": msg, "status_code": status_code},
+        )
         resp = templates.TemplateResponse(
             "auth_signup.html",
             {
@@ -5992,13 +6236,16 @@ def auth_signup_submit(
         secure=secure_cookie,
         path="/",
     )
+    _audit_log(request, action="auth.signup", status="ok", user=user)
     return resp
 
 
 @app.post("/auth/logout")
-def auth_logout() -> RedirectResponse:
+def auth_logout(request: Request) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
     resp = RedirectResponse(url="/auth/login", status_code=303)
     resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
+    _audit_log(request, action="auth.logout", status="ok", user=user)
     return resp
 
 
@@ -6100,33 +6347,73 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
     user = getattr(request.state, "user", None)
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
+    retry_after = _rate_limit_retry_after(
+        bucket="billing_checkout_user", subject=str(getattr(user, "id", "")), limit=10, window_s=10 * 60
+    )
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="billing.checkout",
+            status="rate_limited",
+            user=user,
+            meta={"retry_after_s": retry_after},
+        )
+        return RedirectResponse(
+            url=_path_with_flash("/billing", err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
+            status_code=303,
+        )
     pk = (plan_key or "").strip().lower()
     if pk not in {"solo", "pro", "business"}:
+        _audit_log(request, action="billing.checkout", status="invalid_plan", user=user, meta={"plan_key": pk})
         return RedirectResponse(url="/billing?canceled=1", status_code=303)
     with DB.session() as db:
         current = billing.effective_plan_key(db, user_id=str(user.id))
         sub = billing.subscription_for_user(db, user_id=str(user.id))
         sub_active = bool(sub and str(getattr(sub, "status", "") or "").strip().lower() in billing.ACTIVE_SUB_STATUSES)
         if sub_active and current == pk:
+            _audit_log(request, action="billing.checkout", status="noop", user=user, meta={"plan_key": pk, "current": current})
             return RedirectResponse(url="/billing?msg=Tu%20es%20d%C3%A9j%C3%A0%20sur%20ce%20plan.", status_code=303)
         if sub_active and current != "free":
             try:
                 if billing.plan_rank(pk) > billing.plan_rank(current):
                     billing.change_plan_now(db, user_id=str(user.id), target_plan_key=pk)
+                    _audit_log(
+                        request,
+                        action="billing.plan_change",
+                        status="ok",
+                        user=user,
+                        meta={"mode": "upgrade_now", "from": current, "to": pk},
+                    )
                     return RedirectResponse(url=f"/billing?msg={quote('Plan mis à jour.')}", status_code=303)
                 _, effective_at = billing.schedule_plan_change_at_period_end(db, user_id=str(user.id), target_plan_key=pk)
+                _audit_log(
+                    request,
+                    action="billing.plan_change",
+                    status="ok",
+                    user=user,
+                    meta={"mode": "downgrade_period_end", "from": current, "to": pk},
+                )
                 if effective_at:
                     msg = f"Downgrade planifié pour le {effective_at.strftime('%d/%m/%Y')}."
                 else:
                     msg = "Downgrade planifié en fin de période."
                 return RedirectResponse(url=f"/billing?msg={quote(msg)}", status_code=303)
             except Exception as e:
+                _audit_log(
+                    request,
+                    action="billing.plan_change",
+                    status="error",
+                    user=user,
+                    meta={"from": current, "to": pk, "error": str(e)[:240]},
+                )
                 return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
     try:
         with DB.session() as db:
             url = billing.create_checkout_session_url(db, user_id=str(user.id), email=str(user.email), plan_key=pk)
+        _audit_log(request, action="billing.checkout", status="ok", user=user, meta={"plan_key": pk})
         return RedirectResponse(url=url, status_code=303)
     except Exception as e:
+        _audit_log(request, action="billing.checkout", status="error", user=user, meta={"plan_key": pk, "error": str(e)[:240]})
         return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
 
 
@@ -6135,11 +6422,28 @@ def billing_portal(request: Request) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
+    retry_after = _rate_limit_retry_after(
+        bucket="billing_portal_user", subject=str(getattr(user, "id", "")), limit=10, window_s=10 * 60
+    )
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="billing.portal",
+            status="rate_limited",
+            user=user,
+            meta={"retry_after_s": retry_after},
+        )
+        return RedirectResponse(
+            url=_path_with_flash("/billing", err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
+            status_code=303,
+        )
     try:
         with DB.session() as db:
             url = billing.create_billing_portal_url(db, user_id=str(user.id), email=str(user.email))
+        _audit_log(request, action="billing.portal", status="ok", user=user)
         return RedirectResponse(url=url, status_code=303)
     except Exception as e:
+        _audit_log(request, action="billing.portal", status="error", user=user, meta={"error": str(e)[:240]})
         return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
 
 
@@ -6376,6 +6680,7 @@ def settings_accounts_save(
     try:
         if op == "clear":
             _delete_user_connection(user_id=str(user.id), key=key)
+            _audit_log(request, action="settings.account_connection", status="cleared", user=user, target_type="connection", target_id=key)
         else:
             v = (value or "").strip()
             if not v:
@@ -6383,7 +6688,17 @@ def settings_accounts_save(
             if key == "BING_WEBMASTER_API_KEY":
                 _delete_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY)
             _upsert_user_connection(user_id=str(user.id), key=key, value=v, meta={"auth_type": "manual"})
+            _audit_log(request, action="settings.account_connection", status="saved", user=user, target_type="connection", target_id=key)
     except Exception as e:
+        _audit_log(
+            request,
+            action="settings.account_connection",
+            status="error",
+            user=user,
+            target_type="connection",
+            target_id=key,
+            meta={"error": str(e)[:240], "op": op},
+        )
         raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
 
     return RedirectResponse(url="/settings/accounts", status_code=303)
@@ -6559,9 +6874,27 @@ def settings_system_save(
                 return RedirectResponse(url="/settings/system", status_code=303)
             _write_env_key(target, key, v)
     except Exception as e:
+        _audit_log(
+            request,
+            action="settings.system",
+            status="error",
+            user=request.state.user,
+            target_type="env",
+            target_id=key,
+            meta={"op": op, "error": str(e)[:240]},
+        )
         raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
 
     _apply_effective_env(key)
+    _audit_log(
+        request,
+        action="settings.system",
+        status=("cleared" if op == "clear" else "saved"),
+        user=request.state.user,
+        target_type="env",
+        target_id=key,
+        meta={"op": op},
+    )
     return RedirectResponse(url="/settings/system", status_code=303)
 
 
@@ -6633,6 +6966,14 @@ def add_project(
             msg = "Limite de sites atteinte pour ton plan. Va sur Abonnement pour upgrade."
         if skipped and not created:
             msg = "Aucun projet ajouté (certains hôtes sont refusés)."
+        _audit_log(
+            request,
+            action="project.create",
+            status=("ok" if created else "noop"),
+            user=user,
+            target_type="project",
+            meta={"mode": mode, "count": len(created), "created": created[:20], "skipped": skipped, "capped": capped},
+        )
         return RedirectResponse(url=_path_with_flash(next_path, msg=msg), status_code=303)
 
     raw = domain if mode == "domain" else url
@@ -6655,6 +6996,15 @@ def add_project(
     slug = _db_upsert_project(user_id=user.id, base_url=base, site_name=site_name)
     if slug:
         created.append(slug)
+    _audit_log(
+        request,
+        action="project.create",
+        status=("ok" if created else "noop"),
+        user=user,
+        target_type="project",
+        target_id=(created[0] if created else ""),
+        meta={"mode": mode, "base_url": base},
+    )
     return RedirectResponse(url=_path_with_flash(next_path, msg="Projet ajouté."), status_code=303)
 
 
@@ -6681,9 +7031,18 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
                 select(Project).where(Project.owner_user_id == str(user.id), Project.slug.in_(normalized))  # type: ignore[arg-type]
             )
         )
+        deleted_slugs = [str(p.slug or "").strip() for p in rows if str(p.slug or "").strip()]
         for p in rows:
             db.delete(p)
         db.commit()
+    _audit_log(
+        request,
+        action="project.delete",
+        status="ok",
+        user=user,
+        target_type="project",
+        meta={"count": len(deleted_slugs), "slugs": deleted_slugs[:50]},
+    )
 
     return RedirectResponse(url="/", status_code=303)
 
@@ -6722,6 +7081,18 @@ async def assistant_chat(request: Request) -> JSONResponse:
     if not isinstance(message, str) or not message.strip():
         return JSONResponse({"ok": False, "error": "Missing message"}, status_code=400)
     message = message.strip()[:2000]
+    retry_after = _rate_limit_retry_after(
+        bucket="assistant_chat_user",
+        subject=str(getattr(user, "id", "")),
+        limit=20,
+        window_s=60,
+    )
+    if isinstance(retry_after, int):
+        return JSONResponse(
+            {"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
 
     if not bool(getattr(user, "is_admin", False)):
         with DB.session() as db:
@@ -6834,14 +7205,37 @@ def google_oauth_callback(
     return_to = _safe_next_path(payload.get("next") if isinstance(payload, dict) else None)
     fallback_target = return_to or f"/projects/{slug}/settings/crawl"
     if not slug:
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="invalid_state",
+            target_type="project",
+            target_id="missing_slug",
+        )
         return RedirectResponse(url=f"/settings/accounts?err={quote('OAuth state invalide.')}", status_code=303)
     user = getattr(request.state, "user", None)
     if not user or not _db_project(str(user.id), slug):
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="project_not_found",
+            user=user,
+            target_type="project",
+            target_id=slug,
+        )
         return RedirectResponse(url=f"/?err={quote('Projet introuvable (OAuth).')}", status_code=303)
 
     ts = payload.get("ts") if isinstance(payload, dict) else None
     try:
         if isinstance(ts, int) and ts > 0 and (time.time() - ts) > 20 * 60:
+            _audit_log(
+                request,
+                action="oauth.google.callback",
+                status="expired",
+                user=user,
+                target_type="project",
+                target_id=slug,
+            )
             return RedirectResponse(
                 url=_path_with_flash(fallback_target, err="OAuth expiré. Relance la connexion Google."),
                 status_code=303,
@@ -6853,9 +7247,26 @@ def google_oauth_callback(
         details = (error_description or error).strip()
         if len(details) > 200:
             details = details[:200] + "…"
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="provider_error",
+            user=user,
+            target_type="project",
+            target_id=slug,
+            meta={"error": details},
+        )
         return RedirectResponse(url=_path_with_flash(fallback_target, err=details), status_code=303)
 
     if not code:
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="missing_code",
+            user=user,
+            target_type="project",
+            target_id=slug,
+        )
         return RedirectResponse(
             url=_path_with_flash(fallback_target, err="Code OAuth manquant."),
             status_code=303,
@@ -6863,6 +7274,14 @@ def google_oauth_callback(
 
     client_id, client_secret = _google_oauth_client()
     if not client_id or not client_secret:
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="oauth_not_configured",
+            user=user,
+            target_type="project",
+            target_id=slug,
+        )
         return RedirectResponse(
             url=_path_with_flash(fallback_target, err="Google OAuth non configuré (client id/secret)."),
             status_code=303,
@@ -6880,11 +7299,28 @@ def google_oauth_callback(
         msg = f"OAuth token exchange failed: {type(e).__name__}: {e}"
         if len(msg) > 250:
             msg = msg[:250] + "…"
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="exchange_error",
+            user=user,
+            target_type="project",
+            target_id=slug,
+            meta={"error": msg},
+        )
         return RedirectResponse(url=_path_with_flash(fallback_target, err=msg), status_code=303)
 
     refresh_token = str(token_data.get("refresh_token") or "").strip()
     if not refresh_token:
         missing_msg = "Google n'a pas renvoyé de refresh_token. Réessaie (prompt=consent) ou révoque l'accès puis reconnecte."
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="missing_refresh_token",
+            user=user,
+            target_type="project",
+            target_id=slug,
+        )
         return RedirectResponse(url=_path_with_flash(fallback_target, err=missing_msg), status_code=303)
 
     scope = str(token_data.get("scope") or _GOOGLE_OAUTH_SCOPE).strip() or _GOOGLE_OAUTH_SCOPE
@@ -6894,8 +7330,25 @@ def google_oauth_callback(
         msg = f"SaveError: {type(e).__name__}: {e}"
         if len(msg) > 200:
             msg = msg[:200] + "…"
+        _audit_log(
+            request,
+            action="oauth.google.callback",
+            status="save_error",
+            user=user,
+            target_type="project",
+            target_id=slug,
+            meta={"error": msg},
+        )
         return RedirectResponse(url=_path_with_flash(fallback_target, err=msg), status_code=303)
 
+    _audit_log(
+        request,
+        action="oauth.google.callback",
+        status="ok",
+        user=user,
+        target_type="project",
+        target_id=slug,
+    )
     return RedirectResponse(url=_path_with_flash(fallback_target, msg="Google connecté (OAuth)."), status_code=303)
 
 
@@ -6907,6 +7360,14 @@ def project_gsc_oauth_disconnect(request: Request, slug: str) -> RedirectRespons
     if token:
         _google_oauth_revoke_token(token)
     _gsc_oauth_clear(str(getattr(user, "id", "")), slug)
+    _audit_log(
+        request,
+        action="oauth.google.disconnect",
+        status="ok",
+        user=user,
+        target_type="project",
+        target_id=slug,
+    )
     return RedirectResponse(url=f"/projects/{slug}/settings/crawl?msg={quote('Google déconnecté.')}", status_code=303)
 
 
@@ -6993,7 +7454,25 @@ def github_oauth_callback(
         }
         _upsert_user_connection(user_id=str(user.id), key="GITHUB_TOKEN", value=access_token, meta=meta)
     except Exception as e:
+        _audit_log(
+            request,
+            action="oauth.github.connect",
+            status="error",
+            user=user,
+            target_type="connection",
+            target_id="GITHUB_TOKEN",
+            meta={"error": str(e)[:240]},
+        )
         return RedirectResponse(url=_path_with_flash(return_to, err=f"GitHub OAuth: {type(e).__name__}: {e}"), status_code=303)
+    _audit_log(
+        request,
+        action="oauth.github.connect",
+        status="ok",
+        user=user,
+        target_type="connection",
+        target_id="GITHUB_TOKEN",
+        meta={"login": meta.get("login") or ""},
+    )
     return RedirectResponse(url=_path_with_flash(return_to, msg="GitHub connecté."), status_code=303)
 
 
@@ -7003,6 +7482,7 @@ def github_oauth_disconnect(request: Request, next: str = Form(default="/setting
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
     _delete_user_connection(user_id=str(user.id), key="GITHUB_TOKEN")
+    _audit_log(request, action="oauth.github.disconnect", status="ok", user=user, target_type="connection", target_id="GITHUB_TOKEN")
     return RedirectResponse(url=_path_with_flash(next, msg="GitHub déconnecté."), status_code=303)
 
 
@@ -7127,6 +7607,15 @@ def netlify_oauth_complete(
             _netlify_store_oauth_token_fallback(user_id=str(user.id), oauth_token=token, upgrade_error=str(e))
             message = "Netlify connecté (fallback token OAuth ; génération PAT refusée)."
         except Exception as fallback_error:
+            _audit_log(
+                request,
+                action="oauth.netlify.connect",
+                status="error",
+                user=user,
+                target_type="connection",
+                target_id="NETLIFY_TOKEN",
+                meta={"error": str(fallback_error)[:240]},
+            )
             return RedirectResponse(
                 url=_path_with_flash(
                     return_to,
@@ -7134,6 +7623,15 @@ def netlify_oauth_complete(
                 ),
                 status_code=303,
             )
+    _audit_log(
+        request,
+        action="oauth.netlify.connect",
+        status="ok",
+        user=user,
+        target_type="connection",
+        target_id="NETLIFY_TOKEN",
+        meta={"mode": ("fallback_oauth" if "fallback" in message.lower() else "pat")},
+    )
     return RedirectResponse(url=_path_with_flash(return_to, msg=message), status_code=303)
 
 
@@ -7143,6 +7641,7 @@ def netlify_oauth_disconnect(request: Request, next: str = Form(default="/settin
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
     _delete_user_connection(user_id=str(user.id), key="NETLIFY_TOKEN")
+    _audit_log(request, action="oauth.netlify.disconnect", status="ok", user=user, target_type="connection", target_id="NETLIFY_TOKEN")
     return RedirectResponse(url=_path_with_flash(next, msg="Netlify déconnecté."), status_code=303)
 
 
@@ -7290,7 +7789,24 @@ def bing_oauth_callback(
         _upsert_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY, value=refresh_token, meta=meta)
         _delete_user_connection(user_id=str(user.id), key="BING_WEBMASTER_API_KEY")
     except Exception as e:
+        _audit_log(
+            request,
+            action="oauth.bing.connect",
+            status="error",
+            user=user,
+            target_type="connection",
+            target_id=_BING_OAUTH_CONNECTION_KEY,
+            meta={"error": str(e)[:240]},
+        )
         return RedirectResponse(url=_path_with_flash(return_to, err=f"Bing OAuth: {type(e).__name__}: {e}"), status_code=303)
+    _audit_log(
+        request,
+        action="oauth.bing.connect",
+        status="ok",
+        user=user,
+        target_type="connection",
+        target_id=_BING_OAUTH_CONNECTION_KEY,
+    )
     return RedirectResponse(url=_path_with_flash(return_to, msg="Bing connecté."), status_code=303)
 
 
@@ -7300,6 +7816,7 @@ def bing_oauth_disconnect(request: Request, next: str = Form(default="/settings/
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
     _delete_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY)
+    _audit_log(request, action="oauth.bing.disconnect", status="ok", user=user, target_type="connection", target_id=_BING_OAUTH_CONNECTION_KEY)
     return RedirectResponse(url=_path_with_flash(next, msg="Bing déconnecté."), status_code=303)
 
 
@@ -7704,6 +8221,21 @@ def run(
     site: str | None = Form(default=None),
 ) -> RedirectResponse:
     user = _require_admin(request)
+    retry_after = _rate_limit_retry_after(
+        bucket="automation_run_user", subject=str(getattr(user, "id", "")), limit=4, window_s=60
+    )
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="automation.run",
+            status="rate_limited",
+            user=user,
+            meta={"retry_after_s": retry_after},
+        )
+        return RedirectResponse(
+            url=_path_with_flash("/automation", err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
+            status_code=303,
+        )
     cfg = Path(config_path).expanduser()
     if not cfg.is_absolute():
         cfg = (REPO_ROOT / cfg).resolve()
@@ -7737,6 +8269,15 @@ def run(
         cmd_preview.extend(extra_args)
     job.command = cmd_preview
     _save_job(job)
+    _audit_log(
+        request,
+        action="automation.run",
+        status="queued",
+        user=user,
+        target_type="job",
+        target_id=job.id,
+        meta={"run_policy": run_policy, "site": site or ""},
+    )
     return RedirectResponse(url=f"/jobs?job={job.id}", status_code=303)
 
 
@@ -7747,11 +8288,31 @@ def crawl_project(
     config_path: str = Form(default=str(DEFAULT_CONFIG)),
 ) -> Response:
     proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    retry_after = _rate_limit_retry_after(
+        bucket="crawl_project_user",
+        subject=str(getattr(user, "id", "") or _request_client_ip(request) or slug),
+        limit=8,
+        window_s=60,
+    )
+    if isinstance(retry_after, int):
+        msg = f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."
+        _audit_log(
+            request,
+            action="crawl.start",
+            status="rate_limited",
+            user=user,
+            target_type="project",
+            target_id=slug,
+            meta={"retry_after_s": retry_after},
+        )
+        if _client_wants_json(request):
+            return JSONResponse({"ok": False, "error": msg}, status_code=429, headers={"Retry-After": str(retry_after)})
+        return RedirectResponse(url=f"/projects/{slug}?err={quote(msg)}", status_code=303)
     cfg = Path(config_path).expanduser()
     if not cfg.is_absolute():
         cfg = (REPO_ROOT / cfg).resolve()
 
-    user = getattr(request.state, "user", None)
     project_settings = proj.settings if isinstance(proj.settings, dict) else {}
     crawl_cfg, _, _ = _effective_project_crawl_settings(
         slug, config_path=(cfg if cfg.exists() else None), project_settings=project_settings
@@ -7781,6 +8342,15 @@ def crawl_project(
                 override_max_pages = int(remaining)
             elif not ok:
                 msg = "Quota crawl mensuel atteint. Va sur Abonnement pour upgrade."
+                _audit_log(
+                    request,
+                    action="crawl.start",
+                    status="quota_reached",
+                    user=user,
+                    target_type="project",
+                    target_id=slug,
+                    meta={"requested_max_pages": requested_max_pages},
+                )
                 if _client_wants_json(request):
                     return JSONResponse({"ok": False, "error": msg, "billing_url": "/billing"}, status_code=402)
                 return RedirectResponse(url=f"/projects/{slug}?err={quote(msg)}", status_code=303)
@@ -7804,6 +8374,15 @@ def crawl_project(
     else:
         job.result["skip_billing"] = True
     _save_job(job)
+    _audit_log(
+        request,
+        action="crawl.start",
+        status="queued",
+        user=user,
+        target_type="project",
+        target_id=slug,
+        meta={"job_id": job.id, "requested_max_pages": requested_max_pages, "planned_pages": planned_pages},
+    )
     if _client_wants_json(request):
         return JSONResponse({"ok": True, "slug": slug, "job_id": job.id, "status": job.status})
     return RedirectResponse(url=f"/projects/{slug}?job={job.id}", status_code=303)
@@ -7815,6 +8394,25 @@ def crawl_projects_batch(
     config_path: str = Form(default=str(DEFAULT_CONFIG)),
     slugs: list[str] = Form(default=[]),
 ) -> Response:
+    user = getattr(request.state, "user", None)
+    retry_after = _rate_limit_retry_after(
+        bucket="crawl_batch_user",
+        subject=str(getattr(user, "id", "") or _request_client_ip(request) or "batch"),
+        limit=4,
+        window_s=60,
+    )
+    if isinstance(retry_after, int):
+        msg = f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."
+        _audit_log(
+            request,
+            action="crawl.batch",
+            status="rate_limited",
+            user=user,
+            meta={"retry_after_s": retry_after},
+        )
+        if _client_wants_json(request):
+            return JSONResponse({"ok": False, "error": msg}, status_code=429, headers={"Retry-After": str(retry_after)})
+        return RedirectResponse(url=_path_with_flash("/", err=msg), status_code=303)
     cfg = Path(config_path).expanduser()
     if not cfg.is_absolute():
         cfg = (REPO_ROOT / cfg).resolve()
@@ -7833,7 +8431,6 @@ def crawl_projects_batch(
             return JSONResponse({"ok": False, "error": "Aucun projet sélectionné"}, status_code=400)
         return RedirectResponse(url="/", status_code=303)
 
-    user = getattr(request.state, "user", None)
     allowed = [s for s in normalized if user and _db_project(str(user.id), s)]
     if not allowed:
         if _client_wants_json(request):
@@ -7914,8 +8511,22 @@ def crawl_projects_batch(
         return JSONResponse({"ok": True, "jobs": jobs, "capped": capped_any})
 
     if not jobs:
+        _audit_log(
+            request,
+            action="crawl.batch",
+            status="quota_reached",
+            user=user,
+            meta={"requested_slugs": normalized[:50]},
+        )
         return RedirectResponse(url=f"/?err={quote('Quota crawl mensuel atteint. Va sur Abonnement pour upgrade.')}", status_code=303)
 
+    _audit_log(
+        request,
+        action="crawl.batch",
+        status="queued",
+        user=user,
+        meta={"count": len(jobs), "jobs": jobs[:50], "capped": capped_any},
+    )
     if len(jobs) == 1:
         return RedirectResponse(url=f"/projects/{jobs[0]['slug']}?job={job_ids[0]}", status_code=303)
     if capped_any and jobs:

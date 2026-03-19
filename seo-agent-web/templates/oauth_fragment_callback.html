@@ -38,6 +38,7 @@
   </head>
   <body>
     <form id="oauth-complete-form" method="post" action="{{ complete_url }}">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
       <input type="hidden" name="access_token" id="oauth-access-token" value="" />
       <input type="hidden" name="state" id="oauth-state" value="" />
       <input type="hidden" name="error" id="oauth-error" value="" />
