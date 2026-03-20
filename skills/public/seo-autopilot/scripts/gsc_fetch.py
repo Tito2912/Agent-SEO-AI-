@@ -37,6 +37,23 @@ GSC_SCOPE_READONLY = "https://www.googleapis.com/auth/webmasters.readonly"
 GSC_SCOPE_FULL = "https://www.googleapis.com/auth/webmasters"
 
 
+def _scopes_from_json(raw: Any) -> list[str] | None:
+    if not isinstance(raw, dict):
+        return None
+
+    scopes_list = raw.get("scopes")
+    if isinstance(scopes_list, list):
+        out = [str(s).strip() for s in scopes_list if isinstance(s, str) and str(s).strip()]
+        return out or None
+
+    scope = raw.get("scope")
+    if isinstance(scope, str) and scope.strip():
+        out = [s.strip() for s in scope.split() if s.strip()]
+        return out or None
+
+    return None
+
+
 def _today_utc() -> dt.date:
     return dt.datetime.now(dt.timezone.utc).date()
 
@@ -53,8 +70,6 @@ def _get_access_token(credentials_path: Path, *, scopes: list[str] | None = None
     except ModuleNotFoundError as e:
         raise RuntimeError("Missing dependency. Install: pip install google-auth") from e
 
-    scopes = scopes or [GSC_SCOPE_READONLY]
-
     raw: Any = None
     try:
         raw = json.loads(credentials_path.read_text(encoding="utf-8"))
@@ -62,9 +77,13 @@ def _get_access_token(credentials_path: Path, *, scopes: list[str] | None = None
         raw = None
 
     if isinstance(raw, dict) and str(raw.get("type") or "").strip() == "service_account":
-        creds = service_account.Credentials.from_service_account_file(str(credentials_path), scopes=list(scopes))
+        effective_scopes = scopes or _scopes_from_json(raw) or [GSC_SCOPE_READONLY]
+        creds = service_account.Credentials.from_service_account_file(str(credentials_path), scopes=list(effective_scopes))
     else:
         # OAuth "authorized_user" (refresh token) format.
+        # Important: avoid forcing scopes on refresh unless we have them from the stored credential file.
+        # Mismatched scopes can lead to `invalid_scope` on refresh.
+        raw_scopes = _scopes_from_json(raw)
         refresh_token = str(raw.get("refresh_token") or "").strip() if isinstance(raw, dict) else ""
         client_id = str(raw.get("client_id") or "").strip() if isinstance(raw, dict) else ""
         client_secret = str(raw.get("client_secret") or "").strip() if isinstance(raw, dict) else ""
@@ -83,11 +102,14 @@ def _get_access_token(credentials_path: Path, *, scopes: list[str] | None = None
                 token_uri=token_uri,
                 client_id=client_id,
                 client_secret=client_secret,
-                scopes=list(scopes),
+                scopes=list(raw_scopes) if raw_scopes else None,
             )
         else:
             # Fall back to google-auth's built-in file parser for authorized_user JSON.
-            creds = Credentials.from_authorized_user_file(str(credentials_path), scopes=list(scopes))
+            creds = Credentials.from_authorized_user_file(
+                str(credentials_path),
+                scopes=list(raw_scopes) if raw_scopes else None,
+            )
 
     creds.refresh(Request())
     token = getattr(creds, "token", None)
@@ -107,7 +129,7 @@ def fetch_gsc(
     row_limit: int,
     timeout_s: float,
 ) -> list[dict[str, Any]]:
-    token = _get_access_token(credentials_path, scopes=[GSC_SCOPE_READONLY])
+    token = _get_access_token(credentials_path, scopes=None)
 
     # siteUrl must be URL-encoded when used in path.
     site_encoded = quote(property_url, safe="")
@@ -145,6 +167,9 @@ def inspect_url(
     Docs: https://developers.google.com/webmaster-tools/search-console-api-original/v3/urlInspection.index/inspect
     Endpoint is stable as of v1: POST https://searchconsole.googleapis.com/v1/urlInspection/index:inspect
     """
+    # For OAuth refresh tokens, we rely on the stored credential scopes (or token's original scopes)
+    # to avoid `invalid_scope` on refresh. Service accounts still require explicit scopes, but that
+    # is handled inside `_get_access_token`.
     token = _get_access_token(credentials_path, scopes=[GSC_SCOPE_FULL])
     url = "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect"
     body: dict[str, Any] = {"inspectionUrl": inspection_url, "siteUrl": property_url}
