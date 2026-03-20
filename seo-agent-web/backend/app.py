@@ -26,6 +26,7 @@ import csv
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
@@ -38,6 +39,13 @@ try:
     from bs4 import BeautifulSoup  # type: ignore
 except Exception:
     BeautifulSoup = None  # type: ignore
+try:  # pragma: no cover - optional dependency
+    from cryptography.fernet import Fernet, InvalidToken  # type: ignore
+except Exception:  # pragma: no cover
+    Fernet = None  # type: ignore
+
+    class InvalidToken(Exception):  # type: ignore
+        pass
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -414,6 +422,62 @@ def _env_list(name: str) -> list[str]:
     parts = [p.strip() for p in re.split(r"[,\n;]+", raw) if p and p.strip()]
     return [p for p in parts if p]
 
+_SECRET_PREFIX = "enc:"
+
+
+def _encryption_seed() -> str:
+    # Prefer a dedicated encryption seed; fall back to session secret for backward compatibility.
+    return _safe_env("SEO_AGENT_ENCRYPTION_KEY") or _safe_env("SEO_AGENT_SECRET_KEY")
+
+
+def _encryption_ready() -> bool:
+    return bool(_encryption_seed()) and Fernet is not None
+
+
+@lru_cache(maxsize=1)
+def _fernet() -> Any | None:
+    if not _encryption_ready():
+        return None
+    seed = _encryption_seed()
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
+    key = base64.urlsafe_b64encode(digest)
+    try:
+        return Fernet(key)  # type: ignore[misc]
+    except Exception:
+        return None
+
+
+def _encrypt_secret(plaintext: str) -> str:
+    raw = (plaintext or "").strip()
+    if not raw or raw.startswith(_SECRET_PREFIX):
+        return raw
+    f = _fernet()
+    if f is None:
+        return raw
+    try:
+        token = f.encrypt(raw.encode("utf-8")).decode("ascii")  # type: ignore[union-attr]
+    except Exception:
+        return raw
+    return f"{_SECRET_PREFIX}{token}"
+
+
+def _decrypt_secret(stored: str) -> str:
+    raw = (stored or "").strip()
+    if not raw:
+        return ""
+    if not raw.startswith(_SECRET_PREFIX):
+        return raw
+    f = _fernet()
+    if f is None:
+        raise RuntimeError("encryption_not_configured")
+    token = raw[len(_SECRET_PREFIX) :].strip()
+    try:
+        return f.decrypt(token.encode("ascii")).decode("utf-8")  # type: ignore[union-attr]
+    except InvalidToken as e:  # pragma: no cover
+        raise RuntimeError("invalid_encryption_key") from e
+    except Exception as e:  # pragma: no cover
+        raise RuntimeError("secret_decrypt_failed") from e
+
 
 def _project_meta(settings: dict[str, Any] | None) -> dict[str, Any]:
     node = settings if isinstance(settings, dict) else {}
@@ -448,9 +512,22 @@ def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tupl
                 UserConnection.key == normalized_key,
             )
         )
-        value = str(getattr(row, "secret_value", "") or "").strip()
-        if value:
-            return value, "user"
+        stored = str(getattr(row, "secret_value", "") or "").strip()
+        if stored:
+            try:
+                value = _decrypt_secret(stored)
+            except Exception:
+                value = ""
+            if value:
+                # Lazy-migrate plaintext secrets to encrypted-at-rest.
+                if _encryption_ready() and not stored.startswith(_SECRET_PREFIX) and row is not None:
+                    try:
+                        row.secret_value = _encrypt_secret(value)
+                        session.add(row)
+                        session.commit()
+                    except Exception:
+                        session.rollback()
+                return value, "user"
         system_value = _safe_env(normalized_key)
         if system_value:
             return system_value, "system"
@@ -461,6 +538,7 @@ def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tupl
 
 
 def _upsert_user_connection(*, user_id: str, key: str, value: str, meta: dict[str, Any] | None = None) -> None:
+    stored_value = _encrypt_secret(str(value))
     with DB.session() as db:
         row = db.scalar(
             select(UserConnection).where(
@@ -469,7 +547,7 @@ def _upsert_user_connection(*, user_id: str, key: str, value: str, meta: dict[st
             )
         )
         if row:
-            row.secret_value = str(value)
+            row.secret_value = stored_value
             if meta is not None:
                 row.meta = dict(meta)
             db.add(row)
@@ -478,7 +556,7 @@ def _upsert_user_connection(*, user_id: str, key: str, value: str, meta: dict[st
                 UserConnection(
                     user_id=str(user_id),
                     key=str(key),
-                    secret_value=str(value),
+                    secret_value=stored_value,
                     meta=(dict(meta) if meta is not None else {}),
                 )
             )
@@ -510,7 +588,20 @@ def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
 
         oauth_row = _user_connection_row(user_id=str(user_id), key=_BING_OAUTH_CONNECTION_KEY, db=session)
         oauth_meta = _connection_meta(oauth_row)
-        refresh_token = str(getattr(oauth_row, "secret_value", "") or "").strip() if oauth_row else ""
+        refresh_token_stored = str(getattr(oauth_row, "secret_value", "") or "").strip() if oauth_row else ""
+        refresh_token = ""
+        if refresh_token_stored:
+            try:
+                refresh_token = _decrypt_secret(refresh_token_stored)
+            except Exception:
+                refresh_token = ""
+            if refresh_token and _encryption_ready() and oauth_row is not None and not refresh_token_stored.startswith(_SECRET_PREFIX):
+                try:
+                    oauth_row.secret_value = _encrypt_secret(refresh_token)
+                    session.add(oauth_row)
+                    session.commit()
+                except Exception:
+                    session.rollback()
         if refresh_token:
             access_token = str(oauth_meta.get("access_token") or "").strip()
             expires_at = float(oauth_meta.get("expires_at") or 0.0) if oauth_meta.get("expires_at") else 0.0
