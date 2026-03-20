@@ -308,9 +308,17 @@ def _load_env_file(path: Path, *, override: bool) -> None:
 
 # Load `.env` files so subprocesses (crawl/autopilot) can access API keys/tokens when the UI launches jobs.
 # We keep it additive (`setdefault`) so OS env vars still win.
+#
+# Notes:
+# - `.env` stays in the repo (dev convenience).
+# - UI-edited overrides live in `DATA_DIR` so they persist on Render's mounted disk.
 _load_env_file(REPO_ROOT / ".env", override=False)
+# Backward compatible: repo-root overrides (local dev)
 _load_env_file(REPO_ROOT / ".env.gsc", override=True)
 _load_env_file(REPO_ROOT / ".env.local", override=True)
+# Preferred: persisted overrides (Render disk)
+_load_env_file(DATA_DIR / ".env.gsc", override=True)
+_load_env_file(DATA_DIR / ".env.local", override=True)
 
 
 def _read_env_file(path: Path) -> dict[str, str]:
@@ -371,12 +379,19 @@ def _env_effective_value(key: str) -> tuple[str | None, str]:
         if v:
             return v, "os"
 
-    env_local = _read_env_file(REPO_ROOT / ".env.local")
+    env_local = _read_env_file(DATA_DIR / ".env.local")
     if k in env_local and str(env_local.get(k) or "").strip():
-        return str(env_local.get(k) or ""), ".env.local"
-    env_gsc = _read_env_file(REPO_ROOT / ".env.gsc")
+        return str(env_local.get(k) or ""), "data/.env.local"
+    env_local_repo = _read_env_file(REPO_ROOT / ".env.local")
+    if k in env_local_repo and str(env_local_repo.get(k) or "").strip():
+        return str(env_local_repo.get(k) or ""), ".env.local"
+
+    env_gsc = _read_env_file(DATA_DIR / ".env.gsc")
     if k in env_gsc and str(env_gsc.get(k) or "").strip():
-        return str(env_gsc.get(k) or ""), ".env.gsc"
+        return str(env_gsc.get(k) or ""), "data/.env.gsc"
+    env_gsc_repo = _read_env_file(REPO_ROOT / ".env.gsc")
+    if k in env_gsc_repo and str(env_gsc_repo.get(k) or "").strip():
+        return str(env_gsc_repo.get(k) or ""), ".env.gsc"
     env_base = _read_env_file(REPO_ROOT / ".env")
     if k in env_base and str(env_base.get(k) or "").strip():
         return str(env_base.get(k) or ""), ".env"
@@ -1133,7 +1148,10 @@ def _mask_secret(value: str | None) -> str:
 
 def _env_target_path(key: str) -> Path:
     # Keep GSC creds in a dedicated file by default; everything else goes to `.env.local`.
-    return (REPO_ROOT / ".env.gsc") if key == "GOOGLE_APPLICATION_CREDENTIALS" else (REPO_ROOT / ".env.local")
+    #
+    # IMPORTANT: In production (Render), the repo directory can be ephemeral and/or read-only.
+    # Persist UI-edited overrides under `DATA_DIR` (mounted disk) so values survive restarts.
+    return (DATA_DIR / ".env.gsc") if key == "GOOGLE_APPLICATION_CREDENTIALS" else (DATA_DIR / ".env.local")
 
 
 def _apply_effective_env(key: str) -> None:
