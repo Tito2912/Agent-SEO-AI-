@@ -1297,14 +1297,34 @@ def _gsc_property_candidates(base_url: str, configured: str | None) -> list[str]
     if isinstance(configured, str) and configured.strip():
         candidates.append(configured.strip())
 
-    host = (urlsplit(base_url).hostname or "").strip().lower()
+    parts = urlsplit(base_url)
+    scheme = (parts.scheme or "https").strip().lower() or "https"
+    host = (parts.hostname or "").strip().lower()
+    netloc = (parts.netloc or "").strip().lower()
     host_no_www = host[4:] if host.startswith("www.") else host
+    host_www = host if host.startswith("www.") else (f"www.{host}" if host else "")
     if host_no_www:
         candidates.append(f"sc-domain:{host_no_www}")
 
-    root = _root_url(base_url).strip()
-    if root:
-        candidates.append(root if root.endswith("/") else f"{root}/")
+    # URL-prefix properties require an exact match (scheme + host + trailing slash).
+    if netloc:
+        root = urlunsplit((scheme, netloc, "", "", "")).strip()
+        if root:
+            candidates.append(root if root.endswith("/") else f"{root}/")
+
+        if host_www and host_no_www and host_www != host_no_www:
+            alt_netloc = host_www
+            if parts.port:
+                alt_netloc = f"{alt_netloc}:{parts.port}"
+            alt_root = urlunsplit((scheme, alt_netloc, "", "", "")).strip()
+            if alt_root:
+                candidates.append(alt_root if alt_root.endswith("/") else f"{alt_root}/")
+
+        # Also try the opposite scheme (some sites are still registered as http:// in GSC).
+        alt_scheme = "http" if scheme == "https" else "https"
+        alt_root2 = urlunsplit((alt_scheme, netloc, "", "", "")).strip()
+        if alt_root2:
+            candidates.append(alt_root2 if alt_root2.endswith("/") else f"{alt_root2}/")
 
     seen: set[str] = set()
     out: list[str] = []
