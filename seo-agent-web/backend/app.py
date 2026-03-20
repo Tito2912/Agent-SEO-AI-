@@ -5728,9 +5728,31 @@ def _require_admin(request: Request) -> User:
     return user
 
 
+def _system_settings_owner_email() -> str:
+    return _normalize_email(_safe_env("SYSTEM_SETTINGS_OWNER_EMAIL") or _safe_env("BOOTSTRAP_ADMIN_EMAIL"))
+
+
+def _user_can_access_system_settings(user: User | None) -> bool:
+    if not user:
+        return False
+    owner_email = _system_settings_owner_email()
+    user_email = _normalize_email(str(getattr(user, "email", "") or ""))
+    if owner_email:
+        return user_email == owner_email
+    return bool(getattr(user, "is_admin", False))
+
+
+def _require_system_owner(request: Request) -> User:
+    user = getattr(request.state, "user", None)
+    if not _user_can_access_system_settings(user):
+        raise HTTPException(status_code=403, detail="system_owner_required")
+    return user
+
+
 @app.middleware("http")
 async def session_auth_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
     request.state.user = _load_user_from_session(request)
+    request.state.can_access_system_settings = _user_can_access_system_settings(request.state.user)
 
     path = request.url.path
     if path.startswith("/static/") or path in {"/healthz", "/auth/login", "/auth/signup", "/stripe/webhook"}:
@@ -6719,6 +6741,7 @@ def settings_accounts(request: Request) -> HTMLResponse:
             "request": request,
             "project": None,
             "is_admin": bool(getattr(user, "is_admin", False)),
+            "can_access_system_settings": _user_can_access_system_settings(user),
             "github_oauth": {
                 **github_oauth,
                 "connect_url": "/oauth/github/connect?next=/settings/accounts#github-connect-card",
@@ -6795,7 +6818,7 @@ def settings_accounts_save(
 
 @app.get("/settings/system", response_class=HTMLResponse)
 def settings_system(request: Request) -> HTMLResponse:
-    _ = _require_admin(request)
+    _ = _require_system_owner(request)
 
     system_sections = [
         {
@@ -6945,7 +6968,7 @@ def settings_system_save(
     op: str = Form(default="save"),
     value: str = Form(default=""),
 ) -> RedirectResponse:
-    _ = _require_admin(request)
+    _ = _require_system_owner(request)
     key = (key or "").strip()
     op = (op or "").strip().lower()
     if key not in _SETTINGS_ENV_KEYS:
@@ -7997,7 +8020,7 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
 
 @app.get("/api/gsc/properties")
 def gsc_properties(request: Request) -> JSONResponse:
-    _ = _require_admin(request)
+    _ = _require_system_owner(request)
     creds = (os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or "").strip()
     if not creds:
         return JSONResponse({"ok": False, "error": "GOOGLE_APPLICATION_CREDENTIALS not set"}, status_code=400)

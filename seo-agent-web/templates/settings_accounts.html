@@ -125,7 +125,7 @@
     <p class="muted">Connecte tes comptes utilisateurs. Les réglages système internes sont séparés.</p>
   </div>
 
-  {% if is_admin %}
+  {% if can_access_system_settings %}
     <section class="card">
       <div class="card-title-row">
         <h2>Zone admin</h2>
@@ -236,7 +236,7 @@
         {% else %}
           <p class="muted small setting-note">
             La connexion Google n’est pas encore disponible sur cette plateforme.
-            {% if is_admin %}
+            {% if can_access_system_settings %}
               <a href="{{ gsc_oauth.system_url }}">Configurer OAuth côté système</a>.
             {% endif %}
           </p>
@@ -298,7 +298,7 @@
             <a class="btn {% if not bing_oauth.is_oauth %}primary{% endif %}" href="{{ bing_oauth.connect_url }}">
               {% if bing_oauth.is_oauth %}Reconnecter Bing{% else %}Connecter Bing{% endif %}
             </a>
-          {% elif is_admin %}
+          {% elif can_access_system_settings %}
             <a class="btn" href="{{ bing_oauth.system_url }}">Configurer OAuth plateforme</a>
           {% else %}
             <span class="muted small">Connexion Bing indisponible pour le moment.</span>
@@ -437,7 +437,7 @@
             <a class="btn {% if not github_oauth.is_oauth %}primary{% endif %}" href="{{ github_oauth.connect_url }}">
               {% if github_oauth.is_oauth %}Reconnecter GitHub{% else %}Connecter GitHub{% endif %}
             </a>
-          {% elif is_admin %}
+          {% elif can_access_system_settings %}
             <a class="btn" href="{{ github_oauth.system_url }}">Configurer OAuth plateforme</a>
           {% else %}
             <span class="muted small">Connexion GitHub indisponible pour le moment.</span>
@@ -554,7 +554,7 @@
             <a class="btn {% if not netlify_oauth.is_oauth %}primary{% endif %}" href="{{ netlify_oauth.connect_url }}">
               {% if netlify_oauth.is_oauth %}Reconnecter Netlify{% else %}Connecter Netlify{% endif %}
             </a>
-          {% elif is_admin %}
+          {% elif can_access_system_settings %}
             <a class="btn" href="{{ netlify_oauth.system_url }}">Configurer OAuth plateforme</a>
           {% else %}
             <span class="muted small">Connexion Netlify indisponible pour le moment.</span>

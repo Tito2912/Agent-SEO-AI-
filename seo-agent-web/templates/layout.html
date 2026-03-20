@@ -29,7 +29,7 @@
             href="/settings/accounts"
             >Comptes &amp; connexions</a
           >
-          {% if request.state.user and request.state.user.is_admin %}
+          {% if request.state.can_access_system_settings %}
             <a
               class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}"
               href="/settings/system"

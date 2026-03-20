@@ -209,7 +209,7 @@
           </section>
         {% endif %}
 
-        {% for item in section.items %}
+        {% for item in section["items"] %}
           {% if not (section.id == "gsc-service-account-system" and item.key == "GOOGLE_APPLICATION_CREDENTIALS") %}
             {{ setting_card(item) }}
           {% endif %}
