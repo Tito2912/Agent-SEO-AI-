@@ -28,7 +28,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import requests
 import yaml
@@ -42,6 +42,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 
 try:
@@ -5580,14 +5581,52 @@ def _issue_csrf_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def _make_replay_receive(body: bytes) -> Any:
+    sent = False
+
+    async def receive() -> dict[str, Any]:
+        nonlocal sent
+        if sent:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        sent = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    return receive
+
+
+async def _buffer_body_for_downstream(request: Request) -> bytes:
+    """
+    Starlette/FastAPI `@app.middleware('http')` is implemented on top of `BaseHTTPMiddleware`.
+    If we read the request body in middleware (ex: `await request.form()`), the downstream
+    route handler will see an empty body and all `Form(...)` fields will be empty.
+
+    We buffer the body once and replace `request._receive` with a replayable receive so the
+    rest of the app can read it normally.
+    """
+    body = await request.body()
+    request._receive = _make_replay_receive(body)  # type: ignore[attr-defined]
+    return body
+
+
 async def _request_csrf_submission_token(request: Request) -> str:
     header_token = _sanitize_csrf_token(request.headers.get(_CSRF_HEADER_NAME))
     if header_token:
         return header_token
     content_type = (request.headers.get("content-type") or "").split(";", 1)[0].strip().lower()
     if content_type in {"application/x-www-form-urlencoded", "multipart/form-data"}:
+        body = await _buffer_body_for_downstream(request)
+        if content_type == "application/x-www-form-urlencoded":
+            try:
+                data = parse_qs(body.decode("utf-8", errors="replace"), keep_blank_values=True)
+            except Exception:
+                return ""
+            values = data.get(_CSRF_FORM_FIELD) or []
+            return _sanitize_csrf_token(values[0] if values else "")
+
+        # multipart/form-data (e.g. file uploads): parse via a cloned Request replaying the same buffered body.
         try:
-            form = await request.form()
+            clone = StarletteRequest(request.scope, receive=_make_replay_receive(body))
+            form = await clone.form()
         except Exception:
             return ""
         return _sanitize_csrf_token(form.get(_CSRF_FORM_FIELD))
