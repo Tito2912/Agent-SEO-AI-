@@ -1,6 +1,10 @@
 {% extends "layout.html" %}
 {% block title %}Performance — {{ project.site_name if project else slug }}{% endblock %}
 
+{% block head_extra %}
+  <script src="/static/project_overview.js" defer></script>
+{% endblock %}
+
 {% block crumbs %}
   <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
@@ -130,6 +134,49 @@
             <span class="muted">Position moyenne</span>
             <strong class="mono">{{ "%.2f"|format(totals.avg_position or 0) }}</strong>
           </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Évolution</h2>
+          <span class="muted small">{{ source|upper }} · {{ days }}j</span>
+        </div>
+
+        <div
+          id="perf-live-widget"
+          class="ts-widget"
+          data-default-metrics="clicks,impressions"
+          data-max-metrics="2"
+          data-live-url="/api/projects/{{ project.slug }}/search-series?source={{ source }}&days={{ days }}"
+        >
+          <div class="ts-metrics" aria-label="Métriques {{ source|upper }}">
+            <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
+              <span class="ts-metric-check">✓</span>
+              <span class="ts-metric-label">Clics</span>
+              <span class="ts-metric-value" data-value-for="clicks">{{ totals.clicks }}</span>
+            </button>
+            <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
+              <span class="ts-metric-check">✓</span>
+              <span class="ts-metric-label">Impressions</span>
+              <span class="ts-metric-value" data-value-for="impressions">{{ totals.impressions }}</span>
+            </button>
+            <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
+              <span class="ts-metric-check">✓</span>
+              <span class="ts-metric-label">CTR moyen</span>
+              <span class="ts-metric-value" data-value-for="ctr">{{ (totals.avg_ctr * 100)|round(1) }}%</span>
+            </button>
+            <button type="button" class="ts-metric" data-metric="position" aria-pressed="false">
+              <span class="ts-metric-check">✓</span>
+              <span class="ts-metric-label">Position moyenne</span>
+              <span class="ts-metric-value" data-value-for="position">{{ totals.avg_position|round(1) }}</span>
+            </button>
+          </div>
+          <div class="ts-chart">
+            <canvas class="ts-canvas" aria-label="Graphique {{ source|upper }}" role="img"></canvas>
+            <div class="ts-empty">Chargement du graphique live…</div>
+          </div>
+          <div class="ts-meta muted small" data-ts-meta></div>
         </div>
       </section>
 
