@@ -25,6 +25,8 @@ services:
         value: /app/seo-autopilot.yml
       - key: SEO_AGENT_SECRET_KEY
         generateValue: true
+      - key: SEO_AGENT_ENCRYPTION_KEY
+        sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY
