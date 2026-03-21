@@ -6987,6 +6987,8 @@ def settings_accounts_save(
 @app.get("/settings/system", response_class=HTMLResponse)
 def settings_system(request: Request) -> HTMLResponse:
     _ = _require_system_owner(request)
+    msg = str(request.query_params.get("msg") or "").strip()
+    err = str(request.query_params.get("err") or "").strip()
 
     system_sections = [
         {
@@ -7118,6 +7120,8 @@ def settings_system(request: Request) -> HTMLResponse:
             "request": request,
             "project": None,
             "sections": system_sections,
+            "msg": msg,
+            "err": err,
             "gsc": {
                 "credentials": cred_info,
                 "candidates": candidates,
@@ -7140,9 +7144,9 @@ def settings_system_save(
     key = (key or "").strip()
     op = (op or "").strip().lower()
     if key not in _SETTINGS_ENV_KEYS:
-        raise HTTPException(status_code=400, detail="Invalid key")
+        return RedirectResponse(url=_path_with_flash("/settings/system", err="Clé de réglage inconnue."), status_code=303)
     if not bool(_SETTINGS_ENV_KEYS.get(key, {}).get("editable", True)):
-        raise HTTPException(status_code=403, detail="Key is read-only")
+        return RedirectResponse(url=_path_with_flash("/settings/system", err="Cette variable est en lecture seule."), status_code=303)
 
     target = _env_target_path(key)
     try:
@@ -7151,7 +7155,7 @@ def settings_system_save(
         else:
             v = (value or "").strip()
             if not v:
-                return RedirectResponse(url="/settings/system", status_code=303)
+                return RedirectResponse(url=_path_with_flash("/settings/system", err="Valeur manquante."), status_code=303)
             _write_env_key(target, key, v)
     except Exception as e:
         _audit_log(
@@ -7163,7 +7167,13 @@ def settings_system_save(
             target_id=key,
             meta={"op": op, "error": str(e)[:240]},
         )
-        raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
+        return RedirectResponse(
+            url=_path_with_flash(
+                "/settings/system",
+                err=f"{type(e).__name__}: {str(e)[:180]}",
+            ),
+            status_code=303,
+        )
 
     _apply_effective_env(key)
     _audit_log(
@@ -7175,7 +7185,10 @@ def settings_system_save(
         target_id=key,
         meta={"op": op},
     )
-    return RedirectResponse(url="/settings/system", status_code=303)
+    return RedirectResponse(
+        url=_path_with_flash("/settings/system", msg=("Valeur supprimée." if op == "clear" else "Valeur enregistrée.")),
+        status_code=303,
+    )
 
 
 @app.post("/projects/add")

@@ -83,8 +83,8 @@ def _get_access_token(credentials_path: Path, *, scopes: list[str] | None = None
         # OAuth "authorized_user" (refresh token) format.
         # Important: avoid sending `scope` on refresh by default.
         # Google will reject refresh requests with mismatched scopes (`invalid_scope`).
-        # Using an empty list prevents google-auth from adding the `scope` parameter.
-        refresh_scopes: list[str] = []
+        # Setting scopes to `None` prevents google-auth from adding the `scope` parameter.
+        refresh_scopes: list[str] | None = None
         refresh_token = str(raw.get("refresh_token") or "").strip() if isinstance(raw, dict) else ""
         client_id = str(raw.get("client_id") or "").strip() if isinstance(raw, dict) else ""
         client_secret = str(raw.get("client_secret") or "").strip() if isinstance(raw, dict) else ""
@@ -106,9 +106,9 @@ def _get_access_token(credentials_path: Path, *, scopes: list[str] | None = None
                 scopes=refresh_scopes,
             )
         else:
-            # Fall back to google-auth's built-in file parser for authorized_user JSON.
-            # Force empty scopes to avoid `scope=` on refresh.
-            creds = Credentials.from_authorized_user_file(str(credentials_path), scopes=refresh_scopes)
+            raise RuntimeError(
+                "OAuth credentials are missing refresh_token or GOOGLE_OAUTH_CLIENT_ID/GOOGLE_OAUTH_CLIENT_SECRET."
+            )
 
     creds.refresh(Request())
     token = getattr(creds, "token", None)

@@ -110,6 +110,22 @@
     <p class="muted">Configuration interne de la plateforme. Cette page n’est pas exposée aux utilisatrices.</p>
   </div>
 
+  {% if err %}
+    <section class="card" style="border-color: rgba(255, 107, 107, .35);">
+      <div class="card-title-row">
+        <h2>Erreur</h2>
+      </div>
+      <p class="muted small" style="margin:0;">{{ err }}</p>
+    </section>
+  {% elif msg %}
+    <section class="card" style="border-color: rgba(95, 169, 154, .25);">
+      <div class="card-title-row">
+        <h2>OK</h2>
+      </div>
+      <p class="muted small" style="margin:0;">{{ msg }}</p>
+    </section>
+  {% endif %}
+
   <section class="card">
     <div class="card-title-row">
       <h2>Portée</h2>
