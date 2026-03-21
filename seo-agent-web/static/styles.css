@@ -665,6 +665,19 @@ pre {
 }
 .ts-empty[hidden] { display: none; }
 .ts-meta { margin-top: 8px; }
+.search-mini {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.012);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.search-mini-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.search-mini .tab-buttons { margin: 0; gap: 6px; }
+.search-mini .tab-btn { padding: 7px 10px; border-radius: 999px; }
+.search-mini .table { min-width: 620px; }
+.search-mini-meta { margin-top: 8px; }
 .issue-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border-2); background: rgba(255,255,255,.03); color: var(--text); text-decoration: none; font-size: 13px; }
 .chip:hover { background: rgba(255,255,255,.06); }

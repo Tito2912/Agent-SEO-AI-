@@ -25,15 +25,13 @@
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
-    {% set cur = project.current %}
     <div class="page-header">
       <h1>Performance</h1>
-      <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
+      <p class="muted">{{ project.site_name }} · Live ({{ days }}j)</p>
     </div>
 
     <section class="card">
       <form method="get" class="filters">
-        <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
         <label>
           Source
           <select name="source">
@@ -51,10 +49,10 @@
         </label>
 
         <label>
-          Crawl
-          <select name="crawl">
-            {% for ts in project.crawls %}
-              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
+          Période
+          <select name="days">
+            {% for d in [7, 28, 90] %}
+              <option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }}j</option>
             {% endfor %}
           </select>
         </label>
@@ -89,14 +87,18 @@
     {% if not perf_ok %}
       <section class="card">
         <p class="muted" style="margin: 0;">
-          Données {{ source|upper }} indisponibles pour ce crawl.
-          {% if source == 'gsc' %}
-            Active Google dans les paramètres du crawl puis connecte ton compte depuis
-            <a href="/settings/accounts#gsc-oauth-card">Comptes &amp; connexions</a>.
+          Données live {{ source|upper }} indisponibles
+          {% if live and (live.reason or live.error) %}
+            : <span class="mono">{{ live.reason or live.error }}</span>.
           {% else %}
-            Active Bing dans les paramètres du crawl et connecte ta clé depuis
-            <a href="/settings/accounts#bing-connect-card">Comptes &amp; connexions</a>
-            (ou renseigne les exports CSV).
+            .
+          {% endif %}
+          {% if live and live.reason == "disabled" %}
+            Active le module dans <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>.
+          {% elif source == 'gsc' %}
+            Connecte ton compte depuis <a href="/settings/accounts#gsc-oauth-card">Comptes &amp; connexions</a>.
+          {% else %}
+            Connecte ton compte depuis <a href="/settings/accounts#bing-connect-card">Comptes &amp; connexions</a>.
           {% endif %}
         </p>
       </section>
@@ -104,10 +106,17 @@
       <section class="card">
         <div class="card-title-row">
           <h2>Résumé</h2>
-          {% if csv_path %}
-            <a class="muted small" href="/file?path={{ csv_path }}">Télécharger CSV</a>
+          {% if csv_url %}
+            <a class="muted small" href="{{ csv_url }}">Télécharger CSV</a>
           {% endif %}
         </div>
+        {% if live and live.ok %}
+          <p class="muted small" style="margin: 0 0 10px;">
+            {% if source == "gsc" %}Propriété: <span class="mono">{{ live.property }}</span>{% else %}siteUrl: <span class="mono">{{ live.site_url }}</span>{% endif %}
+            · <span class="mono">{{ live.start_date }}</span> → <span class="mono">{{ live.end_date }}</span>
+            ({{ live.days }}j)
+          </p>
+        {% endif %}
         <div class="kv">
           <div class="kv-item">
             <span class="muted">Clics</span>
@@ -122,15 +131,6 @@
             <strong class="mono">{{ "%.2f"|format(totals.avg_position or 0) }}</strong>
           </div>
         </div>
-
-        {% if files %}
-          <p class="muted small" style="margin: 10px 0 0;">
-            Fichiers:
-            {% for f in files %}
-              <a href="/file?path={{ f.path }}">{{ f.label }}</a>{% if not loop.last %} · {% endif %}
-            {% endfor %}
-          </p>
-        {% endif %}
       </section>
 
       <section class="card">
@@ -173,11 +173,11 @@
             <span>Page {{ page }} / {{ pages }}</span>
             <span>
               {% if page > 1 %}
-                <a href="?crawl={{ cur.timestamp }}&source={{ source }}&dim={{ dim }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}">Précédent</a>
+                <a href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}">Précédent</a>
               {% endif %}
               {% if page < pages %}
                 {% if page > 1 %} · {% endif %}
-                <a href="?crawl={{ cur.timestamp }}&source={{ source }}&dim={{ dim }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}">Suivant</a>
+                <a href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}">Suivant</a>
               {% endif %}
             </span>
           </div>

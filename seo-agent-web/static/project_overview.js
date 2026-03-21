@@ -1,5 +1,6 @@
 (() => {
   const widgetStates = new WeakMap();
+  const miniStates = new WeakMap();
   const METRIC_CONFIG = {
     clicks: { colorVar: "--ts-clicks", fallback: "#6f8ff2" },
     impressions: { colorVar: "--ts-impressions", fallback: "#7352d9" },
@@ -49,6 +50,29 @@
       notation: value >= 1000 ? "compact" : "standard",
       maximumFractionDigits: value >= 1000 ? 1 : 0,
     }).format(Math.round(value));
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function formatCompactInt(value) {
+    if (!Number.isFinite(value)) return "—";
+    const v = Math.round(value);
+    return new Intl.NumberFormat("fr-FR", {
+      notation: v >= 1000 ? "compact" : "standard",
+      maximumFractionDigits: v >= 1000 ? 1 : 0,
+    }).format(v);
+  }
+
+  function formatCtrFraction(value) {
+    if (!Number.isFinite(value)) return "—";
+    return `${(value * 100).toFixed(1)}%`;
   }
 
   function parseSeries(raw) {
@@ -342,12 +366,150 @@
   function errorLabel(data) {
     const reason = String((data && (data.error || data.reason)) || "").trim();
     const source = String((data && data.source) || "").trim();
-    if (reason === "missing_credentials") return "Google Search Console non connecté pour ce projet.";
+    if (reason === "missing_credentials") {
+      return source === "bing"
+        ? "Bing Webmaster Tools non connecté."
+        : "Google Search Console non connecté pour ce projet.";
+    }
     if (reason === "missing_api_key") return "Clé Bing Webmaster API manquante.";
     if (reason === "site_not_found") return "Site Bing introuvable dans le compte connecté.";
     if (reason === "no_data") return source === "bing" ? "Aucune donnée Bing disponible sur la période." : "Aucune donnée GSC disponible sur la période.";
     if (!reason) return "Données indisponibles.";
     return reason;
+  }
+
+  function miniDays(widgetId) {
+    if (!widgetId) return 28;
+    const select = document.querySelector(`.js-ts-days[data-widget-id="${CSS.escape(widgetId)}"]`);
+    const days = Number(select && select.value);
+    return Number.isFinite(days) && days > 0 ? days : 28;
+  }
+
+  function miniUpdateLink(el, dim) {
+    const link = el.querySelector('a[href^="/projects/"][href*="/performance"]');
+    if (!link) return;
+    try {
+      const url = new URL(link.getAttribute("href") || "", window.location.origin);
+      url.searchParams.set("dim", String(dim || "query"));
+      link.setAttribute("href", url.pathname + url.search);
+    } catch {
+      // ignore
+    }
+  }
+
+  function miniRender(el, payload, dim) {
+    const body = el.querySelector("[data-mini-body]");
+    if (!body) return;
+    const meta = el.querySelector("[data-mini-meta]");
+    if (meta) meta.textContent = payload && payload.ok ? liveMetaText(payload) : `Live indisponible · ${errorLabel(payload || {})}`;
+
+    if (!payload || !payload.ok) {
+      body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(errorLabel(payload || {}))}</td></tr>`;
+      return;
+    }
+
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    if (!items.length) {
+      body.innerHTML = `<tr><td colspan="5" class="muted">Aucune donnée sur la période.</td></tr>`;
+      return;
+    }
+
+    const dimKey = String(dim || "query");
+    body.innerHTML = items
+      .map((it) => {
+        const key = String(it.keyword || "");
+        const display = key.length > 72 ? `${key.slice(0, 69)}…` : key;
+        const keyCell = dimKey === "page" && key.startsWith("http")
+          ? `<a href="${escapeHtml(key)}" target="_blank" rel="noopener">${escapeHtml(display)}</a>`
+          : `<span class="mono">${escapeHtml(display)}</span>`;
+        const clicks = Number(it.clicks || 0);
+        const impressions = Number(it.impressions || 0);
+        const ctr = Number(it.ctr || 0);
+        const position = Number(it.position || 0);
+        return `<tr>
+          <td>${keyCell}</td>
+          <td class="num mono">${escapeHtml(formatCompactInt(clicks))}</td>
+          <td class="num mono">${escapeHtml(formatCompactInt(impressions))}</td>
+          <td class="num mono">${escapeHtml(formatCtrFraction(ctr))}</td>
+          <td class="num mono">${position > 0 ? escapeHtml(position.toFixed(1)) : "—"}</td>
+        </tr>`;
+      })
+      .join("");
+  }
+
+  async function miniFetch(el) {
+    const state = miniStates.get(el);
+    if (!state) return;
+    const requestId = (state.requestId || 0) + 1;
+    state.requestId = requestId;
+
+    const body = el.querySelector("[data-mini-body]");
+    if (body) body.innerHTML = `<tr><td colspan="5" class="muted">Chargement…</td></tr>`;
+
+    const days = miniDays(state.daysWidgetId);
+    const url = new URL(`/api/projects/${state.slug}/search-items`, window.location.origin);
+    url.searchParams.set("source", state.source);
+    url.searchParams.set("dim", state.dim);
+    url.searchParams.set("days", String(days));
+    url.searchParams.set("limit", String(state.limit));
+
+    let resp;
+    let payload;
+    try {
+      resp = await fetch(url.toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
+      payload = await resp.json();
+    } catch (error) {
+      if (state.requestId !== requestId) return;
+      miniRender(el, { ok: false, source: state.source, error: error instanceof Error ? error.message : "request_failed" }, state.dim);
+      return;
+    }
+
+    if (state.requestId !== requestId) return;
+    miniRender(el, payload, state.dim);
+  }
+
+  function miniSetDim(el, dim) {
+    const state = miniStates.get(el);
+    if (!state) return;
+    state.dim = dim;
+    miniUpdateLink(el, dim);
+    for (const btn of el.querySelectorAll("button[data-dim]")) {
+      const isActive = String(btn.getAttribute("data-dim") || "") === dim;
+      btn.classList.toggle("active", isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+    miniFetch(el);
+  }
+
+  function miniRefreshForWidgetId(widgetId) {
+    if (!widgetId) return;
+    const widgets = document.querySelectorAll(`[data-search-mini][data-days-widget="${CSS.escape(widgetId)}"]`);
+    for (const el of widgets) miniFetch(el);
+  }
+
+  function initMiniTables() {
+    const widgets = document.querySelectorAll("[data-search-mini]");
+    for (const el of widgets) {
+      const source = String(el.getAttribute("data-source") || "").trim();
+      const slug = String(el.getAttribute("data-slug") || "").trim();
+      const daysWidgetId = String(el.getAttribute("data-days-widget") || "").trim();
+      const limit = Math.max(1, Math.min(50, Number(el.getAttribute("data-limit") || 12) || 12));
+      if (!source || !slug || !daysWidgetId) continue;
+
+      const state = { source, slug, daysWidgetId, limit, dim: "query", requestId: 0 };
+      miniStates.set(el, state);
+      miniUpdateLink(el, state.dim);
+
+      for (const btn of el.querySelectorAll("button[data-dim]")) {
+        btn.addEventListener("click", () => {
+          const nextDim = String(btn.getAttribute("data-dim") || "").trim();
+          if (!nextDim) return;
+          miniSetDim(el, nextDim);
+        });
+      }
+
+      miniFetch(el);
+    }
   }
 
   async function fetchLiveSeries(widget, days) {
@@ -467,6 +629,7 @@
         const widget = document.getElementById(widgetId);
         if (!widget) return;
         fetchLiveSeries(widget, select.value);
+        miniRefreshForWidgetId(widgetId);
       });
     }
   }
@@ -475,6 +638,7 @@
     initPeriodSelects();
     initTimeseriesWidgets();
     initTimeseriesPeriodSelects();
+    initMiniTables();
   }
 
   if (document.readyState === "loading") {

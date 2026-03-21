@@ -3511,6 +3511,270 @@ def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, 
     }
 
 
+def _to_ctr_fraction(value: Any) -> float:
+    """
+    Normalize CTR values to a 0..1 fraction.
+    Bing APIs may return CTR either as fraction or percent (string/number).
+    """
+    if value is None:
+        return 0.0
+    if isinstance(value, bool):
+        return 0.0
+    if isinstance(value, (int, float)):
+        v = float(value)
+        if v < 0:
+            return 0.0
+        if v <= 1.0:
+            return v
+        if v <= 100.0:
+            return v / 100.0
+        return 0.0
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return 0.0
+        if s.endswith("%"):
+            s = s[:-1].strip()
+        try:
+            return _to_ctr_fraction(float(s))
+        except Exception:
+            return 0.0
+    return 0.0
+
+
+def _gsc_rows_to_perf_items(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        keys = row.get("keys") if isinstance(row.get("keys"), list) else []
+        key = str(keys[0]) if keys else ""
+        if not key:
+            continue
+        items.append(
+            {
+                "keyword": key,
+                "clicks": _to_int(row.get("clicks")),
+                "impressions": _to_int(row.get("impressions")),
+                "ctr": _to_float(row.get("ctr")),
+                "position": _to_float(row.get("position")),
+            }
+        )
+    return items
+
+
+def _bing_rows_to_perf_items(rows: list[dict[str, Any]], *, dim: str) -> list[dict[str, Any]]:
+    def pick(row: dict[str, Any], keys: list[str]) -> Any:
+        for k in keys:
+            if k in row:
+                return row.get(k)
+        lookup = {str(k).lower(): k for k in row.keys()}
+        for k in keys:
+            k2 = lookup.get(k.lower())
+            if k2 is not None:
+                return row.get(k2)
+        return None
+
+    items: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if dim == "query":
+            key = str(pick(row, ["Query", "query", "Keyword", "keyword"]) or "").strip()
+        else:
+            key = str(pick(row, ["Page", "page", "Url", "url", "URL"]) or "").strip()
+        if not key:
+            continue
+        clicks = _to_int(pick(row, ["Clicks", "clicks"]))
+        impressions = _to_int(pick(row, ["Impressions", "impressions"]))
+        ctr_raw = pick(row, ["Ctr", "ctr", "CTR"])
+        ctr = _to_ctr_fraction(ctr_raw) if ctr_raw is not None else ((clicks / impressions) if impressions else 0.0)
+        position = _to_float(pick(row, ["AvgPosition", "AveragePosition", "Position", "position"]))
+        items.append({"keyword": key, "clicks": clicks, "impressions": impressions, "ctr": ctr, "position": position})
+    return items
+
+
+def _fetch_gsc_live_items(
+    *,
+    user_id: str,
+    slug: str,
+    base_url: str,
+    gsc_cfg: dict[str, Any],
+    days: int,
+    dim: str,
+    limit: int,
+) -> dict[str, Any]:
+    enabled = bool(gsc_cfg.get("enabled")) if "enabled" in gsc_cfg else True
+    if not enabled:
+        return {"ok": False, "enabled": False, "source": "gsc", "reason": "disabled"}
+
+    credentials_path, auth_mode = _gsc_live_credentials_path(user_id=user_id, slug=slug)
+    if not credentials_path:
+        return {"ok": False, "enabled": True, "source": "gsc", "reason": "missing_credentials"}
+
+    dimension = (dim or "query").strip().lower()
+    if dimension not in {"query", "page"}:
+        dimension = "query"
+
+    today = dt.datetime.now(dt.timezone.utc).date()
+    end_date = today - dt.timedelta(days=3)
+    if end_date < dt.date(2000, 1, 1):
+        end_date = today
+    days = max(1, min(int(days or 28), 365))
+    start_date = end_date - dt.timedelta(days=days - 1)
+    search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
+    min_impressions = max(0, int(gsc_cfg.get("min_impressions") or 0))
+
+    gsc_fetch = _load_gsc_fetch_module()
+
+    fetch_limit = min(25000, max(500, int(limit or 200) * 10))
+    last_error = ""
+    for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
+        try:
+            rows = gsc_fetch.fetch_gsc(
+                credentials_path=credentials_path.resolve(),
+                property_url=property_url,
+                start_date=start_date,
+                end_date=end_date,
+                dimensions=[dimension],
+                search_type=search_type,
+                row_limit=fetch_limit,
+                timeout_s=30.0,
+            )
+        except Exception as e:
+            last_error = f"{type(e).__name__}: {e}"
+            continue
+
+        items = _gsc_rows_to_perf_items(rows if isinstance(rows, list) else [])
+        if min_impressions:
+            items = [it for it in items if _to_int(it.get("impressions")) >= min_impressions]
+        items.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
+        if limit and limit > 0:
+            items = items[: int(limit)]
+        return {
+            "ok": True,
+            "enabled": True,
+            "source": "gsc",
+            "live": True,
+            "auth_mode": auth_mode,
+            "dim": dimension,
+            "property": property_url,
+            "days": days,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "min_impressions": min_impressions,
+            "items": items,
+            "totals": _timeseries_totals(items),
+            "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+        }
+
+    return {
+        "ok": False,
+        "enabled": True,
+        "source": "gsc",
+        "reason": "request_failed",
+        "error": last_error or "gsc_request_failed",
+    }
+
+
+def _fetch_bing_live_items(
+    *,
+    user_id: str,
+    base_url: str,
+    bing_cfg: dict[str, Any],
+    days: int,
+    dim: str,
+    limit: int,
+) -> dict[str, Any]:
+    enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
+    if not enabled:
+        return {"ok": False, "enabled": False, "source": "bing", "reason": "disabled"}
+
+    auth = _effective_bing_connection(user_id=str(user_id))
+    token = str(auth.get("token") or "").strip()
+    if not token:
+        return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_credentials"}
+
+    dimension = (dim or "query").strip().lower()
+    if dimension not in {"query", "page"}:
+        dimension = "query"
+
+    timeout_s = 20.0
+    configured_site_url = str(bing_cfg.get("site_url") or "").strip()
+    site_url = configured_site_url or ""
+    user_sites: list[str] = []
+    if not site_url:
+        site_url, user_sites, sites_error = _bing_pick_site_url(
+            base_url=base_url,
+            timeout_s=timeout_s,
+            configured=configured_site_url,
+            api_key=(token if auth.get("mode") == "api_key" else ""),
+            access_token=(token if auth.get("mode") == "oauth" else ""),
+        )
+        if not site_url:
+            return {
+                "ok": False,
+                "enabled": True,
+                "source": "bing",
+                "reason": "site_not_found",
+                "error": sites_error or "bing_site_not_found",
+                "user_sites": user_sites[:50],
+                "auth_mode": str(auth.get("mode") or ""),
+            }
+
+    today = dt.datetime.now(dt.timezone.utc).date()
+    end_date = today - dt.timedelta(days=3)
+    days = max(1, min(int(days or 28), 365))
+    start_date = end_date - dt.timedelta(days=days - 1)
+    min_impressions = max(0, int(bing_cfg.get("min_impressions") or 0))
+
+    method = "GetQueryStats" if dimension == "query" else "GetPageStats"
+    try:
+        payload = _bing_call(
+            method,
+            params={"siteUrl": site_url, "startDate": start_date.isoformat(), "endDate": end_date.isoformat()},
+            timeout_s=timeout_s,
+            api_key=(token if auth.get("mode") == "api_key" else ""),
+            access_token=(token if auth.get("mode") == "oauth" else ""),
+        )
+        rows = _bing_extract_rows(payload)
+    except Exception as e:
+        return {
+            "ok": False,
+            "enabled": True,
+            "source": "bing",
+            "reason": "request_failed",
+            "error": f"{type(e).__name__}: {e}",
+            "auth_mode": str(auth.get("mode") or ""),
+        }
+
+    items = _bing_rows_to_perf_items(rows, dim=dimension)
+    if min_impressions:
+        items = [it for it in items if _to_int(it.get("impressions")) >= min_impressions]
+    items.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
+    if limit and limit > 0:
+        items = items[: int(limit)]
+
+    return {
+        "ok": True,
+        "enabled": True,
+        "source": "bing",
+        "live": True,
+        "auth_source": str(auth.get("source") or ""),
+        "auth_mode": str(auth.get("mode") or ""),
+        "dim": dimension,
+        "site_url": site_url,
+        "days": days,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "min_impressions": min_impressions,
+        "items": items,
+        "totals": _timeseries_totals(items),
+        "data_delay_hint": "Bing Webmaster Tools peut avoir un léger décalage.",
+        "source_label": str(auth.get("source_label") or "bing"),
+    }
+
+
 def _validate_public_crawl_target(base_url: str) -> str | None:
     """
     Guardrail for a public SaaS: refuse obvious SSRF targets.
@@ -8389,6 +8653,94 @@ def project_search_series(request: Request, slug: str, source: str, days: int | 
     return resp
 
 
+def _perf_items_csv(items: list[dict[str, Any]], *, dim: str) -> bytes:
+    out = io.StringIO()
+    dimension_header = "query" if dim == "query" else "page"
+    writer = csv.DictWriter(out, fieldnames=[dimension_header, "clicks", "impressions", "ctr", "position"])
+    writer.writeheader()
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        writer.writerow(
+            {
+                dimension_header: str(it.get("keyword") or ""),
+                "clicks": _to_int(it.get("clicks")),
+                "impressions": _to_int(it.get("impressions")),
+                "ctr": _to_float(it.get("ctr")),
+                "position": _to_float(it.get("position")),
+            }
+        )
+    return out.getvalue().encode("utf-8")
+
+
+@app.get("/api/projects/{slug}/search-items")
+def project_search_items(
+    request: Request,
+    slug: str,
+    source: str,
+    dim: str,
+    days: int | None = None,
+    limit: int | None = None,
+    format: str | None = None,
+) -> Response:
+    proj = _db_project_or_404(request, slug)
+    _, gsc_cfg, bing_cfg = _effective_project_crawl_settings(
+        slug,
+        config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
+        project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
+    )
+
+    source_key = str(source or "").strip().lower()
+    dimension = str(dim or "query").strip().lower()
+    if dimension not in {"query", "page"}:
+        dimension = "query"
+
+    default_days = int((gsc_cfg.get("days") if source_key == "gsc" else bing_cfg.get("days")) or 28)
+    requested_days = max(1, min(int(days or default_days), 365))
+    requested_limit = max(1, min(int(limit or 200), 5000))
+
+    user = getattr(request.state, "user", None)
+    if source_key == "gsc":
+        payload = _fetch_gsc_live_items(
+            user_id=str(getattr(user, "id", "")),
+            slug=slug,
+            base_url=str(proj.base_url or ""),
+            gsc_cfg=gsc_cfg,
+            days=requested_days,
+            dim=dimension,
+            limit=requested_limit,
+        )
+    elif source_key == "bing":
+        payload = _fetch_bing_live_items(
+            user_id=str(getattr(user, "id", "")),
+            base_url=str(proj.base_url or ""),
+            bing_cfg=bing_cfg,
+            days=requested_days,
+            dim=dimension,
+            limit=requested_limit,
+        )
+    else:
+        payload = {"ok": False, "error": "source must be gsc or bing"}
+
+    status_code = 200 if payload.get("ok") else 400
+    fmt = str(format or "").strip().lower()
+    if fmt == "csv":
+        if not payload.get("ok"):
+            resp = JSONResponse(payload, status_code=status_code)
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+        csv_bytes = _perf_items_csv(payload.get("items") if isinstance(payload.get("items"), list) else [], dim=dimension)
+        filename = f"{slug}-{source_key}-{dimension}-{payload.get('start_date')}-{payload.get('end_date')}.csv"
+        resp = Response(content=csv_bytes, media_type="text/csv")
+        resp.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
+    resp = JSONResponse(payload, status_code=status_code)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.get("/automation", response_class=HTMLResponse)
 def automation(request: Request) -> HTMLResponse:
     _ = _require_admin(request)
@@ -10161,34 +10513,23 @@ def project_performance(
     crawl: str | None = None,
     source: str | None = None,
     dim: str | None = None,
+    days: int | None = None,
     q: str | None = None,
     sort: str | None = None,
     dir: str | None = None,
     page: int = 1,
 ) -> HTMLResponse:
-    _ = _db_project_or_404(request, slug)
+    proj_row = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_for_request(request)
     project = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not project:
-        resp = templates.TemplateResponse(
-            "performance.html",
-            {
-                "request": request,
-                "project": None,
-                "slug": slug,
-                "source": (source or "gsc"),
-                "dim": (dim or "query"),
-                "q": q or "",
-                "sort": sort or "",
-                "dir": dir or "",
-            },
-            status_code=404,
-        )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
-
-    cur = project["current"]
-    ts = str(cur.get("timestamp") or "")
+        project = {
+            "slug": slug,
+            "site_name": str(proj_row.site_name or slug),
+            "base_url": str(proj_row.base_url or ""),
+            "crawls": [],
+            "current": {"timestamp": ""},
+        }
 
     src = (source or "gsc").strip().lower()
     if src not in {"gsc", "bing"}:
@@ -10197,13 +10538,6 @@ def project_performance(
     if dimension not in {"query", "page"}:
         dimension = "query"
 
-    run_dir = (runs_dir / slug / ts).resolve()
-    data_dir = (run_dir / ("gsc" if src == "gsc" else "bing")).resolve()
-
-    queries_csv = data_dir / ("gsc-queries.csv" if src == "gsc" else "bing-queries.csv")
-    pages_csv = data_dir / ("gsc-pages.csv" if src == "gsc" else "bing-pages.csv")
-    csv_path = pages_csv if dimension == "page" else queries_csv
-
     sort_key = (sort or "clicks").strip().lower()
     if sort_key not in {"clicks", "impressions", "ctr", "position"}:
         sort_key = "clicks"
@@ -10211,9 +10545,43 @@ def project_performance(
     if sort_dir not in {"asc", "desc"}:
         sort_dir = "desc"
 
+    _, gsc_cfg, bing_cfg = _effective_project_crawl_settings(
+        slug,
+        config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
+        project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
+    )
+
+    default_days = int((gsc_cfg.get("days") if src == "gsc" else bing_cfg.get("days")) or 28)
+    requested_days = max(1, min(int(days or default_days), 365))
+    fetch_limit = 5000
+
+    user = getattr(request.state, "user", None)
+    live_payload: dict[str, Any]
+    if src == "gsc":
+        live_payload = _fetch_gsc_live_items(
+            user_id=str(getattr(user, "id", "")),
+            slug=slug,
+            base_url=str(proj_row.base_url or ""),
+            gsc_cfg=gsc_cfg,
+            days=requested_days,
+            dim=dimension,
+            limit=fetch_limit,
+        )
+    else:
+        live_payload = _fetch_bing_live_items(
+            user_id=str(getattr(user, "id", "")),
+            base_url=str(proj_row.base_url or ""),
+            bing_cfg=bing_cfg,
+            days=requested_days,
+            dim=dimension,
+            limit=fetch_limit,
+        )
+
+    perf_ok = bool(live_payload.get("ok"))
     needle = (q or "").strip().lower()
-    all_rows: list[dict[str, Any]] = _read_gsc_csv_rows(csv_path) if csv_path.exists() else []
-    perf_ok = csv_path.exists()
+    all_rows: list[dict[str, Any]] = (
+        list(live_payload.get("items") or []) if perf_ok and isinstance(live_payload.get("items"), list) else []
+    )
 
     if needle:
         all_rows = [r for r in all_rows if needle in str(r.get("keyword") or "").lower()]
@@ -10229,26 +10597,9 @@ def project_performance(
     end = start + per_page
     rows = all_rows[start:end]
 
-    clicks_sum = sum(int(r.get("clicks") or 0) for r in all_rows)
-    impressions_sum = sum(int(r.get("impressions") or 0) for r in all_rows)
-    avg_pos = (sum(float(r.get("position") or 0) for r in all_rows) / total_rows) if total_rows else 0.0
+    totals = _timeseries_totals(all_rows)
 
-    files: list[dict[str, str]] = []
-    if queries_csv.exists():
-        files.append({"label": "queries.csv", "path": str(queries_csv)})
-    if pages_csv.exists():
-        files.append({"label": "pages.csv", "path": str(pages_csv)})
-    if src == "bing":
-        for name in [
-            "bing-query-stats.json",
-            "bing-page-stats.json",
-            "bing-crawl-issues.json",
-            "bing-blocked-urls.json",
-            "bing-url-info.json",
-        ]:
-            p = data_dir / name
-            if p.exists():
-                files.append({"label": name, "path": str(p)})
+    csv_url = f"/api/projects/{slug}/search-items?{urlencode({'source': src, 'dim': dimension, 'days': requested_days, 'limit': fetch_limit, 'format': 'csv'})}"
 
     resp = templates.TemplateResponse(
         "performance.html",
@@ -10258,6 +10609,7 @@ def project_performance(
             "slug": slug,
             "source": src,
             "dim": dimension,
+            "days": requested_days,
             "q": q or "",
             "sort": sort_key,
             "dir": sort_dir,
@@ -10266,9 +10618,9 @@ def project_performance(
             "rows": rows,
             "total_rows": total_rows,
             "perf_ok": perf_ok,
-            "csv_path": str(csv_path) if csv_path.exists() else "",
-            "files": files,
-            "totals": {"clicks": clicks_sum, "impressions": impressions_sum, "avg_position": avg_pos},
+            "csv_url": csv_url if perf_ok else "",
+            "live": live_payload,
+            "totals": totals,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

@@ -695,6 +695,42 @@
                 {% endif %}
               </div>
             {% endif %}
+
+            {% if live_gsc.enabled %}
+              <div
+                class="search-mini"
+                data-search-mini
+                data-source="gsc"
+                data-slug="{{ project.slug }}"
+                data-days-widget="gsc-live-widget"
+                data-limit="12"
+              >
+                <div class="search-mini-head">
+                  <div class="tab-buttons">
+                    <button type="button" class="tab-btn active" data-dim="query">Requêtes</button>
+                    <button type="button" class="tab-btn" data-dim="page">Pages</button>
+                  </div>
+                  <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">Voir tout</a>
+                </div>
+                <div class="table-wrap">
+                  <table class="table compact mini-perf-table">
+                    <thead>
+                      <tr>
+                        <th>Requête / page</th>
+                        <th class="num">Clics</th>
+                        <th class="num">Impressions</th>
+                        <th class="num">CTR</th>
+                        <th class="num">Position</th>
+                      </tr>
+                    </thead>
+                    <tbody data-mini-body>
+                      <tr><td colspan="5" class="muted">Chargement…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="muted small search-mini-meta" data-mini-meta></div>
+              </div>
+            {% endif %}
           </section>
 
           <section class="card">
@@ -797,6 +833,42 @@
                 {% if bing and bing.daily and (bing.daily|length) >= 2 %}
                   <script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>
                 {% endif %}
+              </div>
+            {% endif %}
+
+            {% if live_bing.enabled %}
+              <div
+                class="search-mini"
+                data-search-mini
+                data-source="bing"
+                data-slug="{{ project.slug }}"
+                data-days-widget="bing-live-widget"
+                data-limit="12"
+              >
+                <div class="search-mini-head">
+                  <div class="tab-buttons">
+                    <button type="button" class="tab-btn active" data-dim="query">Requêtes</button>
+                    <button type="button" class="tab-btn" data-dim="page">Pages</button>
+                  </div>
+                  <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">Voir tout</a>
+                </div>
+                <div class="table-wrap">
+                  <table class="table compact mini-perf-table">
+                    <thead>
+                      <tr>
+                        <th>Requête / page</th>
+                        <th class="num">Clics</th>
+                        <th class="num">Impressions</th>
+                        <th class="num">CTR</th>
+                        <th class="num">Position</th>
+                      </tr>
+                    </thead>
+                    <tbody data-mini-body>
+                      <tr><td colspan="5" class="muted">Chargement…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="muted small search-mini-meta" data-mini-meta></div>
               </div>
             {% endif %}
           </section>
