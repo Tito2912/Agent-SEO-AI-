@@ -109,6 +109,24 @@ services:
         sync: false
       - key: SEO_AGENT_RETENTION_EVERY_SECONDS
         value: "21600"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_STARTTLS
+        sync: false
+      - key: SMTP_SSL
+        sync: false
+      - key: SMTP_TIMEOUT_SECONDS
+        sync: false
+      - key: PASSWORD_RESET_TTL_SECONDS
+        sync: false
       - key: SENTRY_DSN
         sync: false
       - key: SENTRY_TRACES_SAMPLE_RATE

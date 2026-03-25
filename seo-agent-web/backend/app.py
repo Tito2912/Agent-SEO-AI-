@@ -15,6 +15,7 @@ import re
 import secrets
 import shutil
 import socket
+import smtplib
 import subprocess
 import sys
 import threading
@@ -26,6 +27,7 @@ import csv
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from email.message import EmailMessage
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -91,11 +93,11 @@ except ImportError:
 
 try:
     from .db import Database  # type: ignore
-    from .models import AuditLog, JobRecord, Project, User, UserConnection  # type: ignore
+    from .models import AuditLog, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
     from . import auth as auth  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
-    from models import AuditLog, JobRecord, Project, User, UserConnection  # type: ignore
+    from models import AuditLog, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
     import auth as auth  # type: ignore
 
 
@@ -5936,6 +5938,189 @@ def _safe_next_path(next_path: str | None) -> str:
     return n
 
 
+def _env_bool_default(name: str, default: bool) -> bool:
+    raw = _safe_env(name)
+    if raw == "":
+        return default
+    return raw.lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _smtp_config() -> dict[str, Any] | None:
+    host = _safe_env("SMTP_HOST")
+    if not host:
+        return None
+    try:
+        port = int(_safe_env("SMTP_PORT") or "587")
+    except Exception:
+        port = 587
+    username = _safe_env("SMTP_USERNAME") or _safe_env("SMTP_USER")
+    password = _safe_env("SMTP_PASSWORD")
+    from_addr = _safe_env("SMTP_FROM") or username
+    if not from_addr:
+        return None
+
+    use_ssl = _env_bool_default("SMTP_SSL", False)
+    use_starttls = _env_bool_default("SMTP_STARTTLS", not use_ssl)
+    timeout_s = 10.0
+    raw_timeout = _safe_env("SMTP_TIMEOUT_SECONDS")
+    if raw_timeout:
+        try:
+            timeout_s = float(raw_timeout)
+        except Exception:
+            pass
+    return {
+        "host": host,
+        "port": port,
+        "username": username,
+        "password": password,
+        "from": from_addr,
+        "ssl": use_ssl,
+        "starttls": use_starttls,
+        "timeout_s": timeout_s,
+    }
+
+
+def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
+    cfg = _smtp_config()
+    if not cfg:
+        raise RuntimeError("smtp_not_configured")
+
+    msg = EmailMessage()
+    msg["From"] = str(cfg["from"])
+    msg["To"] = str(to_addr)
+    msg["Subject"] = str(subject)
+    msg.set_content(str(body))
+
+    try:
+        if bool(cfg.get("ssl")):
+            with smtplib.SMTP_SSL(str(cfg["host"]), int(cfg["port"]), timeout=float(cfg["timeout_s"])) as smtp:
+                if cfg.get("username") and cfg.get("password"):
+                    smtp.login(str(cfg["username"]), str(cfg["password"]))
+                smtp.send_message(msg)
+            return
+
+        with smtplib.SMTP(str(cfg["host"]), int(cfg["port"]), timeout=float(cfg["timeout_s"])) as smtp:
+            smtp.ehlo()
+            if bool(cfg.get("starttls")):
+                smtp.starttls()
+                smtp.ehlo()
+            if cfg.get("username") and cfg.get("password"):
+                smtp.login(str(cfg["username"]), str(cfg["password"]))
+            smtp.send_message(msg)
+    except Exception as e:
+        print(f"[MAIL] send error: {type(e).__name__}: {e}")
+        raise
+
+
+_PASSWORD_RESET_TTL_DEFAULT_S = 60 * 60
+
+
+def _password_reset_ttl_s() -> int:
+    raw = _safe_env("PASSWORD_RESET_TTL_SECONDS")
+    if raw:
+        try:
+            v = int(raw)
+            return max(5 * 60, min(24 * 60 * 60, v))
+        except Exception:
+            pass
+    return _PASSWORD_RESET_TTL_DEFAULT_S
+
+
+def _dt_as_naive_utc(value: datetime | None) -> datetime | None:
+    if not value:
+        return None
+    if getattr(value, "tzinfo", None) is None:
+        return value
+    try:
+        return value.astimezone(dt.timezone.utc).replace(tzinfo=None)
+    except Exception:
+        return value.replace(tzinfo=None)
+
+
+def _password_reset_token_hash(token: str) -> str:
+    raw = str(token or "").strip()
+    if not raw:
+        return ""
+    pepper = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not pepper:
+        raise RuntimeError("SEO_AGENT_SECRET_KEY missing")
+    return hashlib.sha256(f"{pepper}:{raw}".encode("utf-8")).hexdigest()
+
+
+def _issue_password_reset_token(db, *, user_id: str) -> tuple[str, datetime]:
+    uid = str(user_id or "").strip()
+    if not uid:
+        raise ValueError("Missing user_id")
+
+    ttl_s = _password_reset_ttl_s()
+    now = datetime.utcnow()
+    expires_at = now + dt.timedelta(seconds=int(ttl_s))
+
+    # Invalidate previous tokens for this user (single active token at a time).
+    try:
+        db.execute(
+            update(PasswordResetToken)
+            .where(
+                PasswordResetToken.user_id == uid,
+                PasswordResetToken.used_at.is_(None),
+            )
+            .values(used_at=now)
+        )
+    except Exception:
+        pass
+
+    for _ in range(3):
+        token = secrets.token_urlsafe(48)
+        token_hash = _password_reset_token_hash(token)
+        row = PasswordResetToken(user_id=uid, token_hash=token_hash, expires_at=expires_at)
+        db.add(row)
+        try:
+            db.commit()
+            return token, expires_at
+        except IntegrityError:
+            db.rollback()
+            continue
+    raise RuntimeError("reset_token_create_failed")
+
+
+def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
+    h = _password_reset_token_hash(token)
+    if not h:
+        return None
+    row = db.scalar(select(PasswordResetToken).where(PasswordResetToken.token_hash == h))
+    if not row:
+        return None
+    if getattr(row, "used_at", None):
+        return None
+    now = datetime.utcnow()
+    exp = _dt_as_naive_utc(getattr(row, "expires_at", None))
+    if exp and exp <= now:
+        return None
+    return row
+
+
+def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: datetime) -> None:
+    exp = _dt_as_naive_utc(expires_at) or datetime.utcnow()
+    ttl_s = max(60, int((_dt_as_naive_utc(expires_at) or exp) - datetime.utcnow()).total_seconds())
+    ttl_minutes = max(1, int(math.ceil(float(ttl_s) / 60.0)))
+
+    subject = "Réinitialisation du mot de passe — SEO Agent"
+    body = "\n".join(
+        [
+            "Bonjour,",
+            "",
+            "Pour réinitialiser votre mot de passe, cliquez sur ce lien :",
+            str(reset_url).strip(),
+            "",
+            f"Ce lien est valable {ttl_minutes} min.",
+            "",
+            "Si vous n’êtes pas à l’origine de cette demande, ignorez cet email.",
+            "",
+        ]
+    )
+    _smtp_send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
+
+
 def _request_is_secure(request: Request) -> bool:
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip().lower()
     return proto == "https"
@@ -6187,7 +6372,14 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
     request.state.can_access_system_settings = _user_can_access_system_settings(request.state.user)
 
     path = request.url.path
-    if path.startswith("/static/") or path in {"/healthz", "/auth/login", "/auth/signup", "/stripe/webhook"}:
+    if path.startswith("/static/") or path in {
+        "/healthz",
+        "/auth/login",
+        "/auth/signup",
+        "/auth/forgot",
+        "/auth/reset",
+        "/stripe/webhook",
+    }:
         return await call_next(request)
 
     if not request.state.user:
@@ -6522,6 +6714,69 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "SMTP_HOST": {
+        "label": "SMTP — Host",
+        "hint": "ex: smtp.mailgun.org",
+        "group": "Emails",
+        "order": 10,
+        "editable": True,
+    },
+    "SMTP_PORT": {
+        "label": "SMTP — Port",
+        "hint": "ex: 587",
+        "group": "Emails",
+        "order": 11,
+        "editable": True,
+    },
+    "SMTP_USERNAME": {
+        "label": "SMTP — Username",
+        "hint": "Identifiant SMTP",
+        "group": "Emails",
+        "order": 12,
+        "editable": True,
+    },
+    "SMTP_PASSWORD": {
+        "label": "SMTP — Password",
+        "hint": "Mot de passe SMTP",
+        "group": "Emails",
+        "order": 13,
+        "editable": True,
+    },
+    "SMTP_FROM": {
+        "label": "SMTP — From",
+        "hint": "ex: no-reply@ton-domaine.com",
+        "group": "Emails",
+        "order": 14,
+        "editable": True,
+    },
+    "SMTP_STARTTLS": {
+        "label": "SMTP — STARTTLS",
+        "hint": "true/false",
+        "group": "Emails",
+        "order": 15,
+        "editable": True,
+    },
+    "SMTP_SSL": {
+        "label": "SMTP — SSL",
+        "hint": "true/false (port 465)",
+        "group": "Emails",
+        "order": 16,
+        "editable": True,
+    },
+    "SMTP_TIMEOUT_SECONDS": {
+        "label": "SMTP — Timeout",
+        "hint": "ex: 10",
+        "group": "Emails",
+        "order": 17,
+        "editable": True,
+    },
+    "PASSWORD_RESET_TTL_SECONDS": {
+        "label": "Reset password — TTL",
+        "hint": "Durée lien (secondes)",
+        "group": "Emails",
+        "order": 18,
+        "editable": True,
+    },
 }
 
 _INTERNAL_SETTINGS_KEYS: set[str] = {
@@ -6531,6 +6786,242 @@ _INTERNAL_SETTINGS_KEYS: set[str] = {
     "GOOGLE_GEMINI_API_KEY",
     "SEO_AUDIT_ASSISTANT_GEMINI_MODEL",
 }
+
+
+@app.get("/auth/forgot", response_class=HTMLResponse)
+def auth_forgot(request: Request, next: str | None = None, msg: str | None = None, err: str | None = None) -> Response:
+    user = getattr(request.state, "user", None)
+    n = _safe_next_path(next)
+    if user:
+        return RedirectResponse(url=n, status_code=303)
+
+    resp = templates.TemplateResponse(
+        "auth_forgot.html",
+        {
+            "request": request,
+            "next": n,
+            "next_q": quote(n),
+            "msg": str(msg or "").strip(),
+            "err": str(err or "").strip(),
+            "email": "",
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/auth/forgot")
+def auth_forgot_submit(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    email: str = Form(default=""),
+    next: str = Form(default="/"),
+) -> Response:
+    user = getattr(request.state, "user", None)
+    n = _safe_next_path(next)
+    if user:
+        return RedirectResponse(url=n, status_code=303)
+
+    e = _normalize_email(email)
+
+    def _forgot_error(message: str, status_code: int = 400) -> Response:
+        resp = templates.TemplateResponse(
+            "auth_forgot.html",
+            {
+                "request": request,
+                "next": n,
+                "next_q": quote(n),
+                "msg": "",
+                "err": message,
+                "email": e,
+            },
+            status_code=status_code,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
+    ip = _request_client_ip(request) or "unknown"
+    retry_ip = _rate_limit_retry_after(bucket="auth_forgot_ip", subject=ip, limit=20, window_s=60 * 60)
+    retry_email = _rate_limit_retry_after(
+        bucket="auth_forgot_email", subject=(e or "missing"), limit=10, window_s=60 * 60
+    )
+    retry_after = max(v for v in [retry_ip, retry_email] if isinstance(v, int)) if any(
+        isinstance(v, int) for v in [retry_ip, retry_email]
+    ) else None
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="auth.forgot",
+            status="rate_limited",
+            actor_email=e,
+            meta={"retry_after_s": retry_after},
+        )
+        return _forgot_error(f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}.", 429)
+
+    if not e or "@" not in e or len(e) > 320:
+        return _forgot_error("Email invalide.", 400)
+
+    if not _smtp_config():
+        _audit_log(
+            request,
+            action="auth.forgot",
+            status="smtp_not_configured",
+            actor_email=e,
+        )
+        return _forgot_error("Réinitialisation par email non configurée. Contacte le support.", 503)
+
+    public_msg = "Si un compte existe, un email de réinitialisation a été envoyé."
+    with DB.session() as db:
+        row = db.scalar(select(User).where(User.email == e))
+        if row:
+            try:
+                token, expires_at = _issue_password_reset_token(db, user_id=str(row.id))
+            except Exception as exc:
+                _audit_log(
+                    request,
+                    action="auth.forgot",
+                    status="token_error",
+                    actor_email=e,
+                    target_type="user",
+                    target_id=str(getattr(row, "id", "") or ""),
+                    meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
+                )
+                return _forgot_error("Erreur lors de la génération du lien. Réessaie plus tard.", 500)
+
+            reset_url = f"{_public_base_url(request)}/auth/reset?{urlencode({'token': token, 'next': n})}"
+            background_tasks.add_task(
+                _send_password_reset_email,
+                to_email=str(getattr(row, "email", "") or e),
+                reset_url=reset_url,
+                expires_at=expires_at,
+            )
+            _audit_log(
+                request,
+                action="auth.forgot",
+                status="ok",
+                actor_email=e,
+                target_type="user",
+                target_id=str(getattr(row, "id", "") or ""),
+            )
+        else:
+            _audit_log(request, action="auth.forgot", status="ok", actor_email=e, meta={"note": "email_not_found"})
+
+    return RedirectResponse(
+        url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg),
+        status_code=303,
+    )
+
+
+@app.get("/auth/reset", response_class=HTMLResponse)
+def auth_reset(request: Request, token: str | None = None, next: str | None = None) -> Response:
+    t = str(token or "").strip()
+    n = _safe_next_path(next)
+    err = ""
+    ok = False
+
+    if not t:
+        err = "Lien invalide."
+    else:
+        with DB.session() as db:
+            ok = _valid_password_reset_row(db, token=t) is not None
+        if not ok:
+            err = "Lien invalide ou expiré."
+
+    resp = templates.TemplateResponse(
+        "auth_reset.html",
+        {
+            "request": request,
+            "next": n,
+            "next_q": quote(n),
+            "token": t,
+            "ok": ok,
+            "err": err,
+        },
+        status_code=(200 if ok else 400),
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return resp
+
+
+@app.post("/auth/reset")
+def auth_reset_submit(
+    request: Request,
+    token: str = Form(default=""),
+    password: str = Form(default=""),
+    password2: str = Form(default=""),
+    next: str = Form(default="/"),
+) -> Response:
+    secret = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not secret:
+        raise HTTPException(status_code=500, detail="SEO_AGENT_SECRET_KEY missing")
+
+    t = str(token or "").strip()
+    n = _safe_next_path(next)
+
+    def _reset_error(message: str, status_code: int = 400, *, ok: bool = True) -> Response:
+        resp = templates.TemplateResponse(
+            "auth_reset.html",
+            {
+                "request": request,
+                "next": n,
+                "next_q": quote(n),
+                "token": t,
+                "ok": ok,
+                "err": message,
+            },
+            status_code=status_code,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
+    if not t:
+        return _reset_error("Lien invalide.", 400, ok=False)
+    if len(password or "") < 10:
+        return _reset_error("Mot de passe trop court (min 10).", 400, ok=True)
+    if password != password2:
+        return _reset_error("Les mots de passe ne correspondent pas.", 400, ok=True)
+
+    now = datetime.utcnow()
+    uid = ""
+    email_out = ""
+    with DB.session() as db:
+        row = _valid_password_reset_row(db, token=t)
+        if not row:
+            _audit_log(request, action="auth.reset_password", status="invalid_token")
+            return _reset_error("Lien invalide ou expiré.", 400, ok=False)
+        user = db.get(User, str(getattr(row, "user_id", "") or ""))
+        if not user:
+            _audit_log(request, action="auth.reset_password", status="user_missing")
+            return _reset_error("Compte introuvable.", 400, ok=False)
+
+        user.password_hash = auth.hash_password(password)
+        row.used_at = now
+        db.add(user)
+        db.add(row)
+        db.commit()
+        uid = str(getattr(user, "id", "") or "")
+        email_out = str(getattr(user, "email", "") or "")
+
+    if not uid:
+        return _reset_error("Erreur serveur.", 500, ok=False)
+
+    token_out = auth.make_session_token(user_id=uid, secret=secret)
+    resp = RedirectResponse(url=n, status_code=303)
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
+    secure_cookie = proto == "https"
+    resp.set_cookie(
+        auth.SESSION_COOKIE_NAME,
+        token_out,
+        max_age=auth.SESSION_TTL_S,
+        httponly=True,
+        samesite="lax",
+        secure=secure_cookie,
+        path="/",
+    )
+    _audit_log(request, action="auth.reset_password", status="ok", actor_email=email_out, target_type="user", target_id=uid)
+    return resp
 
 
 @app.get("/auth/login", response_class=HTMLResponse)
@@ -7307,6 +7798,23 @@ def settings_system(request: Request) -> HTMLResponse:
             "title": "Search Console — fallback technique",
             "description": "Service account utilisé uniquement en secours ou pour les opérations internes.",
             "items": [_build_env_setting_item("GOOGLE_APPLICATION_CREDENTIALS")],
+        },
+        {
+            "id": "emails-system",
+            "title": "Emails transactionnels",
+            "description": "SMTP utilisé pour envoyer les emails (ex: mot de passe oublié).",
+            "items": [
+                _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("SMTP_HOST"),
+                _build_env_setting_item("SMTP_PORT"),
+                _build_env_setting_item("SMTP_USERNAME"),
+                _build_env_setting_item("SMTP_PASSWORD"),
+                _build_env_setting_item("SMTP_FROM"),
+                _build_env_setting_item("SMTP_STARTTLS"),
+                _build_env_setting_item("SMTP_SSL"),
+                _build_env_setting_item("SMTP_TIMEOUT_SECONDS"),
+                _build_env_setting_item("PASSWORD_RESET_TTL_SECONDS"),
+            ],
         },
         {
             "id": "assistant-system",

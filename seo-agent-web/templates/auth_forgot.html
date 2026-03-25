@@ -3,16 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Connexion — SEO Audit</title>
+    <title>Mot de passe oublié — SEO Audit</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <main class="auth-shell">
       <section class="card auth-card">
         <div class="page-header">
-          <h1>Connexion</h1>
-          <p class="muted">Accédez à votre espace.</p>
+          <h1>Mot de passe oublié</h1>
+          <p class="muted">Recevez un lien de réinitialisation par email.</p>
         </div>
+
+        {% if msg %}
+          <div class="alert ok">
+            <span class="badge ok">ok</span>
+            <p class="muted small">{{ msg }}</p>
+          </div>
+        {% endif %}
 
         {% if err %}
           <div class="alert error">
@@ -21,7 +28,7 @@
           </div>
         {% endif %}
 
-        <form method="post" action="/auth/login">
+        <form method="post" action="/auth/forgot">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
 
@@ -30,20 +37,13 @@
             <input name="email" type="email" autocomplete="email" required value="{{ email }}" />
           </label>
 
-          <div class="row"></div>
-
-          <label>
-            Mot de passe
-            <input name="password" type="password" autocomplete="current-password" required />
-          </label>
-
           <p class="muted small" style="margin: 8px 0 0;">
-            <a href="/auth/forgot?next={{ next_q }}">Mot de passe oublié ?</a>
+            Si un compte existe, un email est envoyé (pensez à vérifier vos spams).
           </p>
 
-          <div class="row-actions">
-            <button class="btn primary" type="submit">Se connecter</button>
-            <a class="btn" href="/auth/signup?next={{ next_q }}">Créer un compte</a>
+          <div class="row-actions" style="margin-top: 14px;">
+            <button class="btn primary" type="submit">Envoyer le lien</button>
+            <a class="btn" href="/auth/login?next={{ next_q }}">Retour connexion</a>
           </div>
         </form>
       </section>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Réinitialiser le mot de passe — SEO Audit</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="card auth-card">
+        <div class="page-header">
+          <h1>Nouveau mot de passe</h1>
+          <p class="muted">Choisissez un nouveau mot de passe pour votre compte.</p>
+        </div>
+
+        {% if err %}
+          <div class="alert error">
+            <span class="badge error">erreur</span>
+            <p class="muted small">{{ err }}</p>
+          </div>
+        {% endif %}
+
+        {% if ok %}
+          <form method="post" action="/auth/reset">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <input type="hidden" name="token" value="{{ token }}" />
+            <input type="hidden" name="next" value="{{ next }}" />
+
+            <label>
+              Mot de passe
+              <input name="password" type="password" autocomplete="new-password" required minlength="10" />
+            </label>
+            <div class="row"></div>
+            <label>
+              Confirmation
+              <input name="password2" type="password" autocomplete="new-password" required minlength="10" />
+            </label>
+            <p class="muted small" style="margin: 8px 0 0;">Minimum 10 caractères.</p>
+
+            <div class="row-actions" style="margin-top: 14px;">
+              <button class="btn primary" type="submit">Réinitialiser</button>
+              <a class="btn" href="/auth/login?next={{ next_q }}">Retour connexion</a>
+            </div>
+          </form>
+        {% else %}
+          <div class="row-actions">
+            <a class="btn primary" href="/auth/forgot?next={{ next_q }}">Demander un nouveau lien</a>
+            <a class="btn" href="/auth/login?next={{ next_q }}">Retour connexion</a>
+          </div>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>
