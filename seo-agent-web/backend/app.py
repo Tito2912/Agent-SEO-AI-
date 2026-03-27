@@ -6094,6 +6094,17 @@ def _send_email(*, to_addr: str, subject: str, body: str) -> None:
     if not cfg:
         raise RuntimeError("smtp_not_configured")
     sg_key = _sendgrid_api_key_from_smtp_cfg(cfg)
+    try:
+        print(
+            "[MAIL] dispatch "
+            f"host={str(cfg.get('host') or '')}:{int(cfg.get('port') or 0)} "
+            f"from={_mask_email(str(cfg.get('from') or ''))} "
+            f"to={_mask_email(to_addr)} "
+            f"sendgrid_api={bool(sg_key)}",
+            flush=True,
+        )
+    except Exception:
+        pass
     if sg_key:
         _sendgrid_send_email(
             api_key=sg_key,
@@ -6195,6 +6206,13 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
 
 
 def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: datetime) -> None:
+    try:
+        print(
+            f"[MAIL] reset compose to={_mask_email(to_email)} url_host={urlparse(str(reset_url)).netloc}",
+            flush=True,
+        )
+    except Exception:
+        pass
     exp = _dt_as_naive_utc(expires_at) or datetime.utcnow()
     ttl_s = max(60, int((_dt_as_naive_utc(expires_at) or exp) - datetime.utcnow()).total_seconds())
     ttl_minutes = max(1, int(math.ceil(float(ttl_s) / 60.0)))
@@ -6993,6 +7011,10 @@ def auth_forgot_submit(
                     expires_at=expires_at,
                 )
             except Exception as exc:
+                try:
+                    print(f"[MAIL] forgot send_error: {type(exc).__name__}: {str(exc)[:500]}", flush=True)
+                except Exception:
+                    pass
                 _audit_log(
                     request,
                     action="auth.forgot",
