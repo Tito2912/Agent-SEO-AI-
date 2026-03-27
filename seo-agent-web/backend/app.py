@@ -6014,13 +6014,16 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
     msg.set_content(str(body))
 
     try:
-        print(f"[MAIL] sending to={to_masked} from={from_masked} via={host}:{port} ssl={ssl} starttls={starttls}")
+        print(
+            f"[MAIL] sending to={to_masked} from={from_masked} via={host}:{port} ssl={ssl} starttls={starttls}",
+            flush=True,
+        )
         if bool(cfg.get("ssl")):
             with smtplib.SMTP_SSL(str(cfg["host"]), int(cfg["port"]), timeout=float(cfg["timeout_s"])) as smtp:
                 if cfg.get("username") and cfg.get("password"):
                     smtp.login(str(cfg["username"]), str(cfg["password"]))
                 smtp.send_message(msg)
-            print(f"[MAIL] sent to={to_masked} via={host}:{port}")
+            print(f"[MAIL] sent to={to_masked} via={host}:{port}", flush=True)
             return
 
         with smtplib.SMTP(str(cfg["host"]), int(cfg["port"]), timeout=float(cfg["timeout_s"])) as smtp:
@@ -6031,10 +6034,77 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
             if cfg.get("username") and cfg.get("password"):
                 smtp.login(str(cfg["username"]), str(cfg["password"]))
             smtp.send_message(msg)
-        print(f"[MAIL] sent to={to_masked} via={host}:{port}")
+        print(f"[MAIL] sent to={to_masked} via={host}:{port}", flush=True)
     except Exception as e:
-        print(f"[MAIL] send error: {type(e).__name__}: {e}")
+        print(f"[MAIL] send error: {type(e).__name__}: {e}", flush=True)
         raise
+
+
+def _sendgrid_api_key_from_smtp_cfg(cfg: dict[str, Any]) -> str:
+    host = str(cfg.get("host") or "").strip().lower()
+    username = str(cfg.get("username") or "").strip().lower()
+    password = str(cfg.get("password") or "").strip()
+    if host == "smtp.sendgrid.net" and username == "apikey" and password:
+        return password
+    return ""
+
+
+def _sendgrid_send_email(*, api_key: str, to_addr: str, subject: str, body: str, from_addr: str) -> None:
+    key = str(api_key or "").strip()
+    if not key:
+        raise RuntimeError("sendgrid_api_key_missing")
+
+    to_masked = _mask_email(to_addr)
+    from_masked = _mask_email(from_addr)
+    try:
+        print(f"[MAIL] sendgrid api sending to={to_masked} from={from_masked}", flush=True)
+        resp = requests.post(
+            "https://api.sendgrid.com/v3/mail/send",
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "personalizations": [{"to": [{"email": str(to_addr).strip()}]}],
+                "from": {"email": str(from_addr).strip()},
+                "subject": str(subject),
+                "content": [{"type": "text/plain", "value": str(body)}],
+            },
+            timeout=15.0,
+        )
+    except Exception as e:
+        print(f"[MAIL] sendgrid api error: {type(e).__name__}: {e}", flush=True)
+        raise
+
+    if resp.status_code >= 400:
+        detail = (resp.text or "").strip().replace("\n", " ")[:500]
+        print(f"[MAIL] sendgrid api failed status={resp.status_code} detail={detail}", flush=True)
+        raise RuntimeError(f"sendgrid_api_http_{resp.status_code}")
+
+    print(f"[MAIL] sendgrid api accepted status={resp.status_code} to={to_masked}", flush=True)
+
+
+def _send_email(*, to_addr: str, subject: str, body: str) -> None:
+    """
+    Prefer SendGrid HTTP API when the current SMTP config matches SendGrid.
+
+    Render/other PaaS environments can block outbound SMTP ports; HTTPS is much more reliable.
+    """
+    cfg = _smtp_config()
+    if not cfg:
+        raise RuntimeError("smtp_not_configured")
+    sg_key = _sendgrid_api_key_from_smtp_cfg(cfg)
+    if sg_key:
+        _sendgrid_send_email(
+            api_key=sg_key,
+            to_addr=to_addr,
+            subject=subject,
+            body=body,
+            from_addr=str(cfg.get("from") or ""),
+        )
+        return
+
+    _smtp_send_email(to_addr=to_addr, subject=subject, body=body)
 
 
 _PASSWORD_RESET_TTL_DEFAULT_S = 60 * 60
@@ -6143,7 +6213,7 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
             "",
         ]
     )
-    _smtp_send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
+    _send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
 
 
 def _request_is_secure(request: Request) -> bool:
@@ -6895,10 +6965,13 @@ def auth_forgot_submit(
         )
         return _forgot_error("Réinitialisation par email non configurée. Contacte le support.", 503)
 
+    print(f"[MAIL] forgot request email={_mask_email(e)} ip={ip}", flush=True)
+
     public_msg = "Si un compte existe, un email de réinitialisation a été envoyé."
     with DB.session() as db:
         row = db.scalar(select(User).where(User.email == e))
         if row:
+            print(f"[MAIL] forgot user_found=1 email={_mask_email(e)}", flush=True)
             try:
                 token, expires_at = _issue_password_reset_token(db, user_id=str(row.id))
             except Exception as exc:
@@ -6929,6 +7002,7 @@ def auth_forgot_submit(
                 target_id=str(getattr(row, "id", "") or ""),
             )
         else:
+            print(f"[MAIL] forgot user_found=0 email={_mask_email(e)}", flush=True)
             _audit_log(request, action="auth.forgot", status="ok", actor_email=e, meta={"note": "email_not_found"})
 
     resp = RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
