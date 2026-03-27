@@ -6908,7 +6908,6 @@ def auth_forgot(request: Request, next: str | None = None, msg: str | None = Non
 @app.post("/auth/forgot")
 def auth_forgot_submit(
     request: Request,
-    background_tasks: BackgroundTasks,
     email: str = Form(default=""),
     next: str = Form(default="/"),
 ) -> Response:
@@ -6987,12 +6986,23 @@ def auth_forgot_submit(
                 return _forgot_error("Erreur lors de la génération du lien. Réessaie plus tard.", 500)
 
             reset_url = f"{_public_base_url(request)}/auth/reset?{urlencode({'token': token, 'next': n})}"
-            background_tasks.add_task(
-                _send_password_reset_email,
-                to_email=str(getattr(row, "email", "") or e),
-                reset_url=reset_url,
-                expires_at=expires_at,
-            )
+            try:
+                _send_password_reset_email(
+                    to_email=str(getattr(row, "email", "") or e),
+                    reset_url=reset_url,
+                    expires_at=expires_at,
+                )
+            except Exception as exc:
+                _audit_log(
+                    request,
+                    action="auth.forgot",
+                    status="send_error",
+                    actor_email=e,
+                    target_type="user",
+                    target_id=str(getattr(row, "id", "") or ""),
+                    meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
+                )
+                return _forgot_error("Email non envoyé (erreur serveur). Vérifie la config SendGrid/SMTP.", 503)
             _audit_log(
                 request,
                 action="auth.forgot",
@@ -7005,9 +7015,7 @@ def auth_forgot_submit(
             print(f"[MAIL] forgot user_found=0 email={_mask_email(e)}", flush=True)
             _audit_log(request, action="auth.forgot", status="ok", actor_email=e, meta={"note": "email_not_found"})
 
-    resp = RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
-    resp.background = background_tasks
-    return resp
+    return RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
 
 
 @app.get("/auth/reset", response_class=HTMLResponse)
