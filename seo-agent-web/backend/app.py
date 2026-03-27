@@ -1239,6 +1239,21 @@ def _mask_secret(value: str | None) -> str:
     return f"••••{v[-4:]}"
 
 
+def _mask_email(value: str | None) -> str:
+    v = str(value or "").strip()
+    if not v:
+        return ""
+    if "@" not in v:
+        return _mask_secret(v)
+    local, domain = v.split("@", 1)
+    local = local.strip()
+    domain = domain.strip()
+    if not local or not domain:
+        return _mask_secret(v)
+    keep = 2 if len(local) >= 2 else 1
+    return f"{local[:keep]}•••@{domain}"
+
+
 def _env_target_path(key: str) -> Path:
     # Keep GSC creds in a dedicated file by default; everything else goes to `.env.local`.
     #
@@ -5985,6 +6000,13 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
     if not cfg:
         raise RuntimeError("smtp_not_configured")
 
+    to_masked = _mask_email(to_addr)
+    from_masked = _mask_email(str(cfg.get("from") or ""))
+    host = str(cfg.get("host") or "")
+    port = int(cfg.get("port") or 0)
+    starttls = bool(cfg.get("starttls"))
+    ssl = bool(cfg.get("ssl"))
+
     msg = EmailMessage()
     msg["From"] = str(cfg["from"])
     msg["To"] = str(to_addr)
@@ -5992,11 +6014,13 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
     msg.set_content(str(body))
 
     try:
+        print(f"[MAIL] sending to={to_masked} from={from_masked} via={host}:{port} ssl={ssl} starttls={starttls}")
         if bool(cfg.get("ssl")):
             with smtplib.SMTP_SSL(str(cfg["host"]), int(cfg["port"]), timeout=float(cfg["timeout_s"])) as smtp:
                 if cfg.get("username") and cfg.get("password"):
                     smtp.login(str(cfg["username"]), str(cfg["password"]))
                 smtp.send_message(msg)
+            print(f"[MAIL] sent to={to_masked} via={host}:{port}")
             return
 
         with smtplib.SMTP(str(cfg["host"]), int(cfg["port"]), timeout=float(cfg["timeout_s"])) as smtp:
@@ -6007,6 +6031,7 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
             if cfg.get("username") and cfg.get("password"):
                 smtp.login(str(cfg["username"]), str(cfg["password"]))
             smtp.send_message(msg)
+        print(f"[MAIL] sent to={to_masked} via={host}:{port}")
     except Exception as e:
         print(f"[MAIL] send error: {type(e).__name__}: {e}")
         raise
@@ -6906,10 +6931,9 @@ def auth_forgot_submit(
         else:
             _audit_log(request, action="auth.forgot", status="ok", actor_email=e, meta={"note": "email_not_found"})
 
-    return RedirectResponse(
-        url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg),
-        status_code=303,
-    )
+    resp = RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
+    resp.background = background_tasks
+    return resp
 
 
 @app.get("/auth/reset", response_class=HTMLResponse)
