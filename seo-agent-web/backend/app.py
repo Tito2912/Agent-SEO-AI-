@@ -6214,7 +6214,7 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
     except Exception:
         pass
     exp = _dt_as_naive_utc(expires_at) or datetime.utcnow()
-    ttl_s = max(60, int((_dt_as_naive_utc(expires_at) or exp) - datetime.utcnow()).total_seconds())
+    ttl_s = max(60, int(((_dt_as_naive_utc(expires_at) or exp) - datetime.utcnow()).total_seconds()))
     ttl_minutes = max(1, int(math.ceil(float(ttl_s) / 60.0)))
 
     subject = "Réinitialisation du mot de passe — SEO Agent"
