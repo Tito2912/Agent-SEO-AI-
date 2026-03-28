@@ -94,11 +94,11 @@ except ImportError:
 
 try:
     from .db import Database  # type: ignore
-    from .models import AuditLog, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
+    from .models import AuditLog, EmailVerificationToken, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
     from . import auth as auth  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
-    from models import AuditLog, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
+    from models import AuditLog, EmailVerificationToken, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
     import auth as auth  # type: ignore
 
 
@@ -6254,6 +6254,118 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
     _send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
 
 
+_EMAIL_VERIFY_TTL_DEFAULT_S = 60 * 60 * 24
+
+
+def _email_verify_ttl_s() -> int:
+    raw = _safe_env("EMAIL_VERIFY_TTL_SECONDS")
+    if raw:
+        try:
+            v = int(raw)
+            return max(5 * 60, min(7 * 24 * 60 * 60, v))
+        except Exception:
+            pass
+    return _EMAIL_VERIFY_TTL_DEFAULT_S
+
+
+def _email_verification_enabled() -> bool:
+    if _env_bool("EMAIL_VERIFICATION_DISABLED"):
+        return False
+    return bool(_smtp_config())
+
+
+def _email_verify_token_hash(token: str) -> str:
+    raw = str(token or "").strip()
+    if not raw:
+        return ""
+    pepper = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not pepper:
+        raise RuntimeError("SEO_AGENT_SECRET_KEY missing")
+    return hashlib.sha256(f"{pepper}:email_verify:{raw}".encode("utf-8")).hexdigest()
+
+
+def _user_email_verified(db, *, user_id: str) -> bool:
+    uid = str(user_id or "").strip()
+    if not uid:
+        return False
+    row = db.scalar(
+        select(EmailVerificationToken.id).where(
+            EmailVerificationToken.user_id == uid,
+            EmailVerificationToken.used_at.is_not(None),
+        )
+    )
+    return bool(row)
+
+
+def _issue_email_verification_token(db, *, user_id: str) -> tuple[str, datetime]:
+    uid = str(user_id or "").strip()
+    if not uid:
+        raise ValueError("Missing user_id")
+
+    ttl_s = _email_verify_ttl_s()
+    now = datetime.utcnow()
+    expires_at = now + dt.timedelta(seconds=int(ttl_s))
+
+    for _ in range(3):
+        token = secrets.token_urlsafe(48)
+        token_hash = _email_verify_token_hash(token)
+        row = EmailVerificationToken(user_id=uid, token_hash=token_hash, expires_at=expires_at)
+        db.add(row)
+        try:
+            db.commit()
+            return token, expires_at
+        except IntegrityError:
+            db.rollback()
+            continue
+    raise RuntimeError("email_verify_token_create_failed")
+
+
+def _valid_email_verification_row(db, *, token: str) -> EmailVerificationToken | None:
+    h = _email_verify_token_hash(token)
+    if not h:
+        return None
+    row = db.scalar(select(EmailVerificationToken).where(EmailVerificationToken.token_hash == h))
+    if not row:
+        return None
+    if getattr(row, "used_at", None):
+        return None
+    now = datetime.utcnow()
+    exp = _dt_as_naive_utc(getattr(row, "expires_at", None))
+    if exp and exp <= now:
+        return None
+    return row
+
+
+def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at: datetime) -> None:
+    exp = _dt_as_naive_utc(expires_at) or datetime.utcnow()
+    ttl_s = max(60, int((exp - datetime.utcnow()).total_seconds()))
+    ttl_hours = max(1, int(math.ceil(float(ttl_s) / 3600.0)))
+
+    app_name = _safe_env("APP_NAME") or "SEO Agent"
+    subject_tpl = _safe_env("EMAIL_VERIFY_EMAIL_SUBJECT")
+    if subject_tpl:
+        subject = subject_tpl.replace("{app}", app_name).replace("{brand}", app_name).strip()
+    else:
+        subject = f"Vérifie ton email — {app_name}"
+    if not subject:
+        subject = f"Vérifie ton email — {app_name}"
+
+    body = "\n".join(
+        [
+            "Bonjour,",
+            "",
+            "Pour confirmer ton email, clique sur ce lien :",
+            str(verify_url).strip(),
+            "",
+            f"Ce lien est valable {ttl_hours} h.",
+            "",
+            "Si tu n’es pas à l’origine de cette demande, ignore cet email.",
+            "",
+        ]
+    )
+    _send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
+
+
 def _request_is_secure(request: Request) -> bool:
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip().lower()
     return proto == "https"
@@ -6502,6 +6614,17 @@ def _require_system_owner(request: Request) -> User:
 @app.middleware("http")
 async def session_auth_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
     request.state.user = _load_user_from_session(request)
+
+    # Enforce email verification (when enabled) by treating unverified sessions as unauthenticated.
+    if request.state.user and _email_verification_enabled():
+        try:
+            with DB.session() as db:
+                verified = _user_email_verified(db, user_id=str(getattr(request.state.user, "id", "") or ""))
+        except Exception:
+            verified = False
+        if not verified:
+            request.state.user = None
+
     request.state.can_access_system_settings = _user_can_access_system_settings(request.state.user)
 
     path = request.url.path
@@ -6511,6 +6634,8 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/auth/signup",
         "/auth/forgot",
         "/auth/reset",
+        "/auth/verify",
+        "/auth/verify/resend",
         "/stripe/webhook",
     }:
         return await call_next(request)
@@ -6917,6 +7042,27 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         "order": 17,
         "editable": True,
     },
+    "EMAIL_VERIFICATION_DISABLED": {
+        "label": "Email verify — Disabled",
+        "hint": "true/false",
+        "group": "Emails",
+        "order": 17.5,
+        "editable": True,
+    },
+    "EMAIL_VERIFY_TTL_SECONDS": {
+        "label": "Email verify — TTL",
+        "hint": "Durée lien (secondes)",
+        "group": "Emails",
+        "order": 17.6,
+        "editable": True,
+    },
+    "EMAIL_VERIFY_EMAIL_SUBJECT": {
+        "label": "Email verify — Sujet",
+        "hint": "ex: Vérifie ton email — {app}",
+        "group": "Emails",
+        "order": 17.7,
+        "editable": True,
+    },
     "PASSWORD_RESET_TTL_SECONDS": {
         "label": "Reset password — TTL",
         "hint": "Durée lien (secondes)",
@@ -7193,15 +7339,248 @@ def auth_reset_submit(
     return resp
 
 
-@app.get("/auth/login", response_class=HTMLResponse)
-def auth_login(request: Request, next: str | None = None) -> Response:
+@app.get("/auth/verify/resend", response_class=HTMLResponse)
+def auth_verify_resend(
+    request: Request,
+    next: str | None = None,
+    email: str | None = None,
+    msg: str | None = None,
+    err: str | None = None,
+) -> Response:
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
         return RedirectResponse(url=n, status_code=303)
+
+    e = _normalize_email(email or "")
+    resp = templates.TemplateResponse(
+        "auth_verify_resend.html",
+        {
+            "request": request,
+            "next": n,
+            "next_q": quote(n),
+            "msg": str(msg or "").strip(),
+            "err": str(err or "").strip(),
+            "email": e,
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/auth/verify/resend")
+def auth_verify_resend_submit(
+    request: Request,
+    email: str = Form(default=""),
+    next: str = Form(default="/"),
+) -> Response:
+    user = getattr(request.state, "user", None)
+    n = _safe_next_path(next)
+    if user:
+        return RedirectResponse(url=n, status_code=303)
+
+    e = _normalize_email(email)
+
+    def _resend_error(message: str, status_code: int = 400) -> Response:
+        resp = templates.TemplateResponse(
+            "auth_verify_resend.html",
+            {
+                "request": request,
+                "next": n,
+                "next_q": quote(n),
+                "msg": "",
+                "err": message,
+                "email": e,
+            },
+            status_code=status_code,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+
+    if not e or "@" not in e or len(e) > 320:
+        return _resend_error("Email invalide.", 400)
+
+    if not _email_verification_enabled():
+        _audit_log(request, action="auth.verify_send", status="smtp_not_configured", actor_email=e)
+        return _resend_error("Vérification email non configurée. Contacte le support.", 503)
+
+    ip = _request_client_ip(request) or "unknown"
+    retry_ip = _rate_limit_retry_after(bucket="auth_verify_ip", subject=ip, limit=20, window_s=60 * 60)
+    retry_email = _rate_limit_retry_after(bucket="auth_verify_email", subject=(e or "missing"), limit=10, window_s=60 * 60)
+    retry_after = max(v for v in [retry_ip, retry_email] if isinstance(v, int)) if any(
+        isinstance(v, int) for v in [retry_ip, retry_email]
+    ) else None
+    if isinstance(retry_after, int):
+        _audit_log(
+            request,
+            action="auth.verify_send",
+            status="rate_limited",
+            actor_email=e,
+            meta={"retry_after_s": retry_after},
+        )
+        return _resend_error(f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}.", 429)
+
+    public_msg = "Si un compte existe, un email de vérification a été envoyé."
+    with DB.session() as db:
+        row = db.scalar(select(User).where(User.email == e))
+        if row and not _user_email_verified(db, user_id=str(getattr(row, "id", "") or "")):
+            try:
+                token_v, expires_at = _issue_email_verification_token(db, user_id=str(row.id))
+                verify_url = f"{_public_base_url(request)}/auth/verify?{urlencode({'token': token_v, 'next': n})}"
+                _send_email_verification_email(
+                    to_email=str(getattr(row, "email", "") or e),
+                    verify_url=verify_url,
+                    expires_at=expires_at,
+                )
+            except Exception as exc:
+                _audit_log(
+                    request,
+                    action="auth.verify_send",
+                    status="send_error",
+                    actor_email=e,
+                    target_type="user",
+                    target_id=str(getattr(row, "id", "") or ""),
+                    meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
+                )
+                return _resend_error("Email non envoyé (erreur serveur). Réessaie plus tard.", 503)
+
+            _audit_log(
+                request,
+                action="auth.verify_send",
+                status="ok",
+                actor_email=e,
+                target_type="user",
+                target_id=str(getattr(row, "id", "") or ""),
+                meta={"reason": "resend"},
+            )
+        else:
+            _audit_log(request, action="auth.verify_send", status="ok", actor_email=e, meta={"note": "noop"})
+
+    return RedirectResponse(
+        url=_path_with_flash(f"/auth/verify/resend?next={quote(n)}&email={quote(e)}", msg=public_msg),
+        status_code=303,
+    )
+
+
+@app.get("/auth/verify", response_class=HTMLResponse)
+def auth_verify(request: Request, token: str | None = None, next: str | None = None) -> Response:
+    secret = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not secret:
+        raise HTTPException(status_code=500, detail="SEO_AGENT_SECRET_KEY missing")
+
+    t = str(token or "").strip()
+    n = _safe_next_path(next)
+    if not t:
+        resp = templates.TemplateResponse(
+            "auth_verify.html",
+            {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Lien invalide."},
+            status_code=400,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
+    if not _email_verification_enabled():
+        resp = templates.TemplateResponse(
+            "auth_verify.html",
+            {
+                "request": request,
+                "next": n,
+                "next_q": quote(n),
+                "ok": False,
+                "err": "Vérification email non configurée.",
+            },
+            status_code=503,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
+    now = datetime.utcnow()
+    uid = ""
+    email_out = ""
+    with DB.session() as db:
+        row = _valid_email_verification_row(db, token=t)
+        if not row:
+            _audit_log(request, action="auth.verify_email", status="invalid_token")
+            resp = templates.TemplateResponse(
+                "auth_verify.html",
+                {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Lien invalide ou expiré."},
+                status_code=400,
+            )
+            resp.headers["Cache-Control"] = "no-store"
+            resp.headers["Referrer-Policy"] = "no-referrer"
+            return resp
+
+        user = db.get(User, str(getattr(row, "user_id", "") or ""))
+        if not user:
+            _audit_log(request, action="auth.verify_email", status="user_missing")
+            resp = templates.TemplateResponse(
+                "auth_verify.html",
+                {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Compte introuvable."},
+                status_code=400,
+            )
+            resp.headers["Cache-Control"] = "no-store"
+            resp.headers["Referrer-Policy"] = "no-referrer"
+            return resp
+
+        row.used_at = now
+        db.add(row)
+        db.commit()
+        uid = str(getattr(user, "id", "") or "")
+        email_out = str(getattr(user, "email", "") or "")
+
+    if not uid:
+        resp = templates.TemplateResponse(
+            "auth_verify.html",
+            {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Erreur serveur."},
+            status_code=500,
+        )
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
+    token_out = auth.make_session_token(user_id=uid, secret=secret)
+    resp = RedirectResponse(url=n, status_code=303)
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
+    secure_cookie = proto == "https"
+    resp.set_cookie(
+        auth.SESSION_COOKIE_NAME,
+        token_out,
+        max_age=auth.SESSION_TTL_S,
+        httponly=True,
+        samesite="lax",
+        secure=secure_cookie,
+        path="/",
+    )
+    _audit_log(request, action="auth.verify_email", status="ok", actor_email=email_out, target_type="user", target_id=uid)
+    return resp
+
+
+@app.get("/auth/login", response_class=HTMLResponse)
+def auth_login(
+    request: Request,
+    next: str | None = None,
+    email: str | None = None,
+    msg: str | None = None,
+    err: str | None = None,
+) -> Response:
+    user = getattr(request.state, "user", None)
+    n = _safe_next_path(next)
+    if user:
+        return RedirectResponse(url=n, status_code=303)
+    e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
         "auth_login.html",
-        {"request": request, "next": n, "next_q": quote(n), "err": "", "email": ""},
+        {
+            "request": request,
+            "next": n,
+            "next_q": quote(n),
+            "msg": str(msg or "").strip(),
+            "err": str(err or "").strip(),
+            "email": e,
+            "email_q": quote(e),
+        },
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -7228,8 +7607,10 @@ def auth_login_submit(
                 "request": request,
                 "next": n,
                 "next_q": quote(n),
+                "msg": "",
                 "err": message,
                 "email": e,
+                "email_q": quote(e),
             },
             status_code=status_code,
         )
@@ -7258,10 +7639,98 @@ def auth_login_submit(
             _audit_log(request, action="auth.login", status="invalid_credentials", actor_email=e)
             return _login_error("Identifiants invalides.", 401)
 
+        if _email_verification_enabled() and not _user_email_verified(db, user_id=str(user.id)):
+            retry_verify_ip = _rate_limit_retry_after(bucket="auth_verify_ip", subject=ip, limit=20, window_s=60 * 60)
+            retry_verify_email = _rate_limit_retry_after(
+                bucket="auth_verify_email", subject=(e or "missing"), limit=10, window_s=60 * 60
+            )
+            retry_after_verify = max(v for v in [retry_verify_ip, retry_verify_email] if isinstance(v, int)) if any(
+                isinstance(v, int) for v in [retry_verify_ip, retry_verify_email]
+            ) else None
+            if isinstance(retry_after_verify, int):
+                _audit_log(
+                    request,
+                    action="auth.verify_send",
+                    status="rate_limited",
+                    actor_email=e,
+                    target_type="user",
+                    target_id=str(getattr(user, "id", "") or ""),
+                    meta={"retry_after_s": retry_after_verify},
+                )
+                return _login_error(
+                    f"Email non vérifié. Réessaie dans {_format_retry_after(retry_after_verify)}.",
+                    429,
+                )
+
+            try:
+                token_v, expires_at = _issue_email_verification_token(db, user_id=str(user.id))
+                verify_url = f"{_public_base_url(request)}/auth/verify?{urlencode({'token': token_v, 'next': n})}"
+                _send_email_verification_email(to_email=str(getattr(user, "email", "") or e), verify_url=verify_url, expires_at=expires_at)
+            except Exception as exc:
+                _audit_log(
+                    request,
+                    action="auth.verify_send",
+                    status="send_error",
+                    actor_email=e,
+                    target_type="user",
+                    target_id=str(getattr(user, "id", "") or ""),
+                    meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
+                )
+                return _login_error(
+                    "Email non vérifié. Impossible d’envoyer l’email de vérification (erreur serveur).",
+                    503,
+                )
+
+            _audit_log(
+                request,
+                action="auth.verify_send",
+                status="ok",
+                actor_email=e,
+                target_type="user",
+                target_id=str(getattr(user, "id", "") or ""),
+            )
+            return _login_error("Email non vérifié. Un email de vérification vient d’être envoyé.", 403)
+
     if bool(getattr(user, "is_admin", False)):
         _import_legacy_projects_for_user(str(user.id))
         _migrate_legacy_runs_for_user(str(user.id))
         _migrate_legacy_gsc_oauth_for_user(str(user.id))
+
+    if _email_verification_enabled():
+        try:
+            with DB.session() as db:
+                token_v, expires_at = _issue_email_verification_token(db, user_id=str(user.id))
+            verify_url = f"{_public_base_url(request)}/auth/verify?{urlencode({'token': token_v, 'next': n})}"
+            _send_email_verification_email(to_email=str(getattr(user, "email", "") or e), verify_url=verify_url, expires_at=expires_at)
+        except Exception as exc:
+            _audit_log(
+                request,
+                action="auth.verify_send",
+                status="send_error",
+                actor_email=e,
+                target_type="user",
+                target_id=str(getattr(user, "id", "") or ""),
+                meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
+            )
+            return _signup_error("Impossible d’envoyer l’email de vérification. Réessaie plus tard.", 503)
+
+        _audit_log(
+            request,
+            action="auth.verify_send",
+            status="ok",
+            actor_email=e,
+            target_type="user",
+            target_id=str(getattr(user, "id", "") or ""),
+            meta={"reason": "signup"},
+        )
+        _audit_log(request, action="auth.signup", status="ok", user=user)
+        return RedirectResponse(
+            url=_path_with_flash(
+                f"/auth/login?next={quote(n)}&email={quote(e)}",
+                msg="Compte créé. Vérifie ton email pour te connecter.",
+            ),
+            status_code=303,
+        )
 
     token = auth.make_session_token(user_id=user.id, secret=secret)
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
@@ -7984,6 +8453,9 @@ def settings_system(request: Request) -> HTMLResponse:
                 _build_env_setting_item("SMTP_STARTTLS"),
                 _build_env_setting_item("SMTP_SSL"),
                 _build_env_setting_item("SMTP_TIMEOUT_SECONDS"),
+                _build_env_setting_item("EMAIL_VERIFICATION_DISABLED"),
+                _build_env_setting_item("EMAIL_VERIFY_TTL_SECONDS"),
+                _build_env_setting_item("EMAIL_VERIFY_EMAIL_SUBJECT"),
                 _build_env_setting_item("PASSWORD_RESET_TTL_SECONDS"),
                 _build_env_setting_item("PASSWORD_RESET_EMAIL_SUBJECT"),
             ],

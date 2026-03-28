@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Vérification email — SEO Audit</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="card auth-card">
+        <div class="page-header">
+          <h1>Vérification email</h1>
+          <p class="muted">Confirmez votre adresse email pour accéder à votre espace.</p>
+        </div>
+
+        {% if ok %}
+          <div class="alert ok">
+            <span class="badge ok">ok</span>
+            <p class="muted small">Email vérifié.</p>
+          </div>
+        {% endif %}
+
+        {% if err %}
+          <div class="alert error">
+            <span class="badge error">erreur</span>
+            <p class="muted small">{{ err }}</p>
+          </div>
+        {% endif %}
+
+        <div class="row-actions" style="margin-top: 14px;">
+          <a class="btn primary" href="/auth/login?next={{ next_q }}">Aller à la connexion</a>
+          <a class="btn" href="/auth/verify/resend?next={{ next_q }}">Renvoyer un email</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
+
