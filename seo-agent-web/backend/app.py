@@ -28,6 +28,7 @@ from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from email.message import EmailMessage
+from email.utils import formataddr
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -5971,6 +5972,8 @@ def _smtp_config() -> dict[str, Any] | None:
     username = _safe_env("SMTP_USERNAME") or _safe_env("SMTP_USER")
     password = _safe_env("SMTP_PASSWORD")
     from_addr = _safe_env("SMTP_FROM") or username
+    from_name = _safe_env("SMTP_FROM_NAME") or _safe_env("APP_NAME")
+    from_name = str(from_name or "").strip()
     if not from_addr:
         return None
 
@@ -5989,6 +5992,7 @@ def _smtp_config() -> dict[str, Any] | None:
         "username": username,
         "password": password,
         "from": from_addr,
+        "from_name": from_name,
         "ssl": use_ssl,
         "starttls": use_starttls,
         "timeout_s": timeout_s,
@@ -6007,8 +6011,10 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
     starttls = bool(cfg.get("starttls"))
     ssl = bool(cfg.get("ssl"))
 
+    from_addr = str(cfg["from"])
+    from_name = str(cfg.get("from_name") or "").strip()
     msg = EmailMessage()
-    msg["From"] = str(cfg["from"])
+    msg["From"] = formataddr((from_name, from_addr)) if from_name else from_addr
     msg["To"] = str(to_addr)
     msg["Subject"] = str(subject)
     msg.set_content(str(body))
@@ -6049,7 +6055,9 @@ def _sendgrid_api_key_from_smtp_cfg(cfg: dict[str, Any]) -> str:
     return ""
 
 
-def _sendgrid_send_email(*, api_key: str, to_addr: str, subject: str, body: str, from_addr: str) -> None:
+def _sendgrid_send_email(
+    *, api_key: str, to_addr: str, subject: str, body: str, from_addr: str, from_name: str = ""
+) -> None:
     key = str(api_key or "").strip()
     if not key:
         raise RuntimeError("sendgrid_api_key_missing")
@@ -6058,6 +6066,10 @@ def _sendgrid_send_email(*, api_key: str, to_addr: str, subject: str, body: str,
     from_masked = _mask_email(from_addr)
     try:
         print(f"[MAIL] sendgrid api sending to={to_masked} from={from_masked}", flush=True)
+        from_obj: dict[str, str] = {"email": str(from_addr).strip()}
+        if str(from_name or "").strip():
+            from_obj["name"] = str(from_name).strip()
+
         resp = requests.post(
             "https://api.sendgrid.com/v3/mail/send",
             headers={
@@ -6066,7 +6078,7 @@ def _sendgrid_send_email(*, api_key: str, to_addr: str, subject: str, body: str,
             },
             json={
                 "personalizations": [{"to": [{"email": str(to_addr).strip()}]}],
-                "from": {"email": str(from_addr).strip()},
+                "from": from_obj,
                 "subject": str(subject),
                 "content": [{"type": "text/plain", "value": str(body)}],
             },
@@ -6112,6 +6124,7 @@ def _send_email(*, to_addr: str, subject: str, body: str) -> None:
             subject=subject,
             body=body,
             from_addr=str(cfg.get("from") or ""),
+            from_name=str(cfg.get("from_name") or ""),
         )
         return
 
@@ -6208,7 +6221,7 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
 def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: datetime) -> None:
     try:
         print(
-            f"[MAIL] reset compose to={_mask_email(to_email)} url_host={urlparse(str(reset_url)).netloc}",
+            f"[MAIL] reset compose to={_mask_email(to_email)} url_host={urlsplit(str(reset_url)).netloc}",
             flush=True,
         )
     except Exception:
@@ -6217,7 +6230,14 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
     ttl_s = max(60, int(((_dt_as_naive_utc(expires_at) or exp) - datetime.utcnow()).total_seconds()))
     ttl_minutes = max(1, int(math.ceil(float(ttl_s) / 60.0)))
 
-    subject = "Réinitialisation du mot de passe — SEO Agent"
+    app_name = _safe_env("APP_NAME") or "SEO Agent"
+    subject_tpl = _safe_env("PASSWORD_RESET_EMAIL_SUBJECT")
+    if subject_tpl:
+        subject = subject_tpl.replace("{app}", app_name).replace("{brand}", app_name).strip()
+    else:
+        subject = f"Réinitialisation du mot de passe — {app_name}"
+    if not subject:
+        subject = f"Réinitialisation du mot de passe — {app_name}"
     body = "\n".join(
         [
             "Bonjour,",
@@ -6827,6 +6847,13 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
             ],
         },
     },
+    "APP_NAME": {
+        "label": "App — Nom",
+        "hint": "ex: Noyaru",
+        "group": "Emails",
+        "order": 9,
+        "editable": True,
+    },
     "SMTP_HOST": {
         "label": "SMTP — Host",
         "hint": "ex: smtp.mailgun.org",
@@ -6862,6 +6889,13 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         "order": 14,
         "editable": True,
     },
+    "SMTP_FROM_NAME": {
+        "label": "SMTP — From name",
+        "hint": "Nom d’expéditeur (optionnel)",
+        "group": "Emails",
+        "order": 14.5,
+        "editable": True,
+    },
     "SMTP_STARTTLS": {
         "label": "SMTP — STARTTLS",
         "hint": "true/false",
@@ -6888,6 +6922,13 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         "hint": "Durée lien (secondes)",
         "group": "Emails",
         "order": 18,
+        "editable": True,
+    },
+    "PASSWORD_RESET_EMAIL_SUBJECT": {
+        "label": "Reset password — Sujet",
+        "hint": "ex: Réinitialisation du mot de passe — {app}",
+        "group": "Emails",
+        "order": 19,
         "editable": True,
     },
 }
@@ -7933,15 +7974,18 @@ def settings_system(request: Request) -> HTMLResponse:
             "description": "SMTP utilisé pour envoyer les emails (ex: mot de passe oublié).",
             "items": [
                 _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("APP_NAME"),
                 _build_env_setting_item("SMTP_HOST"),
                 _build_env_setting_item("SMTP_PORT"),
                 _build_env_setting_item("SMTP_USERNAME"),
                 _build_env_setting_item("SMTP_PASSWORD"),
                 _build_env_setting_item("SMTP_FROM"),
+                _build_env_setting_item("SMTP_FROM_NAME"),
                 _build_env_setting_item("SMTP_STARTTLS"),
                 _build_env_setting_item("SMTP_SSL"),
                 _build_env_setting_item("SMTP_TIMEOUT_SECONDS"),
                 _build_env_setting_item("PASSWORD_RESET_TTL_SECONDS"),
+                _build_env_setting_item("PASSWORD_RESET_EMAIL_SUBJECT"),
             ],
         },
         {
