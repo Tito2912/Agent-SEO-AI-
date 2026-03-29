@@ -148,6 +148,40 @@
     </ul>
   </section>
 
+  <section class="card setting-card" id="danger-zone">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Zone à risque</h2>
+        <div class="muted small">Suppression définitive du compte et des données associées.</div>
+      </div>
+      <div class="setting-actions">
+        <span class="badge notice">irréversible</span>
+      </div>
+    </div>
+    <p class="muted small setting-note" style="margin-top:0;">
+      Cette action supprime le compte, ses projets, ses connexions et ses fichiers (runs / tokens OAuth).
+    </p>
+    <details class="setting-details">
+      <summary>Supprimer mon compte</summary>
+      <form method="post" action="/settings/account/delete" class="setting-form">
+        <label>
+          Tape <span class="mono">DELETE</span> pour confirmer
+          <input name="confirm" type="text" autocomplete="off" placeholder="DELETE" />
+        </label>
+        <div class="modal-actions between">
+          <span></span>
+          <button
+            class="btn danger"
+            type="submit"
+            onclick="return confirm('Supprimer définitivement le compte ?');"
+          >
+            Supprimer définitivement
+          </button>
+        </div>
+      </form>
+    </details>
+  </section>
+
   <div class="settings-section">
     <div class="settings-section-head">
       <div>

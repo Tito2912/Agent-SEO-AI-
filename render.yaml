@@ -27,6 +27,8 @@ services:
         generateValue: true
       - key: SEO_AGENT_ENCRYPTION_KEY
         sync: false
+      - key: SEO_AGENT_ENCRYPTION_KEYS
+        sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY
@@ -98,7 +100,7 @@ services:
       - key: STRIPE_PRICE_ID_BUSINESS
         sync: false
       - key: SEO_AGENT_DISABLE_WORKER
-        sync: false
+        value: "true"
       - key: SEO_AGENT_WORKER_CONCURRENCY
         value: "1"
       - key: SEO_AGENT_CRAWL_JOB_TIMEOUT_SECONDS
@@ -145,3 +147,71 @@ services:
         value: "0.05"
       - key: SENTRY_ENVIRONMENT
         value: "prod"
+
+  - type: worker
+    name: seo-agent-worker
+    runtime: docker
+    plan: starter
+    disk:
+      name: worker-data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seo-agent-db
+          property: connectionString
+      - key: SEO_AGENT_SERVICE_MODE
+        value: worker
+      - key: SEO_AGENT_DATA_DIR
+        value: /var/data/data
+      - key: SEO_AGENT_RUNS_DIR
+        value: /var/data/seo-runs
+      - key: SEO_AGENT_CONFIG_PATH
+        value: /app/seo-autopilot.yml
+      # Required to decrypt/encrypt secrets stored in DB (must match the web service).
+      - key: SEO_AGENT_ENCRYPTION_KEY
+        sync: false
+      - key: SEO_AGENT_ENCRYPTION_KEYS
+        sync: false
+      # Runs artefacts storage (recommended when separating web/worker).
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_PREFIX
+        value: seo-runs
+      # Integrations / AI keys used during jobs
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_GEMINI_API_KEY
+        sync: false
+      - key: PAGESPEED_API_KEY
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        sync: false
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: BING_OAUTH_CLIENT_ID
+        sync: false
+      - key: BING_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: NETLIFY_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      # Retention
+      - key: SEO_AGENT_JOBS_RETENTION_DAYS
+        sync: false
+      - key: SEO_AGENT_RUNS_RETENTION_DAYS
+        sync: false
+      - key: SEO_AGENT_RETENTION_EVERY_SECONDS
+        value: "21600"

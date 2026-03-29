@@ -447,58 +447,86 @@ def _env_list(name: str) -> list[str]:
 _SECRET_PREFIX = "enc:"
 
 
-def _encryption_seed() -> str:
-    # Prefer a dedicated encryption seed; fall back to session secret for backward compatibility.
-    return _safe_env("SEO_AGENT_ENCRYPTION_KEY") or _safe_env("SEO_AGENT_SECRET_KEY")
+def _encryption_seeds() -> list[str]:
+    """
+    Returns encryption seeds in priority order.
+
+    Rotation:
+    - Set `SEO_AGENT_ENCRYPTION_KEYS` (comma/newline/semicolon separated) with the *current* key first,
+      then previous keys for read/decrypt compatibility.
+    - For backward compatibility, falls back to `SEO_AGENT_ENCRYPTION_KEY` then `SEO_AGENT_SECRET_KEY`.
+    """
+    raw = _safe_env("SEO_AGENT_ENCRYPTION_KEYS")
+    if raw:
+        parts = [p.strip() for p in re.split(r"[,\n;]+", raw) if p and p.strip()]
+        out = [p for p in parts if p]
+        legacy = _safe_env("SEO_AGENT_SECRET_KEY").strip()
+        if legacy and legacy not in out:
+            out.append(legacy)
+        return out
+    seed = _safe_env("SEO_AGENT_ENCRYPTION_KEY") or _safe_env("SEO_AGENT_SECRET_KEY")
+    seed = seed.strip()
+    return [seed] if seed else []
 
 
 def _encryption_ready() -> bool:
-    return bool(_encryption_seed()) and Fernet is not None
+    return bool(_encryption_seeds()) and Fernet is not None
 
 
 @lru_cache(maxsize=1)
-def _fernet() -> Any | None:
+def _fernets() -> list[Any]:
     if not _encryption_ready():
-        return None
-    seed = _encryption_seed()
-    digest = hashlib.sha256(seed.encode("utf-8")).digest()
-    key = base64.urlsafe_b64encode(digest)
-    try:
-        return Fernet(key)  # type: ignore[misc]
-    except Exception:
-        return None
+        return []
+
+    out: list[Any] = []
+    for seed in _encryption_seeds():
+        digest = hashlib.sha256(seed.encode("utf-8")).digest()
+        key = base64.urlsafe_b64encode(digest)
+        try:
+            f = Fernet(key)  # type: ignore[misc]
+        except Exception:
+            continue
+        out.append(f)
+    return out
 
 
 def _encrypt_secret(plaintext: str) -> str:
     raw = (plaintext or "").strip()
     if not raw or raw.startswith(_SECRET_PREFIX):
         return raw
-    f = _fernet()
-    if f is None:
+    f_list = _fernets()
+    if not f_list:
         return raw
     try:
-        token = f.encrypt(raw.encode("utf-8")).decode("ascii")  # type: ignore[union-attr]
+        token = f_list[0].encrypt(raw.encode("utf-8")).decode("ascii")
     except Exception:
         return raw
     return f"{_SECRET_PREFIX}{token}"
 
-
-def _decrypt_secret(stored: str) -> str:
+def _decrypt_secret_with_rotation(stored: str) -> tuple[str, bool]:
     raw = (stored or "").strip()
     if not raw:
-        return ""
+        return "", False
     if not raw.startswith(_SECRET_PREFIX):
-        return raw
-    f = _fernet()
-    if f is None:
+        return raw, False
+    f_list = _fernets()
+    if not f_list:
         raise RuntimeError("encryption_not_configured")
     token = raw[len(_SECRET_PREFIX) :].strip()
-    try:
-        return f.decrypt(token.encode("ascii")).decode("utf-8")  # type: ignore[union-attr]
-    except InvalidToken as e:  # pragma: no cover
-        raise RuntimeError("invalid_encryption_key") from e
-    except Exception as e:  # pragma: no cover
-        raise RuntimeError("secret_decrypt_failed") from e
+    for idx, f in enumerate(f_list):
+        try:
+            value = f.decrypt(token.encode("ascii")).decode("utf-8")
+            return value, idx > 0
+        except InvalidToken:
+            continue
+        except Exception:
+            continue
+    raise RuntimeError("invalid_encryption_key")
+
+
+def _decrypt_secret(stored: str) -> str:
+    value, _rotated = _decrypt_secret_with_rotation(stored)
+    return value
 
 
 def _project_meta(settings: dict[str, Any] | None) -> dict[str, Any]:
@@ -536,13 +564,14 @@ def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tupl
         )
         stored = str(getattr(row, "secret_value", "") or "").strip()
         if stored:
+            rotated = False
             try:
-                value = _decrypt_secret(stored)
+                value, rotated = _decrypt_secret_with_rotation(stored)
             except Exception:
                 value = ""
             if value:
-                # Lazy-migrate plaintext secrets to encrypted-at-rest.
-                if _encryption_ready() and not stored.startswith(_SECRET_PREFIX) and row is not None:
+                # Lazy-migrate plaintext/old-key secrets to encrypted-at-rest (current key).
+                if _encryption_ready() and row is not None and (rotated or not stored.startswith(_SECRET_PREFIX)):
                     try:
                         row.secret_value = _encrypt_secret(value)
                         session.add(row)
@@ -613,11 +642,12 @@ def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
         refresh_token_stored = str(getattr(oauth_row, "secret_value", "") or "").strip() if oauth_row else ""
         refresh_token = ""
         if refresh_token_stored:
+            rotated = False
             try:
-                refresh_token = _decrypt_secret(refresh_token_stored)
+                refresh_token, rotated = _decrypt_secret_with_rotation(refresh_token_stored)
             except Exception:
                 refresh_token = ""
-            if refresh_token and _encryption_ready() and oauth_row is not None and not refresh_token_stored.startswith(_SECRET_PREFIX):
+            if refresh_token and _encryption_ready() and oauth_row is not None and (rotated or not refresh_token_stored.startswith(_SECRET_PREFIX)):
                 try:
                     oauth_row.secret_value = _encrypt_secret(refresh_token)
                     session.add(oauth_row)
@@ -938,9 +968,24 @@ def _gsc_oauth_refresh_token(user_id: str, slug: str) -> str | None:
     if not isinstance(data, dict):
         return None
     t = data.get("refresh_token")
-    if isinstance(t, str) and t.strip():
-        return t.strip()
-    return None
+    if not isinstance(t, str) or not t.strip():
+        return None
+    stored = t.strip()
+    rotated = False
+    try:
+        value, rotated = _decrypt_secret_with_rotation(stored)
+    except Exception:
+        return None
+    if not value:
+        return None
+    # Lazy-migrate plaintext/old-key refresh tokens to encrypted-at-rest.
+    if _encryption_ready() and (rotated or not stored.startswith(_SECRET_PREFIX)):
+        try:
+            scope = str(data.get("scope") or _GOOGLE_OAUTH_SCOPE).strip() or _GOOGLE_OAUTH_SCOPE
+            _gsc_oauth_save(user_id, slug, refresh_token=value, scope=scope)
+        except Exception:
+            pass
+    return value
 
 
 def _gsc_oauth_connected(user_id: str, slug: str) -> bool:
@@ -952,7 +997,7 @@ def _gsc_oauth_save(user_id: str, slug: str, *, refresh_token: str, scope: str) 
         "v": 1,
         "type": "google_oauth_refresh_token",
         "scope": scope,
-        "refresh_token": str(refresh_token),
+        "refresh_token": _encrypt_secret(str(refresh_token)),
         "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
     path = _gsc_oauth_token_path(user_id, slug)
@@ -5954,7 +5999,10 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
 
 @app.on_event("startup")
 def _startup() -> None:
-    DB.create_tables()
+    # In production (Render/Postgres), schema is managed via Alembic migrations (see `seo-agent-web/alembic.ini`).
+    # Keep auto-create for local dev (SQLite) and opt-in environments only.
+    if (not _safe_env("DATABASE_URL")) or _env_bool("SEO_AGENT_DB_AUTO_CREATE"):
+        DB.create_tables()
     _init_sentry()
     _start_job_worker()
     _start_retention()
@@ -7786,6 +7834,7 @@ def auth_google_callback(
     uid = ""
     is_admin = False
     identity_exists = False
+    linked_by_email = False
     with DB.session() as db:
         ident = db.scalar(
             select(OAuthIdentity).where(
@@ -7818,20 +7867,73 @@ def auth_google_callback(
                 _mark_user_email_verified(db, user_id=uid)
 
         else:
-            if mode == "login":
-                existing_user = db.scalar(select(User.id).where(User.email == email))
-                if existing_user:
+            # Auto-link: if a user exists with the same email, attach this Google identity to the account.
+            existing_user = db.scalar(select(User).where(User.email == email))
+            if existing_user:
+                existing_google = db.scalar(
+                    select(OAuthIdentity).where(
+                        OAuthIdentity.provider == "google",
+                        OAuthIdentity.user_id == str(getattr(existing_user, "id", "") or ""),
+                    )
+                )
+                if existing_google:
                     _audit_log(
                         request,
                         action="auth.google.callback",
-                        status="not_linked",
+                        status="already_linked",
                         actor_email=email,
-                        meta={"mode": "login"},
+                        meta={"mode": mode},
                     )
                     return RedirectResponse(
-                        url=_path_with_flash(login_target, err="Compte non lié à Google. Connecte-toi avec email/mot de passe."),
+                        url=_path_with_flash(
+                            login_target,
+                            err="Ce compte est déjà lié à un autre compte Google. Connecte-toi avec email/mot de passe.",
+                        ),
                         status_code=303,
                     )
+
+                ident = OAuthIdentity(
+                    user_id=str(getattr(existing_user, "id", "") or ""),
+                    provider="google",
+                    provider_user_id=sub,
+                    email=email,
+                )
+                db.add(ident)
+                try:
+                    db.commit()
+                except IntegrityError:
+                    db.rollback()
+                    ident = db.scalar(
+                        select(OAuthIdentity).where(
+                            OAuthIdentity.provider == "google",
+                            OAuthIdentity.provider_user_id == sub,
+                        )
+                    )
+                    if not ident:
+                        _audit_log(
+                            request,
+                            action="auth.google.callback",
+                            status="link_race_failed",
+                            actor_email=email,
+                            meta={"mode": mode},
+                        )
+                        return RedirectResponse(
+                            url=_path_with_flash(base_target, err="Erreur liaison Google. Réessaie."),
+                            status_code=303,
+                        )
+                    existing_user = db.get(User, str(getattr(ident, "user_id", "") or ""))
+                    if not existing_user:
+                        _audit_log(request, action="auth.google.callback", status="user_missing", actor_email=email)
+                        return RedirectResponse(url=_path_with_flash(base_target, err="Compte introuvable."), status_code=303)
+
+                uid = str(getattr(existing_user, "id", "") or "")
+                is_admin = bool(getattr(existing_user, "is_admin", False))
+                linked_by_email = True
+
+                if _email_verification_enabled() and email_verified:
+                    _mark_user_email_verified(db, user_id=uid)
+
+            elif mode == "login":
                 _audit_log(request, action="auth.google.callback", status="no_account", actor_email=email, meta={"mode": "login"})
                 return RedirectResponse(
                     url=_path_with_flash(signup_target, err="Aucun compte Google associé. Crée un compte."),
@@ -7850,7 +7952,13 @@ def auth_google_callback(
 
             existing = db.scalar(select(User.id).where(User.email == email))
             if existing:
-                _audit_log(request, action="auth.google.callback", status="email_exists", actor_email=email, meta={"mode": "signup"})
+                _audit_log(
+                    request,
+                    action="auth.google.callback",
+                    status="email_exists",
+                    actor_email=email,
+                    meta={"mode": "signup", "note": "existing_user_unexpected"},
+                )
                 return RedirectResponse(
                     url=_path_with_flash(login_target, err="Ce compte existe déjà. Connecte-toi."),
                     status_code=303,
@@ -7920,7 +8028,7 @@ def auth_google_callback(
         actor_email=email,
         target_type="user",
         target_id=uid,
-        meta={"mode": mode, "existing": identity_exists},
+        meta={"mode": mode, "existing": identity_exists, "linked": linked_by_email},
     )
     return resp
 
@@ -8747,6 +8855,94 @@ def settings_accounts_save(
         raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
 
     return RedirectResponse(url="/settings/accounts", status_code=303)
+
+
+@app.post("/settings/account/delete")
+def settings_account_delete(request: Request, confirm: str = Form(default="")) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    c = str(confirm or "").strip().upper()
+    if c != "DELETE":
+        return RedirectResponse(
+            url=_path_with_flash("/settings/accounts#danger-zone", err="Tape DELETE pour confirmer."),
+            status_code=303,
+        )
+
+    uid = str(getattr(user, "id", "") or "").strip()
+    email = _normalize_email(str(getattr(user, "email", "") or ""))
+
+    _audit_log(
+        request,
+        action="account.delete",
+        status="requested",
+        actor_email=email,
+        target_type="user",
+        target_id=uid,
+    )
+
+    try:
+        with DB.session() as db:
+            # Scrub audit log PII while keeping the events.
+            if uid:
+                db.execute(
+                    update(AuditLog)
+                    .where(AuditLog.actor_user_id == uid)
+                    .values(actor_user_id=None, actor_email=None)
+                )
+            if email:
+                db.execute(update(AuditLog).where(AuditLog.actor_email == email).values(actor_email=None))
+
+            row = db.get(User, uid) if uid else None
+            if row is not None:
+                db.delete(row)
+            db.commit()
+    except Exception as e:
+        _audit_log(
+            request,
+            action="account.delete",
+            status="db_error",
+            actor_email=email,
+            target_type="user",
+            target_id=uid,
+            meta={"error": f"{type(e).__name__}: {str(e)[:200]}"},
+        )
+        return RedirectResponse(
+            url=_path_with_flash("/settings/accounts#danger-zone", err="Erreur suppression compte (DB)."),
+            status_code=303,
+        )
+
+    # Delete on-disk data (best-effort).
+    try:
+        if uid:
+            user_runs_dir = (DEFAULT_RUNS_DIR / uid).resolve()
+            if user_runs_dir.exists() and user_runs_dir.is_dir():
+                _delete_runs_path_from_object_store(user_runs_dir, recursive=True)
+                shutil.rmtree(str(user_runs_dir), ignore_errors=True)
+    except Exception:
+        pass
+
+    try:
+        if uid:
+            safe_user = re.sub(r"[^a-z0-9_.-]+", "-", uid.strip().lower()).strip("-") or "user"
+            user_gsc_dir = (GSC_OAUTH_DIR / safe_user).resolve()
+            if user_gsc_dir.exists() and user_gsc_dir.is_dir():
+                shutil.rmtree(str(user_gsc_dir), ignore_errors=True)
+    except Exception:
+        pass
+
+    resp = RedirectResponse(url=_path_with_flash("/auth/login", msg="Compte supprimé."), status_code=303)
+    resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
+    _audit_log(
+        request,
+        action="account.delete",
+        status="ok",
+        actor_email=email,
+        target_type="user",
+        target_id=uid,
+    )
+    return resp
 
 
 @app.get("/settings/system", response_class=HTMLResponse)
