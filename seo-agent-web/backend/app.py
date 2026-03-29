@@ -943,6 +943,14 @@ def _connection_meta(row: UserConnection | None) -> dict[str, Any]:
     data = getattr(row, "meta", None) if row is not None else None
     return dict(data) if isinstance(data, dict) else {}
 
+def _gsc_oauth_connection_key(slug: str) -> str:
+    safe_slug = re.sub(r"[^a-z0-9_.-]+", "-", (slug or "").strip().lower()).strip("-") or "project"
+    prefix = "GSC_OAUTH:"
+    if len(safe_slug) <= 80:
+        return f"{prefix}{safe_slug}"
+    digest = hashlib.sha1(safe_slug.encode("utf-8")).hexdigest()[:8]
+    return f"{prefix}{safe_slug[:80]}:{digest}"
+
 
 def _gsc_oauth_token_path(user_id: str, slug: str) -> Path:
     safe_user = re.sub(r"[^a-z0-9_.-]+", "-", (user_id or "").strip().lower()).strip("-") or "user"
@@ -953,14 +961,37 @@ def _gsc_oauth_token_path(user_id: str, slug: str) -> Path:
 
 
 def _gsc_oauth_load(user_id: str, slug: str) -> dict[str, Any] | None:
-    path = _gsc_oauth_token_path(user_id, slug)
-    if not path.exists() or not path.is_file():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    return data if isinstance(data, dict) else None
+    # Prefer DB storage (required for web/worker separation). Fall back to legacy on-disk token file.
+    row = _user_connection_row(user_id=str(user_id), key=_gsc_oauth_connection_key(slug))
+    if row is not None:
+        stored = str(getattr(row, "secret_value", "") or "").strip()
+        if stored:
+            meta = _connection_meta(row)
+            payload: dict[str, Any] = {
+                "v": int(meta.get("v") or 1),
+                "type": str(meta.get("type") or "google_oauth_refresh_token"),
+                "scope": str(meta.get("scope") or "").strip(),
+                "refresh_token": stored,
+                "updated_at": str(meta.get("updated_at") or "").strip(),
+                "_source": "db",
+            }
+            return payload
+
+    # Legacy on-disk token (historically stored either under `gsc-oauth/<user>/` or directly in `gsc-oauth/`).
+    user_path = _gsc_oauth_token_path(user_id, slug)
+    root_path = (GSC_OAUTH_DIR / user_path.name).resolve()
+    for path in [user_path, root_path]:
+        if not path.exists() or not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(data, dict):
+            continue
+        data["_source"] = "file"
+        return data
+    return None
 
 
 def _gsc_oauth_refresh_token(user_id: str, slug: str) -> str | None:
@@ -971,6 +1002,7 @@ def _gsc_oauth_refresh_token(user_id: str, slug: str) -> str | None:
     if not isinstance(t, str) or not t.strip():
         return None
     stored = t.strip()
+    source = str(data.get("_source") or "").strip().lower() or "file"
     rotated = False
     try:
         value, rotated = _decrypt_secret_with_rotation(stored)
@@ -978,8 +1010,11 @@ def _gsc_oauth_refresh_token(user_id: str, slug: str) -> str | None:
         return None
     if not value:
         return None
-    # Lazy-migrate plaintext/old-key refresh tokens to encrypted-at-rest.
-    if _encryption_ready() and (rotated or not stored.startswith(_SECRET_PREFIX)):
+    # Lazy-migrate:
+    # - legacy on-disk tokens -> DB (needed for web/worker separation)
+    # - plaintext/old-key tokens -> encrypted-at-rest with the current key
+    needs_save = (source == "file") or (_encryption_ready() and (rotated or not stored.startswith(_SECRET_PREFIX)))
+    if needs_save:
         try:
             scope = str(data.get("scope") or _GOOGLE_OAUTH_SCOPE).strip() or _GOOGLE_OAUTH_SCOPE
             _gsc_oauth_save(user_id, slug, refresh_token=value, scope=scope)
@@ -993,25 +1028,40 @@ def _gsc_oauth_connected(user_id: str, slug: str) -> bool:
 
 
 def _gsc_oauth_save(user_id: str, slug: str, *, refresh_token: str, scope: str) -> None:
-    payload = {
+    meta = {
         "v": 1,
         "type": "google_oauth_refresh_token",
-        "scope": scope,
-        "refresh_token": _encrypt_secret(str(refresh_token)),
+        "scope": str(scope or "").strip() or _GOOGLE_OAUTH_SCOPE,
         "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
-    path = _gsc_oauth_token_path(user_id, slug)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _upsert_user_connection(
+        user_id=str(user_id),
+        key=_gsc_oauth_connection_key(slug),
+        value=str(refresh_token),
+        meta=meta,
+    )
+    # Best-effort cleanup of legacy token file (if present).
+    try:
+        legacy_path = _gsc_oauth_token_path(user_id, slug)
+        if legacy_path.exists():
+            legacy_path.unlink()
+        root_legacy = (GSC_OAUTH_DIR / legacy_path.name).resolve()
+        if root_legacy.exists():
+            root_legacy.unlink()
+    except Exception:
+        pass
 
 
 def _gsc_oauth_clear(user_id: str, slug: str) -> None:
+    _delete_user_connection(user_id=str(user_id), key=_gsc_oauth_connection_key(slug))
     path = _gsc_oauth_token_path(user_id, slug)
-    try:
-        if path.exists():
-            path.unlink()
-    except Exception:
-        pass
+    root_path = (GSC_OAUTH_DIR / path.name).resolve()
+    for p in [path, root_path]:
+        try:
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
 
 
 def _google_oauth_exchange_code(
