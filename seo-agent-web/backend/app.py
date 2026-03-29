@@ -6123,6 +6123,33 @@ def _smtp_config() -> dict[str, Any] | None:
     }
 
 
+def _app_name() -> str:
+    return _safe_env("APP_NAME") or "SEO Audit"
+
+
+def _support_email() -> str:
+    raw = _safe_env("SUPPORT_EMAIL") or _safe_env("SMTP_FROM") or "contact@noyaru.com"
+    return str(raw or "").strip() or "contact@noyaru.com"
+
+
+def _public_nav_items() -> list[dict[str, str]]:
+    return [
+        {"href": "/pricing", "label": "Pricing"},
+        {"href": "/terms", "label": "CGU"},
+        {"href": "/privacy", "label": "Confidentialité"},
+        {"href": "/support", "label": "Support"},
+        {"href": "/status", "label": "Statut"},
+    ]
+
+
+def _legal_version() -> str:
+    return _safe_env("LEGAL_VERSION") or "0.1"
+
+
+def _legal_updated_at() -> str:
+    return _safe_env("LEGAL_UPDATED_AT") or datetime.utcnow().strftime("%Y-%m-%d")
+
+
 def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
     cfg = _smtp_config()
     if not cfg:
@@ -6774,6 +6801,11 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
     path = request.url.path
     if path.startswith("/static/") or path in {
         "/healthz",
+        "/pricing",
+        "/terms",
+        "/privacy",
+        "/support",
+        "/status",
         "/auth/login",
         "/auth/signup",
         "/auth/forgot",
@@ -8449,6 +8481,111 @@ def auth_logout(request: Request) -> RedirectResponse:
     resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
     _audit_log(request, action="auth.logout", status="ok", user=user)
     return resp
+
+
+@app.get("/pricing", response_class=HTMLResponse)
+def pricing_public(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "pricing_public.html",
+        {
+            "request": request,
+            "app_name": _app_name(),
+            "support_email": _support_email(),
+            "year": datetime.utcnow().year,
+            "nav_items": _public_nav_items(),
+            "catalog": billing.plan_catalog(),
+            "stripe_ok": billing.stripe_enabled(),
+        },
+    )
+
+
+@app.get("/terms", response_class=HTMLResponse)
+def terms_public(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "terms_public.html",
+        {
+            "request": request,
+            "app_name": _app_name(),
+            "support_email": _support_email(),
+            "year": datetime.utcnow().year,
+            "nav_items": _public_nav_items(),
+            "legal_version": _legal_version(),
+            "legal_updated_at": _legal_updated_at(),
+        },
+    )
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_public(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "privacy_public.html",
+        {
+            "request": request,
+            "app_name": _app_name(),
+            "support_email": _support_email(),
+            "year": datetime.utcnow().year,
+            "nav_items": _public_nav_items(),
+            "legal_version": _legal_version(),
+            "legal_updated_at": _legal_updated_at(),
+        },
+    )
+
+
+@app.get("/support", response_class=HTMLResponse)
+def support_public(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "support_public.html",
+        {
+            "request": request,
+            "app_name": _app_name(),
+            "support_email": _support_email(),
+            "year": datetime.utcnow().year,
+            "nav_items": _public_nav_items(),
+        },
+    )
+
+
+@app.get("/status", response_class=HTMLResponse)
+def status_public(request: Request) -> HTMLResponse:
+    db_ok = False
+    db_error = ""
+    try:
+        with DB.session() as db:
+            db.execute(select(1))
+        db_ok = True
+    except Exception as e:
+        db_ok = False
+        db_error = f"{type(e).__name__}: {str(e)[:180]}"
+
+    smtp_ok = bool(_smtp_config())
+    s3_ok = bool(object_store.s3_enabled())
+    s3_reason = ""
+    if not s3_ok:
+        reason = str(object_store.s3_available_reason() or "disabled")
+        s3_reason = {
+            "missing_bucket": "Non configuré",
+            "missing_boto3": "Dépendance manquante",
+            "disabled": "Désactivé",
+        }.get(reason, reason)
+
+    return templates.TemplateResponse(
+        "status_public.html",
+        {
+            "request": request,
+            "app_name": _app_name(),
+            "support_email": _support_email(),
+            "year": datetime.utcnow().year,
+            "nav_items": _public_nav_items(),
+            "now": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "web_ok": True,
+            "db_ok": db_ok,
+            "db_error": db_error,
+            "smtp_ok": smtp_ok,
+            "s3_ok": s3_ok,
+            "s3_reason": s3_reason,
+            "stripe_ok": billing.stripe_enabled(),
+        },
+    )
 
 
 @app.get("/billing", response_class=HTMLResponse)

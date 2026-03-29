@@ -1,0 +1,44 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Statut — {{ app_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Statut</h1>
+    <p class="muted">État des services (best-effort).</p>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Services</h2>
+      <span class="muted small">{{ now }}</span>
+    </div>
+
+    <div class="kv one">
+      <div class="kv-item">
+        <span class="muted">Web</span>
+        <strong>{% if web_ok %}OK{% else %}KO{% endif %}</strong>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Base de données</span>
+        <strong>{% if db_ok %}OK{% else %}KO{% endif %}</strong>
+        {% if db_error %}
+          <div class="muted small">{{ db_error }}</div>
+        {% endif %}
+      </div>
+      <div class="kv-item">
+        <span class="muted">Emails (SMTP)</span>
+        <strong>{% if smtp_ok %}OK{% else %}Non configuré{% endif %}</strong>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Stockage artefacts (S3)</span>
+        <strong>{% if s3_ok %}OK{% else %}{{ s3_reason }}{% endif %}</strong>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Paiement (Stripe)</span>
+        <strong>{% if stripe_ok %}OK{% else %}Non configuré{% endif %}</strong>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="crumbs">
+        <a href="/" class="brand-link">{{ app_name }}</a>
+        <span class="crumb-sep">·</span>
+        {% set path = request.url.path %}
+        {% for item in nav_items %}
+          {% if path == item.href %}
+            <span class="crumb-current">{{ item.label }}</span>
+          {% else %}
+            <a class="muted" href="{{ item.href }}">{{ item.label }}</a>
+          {% endif %}
+          {% if not loop.last %}<span class="crumb-sep">·</span>{% endif %}
+        {% endfor %}
+      </div>
+      <div class="topbar-actions">
+        {% if request.state.user %}
+          <a class="btn" href="/">Tableau de bord</a>
+          <form method="post" action="/auth/logout" class="inline">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <button type="submit" class="btn">Se déconnecter</button>
+          </form>
+        {% else %}
+          <a class="btn" href="/auth/login">Se connecter</a>
+          <a class="btn primary" href="/auth/signup">Créer un compte</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="container muted small" style="padding-top: 0;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+        <div>
+          © {{ year }} {{ app_name }} · <a href="mailto:{{ support_email }}">{{ support_email }}</a>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <a href="/pricing">Pricing</a>
+          <a href="/terms">CGU</a>
+          <a href="/privacy">Confidentialité</a>
+          <a href="/support">Support</a>
+          <a href="/status">Statut</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+

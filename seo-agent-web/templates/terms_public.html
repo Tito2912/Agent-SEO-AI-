@@ -1,0 +1,51 @@
+{% extends "public_layout.html" %}
+
+{% block title %}CGU — {{ app_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Conditions Générales d’Utilisation (CGU)</h1>
+    <p class="muted">Version {{ legal_version }} · Dernière mise à jour : {{ legal_updated_at }}</p>
+  </div>
+
+  <section class="card">
+    <h2>1. Objet</h2>
+    <p class="muted small">
+      {{ app_name }} fournit un service d’audit SEO, d’exports et d’assistance IA. Les présentes CGU encadrent l’accès et l’utilisation du service.
+    </p>
+
+    <h2>2. Compte &amp; sécurité</h2>
+    <ul class="examples">
+      <li>Tu es responsable de la confidentialité de ton mot de passe et de l’accès à ton compte.</li>
+      <li>La vérification d’email peut être requise pour accéder à l’application.</li>
+      <li>En cas d’abus (spam, tentative d’attaque, usage automatisé non autorisé), l’accès peut être suspendu.</li>
+    </ul>
+
+    <h2>3. Données &amp; confidentialité</h2>
+    <p class="muted small">
+      Le traitement des données personnelles est décrit dans la page <a href="/privacy">Politique de confidentialité</a>.
+    </p>
+
+    <h2>4. Paiement</h2>
+    <ul class="examples">
+      <li>Les abonnements et la facturation sont gérés via Stripe (Checkout/Portal).</li>
+      <li>Le plan actif détermine les quotas applicables (sites, pages, messages IA).</li>
+    </ul>
+
+    <h2>5. Limitations</h2>
+    <ul class="examples">
+      <li>Le service est fourni “tel quel” et peut évoluer, notamment en période bêta.</li>
+      <li>Les recommandations SEO sont indicatives ; tu restes responsable des changements appliqués à ton site.</li>
+    </ul>
+
+    <h2>6. Contact</h2>
+    <p class="muted small">
+      Pour toute question, contacte-nous à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+    </p>
+
+    <p class="muted small" style="margin-top: 14px;">
+      Note: ce document est un modèle de base à compléter (raison sociale, mentions légales, juridiction, etc.).
+    </p>
+  </section>
+{% endblock %}
+

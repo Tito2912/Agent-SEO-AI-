@@ -1,0 +1,53 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Pricing — {{ app_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Pricing</h1>
+    <p class="muted">Choisis un plan adapté à ton volume de crawl et à ton usage IA.</p>
+  </div>
+
+  <div class="grid">
+    {% for key in ["solo", "pro", "business"] %}
+      {% set plan = catalog.get(key) %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2>{{ plan.label }}</h2>
+          <span class="badge notice">{{ plan.price_label }}</span>
+        </div>
+
+        <ul class="examples">
+          {% for f in plan.features %}
+            <li>{{ f }}</li>
+          {% endfor %}
+        </ul>
+
+        <div class="row muted small" style="margin-top: 10px;">
+          Limites mensuelles: {{ plan.limits.projects }} sites · {{ plan.limits.pages_crawled_month }} pages crawlées · {{ plan.limits.assistant_messages_month }} messages IA
+        </div>
+
+        <div class="row-actions">
+          {% if request.state.user %}
+            <a class="btn primary" href="/billing">Choisir</a>
+          {% else %}
+            <a class="btn primary" href="/auth/signup">Commencer</a>
+          {% endif %}
+        </div>
+      </section>
+    {% endfor %}
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Questions fréquentes</h2>
+      <span class="muted small">Beta</span>
+    </div>
+    <ul class="examples">
+      <li>Tu peux changer de plan à tout moment depuis l’écran Abonnement.</li>
+      <li>Les emails transactionnels (vérification, reset password) sont inclus.</li>
+      <li>Besoin d’un plan sur-mesure ? Écris à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+    </ul>
+  </section>
+{% endblock %}
+

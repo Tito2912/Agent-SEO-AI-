@@ -1,0 +1,36 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Support — {{ app_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Support</h1>
+    <p class="muted">Un problème de connexion, d’intégration ou de facturation ?</p>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Contact</h2>
+      <span class="badge notice">email</span>
+    </div>
+    <p class="muted small">
+      Écris à <a href="mailto:{{ support_email }}">{{ support_email }}</a> en précisant :
+    </p>
+    <ul class="examples">
+      <li>Ton email de compte</li>
+      <li>Le nom du projet concerné</li>
+      <li>Une capture d’écran + l’heure approximative</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Statut</h2>
+      <span class="muted small">live</span>
+    </div>
+    <p class="muted small">
+      Consulte la page <a href="/status">Statut</a> pour vérifier l’état des services.
+    </p>
+  </section>
+{% endblock %}
+

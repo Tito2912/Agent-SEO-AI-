@@ -1,0 +1,54 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Confidentialité — {{ app_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Politique de confidentialité</h1>
+    <p class="muted">Version {{ legal_version }} · Dernière mise à jour : {{ legal_updated_at }}</p>
+  </div>
+
+  <section class="card">
+    <h2>1. Données collectées</h2>
+    <ul class="examples">
+      <li>Email et informations de compte (authentification, support, sécurité).</li>
+      <li>Données de projets (URL de site, paramètres de crawl, exports).</li>
+      <li>Données techniques (logs, IP, user-agent) pour la sécurité et le diagnostic.</li>
+    </ul>
+
+    <h2>2. Finalités</h2>
+    <ul class="examples">
+      <li>Fournir le service (audits, crawls, exports, quotas).</li>
+      <li>Sécuriser l’accès (anti-abus, vérification email).</li>
+      <li>Support et amélioration produit.</li>
+    </ul>
+
+    <h2>3. Sous-traitants</h2>
+    <ul class="examples">
+      <li>Hébergement: Render + Postgres.</li>
+      <li>Email transactionnel: SendGrid.</li>
+      <li>Paiement: Stripe.</li>
+      <li>Stockage artefacts: S3 (si activé).</li>
+    </ul>
+
+    <h2>4. Conservation</h2>
+    <p class="muted small">
+      Les données sont conservées le temps nécessaire au fonctionnement du service. Une politique de rétention peut être appliquée sur les logs/artefacts.
+    </p>
+
+    <h2>5. Suppression</h2>
+    <p class="muted small">
+      Tu peux demander la suppression de ton compte et de tes données depuis la page “Comptes &amp; connexions” (Zone à risque), ou en contactant le support.
+    </p>
+
+    <h2>6. Contact</h2>
+    <p class="muted small">
+      Pour toute question liée aux données personnelles : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+    </p>
+
+    <p class="muted small" style="margin-top: 14px;">
+      Note: ce document est un modèle de base à compléter (responsable de traitement, base légale, droits RGPD, etc.).
+    </p>
+  </section>
+{% endblock %}
+
