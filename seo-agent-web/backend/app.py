@@ -6801,6 +6801,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
     path = request.url.path
     if path.startswith("/static/") or path in {
         "/healthz",
+        "/",
         "/pricing",
         "/terms",
         "/privacy",
@@ -8813,6 +8814,17 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
     runs_dir = _runs_dir_for_request(request)
 
     user = getattr(request.state, "user", None)
+    if not user:
+        return templates.TemplateResponse(
+            "home_public.html",
+            {
+                "request": request,
+                "app_name": _app_name(),
+                "support_email": _support_email(),
+                "year": datetime.utcnow().year,
+                "nav_items": _public_nav_items(),
+            },
+        )
     with DB.session() as db:
         db_projects = list(
             db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))

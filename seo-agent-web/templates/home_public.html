@@ -1,0 +1,53 @@
+{% extends "public_layout.html" %}
+
+{% block title %}{{ app_name }} — Audit SEO{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>{{ app_name }}</h1>
+    <p class="muted">Audit SEO, dashboards, exports et assistance IA — prêt pour la production.</p>
+    <div class="row-actions">
+      <a class="btn primary" href="/auth/signup">Créer un compte</a>
+      <a class="btn" href="/pricing">Voir le pricing</a>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <section class="card">
+      <h2>Audits &amp; crawls</h2>
+      <ul class="examples">
+        <li>Audits multi-sites et suivi de santé.</li>
+        <li>Top actions et recommandations priorisées.</li>
+        <li>Exports PDF/CSV et Fix Pack.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Intégrations</h2>
+      <ul class="examples">
+        <li>Google Search Console (OAuth projet par projet).</li>
+        <li>Bing Webmaster Tools, GitHub, Netlify.</li>
+        <li>PageSpeed Insights (clé plateforme).</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Sécurité</h2>
+      <ul class="examples">
+        <li>Vérification d’email et reset password.</li>
+        <li>Chiffrement des secrets stockés en base.</li>
+        <li>Suppression du compte et des données.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Support</h2>
+      <ul class="examples">
+        <li>Une question ? Écris à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+        <li>Consulte le <a href="/status">statut</a> en cas d’incident.</li>
+        <li>CGU et confidentialité accessibles publiquement.</li>
+      </ul>
+    </section>
+  </div>
+{% endblock %}
+
