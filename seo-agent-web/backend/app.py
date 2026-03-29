@@ -6027,7 +6027,17 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
     if not expected:
         return await call_next(request)
 
-    if request.url.path in {"/healthz", "/stripe/webhook"}:
+    path = request.url.path
+    if path.startswith("/static/") or path in {
+        "/healthz",
+        "/stripe/webhook",
+        "/",
+        "/pricing",
+        "/terms",
+        "/privacy",
+        "/support",
+        "/status",
+    }:
         return await call_next(request)
 
     auth = str(request.headers.get("authorization") or "")
