@@ -77,6 +77,23 @@ a:hover { text-decoration: underline; }
 .auth-card .page-header h1 { margin: 0; font-size: 24px; letter-spacing: .01em; }
 .auth-card .page-header p { margin: 6px 0 0; }
 .row-actions { display:flex; gap: 10px; align-items: center; margin-top: 14px; }
+.btn.block { width: 100%; }
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-2);
+}
+.auth-divider span { padding: 0 6px; }
 
 .sidebar {
   width: 280px;

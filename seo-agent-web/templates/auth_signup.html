@@ -25,6 +25,20 @@
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
 
+          <button
+            class="btn block"
+            type="submit"
+            formaction="/auth/google/start"
+            name="mode"
+            value="signup"
+            formnovalidate
+            {% if signup_disabled %}disabled{% endif %}
+          >
+            Continuer avec Google
+          </button>
+
+          <div class="auth-divider"><span>ou</span></div>
+
           {% if signup_disabled %}
             <p class="muted small" style="margin: 0 0 10px;">Inscriptions fermées.</p>
           {% endif %}

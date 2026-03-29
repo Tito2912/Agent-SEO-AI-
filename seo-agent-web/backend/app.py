@@ -94,11 +94,29 @@ except ImportError:
 
 try:
     from .db import Database  # type: ignore
-    from .models import AuditLog, EmailVerificationToken, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
+    from .models import (  # type: ignore
+        AuditLog,
+        EmailVerificationToken,
+        JobRecord,
+        OAuthIdentity,
+        PasswordResetToken,
+        Project,
+        User,
+        UserConnection,
+    )
     from . import auth as auth  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
-    from models import AuditLog, EmailVerificationToken, JobRecord, PasswordResetToken, Project, User, UserConnection  # type: ignore
+    from models import (  # type: ignore
+        AuditLog,
+        EmailVerificationToken,
+        JobRecord,
+        OAuthIdentity,
+        PasswordResetToken,
+        Project,
+        User,
+        UserConnection,
+    )
     import auth as auth  # type: ignore
 
 
@@ -234,6 +252,7 @@ _ACTIVE_JOBS: set[str] = set()
 
 
 _GOOGLE_OAUTH_SCOPE = "https://www.googleapis.com/auth/webmasters"
+_GOOGLE_AUTH_SCOPE = "openid email profile"
 _GITHUB_OAUTH_SCOPE = "read:user user:email repo"
 _BING_OAUTH_SCOPE = "webmaster.manage offline_access"
 _NETLIFY_PAT_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 365
@@ -790,6 +809,13 @@ def _google_oauth_redirect_uri(request: Request) -> str:
     if configured:
         return configured
     return f"{_public_base_url(request)}/oauth/google/callback"
+
+
+def _google_auth_redirect_uri(request: Request) -> str:
+    configured = _safe_env("GOOGLE_AUTH_REDIRECT_URI").rstrip("/")
+    if configured:
+        return configured
+    return f"{_public_base_url(request)}/auth/google/callback"
 
 
 def _provider_oauth_redirect_uri(request: Request, provider: str) -> str:
@@ -6297,6 +6323,26 @@ def _user_email_verified(db, *, user_id: str) -> bool:
     return bool(row)
 
 
+def _mark_user_email_verified(db, *, user_id: str) -> None:
+    uid = str(user_id or "").strip()
+    if not uid:
+        return
+    if _user_email_verified(db, user_id=uid):
+        return
+    now = datetime.utcnow()
+    for _ in range(3):
+        token = secrets.token_urlsafe(48)
+        token_hash = _email_verify_token_hash(token)
+        row = EmailVerificationToken(user_id=uid, token_hash=token_hash, expires_at=now, used_at=now)
+        db.add(row)
+        try:
+            db.commit()
+            return
+        except IntegrityError:
+            db.rollback()
+            continue
+
+
 def _issue_email_verification_token(db, *, user_id: str) -> tuple[str, datetime]:
     uid = str(user_id or "").strip()
     if not uid:
@@ -6634,6 +6680,8 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/auth/signup",
         "/auth/forgot",
         "/auth/reset",
+        "/auth/google/start",
+        "/auth/google/callback",
         "/auth/verify",
         "/auth/verify/resend",
         "/stripe/webhook",
@@ -7557,6 +7605,326 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
     return resp
 
 
+@app.post("/auth/google/start")
+def auth_google_start(
+    request: Request,
+    mode: str = Form(default="login"),
+    invite_code: str = Form(default=""),
+    next: str = Form(default="/"),
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    n = _safe_next_path(next)
+    if user:
+        return RedirectResponse(url=n, status_code=303)
+
+    m = str(mode or "login").strip().lower()
+    if m not in {"login", "signup"}:
+        m = "login"
+
+    client_id, client_secret = _google_oauth_client()
+    if not client_id or not client_secret:
+        _audit_log(request, action="auth.google.start", status="oauth_not_configured")
+        return RedirectResponse(
+            url=_path_with_flash(f"/auth/login?next={quote(n)}", err="Google non configuré (client id/secret)."),
+            status_code=303,
+        )
+
+    signup_target = f"/auth/signup?next={quote(n)}"
+    invite_expected = _safe_env("SIGNUP_INVITE_CODE")
+    invite_required = bool(invite_expected)
+    invite_ok = True
+    if m == "signup" and invite_required:
+        invite_code_clean = str(invite_code or "").strip()
+        if not hmac.compare_digest(invite_code_clean, invite_expected):
+            _audit_log(request, action="auth.google.start", status="invite_invalid", meta={"mode": m})
+            return RedirectResponse(
+                url=_path_with_flash(signup_target, err="Code d’invitation invalide."),
+                status_code=303,
+            )
+
+    csrf_token = str(getattr(request.state, "csrf_token", "") or "").strip()
+    try:
+        state = _oauth_state_encode(
+            {
+                "purpose": "auth_google",
+                "mode": m,
+                "ts": int(time.time()),
+                "nonce": uuid.uuid4().hex,
+                "next": n,
+                "invite_ok": invite_ok,
+                "csrf": csrf_token,
+            }
+        )
+    except Exception as e:
+        _audit_log(
+            request,
+            action="auth.google.start",
+            status="state_error",
+            meta={"error": f"{type(e).__name__}: {str(e)[:180]}"},
+        )
+        return RedirectResponse(
+            url=_path_with_flash(f"/auth/login?next={quote(n)}", err=(str(e) or "OAuth state error")[:240]),
+            status_code=303,
+        )
+
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
+    params = {
+        "client_id": client_id,
+        "redirect_uri": _google_auth_redirect_uri(request),
+        "response_type": "code",
+        "scope": _GOOGLE_AUTH_SCOPE,
+        "include_granted_scopes": "true",
+        "prompt": "select_account",
+        "state": state,
+    }
+    _audit_log(request, action="auth.google.start", status="ok", meta={"mode": m})
+    return RedirectResponse(url=f"{auth_url}?{urlencode(params)}", status_code=303)
+
+
+@app.get("/auth/google/callback")
+def auth_google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+) -> Response:
+    secret = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not secret:
+        raise HTTPException(status_code=500, detail="SEO_AGENT_SECRET_KEY missing")
+
+    payload = _oauth_state_decode(state or "")
+    mode = str(payload.get("mode") if isinstance(payload, dict) else "login" or "login").strip().lower()
+    if mode not in {"login", "signup"}:
+        mode = "login"
+
+    next_path = _safe_next_path(payload.get("next") if isinstance(payload, dict) else "/")
+    login_target = f"/auth/login?next={quote(next_path)}"
+    signup_target = f"/auth/signup?next={quote(next_path)}"
+    base_target = signup_target if mode == "signup" else login_target
+
+    if not isinstance(payload, dict) or payload.get("purpose") != "auth_google":
+        _audit_log(request, action="auth.google.callback", status="invalid_state")
+        return RedirectResponse(url=_path_with_flash(base_target, err="OAuth state invalide."), status_code=303)
+
+    cookie_csrf = _sanitize_csrf_token(request.cookies.get(_CSRF_COOKIE_NAME))
+    state_csrf = _sanitize_csrf_token(str(payload.get("csrf") or ""))
+    if not cookie_csrf or not state_csrf or not hmac.compare_digest(cookie_csrf, state_csrf):
+        _audit_log(request, action="auth.google.callback", status="csrf_mismatch")
+        return RedirectResponse(url=_path_with_flash(base_target, err="OAuth invalide (CSRF)."), status_code=303)
+
+    ts = payload.get("ts")
+    try:
+        if isinstance(ts, int) and ts > 0 and (time.time() - ts) > 20 * 60:
+            _audit_log(request, action="auth.google.callback", status="expired")
+            return RedirectResponse(url=_path_with_flash(base_target, err="OAuth expiré. Réessaie."), status_code=303)
+    except Exception:
+        pass
+
+    if error:
+        details = (error_description or error or "").strip() or "Google OAuth refusé."
+        _audit_log(request, action="auth.google.callback", status="provider_error", meta={"error": details[:200]})
+        return RedirectResponse(url=_path_with_flash(base_target, err=details[:240]), status_code=303)
+
+    if not code:
+        _audit_log(request, action="auth.google.callback", status="missing_code")
+        return RedirectResponse(url=_path_with_flash(base_target, err="Code OAuth manquant."), status_code=303)
+
+    client_id, client_secret = _google_oauth_client()
+    if not client_id or not client_secret:
+        _audit_log(request, action="auth.google.callback", status="oauth_not_configured")
+        return RedirectResponse(
+            url=_path_with_flash(base_target, err="Google non configuré (client id/secret)."),
+            status_code=303,
+        )
+
+    try:
+        token_data = _google_oauth_exchange_code(
+            code=str(code),
+            redirect_uri=_google_auth_redirect_uri(request),
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+    except Exception as e:
+        msg = f"OAuth token exchange failed: {type(e).__name__}: {e}"
+        _audit_log(request, action="auth.google.callback", status="exchange_error", meta={"error": msg[:240]})
+        return RedirectResponse(url=_path_with_flash(base_target, err="Erreur OAuth Google (token)."), status_code=303)
+
+    raw_id_token = str(token_data.get("id_token") or "").strip()
+    if not raw_id_token:
+        _audit_log(request, action="auth.google.callback", status="missing_id_token")
+        return RedirectResponse(url=_path_with_flash(base_target, err="Erreur OAuth Google (id_token manquant)."), status_code=303)
+
+    try:
+        from google.auth.transport.requests import Request as GoogleAuthRequest  # type: ignore
+        from google.oauth2 import id_token as google_id_token  # type: ignore
+
+        idinfo = google_id_token.verify_oauth2_token(raw_id_token, GoogleAuthRequest(), client_id)
+    except Exception as e:
+        _audit_log(
+            request,
+            action="auth.google.callback",
+            status="id_token_invalid",
+            meta={"error": f"{type(e).__name__}: {str(e)[:180]}"},
+        )
+        return RedirectResponse(url=_path_with_flash(base_target, err="Erreur OAuth Google (token invalide)."), status_code=303)
+
+    sub = str((idinfo or {}).get("sub") or "").strip()
+    email = _normalize_email(str((idinfo or {}).get("email") or ""))
+    email_verified = bool((idinfo or {}).get("email_verified") is True)
+    if not sub or not email or "@" not in email:
+        _audit_log(request, action="auth.google.callback", status="missing_profile", meta={"sub": sub[:12]})
+        return RedirectResponse(url=_path_with_flash(base_target, err="Profil Google invalide."), status_code=303)
+
+    if _email_verification_enabled() and not email_verified:
+        _audit_log(request, action="auth.google.callback", status="email_not_verified", actor_email=email)
+        return RedirectResponse(
+            url=_path_with_flash(base_target, err="Ton email Google n’est pas vérifié."),
+            status_code=303,
+        )
+
+    uid = ""
+    is_admin = False
+    identity_exists = False
+    with DB.session() as db:
+        ident = db.scalar(
+            select(OAuthIdentity).where(
+                OAuthIdentity.provider == "google",
+                OAuthIdentity.provider_user_id == sub,
+            )
+        )
+
+        if ident:
+            identity_exists = True
+            user = db.get(User, str(getattr(ident, "user_id", "") or ""))
+            if not user:
+                _audit_log(request, action="auth.google.callback", status="user_missing", actor_email=email)
+                return RedirectResponse(url=_path_with_flash(base_target, err="Compte introuvable."), status_code=303)
+            uid = str(getattr(user, "id", "") or "")
+            is_admin = bool(getattr(user, "is_admin", False))
+
+            # Keep email in sync when possible (Google account email can change).
+            if email and email != _normalize_email(str(getattr(user, "email", "") or "")):
+                existing = db.scalar(select(User.id).where(User.email == email))
+                if not existing:
+                    user.email = email
+                    db.add(user)
+                    try:
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+
+            if _email_verification_enabled() and email_verified:
+                _mark_user_email_verified(db, user_id=uid)
+
+        else:
+            if mode == "login":
+                existing_user = db.scalar(select(User.id).where(User.email == email))
+                if existing_user:
+                    _audit_log(
+                        request,
+                        action="auth.google.callback",
+                        status="not_linked",
+                        actor_email=email,
+                        meta={"mode": "login"},
+                    )
+                    return RedirectResponse(
+                        url=_path_with_flash(login_target, err="Compte non lié à Google. Connecte-toi avec email/mot de passe."),
+                        status_code=303,
+                    )
+                _audit_log(request, action="auth.google.callback", status="no_account", actor_email=email, meta={"mode": "login"})
+                return RedirectResponse(
+                    url=_path_with_flash(signup_target, err="Aucun compte Google associé. Crée un compte."),
+                    status_code=303,
+                )
+
+            # Signup with Google
+            invite_expected = _safe_env("SIGNUP_INVITE_CODE")
+            invite_required = bool(invite_expected)
+            invite_ok = bool(payload.get("invite_ok"))
+            signup_disabled = _env_bool("SIGNUP_DISABLED")
+            allow_emails = {_normalize_email(v) for v in _env_list("SIGNUP_ALLOWLIST_EMAILS")}
+            allow_domains = {str(v).strip().lower().lstrip("@") for v in _env_list("SIGNUP_ALLOWLIST_DOMAINS")}
+            allowlist_configured = bool(allow_emails or allow_domains)
+            bootstrap_admin_email = _normalize_email(_safe_env("BOOTSTRAP_ADMIN_EMAIL"))
+
+            existing = db.scalar(select(User.id).where(User.email == email))
+            if existing:
+                _audit_log(request, action="auth.google.callback", status="email_exists", actor_email=email, meta={"mode": "signup"})
+                return RedirectResponse(
+                    url=_path_with_flash(login_target, err="Ce compte existe déjà. Connecte-toi."),
+                    status_code=303,
+                )
+
+            users_count = int(db.scalar(select(func.count()).select_from(User)) or 0)
+            if users_count == 0 and bootstrap_admin_email and email != bootstrap_admin_email:
+                return RedirectResponse(
+                    url=_path_with_flash(signup_target, err="Le premier compte doit utiliser BOOTSTRAP_ADMIN_EMAIL."),
+                    status_code=303,
+                )
+            if signup_disabled:
+                if users_count != 0:
+                    return RedirectResponse(url=_path_with_flash(signup_target, err="Inscriptions fermées."), status_code=303)
+                if not bootstrap_admin_email or email != bootstrap_admin_email:
+                    return RedirectResponse(url=_path_with_flash(signup_target, err="Inscriptions fermées."), status_code=303)
+            if invite_required and not invite_ok:
+                return RedirectResponse(url=_path_with_flash(signup_target, err="Code d’invitation invalide."), status_code=303)
+            if allowlist_configured:
+                domain = email.split("@", 1)[1] if "@" in email else ""
+                if (email not in allow_emails) and (domain not in allow_domains):
+                    return RedirectResponse(url=_path_with_flash(signup_target, err="Accès bêta: email non autorisé."), status_code=303)
+
+            is_admin = users_count == 0
+            user = User(email=email, password_hash=auth.hash_password(secrets.token_urlsafe(32)), is_admin=is_admin)
+            db.add(user)
+            try:
+                db.flush()
+                ident = OAuthIdentity(user_id=str(getattr(user, "id", "") or ""), provider="google", provider_user_id=sub, email=email)
+                db.add(ident)
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+                return RedirectResponse(url=_path_with_flash(signup_target, err="Erreur création compte. Réessaie."), status_code=303)
+            db.refresh(user)
+            uid = str(getattr(user, "id", "") or "")
+
+            if _email_verification_enabled() and email_verified:
+                _mark_user_email_verified(db, user_id=uid)
+
+    if not uid:
+        _audit_log(request, action="auth.google.callback", status="missing_uid", actor_email=email)
+        return RedirectResponse(url=_path_with_flash(base_target, err="Erreur serveur."), status_code=303)
+
+    if is_admin:
+        _import_legacy_projects_for_user(uid)
+        _migrate_legacy_runs_for_user(uid)
+        _migrate_legacy_gsc_oauth_for_user(uid)
+
+    token_out = auth.make_session_token(user_id=uid, secret=secret)
+    resp = RedirectResponse(url=next_path, status_code=303)
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
+    secure_cookie = proto == "https"
+    resp.set_cookie(
+        auth.SESSION_COOKIE_NAME,
+        token_out,
+        max_age=auth.SESSION_TTL_S,
+        httponly=True,
+        samesite="lax",
+        secure=secure_cookie,
+        path="/",
+    )
+    _audit_log(
+        request,
+        action="auth.google.callback",
+        status="ok",
+        actor_email=email,
+        target_type="user",
+        target_id=uid,
+        meta={"mode": mode, "existing": identity_exists},
+    )
+    return resp
+
+
 @app.get("/auth/login", response_class=HTMLResponse)
 def auth_login(
     request: Request,
@@ -7695,42 +8063,6 @@ def auth_login_submit(
         _import_legacy_projects_for_user(str(user.id))
         _migrate_legacy_runs_for_user(str(user.id))
         _migrate_legacy_gsc_oauth_for_user(str(user.id))
-
-    if _email_verification_enabled():
-        try:
-            with DB.session() as db:
-                token_v, expires_at = _issue_email_verification_token(db, user_id=str(user.id))
-            verify_url = f"{_public_base_url(request)}/auth/verify?{urlencode({'token': token_v, 'next': n})}"
-            _send_email_verification_email(to_email=str(getattr(user, "email", "") or e), verify_url=verify_url, expires_at=expires_at)
-        except Exception as exc:
-            _audit_log(
-                request,
-                action="auth.verify_send",
-                status="send_error",
-                actor_email=e,
-                target_type="user",
-                target_id=str(getattr(user, "id", "") or ""),
-                meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
-            )
-            return _signup_error("Impossible d’envoyer l’email de vérification. Réessaie plus tard.", 503)
-
-        _audit_log(
-            request,
-            action="auth.verify_send",
-            status="ok",
-            actor_email=e,
-            target_type="user",
-            target_id=str(getattr(user, "id", "") or ""),
-            meta={"reason": "signup"},
-        )
-        _audit_log(request, action="auth.signup", status="ok", user=user)
-        return RedirectResponse(
-            url=_path_with_flash(
-                f"/auth/login?next={quote(n)}&email={quote(e)}",
-                msg="Compte créé. Vérifie ton email pour te connecter.",
-            ),
-            status_code=303,
-        )
 
     token = auth.make_session_token(user_id=user.id, secret=secret)
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
@@ -7894,6 +8226,46 @@ def auth_signup_submit(
         _import_legacy_projects_for_user(str(user.id))
         _migrate_legacy_runs_for_user(str(user.id))
         _migrate_legacy_gsc_oauth_for_user(str(user.id))
+
+    if _email_verification_enabled():
+        try:
+            with DB.session() as db:
+                token_v, expires_at = _issue_email_verification_token(db, user_id=str(user.id))
+            verify_url = f"{_public_base_url(request)}/auth/verify?{urlencode({'token': token_v, 'next': n})}"
+            _send_email_verification_email(
+                to_email=str(getattr(user, "email", "") or e),
+                verify_url=verify_url,
+                expires_at=expires_at,
+            )
+        except Exception as exc:
+            _audit_log(
+                request,
+                action="auth.verify_send",
+                status="send_error",
+                actor_email=e,
+                target_type="user",
+                target_id=str(getattr(user, "id", "") or ""),
+                meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
+            )
+            return _signup_error("Impossible d’envoyer l’email de vérification. Réessaie plus tard.", 503)
+
+        _audit_log(
+            request,
+            action="auth.verify_send",
+            status="ok",
+            actor_email=e,
+            target_type="user",
+            target_id=str(getattr(user, "id", "") or ""),
+            meta={"reason": "signup"},
+        )
+        _audit_log(request, action="auth.signup", status="ok", user=user)
+        return RedirectResponse(
+            url=_path_with_flash(
+                f"/auth/login?next={quote(n)}&email={quote(e)}",
+                msg="Compte créé. Vérifie ton email pour te connecter.",
+            ),
+            status_code=303,
+        )
 
     token = auth.make_session_token(user_id=user.id, secret=secret)
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()

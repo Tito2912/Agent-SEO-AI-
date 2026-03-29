@@ -32,6 +32,19 @@
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
 
+          <button
+            class="btn block"
+            type="submit"
+            formaction="/auth/google/start"
+            name="mode"
+            value="login"
+            formnovalidate
+          >
+            Continuer avec Google
+          </button>
+
+          <div class="auth-divider"><span>ou</span></div>
+
           <label>
             Email
             <input name="email" type="email" autocomplete="email" required value="{{ email }}" />
