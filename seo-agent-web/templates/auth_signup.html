@@ -14,6 +14,13 @@
           <p class="muted">Votre compte vous permet de gérer vos projets et vos crawls.</p>
         </div>
 
+        {% if msg %}
+          <div class="alert ok">
+            <span class="badge ok">ok</span>
+            <p class="muted small">{{ msg }}</p>
+          </div>
+        {% endif %}
+
         {% if err %}
           <div class="alert error">
             <span class="badge error">erreur</span>

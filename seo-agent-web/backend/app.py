@@ -8283,21 +8283,29 @@ def auth_login_submit(
 
 
 @app.get("/auth/signup", response_class=HTMLResponse)
-def auth_signup(request: Request, next: str | None = None) -> Response:
+def auth_signup(
+    request: Request,
+    next: str | None = None,
+    email: str | None = None,
+    msg: str | None = None,
+    err: str | None = None,
+) -> Response:
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
         return RedirectResponse(url=n, status_code=303)
     invite_required = bool(_safe_env("SIGNUP_INVITE_CODE"))
     signup_disabled = _env_bool("SIGNUP_DISABLED")
+    e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
         "auth_signup.html",
         {
             "request": request,
             "next": n,
             "next_q": quote(n),
-            "err": "",
-            "email": "",
+            "msg": str(msg or "").strip(),
+            "err": str(err or "").strip(),
+            "email": e,
             "invite_required": invite_required,
             "invite_code": "",
             "signup_disabled": signup_disabled,
@@ -8330,8 +8338,11 @@ def auth_signup_submit(
     bootstrap_admin_email = _normalize_email(_safe_env("BOOTSTRAP_ADMIN_EMAIL"))
     n = _safe_next_path(next)
     ip = _request_client_ip(request) or "unknown"
-    retry_ip = _rate_limit_retry_after(bucket="auth_signup_ip", subject=ip, limit=10, window_s=60 * 60)
-    retry_email = _rate_limit_retry_after(bucket="auth_signup_email", subject=(e or "missing"), limit=5, window_s=60 * 60)
+    signup_window_s = 15 * 60
+    retry_ip = _rate_limit_retry_after(bucket="auth_signup_ip", subject=ip, limit=20, window_s=signup_window_s)
+    retry_email = _rate_limit_retry_after(
+        bucket="auth_signup_email", subject=(e or "missing"), limit=10, window_s=signup_window_s
+    )
     retry_after = max(v for v in [retry_ip, retry_email] if isinstance(v, int)) if any(
         isinstance(v, int) for v in [retry_ip, retry_email]
     ) else None
@@ -8343,22 +8354,11 @@ def auth_signup_submit(
             actor_email=e,
             meta={"retry_after_s": retry_after},
         )
-        resp = templates.TemplateResponse(
-            "auth_signup.html",
-            {
-                "request": request,
-                "next": n,
-                "next_q": quote(n),
-                "err": f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}.",
-                "email": e,
-                "invite_required": invite_required,
-                "invite_code": invite_code_clean,
-                "signup_disabled": signup_disabled,
-            },
-            status_code=429,
+        target = f"/auth/signup?next={quote(n)}&email={quote(e)}"
+        return RedirectResponse(
+            url=_path_with_flash(target, err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
+            status_code=303,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
 
     def _signup_error(msg: str, status_code: int = 400) -> Response:
         _audit_log(
@@ -8368,22 +8368,8 @@ def auth_signup_submit(
             actor_email=e,
             meta={"reason": msg, "status_code": status_code},
         )
-        resp = templates.TemplateResponse(
-            "auth_signup.html",
-            {
-                "request": request,
-                "next": n,
-                "next_q": quote(n),
-                "err": msg,
-                "email": e,
-                "invite_required": invite_required,
-                "invite_code": invite_code_clean,
-                "signup_disabled": signup_disabled,
-            },
-            status_code=status_code,
-        )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+        target = f"/auth/signup?next={quote(n)}&email={quote(e)}"
+        return RedirectResponse(url=_path_with_flash(target, err=msg), status_code=303)
 
     if not e or "@" not in e or len(e) > 320:
         return _signup_error("Email invalide.", 400)
