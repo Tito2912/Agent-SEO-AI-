@@ -181,11 +181,11 @@
                   <option value="discover" {% if gsc.search_type == "discover" %}selected{% endif %}>discover</option>
                 </select>
               </label>
-              <label class="span-2">
-                Propriété (optionnel)
-                <input type="text" name="gsc_property" value="{{ gsc.property_url }}" placeholder="ex: sc-domain:example.com ou https://example.com/" />
-              </label>
-            </div>
+	              <label class="span-2">
+	                Propriété (optionnel)
+	                <input id="gsc-property-input" type="text" name="gsc_property" value="{{ gsc.property_url }}" placeholder="ex: sc-domain:example.com ou https://example.com/" />
+	              </label>
+	            </div>
 
             <div class="module-divider"></div>
 
@@ -218,27 +218,30 @@
                 {% else %}
                   <span class="badge notice">OAuth non connecté</span>
                 {% endif %}
-                <span style="margin-left:6px;">(<a href="{{ gsc_oauth.settings_url }}">Paramètres</a>)</span>
-                <div class="modal-actions between" style="margin-top:10px; gap:10px; align-items:center;">
-                  <a class="btn {% if gsc_oauth.connected %}{% else %}primary{% endif %}" href="/projects/{{ slug }}/gsc/oauth/connect">
-                    {% if gsc_oauth.connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
-                  </a>
-                  {% if gsc_oauth.connected %}
-                    <button
-                      type="submit"
-                      class="btn danger"
-                      formmethod="post"
-                      formaction="/projects/{{ slug }}/gsc/oauth/disconnect"
-                      onclick="return confirm('Déconnecter Google pour ce projet ?');"
-                    >
-                      Déconnecter
-                    </button>
-                  {% endif %}
-                  <button type="button" class="btn" id="gsc-oauth-test-btn">Tester</button>
-                  <span class="muted small" id="gsc-oauth-test-result"></span>
-                </div>
-              {% else %}
-                <span class="badge notice">OAuth à configurer</span>
+	                <span style="margin-left:6px;">(<a href="{{ gsc_oauth.settings_url }}">Paramètres</a>)</span>
+	                <div class="modal-actions between" style="margin-top:10px; gap:10px; align-items:center;">
+	                  <a class="btn {% if gsc_oauth.connected %}{% else %}primary{% endif %}" href="/projects/{{ slug }}/gsc/oauth/connect">
+	                    {% if gsc_oauth.connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
+	                  </a>
+	                  {% if gsc_oauth.connected %}
+	                    <button
+	                      type="submit"
+	                      class="btn danger"
+	                      formmethod="post"
+	                      formaction="/projects/{{ slug }}/gsc/oauth/disconnect"
+	                      onclick="return confirm('Déconnecter Google pour ce projet ?');"
+	                    >
+	                      Déconnecter
+	                    </button>
+	                  {% endif %}
+	                  <button type="button" class="btn" id="gsc-oauth-properties-btn">Propriétés</button>
+	                  <button type="button" class="btn" id="gsc-oauth-test-btn">Tester</button>
+	                  <span class="muted small" id="gsc-oauth-test-result"></span>
+	                </div>
+	                <span class="muted small" id="gsc-oauth-properties-status" style="display:block; margin-top:10px;"></span>
+	                <div class="oauth-project-list" id="gsc-oauth-properties-list" style="display:none;"></div>
+	              {% else %}
+	                <span class="badge notice">OAuth à configurer</span>
                 <span style="margin-left:6px;">
                   La connexion Google n’est pas encore disponible pour ce projet.
                   {% if request.state.can_access_system_settings %}
@@ -409,28 +412,126 @@
       </div>
     </form>
 
-    <script>
-      (() => {
-        const testBtn = document.getElementById("gsc-oauth-test-btn");
-        const out = document.getElementById("gsc-oauth-test-result");
-        async function testOauth() {
-          if (!out) return;
-          out.textContent = "Test en cours…";
-          try {
-            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, { headers: { "Accept": "application/json" }, cache: "no-store" });
-            const data = await r.json();
-            if (!data || !data.ok) {
-              out.textContent = (data && data.error) ? data.error : "Erreur GSC OAuth";
-              return;
-            }
-            const n = Array.isArray(data.properties) ? data.properties.length : 0;
-            out.textContent = `${n} propriétés accessibles.`;
-          } catch (e) {
-            out.textContent = String(e);
-          }
-        }
-        if (testBtn) testBtn.addEventListener("click", testOauth);
-      })();
-    </script>
-  {% endif %}
-{% endblock %}
+	    <script>
+	      (() => {
+	        const testBtn = document.getElementById("gsc-oauth-test-btn");
+	        const out = document.getElementById("gsc-oauth-test-result");
+	        const propsBtn = document.getElementById("gsc-oauth-properties-btn");
+	        const propsStatus = document.getElementById("gsc-oauth-properties-status");
+	        const propsList = document.getElementById("gsc-oauth-properties-list");
+	        const propInput = document.getElementById("gsc-property-input");
+	        const projectBaseUrl = {{ (project.base_url or "") | tojson }};
+
+	        function escapeHtml(value) {
+	          return String(value || "")
+	            .replaceAll("&", "&amp;")
+	            .replaceAll("<", "&lt;")
+	            .replaceAll(">", "&gt;")
+	            .replaceAll('"', "&quot;")
+	            .replaceAll("'", "&#39;");
+	        }
+
+	        function normalizeHost(value) {
+	          try {
+	            const host = new URL(String(value || ""), window.location.origin).hostname || "";
+	            return host.replace(/^www\\./, "").toLowerCase();
+	          } catch {
+	            return "";
+	          }
+	        }
+
+	        const baseHost = normalizeHost(projectBaseUrl);
+
+	        async function testOauth() {
+	          if (!out) return;
+	          out.textContent = "Test en cours…";
+	          try {
+	            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, { headers: { "Accept": "application/json" }, cache: "no-store" });
+	            const data = await r.json();
+	            if (!data || !data.ok) {
+	              out.textContent = (data && data.error) ? data.error : "Erreur GSC OAuth";
+	              return;
+	            }
+	            const n = Array.isArray(data.properties) ? data.properties.length : 0;
+	            out.textContent = `${n} propriétés accessibles.`;
+	          } catch (e) {
+	            out.textContent = String(e);
+	          }
+	        }
+
+	        function renderProperties(items) {
+	          if (!propsList) return;
+	          propsList.innerHTML = "";
+	          const arr = Array.isArray(items) ? items : [];
+	          if (!arr.length) {
+	            propsList.innerHTML = `<div class="muted small setting-note">Aucune propriété détectée.</div>`;
+	            return;
+	          }
+
+	          arr.forEach((item) => {
+	            const url = String(item.property_url || "").trim();
+	            if (!url) return;
+	            const permission = String(item.permission || "").trim();
+	            const domain = String(item.domain || "").trim();
+	            const title = domain || url;
+	            const isRecommended = Boolean(item.is_recommended) || (baseHost && (url.includes(baseHost) || title.toLowerCase().includes(baseHost)));
+
+	            const row = document.createElement("div");
+	            row.className = "oauth-project-item";
+	            const badges = isRecommended ? `<span class="badge ok">recommandé</span>` : "";
+	            row.innerHTML = `
+	              <div>
+	                <div class="oauth-project-title">${escapeHtml(title)}</div>
+	                <div class="muted small"><span class="mono">${escapeHtml(url)}</span>${permission ? ` · ${escapeHtml(permission)}` : ""}</div>
+	              </div>
+	              <div class="oauth-project-actions">
+	                ${badges}
+	                <button type="button" class="btn primary" data-use-url="${escapeHtml(url)}">Utiliser</button>
+	              </div>
+	            `;
+	            const useBtn = row.querySelector("button[data-use-url]");
+	            if (useBtn) {
+	              useBtn.addEventListener("click", () => {
+	                if (propInput) propInput.value = url;
+	                if (propsStatus) propsStatus.textContent = "Propriété sélectionnée. Pense à enregistrer.";
+	                if (propsList) propsList.style.display = "none";
+	              });
+	            }
+	            propsList.appendChild(row);
+	          });
+	        }
+
+	        async function loadProperties() {
+	          if (!propsStatus || !propsList) return;
+
+	          const alreadyLoaded = propsList.dataset.loaded === "true";
+	          if (alreadyLoaded) {
+	            propsList.style.display = propsList.style.display === "none" ? "grid" : "none";
+	            return;
+	          }
+
+	          propsStatus.textContent = "Chargement des propriétés…";
+	          propsList.style.display = "none";
+	          propsList.innerHTML = "";
+	          try {
+	            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, { headers: { "Accept": "application/json" }, cache: "no-store" });
+	            const data = await r.json();
+	            if (!data || !data.ok) {
+	              propsStatus.textContent = (data && data.error) ? data.error : "Erreur Google Search Console";
+	              return;
+	            }
+	            const items = Array.isArray(data.properties) ? data.properties : [];
+	            propsStatus.textContent = `${items.length} propriété(s) détectée(s).`;
+	            renderProperties(items);
+	            propsList.dataset.loaded = "true";
+	            propsList.style.display = "grid";
+	          } catch (e) {
+	            propsStatus.textContent = String(e);
+	          }
+	        }
+	        if (testBtn) testBtn.addEventListener("click", testOauth);
+	        if (propsBtn) propsBtn.addEventListener("click", loadProperties);
+	      })();
+	    </script>
+	  {% endif %}
+	{% endblock %}

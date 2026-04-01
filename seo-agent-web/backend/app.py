@@ -10415,7 +10415,7 @@ def bing_oauth_disconnect(request: Request, next: str = Form(default="/settings/
 
 @app.get("/api/projects/{slug}/gsc/properties")
 def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
-    _ = _db_project_or_404(request, slug)
+    proj = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
     user_id = str(getattr(user, "id", "") or "")
     token = _gsc_oauth_refresh_token(str(getattr(user, "id", "")), slug)
@@ -10467,6 +10467,8 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
         entries = []
 
     existing_by_base = _db_project_lookup_by_base_url(user_id)
+    base_url = str(getattr(proj, "base_url", "") or "").strip()
+    recommended: set[str] = set(_gsc_property_candidates(base_url, None)) if base_url else set()
     props: list[dict[str, Any]] = []
     for it in entries:
         if not isinstance(it, dict):
@@ -10491,18 +10493,25 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
             suggested = _normalize_base_url(site_url) or ""
 
         existing_slug = existing_by_base.get(suggested or "")
+        is_recommended = bool(site_url and site_url in recommended)
         props.append(
             {
                 "property_url": site_url,
                 "permission": perm,
                 "domain": domain,
                 "suggested_base_url": suggested,
+                "is_recommended": is_recommended,
                 "already_imported": bool(existing_slug),
                 "project_slug": existing_slug or "",
             }
         )
 
-    props.sort(key=lambda p: (p.get("domain") or p.get("property_url") or "").lower())
+    props.sort(
+        key=lambda p: (
+            0 if p.get("is_recommended") else 1,
+            (p.get("domain") or p.get("property_url") or "").lower(),
+        )
+    )
     return JSONResponse({"ok": True, "properties": props})
 
 
