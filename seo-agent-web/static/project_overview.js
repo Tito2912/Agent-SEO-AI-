@@ -371,6 +371,10 @@
         ? "Bing Webmaster Tools non connecté."
         : "Google Search Console non connecté pour ce projet.";
     }
+    if (reason === "oauth_not_configured") return "OAuth Google non configuré (client id/secret).";
+    if (reason === "oauth_invalid_client") return "OAuth Google invalide (client id/secret).";
+    if (reason === "credentials_file_not_found") return "Credentials GSC introuvables sur le serveur.";
+    if (reason === "oauth_invalid_grant") return "Accès Google révoqué. Reconnecte Google.";
     if (reason === "missing_api_key") return "Clé Bing Webmaster API manquante.";
     if (reason === "site_not_found") return "Site Bing introuvable dans le compte connecté.";
     if (reason === "no_data") return source === "bing" ? "Aucune donnée Bing disponible sur la période." : "Aucune donnée GSC disponible sur la période.";

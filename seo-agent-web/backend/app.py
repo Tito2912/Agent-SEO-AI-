@@ -25,6 +25,7 @@ import unicodedata
 import uuid
 import csv
 from collections import deque
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from email.message import EmailMessage
@@ -1062,6 +1063,73 @@ def _gsc_oauth_clear(user_id: str, slug: str) -> None:
                 p.unlink()
         except Exception:
             pass
+
+
+def _gsc_runtime_oauth_dir(user_id: str) -> Path:
+    safe_user = re.sub(r"[^a-z0-9_.-]+", "-", (user_id or "").strip().lower()).strip("-") or "user"
+    runtime_dir = (GSC_OAUTH_DIR / "_runtime" / safe_user).resolve()
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(runtime_dir, 0o700)
+    except Exception:
+        pass
+    return runtime_dir
+
+
+def _gsc_write_runtime_oauth_credentials(*, user_id: str, slug: str, refresh_token: str) -> Path:
+    """
+    Create a short-lived OAuth "authorized_user" JSON file for gsc_fetch / seo_audit.
+
+    We keep refresh tokens encrypted in DB; this file exists only for the duration of a single request/job.
+    """
+    safe_slug = re.sub(r"[^a-z0-9_.-]+", "-", (slug or "").strip().lower()).strip("-") or "project"
+    runtime_dir = _gsc_runtime_oauth_dir(user_id)
+    path = (runtime_dir / f"{safe_slug}-{uuid.uuid4().hex}.json").resolve()
+    payload = {
+        "type": "authorized_user",
+        "refresh_token": str(refresh_token or "").strip(),
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except Exception:
+        pass
+    return path
+
+
+@contextmanager
+def _gsc_live_credentials(*, user_id: str, slug: str) -> Any:
+    """
+    Yield a credentials path usable by `gsc_fetch`:
+    - Prefer per-project OAuth refresh token stored in DB (temp file)
+    - Fall back to service account credentials (GOOGLE_APPLICATION_CREDENTIALS)
+    """
+    oauth_refresh = _gsc_oauth_refresh_token(user_id, slug)
+    if oauth_refresh:
+        client_id, client_secret = _google_oauth_client()
+        if not client_id or not client_secret:
+            yield None, "oauth", "oauth_not_configured"
+            return
+
+        runtime_path: Path | None = None
+        try:
+            runtime_path = _gsc_write_runtime_oauth_credentials(user_id=user_id, slug=slug, refresh_token=oauth_refresh)
+            yield runtime_path, "oauth", ""
+        finally:
+            if runtime_path is not None:
+                try:
+                    runtime_path.unlink()
+                except Exception:
+                    pass
+        return
+
+    env_creds = _resolve_repo_path(_safe_env("GOOGLE_APPLICATION_CREDENTIALS"))
+    if env_creds and env_creds.exists():
+        yield env_creds, "service_account", ""
+        return
+
+    yield None, "", "missing_credentials"
 
 
 def _google_oauth_exchange_code(
@@ -3292,77 +3360,109 @@ def _gsc_daily_series(rows: list[dict[str, Any]], *, start_date: dt.date, end_da
     return out
 
 
-def _gsc_live_credentials_path(*, user_id: str, slug: str) -> tuple[Path | None, str]:
-    oauth_path = _gsc_oauth_token_path(user_id, slug)
-    if oauth_path.exists():
-        return oauth_path, "oauth"
+def _gsc_live_credentials_status(*, user_id: str, slug: str) -> dict[str, str | bool]:
+    """
+    Lightweight status (no temp files) used by the UI to decide whether live GSC can run.
+    """
+    oauth_refresh = _gsc_oauth_refresh_token(user_id, slug)
+    if oauth_refresh:
+        client_id, client_secret = _google_oauth_client()
+        if client_id and client_secret:
+            return {"ready": True, "auth_mode": "oauth", "reason": ""}
+        return {"ready": False, "auth_mode": "oauth", "reason": "oauth_not_configured"}
 
     env_creds = _resolve_repo_path(_safe_env("GOOGLE_APPLICATION_CREDENTIALS"))
     if env_creds and env_creds.exists():
-        return env_creds, "service_account"
+        return {"ready": True, "auth_mode": "service_account", "reason": ""}
+    if _safe_env("GOOGLE_APPLICATION_CREDENTIALS"):
+        return {"ready": False, "auth_mode": "service_account", "reason": "credentials_file_not_found"}
+    return {"ready": False, "auth_mode": "", "reason": "missing_credentials"}
 
-    return None, ""
+
+def _classify_google_oauth_failure(err: Exception) -> str:
+    """
+    Best-effort classification for Google OAuth refresh failures surfaced by `google-auth`.
+    Used to provide cleaner UX than raw exception strings.
+    """
+    msg = f"{type(err).__name__}: {err}".lower()
+    if "invalid_grant" in msg:
+        return "oauth_invalid_grant"
+    if "invalid_client" in msg:
+        return "oauth_invalid_client"
+    if "google_oauth_client_id" in msg or "google_oauth_client_secret" in msg:
+        return "oauth_not_configured"
+    if "oauth credentials are missing" in msg:
+        return "oauth_not_configured"
+    return ""
 
 
 def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: dict[str, Any], days: int) -> dict[str, Any]:
     enabled = bool(gsc_cfg.get("enabled")) if "enabled" in gsc_cfg else True
     if not enabled:
-        return {"ok": False, "enabled": False, "reason": "disabled"}
+        return {"ok": False, "enabled": False, "source": "gsc", "reason": "disabled"}
 
-    credentials_path, auth_mode = _gsc_live_credentials_path(user_id=user_id, slug=slug)
-    if not credentials_path:
-        return {"ok": False, "enabled": True, "reason": "missing_credentials"}
+    with _gsc_live_credentials(user_id=user_id, slug=slug) as (credentials_path, auth_mode, cred_reason):
+        if not credentials_path:
+            return {
+                "ok": False,
+                "enabled": True,
+                "source": "gsc",
+                "reason": cred_reason or "missing_credentials",
+            }
 
-    gsc_fetch = _load_gsc_fetch_module()
+        gsc_fetch = _load_gsc_fetch_module()
 
-    today = dt.datetime.now(dt.timezone.utc).date()
-    end_date = today - dt.timedelta(days=3)
-    if end_date < dt.date(2000, 1, 1):
-        end_date = today
-    days = max(1, min(int(days or 28), 365))
-    start_date = end_date - dt.timedelta(days=days - 1)
-    search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
+        today = dt.datetime.now(dt.timezone.utc).date()
+        end_date = today - dt.timedelta(days=3)
+        if end_date < dt.date(2000, 1, 1):
+            end_date = today
+        days = max(1, min(int(days or 28), 365))
+        start_date = end_date - dt.timedelta(days=days - 1)
+        search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
 
-    last_error = ""
-    for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
-        try:
-            rows = gsc_fetch.fetch_gsc(
-                credentials_path=credentials_path.resolve(),
-                property_url=property_url,
-                start_date=start_date,
-                end_date=end_date,
-                dimensions=["date"],
-                search_type=search_type,
-                row_limit=max(500, days + 10),
-                timeout_s=30.0,
-            )
-        except Exception as e:
-            last_error = f"{type(e).__name__}: {e}"
-            continue
+        last_error = ""
+        for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
+            try:
+                rows = gsc_fetch.fetch_gsc(
+                    credentials_path=credentials_path.resolve(),
+                    property_url=property_url,
+                    start_date=start_date,
+                    end_date=end_date,
+                    dimensions=["date"],
+                    search_type=search_type,
+                    row_limit=max(500, days + 10),
+                    timeout_s=30.0,
+                )
+            except Exception as e:
+                oauth_reason = _classify_google_oauth_failure(e)
+                if oauth_reason:
+                    return {"ok": False, "enabled": True, "source": "gsc", "reason": oauth_reason}
+                last_error = f"{type(e).__name__}: {e}"
+                continue
 
-        daily = _gsc_daily_series(rows if isinstance(rows, list) else [], start_date=start_date, end_date=end_date)
+            daily = _gsc_daily_series(rows if isinstance(rows, list) else [], start_date=start_date, end_date=end_date)
+            return {
+                "ok": True,
+                "enabled": True,
+                "source": "gsc",
+                "live": True,
+                "auth_mode": auth_mode,
+                "property": property_url,
+                "days": days,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "daily": daily,
+                "totals": _timeseries_totals(daily),
+                "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+            }
+
         return {
-            "ok": True,
+            "ok": False,
             "enabled": True,
             "source": "gsc",
-            "live": True,
-            "auth_mode": auth_mode,
-            "property": property_url,
-            "days": days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "daily": daily,
-            "totals": _timeseries_totals(daily),
-            "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+            "reason": "request_failed",
+            "error": last_error or "gsc_request_failed",
         }
-
-    return {
-        "ok": False,
-        "enabled": True,
-        "source": "gsc",
-        "reason": "request_failed",
-        "error": last_error or "gsc_request_failed",
-    }
 
 
 def _bing_site_candidates(base_url: str, configured: str | None) -> list[str]:
@@ -3747,73 +3847,76 @@ def _fetch_gsc_live_items(
     if not enabled:
         return {"ok": False, "enabled": False, "source": "gsc", "reason": "disabled"}
 
-    credentials_path, auth_mode = _gsc_live_credentials_path(user_id=user_id, slug=slug)
-    if not credentials_path:
-        return {"ok": False, "enabled": True, "source": "gsc", "reason": "missing_credentials"}
+    with _gsc_live_credentials(user_id=user_id, slug=slug) as (credentials_path, auth_mode, cred_reason):
+        if not credentials_path:
+            return {"ok": False, "enabled": True, "source": "gsc", "reason": cred_reason or "missing_credentials"}
 
-    dimension = (dim or "query").strip().lower()
-    if dimension not in {"query", "page"}:
-        dimension = "query"
+        dimension = (dim or "query").strip().lower()
+        if dimension not in {"query", "page"}:
+            dimension = "query"
 
-    today = dt.datetime.now(dt.timezone.utc).date()
-    end_date = today - dt.timedelta(days=3)
-    if end_date < dt.date(2000, 1, 1):
-        end_date = today
-    days = max(1, min(int(days or 28), 365))
-    start_date = end_date - dt.timedelta(days=days - 1)
-    search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
-    min_impressions = max(0, int(gsc_cfg.get("min_impressions") or 0))
+        today = dt.datetime.now(dt.timezone.utc).date()
+        end_date = today - dt.timedelta(days=3)
+        if end_date < dt.date(2000, 1, 1):
+            end_date = today
+        days = max(1, min(int(days or 28), 365))
+        start_date = end_date - dt.timedelta(days=days - 1)
+        search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
+        min_impressions = max(0, int(gsc_cfg.get("min_impressions") or 0))
 
-    gsc_fetch = _load_gsc_fetch_module()
+        gsc_fetch = _load_gsc_fetch_module()
 
-    fetch_limit = min(25000, max(500, int(limit or 200) * 10))
-    last_error = ""
-    for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
-        try:
-            rows = gsc_fetch.fetch_gsc(
-                credentials_path=credentials_path.resolve(),
-                property_url=property_url,
-                start_date=start_date,
-                end_date=end_date,
-                dimensions=[dimension],
-                search_type=search_type,
-                row_limit=fetch_limit,
-                timeout_s=30.0,
-            )
-        except Exception as e:
-            last_error = f"{type(e).__name__}: {e}"
-            continue
+        fetch_limit = min(25000, max(500, int(limit or 200) * 10))
+        last_error = ""
+        for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
+            try:
+                rows = gsc_fetch.fetch_gsc(
+                    credentials_path=credentials_path.resolve(),
+                    property_url=property_url,
+                    start_date=start_date,
+                    end_date=end_date,
+                    dimensions=[dimension],
+                    search_type=search_type,
+                    row_limit=fetch_limit,
+                    timeout_s=30.0,
+                )
+            except Exception as e:
+                oauth_reason = _classify_google_oauth_failure(e)
+                if oauth_reason:
+                    return {"ok": False, "enabled": True, "source": "gsc", "reason": oauth_reason}
+                last_error = f"{type(e).__name__}: {e}"
+                continue
 
-        items = _gsc_rows_to_perf_items(rows if isinstance(rows, list) else [])
-        if min_impressions:
-            items = [it for it in items if _to_int(it.get("impressions")) >= min_impressions]
-        items.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
-        if limit and limit > 0:
-            items = items[: int(limit)]
+            items = _gsc_rows_to_perf_items(rows if isinstance(rows, list) else [])
+            if min_impressions:
+                items = [it for it in items if _to_int(it.get("impressions")) >= min_impressions]
+            items.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
+            if limit and limit > 0:
+                items = items[: int(limit)]
+            return {
+                "ok": True,
+                "enabled": True,
+                "source": "gsc",
+                "live": True,
+                "auth_mode": auth_mode,
+                "dim": dimension,
+                "property": property_url,
+                "days": days,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "min_impressions": min_impressions,
+                "items": items,
+                "totals": _timeseries_totals(items),
+                "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+            }
+
         return {
-            "ok": True,
+            "ok": False,
             "enabled": True,
             "source": "gsc",
-            "live": True,
-            "auth_mode": auth_mode,
-            "dim": dimension,
-            "property": property_url,
-            "days": days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "min_impressions": min_impressions,
-            "items": items,
-            "totals": _timeseries_totals(items),
-            "data_delay_hint": "GSC a généralement 48–72h de décalage.",
+            "reason": "request_failed",
+            "error": last_error or "gsc_request_failed",
         }
-
-    return {
-        "ok": False,
-        "enabled": True,
-        "source": "gsc",
-        "reason": "request_failed",
-        "error": last_error or "gsc_request_failed",
-    }
 
 
 def _fetch_bing_live_items(
@@ -5668,6 +5771,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     except Exception:
         override_max_pages = None
     actual_pages_crawled: int | None = None
+    gsc_runtime_creds: Path | None = None
 
     job.status = "running"
     job.started_at = time.time()
@@ -5836,9 +5940,21 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         gsc_dir.mkdir(parents=True, exist_ok=True)
         cmd.append("--gsc-api")
         # Prefer per-project Google OAuth (refresh token) credentials when available.
-        oauth_creds = _gsc_oauth_token_path(str(user_id), slug)
-        if oauth_creds.exists() and oauth_creds.is_file():
-            cmd.extend(["--gsc-credentials", str(oauth_creds)])
+        oauth_refresh = _gsc_oauth_refresh_token(str(user_id), slug)
+        if oauth_refresh:
+            client_id, client_secret = _google_oauth_client()
+            if client_id and client_secret:
+                try:
+                    gsc_runtime_creds = _gsc_write_runtime_oauth_credentials(
+                        user_id=str(user_id),
+                        slug=slug,
+                        refresh_token=oauth_refresh,
+                    )
+                    cmd.extend(["--gsc-credentials", str(gsc_runtime_creds)])
+                except Exception as e:
+                    job.stdout = (job.stdout or "") + f"[GSC] credentials error: {type(e).__name__}: {e}\n"
+            else:
+                job.stdout = (job.stdout or "") + "[GSC] OAuth token présent, mais GOOGLE_OAUTH_CLIENT_ID/SECRET manquants sur ce service.\n"
         if gsc_property:
             cmd.extend(["--gsc-property", gsc_property])
         cmd.extend(["--gsc-days", str(max(1, gsc_days))])
@@ -5954,6 +6070,11 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         job.status = "failed"
         _save_job(job)
     finally:
+        if gsc_runtime_creds is not None:
+            try:
+                gsc_runtime_creds.unlink()
+            except Exception:
+                pass
         try:
             if site_dir.exists() and site_dir.is_dir():
                 _sync_runs_path_to_object_store(site_dir)
@@ -10312,7 +10433,14 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
             client_secret=client_secret,
         )
     except Exception as e:
-        return JSONResponse({"ok": False, "error": f"AuthError: {type(e).__name__}: {e}"}, status_code=400)
+        reason = _classify_google_oauth_failure(e)
+        if reason == "oauth_invalid_grant":
+            msg = "Accès Google révoqué ou expiré. Reconnecte Google pour ce projet."
+        elif reason == "oauth_invalid_client":
+            msg = "OAuth Google invalide (client id/secret). Vérifie la config plateforme."
+        else:
+            msg = f"AuthError: {type(e).__name__}: {e}"
+        return JSONResponse({"ok": False, "error": msg, "reason": reason or "auth_failed"}, status_code=400)
 
     try:
         resp = requests.get(
@@ -11171,13 +11299,14 @@ def project_overview(
         config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
         project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
     )
-    gsc_creds_path, gsc_auth_mode = _gsc_live_credentials_path(user_id=str(getattr(user, "id", "")), slug=slug)
+    gsc_status = _gsc_live_credentials_status(user_id=str(getattr(user, "id", "")), slug=slug)
     live_series = {
         "gsc": {
             "enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
             "days": int(effective_gsc.get("days") or 28),
-            "credentials_ready": bool(gsc_creds_path and gsc_creds_path.exists()),
-            "auth_mode": gsc_auth_mode,
+            "credentials_ready": bool(gsc_status.get("ready")),
+            "auth_mode": str(gsc_status.get("auth_mode") or ""),
+            "reason": str(gsc_status.get("reason") or ""),
         },
         "bing": {
             "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
