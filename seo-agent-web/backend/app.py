@@ -4696,6 +4696,7 @@ def _job_worker_loop(worker_id: str) -> None:
             jid = _claim_next_job_id(worker_id=worker_id)
         except Exception as e:
             print(f"[WORKER] claim error: {type(e).__name__}: {e}")
+            _sentry_capture_exception(e, where="worker.claim_next_job", meta={"worker_id": worker_id})
             _WORKER_STOP.wait(1.0)
             continue
 
@@ -4706,6 +4707,7 @@ def _job_worker_loop(worker_id: str) -> None:
         try:
             _execute_queued_job(jid)
         except Exception as e:
+            _sentry_capture_exception(e, where="worker.execute_job", meta={"worker_id": worker_id, "job_id": jid})
             try:
                 job = _load_job(jid)
                 if job:
@@ -4874,6 +4876,22 @@ def _init_sentry() -> None:
         _SENTRY_READY = True
     except Exception as e:
         print(f"[SENTRY] init error: {type(e).__name__}: {e}")
+
+
+def _sentry_capture_exception(exc: Exception, *, where: str = "", meta: dict[str, Any] | None = None) -> None:
+    if not _SENTRY_READY:
+        return
+    try:
+        import sentry_sdk  # type: ignore
+
+        with sentry_sdk.push_scope() as scope:
+            if where:
+                scope.set_tag("where", str(where)[:80])
+            if isinstance(meta, dict) and meta:
+                scope.set_context("meta", meta)
+            sentry_sdk.capture_exception(exc)
+    except Exception:
+        return
 
 
 _LOG_LIMIT_CHARS = 200_000

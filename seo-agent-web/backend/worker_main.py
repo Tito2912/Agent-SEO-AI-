@@ -12,6 +12,12 @@ def main() -> int:
     # Importing `backend.app` registers all worker helpers and initializes DB/env.
     from backend import app as app_module  # type: ignore
 
+    # Initialize Sentry in the worker process too (FastAPI startup hook won't run here).
+    try:
+        app_module._init_sentry()
+    except Exception:
+        pass
+
     def _stop(*_args) -> None:
         try:
             app_module._WORKER_STOP.set()
