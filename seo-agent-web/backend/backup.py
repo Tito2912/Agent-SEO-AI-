@@ -324,9 +324,14 @@ def main() -> int:
     # 5) Retention cleanup (optional)
     retention_days = _retention_days()
     if retention_days > 0:
-        deleted = _cleanup_old_backups(client=client, bucket=bucket, prefix=f"{prefix}/", retention_days=retention_days)
-        if deleted:
-            print(f"[BACKUP] retention deleted={deleted} days={retention_days}", flush=True)
+        try:
+            deleted = _cleanup_old_backups(
+                client=client, bucket=bucket, prefix=f"{prefix}/", retention_days=retention_days
+            )
+            if deleted:
+                print(f"[BACKUP] retention deleted={deleted} days={retention_days}", flush=True)
+        except Exception as exc:
+            print(f"[BACKUP] retention cleanup error: {type(exc).__name__}: {exc}", flush=True)
 
     print("[BACKUP] done", flush=True)
     return 0
