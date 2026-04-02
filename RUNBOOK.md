@@ -49,6 +49,27 @@ Idée simple :
 - **Sentry** : configure `SENTRY_DSN` + vérifie la réception d’une erreur test.
 - **Santé** : endpoint `GET /healthz` utilisé par Render.
 
+## Backups automatiques (S3)
+
+Le repo inclut un script de backup qui exporte la base Postgres (format custom) et upload le dump (et optionnellement le data dir) vers S3.
+
+Commande (dans le container) :
+- `python -m backend.backup`
+
+Variables nécessaires :
+- `DATABASE_URL`
+- `S3_BUCKET_NAME`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` (et optionnel `AWS_S3_ENDPOINT_URL`)
+
+Variables optionnelles :
+- `BACKUP_S3_PREFIX` (défaut `backups`)
+- `BACKUP_ENV` (sinon `SENTRY_ENVIRONMENT` / `RENDER_SERVICE_NAME`)
+- `BACKUP_RETENTION_DAYS` (si > 0, suppression best-effort des objets plus vieux)
+- `BACKUP_SKIP_DATA_DIR=true` (ne pas archiver `SEO_AGENT_DATA_DIR`)
+- `BACKUP_INCLUDE_RUNS_DIR=true` (archive `SEO_AGENT_RUNS_DIR` — peut être gros)
+
+Sur Render : crée un **Cron Job / Scheduled Job** (ou job manuel) qui lance `python -m backend.backup` avec les mêmes env vars AWS+S3 que le service web/worker.
+
 ## Procédure de déploiement (checklist)
 
 - Migrations : `alembic upgrade head` (automatique en prod via Dockerfile).
