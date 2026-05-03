@@ -27,7 +27,7 @@ import csv
 from collections import deque
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.message import EmailMessage
 from email.utils import formataddr
 from functools import lru_cache
@@ -474,6 +474,25 @@ def _encryption_ready() -> bool:
     return bool(_encryption_seeds()) and Fernet is not None
 
 
+def _secret_encryption_source() -> str:
+    if _safe_env("SEO_AGENT_ENCRYPTION_KEYS").strip():
+        return "SEO_AGENT_ENCRYPTION_KEYS"
+    if _safe_env("SEO_AGENT_ENCRYPTION_KEY").strip():
+        return "SEO_AGENT_ENCRYPTION_KEY"
+    if _safe_env("SEO_AGENT_SECRET_KEY").strip():
+        return "SEO_AGENT_SECRET_KEY"
+    return ""
+
+
+def _require_secret_encryption_ready() -> None:
+    if Fernet is None:
+        raise RuntimeError("cryptography_missing")
+    if not _encryption_seeds():
+        raise RuntimeError("secret_encryption_key_missing")
+    if not _fernets():
+        raise RuntimeError("invalid_secret_encryption_key")
+
+
 @lru_cache(maxsize=1)
 def _fernets() -> list[Any]:
     if not _encryption_ready():
@@ -590,6 +609,7 @@ def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tupl
 
 
 def _upsert_user_connection(*, user_id: str, key: str, value: str, meta: dict[str, Any] | None = None) -> None:
+    _require_secret_encryption_ready()
     stored_value = _encrypt_secret(str(value))
     with DB.session() as db:
         row = db.scalar(
@@ -626,6 +646,96 @@ def _delete_user_connection(*, user_id: str, key: str) -> None:
         if row:
             db.delete(row)
             db.commit()
+
+
+def _secret_storage_health() -> dict[str, Any]:
+    seeds = _encryption_seeds()
+    fernet_count = len(_fernets()) if Fernet is not None else 0
+    stats: dict[str, Any] = {
+        "configured": bool(seeds) and Fernet is not None and fernet_count > 0,
+        "source": _secret_encryption_source(),
+        "seed_count": len(seeds),
+        "fernet_count": fernet_count,
+        "total": 0,
+        "encrypted_current": 0,
+        "encrypted_legacy": 0,
+        "plaintext": 0,
+        "empty": 0,
+        "unreadable": 0,
+        "legacy_gsc_files": 0,
+    }
+    with DB.session() as db:
+        rows = list(db.scalars(select(UserConnection)))
+    for row in rows:
+        stats["total"] += 1
+        stored = str(getattr(row, "secret_value", "") or "").strip()
+        if not stored:
+            stats["empty"] += 1
+            continue
+        if not stored.startswith(_SECRET_PREFIX):
+            stats["plaintext"] += 1
+            continue
+        try:
+            value, rotated = _decrypt_secret_with_rotation(stored)
+            if not value:
+                stats["unreadable"] += 1
+            elif rotated:
+                stats["encrypted_legacy"] += 1
+            else:
+                stats["encrypted_current"] += 1
+        except Exception:
+            stats["unreadable"] += 1
+    try:
+        for path in GSC_OAUTH_DIR.rglob("*.json"):
+            rel = path.relative_to(GSC_OAUTH_DIR)
+            if rel.parts and rel.parts[0] == "_runtime":
+                continue
+            stats["legacy_gsc_files"] += 1
+    except Exception:
+        pass
+    return stats
+
+
+def _rotate_user_connection_secrets() -> dict[str, int]:
+    _require_secret_encryption_ready()
+    counts = {
+        "total": 0,
+        "rotated": 0,
+        "unchanged": 0,
+        "plaintext_reencrypted": 0,
+        "unreadable": 0,
+        "empty": 0,
+    }
+    with DB.session() as db:
+        rows = list(db.scalars(select(UserConnection)))
+        for row in rows:
+            counts["total"] += 1
+            stored = str(getattr(row, "secret_value", "") or "").strip()
+            if not stored:
+                counts["empty"] += 1
+                continue
+            if not stored.startswith(_SECRET_PREFIX):
+                row.secret_value = _encrypt_secret(stored)
+                db.add(row)
+                counts["plaintext_reencrypted"] += 1
+                counts["rotated"] += 1
+                continue
+            try:
+                value, rotated = _decrypt_secret_with_rotation(stored)
+            except Exception:
+                counts["unreadable"] += 1
+                continue
+            if not value:
+                counts["unreadable"] += 1
+                continue
+            if rotated:
+                row.secret_value = _encrypt_secret(value)
+                db.add(row)
+                counts["rotated"] += 1
+            else:
+                counts["unchanged"] += 1
+        db.commit()
+    return counts
 
 
 def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
@@ -944,8 +1054,13 @@ def _connection_meta(row: UserConnection | None) -> dict[str, Any]:
     data = getattr(row, "meta", None) if row is not None else None
     return dict(data) if isinstance(data, dict) else {}
 
+
+def _safe_storage_segment(value: str, default: str) -> str:
+    return re.sub(r"[^a-z0-9_.-]+", "-", (value or "").strip().lower()).strip("-") or default
+
+
 def _gsc_oauth_connection_key(slug: str) -> str:
-    safe_slug = re.sub(r"[^a-z0-9_.-]+", "-", (slug or "").strip().lower()).strip("-") or "project"
+    safe_slug = _safe_storage_segment(slug, "project")
     prefix = "GSC_OAUTH:"
     if len(safe_slug) <= 80:
         return f"{prefix}{safe_slug}"
@@ -953,12 +1068,16 @@ def _gsc_oauth_connection_key(slug: str) -> str:
     return f"{prefix}{safe_slug[:80]}:{digest}"
 
 
+def _gsc_oauth_user_dir(user_id: str, *, create: bool = True) -> Path:
+    user_dir = (GSC_OAUTH_DIR / _safe_storage_segment(user_id, "user")).resolve()
+    if create:
+        user_dir.mkdir(parents=True, exist_ok=True)
+    return user_dir
+
+
 def _gsc_oauth_token_path(user_id: str, slug: str) -> Path:
-    safe_user = re.sub(r"[^a-z0-9_.-]+", "-", (user_id or "").strip().lower()).strip("-") or "user"
-    safe_slug = re.sub(r"[^a-z0-9_.-]+", "-", (slug or "").strip().lower()).strip("-") or "project"
-    user_dir = (GSC_OAUTH_DIR / safe_user).resolve()
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return user_dir / f"{safe_slug}.json"
+    safe_slug = _safe_storage_segment(slug, "project")
+    return _gsc_oauth_user_dir(user_id, create=True) / f"{safe_slug}.json"
 
 
 def _gsc_oauth_load(user_id: str, slug: str) -> dict[str, Any] | None:
@@ -1065,14 +1184,14 @@ def _gsc_oauth_clear(user_id: str, slug: str) -> None:
             pass
 
 
-def _gsc_runtime_oauth_dir(user_id: str) -> Path:
-    safe_user = re.sub(r"[^a-z0-9_.-]+", "-", (user_id or "").strip().lower()).strip("-") or "user"
-    runtime_dir = (GSC_OAUTH_DIR / "_runtime" / safe_user).resolve()
-    runtime_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        os.chmod(runtime_dir, 0o700)
-    except Exception:
-        pass
+def _gsc_runtime_oauth_dir(user_id: str, *, create: bool = True) -> Path:
+    runtime_dir = (GSC_OAUTH_DIR / "_runtime" / _safe_storage_segment(user_id, "user")).resolve()
+    if create:
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(runtime_dir, 0o700)
+        except Exception:
+            pass
     return runtime_dir
 
 
@@ -9186,7 +9305,10 @@ def settings_accounts_save(
             target_id=key,
             meta={"error": str(e)[:240], "op": op},
         )
-        raise HTTPException(status_code=400, detail=f"{type(e).__name__}: {e}") from e
+        return RedirectResponse(
+            url=_path_with_flash("/settings/accounts", err=f"{type(e).__name__}: {str(e)[:180]}"),
+            status_code=303,
+        )
 
     return RedirectResponse(url="/settings/accounts", status_code=303)
 
@@ -9206,6 +9328,9 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
 
     uid = str(getattr(user, "id", "") or "").strip()
     email = _normalize_email(str(getattr(user, "email", "") or ""))
+    project_slugs: list[str] = []
+    gsc_refresh_tokens: list[str] = []
+    stripe_summary: dict[str, Any] = {}
 
     _audit_log(
         request,
@@ -9218,6 +9343,31 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
 
     try:
         with DB.session() as db:
+            if uid:
+                projects = list(db.scalars(select(Project).where(Project.owner_user_id == uid)))
+                project_slugs = [str(getattr(project, "slug", "") or "").strip() for project in projects if str(getattr(project, "slug", "") or "").strip()]
+                gsc_rows = list(
+                    db.scalars(
+                        select(UserConnection).where(
+                            UserConnection.user_id == uid,
+                            UserConnection.key.like("GSC_OAUTH:%"),
+                        )
+                    )
+                )
+                seen_tokens: set[str] = set()
+                for row in gsc_rows:
+                    stored = str(getattr(row, "secret_value", "") or "").strip()
+                    if not stored:
+                        continue
+                    try:
+                        refresh_token, _rotated = _decrypt_secret_with_rotation(stored)
+                    except Exception:
+                        refresh_token = ""
+                    token = str(refresh_token or "").strip()
+                    if token and token not in seen_tokens:
+                        seen_tokens.add(token)
+                        gsc_refresh_tokens.append(token)
+                stripe_summary = billing.cancel_and_purge_customer(db, user_id=uid)
             # Scrub audit log PII while keeping the events.
             if uid:
                 db.execute(
@@ -9233,38 +9383,56 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
                 db.delete(row)
             db.commit()
     except Exception as e:
+        reason = "Erreur suppression compte (Stripe)." if "stripe_" in str(e).lower() else "Erreur suppression compte (DB)."
         _audit_log(
             request,
             action="account.delete",
-            status="db_error",
+            status="delete_error",
             actor_email=email,
             target_type="user",
             target_id=uid,
             meta={"error": f"{type(e).__name__}: {str(e)[:200]}"},
         )
         return RedirectResponse(
-            url=_path_with_flash("/settings/accounts#danger-zone", err="Erreur suppression compte (DB)."),
+            url=_path_with_flash("/settings/accounts#danger-zone", err=reason),
             status_code=303,
         )
 
-    # Delete on-disk data (best-effort).
     try:
         if uid:
             user_runs_dir = (DEFAULT_RUNS_DIR / uid).resolve()
             if user_runs_dir.exists() and user_runs_dir.is_dir():
                 _delete_runs_path_from_object_store(user_runs_dir, recursive=True)
                 shutil.rmtree(str(user_runs_dir), ignore_errors=True)
+            for slug in project_slugs:
+                legacy_runs_dir = (DEFAULT_RUNS_DIR / _safe_storage_segment(slug, "project")).resolve()
+                if legacy_runs_dir.exists() and legacy_runs_dir.is_dir():
+                    _delete_runs_path_from_object_store(legacy_runs_dir, recursive=True)
+                    shutil.rmtree(str(legacy_runs_dir), ignore_errors=True)
     except Exception:
         pass
 
     try:
         if uid:
-            safe_user = re.sub(r"[^a-z0-9_.-]+", "-", uid.strip().lower()).strip("-") or "user"
-            user_gsc_dir = (GSC_OAUTH_DIR / safe_user).resolve()
-            if user_gsc_dir.exists() and user_gsc_dir.is_dir():
-                shutil.rmtree(str(user_gsc_dir), ignore_errors=True)
+            user_gsc_dir = _gsc_oauth_user_dir(uid, create=False)
+            runtime_gsc_dir = _gsc_runtime_oauth_dir(uid, create=False)
+            for path in [user_gsc_dir, runtime_gsc_dir]:
+                if path.exists() and path.is_dir():
+                    shutil.rmtree(str(path), ignore_errors=True)
+            for slug in project_slugs:
+                legacy_token = (GSC_OAUTH_DIR / f"{_safe_storage_segment(slug, 'project')}.json").resolve()
+                if legacy_token.exists() and legacy_token.is_file():
+                    legacy_token.unlink()
     except Exception:
         pass
+
+    revoked_tokens = 0
+    for token in gsc_refresh_tokens:
+        try:
+            _google_oauth_revoke_token(token)
+            revoked_tokens += 1
+        except Exception:
+            continue
 
     resp = RedirectResponse(url=_path_with_flash("/auth/login", msg="Compte supprimé."), status_code=303)
     resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
@@ -9275,6 +9443,11 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
         actor_email=email,
         target_type="user",
         target_id=uid,
+        meta={
+            "project_count": len(project_slugs),
+            "gsc_tokens_revoked": revoked_tokens,
+            "stripe": stripe_summary,
+        },
     )
     return resp
 
@@ -9440,6 +9613,7 @@ def settings_system(request: Request) -> HTMLResponse:
             "sections": system_sections,
             "msg": msg,
             "err": err,
+            "secret_storage": _secret_storage_health(),
             "gsc": {
                 "credentials": cred_info,
                 "candidates": candidates,
@@ -9449,6 +9623,46 @@ def settings_system(request: Request) -> HTMLResponse:
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@app.post("/settings/system/secrets/rotate")
+def settings_system_rotate_secrets(request: Request) -> RedirectResponse:
+    _ = _require_system_owner(request)
+    try:
+        counts = _rotate_user_connection_secrets()
+    except Exception as e:
+        _audit_log(
+            request,
+            action="settings.system.secret_rotation",
+            status="error",
+            user=request.state.user,
+            target_type="user_connections",
+            target_id="rotate",
+            meta={"error": str(e)[:240]},
+        )
+        return RedirectResponse(
+            url=_path_with_flash("/settings/system#secret-storage", err=f"{type(e).__name__}: {str(e)[:180]}"),
+            status_code=303,
+        )
+    _audit_log(
+        request,
+        action="settings.system.secret_rotation",
+        status="ok",
+        user=request.state.user,
+        target_type="user_connections",
+        target_id="rotate",
+        meta=counts,
+    )
+    return RedirectResponse(
+        url=_path_with_flash(
+            "/settings/system#secret-storage",
+            msg=(
+                f"Rotation terminée ({counts['rotated']} mis à jour, "
+                f"{counts['unchanged']} déjà OK, {counts['unreadable']} illisibles)."
+            ),
+        ),
+        status_code=303,
+    )
 
 
 @app.post("/settings/system")

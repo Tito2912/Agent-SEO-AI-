@@ -43,6 +43,7 @@
       <details class="setting-details">
         <summary>Configurer</summary>
         <form method="post" action="{{ action }}" class="setting-form">
+          <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="key" value="{{ item.key }}" />
           <label>
             Valeur
@@ -137,6 +138,69 @@
     </ul>
   </section>
 
+  <section class="card setting-card" id="secret-storage">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Stockage des secrets utilisateur</h2>
+        <div class="muted small">Santé du chiffrement DB et rotation des secrets stockés.</div>
+      </div>
+      <div class="setting-actions">
+        {% if secret_storage and secret_storage.configured %}
+          <span class="badge ok">chiffrement actif</span>
+        {% else %}
+          <span class="badge notice">à corriger</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="kv setting-kv">
+      <div class="kv-item">
+        <span class="muted">Source</span>
+        <div class="mono">{{ (secret_storage.source if secret_storage else "") or "—" }}</div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Clés chargées</span>
+        <div class="mono">{{ (secret_storage.fernet_count if secret_storage else 0) }} / {{ (secret_storage.seed_count if secret_storage else 0) }}</div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Secrets DB</span>
+        <div class="mono">{{ (secret_storage.total if secret_storage else 0) }}</div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Fichiers GSC legacy</span>
+        <div class="mono">{{ (secret_storage.legacy_gsc_files if secret_storage else 0) }}</div>
+      </div>
+    </div>
+
+    <ul class="examples muted small" style="margin:0 0 14px 0;">
+      <li>Chiffrés clé courante : {{ (secret_storage.encrypted_current if secret_storage else 0) }}</li>
+      <li>Chiffrés avec ancienne clé : {{ (secret_storage.encrypted_legacy if secret_storage else 0) }}</li>
+      <li>Stockés en clair : {{ (secret_storage.plaintext if secret_storage else 0) }}</li>
+      <li>Illisibles : {{ (secret_storage.unreadable if secret_storage else 0) }}</li>
+    </ul>
+
+    {% if not (secret_storage and secret_storage.configured) %}
+      <p class="muted small setting-note">
+        Configure <span class="mono">SEO_AGENT_ENCRYPTION_KEYS</span> côté Render avant d’autoriser de nouvelles écritures de secrets.
+      </p>
+    {% endif %}
+
+    <form method="post" action="/settings/system/secrets/rotate" class="setting-form" style="margin-top:0;">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <div class="modal-actions between">
+        <span class="muted small">La rotation rechiffre les secrets DB avec la clé courante.</span>
+        <button
+          class="btn primary"
+          type="submit"
+          {% if not (secret_storage and secret_storage.configured) %}disabled{% endif %}
+          onclick="return confirm('Relancer la rotation des secrets stockés ?');"
+        >
+          Rechiffrer les secrets
+        </button>
+      </div>
+    </form>
+  </section>
+
   {% for section in sections %}
     <div class="settings-section" id="{{ section.id }}">
       <div class="settings-section-head">
@@ -182,6 +246,7 @@
             <details class="setting-details" {% if not (cred and cred.exists) %}open{% endif %}>
               <summary>Configurer</summary>
               <form method="post" action="/settings/system" id="gsc-form" class="setting-form">
+                <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                 <input type="hidden" name="key" value="GOOGLE_APPLICATION_CREDENTIALS" />
                 <label>
                   Chemin du fichier JSON

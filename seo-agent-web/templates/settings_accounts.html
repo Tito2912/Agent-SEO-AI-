@@ -82,6 +82,7 @@
     <details class="setting-details" {% if item.source == "none" %}open{% endif %}>
       <summary>{{ action_label }}</summary>
       <form method="post" action="/settings/accounts" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
         <input type="hidden" name="key" value="{{ item.key }}" />
         <label>
           Valeur
@@ -164,6 +165,7 @@
     <details class="setting-details">
       <summary>Supprimer mon compte</summary>
       <form method="post" action="/settings/account/delete" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
         <label>
           Tape <span class="mono">DELETE</span> pour confirmer
           <input name="confirm" type="text" autocomplete="off" placeholder="DELETE" />
@@ -339,6 +341,7 @@
           {% endif %}
           {% if bing_oauth.is_oauth %}
             <form method="post" action="{{ bing_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
               <input type="hidden" name="next" value="/settings/accounts#bing-connect-card" />
               <button
                 class="btn danger"
@@ -382,6 +385,7 @@
         <details class="setting-details" {% if bing_oauth.source == "none" and not bing_oauth.ready %}open{% endif %}>
           <summary>Mode avancé : clé API manuelle</summary>
           <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
             <label>
               Clé API Bing
@@ -478,6 +482,7 @@
           {% endif %}
           {% if github_oauth.source == "user" %}
             <form method="post" action="{{ github_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
               <input type="hidden" name="next" value="/settings/accounts#github-connect-card" />
               <button
                 class="btn danger"
@@ -493,6 +498,7 @@
         <details class="setting-details">
           <summary>Mode avancé : token manuel</summary>
           <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <input type="hidden" name="key" value="GITHUB_TOKEN" />
             <label>
               Token GitHub
@@ -595,6 +601,7 @@
           {% endif %}
           {% if netlify_oauth.source == "user" %}
             <form method="post" action="{{ netlify_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
               <input type="hidden" name="next" value="/settings/accounts#netlify-connect-card" />
               <button
                 class="btn danger"
@@ -610,6 +617,7 @@
         <details class="setting-details">
           <summary>Mode avancé : token manuel</summary>
           <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <input type="hidden" name="key" value="NETLIFY_TOKEN" />
             <label>
               Token Netlify
@@ -667,6 +675,7 @@
       const gscList = document.getElementById("gsc-properties-list");
       const gscProjectPicker = document.getElementById("gsc-project-picker");
       const gscLoadBtn = document.getElementById("gsc-load-properties");
+      const csrfToken = {{ (request.state.csrf_token or '') | tojson }};
 
       function escapeHtml(value) {
         return String(value || "")
@@ -683,6 +692,7 @@
           : "";
         return `
           <form method="post" action="/projects/add" style="display:inline-flex; gap:8px; align-items:center;">
+            <input type="hidden" name="_csrf" value="${escapeHtml(csrfToken)}" />
             <input type="hidden" name="mode" value="url" />
             <input type="hidden" name="url" value="${escapeHtml(url)}" />
             <input type="hidden" name="next" value="${escapeHtml(next)}" />

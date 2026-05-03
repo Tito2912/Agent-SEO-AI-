@@ -178,6 +178,68 @@ def stripe_customer_id(db: Session, *, user_id: str) -> str:
     return str(row.stripe_customer_id or "").strip() if row else ""
 
 
+def cancel_and_purge_customer(db: Session, *, user_id: str) -> dict[str, Any]:
+    uid = (user_id or "").strip()
+    if not uid:
+        return {"customer_id": "", "subscriptions_seen": 0, "subscriptions_canceled": 0, "customer_deleted": 0}
+
+    row = _billing_customer(db, user_id=uid)
+    customer_id = str(getattr(row, "stripe_customer_id", "") or "").strip()
+    sub_rows = list(db.scalars(select(BillingSubscription).where(BillingSubscription.user_id == uid)))
+    sub_ids = {
+        str(getattr(sub, "stripe_subscription_id", "") or "").strip()
+        for sub in sub_rows
+        if str(getattr(sub, "stripe_subscription_id", "") or "").strip()
+    }
+    if not customer_id and not sub_ids:
+        return {"customer_id": "", "subscriptions_seen": 0, "subscriptions_canceled": 0, "customer_deleted": 0}
+
+    stripe_init()
+    if not stripe_enabled():
+        raise RuntimeError("stripe_not_configured")
+
+    sub_status_by_id: dict[str, str] = {}
+    if customer_id:
+        try:
+            remote_subs = stripe.Subscription.list(customer=customer_id, status="all", limit=100)  # type: ignore[attr-defined]
+            remote_subs_dict = _stripe_to_dict(remote_subs)
+            for item in remote_subs_dict.get("data") if isinstance(remote_subs_dict.get("data"), list) else []:
+                if not isinstance(item, dict):
+                    continue
+                remote_id = str(item.get("id") or "").strip()
+                if remote_id:
+                    sub_ids.add(remote_id)
+                    sub_status_by_id[remote_id] = str(item.get("status") or "").strip().lower()
+        except Exception as e:
+            if not sub_ids:
+                raise RuntimeError(f"stripe_subscription_list_failed:{type(e).__name__}:{str(e)[:160]}") from e
+
+    canceled = 0
+    for sub_id in sorted(sub_ids):
+        if sub_status_by_id.get(sub_id) in {"canceled", "incomplete_expired"}:
+            continue
+        try:
+            stripe.Subscription.cancel(sub_id)  # type: ignore[attr-defined]
+            canceled += 1
+        except Exception as e:
+            raise RuntimeError(f"stripe_subscription_cancel_failed:{sub_id}:{type(e).__name__}:{str(e)[:160]}") from e
+
+    customer_deleted = 0
+    if customer_id:
+        try:
+            stripe.Customer.delete(customer_id)  # type: ignore[attr-defined]
+            customer_deleted = 1
+        except Exception as e:
+            raise RuntimeError(f"stripe_customer_delete_failed:{customer_id}:{type(e).__name__}:{str(e)[:160]}") from e
+
+    return {
+        "customer_id": customer_id,
+        "subscriptions_seen": len(sub_ids),
+        "subscriptions_canceled": canceled,
+        "customer_deleted": customer_deleted,
+    }
+
+
 def get_or_create_stripe_customer(db: Session, *, user_id: str, email: str) -> str:
     stripe_init()
     if not stripe_enabled():
