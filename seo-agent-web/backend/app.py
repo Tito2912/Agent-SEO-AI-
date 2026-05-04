@@ -3515,6 +3515,31 @@ def _classify_google_oauth_failure(err: Exception) -> str:
     return ""
 
 
+def _clear_stale_gsc_oauth(*, user_id: str, slug: str, reason: str) -> None:
+    if reason != "oauth_invalid_grant":
+        return
+    try:
+        _gsc_oauth_clear(user_id, slug)
+        print(f"[GSC] cleared stale oauth token user={user_id} slug={slug}", flush=True)
+    except Exception as exc:
+        print(f"[GSC] clear stale oauth failed user={user_id} slug={slug}: {type(exc).__name__}: {exc}", flush=True)
+
+
+def _gsc_oauth_status_hint(reason: str) -> str:
+    reason = str(reason or "").strip().lower()
+    if reason == "oauth_invalid_grant":
+        return "Accès Google révoqué ou expiré. Reconnecte ce projet."
+    if reason == "oauth_invalid_client":
+        return "OAuth Google invalide côté plateforme. Vérifie le client Google."
+    if reason == "oauth_not_configured":
+        return "OAuth Google n’est pas configuré côté plateforme."
+    if reason == "credentials_file_not_found":
+        return "Le fichier de credentials Google n’a pas été trouvé."
+    if reason == "missing_credentials":
+        return "Aucune connexion Google active pour ce projet."
+    return ""
+
+
 def _google_api_error_info(resp: Any) -> dict[str, str]:
     status = ""
     reason = ""
@@ -3603,6 +3628,7 @@ def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: d
             except Exception as e:
                 oauth_reason = _classify_google_oauth_failure(e)
                 if oauth_reason:
+                    _clear_stale_gsc_oauth(user_id=user_id, slug=slug, reason=oauth_reason)
                     return {"ok": False, "enabled": True, "source": "gsc", "reason": oauth_reason}
                 last_error = f"{type(e).__name__}: {e}"
                 continue
@@ -4050,6 +4076,7 @@ def _fetch_gsc_live_items(
             except Exception as e:
                 oauth_reason = _classify_google_oauth_failure(e)
                 if oauth_reason:
+                    _clear_stale_gsc_oauth(user_id=user_id, slug=slug, reason=oauth_reason)
                     return {"ok": False, "enabled": True, "source": "gsc", "reason": oauth_reason}
                 last_error = f"{type(e).__name__}: {e}"
                 continue
@@ -9255,6 +9282,7 @@ def settings_accounts(request: Request) -> HTMLResponse:
             config_path=config_path,
             project_settings=(proj.settings if isinstance(proj.settings, dict) else {}),
         )
+        gsc_status = _gsc_live_credentials_status(user_id=str(user.id), slug=slug)
         gsc_projects.append(
             {
                 "slug": slug,
@@ -9262,7 +9290,10 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 "base_url": str(proj.base_url or ""),
                 "gsc_enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
                 "oauth_connected": _gsc_oauth_connected(str(user.id), slug),
+                "oauth_status": gsc_status,
+                "oauth_status_hint": _gsc_oauth_status_hint(str(gsc_status.get("reason") or "")),
                 "connect_url": f"/projects/{slug}/gsc/oauth/connect?{urlencode({'next': gsc_return_to})}",
+                "disconnect_url": f"/projects/{slug}/gsc/oauth/disconnect",
                 "crawl_settings_url": f"/projects/{slug}/settings/crawl#gsc",
                 "properties_url": f"/api/projects/{slug}/gsc/properties",
             }
@@ -10715,6 +10746,7 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
     except Exception as e:
         reason = _classify_google_oauth_failure(e)
         if reason == "oauth_invalid_grant":
+            _clear_stale_gsc_oauth(user_id=user_id, slug=slug, reason=reason)
             msg = "Accès Google révoqué ou expiré. Reconnecte Google pour ce projet."
         elif reason == "oauth_invalid_client":
             msg = "OAuth Google invalide (client id/secret). Vérifie la config plateforme."

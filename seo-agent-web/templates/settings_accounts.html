@@ -196,7 +196,7 @@
       <section class="card setting-card span-2" id="gsc-oauth-card">
         {% set gsc_connected = namespace(count=0) %}
         {% for project_item in gsc_oauth.projects %}
-          {% if project_item.oauth_connected %}
+          {% if project_item.oauth_connected and project_item.oauth_status.ready %}
             {% set gsc_connected.count = gsc_connected.count + 1 %}
           {% endif %}
         {% endfor %}
@@ -221,7 +221,7 @@
               <div class="gsc-toolbar">
                 <select id="gsc-project-picker" aria-label="Projet Google connecté">
                   {% for project_item in gsc_oauth.projects %}
-                    {% if project_item.oauth_connected %}
+                    {% if project_item.oauth_connected and project_item.oauth_status.ready %}
                       <option
                         value="{{ project_item.properties_url }}"
                         data-project-name="{{ project_item.site_name }}"
@@ -240,10 +240,15 @@
                   <div>
                     <div class="oauth-project-title">{{ project_item.site_name }}</div>
                     <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
+                    {% if project_item.oauth_connected and not project_item.oauth_status.ready and project_item.oauth_status_hint %}
+                      <div class="muted small" style="margin-top:6px;">{{ project_item.oauth_status_hint }}</div>
+                    {% endif %}
                   </div>
                   <div class="oauth-project-actions">
-                    {% if project_item.oauth_connected %}
+                    {% if project_item.oauth_connected and project_item.oauth_status.ready %}
                       <span class="badge ok">oauth connecté</span>
+                    {% elif project_item.oauth_connected %}
+                      <span class="badge error">connexion à réparer</span>
                     {% elif project_item.gsc_enabled %}
                       <span class="badge notice">non connecté</span>
                     {% else %}
@@ -251,6 +256,17 @@
                     {% endif %}
                     {% if project_item.oauth_connected %}
                       <a class="btn" href="{{ project_item.connect_url }}">Relancer OAuth</a>
+                      <form method="post" action="{{ project_item.disconnect_url }}" style="display:inline-flex;">
+                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                        <input type="hidden" name="next" value="/settings/accounts#gsc-oauth-card" />
+                        <button
+                          class="btn danger"
+                          type="submit"
+                          onclick="return confirm('Déconnecter Google Search Console pour ce projet ?');"
+                        >
+                          Déconnecter
+                        </button>
+                      </form>
                     {% else %}
                       <a class="btn primary" href="{{ project_item.connect_url }}">Connecter Google</a>
                     {% endif %}
