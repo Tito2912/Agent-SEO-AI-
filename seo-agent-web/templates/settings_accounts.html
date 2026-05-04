@@ -877,11 +877,19 @@
           });
           const data = await response.json();
           if (!data || !data.ok) {
-            gscStatus.textContent = data && data.error ? data.error : "Erreur Google Search Console";
+            const parts = [];
+            if (data && data.error) parts.push(String(data.error));
+            if (data && data.hint) parts.push(String(data.hint));
+            gscStatus.textContent = parts.join(" ") || "Erreur Google Search Console";
             return;
           }
           const items = Array.isArray(data.properties) ? data.properties : [];
-          gscStatus.textContent = `${items.length} propriété(s) détectée(s) pour ${name || "ce projet"}.`;
+          if (!items.length && data && data.hint) {
+            gscStatus.textContent = String(data.hint);
+          } else {
+            const suffix = data && data.hint ? ` ${String(data.hint)}` : "";
+            gscStatus.textContent = `${items.length} propriété(s) détectée(s) pour ${name || "ce projet"}.${suffix}`;
+          }
           renderImportRows(gscList, items, "gsc");
         } catch (error) {
           gscStatus.textContent = String(error);

@@ -3515,6 +3515,54 @@ def _classify_google_oauth_failure(err: Exception) -> str:
     return ""
 
 
+def _google_api_error_info(resp: Any) -> dict[str, str]:
+    status = ""
+    reason = ""
+    message = ""
+    try:
+        data = resp.json()
+    except Exception:
+        data = None
+    if isinstance(data, dict):
+        err = data.get("error")
+        if isinstance(err, dict):
+            status = str(err.get("status") or "").strip()
+            message = str(err.get("message") or "").strip()
+            errors = err.get("errors")
+            if isinstance(errors, list):
+                for item in errors:
+                    if not isinstance(item, dict):
+                        continue
+                    if not message:
+                        message = str(item.get("message") or "").strip()
+                    reason = str(item.get("reason") or item.get("domain") or "").strip()
+                    if reason:
+                        break
+    if not message:
+        message = str(getattr(resp, "text", "") or "").strip()
+    if len(message) > 400:
+        message = message[:400] + "…"
+    return {
+        "status": status.lower(),
+        "reason": reason.lower(),
+        "message": message,
+    }
+
+
+def _classify_gsc_api_failure(resp: Any) -> tuple[str, str]:
+    info = _google_api_error_info(resp)
+    text = f"{getattr(resp, 'status_code', '')} {info.get('status', '')} {info.get('reason', '')} {info.get('message', '')}".lower()
+    if getattr(resp, "status_code", 0) == 401:
+        return "gsc_auth_failed", "Reconnecte Google pour ce projet."
+    if "accessnotconfigured" in text or "service_disabled" in text or "api has not been used" in text:
+        return "gsc_api_disabled", "Active Search Console API dans Google Cloud, puis réessaie."
+    if getattr(resp, "status_code", 0) == 429 or "quota" in text or "rate limit" in text or "userratelimitexceeded" in text:
+        return "gsc_rate_limited", "Quota Google atteint temporairement. Réessaie plus tard."
+    if "insufficient" in text or "forbidden" in text or "permission" in text:
+        return "gsc_insufficient_scope", "Reconnecte Google et accepte bien l’accès Search Console."
+    return "gsc_request_failed", ""
+
+
 def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: dict[str, Any], days: int) -> dict[str, Any]:
     enabled = bool(gsc_cfg.get("enabled")) if "enabled" in gsc_cfg else True
     if not enabled:
@@ -10684,10 +10732,24 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": f"RequestError: {type(e).__name__}: {e}"}, status_code=400)
 
     if resp.status_code != 200:
-        snippet = (resp.text or "").strip()
-        if len(snippet) > 400:
-            snippet = snippet[:400] + "…"
-        return JSONResponse({"ok": False, "error": f"HTTP {resp.status_code}: {snippet}"}, status_code=400)
+        reason, hint = _classify_gsc_api_failure(resp)
+        info = _google_api_error_info(resp)
+        if reason == "gsc_auth_failed":
+            msg = "Accès Google refusé ou expiré."
+        elif reason == "gsc_api_disabled":
+            msg = "Search Console API indisponible côté Google Cloud."
+        elif reason == "gsc_rate_limited":
+            msg = "Quota Google atteint temporairement."
+        elif reason == "gsc_insufficient_scope":
+            msg = "Scopes Google insuffisants pour lire Search Console."
+        else:
+            msg = f"HTTP {resp.status_code}: {info.get('message') or 'gsc_request_failed'}"
+        payload: dict[str, Any] = {"ok": False, "error": msg, "reason": reason}
+        if hint:
+            payload["hint"] = hint
+        if info.get("message") and reason != "gsc_request_failed":
+            payload["provider_error"] = info["message"]
+        return JSONResponse(payload, status_code=400)
 
     try:
         data = resp.json()
@@ -10744,7 +10806,10 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
             (p.get("domain") or p.get("property_url") or "").lower(),
         )
     )
-    return JSONResponse({"ok": True, "properties": props})
+    payload: dict[str, Any] = {"ok": True, "properties": props}
+    if not props:
+        payload["hint"] = "Aucune propriété Search Console vérifiée n’est accessible avec ce compte pour ce projet."
+    return JSONResponse(payload)
 
 
 @app.get("/api/gsc/properties")

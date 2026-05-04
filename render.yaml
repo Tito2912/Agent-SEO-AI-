@@ -222,3 +222,34 @@ services:
         value: "0.05"
       - key: SENTRY_ENVIRONMENT
         value: "prod"
+
+  - type: cron
+    name: noyaru-db-backup
+    runtime: docker
+    plan: starter
+    region: oregon
+    schedule: "0 2 * * *"
+    dockerCommand: python -m backend.backup
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: seo-agent-db
+          property: connectionString
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_S3_ENDPOINT_URL
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: BACKUP_SKIP_DATA_DIR
+        value: "true"
+      - key: BACKUP_ENV
+        value: noyaru-prod
+      - key: BACKUP_S3_PREFIX
+        value: backups
+      - key: BACKUP_RETENTION_DAYS
+        value: "30"

@@ -68,7 +68,41 @@ Variables optionnelles :
 - `BACKUP_SKIP_DATA_DIR=true` (ne pas archiver `SEO_AGENT_DATA_DIR`)
 - `BACKUP_INCLUDE_RUNS_DIR=true` (archive `SEO_AGENT_RUNS_DIR` — peut être gros)
 
-Sur Render : crée un **Cron Job / Scheduled Job** (ou job manuel) qui lance `python -m backend.backup` avec les mêmes env vars AWS+S3 que le service web/worker.
+Sur Render :
+- le blueprint inclut un cron job `noyaru-db-backup`
+- commande : `python -m backend.backup`
+- schedule : `0 2 * * *` (02:00 UTC)
+- variables minimales : `DATABASE_URL`, `S3_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+- variables recommandées : `BACKUP_SKIP_DATA_DIR=true`, `BACKUP_ENV=noyaru-prod`, `BACKUP_S3_PREFIX=backups`, `BACKUP_RETENTION_DAYS=30`
+
+### Vérifier un run de backup
+
+Dans les logs du cron job, attendre :
+- `[BACKUP] uploaded db ...`
+- `[BACKUP] uploaded manifest ...`
+- `[BACKUP] done`
+
+Dans S3, vérifier :
+- `backups/noyaru-prod/db-YYYYMMDD-HHMMSS.dump`
+- `backups/noyaru-prod/manifest-YYYYMMDD-HHMMSS.json`
+
+### Restore depuis un backup S3
+
+1. Télécharger le dump ciblé depuis le manifest :
+- `aws s3 cp "s3://$S3_BUCKET_NAME/backups/noyaru-prod/db-YYYYMMDD-HHMMSS.dump" ./restore.dump`
+
+2. Restaurer dans une base cible :
+- `pg_restore -d "$DATABASE_URL" --clean --if-exists ./restore.dump`
+
+3. Vérifier l'application :
+- login
+- ouverture du dashboard
+- crawl simple
+- exports / intégrations critiques si concernées
+
+Remarques :
+- si `BACKUP_SKIP_DATA_DIR=true`, ce cron job ne sauvegarde que Postgres
+- pour une restauration sans risque, restaurer d'abord dans une base temporaire/staging
 
 ## Procédure de déploiement (checklist)
 
