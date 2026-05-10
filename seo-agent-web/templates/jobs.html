@@ -28,6 +28,38 @@
     <p class="muted">Historique des crawls (mono-site) et des audits (multi-sites).</p>
   </div>
 
+  {% if jobs %}
+    {% set ns = namespace(live=0, done=0, failed=0) %}
+    {% for j in jobs %}
+      {% if j.status in ['queued', 'running', 'cancel_requested'] %}{% set ns.live = ns.live + 1 %}
+      {% elif j.status == 'done' %}{% set ns.done = ns.done + 1 %}
+      {% elif j.status in ['failed', 'canceled'] %}{% set ns.failed = ns.failed + 1 %}
+      {% endif %}
+    {% endfor %}
+    <div class="metric-band" style="margin-bottom:16px;">
+      <div class="metric-tile">
+        <div class="metric-tile-label">Total</div>
+        <div class="metric-tile-value">{{ jobs | length }}</div>
+      </div>
+      {% if ns.live %}
+        <div class="metric-tile" style="border-color:rgba(195,162,90,.22); background:rgba(195,162,90,.06);">
+          <div class="metric-tile-label">En cours</div>
+          <div class="metric-tile-value" style="color:var(--warn);">{{ ns.live }}</div>
+        </div>
+      {% endif %}
+      <div class="metric-tile">
+        <div class="metric-tile-label">Terminés</div>
+        <div class="metric-tile-value">{{ ns.done }}</div>
+      </div>
+      {% if ns.failed %}
+        <div class="metric-tile" style="border-color:rgba(192,107,127,.22); background:rgba(192,107,127,.06);">
+          <div class="metric-tile-label">Échecs</div>
+          <div class="metric-tile-value" style="color:var(--err);">{{ ns.failed }}</div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
   <section class="card">
     {% if not jobs %}
       <p class="muted">Aucun job.</p>

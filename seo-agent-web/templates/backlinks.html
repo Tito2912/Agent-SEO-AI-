@@ -146,18 +146,18 @@
             </div>
           </div>
 
-          <div class="kv setting-kv">
-            <div class="kv-item">
-              <span class="muted">Domaines référents</span>
-              <div class="mono">{{ src.domains.total }}</div>
+          <div class="metric-band" style="margin:10px 0 4px;">
+            <div class="metric-tile">
+              <div class="metric-tile-label">Domaines référents</div>
+              <div class="metric-tile-value">{{ src.domains.total }}</div>
             </div>
-            <div class="kv-item">
-              <span class="muted">Liens (domaines)</span>
-              <div class="mono">{{ src.domains.links_total }}</div>
+            <div class="metric-tile">
+              <div class="metric-tile-label">Liens (domaines)</div>
+              <div class="metric-tile-value">{{ src.domains.links_total }}</div>
             </div>
-            <div class="kv-item">
-              <span class="muted">Backlinks (détails)</span>
-              <div class="mono">{{ src.backlinks.total }}</div>
+            <div class="metric-tile">
+              <div class="metric-tile-label">Backlinks</div>
+              <div class="metric-tile-value">{{ src.backlinks.total }}</div>
             </div>
           </div>
 
@@ -295,18 +295,20 @@
           <h2>Netlinking (crawl)</h2>
           <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">Voir anomalies “Liens”</a>
         </div>
-        <div class="kv">
-          <div class="kv-item">
-            <span class="muted">Pages analysées</span>
-            <strong class="mono">{{ summary.pages_total }}</strong>
+        <div class="metric-band" style="margin-top:4px;">
+          <div class="metric-tile">
+            <div class="metric-tile-label">Pages analysées</div>
+            <div class="metric-tile-value">{{ summary.pages_total }}</div>
           </div>
-          <div class="kv-item">
-            <span class="muted">Pages orphelines (0 lien entrant)</span>
-            <strong class="mono">{{ summary.orphans_total }}</strong>
+          <div class="metric-tile" style="border-color:rgba(195,162,90,.22); background:rgba(195,162,90,.06);">
+            <div class="metric-tile-label">Pages orphelines</div>
+            <div class="metric-tile-value" style="color:var(--warn);">{{ summary.orphans_total }}</div>
+            <div class="metric-tile-sub">0 lien entrant</div>
           </div>
-          <div class="kv-item">
-            <span class="muted">Domaines externes (liens sortants)</span>
-            <strong class="mono">{{ summary.external_domains }}</strong>
+          <div class="metric-tile">
+            <div class="metric-tile-label">Domaines externes</div>
+            <div class="metric-tile-value">{{ summary.external_domains }}</div>
+            <div class="metric-tile-sub">liens sortants</div>
           </div>
         </div>
       </section>

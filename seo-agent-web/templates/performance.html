@@ -121,18 +121,22 @@
             ({{ live.days }}j)
           </p>
         {% endif %}
-        <div class="kv">
-          <div class="kv-item">
-            <span class="muted">Clics</span>
-            <strong class="mono">{{ totals.clicks }}</strong>
+        <div class="metric-band" style="margin-top:4px;">
+          <div class="metric-tile">
+            <div class="metric-tile-label">Clics</div>
+            <div class="metric-tile-value">{{ totals.clicks }}</div>
           </div>
-          <div class="kv-item">
-            <span class="muted">Impressions</span>
-            <strong class="mono">{{ totals.impressions }}</strong>
+          <div class="metric-tile">
+            <div class="metric-tile-label">Impressions</div>
+            <div class="metric-tile-value">{{ totals.impressions }}</div>
           </div>
-          <div class="kv-item">
-            <span class="muted">Position moyenne</span>
-            <strong class="mono">{{ "%.2f"|format(totals.avg_position or 0) }}</strong>
+          <div class="metric-tile">
+            <div class="metric-tile-label">CTR moyen</div>
+            <div class="metric-tile-value">{{ (totals.avg_ctr * 100)|round(1) }}%</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-tile-label">Position moyenne</div>
+            <div class="metric-tile-value">{{ "%.1f"|format(totals.avg_position or 0) }}</div>
           </div>
         </div>
       </section>
