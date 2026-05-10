@@ -81,7 +81,7 @@
         </label>
 
         <p class="muted small" style="margin: 10px 0 0;">
-          Par défaut, le crawl respecte <span class="mono">robots.txt</span>. Activez l’option “Ignorer robots.txt” uniquement si vous savez ce que vous faites.
+          Par défaut, le crawl respecte <span class="mono">robots.txt</span>. Activez l'option “Ignorer robots.txt” uniquement si vous savez ce que vous faites.
         </p>
       </section>
 
@@ -243,11 +243,11 @@
 	              {% else %}
 	                <span class="badge notice">OAuth à configurer</span>
                 <span style="margin-left:6px;">
-                  La connexion Google n’est pas encore disponible pour ce projet.
+                  La connexion Google n'est pas encore disponible pour ce projet.
                   {% if request.state.can_access_system_settings %}
                     <a href="{{ (gsc_oauth.system_url if gsc_oauth else '/settings/system') }}">Configurer OAuth plateforme</a>.
                   {% else %}
-                    Contacte l’administrateur de la plateforme.
+                    Contacte l'administrateur de la plateforme.
                   {% endif %}
                 </span>
               {% endif %}
@@ -309,7 +309,7 @@
             </div>
 
             <p class="muted small" style="margin: 8px 0 0;">
-              Utilise l’API si un compte Bing ou une clé manuelle est connecté sur ce compte, sinon les exports CSV.
+              Utilise l'API si un compte Bing ou une clé manuelle est connecté sur ce compte, sinon les exports CSV.
             </p>
             {% if not bing_api_ready %}
               <p class="muted small" style="margin: 8px 0 0;">

@@ -38,7 +38,7 @@
     </div>
 
     {% if item.locked %}
-      <p class="muted small setting-note">Variable fournie par l’environnement système au démarrage du serveur.</p>
+      <p class="muted small setting-note">Variable fournie par l'environnement système au démarrage du serveur.</p>
     {% else %}
       <details class="setting-details">
         <summary>Configurer</summary>
@@ -108,7 +108,7 @@
 {% block content %}
   <div class="page-header">
     <h1>Paramètres système</h1>
-    <p class="muted">Configuration interne de la plateforme. Cette page n’est pas exposée aux utilisatrices.</p>
+    <p class="muted">Configuration interne de la plateforme. Cette page n'est pas exposée aux utilisatrices.</p>
   </div>
 
   {% if err %}
@@ -132,8 +132,8 @@
       <h2>Portée</h2>
     </div>
     <ul class="examples muted small" style="margin:0;">
-      <li>OAuth Google plateforme, secrets d’application et fournisseurs IA.</li>
-      <li>Fallbacks plateforme utilisés quand un compte utilisateur n’a pas sa propre connexion.</li>
+      <li>OAuth Google plateforme, secrets d'application et fournisseurs IA.</li>
+      <li>Fallbacks plateforme utilisés quand un compte utilisateur n'a pas sa propre connexion.</li>
       <li>Les clés système restent séparées de la page utilisateur <span class="mono">/settings/accounts</span>.</li>
     </ul>
   </section>
@@ -181,7 +181,7 @@
 
     {% if not (secret_storage and secret_storage.configured) %}
       <p class="muted small setting-note">
-        Configure <span class="mono">SEO_AGENT_ENCRYPTION_KEYS</span> côté Render avant d’autoriser de nouvelles écritures de secrets.
+        Configure <span class="mono">SEO_AGENT_ENCRYPTION_KEYS</span> côté Render avant d'autoriser de nouvelles écritures de secrets.
       </p>
     {% endif %}
 

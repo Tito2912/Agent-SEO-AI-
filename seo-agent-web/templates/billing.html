@@ -60,10 +60,10 @@
       <div class="row-actions">
         {% if stripe_ready %}
           <form method="post" action="/billing/portal" class="inline">
-            <button type="submit" class="btn">Gérer l’abonnement</button>
+            <button type="submit" class="btn">Gérer l'abonnement</button>
           </form>
         {% else %}
-          <span class="muted small">Stripe n’est pas configuré sur ce déploiement.</span>
+          <span class="muted small">Stripe n'est pas configuré sur ce déploiement.</span>
         {% endif %}
       </div>
     </div>
@@ -110,7 +110,7 @@
     </div>
 
     {% if not stripe_ready %}
-      <p class="muted">Stripe n’est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
+      <p class="muted">Stripe n'est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
     {% else %}
       {% set rank = {'free': 0, 'solo': 1, 'pro': 2, 'business': 3} %}
       {% set current_rank = rank.get(plan_key, 0) %}

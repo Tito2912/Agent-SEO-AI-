@@ -10,7 +10,7 @@
 {% block content %}
   <div class="page-header">
     <h1>Automatisation</h1>
-    <p class="muted">Lancez l’autopilot (audit multi-sites, GSC, backlog) et consultez le résumé global.</p>
+    <p class="muted">Lancez l'autopilot (audit multi-sites, GSC, backlog) et consultez le résumé global.</p>
   </div>
 
   <section class="card">
@@ -37,10 +37,10 @@
     </div>
     {% if env_status and config_status %}
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
-        <span class="badge {{ ‘ok’ if config_status.pagespeed_enabled else ‘notice’ }}">PageSpeed {{ ‘on’ if config_status.pagespeed_enabled else ‘off’ }}</span>
-        <span class="badge {{ ‘ok’ if env_status.pagespeed_api_key_set else ‘notice’ }}">Clé API {{ ‘ok’ if env_status.pagespeed_api_key_set else ‘manquante’ }}</span>
-        <span class="badge {{ ‘ok’ if config_status.gsc_api_enabled else ‘notice’ }}">GSC {{ ‘on’ if config_status.gsc_api_enabled else ‘off’ }}</span>
-        <span class="badge {{ ‘ok’ if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else ‘notice’ }}">
+        <span class="badge {{ 'ok' if config_status.pagespeed_enabled else 'notice' }}">PageSpeed {{ 'on' if config_status.pagespeed_enabled else 'off' }}</span>
+        <span class="badge {{ 'ok' if env_status.pagespeed_api_key_set else 'notice' }}">Clé API {{ 'ok' if env_status.pagespeed_api_key_set else 'manquante' }}</span>
+        <span class="badge {{ 'ok' if config_status.gsc_api_enabled else 'notice' }}">GSC {{ 'on' if config_status.gsc_api_enabled else 'off' }}</span>
+        <span class="badge {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'notice' }}">
           Credentials {% if env_status.gsc_credentials_set and env_status.gsc_credentials_exists %}ok{% else %}manquant{% endif %}
         </span>
       </div>
@@ -58,9 +58,9 @@
         </div>
         <label class="checkbox" style="margin-top:8px;">
           <input type="checkbox" name="confirm_auto" value="yes" />
-          Je confirme l’exécution (déploiement auto)
+          Je confirme l'exécution (déploiement auto)
         </label>
-        <p class="muted small" style="margin:6px 0 0;">Le mode auto n’est lancé que si le choix = auto + la case est cochée.</p>
+        <p class="muted small" style="margin:6px 0 0;">Le mode auto n'est lancé que si le choix = auto + la case est cochée.</p>
       </div>
       <div class="modal-actions between" style="margin-top:12px;">
         <span></span>
@@ -100,7 +100,7 @@
           {% for j in jobs %}
             <a class="job-chip" href="/jobs/{{ j.id }}">
               <span class="mono">{{ j.id[:8] }}</span>
-              <span class="pill {{ j.status }}">{{ {‘queued’:’en attente’,’running’:’en cours’,’cancel_requested’:’annulation…’,’done’:’terminé’,’failed’:’échec’,’canceled’:’annulé’}.get(j.status, j.status) }}</span>
+              <span class="pill {{ j.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
             </a>
           {% endfor %}
         </div>

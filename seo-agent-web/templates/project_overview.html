@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ project.site_name if project else slug }} — Vue d’ensemble{% endblock %}
+{% block title %}{{ project.site_name if project else slug }} — Vue d'ensemble{% endblock %}
 
 {% block head_extra %}
   <script src="/static/project_overview.js" defer></script>
@@ -93,7 +93,7 @@
         <p class="muted" style="margin:0 0 12px;">Aucun crawl terminé pour ce projet.</p>
         {% if live_job and live_job.status == 'failed' %}
           <p class="muted small" style="margin:0 0 14px;">
-            Le dernier crawl a échoué. Ouvre les logs ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l’erreur complète.
+            Le dernier crawl a échoué. Ouvre les logs ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l'erreur complète.
           </p>
         {% endif %}
         <div class="topbar-actions">
@@ -229,7 +229,7 @@
     {% if cur.used_fallback %}
       <section class="card">
         <p class="muted">
-          Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n’a pas encore de rapport (en cours ou interrompu).
+          Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport (en cours ou interrompu).
           Affichage du dernier crawl terminé: <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
           <a href="/jobs">Voir les jobs</a>.
         </p>
@@ -453,7 +453,7 @@
             <div class="muted small">/ 100</div>
           </div>
         </div>
-        <p class="muted small">Proportion d’URLs internes sans erreurs.</p>
+        <p class="muted small">Proportion d'URLs internes sans erreurs.</p>
       </section>
 
       <section class="card">
@@ -581,7 +581,7 @@
           </div>
         {% else %}
           {% if ps and ps.enabled %}
-            <p class="muted">PageSpeed est activé, mais aucune métrique CWV n’est disponible sur ce crawl.</p>
+            <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur ce crawl.</p>
           {% else %}
             <p class="muted">Active PageSpeed pour ajouter LCP/TBT/CLS. La clé API est gérée côté plateforme.</p>
           {% endif %}

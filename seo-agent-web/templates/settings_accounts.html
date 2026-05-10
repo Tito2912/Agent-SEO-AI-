@@ -75,7 +75,7 @@
 
     {% if item.source == "system" %}
       <p class="muted small setting-note">
-        Une clé plateforme est disponible. Tu peux brancher ton propre compte pour l’utiliser à la place.
+        Une clé plateforme est disponible. Tu peux brancher ton propre compte pour l'utiliser à la place.
       </p>
     {% endif %}
 
@@ -155,9 +155,9 @@
       <h2>Sécurité &amp; stockage</h2>
     </div>
     <ul class="examples muted small" style="margin:0;">
-      <li>Les connexions utilisateur sont stockées côté serveur et masquées dans l’interface.</li>
+      <li>Les connexions utilisateur sont stockées côté serveur et masquées dans l'interface.</li>
       <li>Les paramètres internes de la plateforme ne sont plus exposés ici.</li>
-      <li>Les projets masqués/importés n’apparaissent pas dans cette page.</li>
+      <li>Les projets masqués/importés n'apparaissent pas dans cette page.</li>
     </ul>
   </section>
 
@@ -249,7 +249,7 @@
         <div class="setting-head">
           <div>
             <h2 class="setting-title">Connexion Google Search Console</h2>
-            <div class="muted small">Connexion projet par projet via OAuth. C’est le chemin recommandé pour les données live et les imports GSC.</div>
+            <div class="muted small">Connexion projet par projet via OAuth. C'est le chemin recommandé pour les données live et les imports GSC.</div>
           </div>
           <div class="setting-actions">
             {% if gsc_oauth.configured %}
@@ -262,7 +262,7 @@
 
         {% if gsc_oauth.configured %}
           {% if gsc_oauth.projects %}
-            <div class="muted small setting-note">Projets configurés dans l’app</div>
+            <div class="muted small setting-note">Projets configurés dans l'app</div>
             {% if gsc_connected.count %}
               <div class="gsc-toolbar">
                 <select id="gsc-project-picker" aria-label="Projet Google connecté">
@@ -329,11 +329,11 @@
               <div class="oauth-project-list" id="gsc-properties-list"></div>
             </div>
           {% else %}
-            <p class="muted small setting-note">Aucun projet éligible n’est affiché dans cette section.</p>
+            <p class="muted small setting-note">Aucun projet éligible n'est affiché dans cette section.</p>
           {% endif %}
         {% else %}
           <p class="muted small setting-note">
-            La connexion Google n’est pas encore disponible sur cette plateforme.
+            La connexion Google n'est pas encore disponible sur cette plateforme.
             {% if can_access_system_settings %}
               <a href="{{ gsc_oauth.system_url }}">Configurer OAuth côté système</a>.
             {% endif %}
@@ -419,7 +419,7 @@
         </div>
 
         {% if bing_projects %}
-          <div class="muted small setting-note">Projets configurés dans l’app</div>
+          <div class="muted small setting-note">Projets configurés dans l'app</div>
           <div class="oauth-project-list">
             {% for project_item in bing_projects %}
               <div class="oauth-project-item">
@@ -642,8 +642,8 @@
         </div>
         {% if netlify_oauth.is_hardened %}
           <div class="muted small" style="margin-top:10px;">
-            Le token OAuth Netlify n’est pas conservé. L’app génère puis stocke un PAT serveur
-            {% if netlify_oauth.pat_expires_at %} valable jusqu’au {{ netlify_oauth.pat_expires_at[:10] }}{% endif %}.
+            Le token OAuth Netlify n'est pas conservé. L'app génère puis stocke un PAT serveur
+            {% if netlify_oauth.pat_expires_at %} valable jusqu'au {{ netlify_oauth.pat_expires_at[:10] }}{% endif %}.
           </div>
         {% elif netlify_oauth.is_oauth_fallback %}
           <div class="muted small" style="margin-top:10px;">
