@@ -71,36 +71,34 @@
     <div class="card">
       <div class="card-title-row">
         <h2>Quotas</h2>
-        <span class="muted small">Mensuel</span>
+        <span class="muted small">Ce mois-ci</span>
       </div>
 
-      <div class="kv one">
-        <div class="kv-item">
-          <span>Sites</span>
-          <strong>{{ usage.projects }}</strong> <span class="muted">/ {{ limits_labels.projects }}</span>
-        </div>
+      <div style="display:grid; grid-template-columns:1fr; gap:14px;">
 
-        <div class="kv-item">
-          <span>Pages crawlées</span>
-          <div class="progress-row">
-            <strong>{{ usage.pages_crawled_month }}</strong>
-            <span class="muted">/ {{ limits_labels.pages_crawled_month }}</span>
-          </div>
-          <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};">
-            <div class="progress-fill"></div>
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+            <span style="font-size:12px; color:var(--muted);">Sites</span>
+            <span style="font-size:13px; font-weight:800;">{{ usage.projects }} <span class="muted" style="font-weight:400;">/ {{ limits_labels.projects }}</span></span>
           </div>
         </div>
 
-        <div class="kv-item">
-          <span>Assistant IA</span>
-          <div class="progress-row">
-            <strong>{{ usage.assistant_messages_month }}</strong>
-            <span class="muted">/ {{ limits_labels.assistant_messages_month }}</span>
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+            <span style="font-size:12px; color:var(--muted);">Pages crawlées</span>
+            <span style="font-size:13px; font-weight:800;">{{ usage.pages_crawled_month }} <span class="muted" style="font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
           </div>
-          <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};">
-            <div class="progress-fill"></div>
-          </div>
+          <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};"><div class="progress-fill"></div></div>
         </div>
+
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+            <span style="font-size:12px; color:var(--muted);">Messages IA</span>
+            <span style="font-size:13px; font-weight:800;">{{ usage.assistant_messages_month }} <span class="muted" style="font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+          </div>
+          <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};"><div class="progress-fill"></div></div>
+        </div>
+
       </div>
     </div>
   </div>

@@ -50,6 +50,35 @@
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
     </div>
 
+    {% if issues %}
+      {% set ns = namespace(errors=0, warnings=0, notices=0) %}
+      {% for it in issues %}
+        {% if it.severity == 'error' %}{% set ns.errors = ns.errors + 1 %}
+        {% elif it.severity == 'warning' %}{% set ns.warnings = ns.warnings + 1 %}
+        {% elif it.severity == 'notice' %}{% set ns.notices = ns.notices + 1 %}
+        {% endif %}
+      {% endfor %}
+      <div class="metric-band">
+        <div class="metric-tile" style="border-color:rgba(192,107,127,.22); background:rgba(192,107,127,.06);">
+          <div class="metric-tile-label">Erreurs</div>
+          <div class="metric-tile-value" style="color:var(--err);">{{ ns.errors }}</div>
+        </div>
+        <div class="metric-tile" style="border-color:rgba(195,162,90,.22); background:rgba(195,162,90,.06);">
+          <div class="metric-tile-label">Avertissements</div>
+          <div class="metric-tile-value" style="color:var(--warn);">{{ ns.warnings }}</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-label">Infos</div>
+          <div class="metric-tile-value">{{ ns.notices }}</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-label">Total</div>
+          <div class="metric-tile-value">{{ issues | length }}</div>
+          <div class="metric-tile-sub">{{ "filtré" if (severity or category or q) else "toutes catégories" }}</div>
+        </div>
+      </div>
+    {% endif %}
+
     <section class="card">
       <div class="card-title-row">
         <h2>Plan de corrections</h2>
