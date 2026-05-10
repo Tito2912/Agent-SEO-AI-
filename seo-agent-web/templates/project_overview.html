@@ -28,8 +28,18 @@
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     <div class="page-header">
-      <h1>{{ project.site_name }}</h1>
-      <p class="muted">{{ project.base_url }}</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h1 style="margin:0;">{{ project.site_name }}</h1>
+        {% if project.current %}
+          {% set hc = project.current.get('health', {}) %}
+          {% if hc.get('score') is not none %}
+            {% set sc = hc.get('score', 0)|int %}
+            {% if sc >= 80 %}{% set sc_class = 'ok' %}{% elif sc >= 50 %}{% set sc_class = 'warning' %}{% else %}{% set sc_class = 'error' %}{% endif %}
+            <span class="badge {{ sc_class }}" style="font-size:12px;">Santé {{ sc }}%</span>
+          {% endif %}
+        {% endif %}
+      </div>
+      <p class="muted" style="margin:4px 0 0;"><a href="{{ project.base_url }}" target="_blank" rel="noopener" style="color:var(--muted);">{{ project.base_url }}</a></p>
     </div>
 
     {% if live_job %}

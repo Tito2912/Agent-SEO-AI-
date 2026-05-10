@@ -4,86 +4,118 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
-    <title>{% block title %}SEO Audit{% endblock %}</title>
+    <title>{% block title %}SEO Agent{% endblock %}</title>
     <link rel="stylesheet" href="/static/styles.css" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
     <div class="app">
+
+      <!-- ── SIDEBAR ─────────────────────────────── -->
       <aside class="sidebar">
+
+        <!-- Brand -->
         <div class="brand">
-          <a href="/" class="brand-link">SEO Audit</a>
-          <div class="brand-sub">Tableau de bord</div>
+          <div class="brand-logo">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <circle cx="8.5" cy="8.5" r="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M6.5 8.5h4M8.5 6.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <a href="/" class="brand-link">SEO Agent</a>
+            <div class="brand-sub">Tableau de bord</div>
+          </div>
         </div>
 
+        <!-- Nav -->
         <nav class="nav">
-          <a class="nav-item {% if request.url.path == '/' %}active{% endif %}" href="/">Projets</a>
-          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">Exécutions</a>
-          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">Abonnement</a>
+
+          <a class="nav-item {% if request.url.path == '/' %}active{% endif %}" href="/">
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Projets
+          </a>
+
+          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+            Exécutions
+          </a>
+
+          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h3"/></svg>
+            Abonnement
+          </a>
+
           {% if request.state.user and request.state.user.is_admin %}
-            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation">Automatisation</a>
+            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Automatisation
+            </a>
           {% endif %}
+
           <div class="nav-section">Paramètres</div>
-          <a
-            class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}"
-            href="/settings/accounts"
-            >Comptes &amp; connexions</a
-          >
+
+          <a class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}" href="/settings/accounts">
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/></svg>
+            Comptes &amp; connexions
+          </a>
+
           {% if request.state.can_access_system_settings %}
-            <a
-              class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}"
-              href="/settings/system"
-              >Système</a
-            >
+            <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}" href="/settings/system">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
+              Système
+            </a>
           {% endif %}
 
           {% if project and project.slug %}
-            <div class="nav-section">Site</div>
-            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}"
-              >Vue d’ensemble</a
-            >
-            <a
-              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}"
-              href="/projects/{{ project.slug }}/settings/crawl"
-              >Paramètres de crawl</a
-            >
-            <a
-              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}"
-              href="/projects/{{ project.slug }}/performance"
-              >Performance</a
-            >
-            <a
-              class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}"
-              href="/projects/{{ project.slug }}/backlinks"
-              >Backlinks</a
-            >
-            <a
-              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}"
-              href="/projects/{{ project.slug }}/backlinks/opportunities"
-              >Opportunités <span class="badge notice" style="font-size:10px;padding:1px 5px;">Solo+</span></a
-            >
-            <a
-              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"
-              href="/projects/{{ project.slug }}/issues"
-              >Anomalies</a
-            >
-            <a
-              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}"
-              href="/projects/{{ project.slug }}/crawls"
-              >Historique des crawls</a
-            >
+            <div class="nav-section">
+              <span class="nav-section-site">
+                <svg style="width:11px;height:11px;flex:0 0 11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                Site
+              </span>
+            </div>
+
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+              Vue d'ensemble
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}" href="/projects/{{ project.slug }}/settings/crawl">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
+              Paramètres de crawl
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Performance
+            </a>
+
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              Backlinks
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks/opportunities">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Opportunités <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Solo+</span>
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}" href="/projects/{{ project.slug }}/issues">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+              Anomalies
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}" href="/projects/{{ project.slug }}/crawls">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+              Historique des crawls
+            </a>
           {% endif %}
         </nav>
 
+        <!-- Assistant IA -->
         <div class="assistant-dock" id="assistant-dock">
-          <button
-            type="button"
-            class="assistant-launcher"
-            id="assistant-toggle"
-            aria-expanded="false"
-            aria-controls="assistant-panel"
-            title="Assistant"
-          >
+          <button type="button" class="assistant-launcher" id="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel" title="Assistant">
             <span class="assistant-launcher-icon" aria-hidden="true">
               <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
             </span>
@@ -107,27 +139,10 @@
               </div>
               <div class="assistant-head-actions">
                 <button type="button" class="assistant-clear" id="assistant-clear" aria-label="Effacer la conversation" title="Effacer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path
-                      d="M9 3h6m-8 4h10m-9 0 .7 14h6.6L16 7"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6m-8 4h10m-9 0 .7 14h6.6L16 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
                 <button type="button" class="assistant-close" id="assistant-close" aria-label="Fermer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <path
-                      d="M7 7l10 10M17 7L7 17"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                    />
-                  </svg>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
                 </button>
               </div>
             </header>
@@ -136,29 +151,36 @@
             </div>
             <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
             <form class="assistant-form" id="assistant-form">
-              <input
-                class="assistant-input"
-                id="assistant-input"
-                type="text"
-                autocomplete="off"
-                placeholder="Pose une question…"
-                maxlength="2000"
-              />
+              <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une question…" maxlength="2000" />
               <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path
-                    d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z"
-                    fill="currentColor"
-                    opacity=".95"
-                  />
-                </svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
               </button>
             </form>
             <div class="assistant-foot muted small" id="assistant-foot"></div>
           </section>
         </div>
+
+        <!-- User section -->
+        {% if request.state.user %}
+          {% set _email = request.state.user.email or '' %}
+          {% set _initial = _email[0].upper() if _email else '?' %}
+          <div class="sidebar-foot">
+            <div class="sidebar-user">
+              <div class="avatar">{{ _initial }}</div>
+              <div class="sidebar-user-email" title="{{ _email }}">{{ _email }}</div>
+            </div>
+            <form method="post" action="/auth/logout">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+              <button type="submit" class="sidebar-logout" title="Se déconnecter">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              </button>
+            </form>
+          </div>
+        {% endif %}
+
       </aside>
 
+      <!-- ── MAIN ───────────────────────────────── -->
       <main class="main">
         <header class="topbar">
           <div class="crumbs">
@@ -167,22 +189,18 @@
             {% endblock %}
           </div>
           <div class="topbar-actions">
-            {% if request.state.user %}
-              <span class="muted small">{{ request.state.user.email }}</span>
-              <form method="post" action="/auth/logout" class="inline">
-                <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                <button type="submit" class="btn">Se déconnecter</button>
-              </form>
-            {% endif %}
             {% block actions %}{% endblock %}
           </div>
         </header>
+
         <div class="content">
           <div class="content-inner app-surfaces">{% block content %}{% endblock %}</div>
         </div>
       </main>
-    </div>
 
+    </div><!-- /.app -->
+
+    <!-- ── SCRIPTS ────────────────────────────── -->
     <script>
       (() => {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -191,18 +209,12 @@
         const safeMethods = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
         function sameOrigin(urlLike) {
-          try {
-            return new URL(String(urlLike || ""), window.location.href).origin === window.location.origin;
-          } catch (error) {
-            return false;
-          }
+          try { return new URL(String(urlLike || ""), window.location.href).origin === window.location.origin; }
+          catch { return false; }
         }
 
         function effectiveFormMethod(form, submitter) {
-          const raw =
-            (submitter && submitter.getAttribute && submitter.getAttribute("formmethod")) ||
-            form.getAttribute("method") ||
-            "get";
+          const raw = (submitter && submitter.getAttribute && submitter.getAttribute("formmethod")) || form.getAttribute("method") || "get";
           return String(raw || "get").trim().toUpperCase();
         }
 
@@ -221,24 +233,17 @@
         }
 
         document.querySelectorAll("form").forEach((form) => ensureFormToken(form, null));
-        document.addEventListener(
-          "submit",
-          (event) => {
-            const form = event.target;
-            if (!(form instanceof HTMLFormElement)) return;
-            ensureFormToken(form, event.submitter || null);
-          },
-          true
-        );
+        document.addEventListener("submit", (event) => {
+          const form = event.target;
+          if (!(form instanceof HTMLFormElement)) return;
+          ensureFormToken(form, event.submitter || null);
+        }, true);
 
         const originalFetch = window.fetch.bind(window);
         window.fetch = (input, init) => {
           const method = String((init && init.method) || (input && input.method) || "GET").toUpperCase();
-          const urlValue =
-            typeof input === "string" || input instanceof URL ? String(input) : (input && input.url) || "";
-          if (!sameOrigin(urlValue) || safeMethods.has(method)) {
-            return originalFetch(input, init);
-          }
+          const urlValue = typeof input === "string" || input instanceof URL ? String(input) : (input && input.url) || "";
+          if (!sameOrigin(urlValue) || safeMethods.has(method)) return originalFetch(input, init);
           const headers = new Headers((init && init.headers) || (input && input.headers) || undefined);
           if (!headers.has("X-CSRF-Token")) headers.set("X-CSRF-Token", csrfToken);
           const nextInit = Object.assign({}, init || {});
@@ -263,7 +268,6 @@
       (() => {
         function autoHideAlerts() {
           document.querySelectorAll(".alert.ok").forEach((el) => {
-            const delay = 5000;
             setTimeout(() => {
               el.style.transition = "opacity .4s ease, max-height .4s ease, margin .4s ease";
               el.style.opacity = "0";
@@ -271,7 +275,7 @@
               el.style.overflow = "hidden";
               el.style.margin = "0";
               setTimeout(() => el.remove(), 420);
-            }, delay);
+            }, 5000);
           });
         }
         if (document.readyState === "loading") {

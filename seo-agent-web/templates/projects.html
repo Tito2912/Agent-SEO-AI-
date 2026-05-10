@@ -45,6 +45,32 @@
     </div>
   {% endif %}
 
+  {% if projects %}
+    {% set ns = namespace(live_count=0, crawled_count=0) %}
+    {% for p in projects %}
+      {% if p.timestamp %}{% set ns.crawled_count = ns.crawled_count + 1 %}{% endif %}
+      {% set lc = (live_crawls.get(p.slug) if live_crawls else none) %}
+      {% if lc and lc.status in [‘queued’, ‘running’, ‘cancel_requested’] %}{% set ns.live_count = ns.live_count + 1 %}{% endif %}
+    {% endfor %}
+    <div class="metric-band" style="margin-bottom:16px;">
+      <div class="metric-tile">
+        <div class="metric-tile-label">Sites</div>
+        <div class="metric-tile-value">{{ projects | length }}</div>
+        <div class="metric-tile-sub">projets configurés</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-tile-label">Crawlés</div>
+        <div class="metric-tile-value">{{ ns.crawled_count }}</div>
+        <div class="metric-tile-sub">au moins un crawl</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-tile-label">En cours</div>
+        <div class="metric-tile-value">{{ ns.live_count }}</div>
+        <div class="metric-tile-sub">crawls actifs</div>
+      </div>
+    </div>
+  {% endif %}
+
   <form id="batch-crawl-form" method="post" action="/projects/crawl-batch">
     <input type="hidden" name="config_path" value="{{ config_path }}" />
   </form>
