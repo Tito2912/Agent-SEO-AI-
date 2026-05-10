@@ -9390,12 +9390,16 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
                 "catalog": billing.plan_catalog(),
             },
         )
-    with DB.session() as db:
-        db_projects = list(
-            db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
-            if user
-            else []
-        )
+    try:
+        with DB.session() as db:
+            db_projects = list(
+                db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
+                if user
+                else []
+            )
+    except Exception as _e:
+        logger.error("[projects] projects query failed: %s: %s", type(_e).__name__, _e)
+        db_projects = []
 
     projects: list[dict[str, Any]] = []
     for p in db_projects:
@@ -9424,7 +9428,11 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
 
     projects.sort(key=lambda p: (p.get("site_name") or p.get("slug") or "").lower())
 
-    jobs = _list_jobs(limit=100)
+    try:
+        jobs = _list_jobs(limit=100)
+    except Exception as _e:
+        logger.error("[projects] _list_jobs failed: %s: %s", type(_e).__name__, _e)
+        jobs = []
     is_admin = bool(getattr(user, "is_admin", False))
     if not is_admin:
         jobs = [
