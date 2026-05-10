@@ -1460,3 +1460,60 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, .55); }
 @media (max-width: 980px) {
   .sidebar-foot { display: none; }
 }
+
+/* ── Alert auto-dismiss (ok / notice only) ── */
+@keyframes alert-fade-out {
+  0%   { opacity: 1; max-height: 120px; margin-bottom: 12px; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; max-height: 0;   margin-bottom: 0; padding: 0; pointer-events: none; }
+}
+.alert.ok, .alert.notice {
+  animation: alert-fade-out 0.4s ease 5s forwards;
+}
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+.empty-state-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(var(--accent-rgb), .08);
+  border: 1px solid rgba(var(--accent-rgb), .18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 0;
+}
+.empty-state-desc {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 360px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Focus ring improvement ── */
+:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), .7);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Scrollbar (Webkit) ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }

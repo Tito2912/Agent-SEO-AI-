@@ -77,9 +77,11 @@
   <form id="delete-projects-form" method="post" action="/projects/delete"></form>
 
   {% if not projects %}
-    <section class="card" style="text-align:center;padding:48px 24px;">
-      <div style="font-size:2.5rem;margin-bottom:16px;">🔍</div>
-      <h2 style="margin:0 0 8px;">Bienvenue sur votre tableau de bord SEO</h2>
+    <section class="card" style="text-align:center;padding:56px 24px;">
+      <div style="width:56px;height:56px;border-radius:16px;background:rgba(214,178,106,.08);border:1px solid rgba(214,178,106,.18);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:rgba(214,178,106,.8);fill:none;stroke-width:1.6;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+      <h2 style="margin:0 0 8px;letter-spacing:-.02em;">Bienvenue sur votre tableau de bord SEO</h2>
       <p class="muted" style="max-width:480px;margin:0 auto 28px;">
         Commencez par ajouter votre premier site. L’outil crawlera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
       </p>
