@@ -5059,7 +5059,6 @@ def _init_sentry() -> None:
         return
     try:
         import sentry_sdk  # type: ignore
-        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware  # type: ignore
 
         raw_rate = str(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.05"))
         try:
@@ -5067,13 +5066,15 @@ def _init_sentry() -> None:
         except Exception:
             rate = 0.05
 
+        # SDK 2.x: FastApiIntegration/StarletteIntegration are auto-detected.
+        # Do NOT call app.add_middleware() here — the middleware stack is already
+        # frozen at startup time, which raises RuntimeError and corrupts init.
         sentry_sdk.init(
             dsn=dsn,
             traces_sample_rate=max(0.0, min(1.0, rate)),
             environment=str(os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RENDER_SERVICE_NAME") or "prod"),
             release=str(os.getenv("RENDER_GIT_COMMIT") or ""),
         )
-        app.add_middleware(SentryAsgiMiddleware)  # type: ignore[name-defined]
         _SENTRY_READY = True
     except Exception as e:
         logger.warning("[SENTRY] init error: %s: %s", type(e).__name__, e)
