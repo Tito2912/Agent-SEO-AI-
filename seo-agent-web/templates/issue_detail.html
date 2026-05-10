@@ -48,21 +48,24 @@
       </p>
     </div>
 
-    <section class="card">
-      <div class="kv">
-        <div class="kv-item"><span class="muted">Catégorie</span><div>{{ cat_labels.get(project.issue.category, project.issue.category) }}</div></div>
-        <div class="kv-item"><span class="muted">Occurrences</span><div class="mono">{{ project.issue.count }}</div></div>
-        <div class="kv-item">
-          <span class="muted">Rapport</span>
-          <div>
-            <a href="/file?path={{ project.report_md }}">report.md</a> · <a href="/file?path={{ project.report_json }}">report.json</a>
-            · Exporter:
-            <a href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.csv?crawl={{ project.timestamp }}">CSV</a>
-            · <a href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.pdf?crawl={{ project.timestamp }}">PDF</a>
-          </div>
+    <div class="metric-band" style="margin-bottom:16px;">
+      <div class="metric-tile">
+        <div class="metric-tile-label">Occurrences</div>
+        <div class="metric-tile-value">{{ project.issue.count }}</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-tile-label">Catégorie</div>
+        <div class="metric-tile-value" style="font-size:16px;">{{ cat_labels.get(project.issue.category, project.issue.category) }}</div>
+      </div>
+      <div class="metric-tile" style="flex:2; min-width:200px;">
+        <div class="metric-tile-label">Exporter</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+          <a class="btn" href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.csv?crawl={{ project.timestamp }}">CSV</a>
+          <a class="btn" href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.pdf?crawl={{ project.timestamp }}">PDF</a>
+          <a class="btn" href="/file?path={{ project.report_json }}">JSON</a>
         </div>
       </div>
-    </section>
+    </div>
 
     <section class="card">
       <div class="card-title-row">
@@ -91,7 +94,7 @@
 
       <div class="grid two">
         <div class="card">
-          <h3>Actions</h3>
+          <div class="card-title-row"><h3>Actions à faire</h3></div>
           {% if fix_suggestion and fix_suggestion.fix %}
             <ul class="help-steps">
               {% for step in fix_suggestion.fix %}
@@ -103,7 +106,7 @@
           {% endif %}
         </div>
         <div class="card">
-          <h3>Vérifier</h3>
+          <div class="card-title-row"><h3>Comment vérifier</h3></div>
           {% if fix_suggestion and fix_suggestion.verify %}
             <ul class="help-steps">
               {% for step in fix_suggestion.verify %}

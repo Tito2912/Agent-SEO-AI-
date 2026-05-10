@@ -16,6 +16,10 @@
   </div>
 
   <section class="card">
+    <div class="card-title-row">
+      <h2>Crawls</h2>
+      {% if crawls %}<span class="muted small">{{ crawls | length }} crawl{{ 's' if crawls | length > 1 else '' }}</span>{% endif %}
+    </div>
     {% if not crawls %}
       <p class="muted">Aucun crawl trouvé.</p>
     {% else %}
