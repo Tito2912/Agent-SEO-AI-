@@ -185,8 +185,8 @@ class JobRecord(Base):
     status: Mapped[str] = mapped_column(String(24), index=True, nullable=False)
     kind: Mapped[str] = mapped_column(String(32), index=True, nullable=False, default="")
 
-    owner_user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    owner_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True
     )
     slug: Mapped[str] = mapped_column(String(128), index=True, nullable=False, default="")
 
