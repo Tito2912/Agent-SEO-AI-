@@ -126,6 +126,18 @@
     <p class="muted">Connecte tes comptes utilisateurs. Les réglages système internes sont séparés.</p>
   </div>
 
+  {% if err %}
+    <div class="alert error">
+      <span class="badge error">erreur</span>
+      <p class="muted small">{{ err }}</p>
+    </div>
+  {% elif msg %}
+    <div class="alert ok">
+      <span class="badge ok">ok</span>
+      <p class="muted small">{{ msg }}</p>
+    </div>
+  {% endif %}
+
   {% if can_access_system_settings %}
     <section class="card">
       <div class="card-title-row">
@@ -147,6 +159,37 @@
       <li>Les paramètres internes de la plateforme ne sont plus exposés ici.</li>
       <li>Les projets masqués/importés n’apparaissent pas dans cette page.</li>
     </ul>
+  </section>
+
+  <section class="card setting-card" id="security-card">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Changer le mot de passe</h2>
+        <div class="muted small">Saisir l'ancien mot de passe pour confirmer.</div>
+      </div>
+    </div>
+    <details class="setting-details">
+      <summary>Modifier mon mot de passe</summary>
+      <form method="post" action="/settings/account/password" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <label>
+          Mot de passe actuel
+          <input type="password" name="current_password" autocomplete="current-password" required />
+        </label>
+        <label>
+          Nouveau mot de passe <span class="muted small">(10 caractères min.)</span>
+          <input type="password" name="new_password" autocomplete="new-password" required minlength="10" />
+        </label>
+        <label>
+          Confirmer le nouveau mot de passe
+          <input type="password" name="new_password2" autocomplete="new-password" required minlength="10" />
+        </label>
+        <div class="modal-actions between">
+          <span></span>
+          <button class="btn primary" type="submit">Enregistrer</button>
+        </div>
+      </form>
+    </details>
   </section>
 
   <section class="card setting-card" id="danger-zone">

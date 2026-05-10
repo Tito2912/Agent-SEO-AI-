@@ -1,0 +1,300 @@
+{% extends "layout.html" %}
+{% block title %}Opportunités Backlinks — {{ project.site_name if project else slug }}{% endblock %}
+
+{% block head_extra %}
+<style>
+  .opp-card {
+    border: 1px solid var(--border, #2a2a3e);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: var(--bg-card, #13131f);
+  }
+  .opp-card-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .opp-snippet { font-size: 13px; color: var(--muted, #888); margin-top: 6px; }
+  .opp-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .opp-reply-area { width: 100%; margin-top: 10px; min-height: 120px; font-size: 13px; }
+  .opp-target-input { width: 100%; margin-top: 8px; font-size: 13px; }
+</style>
+{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  {% if project %}
+    <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
+    <span class="crumb-sep">/</span>
+    <a href="/projects/{{ project.slug }}/backlinks">Backlinks</a>
+    <span class="crumb-sep">/</span>
+    <span class="crumb-current">Opportunités</span>
+  {% else %}
+    <span class="crumb-current">{{ slug }}</span>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {% if not has_access %}
+    <section class="card">
+      <div class="page-header">
+        <h1>Opportunités de backlinks</h1>
+        <p class="muted">Trouvez des opportunités sur Reddit et Google, générez des réponses avec l'IA.</p>
+      </div>
+      <div class="alert notice" style="margin-top: 16px;">
+        <span class="badge notice">Solo+</span>
+        <p class="muted small" style="margin: 6px 0 12px;">
+          Cette fonctionnalité est réservée aux plans Solo, Pro et Business. Tu es actuellement sur le plan <strong>{{ plan_key | title }}</strong>.
+        </p>
+        <a href="/billing" class="btn primary">Voir les plans</a>
+      </div>
+    </section>
+
+  {% else %}
+
+    {% if msg %}
+      <div class="alert ok" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>
+    {% endif %}
+    {% if err %}
+      <div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>
+    {% endif %}
+
+    {# ── Search Panel ── #}
+    <section class="card" id="search-panel">
+      <div class="card-title-row">
+        <div>
+          <h2>Rechercher des opportunités</h2>
+          <p class="muted small">Reddit et Google via SerpAPI · Réponses générées par IA (gpt-4o-mini)</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          {% if search_remaining is not none %}
+            <span class="badge notice">{{ search_remaining }} recherche{{ 's' if search_remaining != 1 else '' }} restante{{ 's' if search_remaining != 1 else '' }}</span>
+          {% endif %}
+          {% if reply_remaining is not none %}
+            <span class="badge notice">{{ reply_remaining }} réponse{{ 's' if reply_remaining != 1 else '' }} IA restante{{ 's' if reply_remaining != 1 else '' }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="filters" style="margin-bottom:12px;">
+        <input id="opp-query" class="input" type="text" placeholder="Ex: meilleur outil seo gratuit" style="flex:1;min-width:200px;" />
+        <button id="btn-reddit" class="btn" type="button">Chercher Reddit</button>
+        <button id="btn-google" class="btn" type="button">Chercher Google</button>
+      </div>
+
+      <div id="search-status" class="muted small" style="min-height:20px;"></div>
+      <div id="search-results" style="margin-top:12px;"></div>
+    </section>
+
+    {# ── Saved Opportunities ── #}
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Opportunités sauvegardées</h2>
+        <span class="muted small">{{ total }} au total</span>
+      </div>
+
+      <form method="get" class="filters" style="margin-bottom:12px;">
+        <input class="input" type="text" name="q" value="{{ q }}" placeholder="Rechercher dans les titres..." />
+        <select class="input" name="status" style="width:auto;">
+          <option value="">Tous les statuts</option>
+          <option value="new" {% if status_filter == 'new' %}selected{% endif %}>Nouveau</option>
+          <option value="contacted" {% if status_filter == 'contacted' %}selected{% endif %}>Contacté</option>
+          <option value="won" {% if status_filter == 'won' %}selected{% endif %}>Obtenu</option>
+          <option value="lost" {% if status_filter == 'lost' %}selected{% endif %}>Perdu</option>
+        </select>
+        <button class="btn" type="submit">Filtrer</button>
+      </form>
+
+      {% if not opportunities %}
+        <p class="muted small">
+          {% if q or status_filter %}Aucun résultat pour ces filtres.
+          {% else %}Aucune opportunité sauvegardée. Utilise le panneau de recherche ci-dessus pour en trouver.{% endif %}
+        </p>
+      {% else %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Opportunité</th>
+                <th class="num">Score</th>
+                <th>Source</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for opp in opportunities %}
+                <tr>
+                  <td style="max-width:340px;word-break:break-word;">
+                    <a href="{{ opp.url }}" target="_blank" rel="noreferrer" class="mono" style="font-size:13px;">{{ opp.title[:80] }}{% if opp.title | length > 80 %}…{% endif %}</a>
+                    {% if opp.target_url %}
+                      <div class="muted" style="font-size:11px;margin-top:3px;">→ {{ opp.target_url[:60] }}{% if opp.target_url | length > 60 %}…{% endif %}</div>
+                    {% endif %}
+                  </td>
+                  <td class="num">
+                    <span class="badge {% if opp.opportunity_score >= 70 %}ok{% elif opp.opportunity_score >= 40 %}notice{% else %}error{% endif %}">{{ opp.opportunity_score }}</span>
+                  </td>
+                  <td class="mono" style="font-size:12px;">{{ opp.source }}</td>
+                  <td>
+                    <form method="post" action="/projects/{{ slug }}/backlinks/opportunities/{{ opp.id }}/status" style="display:inline;">
+                      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                      <select name="status" class="input" style="width:auto;padding:3px 6px;font-size:12px;" onchange="this.form.submit()">
+                        <option value="new" {% if opp.status == 'new' %}selected{% endif %}>Nouveau</option>
+                        <option value="contacted" {% if opp.status == 'contacted' %}selected{% endif %}>Contacté</option>
+                        <option value="won" {% if opp.status == 'won' %}selected{% endif %}>Obtenu</option>
+                        <option value="lost" {% if opp.status == 'lost' %}selected{% endif %}>Perdu</option>
+                      </select>
+                    </form>
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      <a href="{{ opp.url }}" target="_blank" rel="noreferrer" class="btn" style="font-size:12px;padding:4px 10px;">Ouvrir</a>
+                      <form method="post" action="/projects/{{ slug }}/backlinks/opportunities/{{ opp.id }}/delete" style="display:inline;" onsubmit="return confirm('Supprimer cette opportunité ?');">
+                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                        <button class="btn danger" type="submit" style="font-size:12px;padding:4px 10px;">Supprimer</button>
+                      </form>
+                    </div>
+                    {% if opp.reply %}
+                      <details style="margin-top:6px;">
+                        <summary class="muted small" style="cursor:pointer;">Voir la réponse IA</summary>
+                        <pre style="white-space:pre-wrap;font-size:12px;margin-top:6px;background:var(--bg-card,#1a1a2e);padding:8px;border-radius:6px;overflow-x:auto;">{{ opp.reply }}</pre>
+                      </details>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if pages_total > 1 %}
+          <div class="filters" style="margin-top:12px;justify-content:center;">
+            {% if page > 1 %}
+              <a class="btn" href="?q={{ q }}&status={{ status_filter }}&page={{ page - 1 }}">← Précédent</a>
+            {% endif %}
+            <span class="muted small">Page {{ page }} / {{ pages_total }}</span>
+            {% if page < pages_total %}
+              <a class="btn" href="?q={{ q }}&status={{ status_filter }}&page={{ page + 1 }}">Suivant →</a>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    <script>
+    (function() {
+      var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+      var slug = {{ slug | tojson }};
+
+      function getQuery() {
+        return (document.getElementById('opp-query') ? document.getElementById('opp-query').value : '').trim();
+      }
+
+      function escHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      function setBtnsDisabled(v) {
+        document.getElementById('btn-reddit').disabled = v;
+        document.getElementById('btn-google').disabled = v;
+      }
+
+      function renderResults(items, query) {
+        var el = document.getElementById('search-results');
+        if (!items.length) { el.innerHTML = '<p class="muted small">Aucun résultat trouvé.</p>'; return; }
+        el.innerHTML = items.map(function(item, i) {
+          var scoreClass = item.opportunity_score >= 70 ? 'ok' : item.opportunity_score >= 40 ? 'notice' : 'error';
+          return '<div class="opp-card" id="result-' + i + '">' +
+            '<div class="opp-card-header">' +
+            '<a href="' + escHtml(item.url) + '" target="_blank" rel="noreferrer" style="font-weight:600;word-break:break-word;max-width:75%;">' + escHtml(item.title) + '</a>' +
+            '<span class="badge ' + scoreClass + '">Score ' + item.opportunity_score + '</span>' +
+            '</div>' +
+            '<p class="opp-snippet">' + escHtml(item.source) + (item.snippet ? ' — ' + escHtml(item.snippet.slice(0, 200)) : '') + '</p>' +
+            '<input class="input opp-target-input" type="text" id="target-' + i + '" placeholder="URL de ton article à promouvoir (ex: https://monsite.com/article)" />' +
+            '<div class="opp-actions">' +
+            '<button class="btn" type="button" onclick="window._genReply(' + i + ', ' + JSON.stringify(item) + ')">Générer réponse IA</button>' +
+            '<button class="btn" type="button" onclick="window.open(\'' + escHtml(item.url) + '\', \'_blank\', \'noopener,noreferrer\')">Ouvrir</button>' +
+            '<button class="btn" type="button" id="copy-btn-' + i + '" style="display:none;" onclick="window._copyReply(' + i + ')">Copier réponse</button>' +
+            '<button class="btn" type="button" onclick="window._saveOpp(' + i + ', ' + JSON.stringify(item) + ')">Sauvegarder</button>' +
+            '</div>' +
+            '<div id="reply-status-' + i + '" class="muted small" style="min-height:16px;margin-top:6px;"></div>' +
+            '<textarea class="input opp-reply-area" id="reply-' + i + '" placeholder="La réponse IA apparaîtra ici…" style="display:none;"></textarea>' +
+            '<div id="save-form-' + i + '"></div>' +
+            '</div>';
+        }).join('');
+      }
+
+      window._genReply = function(i, item) {
+        var targetUrl = (document.getElementById('target-' + i) || {}).value || '';
+        var statusEl = document.getElementById('reply-status-' + i);
+        statusEl.textContent = 'Génération en cours…';
+        fetch('/api/projects/' + slug + '/backlinks/generate-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          body: JSON.stringify({ platform: item.source, opportunityTitle: item.title, opportunityUrl: item.url, targetArticleUrl: targetUrl }),
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          if (!data.ok) { statusEl.textContent = '❌ ' + (data.error || 'Erreur'); return; }
+          var ta = document.getElementById('reply-' + i);
+          ta.value = data.reply || '';
+          ta.style.display = 'block';
+          var copyBtn = document.getElementById('copy-btn-' + i);
+          if (copyBtn) copyBtn.style.display = '';
+          statusEl.textContent = '✓ Réponse générée';
+        }).catch(function(e) { statusEl.textContent = '❌ ' + e.message; });
+      };
+
+      window._copyReply = function(i) {
+        var ta = document.getElementById('reply-' + i);
+        if (!ta) return;
+        if (navigator.clipboard) navigator.clipboard.writeText(ta.value).catch(function(){});
+        var btn = document.getElementById('copy-btn-' + i);
+        var prev = btn ? btn.textContent : '';
+        if (btn) { btn.textContent = 'Copié !'; setTimeout(function(){ btn.textContent = prev; }, 1800); }
+      };
+
+      window._saveOpp = function(i, item) {
+        var targetUrl = (document.getElementById('target-' + i) || {}).value || '';
+        var reply = (document.getElementById('reply-' + i) || {}).value || '';
+        var container = document.getElementById('save-form-' + i);
+        var f = document.createElement('form');
+        f.method = 'post';
+        f.action = '/projects/' + slug + '/backlinks/opportunities/save';
+        var fields = { _csrf: csrfToken, source: item.source, title: item.title, url: item.url, snippet: item.snippet || '', opportunity_score: item.opportunity_score, reply: reply, target_url: targetUrl };
+        Object.keys(fields).forEach(function(k) {
+          var inp = document.createElement('input'); inp.type = 'hidden'; inp.name = k; inp.value = fields[k];
+          f.appendChild(inp);
+        });
+        container.appendChild(f);
+        f.submit();
+      };
+
+      function doSearch(source) {
+        var q = getQuery();
+        if (!q) { alert('Entre une requête de recherche.'); return; }
+        var statusEl = document.getElementById('search-status');
+        var resultsEl = document.getElementById('search-results');
+        statusEl.textContent = 'Recherche ' + (source === 'reddit' ? 'Reddit' : 'Google') + ' en cours…';
+        resultsEl.innerHTML = '';
+        setBtnsDisabled(true);
+        fetch('/api/projects/' + slug + '/backlinks/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-csrf-token': csrfToken },
+          body: JSON.stringify({ query: q, source: source }),
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          if (!data.ok) { statusEl.textContent = '❌ ' + (data.error || 'Erreur inconnue'); return; }
+          var items = data.data || [];
+          statusEl.textContent = items.length + ' résultat' + (items.length !== 1 ? 's' : '') + ' pour "' + escHtml(q) + '"';
+          renderResults(items, q);
+        }).catch(function(e) {
+          statusEl.textContent = '❌ Erreur réseau: ' + e.message;
+        }).finally(function() {
+          setBtnsDisabled(false);
+        });
+      }
+
+      document.getElementById('btn-reddit').addEventListener('click', function() { doSearch('reddit'); });
+      document.getElementById('btn-google').addEventListener('click', function() { doSearch('google'); });
+      document.getElementById('opp-query').addEventListener('keydown', function(e) { if (e.key === 'Enter') doSearch('google'); });
+    })();
+    </script>
+
+  {% endif %}
+{% endblock %}

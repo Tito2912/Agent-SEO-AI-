@@ -72,20 +72,38 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
         "solo": {
             "label": "Solo",
             "price_label": "49€/mois",
-            "limits": {"projects": 3, "pages_crawled_month": 20_000, "assistant_messages_month": 400},
-            "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring"],
+            "limits": {
+                "projects": 3,
+                "pages_crawled_month": 20_000,
+                "assistant_messages_month": 400,
+                "backlink_searches_month": 30,
+                "backlink_replies_month": 30,
+            },
+            "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
             "label": "Pro",
             "price_label": "99€/mois",
-            "limits": {"projects": 10, "pages_crawled_month": 100_000, "assistant_messages_month": 2_000},
-            "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes"],
+            "limits": {
+                "projects": 10,
+                "pages_crawled_month": 100_000,
+                "assistant_messages_month": 2_000,
+                "backlink_searches_month": 200,
+                "backlink_replies_month": 200,
+            },
+            "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
             "label": "Business",
             "price_label": "199€/mois",
-            "limits": {"projects": 30, "pages_crawled_month": 300_000, "assistant_messages_month": 6_000},
-            "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes"],
+            "limits": {
+                "projects": 30,
+                "pages_crawled_month": 300_000,
+                "assistant_messages_month": 6_000,
+                "backlink_searches_month": 1_000,
+                "backlink_replies_month": 1_000,
+            },
+            "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
 
@@ -747,3 +765,41 @@ def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
         # object is already a subscription
         upsert_subscription(db, stripe_subscription=obj)
         return
+
+
+def list_invoices(db: Session, *, user_id: str, limit: int = 12) -> list[dict[str, Any]]:
+    """Return the last `limit` Stripe invoices for the given user (empty list if Stripe not configured)."""
+    if not stripe_enabled():
+        return []
+    cid = stripe_customer_id(db, user_id=user_id)
+    if not cid:
+        return []
+    stripe_init()
+    try:
+        raw = stripe.Invoice.list(customer=cid, limit=min(limit, 100))  # type: ignore[attr-defined]
+        results: list[dict[str, Any]] = []
+        for inv in (raw.get("data") if isinstance(raw, dict) else getattr(raw, "data", [])) or []:
+            inv_dict = _stripe_to_dict(inv)
+            amount_paid = inv_dict.get("amount_paid") or 0
+            amount_due = inv_dict.get("amount_due") or 0
+            currency = str(inv_dict.get("currency") or "eur").upper()
+            created_ts = inv_dict.get("created")
+            try:
+                created_dt = datetime.fromtimestamp(int(created_ts), tz=UTC) if created_ts else None
+            except Exception:
+                created_dt = None
+            results.append(
+                {
+                    "id": inv_dict.get("id", ""),
+                    "number": inv_dict.get("number") or inv_dict.get("id", ""),
+                    "status": str(inv_dict.get("status") or "unknown"),
+                    "amount": amount_paid if inv_dict.get("status") == "paid" else amount_due,
+                    "currency": currency,
+                    "created_at": created_dt,
+                    "hosted_url": inv_dict.get("hosted_invoice_url") or "",
+                    "pdf_url": inv_dict.get("invoice_pdf") or "",
+                }
+            )
+        return results
+    except Exception:
+        return []

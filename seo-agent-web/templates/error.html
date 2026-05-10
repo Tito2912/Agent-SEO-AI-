@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{% if status_code == 404 %}Page introuvable{% elif status_code == 403 %}Accès refusé{% else %}Erreur serveur{% endif %} — {{ app_name }}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <style>
+      .error-page {
+        min-height: 60vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 3rem 1rem;
+        gap: 1rem;
+      }
+      .error-code {
+        font-size: 5rem;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--color-muted, #888);
+        letter-spacing: -2px;
+      }
+      .error-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      .error-desc {
+        color: var(--color-muted, #888);
+        max-width: 420px;
+      }
+      .error-actions {
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: .5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="crumbs">
+        <a href="/" class="brand-link">{{ app_name }}</a>
+      </div>
+      <div class="topbar-actions">
+        <a class="btn" href="/">Tableau de bord</a>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="error-page">
+        <div class="error-code">{{ status_code }}</div>
+
+        {% if status_code == 404 %}
+          <h1 class="error-title">Page introuvable</h1>
+          <p class="error-desc">La page que vous cherchez n'existe pas ou a été déplacée.</p>
+        {% elif status_code == 403 %}
+          <h1 class="error-title">Accès refusé</h1>
+          <p class="error-desc">Vous n'avez pas les droits nécessaires pour accéder à cette ressource.</p>
+        {% elif status_code == 429 %}
+          <h1 class="error-title">Trop de requêtes</h1>
+          <p class="error-desc">Vous avez effectué trop de requêtes. Veuillez patienter quelques instants avant de réessayer.</p>
+        {% else %}
+          <h1 class="error-title">Erreur serveur</h1>
+          <p class="error-desc">Une erreur inattendue s'est produite. Notre équipe a été notifiée. Veuillez réessayer dans quelques instants.</p>
+        {% endif %}
+
+        {% if detail and status_code not in (500, 502, 503) %}
+          <p class="muted small mono">{{ detail }}</p>
+        {% endif %}
+
+        <div class="error-actions">
+          <a href="/" class="btn primary">Retour à l'accueil</a>
+          <a href="javascript:history.back()" class="btn">Page précédente</a>
+        </div>
+      </div>
+    </main>
+
+    <footer class="container muted small" style="padding-top: 0;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+        <div>© {{ year }} {{ app_name }}</div>
+        <div style="display:flex; gap:12px;">
+          <a href="/support">Support</a>
+          <a href="/status">Statut</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

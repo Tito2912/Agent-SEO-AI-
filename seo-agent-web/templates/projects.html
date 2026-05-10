@@ -50,13 +50,38 @@
   </form>
   <form id="delete-projects-form" method="post" action="/projects/delete"></form>
 
-  <section class="card">
-    {% if not projects %}
-      <p class="muted">
-        Aucun projet pour l’instant.
-        Cliquez sur <strong>Nouveau projet</strong> pour ajouter un site{% if request.state.user and request.state.user.is_admin %}, ou lancez un audit multi-sites depuis <a href="/automation">Automatisation</a>{% endif %}.
+  {% if not projects %}
+    <section class="card" style="text-align:center;padding:48px 24px;">
+      <div style="font-size:2.5rem;margin-bottom:16px;">🔍</div>
+      <h2 style="margin:0 0 8px;">Bienvenue sur votre tableau de bord SEO</h2>
+      <p class="muted" style="max-width:480px;margin:0 auto 28px;">
+        Commencez par ajouter votre premier site. L’outil crawlera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
       </p>
-    {% else %}
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button type="button" class="btn primary" id="add-project-open" style="padding:10px 24px;">
+          Ajouter mon premier site
+        </button>
+        {% if request.state.user and request.state.user.is_admin %}
+          <a class="btn" href="/automation" style="padding:10px 24px;">Audit multi-sites</a>
+        {% endif %}
+      </div>
+      <div style="margin-top:40px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap;text-align:left;">
+        <div style="max-width:160px;">
+          <div style="font-weight:600;margin-bottom:4px;">1. Ajouter un site</div>
+          <div class="muted small">Entrez l’URL de votre domaine pour créer un projet.</div>
+        </div>
+        <div style="max-width:160px;">
+          <div style="font-weight:600;margin-bottom:4px;">2. Lancer un crawl</div>
+          <div class="muted small">Le crawler analyse toutes vos pages en quelques minutes.</div>
+        </div>
+        <div style="max-width:160px;">
+          <div style="font-weight:600;margin-bottom:4px;">3. Corriger les anomalies</div>
+          <div class="muted small">Priorisez et corrigez chaque problème SEO détecté.</div>
+        </div>
+      </div>
+    </section>
+  {% else %}
+  <section class="card">
       <div class="card-title-row">
 	        <h2>Sélection</h2>
 	        <div class="topbar-actions">
@@ -242,8 +267,8 @@
           </tbody>
         </table>
       </div>
-    {% endif %}
   </section>
+  {% endif %}
 
 	  {% if projects %}
 		    <script>

@@ -53,9 +53,14 @@
               >Performance</a
             >
             <a
-              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks') %}active{% endif %}"
+              class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}"
               href="/projects/{{ project.slug }}/backlinks"
               >Backlinks</a
+            >
+            <a
+              class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}"
+              href="/projects/{{ project.slug }}/backlinks/opportunities"
+              >Opportunités <span class="badge notice" style="font-size:10px;padding:1px 5px;">Solo+</span></a
             >
             <a
               class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"
@@ -254,5 +259,27 @@
       } | tojson }};
     </script>
     <script src="/static/chatbot.js" defer></script>
+    <script>
+      (() => {
+        function autoHideAlerts() {
+          document.querySelectorAll(".alert.ok").forEach((el) => {
+            const delay = 5000;
+            setTimeout(() => {
+              el.style.transition = "opacity .4s ease, max-height .4s ease, margin .4s ease";
+              el.style.opacity = "0";
+              el.style.maxHeight = "0";
+              el.style.overflow = "hidden";
+              el.style.margin = "0";
+              setTimeout(() => el.remove(), 420);
+            }, delay);
+          });
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", autoHideAlerts);
+        } else {
+          autoHideAlerts();
+        }
+      })();
+    </script>
   </body>
 </html>

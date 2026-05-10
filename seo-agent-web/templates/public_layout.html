@@ -6,24 +6,69 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/styles.css" />
+    <style>
+      /* ── Public nav overrides ── */
+      .pub-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(5, 5, 7, .72);
+        backdrop-filter: blur(16px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        gap: 16px;
+      }
+      .pub-nav-brand {
+        font-size: 17px;
+        font-weight: 900;
+        color: var(--text);
+        text-decoration: none;
+        letter-spacing: .01em;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .pub-nav-brand:hover { text-decoration: none; color: var(--accent); }
+      .pub-nav-links {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .pub-nav-links a {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        transition: color .15s ease, background .15s ease;
+      }
+      .pub-nav-links a:hover { color: var(--text); background: rgba(255,255,255,.04); text-decoration: none; }
+      .pub-nav-links a.active { color: var(--text); }
+      .pub-nav-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+      @media (max-width: 640px) {
+        .pub-nav-links { display: none; }
+        .pub-nav { padding: 12px 16px; }
+      }
+    </style>
     {% block head_extra %}{% endblock %}
   </head>
   <body>
-    <header class="topbar">
-      <div class="crumbs">
-        <a href="/" class="brand-link">{{ app_name }}</a>
-        <span class="crumb-sep">·</span>
+    <header class="pub-nav">
+      <a href="/" class="pub-nav-brand">{{ app_name }}</a>
+
+      <nav class="pub-nav-links">
         {% set path = request.url.path %}
-        {% for item in nav_items %}
-          {% if path == item.href %}
-            <span class="crumb-current">{{ item.label }}</span>
-          {% else %}
-            <a class="muted" href="{{ item.href }}">{{ item.label }}</a>
-          {% endif %}
-          {% if not loop.last %}<span class="crumb-sep">·</span>{% endif %}
-        {% endfor %}
-      </div>
-      <div class="topbar-actions">
+        <a href="/pricing" {% if path == '/pricing' %}class="active"{% endif %}>Pricing</a>
+        <a href="/support" {% if path == '/support' %}class="active"{% endif %}>Support</a>
+        <a href="/status" {% if path == '/status' %}class="active"{% endif %}>Statut</a>
+      </nav>
+
+      <div class="pub-nav-actions">
         {% if request.state.user %}
           <a class="btn" href="/">Tableau de bord</a>
           <form method="post" action="/auth/logout" class="inline">
@@ -32,7 +77,7 @@
           </form>
         {% else %}
           <a class="btn" href="/auth/login">Se connecter</a>
-          <a class="btn primary" href="/auth/signup">Créer un compte</a>
+          <a class="btn primary" href="/auth/signup">Commencer →</a>
         {% endif %}
       </div>
     </header>
@@ -41,20 +86,62 @@
       {% block content %}{% endblock %}
     </main>
 
-    <footer class="container muted small" style="padding-top: 0;">
-      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-        <div>
-          © {{ year }} {{ app_name }} · <a href="mailto:{{ support_email }}">{{ support_email }}</a>
+    <footer style="max-width:980px; margin:0 auto; padding:28px 24px 32px; border-top:1px solid var(--border);">
+      <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+        <div style="font-size:13px; color:var(--muted);">
+          © {{ year }} {{ app_name }} · <a href="mailto:{{ support_email }}" style="color:var(--muted);">{{ support_email }}</a>
         </div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <a href="/pricing">Pricing</a>
-          <a href="/terms">CGU</a>
-          <a href="/privacy">Confidentialité</a>
-          <a href="/support">Support</a>
-          <a href="/status">Statut</a>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
+          <a href="/pricing" style="color:var(--muted);">Pricing</a>
+          <a href="/terms" style="color:var(--muted);">CGU</a>
+          <a href="/privacy" style="color:var(--muted);">Confidentialité</a>
+          <a href="/support" style="color:var(--muted);">Support</a>
+          <a href="/status" style="color:var(--muted);">Statut</a>
         </div>
       </div>
     </footer>
+
+    <!-- Cookie consent banner -->
+    <div id="cookie-banner" role="dialog" aria-label="Politique de cookies" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;font-size:14px;">
+      <span>Ce site utilise des cookies essentiels au fonctionnement du service. En continuant, vous acceptez leur utilisation. <a href="/privacy" style="color:#aaa;text-decoration:underline;">En savoir plus</a></span>
+      <button id="cookie-accept" type="button" style="background:#fff;color:#111;border:none;border-radius:4px;padding:7px 18px;font-weight:600;cursor:pointer;white-space:nowrap;">J'accepte</button>
+    </div>
+    <script>
+      (() => {
+        const banner = document.getElementById("cookie-banner");
+        const btn = document.getElementById("cookie-accept");
+        if (!banner) return;
+        if (localStorage.getItem("cookie_consent") !== "1") {
+          banner.style.display = "flex";
+        } else {
+          banner.remove();
+        }
+        if (btn) btn.addEventListener("click", () => {
+          localStorage.setItem("cookie_consent", "1");
+          banner.remove();
+        });
+      })();
+    </script>
+    <script>
+      (() => {
+        function autoHideAlerts() {
+          document.querySelectorAll(".alert.ok").forEach((el) => {
+            setTimeout(() => {
+              el.style.transition = "opacity .4s ease, max-height .4s ease, margin .4s ease";
+              el.style.opacity = "0";
+              el.style.maxHeight = "0";
+              el.style.overflow = "hidden";
+              el.style.margin = "0";
+              setTimeout(() => el.remove(), 420);
+            }, 5000);
+          });
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", autoHideAlerts);
+        } else {
+          autoHideAlerts();
+        }
+      })();
+    </script>
   </body>
 </html>
-

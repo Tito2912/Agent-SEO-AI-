@@ -3,15 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Créer un compte — SEO Audit</title>
+    <title>Créer un compte — SEO Agent</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <main class="auth-shell">
       <section class="card auth-card">
+
+        <!-- Brand header -->
+        <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
+          <a href="/" style="font-size:20px; font-weight:900; color:var(--text); letter-spacing:.01em; text-decoration:none;">SEO Agent</a>
+          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">Audit SEO Intelligent</p>
+        </div>
+
         <div class="page-header">
           <h1>Créer un compte</h1>
-          <p class="muted">Votre compte vous permet de gérer vos projets et vos crawls.</p>
+          <p class="muted">Auditez vos sites et suivez votre SEO au quotidien.</p>
         </div>
 
         {% if msg %}
@@ -60,7 +67,7 @@
 
           {% if invite_required %}
             <label>
-              Code d’invitation
+              Code d'invitation
               <input name="invite_code" type="text" autocomplete="off" value="{{ invite_code }}" />
             </label>
             <div class="row"></div>
@@ -74,9 +81,14 @@
 
           <div class="row-actions">
             <button class="btn primary" type="submit" {% if signup_disabled %}disabled{% endif %}>Créer le compte</button>
-            <a class="btn" href="/auth/login?next={{ next_q }}">J’ai déjà un compte</a>
+            <a class="btn" href="/auth/login?next={{ next_q }}">J'ai déjà un compte</a>
           </div>
         </form>
+
+        <p class="muted small" style="margin:18px 0 0; text-align:center;">
+          En créant un compte, vous acceptez les <a href="/terms">CGU</a> et la <a href="/privacy">politique de confidentialité</a>.
+        </p>
+
       </section>
     </main>
   </body>

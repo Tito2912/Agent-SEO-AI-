@@ -2,52 +2,80 @@
 
 {% block title %}Pricing — {{ app_name }}{% endblock %}
 
+{% block head_extra %}
+<style>
+.pricing-hero { text-align:center; padding:56px 0 40px; }
+.pricing-hero h1 { font-size:clamp(1.8rem,4vw,2.6rem); font-weight:900; letter-spacing:-.02em; margin:0 0 14px; }
+.pricing-hero p { font-size:16px; color:var(--muted); max-width:440px; margin:0 auto; line-height:1.6; }
+.plan-card { padding:28px; }
+.plan-card.highlighted {
+  border-color: rgba(var(--accent-rgb), .30);
+  box-shadow: var(--shadow-sm), 0 0 0 1px rgba(var(--accent-rgb), .14), inset 0 1px 0 rgba(var(--accent-rgb), .06);
+}
+.plan-card h2 { font-size:18px; font-weight:900; margin:0 0 4px; }
+.plan-price { font-size:26px; font-weight:900; color:var(--accent); margin:12px 0 6px; }
+.plan-period { font-size:12px; color:var(--muted); margin:0 0 18px; }
+.plan-limits { font-size:12px; color:var(--muted); margin:14px 0 18px; padding:12px; background:rgba(255,255,255,.03); border-radius:var(--radius-sm); border:1px solid var(--border); line-height:1.8; }
+.faq-card { padding:24px; }
+.faq-card h2 { font-size:17px; font-weight:900; margin:0 0 16px; }
+.faq-item { margin-bottom:14px; }
+.faq-question { font-weight:700; font-size:14px; margin:0 0 4px; }
+.faq-answer { font-size:13px; color:var(--muted); margin:0; line-height:1.6; }
+</style>
+{% endblock %}
+
 {% block content %}
-  <div class="page-header">
-    <h1>Pricing</h1>
-    <p class="muted">Choisis un plan adapté à ton volume de crawl et à ton usage IA.</p>
+  <div class="pricing-hero">
+    <h1>Tarifs simples, sans engagement</h1>
+    <p>Changez de plan à tout moment. Pas de frais cachés, pas de surprises.</p>
   </div>
 
   <div class="grid">
     {% for key in ["solo", "pro", "business"] %}
       {% set plan = catalog.get(key) %}
-      <section class="card">
+      <section class="card plan-card {% if key == 'pro' %}highlighted{% endif %}">
         <div class="card-title-row">
           <h2>{{ plan.label }}</h2>
-          <span class="badge notice">{{ plan.price_label }}</span>
+          {% if key == 'pro' %}<span class="badge notice">Populaire</span>{% endif %}
         </div>
-
+        <div class="plan-price">{{ plan.price_label }}</div>
+        <p class="plan-period">par mois, facturation mensuelle</p>
         <ul class="examples">
           {% for f in plan.features %}
             <li>{{ f }}</li>
           {% endfor %}
         </ul>
-
-        <div class="row muted small" style="margin-top: 10px;">
-          Limites mensuelles: {{ plan.limits.projects }} sites · {{ plan.limits.pages_crawled_month }} pages crawlées · {{ plan.limits.assistant_messages_month }} messages IA
+        <div class="plan-limits">
+          {{ plan.limits.projects }} site{{ 's' if plan.limits.projects > 1 else '' }} · {{ plan.limits.pages_crawled_month }} pages/mois · {{ plan.limits.assistant_messages_month }} messages IA/mois
         </div>
-
         <div class="row-actions">
           {% if request.state.user %}
-            <a class="btn primary" href="/billing">Choisir</a>
+            <a class="btn {% if key == 'pro' %}primary{% endif %} block" href="/billing">Gérer mon plan</a>
           {% else %}
-            <a class="btn primary" href="/auth/signup">Commencer</a>
+            <a class="btn {% if key == 'pro' %}primary{% endif %} block" href="/auth/signup">Commencer</a>
           {% endif %}
         </div>
       </section>
     {% endfor %}
   </div>
 
-  <section class="card">
-    <div class="card-title-row">
-      <h2>Questions fréquentes</h2>
-      <span class="muted small">Beta</span>
+  <section class="card faq-card" style="margin-top:24px;">
+    <h2>Questions fréquentes</h2>
+    <div class="faq-item">
+      <p class="faq-question">Puis-je changer de plan à tout moment ?</p>
+      <p class="faq-answer">Oui. Un upgrade est effectif immédiatement. Un downgrade prend effet à la fin de la période de facturation en cours.</p>
     </div>
-    <ul class="examples">
-      <li>Tu peux changer de plan à tout moment depuis l’écran Abonnement.</li>
-      <li>Les emails transactionnels (vérification, reset password) sont inclus.</li>
-      <li>Besoin d’un plan sur-mesure ? Écris à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
-    </ul>
+    <div class="faq-item">
+      <p class="faq-question">Y a-t-il un engagement de durée ?</p>
+      <p class="faq-answer">Non. Les plans sont mensuels sans engagement. Vous pouvez résilier depuis votre espace abonnement à tout moment.</p>
+    </div>
+    <div class="faq-item">
+      <p class="faq-question">Que comprennent les emails transactionnels ?</p>
+      <p class="faq-answer">La vérification d'adresse email, le reset de mot de passe et l'email de bienvenue sont inclus dans tous les plans.</p>
+    </div>
+    <div class="faq-item" style="margin-bottom:0;">
+      <p class="faq-question">Besoin d'un plan sur-mesure ?</p>
+      <p class="faq-answer">Contactez-nous à <a href="mailto:{{ support_email }}">{{ support_email }}</a> pour discuter de vos besoins spécifiques.</p>
+    </div>
   </section>
 {% endblock %}
-

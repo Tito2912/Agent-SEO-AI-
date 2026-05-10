@@ -215,4 +215,52 @@
       </div>
     {% endif %}
   </div>
+
+  {% if invoices %}
+    <div class="card">
+      <div class="card-title-row">
+        <h2>Historique des factures</h2>
+        <span class="muted small">{{ invoices | length }} facture{{ 's' if invoices | length > 1 else '' }}</span>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Date</th>
+            <th>Montant</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+            {% set status_labels = {'paid': 'Payée', 'open': 'En attente', 'void': 'Annulée', 'draft': 'Brouillon', 'uncollectible': 'Irrécouvrée'} %}
+            {% set status_badges = {'paid': 'ok', 'open': 'notice', 'void': 'muted', 'draft': 'muted', 'uncollectible': 'error'} %}
+            <tr>
+              <td class="mono muted small">{{ inv.number }}</td>
+              <td>{% if inv.created_at %}{{ inv.created_at.strftime('%d/%m/%Y') }}{% else %}—{% endif %}</td>
+              <td>
+                {% if inv.amount is not none %}
+                  {{ "%.2f" | format(inv.amount / 100) }} {{ inv.currency }}
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                <span class="badge {{ status_badges.get(inv.status, 'muted') }}">
+                  {{ status_labels.get(inv.status, inv.status) }}
+                </span>
+              </td>
+              <td style="text-align:right;">
+                {% if inv.pdf_url %}
+                  <a class="btn small" href="{{ inv.pdf_url }}" target="_blank" rel="noopener">PDF</a>
+                {% endif %}
+                {% if inv.hosted_url %}
+                  <a class="btn small" href="{{ inv.hosted_url }}" target="_blank" rel="noopener">Voir</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
 {% endblock %}

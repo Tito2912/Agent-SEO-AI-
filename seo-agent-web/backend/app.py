@@ -9,6 +9,7 @@ import html
 import importlib.util
 import ipaddress
 import json
+import logging
 import math
 import os
 import re
@@ -24,10 +25,12 @@ import textwrap
 import unicodedata
 import uuid
 import csv
+
+logger = logging.getLogger("seo_agent")
 from collections import deque
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
 from functools import lru_cache
@@ -51,7 +54,7 @@ except Exception:  # pragma: no cover
     class InvalidToken(Exception):  # type: ignore
         pass
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request as StarletteRequest
@@ -97,11 +100,13 @@ try:
     from .db import Database  # type: ignore
     from .models import (  # type: ignore
         AuditLog,
+        BacklinkOpportunity,
         EmailVerificationToken,
         JobRecord,
         OAuthIdentity,
         PasswordResetToken,
         Project,
+        RateLimitBucket,
         User,
         UserConnection,
     )
@@ -110,11 +115,13 @@ except ImportError:
     from db import Database  # type: ignore
     from models import (  # type: ignore
         AuditLog,
+        BacklinkOpportunity,
         EmailVerificationToken,
         JobRecord,
         OAuthIdentity,
         PasswordResetToken,
         Project,
+        RateLimitBucket,
         User,
         UserConnection,
     )
@@ -159,7 +166,7 @@ _CSRF_COOKIE_NAME = "seo_agent_csrf"
 _CSRF_FORM_FIELD = "_csrf"
 _CSRF_HEADER_NAME = "x-csrf-token"
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook"}
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -233,14 +240,14 @@ def _sync_runs_path_to_object_store(path: Path) -> None:
     try:
         object_store.upload_runs_path(DEFAULT_RUNS_DIR, path.resolve())
     except Exception as e:
-        print(f"[S3] upload error for {path}: {type(e).__name__}: {e}")
+        logger.error("[S3] upload error for %s: %s: %s", path, type(e).__name__, e)
 
 
 def _delete_runs_path_from_object_store(path: Path, *, recursive: bool = False) -> None:
     try:
         object_store.delete_runs_path(DEFAULT_RUNS_DIR, path.resolve(), recursive=recursive)
     except Exception as e:
-        print(f"[S3] delete error for {path}: {type(e).__name__}: {e}")
+        logger.error("[S3] delete error for %s: %s: %s", path, type(e).__name__, e)
 
 
 dash.register_runs_localizer(_ensure_runs_artifact_local)
@@ -786,7 +793,7 @@ def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
                             "expires_at": time.time() + max(60, expires_in),
                             "scope": str(token_data.get("scope") or oauth_meta.get("scope") or "").strip(),
                             "token_type": str(token_data.get("token_type") or oauth_meta.get("token_type") or "Bearer"),
-                            "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                            "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
                         }
                         oauth_row.meta = oauth_meta
                         session.add(oauth_row)
@@ -1138,8 +1145,8 @@ def _gsc_oauth_refresh_token(user_id: str, slug: str) -> str | None:
         try:
             scope = str(data.get("scope") or _GOOGLE_OAUTH_SCOPE).strip() or _GOOGLE_OAUTH_SCOPE
             _gsc_oauth_save(user_id, slug, refresh_token=value, scope=scope)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.warning("[GSC] OAuth token migration save failed: %s: %s", type(_e).__name__, _e)
     return value
 
 
@@ -1152,7 +1159,7 @@ def _gsc_oauth_save(user_id: str, slug: str, *, refresh_token: str, scope: str) 
         "v": 1,
         "type": "google_oauth_refresh_token",
         "scope": str(scope or "").strip() or _GOOGLE_OAUTH_SCOPE,
-        "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
     }
     _upsert_user_connection(
         user_id=str(user_id),
@@ -1404,7 +1411,7 @@ def _netlify_api_post(
 
 def _netlify_pat_name(*, user_id: str) -> str:
     safe_user = re.sub(r"[^a-z0-9]+", "-", str(user_id or "").strip().lower())[:24].strip("-") or "user"
-    stamp = datetime.utcnow().strftime("%Y%m%d")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
     return f"seo-agent-web-{safe_user}-{stamp}"
 
 
@@ -1430,7 +1437,7 @@ def _netlify_create_personal_access_token(*, oauth_token: str, user_id: str) -> 
 def _netlify_store_hardened_token(*, user_id: str, oauth_token: str) -> dict[str, Any]:
     pat_token, pat_payload = _netlify_create_personal_access_token(oauth_token=oauth_token, user_id=user_id)
     profile = _netlify_api_get("/api/v1/user", token=pat_token)
-    created_at = datetime.utcnow()
+    created_at = datetime.now(timezone.utc)
     expires_at = created_at + timedelta(seconds=_NETLIFY_PAT_EXPIRES_IN_SECONDS)
     meta = {
         "auth_type": "oauth",
@@ -1458,7 +1465,7 @@ def _netlify_store_oauth_token_fallback(*, user_id: str, oauth_token: str, upgra
         "full_name": str(profile.get("full_name") or "").strip() if isinstance(profile, dict) else "",
         "email": str(profile.get("email") or "").strip() if isinstance(profile, dict) else "",
         "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
-        "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "connected_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
     }
     if upgrade_error:
         meta["pat_upgrade_error"] = str(upgrade_error)[:500]
@@ -2233,7 +2240,7 @@ def _save_ai_suggestions(runs_dir: Path, slug: str, ts: str, issues: dict[str, A
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": datetime.now(timezone.utc).isoformat() + "Z",
             "model": model,
             "issues": issues,
         }
@@ -3520,9 +3527,9 @@ def _clear_stale_gsc_oauth(*, user_id: str, slug: str, reason: str) -> None:
         return
     try:
         _gsc_oauth_clear(user_id, slug)
-        print(f"[GSC] cleared stale oauth token user={user_id} slug={slug}", flush=True)
+        logger.info("[GSC] cleared stale oauth token user=%s slug=%s", user_id, slug)
     except Exception as exc:
-        print(f"[GSC] clear stale oauth failed user={user_id} slug={slug}: {type(exc).__name__}: {exc}", flush=True)
+        logger.error("[GSC] clear stale oauth failed user=%s slug=%s: %s: %s", user_id, slug, type(exc).__name__, exc)
 
 
 def _gsc_oauth_status_hint(reason: str) -> str:
@@ -4889,7 +4896,7 @@ def _job_worker_loop(worker_id: str) -> None:
         try:
             jid = _claim_next_job_id(worker_id=worker_id)
         except Exception as e:
-            print(f"[WORKER] claim error: {type(e).__name__}: {e}")
+            logger.error("[WORKER] claim error: %s: %s", type(e).__name__, e)
             _sentry_capture_exception(e, where="worker.claim_next_job", meta={"worker_id": worker_id})
             _WORKER_STOP.wait(1.0)
             continue
@@ -4972,7 +4979,7 @@ def _cleanup_old_jobs() -> None:
             db.execute(update(JobRecord).where(JobRecord.id.in_(ids)).values(stdout=None, stderr=None, progress=None))
             db.commit()
     except Exception as e:
-        print(f"[RETENTION] jobs cleanup error: {type(e).__name__}: {e}")
+        logger.error("[RETENTION] jobs cleanup error: %s: %s", type(e).__name__, e)
 
 
 def _cleanup_old_runs() -> None:
@@ -5011,11 +5018,11 @@ def _cleanup_old_runs() -> None:
                         except Exception:
                             continue
     except Exception as e:
-        print(f"[RETENTION] runs cleanup error: {type(e).__name__}: {e}")
+        logger.error("[RETENTION] runs cleanup error: %s: %s", type(e).__name__, e)
         return
 
     if removed:
-        print(f"[RETENTION] removed runs: {removed}")
+        logger.info("[RETENTION] removed runs: %s", removed)
 
 
 def _retention_loop() -> None:
@@ -5069,7 +5076,7 @@ def _init_sentry() -> None:
         app.add_middleware(SentryAsgiMiddleware)  # type: ignore[name-defined]
         _SENTRY_READY = True
     except Exception as e:
-        print(f"[SENTRY] init error: {type(e).__name__}: {e}")
+        logger.warning("[SENTRY] init error: %s: %s", type(e).__name__, e)
 
 
 def _sentry_capture_exception(exc: Exception, *, where: str = "", meta: dict[str, Any] | None = None) -> None:
@@ -5284,7 +5291,7 @@ def _finalize_crawl_billing_after_stale(job: Job, *, actual_pages_crawled: int |
             except Exception:
                 pass
     except Exception as e:
-        print(f"[BILLING] stale billing reconcile error: {type(e).__name__}: {e}")
+        logger.error("[BILLING] stale billing reconcile error: %s: %s", type(e).__name__, e)
 
 
 def _finalize_stale_job(job: Job) -> bool:
@@ -6291,7 +6298,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
             if site_dir.exists() and site_dir.is_dir():
                 _sync_runs_path_to_object_store(site_dir)
         except Exception as e:
-            print(f"[S3] crawl sync error: {type(e).__name__}: {e}")
+            logger.error("[S3] crawl sync error: %s: %s", type(e).__name__, e)
         try:
             if (not skip_billing) and reserved_pages > 0:
                 if job.status == "done" and isinstance(actual_pages_crawled, int) and actual_pages_crawled >= 0:
@@ -6330,12 +6337,58 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                         meta={"kind": "crawl_usage", "job_id": job_id, "slug": slug},
                     )
         except Exception as e:
-            print(f"[BILLING] usage update error: {type(e).__name__}: {e}")
+            logger.error("[BILLING] usage update error: %s: %s", type(e).__name__, e)
         _mark_job_active(job_id, False)
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+
 app = FastAPI(title="SEO Agent")
 app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "static")), name="static")
+
+
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin", "")
+        allowed_origin = str(os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/")
+        if origin and (not allowed_origin or origin == allowed_origin):
+            return Response(
+                status_code=204,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, x-csrf-token, X-CSRF-Token",
+                },
+            )
+        return Response(status_code=403)
+    response = await call_next(request)
+    origin = request.headers.get("origin", "")
+    allowed_origin = str(os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/")
+    if origin and (not allowed_origin or origin == allowed_origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, x-csrf-token, X-CSRF-Token"
+    return response
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    # HSTS only when served over HTTPS
+    if request.headers.get("x-forwarded-proto", "http") == "https":
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
 
 
 def _beta_basic_auth_expected() -> tuple[str, str] | None:
@@ -6490,10 +6543,10 @@ def _legal_version() -> str:
 
 
 def _legal_updated_at() -> str:
-    return _safe_env("LEGAL_UPDATED_AT") or datetime.utcnow().strftime("%Y-%m-%d")
+    return _safe_env("LEGAL_UPDATED_AT") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
-def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
+def _smtp_send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -> None:
     cfg = _smtp_config()
     if not cfg:
         raise RuntimeError("smtp_not_configured")
@@ -6512,6 +6565,8 @@ def _smtp_send_email(*, to_addr: str, subject: str, body: str) -> None:
     msg["To"] = str(to_addr)
     msg["Subject"] = str(subject)
     msg.set_content(str(body))
+    if html_body:
+        msg.add_alternative(str(html_body), subtype="html")
 
     try:
         print(
@@ -6550,7 +6605,7 @@ def _sendgrid_api_key_from_smtp_cfg(cfg: dict[str, Any]) -> str:
 
 
 def _sendgrid_send_email(
-    *, api_key: str, to_addr: str, subject: str, body: str, from_addr: str, from_name: str = ""
+    *, api_key: str, to_addr: str, subject: str, body: str, from_addr: str, from_name: str = "", html_body: str = ""
 ) -> None:
     key = str(api_key or "").strip()
     if not key:
@@ -6564,6 +6619,10 @@ def _sendgrid_send_email(
         if str(from_name or "").strip():
             from_obj["name"] = str(from_name).strip()
 
+        content_blocks: list[dict[str, str]] = [{"type": "text/plain", "value": str(body)}]
+        if html_body:
+            content_blocks.append({"type": "text/html", "value": str(html_body)})
+
         resp = requests.post(
             "https://api.sendgrid.com/v3/mail/send",
             headers={
@@ -6574,7 +6633,7 @@ def _sendgrid_send_email(
                 "personalizations": [{"to": [{"email": str(to_addr).strip()}]}],
                 "from": from_obj,
                 "subject": str(subject),
-                "content": [{"type": "text/plain", "value": str(body)}],
+                "content": content_blocks,
             },
             timeout=15.0,
         )
@@ -6590,7 +6649,7 @@ def _sendgrid_send_email(
     print(f"[MAIL] sendgrid api accepted status={resp.status_code} to={to_masked}", flush=True)
 
 
-def _send_email(*, to_addr: str, subject: str, body: str) -> None:
+def _send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -> None:
     """
     Prefer SendGrid HTTP API when the current SMTP config matches SendGrid.
 
@@ -6600,17 +6659,11 @@ def _send_email(*, to_addr: str, subject: str, body: str) -> None:
     if not cfg:
         raise RuntimeError("smtp_not_configured")
     sg_key = _sendgrid_api_key_from_smtp_cfg(cfg)
-    try:
-        print(
-            "[MAIL] dispatch "
-            f"host={str(cfg.get('host') or '')}:{int(cfg.get('port') or 0)} "
-            f"from={_mask_email(str(cfg.get('from') or ''))} "
-            f"to={_mask_email(to_addr)} "
-            f"sendgrid_api={bool(sg_key)}",
-            flush=True,
-        )
-    except Exception:
-        pass
+    logger.info(
+        "[MAIL] dispatch host=%s:%s from=%s to=%s sendgrid_api=%s",
+        str(cfg.get("host") or ""), int(cfg.get("port") or 0),
+        _mask_email(str(cfg.get("from") or "")), _mask_email(to_addr), bool(sg_key),
+    )
     if sg_key:
         _sendgrid_send_email(
             api_key=sg_key,
@@ -6619,10 +6672,11 @@ def _send_email(*, to_addr: str, subject: str, body: str) -> None:
             body=body,
             from_addr=str(cfg.get("from") or ""),
             from_name=str(cfg.get("from_name") or ""),
+            html_body=html_body,
         )
         return
 
-    _smtp_send_email(to_addr=to_addr, subject=subject, body=body)
+    _smtp_send_email(to_addr=to_addr, subject=subject, body=body, html_body=html_body)
 
 
 _PASSWORD_RESET_TTL_DEFAULT_S = 60 * 60
@@ -6666,7 +6720,7 @@ def _issue_password_reset_token(db, *, user_id: str) -> tuple[str, datetime]:
         raise ValueError("Missing user_id")
 
     ttl_s = _password_reset_ttl_s()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_at = now + dt.timedelta(seconds=int(ttl_s))
 
     # Invalidate previous tokens for this user (single active token at a time).
@@ -6679,8 +6733,8 @@ def _issue_password_reset_token(db, *, user_id: str) -> tuple[str, datetime]:
             )
             .values(used_at=now)
         )
-    except Exception:
-        pass
+    except Exception as _e:
+        logger.warning("[AUTH] failed to invalidate old reset tokens for user %s: %s", uid, _e)
 
     for _ in range(3):
         token = secrets.token_urlsafe(48)
@@ -6705,7 +6759,7 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
         return None
     if getattr(row, "used_at", None):
         return None
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     exp = _dt_as_naive_utc(getattr(row, "expires_at", None))
     if exp and exp <= now:
         return None
@@ -6713,15 +6767,9 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
 
 
 def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: datetime) -> None:
-    try:
-        print(
-            f"[MAIL] reset compose to={_mask_email(to_email)} url_host={urlsplit(str(reset_url)).netloc}",
-            flush=True,
-        )
-    except Exception:
-        pass
-    exp = _dt_as_naive_utc(expires_at) or datetime.utcnow()
-    ttl_s = max(60, int(((_dt_as_naive_utc(expires_at) or exp) - datetime.utcnow()).total_seconds()))
+    logger.info("[MAIL] reset compose to=%s url_host=%s", _mask_email(to_email), urlsplit(str(reset_url)).netloc)
+    exp = _dt_as_naive_utc(expires_at) or datetime.now(timezone.utc)
+    ttl_s = max(60, int(((_dt_as_naive_utc(expires_at) or exp) - datetime.now(timezone.utc)).total_seconds()))
     ttl_minutes = max(1, int(math.ceil(float(ttl_s) / 60.0)))
 
     app_name = _safe_env("APP_NAME") or "SEO Agent"
@@ -6732,6 +6780,8 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
         subject = f"Réinitialisation du mot de passe — {app_name}"
     if not subject:
         subject = f"Réinitialisation du mot de passe — {app_name}"
+
+    safe_url = html.escape(str(reset_url).strip(), quote=True)
     body = "\n".join(
         [
             "Bonjour,",
@@ -6745,7 +6795,31 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
             "",
         ]
     )
-    _send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
+    html_body = f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="background:#111;padding:24px 32px;">
+          <span style="color:#fff;font-size:18px;font-weight:700;">{html.escape(app_name)}</span>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h1 style="font-size:20px;margin:0 0 16px;">Réinitialisation du mot de passe</h1>
+          <p style="color:#555;margin:0 0 24px;">Clique sur le bouton ci-dessous pour définir un nouveau mot de passe. Ce lien est valable <strong>{ttl_minutes}&nbsp;minutes</strong>.</p>
+          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Réinitialiser mon mot de passe</a>
+          <p style="color:#999;font-size:12px;margin:24px 0 0;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br><a href="{safe_url}" style="color:#555;word-break:break-all;">{safe_url}</a></p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+          <p style="color:#bbb;font-size:12px;margin:0;">Si tu n’es pas à l’origine de cette demande, ignore cet email. Ton mot de passe ne changera pas.</p>
+        </td></tr>
+        <tr><td style="background:#f4f4f7;padding:16px 32px;text-align:center;">
+          <span style="color:#bbb;font-size:12px;">© {datetime.now(timezone.utc).year} {html.escape(app_name)}</span>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+    _send_email(to_addr=str(to_email).strip(), subject=subject, body=body, html_body=html_body)
 
 
 _EMAIL_VERIFY_TTL_DEFAULT_S = 60 * 60 * 24
@@ -6797,7 +6871,7 @@ def _mark_user_email_verified(db, *, user_id: str) -> None:
         return
     if _user_email_verified(db, user_id=uid):
         return
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for _ in range(3):
         token = secrets.token_urlsafe(48)
         token_hash = _email_verify_token_hash(token)
@@ -6817,7 +6891,7 @@ def _issue_email_verification_token(db, *, user_id: str) -> tuple[str, datetime]
         raise ValueError("Missing user_id")
 
     ttl_s = _email_verify_ttl_s()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_at = now + dt.timedelta(seconds=int(ttl_s))
 
     for _ in range(3):
@@ -6843,7 +6917,7 @@ def _valid_email_verification_row(db, *, token: str) -> EmailVerificationToken |
         return None
     if getattr(row, "used_at", None):
         return None
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     exp = _dt_as_naive_utc(getattr(row, "expires_at", None))
     if exp and exp <= now:
         return None
@@ -6851,8 +6925,8 @@ def _valid_email_verification_row(db, *, token: str) -> EmailVerificationToken |
 
 
 def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at: datetime) -> None:
-    exp = _dt_as_naive_utc(expires_at) or datetime.utcnow()
-    ttl_s = max(60, int((exp - datetime.utcnow()).total_seconds()))
+    exp = _dt_as_naive_utc(expires_at) or datetime.now(timezone.utc)
+    ttl_s = max(60, int((exp - datetime.now(timezone.utc)).total_seconds()))
     ttl_hours = max(1, int(math.ceil(float(ttl_s) / 3600.0)))
 
     app_name = _safe_env("APP_NAME") or "SEO Agent"
@@ -6864,6 +6938,7 @@ def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at
     if not subject:
         subject = f"Vérifie ton email — {app_name}"
 
+    safe_url = html.escape(str(verify_url).strip(), quote=True)
     body = "\n".join(
         [
             "Bonjour,",
@@ -6877,7 +6952,74 @@ def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at
             "",
         ]
     )
-    _send_email(to_addr=str(to_email).strip(), subject=subject, body=body)
+    html_body = f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="background:#111;padding:24px 32px;">
+          <span style="color:#fff;font-size:18px;font-weight:700;">{html.escape(app_name)}</span>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h1 style="font-size:20px;margin:0 0 16px;">Confirme ton adresse email</h1>
+          <p style="color:#555;margin:0 0 24px;">Clique sur le bouton ci-dessous pour vérifier ton adresse email. Ce lien est valable <strong>{ttl_hours}&nbsp;h</strong>.</p>
+          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Confirmer mon email</a>
+          <p style="color:#999;font-size:12px;margin:24px 0 0;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br><a href="{safe_url}" style="color:#555;word-break:break-all;">{safe_url}</a></p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+          <p style="color:#bbb;font-size:12px;margin:0;">Si tu n’es pas à l’origine de cette demande, ignore cet email.</p>
+        </td></tr>
+        <tr><td style="background:#f4f4f7;padding:16px 32px;text-align:center;">
+          <span style="color:#bbb;font-size:12px;">© {datetime.now(timezone.utc).year} {html.escape(app_name)}</span>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+    _send_email(to_addr=str(to_email).strip(), subject=subject, body=body, html_body=html_body)
+
+
+def _send_welcome_email(*, to_email: str, dashboard_url: str) -> None:
+    app_name = _safe_env("APP_NAME") or "SEO Agent"
+    subject = f"Bienvenue sur {app_name} !"
+    safe_url = html.escape(str(dashboard_url).strip(), quote=True)
+    body = "\n".join(
+        [
+            f"Bienvenue sur {app_name} !",
+            "",
+            "Ton compte est prêt. Connecte-toi pour commencer ton audit SEO.",
+            str(dashboard_url).strip(),
+            "",
+            f"— L'équipe {app_name}",
+        ]
+    )
+    html_body = f"""<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="background:#111;padding:24px 32px;">
+          <span style="color:#fff;font-size:18px;font-weight:700;">{html.escape(app_name)}</span>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h1 style="font-size:20px;margin:0 0 16px;">Bienvenue sur {html.escape(app_name)} !</h1>
+          <p style="color:#555;margin:0 0 24px;">Ton compte est créé et prêt à l'emploi. Commence par ajouter ton premier site pour lancer un audit SEO complet.</p>
+          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Accéder au tableau de bord</a>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+          <p style="color:#bbb;font-size:12px;margin:0;">Tu reçois cet email car tu viens de créer un compte sur {html.escape(app_name)}.</p>
+        </td></tr>
+        <tr><td style="background:#f4f4f7;padding:16px 32px;text-align:center;">
+          <span style="color:#bbb;font-size:12px;">© {datetime.now(timezone.utc).year} {html.escape(app_name)}</span>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+    try:
+        _send_email(to_addr=str(to_email).strip(), subject=subject, body=body, html_body=html_body)
+    except Exception as exc:
+        logger.warning("[MAIL] welcome email failed for %s: %s", _mask_email(to_email), exc)
 
 
 def _request_is_secure(request: Request) -> bool:
@@ -7000,12 +7142,9 @@ def _request_client_ip(request: Request) -> str:
     return ""
 
 
-def _rate_limit_retry_after(*, bucket: str, subject: str, limit: int, window_s: int) -> int | None:
-    normalized_bucket = str(bucket or "").strip()
-    normalized_subject = str(subject or "").strip()
-    if not normalized_bucket or not normalized_subject or limit <= 0 or window_s <= 0:
-        return None
-    key = f"{normalized_bucket}:{normalized_subject}"
+def _rate_limit_retry_after_memory(*, bucket: str, subject: str, limit: int, window_s: int) -> int | None:
+    """In-memory fallback — used when DB is unavailable."""
+    key = f"{bucket}:{subject}"
     now = time.monotonic()
     with _RATE_LIMIT_LOCK:
         queue = _RATE_LIMIT_BUCKETS.get(key)
@@ -7016,10 +7155,55 @@ def _rate_limit_retry_after(*, bucket: str, subject: str, limit: int, window_s: 
         while queue and queue[0] <= cutoff:
             queue.popleft()
         if len(queue) >= int(limit):
-            retry_after = max(1, int(math.ceil(float(window_s) - (now - queue[0]))))
-            return retry_after
+            return max(1, int(math.ceil(float(window_s) - (now - queue[0]))))
         queue.append(now)
     return None
+
+
+def _rate_limit_retry_after(*, bucket: str, subject: str, limit: int, window_s: int) -> int | None:
+    normalized_bucket = str(bucket or "").strip()
+    normalized_subject = str(subject or "").strip()
+    if not normalized_bucket or not normalized_subject or limit <= 0 or window_s <= 0:
+        return None
+    key = f"{normalized_bucket}:{normalized_subject}"
+    now = time.time()
+    cutoff = now - float(window_s)
+    try:
+        with DB.session() as db:
+            row = db.execute(
+                select(RateLimitBucket)
+                .where(RateLimitBucket.key == key)
+                .with_for_update()
+            ).scalar_one_or_none()
+            hits: list[float] = []
+            if row is not None:
+                try:
+                    raw = json.loads(row.hits_json or "[]")
+                    hits = [float(h) for h in raw if isinstance(h, (int, float))]
+                except Exception:
+                    hits = []
+            hits = [h for h in hits if h > cutoff]
+            if len(hits) >= int(limit):
+                retry_after = max(1, int(math.ceil(float(window_s) - (now - hits[0]))))
+                # Persist pruned list even when rate-limited
+                if row is not None:
+                    row.hits_json = json.dumps(hits)
+                    db.add(row)
+                    db.commit()
+                return retry_after
+            hits.append(now)
+            if row is None:
+                db.add(RateLimitBucket(key=key, hits_json=json.dumps(hits)))
+            else:
+                row.hits_json = json.dumps(hits)
+                db.add(row)
+            db.commit()
+        return None
+    except Exception as _e:
+        logger.warning("[RL] DB rate limit unavailable, using in-memory fallback: %s", _e)
+        return _rate_limit_retry_after_memory(
+            bucket=normalized_bucket, subject=normalized_subject, limit=limit, window_s=window_s
+        )
 
 
 def _format_retry_after(retry_after_s: int) -> str:
@@ -7159,6 +7343,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/auth/verify",
         "/auth/verify/resend",
         "/stripe/webhook",
+        "/cron/check-backlinks",
     }:
         return await call_next(request)
 
@@ -7720,10 +7905,7 @@ def auth_forgot_submit(
                     expires_at=expires_at,
                 )
             except Exception as exc:
-                try:
-                    print(f"[MAIL] forgot send_error: {type(exc).__name__}: {str(exc)[:500]}", flush=True)
-                except Exception:
-                    pass
+                logger.error("[MAIL] forgot send_error: %s: %s", type(exc).__name__, str(exc)[:500])
                 _audit_log(
                     request,
                     action="auth.forgot",
@@ -7743,8 +7925,8 @@ def auth_forgot_submit(
                 target_id=str(getattr(row, "id", "") or ""),
             )
         else:
-            print(f"[MAIL] forgot user_found=0 email={_mask_email(e)}", flush=True)
-            _audit_log(request, action="auth.forgot", status="ok", actor_email=e, meta={"note": "email_not_found"})
+            logger.info("[MAIL] forgot user_found=0 email=%s", _mask_email(e))
+            _audit_log(request, action="auth.forgot", status="ok")
 
     return RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
 
@@ -7820,7 +8002,7 @@ def auth_reset_submit(
     if password != password2:
         return _reset_error("Les mots de passe ne correspondent pas.", 400, ok=True)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     uid = ""
     email_out = ""
     with DB.session() as db:
@@ -8018,7 +8200,7 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
         resp.headers["Referrer-Policy"] = "no-referrer"
         return resp
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     uid = ""
     email_out = ""
     with DB.session() as db:
@@ -8787,6 +8969,14 @@ def auth_signup_submit(
             status_code=303,
         )
 
+    try:
+        _send_welcome_email(
+            to_email=str(getattr(user, "email", "") or e),
+            dashboard_url=f"{_public_base_url(request)}/",
+        )
+    except Exception:
+        pass
+
     token = auth.make_session_token(user_id=user.id, secret=secret)
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
     secure_cookie = proto == "https"
@@ -8821,7 +9011,7 @@ def pricing_public(request: Request) -> HTMLResponse:
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.utcnow().year,
+            "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
             "catalog": billing.plan_catalog(),
             "stripe_ok": billing.stripe_enabled(),
@@ -8837,7 +9027,7 @@ def terms_public(request: Request) -> HTMLResponse:
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.utcnow().year,
+            "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
             "legal_version": _legal_version(),
             "legal_updated_at": _legal_updated_at(),
@@ -8853,7 +9043,7 @@ def privacy_public(request: Request) -> HTMLResponse:
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.utcnow().year,
+            "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
             "legal_version": _legal_version(),
             "legal_updated_at": _legal_updated_at(),
@@ -8869,7 +9059,7 @@ def support_public(request: Request) -> HTMLResponse:
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.utcnow().year,
+            "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
         },
     )
@@ -8904,9 +9094,9 @@ def status_public(request: Request) -> HTMLResponse:
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.utcnow().year,
+            "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
-            "now": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+            "now": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "web_ok": True,
             "db_ok": db_ok,
             "db_error": db_error,
@@ -8916,6 +9106,49 @@ def status_public(request: Request) -> HTMLResponse:
             "stripe_ok": billing.stripe_enabled(),
         },
     )
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+def robots_txt(request: Request) -> PlainTextResponse:
+    base = str(_safe_env("PUBLIC_BASE_URL") or "").rstrip("/")
+    sitemap_line = f"\nSitemap: {base}/sitemap.xml" if base else ""
+    content = f"""User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /terms
+Allow: /privacy
+Allow: /support
+Allow: /status
+Disallow: /auth/
+Disallow: /billing
+Disallow: /jobs
+Disallow: /projects/
+Disallow: /settings/
+Disallow: /automation
+Disallow: /api/
+Disallow: /file
+Disallow: /oauth/{sitemap_line}
+"""
+    return PlainTextResponse(content.strip(), media_type="text/plain; charset=utf-8")
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml(request: Request) -> PlainTextResponse:
+    base = str(_safe_env("PUBLIC_BASE_URL") or "").rstrip("/")
+    if not base:
+        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
+        base = f"{proto}://{request.url.netloc}".rstrip("/")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    urls = ["/", "/pricing", "/terms", "/privacy", "/support", "/status"]
+    url_blocks = "\n".join(
+        f"  <url><loc>{base}{u}</loc><lastmod>{now}</lastmod><changefreq>monthly</changefreq></url>"
+        for u in urls
+    )
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{url_blocks}
+</urlset>"""
+    return PlainTextResponse(xml.strip(), media_type="application/xml; charset=utf-8")
 
 
 @app.get("/billing", response_class=HTMLResponse)
@@ -8955,6 +9188,7 @@ def billing_page(
         projects_count = int(
             db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
         )
+        invoices = billing.list_invoices(db, user_id=str(user.id))
 
     def _limit_label(key: str) -> str:
         v = limits.get(key)
@@ -9005,6 +9239,7 @@ def billing_page(
                 "pro": billing.price_id_for_plan("pro"),
                 "business": billing.price_id_for_plan("business"),
             },
+            "invoices": invoices,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -9131,7 +9366,7 @@ async def stripe_webhook(request: Request) -> JSONResponse:
         try:
             billing.handle_stripe_event(db, event=event)
         except Exception as e:
-            print(f"[STRIPE] webhook error: {type(e).__name__}: {e}")
+            logger.error("[STRIPE] webhook error: %s: %s", type(e).__name__, e)
             return JSONResponse({"ok": False, "error": "webhook_handler_error"}, status_code=500)
 
     return JSONResponse({"ok": True})
@@ -9150,8 +9385,9 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
                 "request": request,
                 "app_name": _app_name(),
                 "support_email": _support_email(),
-                "year": datetime.utcnow().year,
+                "year": datetime.now(timezone.utc).year,
                 "nav_items": _public_nav_items(),
+                "catalog": billing.plan_catalog(),
             },
         )
     with DB.session() as db:
@@ -9248,7 +9484,11 @@ def settings_root() -> RedirectResponse:
 
 
 @app.get("/settings/accounts", response_class=HTMLResponse)
-def settings_accounts(request: Request) -> HTMLResponse:
+def settings_accounts(
+    request: Request,
+    msg: str | None = None,
+    err: str | None = None,
+) -> HTMLResponse:
     user = getattr(request.state, "user", None)
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
@@ -9342,6 +9582,8 @@ def settings_accounts(request: Request) -> HTMLResponse:
                 "projects": gsc_projects,
                 "system_url": "/settings/system#gsc-oauth-system",
             },
+            "msg": str(msg or "").strip(),
+            "err": str(err or "").strip(),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -9529,6 +9771,47 @@ def settings_account_delete(request: Request, confirm: str = Form(default="")) -
         },
     )
     return resp
+
+
+@app.post("/settings/account/password")
+def settings_account_password(
+    request: Request,
+    current_password: str = Form(default=""),
+    new_password: str = Form(default=""),
+    new_password2: str = Form(default=""),
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    back = "/settings/accounts#security-card"
+
+    cur = (current_password or "").strip()
+    pw1 = (new_password or "").strip()
+    pw2 = (new_password2 or "").strip()
+
+    if not cur or not pw1 or not pw2:
+        return RedirectResponse(url=_path_with_flash(back, err="Tous les champs sont requis."), status_code=303)
+
+    if pw1 != pw2:
+        return RedirectResponse(url=_path_with_flash(back, err="Les nouveaux mots de passe ne correspondent pas."), status_code=303)
+
+    if len(pw1) < 10:
+        return RedirectResponse(url=_path_with_flash(back, err="Le nouveau mot de passe doit faire au moins 10 caractères."), status_code=303)
+
+    with DB.session() as db:
+        fresh = db.get(User, str(user.id))
+        if not fresh:
+            raise HTTPException(status_code=401, detail="auth_required")
+        if not auth.verify_password(cur, str(fresh.password_hash or "")):
+            _audit_log(request, action="account.password_change", status="wrong_current_password", user=user)
+            return RedirectResponse(url=_path_with_flash(back, err="Mot de passe actuel incorrect."), status_code=303)
+        fresh.password_hash = auth.hash_password(pw1)
+        db.add(fresh)
+        db.commit()
+
+    _audit_log(request, action="account.password_change", status="ok", user=user)
+    return RedirectResponse(url=_path_with_flash(back, msg="Mot de passe mis à jour."), status_code=303)
 
 
 @app.get("/settings/system", response_class=HTMLResponse)
@@ -9952,7 +10235,9 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
 
 
 @app.get("/api/assistant/meta")
-def assistant_meta() -> JSONResponse:
+def assistant_meta(request: Request) -> JSONResponse:
+    if not getattr(request.state, "user", None):
+        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
     effective = _assistant_effective_provider()
     openai_ok = _assistant_openai_configured()
     gemini_ok = _assistant_gemini_configured()
@@ -10055,7 +10340,7 @@ async def assistant_chat(request: Request) -> JSONResponse:
                 meta={"kind": "assistant_chat", "provider": provider, "model": model},
             )
     except Exception as e:
-        print(f"[BILLING] assistant usage error: {type(e).__name__}: {e}")
+        logger.error("[BILLING] assistant usage error: %s: %s", type(e).__name__, e)
 
     return JSONResponse({"ok": True, "reply": reply, "provider": provider, "model": model})
 
@@ -10257,10 +10542,15 @@ def google_oauth_callback(
 
 
 @app.post("/projects/{slug}/gsc/oauth/disconnect")
-def project_gsc_oauth_disconnect(request: Request, slug: str) -> RedirectResponse:
+def project_gsc_oauth_disconnect(
+    request: Request,
+    slug: str,
+    next: str = Form(default="/settings/accounts#gsc-oauth-card"),
+) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
     token = _gsc_oauth_refresh_token(str(getattr(user, "id", "")), slug)
+    return_to = _safe_next_path(next or f"/projects/{slug}/settings/crawl#gsc")
     if token:
         _google_oauth_revoke_token(token)
     _gsc_oauth_clear(str(getattr(user, "id", "")), slug)
@@ -10272,7 +10562,7 @@ def project_gsc_oauth_disconnect(request: Request, slug: str) -> RedirectRespons
         target_type="project",
         target_id=slug,
     )
-    return RedirectResponse(url=f"/projects/{slug}/settings/crawl?msg={quote('Google déconnecté.')}", status_code=303)
+    return RedirectResponse(url=_path_with_flash(return_to, msg="Google déconnecté."), status_code=303)
 
 
 @app.get("/oauth/github/connect")
@@ -10353,7 +10643,7 @@ def github_oauth_callback(
             "name": str(profile.get("name") or "").strip() if isinstance(profile, dict) else "",
             "avatar_url": str(profile.get("avatar_url") or "").strip() if isinstance(profile, dict) else "",
             "html_url": str(profile.get("html_url") or "").strip() if isinstance(profile, dict) else "",
-            "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+            "connected_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
             "scope": str(token_data.get("scope") or "").strip(),
         }
         _upsert_user_connection(user_id=str(user.id), key="GITHUB_TOKEN", value=access_token, meta=meta)
@@ -10688,7 +10978,7 @@ def bing_oauth_callback(
             "expires_at": time.time() + max(60, expires_in),
             "scope": str(token_data.get("scope") or "").strip(),
             "token_type": str(token_data.get("token_type") or "Bearer").strip(),
-            "connected_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+            "connected_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
         }
         _upsert_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY, value=refresh_token, meta=meta)
         _delete_user_connection(user_id=str(user.id), key="BING_WEBMASTER_API_KEY")
@@ -13270,10 +13560,25 @@ async def backlinks_import(
     base_url = str(project.get("base_url") or "")
     target_host = _host_no_www(base_url) if base_url else ""
 
+    _CSV_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+    content_type = str(file.content_type or "").lower().split(";")[0].strip()
+    _ALLOWED_CSV_TYPES = {"text/csv", "text/plain", "application/csv", "application/octet-stream"}
+    if content_type and content_type not in _ALLOWED_CSV_TYPES:
+        return RedirectResponse(
+            url=f"/projects/{slug}/backlinks?crawl={quote(ts)}&err={quote('Type de fichier invalide (CSV attendu)')}",
+            status_code=303,
+        )
+
     try:
-        content = await file.read()
+        content = await file.read(_CSV_MAX_BYTES + 1)
     except Exception as e:
         return RedirectResponse(url=f"/projects/{slug}/backlinks?crawl={quote(ts)}&err={quote(str(e))}", status_code=303)
+
+    if len(content) > _CSV_MAX_BYTES:
+        return RedirectResponse(
+            url=f"/projects/{slug}/backlinks?crawl={quote(ts)}&err={quote('Fichier trop volumineux (max 10 Mo)')}",
+            status_code=303,
+        )
 
     if not content:
         return RedirectResponse(
@@ -13302,7 +13607,7 @@ async def backlinks_import(
                         "kind": kind,
                         "filename": str(file.filename or ""),
                         "imported_via": "csv",
-                        "imported_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                        "imported_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
                         "rows": len(rows),
                     },
                     "rows": rows,
@@ -13421,7 +13726,7 @@ def backlinks_ahrefs_sync(
         )
         return RedirectResponse(url=f"/projects/{slug}/backlinks?crawl={quote(ts)}&err={quote(msg)}", status_code=303)
 
-    imported_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    imported_at = datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z"
     common_meta: dict[str, Any] = {
         "source": "ahrefs",
         "target": target,
@@ -13556,6 +13861,500 @@ def backlinks_ahrefs_sync(
     )
 
 
+# ---------------------------------------------------------------------------
+# Backlink Opportunities (premium feature — Solo+ plan required)
+# ---------------------------------------------------------------------------
+
+def _score_opportunity(source: str, title: str, url: str, snippet: str = "", query: str = "") -> int:
+    score = 20
+    text = f"{title} {snippet}".lower()
+    url_lower = url.lower()
+
+    intent_kw = [
+        "how", "best", "recommend", "recommendation", "alternative", "tool", "tools",
+        "review", "compare", "worth it", "anyone", "help", "question", "guide",
+        "make money", "earn", "beginner", "start", "need advice",
+    ]
+    score += sum(7 for kw in intent_kw if kw in text)
+
+    bad_kw = ["coupon", "promo code", "download crack", "torrent", "nsfw"]
+    score -= sum(12 for kw in bad_kw if kw in text)
+
+    if source == "reddit":
+        score += 12
+    if "/comments/" in url_lower or "reddit.com/r/" in url_lower:
+        score += 10
+    if "quora.com" in url_lower:
+        score += 8
+    if "medium.com" in url_lower:
+        score += 3
+
+    if query:
+        query_words = [w for w in query.lower().split() if len(w) > 3]
+        matches = sum(1 for w in query_words if w in text)
+        score += min(20, matches * 4)
+
+    return max(0, min(100, round(score)))
+
+
+def _opp_has_access(db_session, *, user_id: str) -> bool:
+    plan_key = billing.effective_plan_key(db_session, user_id=user_id)
+    return billing.plan_rank(plan_key) >= billing.plan_rank("solo")
+
+
+@app.get("/projects/{slug}/backlinks/opportunities", response_class=HTMLResponse)
+def project_backlinks_opportunities(
+    request: Request,
+    slug: str,
+    q: str | None = None,
+    status: str | None = None,
+    page: int = 1,
+    msg: str | None = None,
+    err: str | None = None,
+) -> HTMLResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    page = max(1, page)
+    page_size = 20
+
+    with DB.session() as db:
+        has_access = _opp_has_access(db, user_id=str(user.id))
+        plan_key = billing.effective_plan_key(db, user_id=str(user.id))
+        search_remaining = billing.remaining_quota(db, user_id=str(user.id), metric="backlink_searches_month")
+        reply_remaining = billing.remaining_quota(db, user_id=str(user.id), metric="backlink_replies_month")
+
+        opportunities: list[BacklinkOpportunity] = []
+        total = 0
+
+        if has_access:
+            base_q = (
+                select(BacklinkOpportunity)
+                .where(
+                    BacklinkOpportunity.project_id == str(proj.id),
+                    BacklinkOpportunity.user_id == str(user.id),
+                )
+            )
+            if q:
+                base_q = base_q.where(BacklinkOpportunity.title.ilike(f"%{q}%"))
+            status = (status or "").strip().lower() or None
+            if status and status in {"new", "contacted", "won", "lost"}:
+                base_q = base_q.where(BacklinkOpportunity.status == status)
+            else:
+                status = None
+
+            count_q = select(func.count()).select_from(base_q.subquery())
+            total = int(db.scalar(count_q) or 0)
+            offset = (page - 1) * page_size
+            rows = db.scalars(
+                base_q.order_by(
+                    BacklinkOpportunity.opportunity_score.desc(),
+                    BacklinkOpportunity.created_at.desc(),
+                ).offset(offset).limit(page_size)
+            )
+            opportunities = list(rows)
+
+    project_ctx = {"slug": slug, "site_name": proj.site_name, "base_url": proj.base_url}
+    pages_total = max(1, math.ceil(total / page_size))
+
+    resp = templates.TemplateResponse(
+        "backlinks_opportunities.html",
+        {
+            "request": request,
+            "project": project_ctx,
+            "slug": slug,
+            "has_access": has_access,
+            "plan_key": plan_key,
+            "opportunities": opportunities,
+            "q": q or "",
+            "status_filter": status or "",
+            "page": page,
+            "pages_total": pages_total,
+            "total": total,
+            "page_size": page_size,
+            "search_remaining": search_remaining,
+            "reply_remaining": reply_remaining,
+            "msg": msg or "",
+            "err": err or "",
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/api/projects/{slug}/backlinks/search")
+async def api_backlinks_search(request: Request, slug: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    with DB.session() as db:
+        if not _opp_has_access(db, user_id=str(user.id)):
+            return JSONResponse({"ok": False, "error": "Fonctionnalité réservée au plan Solo+."}, status_code=403)
+
+        allowed, remaining = billing.ensure_within_quota(
+            db, user_id=str(user.id), metric="backlink_searches_month", planned_amount=1
+        )
+        if not allowed:
+            return JSONResponse(
+                {"ok": False, "error": f"Quota mensuel de recherches atteint ({remaining or 0} restant)."},
+                status_code=429,
+            )
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Corps JSON invalide"}, status_code=400)
+
+    raw_query = str(body.get("query") or "").strip()
+    source = str(body.get("source") or "google").strip().lower()
+    if source not in {"reddit", "google"}:
+        source = "google"
+    if not raw_query:
+        return JSONResponse({"ok": False, "error": "Requête vide"}, status_code=400)
+
+    serpapi_key = str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip()
+    if not serpapi_key:
+        return JSONResponse({"ok": False, "error": "SERPAPI_API_KEY non configurée"}, status_code=500)
+
+    search_q = f"site:reddit.com {raw_query}" if source == "reddit" else raw_query
+
+    try:
+        resp = requests.get(
+            "https://serpapi.com/search.json",
+            params={"engine": "google", "q": search_q, "api_key": serpapi_key, "num": "10", "hl": "en"},
+            timeout=20,
+        )
+        data = resp.json()
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": f"Erreur SerpAPI: {exc}"}, status_code=502)
+
+    if not resp.ok:
+        err_msg = str((data or {}).get("error") or f"SerpAPI {resp.status_code}")
+        return JSONResponse({"ok": False, "error": err_msg}, status_code=502)
+
+    items = []
+    for r in data.get("organic_results") or []:
+        url = str(r.get("link") or "").strip()
+        if not url:
+            continue
+        title = str(r.get("title") or "Untitled")
+        snippet = str(r.get("snippet") or "")
+        score = _score_opportunity(source, title, url, snippet, raw_query)
+        items.append({"source": source, "title": title, "url": url, "snippet": snippet, "opportunity_score": score})
+
+    items.sort(key=lambda x: x["opportunity_score"], reverse=True)
+
+    with DB.session() as db:
+        billing.usage_add(db, user_id=str(user.id), metric="backlink_searches_month", amount=1)
+
+    return JSONResponse({"ok": True, "data": items})
+
+
+@app.post("/api/projects/{slug}/backlinks/generate-reply")
+async def api_backlinks_generate_reply(request: Request, slug: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    with DB.session() as db:
+        if not _opp_has_access(db, user_id=str(user.id)):
+            return JSONResponse({"ok": False, "error": "Fonctionnalité réservée au plan Solo+."}, status_code=403)
+
+        allowed, remaining = billing.ensure_within_quota(
+            db, user_id=str(user.id), metric="backlink_replies_month", planned_amount=1
+        )
+        if not allowed:
+            return JSONResponse(
+                {"ok": False, "error": f"Quota mensuel de génération atteint ({remaining or 0} restant)."},
+                status_code=429,
+            )
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Corps JSON invalide"}, status_code=400)
+
+    platform = str(body.get("platform") or "").strip() or "web"
+    opp_title = str(body.get("opportunityTitle") or "").strip()
+    opp_url = str(body.get("opportunityUrl") or "").strip()
+    target_url = str(body.get("targetArticleUrl") or "").strip()
+
+    if not opp_title or not target_url:
+        return JSONResponse({"ok": False, "error": "Titre et URL cible requis"}, status_code=400)
+
+    openai_key = str(os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not openai_key:
+        return JSONResponse({"ok": False, "error": "OPENAI_API_KEY non configurée"}, status_code=500)
+
+    system_prompt = (
+        "Tu es un expert en netlinking et en community management. "
+        "Tu rédiges des réponses naturelles et utiles pour obtenir des backlinks. "
+        "Réponds toujours dans la langue de la discussion (français ou anglais selon le contexte). "
+        "Sois authentique, apporte de la valeur, et mentionne le lien de façon naturelle."
+    )
+    user_prompt = (
+        f"Plateforme : {platform}\n"
+        f"Discussion : {opp_title}\n"
+        f"URL de la discussion : {opp_url}\n"
+        f"Article à promouvoir : {target_url}\n\n"
+        "Rédige une réponse naturelle (150-250 mots) qui apporte de la valeur à la discussion "
+        "et mentionne l'article de façon pertinente avec son URL."
+    )
+
+    try:
+        api_resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "max_tokens": 600,
+                "temperature": 0.7,
+            },
+            timeout=30,
+        )
+        api_data = api_resp.json()
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": f"Erreur OpenAI: {exc}"}, status_code=502)
+
+    if not api_resp.ok:
+        err_msg = str(((api_data or {}).get("error") or {}).get("message") or f"OpenAI {api_resp.status_code}")
+        return JSONResponse({"ok": False, "error": err_msg}, status_code=502)
+
+    reply_text = str(
+        (((api_data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
+    ).strip()
+
+    with DB.session() as db:
+        billing.usage_add(db, user_id=str(user.id), metric="backlink_replies_month", amount=1)
+
+    return JSONResponse({"ok": True, "reply": reply_text})
+
+
+@app.post("/projects/{slug}/backlinks/opportunities/save")
+async def backlinks_opportunity_save(
+    request: Request,
+    slug: str,
+    source: str = Form(default=""),
+    title: str = Form(default=""),
+    url: str = Form(default=""),
+    snippet: str = Form(default=""),
+    opportunity_score: int = Form(default=0),
+    reply: str = Form(default=""),
+    target_url: str = Form(default=""),
+) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    with DB.session() as db:
+        if not _opp_has_access(db, user_id=str(user.id)):
+            return RedirectResponse(
+                url=f"/projects/{slug}/backlinks/opportunities?err={quote('Plan Solo+ requis')}",
+                status_code=303,
+            )
+
+    url = url.strip()
+    title = title.strip()
+    if not url or not title:
+        return RedirectResponse(
+            url=f"/projects/{slug}/backlinks/opportunities?err={quote('URL et titre requis')}",
+            status_code=303,
+        )
+
+    with DB.session() as db:
+        existing = db.scalar(
+            select(BacklinkOpportunity).where(
+                BacklinkOpportunity.project_id == str(proj.id),
+                BacklinkOpportunity.url == url,
+            )
+        )
+        if existing:
+            existing.title = title
+            existing.snippet = snippet.strip() or None
+            existing.opportunity_score = max(0, min(100, opportunity_score))
+            existing.reply = reply.strip() or None
+            existing.target_url = target_url.strip() or None
+            db.add(existing)
+        else:
+            opp = BacklinkOpportunity(
+                project_id=str(proj.id),
+                user_id=str(user.id),
+                source=source.strip() or "web",
+                title=title,
+                url=url,
+                snippet=snippet.strip() or None,
+                opportunity_score=max(0, min(100, opportunity_score)),
+                status="new",
+                reply=reply.strip() or None,
+                target_url=target_url.strip() or None,
+            )
+            db.add(opp)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+
+    return RedirectResponse(
+        url=f"/projects/{slug}/backlinks/opportunities?msg={quote('Opportunité sauvegardée')}",
+        status_code=303,
+    )
+
+
+@app.post("/projects/{slug}/backlinks/opportunities/{opp_id}/delete")
+def backlinks_opportunity_delete(request: Request, slug: str, opp_id: str) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    with DB.session() as db:
+        opp = db.scalar(
+            select(BacklinkOpportunity).where(
+                BacklinkOpportunity.id == opp_id,
+                BacklinkOpportunity.project_id == str(proj.id),
+                BacklinkOpportunity.user_id == str(user.id),
+            )
+        )
+        if opp:
+            db.delete(opp)
+            db.commit()
+
+    return RedirectResponse(
+        url=f"/projects/{slug}/backlinks/opportunities?msg={quote('Opportunité supprimée')}",
+        status_code=303,
+    )
+
+
+@app.post("/projects/{slug}/backlinks/opportunities/{opp_id}/status")
+def backlinks_opportunity_status(
+    request: Request,
+    slug: str,
+    opp_id: str,
+    status: str = Form(default="new"),
+) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+    status = (status or "new").strip().lower()
+    if status not in {"new", "contacted", "won", "lost"}:
+        status = "new"
+
+    with DB.session() as db:
+        opp = db.scalar(
+            select(BacklinkOpportunity).where(
+                BacklinkOpportunity.id == opp_id,
+                BacklinkOpportunity.project_id == str(proj.id),
+                BacklinkOpportunity.user_id == str(user.id),
+            )
+        )
+        if opp:
+            opp.status = status
+            db.add(opp)
+            db.commit()
+
+    return RedirectResponse(
+        url=f"/projects/{slug}/backlinks/opportunities?msg={quote('Statut mis à jour')}",
+        status_code=303,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cron Render — vérification automatique des backlinks
+# ---------------------------------------------------------------------------
+
+def _sendgrid_send(*, subject: str, text_body: str) -> None:
+    api_key = str(os.environ.get("SENDGRID_API_KEY") or "").strip()
+    from_email = str(os.environ.get("SENDGRID_FROM_EMAIL") or "").strip()
+    to_email = str(os.environ.get("NOTIFICATION_EMAIL") or "").strip()
+    if not api_key or not from_email or not to_email:
+        return
+    try:
+        requests.post(
+            "https://api.sendgrid.com/v3/mail/send",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "personalizations": [{"to": [{"email": to_email}]}],
+                "from": {"email": from_email},
+                "subject": subject,
+                "content": [{"type": "text/plain", "value": text_body}],
+            },
+            timeout=15,
+        )
+    except Exception:
+        pass
+
+
+@app.get("/cron/check-backlinks")
+def cron_check_backlinks(request: Request) -> JSONResponse:
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+
+    with DB.session() as db:
+        opps = list(db.scalars(
+            select(BacklinkOpportunity).where(
+                BacklinkOpportunity.status.in_(["won", "contacted"]),
+                BacklinkOpportunity.target_url.isnot(None),
+            )
+        ))
+
+    checked = 0
+    newly_lost: list[dict[str, str]] = []
+    check_errors: list[dict[str, str]] = []
+
+    for opp in opps:
+        target = str(opp.target_url or "").strip().lower()
+        if not target:
+            continue
+        try:
+            resp = requests.get(
+                str(opp.url),
+                timeout=12,
+                allow_redirects=True,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; SEOAgentBot/1.0)"},
+            )
+            found = target in resp.text.lower()
+            checked += 1
+            if not found and str(opp.status) == "won":
+                with DB.session() as db2:
+                    row = db2.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp.id))
+                    if row:
+                        row.status = "lost"
+                        db2.add(row)
+                        db2.commit()
+                newly_lost.append({
+                    "title": str(opp.title or ""),
+                    "url": str(opp.url or ""),
+                    "target_url": target,
+                })
+        except Exception as exc:
+            check_errors.append({"url": str(opp.url or ""), "error": str(exc)[:120]})
+
+    if newly_lost:
+        lines = "\n".join(
+            f"- {item['title'][:70]}\n  Source : {item['url']}\n  Cible  : {item['target_url']}"
+            for item in newly_lost
+        )
+        _sendgrid_send(
+            subject=f"⚠️ {len(newly_lost)} backlink(s) perdu(s) — Agent SEO",
+            text_body=(
+                f"{len(newly_lost)} backlink(s) ne semblent plus actifs :\n\n{lines}\n\n"
+                "Ces opportunités ont été passées au statut « perdu » automatiquement."
+            ),
+        )
+
+    return JSONResponse({
+        "ok": True,
+        "checked": checked,
+        "newly_lost": len(newly_lost),
+        "errors": len(check_errors),
+        "error_details": check_errors[:10],
+    })
+
+
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
 def job_detail(request: Request, job_id: str) -> HTMLResponse:
     job = _load_job(job_id)
@@ -13584,8 +14383,10 @@ def job_detail(request: Request, job_id: str) -> HTMLResponse:
     corrections_plan_path: str | None = None
     if is_admin and job.config_path and job.finished_at:
         try:
+            _cfg_path = Path(str(job.config_path)).expanduser().resolve()
+            _cfg_path.relative_to(REPO_ROOT.resolve())  # raises ValueError if outside REPO_ROOT
             # This is a bit brittle, relies on knowing the orchestrator's output structure.
-            with open(job.config_path, 'r', encoding='utf-8') as f:
+            with open(_cfg_path, 'r', encoding='utf-8') as f:
                 import yaml
                 config = yaml.safe_load(f)
             
@@ -13777,7 +14578,7 @@ def _apply_corrections_worker(plan_path_str: str):
         print("[FIXER] ERROR: Invalid plan format (expected a JSON list).")
         return
 
-    backup_root = (plan_path.parent / f"corrections-backup-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}").resolve()
+    backup_root = (plan_path.parent / f"corrections-backup-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}").resolve()
     backup_root.mkdir(parents=True, exist_ok=True)
 
     def _backup_original(path: Path, original: str) -> None:
@@ -13817,23 +14618,23 @@ def _apply_corrections_worker(plan_path_str: str):
                 (REPO_ROOT / "dist").resolve(),
             ]
             if not file_to_fix.is_relative_to(REPO_ROOT) or any(file_to_fix.is_relative_to(r) for r in forbidden_roots):
-                print(f"[FIXER] ERROR: Refusing to write outside allowed roots: {file_to_fix}")
+                logger.warning("[FIXER] Refusing to write outside allowed roots: %s", file_to_fix)
                 continue
 
             if file_to_fix.suffix.lower() not in {".html", ".htm"}:
-                print(f"[FIXER] ERROR: Refusing to edit non-HTML file: {file_to_fix}")
+                logger.warning("[FIXER] Refusing to edit non-HTML file: %s", file_to_fix)
                 continue
 
             issue_type = str(correction.get("issue_type") or "").strip()
             current_value = str(correction.get("current_value") or "")
             suggested_value = correction.get("suggested_value")
             if suggested_value is None:
-                print(f"[FIXER] ERROR: Missing suggested_value for {file_to_fix}")
+                logger.warning("[FIXER] Missing suggested_value for %s", file_to_fix)
                 continue
             suggested_value_str = str(suggested_value)
 
             if not file_to_fix.exists():
-                print(f"[FIXER] ERROR: File not found, cannot apply fix: {file_to_fix}")
+                logger.warning("[FIXER] File not found, cannot apply fix: %s", file_to_fix)
                 continue
 
             content = file_to_fix.read_text(encoding="utf-8")
@@ -13929,7 +14730,7 @@ def _apply_corrections_worker(plan_path_str: str):
             print("[FIXER]  - SUCCESS: Applied correction.")
 
         except Exception as e:
-            print(f"[FIXER] ERROR: Failed to apply correction for {correction.get('file_path')}: {e}")
+            logger.error("[FIXER] Failed to apply correction for %s: %s", correction.get("file_path"), e)
 
 
 @app.post("/jobs/{job_id}/apply-corrections")
@@ -13947,3 +14748,39 @@ def apply_corrections(
     _apply_corrections_worker(plan_path)
 
     return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Global error handlers
+# ---------------------------------------------------------------------------
+
+def _wants_json(request: Request) -> bool:
+    accept = request.headers.get("accept", "")
+    return "application/json" in accept and "text/html" not in accept
+
+
+def _error_ctx(request: Request, status_code: int, detail: str) -> dict:
+    return {
+        "request": request,
+        "app_name": _app_name(),
+        "year": datetime.now(timezone.utc).year,
+        "status_code": status_code,
+        "detail": detail,
+    }
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> HTMLResponse | JSONResponse:
+    if _wants_json(request):
+        return JSONResponse({"ok": False, "error": str(exc.detail)}, status_code=exc.status_code)
+    ctx = _error_ctx(request, exc.status_code, str(exc.detail or ""))
+    return templates.TemplateResponse("error.html", ctx, status_code=exc.status_code)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> HTMLResponse | JSONResponse:
+    logger.error("[500] Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+    if _wants_json(request):
+        return JSONResponse({"ok": False, "error": "internal_server_error"}, status_code=500)
+    ctx = _error_ctx(request, 500, "")
+    return templates.TemplateResponse("error.html", ctx, status_code=500)

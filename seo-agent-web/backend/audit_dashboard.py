@@ -33,6 +33,9 @@ NON_ISSUE_KEYS: set[str] = {
     "cwv_lcp_pages_to_fix",
     "cwv_tbt_pages_to_fix",
     "cwv_cls_pages_to_fix",
+    # Redundant aggregate: the _indexable / _not_indexable split variants are shown instead.
+    "page_has_only_one_dofollow_incoming_internal_link",
+    "page_has_only_one_dofollow_incoming_internal_link_links",
 }
 
 _RUNS_LOCALIZER: Callable[[Path], bool] | None = None
