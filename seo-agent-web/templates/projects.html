@@ -30,7 +30,7 @@
 {% block content %}
   <div class="page-header">
     <h1>Projets</h1>
-    <p class="muted">Suivez vos sites, lancez des crawls et surveillez l’état de santé.</p>
+    <p class="muted">Suivez vos sites, lancez des crawls et surveillez l'état de santé.</p>
   </div>
 
   {% if err %}
@@ -50,7 +50,7 @@
     {% for p in projects %}
       {% if p.timestamp %}{% set ns.crawled_count = ns.crawled_count + 1 %}{% endif %}
       {% set lc = (live_crawls.get(p.slug) if live_crawls else none) %}
-      {% if lc and lc.status in [‘queued’, ‘running’, ‘cancel_requested’] %}{% set ns.live_count = ns.live_count + 1 %}{% endif %}
+      {% if lc and lc.status in ['queued', 'running', 'cancel_requested'] %}{% set ns.live_count = ns.live_count + 1 %}{% endif %}
     {% endfor %}
     <div class="metric-band" style="margin-bottom:16px;">
       <div class="metric-tile">
@@ -83,7 +83,7 @@
       </div>
       <h2 style="margin:0 0 8px;letter-spacing:-.02em;">Bienvenue sur votre tableau de bord SEO</h2>
       <p class="muted" style="max-width:480px;margin:0 auto 28px;">
-        Commencez par ajouter votre premier site. L’outil crawlera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
+        Commencez par ajouter votre premier site. L'outil crawlera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
       </p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <button type="button" class="btn primary" id="add-project-open" style="padding:10px 24px;">
@@ -96,7 +96,7 @@
       <div style="margin-top:40px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap;text-align:left;">
         <div style="max-width:160px;">
           <div style="font-weight:600;margin-bottom:4px;">1. Ajouter un site</div>
-          <div class="muted small">Entrez l’URL de votre domaine pour créer un projet.</div>
+          <div class="muted small">Entrez l'URL de votre domaine pour créer un projet.</div>
         </div>
         <div style="max-width:160px;">
           <div style="font-weight:600;margin-bottom:4px;">2. Lancer un crawl</div>
@@ -233,7 +233,7 @@
                           </div>
                           {% if recent_job.status == 'failed' %}
                             <div class="muted small" style="margin-top:6px;">
-                              <a href="/projects/{{ p.slug }}?job={{ recent_job.id }}">Voir l’erreur</a>
+                              <a href="/projects/{{ p.slug }}?job={{ recent_job.id }}">Voir l'erreur</a>
                             </div>
                           {% endif %}
 	                    {% endif %}
