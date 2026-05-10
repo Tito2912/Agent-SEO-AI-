@@ -14,29 +14,29 @@
       <span class="muted small">{{ now }}</span>
     </div>
 
-    <div class="kv one">
-      <div class="kv-item">
-        <span class="muted">Web</span>
-        <strong>{% if web_ok %}OK{% else %}KO{% endif %}</strong>
+    <div style="display:grid; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
+        <span class="muted small">Application web</span>
+        <span class="badge {% if web_ok %}ok{% else %}error{% endif %}">{% if web_ok %}opérationnel{% else %}hors service{% endif %}</span>
       </div>
-      <div class="kv-item">
-        <span class="muted">Base de données</span>
-        <strong>{% if db_ok %}OK{% else %}KO{% endif %}</strong>
-        {% if db_error %}
-          <div class="muted small">{{ db_error }}</div>
-        {% endif %}
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
+        <div>
+          <span class="muted small">Base de données</span>
+          {% if db_error %}<div class="muted small mono" style="font-size:11px;">{{ db_error }}</div>{% endif %}
+        </div>
+        <span class="badge {% if db_ok %}ok{% else %}error{% endif %}">{% if db_ok %}opérationnel{% else %}hors service{% endif %}</span>
       </div>
-      <div class="kv-item">
-        <span class="muted">Emails (SMTP)</span>
-        <strong>{% if smtp_ok %}OK{% else %}Non configuré{% endif %}</strong>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
+        <span class="muted small">Emails (SMTP)</span>
+        <span class="badge {% if smtp_ok %}ok{% else %}notice{% endif %}">{% if smtp_ok %}opérationnel{% else %}non configuré{% endif %}</span>
       </div>
-      <div class="kv-item">
-        <span class="muted">Stockage artefacts (S3)</span>
-        <strong>{% if s3_ok %}OK{% else %}{{ s3_reason }}{% endif %}</strong>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
+        <span class="muted small">Stockage (S3)</span>
+        <span class="badge {% if s3_ok %}ok{% else %}notice{% endif %}">{% if s3_ok %}opérationnel{% else %}{{ s3_reason }}{% endif %}</span>
       </div>
-      <div class="kv-item">
-        <span class="muted">Paiement (Stripe)</span>
-        <strong>{% if stripe_ok %}OK{% else %}Non configuré{% endif %}</strong>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
+        <span class="muted small">Paiement (Stripe)</span>
+        <span class="badge {% if stripe_ok %}ok{% else %}notice{% endif %}">{% if stripe_ok %}opérationnel{% else %}non configuré{% endif %}</span>
       </div>
     </div>
   </section>
