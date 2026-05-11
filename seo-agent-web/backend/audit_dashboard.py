@@ -36,6 +36,8 @@ NON_ISSUE_KEYS: set[str] = {
     # Redundant aggregate: the _indexable / _not_indexable split variants are shown instead.
     "page_has_only_one_dofollow_incoming_internal_link",
     "page_has_only_one_dofollow_incoming_internal_link_links",
+    # Duplicate of css_not_minified + javascript_not_minified combined — suppressed to avoid triple-counting.
+    "unminified_javascript_and_css_files",
 }
 
 _RUNS_LOCALIZER: Callable[[Path], bool] | None = None
@@ -783,6 +785,10 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "Image cassée",
         "Images",
         "error",
+    ),
+    "missing_alt_text": IssueMeta(
+        "missing_alt_text", "Texte alternatif manquant", "Images", "warning",
+        description="Pages contenant au moins une image sans attribut alt.",
     ),
     # Assets (HTTPS links to HTTP)
     "https_page_links_to_http_image": IssueMeta(

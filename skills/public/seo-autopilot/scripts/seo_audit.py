@@ -3676,9 +3676,8 @@ def _score_resource_issues(
             return True
         return path.endswith(".min.css") or path.endswith(".min.js")
 
-    # Ahrefs-like threshold tuning (avoid flagging moderately sized images as "too large").
-    # Ahrefs-like: "Image file size too large" is very conservative (often only multi-MB images).
-    IMG_TOO_LARGE = 1024 * 1024
+    # CWV penalises images above 500 KB; 1 MB was too permissive.
+    IMG_TOO_LARGE = 500 * 1024
     JS_TOO_LARGE = 200 * 1024
     CSS_TOO_LARGE = 100 * 1024
     NOT_MINIFIED_TOO_LARGE = 1 * 1024
@@ -4109,7 +4108,7 @@ def _score_issues(
     redirect_302 = [p.url for p in pages if 302 in (p.redirect_statuses or [])]
     broken_redirect = [p.url for p in pages if _is_redirect(p) and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)]
     redirect_chain = [p.url for p in pages if len(p.redirect_statuses or []) > 1]
-    redirect_chain_too_long = [p.url for p in pages if len(p.redirect_statuses or []) > 3]
+    redirect_chain_too_long = [p.url for p in pages if len(p.redirect_statuses or []) > 2]
     http_to_https_redirect = [
         p.url
         for p in pages
@@ -4490,12 +4489,12 @@ def _score_issues(
         if redirect_inlinks > 0:
             redirected_page_no_incoming.append(final)
 
-    # --- Content thresholds (Ahrefs-like approximations) ---
-    TITLE_TOO_LONG = 70
+    # --- Content thresholds ---
+    TITLE_TOO_LONG = 60   # Google truncates around 60 chars on desktop
     TITLE_TOO_SHORT = 20
     DESC_TOO_LONG = 160
-    DESC_TOO_SHORT = 100
-    LOW_WORD_COUNT = 200
+    DESC_TOO_SHORT = 70   # 70-90 chars is valid; 100 was too strict
+    LOW_WORD_COUNT = 150  # Service/landing pages with 150-200 words are legitimate
     # Ahrefs "AI content detection" is proprietary; we approximate it with a deterministic heuristic.
     # Keep this conservative to avoid false positives.
     AI_HIGH_CONTENT_WORD_COUNT = 2000
@@ -4503,7 +4502,7 @@ def _score_issues(
     # "Slow page" in Ahrefs is a crawl-based signal (not CWV). We approximate with PSI overall category
     # (when field data exists) and a conservative Lighthouse LCP threshold.
     SLOW_PAGE_MS = 2000
-    SLOW_PAGE_LCP_MS = 3500
+    SLOW_PAGE_LCP_MS = 2500  # Google "Good" threshold; 3500 was the "Needs Improvement" boundary
     SLOW_PAGE_SPEED_INDEX_MS = 2500
     CWV_LCP_GOOD_MS = 2500
     CWV_LCP_POOR_MS = 4000
@@ -5357,6 +5356,9 @@ def _score_issues(
     issues["missing_meta_description"] = _issue_block("missing_meta_description", missing_description)
     issues["missing_h1_indexable"] = _issue_block("missing_h1_indexable", missing_h1_indexable)
     issues["missing_h1_not_indexable"] = _issue_block("missing_h1_not_indexable", missing_h1_not_indexable)
+    issues["missing_alt_text"] = _issue_block(
+        "missing_alt_text", [p.url for p in ok_html_pages if (p.images_missing_alt or 0) > 0]
+    )
     issues["multiple_h1"] = _issue_block("multiple_h1", multiple_h1)
     issues["missing_canonical"] = _issue_block("missing_canonical", missing_canonical)
     # Ahrefs-like: count = number of affected URLs, not number of duplicated values.
@@ -7458,13 +7460,13 @@ def main(argv: list[str]) -> int:
         "bing": bing_meta,
         "llms_txt": {"ok": bool(llms_ok), "reason": str(llms_err or "")},
         "thresholds": {
-            "title_too_long_chars": 70,
+            "title_too_long_chars": 60,
             "title_too_short_chars": 20,
             "meta_description_too_long_chars": 160,
-            "meta_description_too_short_chars": 100,
-            "low_word_count": 200,
-            "redirect_chain_too_long_hops": 3,
-            "image_file_size_too_large_bytes": 400 * 1024,
+            "meta_description_too_short_chars": 70,
+            "low_word_count": 150,
+            "redirect_chain_too_long_hops": 2,
+            "image_file_size_too_large_bytes": 500 * 1024,
             "javascript_file_size_too_large_bytes": 200 * 1024,
             "css_file_size_too_large_bytes": 100 * 1024,
             "cwv_lcp_poor_ms": 4000,
