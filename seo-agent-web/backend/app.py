@@ -778,26 +778,33 @@ def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
             if (not access_token) or expires_at <= (time.time() + 60):
                 client_id, client_secret = _bing_oauth_client()
                 if client_id and client_secret:
-                    token_data = _bing_oauth_refresh_token_data(
-                        refresh_token=refresh_token,
-                        client_id=client_id,
-                        client_secret=client_secret,
-                    )
-                    access_token = str(token_data.get("access_token") or "").strip()
-                    if access_token:
-                        expires_in = int(token_data.get("expires_in") or 3600)
-                        oauth_meta = {
-                            **oauth_meta,
-                            "auth_type": "oauth",
-                            "access_token": access_token,
-                            "expires_at": time.time() + max(60, expires_in),
-                            "scope": str(token_data.get("scope") or oauth_meta.get("scope") or "").strip(),
-                            "token_type": str(token_data.get("token_type") or oauth_meta.get("token_type") or "Bearer"),
-                            "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
-                        }
-                        oauth_row.meta = oauth_meta
-                        session.add(oauth_row)
-                        session.commit()
+                    try:
+                        token_data = _bing_oauth_refresh_token_data(
+                            refresh_token=refresh_token,
+                            client_id=client_id,
+                            client_secret=client_secret,
+                        )
+                        access_token = str(token_data.get("access_token") or "").strip()
+                        if access_token:
+                            expires_in = int(token_data.get("expires_in") or 3600)
+                            oauth_meta = {
+                                **oauth_meta,
+                                "auth_type": "oauth",
+                                "access_token": access_token,
+                                "expires_at": time.time() + max(60, expires_in),
+                                "scope": str(token_data.get("scope") or oauth_meta.get("scope") or "").strip(),
+                                "token_type": str(token_data.get("token_type") or oauth_meta.get("token_type") or "Bearer"),
+                                "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
+                            }
+                            oauth_row.meta = oauth_meta
+                            session.add(oauth_row)
+                            session.commit()
+                    except Exception as _bing_refresh_err:
+                        logger.warning(
+                            "[Bing] refresh token failed for user=%s: %s: %s",
+                            user_id, type(_bing_refresh_err).__name__, _bing_refresh_err,
+                        )
+                        access_token = ""
             if access_token:
                 return {
                     "mode": "oauth",
