@@ -359,12 +359,12 @@ pre {
 /* Assistant (premium) */
 .assistant-dock {
   position: fixed;
-  left: 18px;
+  right: 18px;
   bottom: 18px;
   z-index: 50;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 12px;
   max-width: calc(100vw - 36px);
 }
@@ -424,7 +424,7 @@ pre {
 
 .assistant-panel {
   position: absolute;
-  left: 0;
+  right: 0;
   bottom: calc(100% + 12px);
   width: 390px;
   max-width: calc(100vw - 36px);
