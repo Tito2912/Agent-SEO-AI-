@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Paramètres — Système{% endblock %}
+{% block title %}Paramètres - Système{% endblock %}
 
 {% macro setting_card(item, action="/settings/system") -%}
   <section class="card setting-card">
@@ -33,7 +33,7 @@
     <div class="kv one setting-kv">
       <div class="kv-item">
         <span class="muted">Actif</span>
-        <div class="mono">{{ item.masked or "—" }}</div>
+        <div class="mono">{{ item.masked or "-" }}</div>
       </div>
     </div>
 
@@ -156,7 +156,7 @@
     <div class="kv setting-kv">
       <div class="kv-item">
         <span class="muted">Source</span>
-        <div class="mono">{{ (secret_storage.source if secret_storage else "") or "—" }}</div>
+        <div class="mono">{{ (secret_storage.source if secret_storage else "") or "-" }}</div>
       </div>
       <div class="kv-item">
         <span class="muted">Clés chargées</span>
@@ -216,7 +216,7 @@
           <section class="card setting-card span-2">
             <div class="setting-head">
               <div>
-                <h2 class="setting-title">Google Search Console — service account</h2>
+                <h2 class="setting-title">Google Search Console - service account</h2>
                 <div class="muted small">Utilisé uniquement en fallback technique.</div>
               </div>
               <div class="setting-actions">
@@ -231,15 +231,15 @@
             <div class="kv setting-kv">
               <div class="kv-item">
                 <span class="muted">Credentials</span>
-                <div class="mono">{{ (cred.path if cred else "") or "—" }}</div>
+                <div class="mono">{{ (cred.path if cred else "") or "-" }}</div>
               </div>
               <div class="kv-item">
                 <span class="muted">Service account</span>
-                <div class="mono">{{ (cred.client_email if cred else "") or "—" }}</div>
+                <div class="mono">{{ (cred.client_email if cred else "") or "-" }}</div>
               </div>
               <div class="kv-item">
                 <span class="muted">Projet</span>
-                <div class="mono">{{ (cred.project_id if cred else "") or "—" }}</div>
+                <div class="mono">{{ (cred.project_id if cred else "") or "-" }}</div>
               </div>
             </div>
 
@@ -262,7 +262,7 @@
                   <label>
                     Détection automatique
                     <select id="gsc-cred-select">
-                      <option value="">— choisir —</option>
+                      <option value="">- choisir -</option>
                       {% for path in gsc.candidates %}
                         <option value="{{ path }}">{{ path }}</option>
                       {% endfor %}

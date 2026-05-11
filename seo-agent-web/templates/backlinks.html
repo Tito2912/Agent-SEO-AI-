@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Backlinks — {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}Backlinks - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
   <a href="/">Projets</a>
@@ -141,7 +141,7 @@
               {% if has %}
                 <span class="badge ok">ok</span>
               {% else %}
-                <span class="badge notice">—</span>
+                <span class="badge notice">-</span>
               {% endif %}
             </div>
           </div>

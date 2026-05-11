@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Projets — SEO Audit{% endblock %}
+{% block title %}Projets - SEO Audit{% endblock %}
 
 {% block head_extra %}
   {% if jobs %}
@@ -176,7 +176,7 @@
 	                    <div>{{ p.timestamp_label }}</div>
 	                    <div class="muted small">{{ p.timestamp }}</div>
 	                  {% else %}
-	                    <div class="muted">—</div>
+	                    <div class="muted">-</div>
                       {% if recent_job and recent_job.status == 'failed' %}
 	                    <div class="muted small">Dernière tentative en échec</div>
                       {% elif recent_job and recent_job.status == 'done' %}
@@ -205,7 +205,7 @@
 	                      <div class="row-crawl" data-job-id="{{ live.id }}" data-live="1" data-project-slug="{{ p.slug }}">
 	                        <div class="row-crawl-head">
 	                          <span class="pill {{ live.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live.status, live.status) }}</span>
-	                          <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}—{% endif %}</span>
+	                          <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}-{% endif %}</span>
 	                        </div>
 	                        <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
 	                          <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
@@ -225,7 +225,7 @@
                           <div class="row-crawl" data-job-id="{{ recent_job.id }}" data-live="0" data-project-slug="{{ p.slug }}">
                             <div class="row-crawl-head">
                               <span class="pill {{ recent_job.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(recent_job.status, recent_job.status) }}</span>
-                              <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}—{% endif %}</span>
+                              <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}-{% endif %}</span>
                             </div>
                             <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
                               <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
@@ -247,10 +247,10 @@
 	                      <span class="mono">{{ p.health_score }}%</span>
 	                    </div>
 	                  {% else %}
-	                    <span class="muted">—</span>
+	                    <span class="muted">-</span>
 	                  {% endif %}
 	                </td>
-	                <td class="num mono">{% if p.timestamp %}{{ p.urls_crawled }}{% else %}—{% endif %}</td>
+	                <td class="num mono">{% if p.timestamp %}{{ p.urls_crawled }}{% else %}-{% endif %}</td>
 	                <td class="num mono">
 	                  {% if p.timestamp %}
 	                    {% if p.urls_with_errors > 0 %}
@@ -259,7 +259,7 @@
 	                      <span class="badge ok">0</span>
 	                    {% endif %}
 	                  {% else %}
-	                    <span class="muted">—</span>
+	                    <span class="muted">-</span>
 	                  {% endif %}
 	                </td>
 	                <td>
@@ -270,7 +270,7 @@
 	                      <span class="dot notice"></span><span class="mono">{{ p.issues_distribution.notice or 0 }}</span>
 	                    </div>
 	                  {% else %}
-	                    <span class="muted">—</span>
+	                    <span class="muted">-</span>
 	                  {% endif %}
 		                </td>
 		                <td class="actions">
@@ -343,7 +343,7 @@
 		            el.innerHTML = `
 		              <div class="row-crawl-head">
 		                <span class="pill queued" data-role="status">en attente</span>
-		                <span class="mono small" data-role="progress-count">—</span>
+		                <span class="mono small" data-role="progress-count">-</span>
 		              </div>
 		              <div class="progress slim crawl" data-role="progress-bar" style="display:none;">
 		                <div class="progress-fill" data-role="progress-fill" style="--p: 0;"></div>
@@ -748,7 +748,7 @@
 	            if (count) count.textContent = `${cur}/${tot}`;
 	          } else {
 	            bar.style.display = "none";
-	            if (count) count.textContent = "—";
+	            if (count) count.textContent = "-";
 	          }
 	        }
 

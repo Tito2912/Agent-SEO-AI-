@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Opportunités Backlinks — {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}Opportunités Backlinks - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -212,7 +212,7 @@
             '<a href="' + escHtml(item.url) + '" target="_blank" rel="noreferrer" style="font-weight:600;word-break:break-word;max-width:75%;">' + escHtml(item.title) + '</a>' +
             '<span class="badge ' + scoreClass + '">Score ' + item.opportunity_score + '</span>' +
             '</div>' +
-            '<p class="opp-snippet">' + escHtml(item.source) + (item.snippet ? ' — ' + escHtml(item.snippet.slice(0, 200)) : '') + '</p>' +
+            '<p class="opp-snippet">' + escHtml(item.source) + (item.snippet ? ' - ' + escHtml(item.snippet.slice(0, 200)) : '') + '</p>' +
             '<input class="input opp-target-input" type="text" id="target-' + i + '" placeholder="URL de ton article à promouvoir (ex: https://monsite.com/article)" />' +
             '<div class="opp-actions">' +
             '<button class="btn" type="button" onclick="window._genReply(' + i + ', ' + JSON.stringify(item) + ')">Générer réponse IA</button>' +

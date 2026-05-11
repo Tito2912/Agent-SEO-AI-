@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Exécutions — SEO Audit{% endblock %}
+{% block title %}Exécutions - SEO Audit{% endblock %}
 
 {% block head_extra %}
   {% if jobs %}
@@ -116,10 +116,10 @@
                         {% if is_finalizing %}{{ cur }}/{{ tot }} · finalisation…{% else %}{{ cur }}/{{ tot }} · {{ pct_display }}%{% endif %}
                       {% endif %}
                       {% if progress.site %}
-                        — {{ progress.site }}
+                        - {{ progress.site }}
                       {% endif %}
                     {% else %}
-                      —
+                      -
                     {% endif %}
                   </div>
                   <div
@@ -210,11 +210,11 @@
               const base = progress.type === "crawl" ? `${cur}/${tot} pages` : `${cur}/${tot}`;
               const suffix = isFinalizing ? " · finalisation…" : ` · ${pct}%`;
               const label = `${base}${suffix}`;
-              const site = progress.site ? ` — ${progress.site}` : "";
+              const site = progress.site ? ` - ${progress.site}` : "";
               progressText.textContent = `${label}${site}`;
               progressBar.style.display = "";
             } else if (progressText && progressBar) {
-              progressText.textContent = "—";
+              progressText.textContent = "-";
               progressBar.style.display = "none";
             }
 

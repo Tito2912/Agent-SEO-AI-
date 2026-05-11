@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Paramètres — Comptes & connexions{% endblock %}
+{% block title %}Paramètres - Comptes & connexions{% endblock %}
 
 {% macro help_dialog(item) -%}
   {% if item.help %}
@@ -69,7 +69,7 @@
       </div>
       <div class="kv-item">
         <span class="muted">Actif</span>
-        <div class="mono">{{ item.masked or "—" }}</div>
+        <div class="mono">{{ item.masked or "-" }}</div>
       </div>
     </div>
 
@@ -369,7 +369,7 @@
           </div>
           <div class="kv-item">
             <span class="muted">Actif</span>
-            <div class="mono">{{ bing_oauth.masked or "—" }}</div>
+            <div class="mono">{{ bing_oauth.masked or "-" }}</div>
           </div>
           <div class="kv-item">
             <span class="muted">Mode</span>
@@ -381,7 +381,7 @@
               {% elif bing_oauth.source == "system" %}
                 fallback plateforme
               {% else %}
-                —
+                -
               {% endif %}
             </div>
           </div>
@@ -527,11 +527,11 @@
           </div>
           <div class="kv-item">
             <span class="muted">Actif</span>
-            <div class="mono">{{ github_oauth.masked or "—" }}</div>
+            <div class="mono">{{ github_oauth.masked or "-" }}</div>
           </div>
           <div class="kv-item">
             <span class="muted">Compte</span>
-            <div class="mono">{{ github_oauth.account_label or "—" }}</div>
+            <div class="mono">{{ github_oauth.account_label or "-" }}</div>
           </div>
         </div>
 
@@ -633,11 +633,11 @@
           </div>
           <div class="kv-item">
             <span class="muted">Actif</span>
-            <div class="mono">{{ netlify_oauth.masked or "—" }}</div>
+            <div class="mono">{{ netlify_oauth.masked or "-" }}</div>
           </div>
           <div class="kv-item">
             <span class="muted">Compte</span>
-            <div class="mono">{{ netlify_oauth.account_label or "—" }}</div>
+            <div class="mono">{{ netlify_oauth.account_label or "-" }}</div>
           </div>
         </div>
         {% if netlify_oauth.is_hardened %}

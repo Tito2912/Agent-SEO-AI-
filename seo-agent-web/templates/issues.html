@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Anomalies — {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}Anomalies - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
   <a href="/">Projets</a>
@@ -192,7 +192,7 @@
                         <span class="muted">0</span>
                       {% endif %}
                     {% else %}
-                      <span class="muted">—</span>
+                      <span class="muted">-</span>
                     {% endif %}
                   </td>
                 </tr>

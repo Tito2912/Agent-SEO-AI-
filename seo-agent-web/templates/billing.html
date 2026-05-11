@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Abonnement — SEO Audit{% endblock %}
+{% block title %}Abonnement - SEO Audit{% endblock %}
 
 {% block crumbs %}
   <a href="/">Projets</a>
@@ -236,11 +236,11 @@
             {% set status_badges = {'paid': 'ok', 'open': 'notice', 'void': 'muted', 'draft': 'muted', 'uncollectible': 'error'} %}
             <tr>
               <td class="mono muted small">{{ inv.number }}</td>
-              <td>{% if inv.created_at %}{{ inv.created_at.strftime('%d/%m/%Y') }}{% else %}—{% endif %}</td>
+              <td>{% if inv.created_at %}{{ inv.created_at.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</td>
               <td>
                 {% if inv.amount is not none %}
                   {{ "%.2f" | format(inv.amount / 100) }} {{ inv.currency }}
-                {% else %}—{% endif %}
+                {% else %}-{% endif %}
               </td>
               <td>
                 <span class="badge {{ status_badges.get(inv.status, 'muted') }}">

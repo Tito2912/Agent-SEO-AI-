@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Exécution — SEO Audit{% endblock %}
+{% block title %}Exécution - SEO Audit{% endblock %}
 
 {% block head_extra %}
   <meta http-equiv="cache-control" content="no-store" />
@@ -82,7 +82,7 @@
               </span>
               <span class="muted small" id="progress-site">
                 {% if progress and progress.type == 'autopilot' and progress.site %}
-                  — {{ progress.site }}
+                  - {{ progress.site }}
                 {% endif %}
               </span>
               <span class="muted small mono" id="progress-pct">{{ pct|round(0) }}%</span>
@@ -268,18 +268,18 @@
                 if (pBar) pBar.classList.add("crawl");
                 pKind.textContent = "Crawl:";
                 pCount.textContent = `${cur}/${tot} pages`;
-                pSite.textContent = isFinalizing ? "— finalisation…" : "";
+                pSite.textContent = isFinalizing ? "- finalisation…" : "";
               } else if (progress.type === "autopilot") {
                 if (pBar) pBar.classList.remove("crawl");
                 pKind.textContent = "Sites:";
                 pCount.textContent = `${cur}/${tot}`;
-                const site = progress.site ? `— ${progress.site}` : "";
-                pSite.textContent = isFinalizing ? `${site}${site ? " · " : "— "}finalisation…` : site;
+                const site = progress.site ? `- ${progress.site}` : "";
+                pSite.textContent = isFinalizing ? `${site}${site ? " · " : "- "}finalisation…` : site;
               } else {
                 if (pBar) pBar.classList.remove("crawl");
                 pKind.textContent = "Progress:";
                 pCount.textContent = `${cur}/${tot}`;
-                pSite.textContent = isFinalizing ? "— finalisation…" : "";
+                pSite.textContent = isFinalizing ? "- finalisation…" : "";
               }
 
               pPct.textContent = `${pct}%`;

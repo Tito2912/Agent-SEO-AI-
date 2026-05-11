@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}{{ project.site_name if project else slug }} — Vue d'ensemble{% endblock %}
+{% block title %}{{ project.site_name if project else slug }} - Vue d'ensemble{% endblock %}
 
 {% block head_extra %}
   <script src="/static/project_overview.js" defer></script>
@@ -124,7 +124,7 @@
         <label>
           Comparer
           <select name="compare">
-            <option value="">—</option>
+            <option value="">-</option>
             {% for ts in project.crawls %}
               <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>
                 {{ ts }}
@@ -677,22 +677,22 @@
                   <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">Clics</span>
-                    <span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "—" }}</span>
+                    <span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "-" }}</span>
                   </button>
                   <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">Impressions</span>
-                    <span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "—" }}</span>
+                    <span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "-" }}</span>
                   </button>
                   <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">CTR moyen</span>
-                    <span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}—{% endif %}</span>
+                    <span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span>
                   </button>
                   <button type="button" class="ts-metric" data-metric="position" aria-pressed="false">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">Position moyenne</span>
-                    <span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}—{% endif %}</span>
+                    <span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}-{% endif %}</span>
                   </button>
                 </div>
                 <div class="ts-chart">
@@ -822,17 +822,17 @@
                   <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">Clics</span>
-                    <span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "—" }}</span>
+                    <span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "-" }}</span>
                   </button>
                   <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">Impressions</span>
-                    <span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "—" }}</span>
+                    <span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "-" }}</span>
                   </button>
                   <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
                     <span class="ts-metric-check">✓</span>
                     <span class="ts-metric-label">CTR moyen</span>
-                    <span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}—{% endif %}</span>
+                    <span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span>
                   </button>
                 </div>
                 <div class="ts-chart">
@@ -922,7 +922,7 @@
 	                          <span class="muted">0</span>
 	                        {% endif %}
 	                      {% else %}
-	                        <span class="muted">—</span>
+	                        <span class="muted">-</span>
 	                      {% endif %}
 	                    </td>
 	                  </tr>
