@@ -362,7 +362,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "certificate_name_mismatch",
         "Certificat TLS non conforme au nom de domaine",
         "Security",
-        "error",
+        "warning",
         description="Le certificat TLS ne correspond pas au nom de domaine.",
     ),
     "old_tls_version": IssueMeta(
@@ -526,12 +526,12 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "Links",
         "warning",
     ),
-    "page_has_no_outgoing_links": IssueMeta("page_has_no_outgoing_links", "Page sans liens sortants", "Links", "error"),
+    "page_has_no_outgoing_links": IssueMeta("page_has_no_outgoing_links", "Page sans liens sortants", "Links", "warning"),
     "page_has_no_outgoing_links_indexable": IssueMeta(
-        "page_has_no_outgoing_links_indexable", "Page sans liens sortants (indexable)", "Links", "error"
+        "page_has_no_outgoing_links_indexable", "Page sans liens sortants (indexable)", "Links", "warning"
     ),
     "page_has_no_outgoing_links_not_indexable": IssueMeta(
-        "page_has_no_outgoing_links_not_indexable", "Page sans liens sortants (non indexable)", "Links", "error"
+        "page_has_no_outgoing_links_not_indexable", "Page sans liens sortants (non indexable)", "Links", "notice"
     ),
     "page_has_links_to_redirect": IssueMeta(
         "page_has_links_to_redirect", "Page → lien vers redirection", "Links", "warning"
@@ -731,11 +731,11 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "more_than_one_page_for_same_language_in_hreflang",
         "Plusieurs pages pour une même langue dans hreflang",
         "Localization",
-        "error",
+        "warning",
     ),
     "html_lang_attribute_invalid": IssueMeta("html_lang_attribute_invalid", "Attribut HTML lang invalide", "Localization", "notice"),
     "missing_reciprocal_hreflang": IssueMeta(
-        "missing_reciprocal_hreflang", "Hreflang réciproque manquant", "Localization", "error"
+        "missing_reciprocal_hreflang", "Hreflang réciproque manquant", "Localization", "warning"
     ),
     "hreflang_defined_but_html_lang_missing": IssueMeta(
         "hreflang_defined_but_html_lang_missing", "Hreflang défini mais HTML lang manquant", "Localization", "notice"
