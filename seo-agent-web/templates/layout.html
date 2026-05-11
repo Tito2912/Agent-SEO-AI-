@@ -114,52 +114,6 @@
           {% endif %}
         </nav>
 
-        <!-- Assistant IA -->
-        <div class="assistant-dock" id="assistant-dock">
-          <button type="button" class="assistant-launcher" id="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel" title="Assistant">
-            <span class="assistant-launcher-icon" aria-hidden="true">
-              <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
-            </span>
-            <span class="assistant-launcher-text">
-              <span class="assistant-launcher-title">Assistant IA</span>
-              <span class="assistant-launcher-sub">Pose une question</span>
-            </span>
-            <span class="assistant-fab-dot" id="assistant-dot" aria-hidden="true"></span>
-          </button>
-
-          <section class="assistant-panel" id="assistant-panel" hidden aria-label="Chat assistant">
-            <header class="assistant-head">
-              <div class="assistant-head-left">
-                <span class="assistant-head-icon" aria-hidden="true">
-                  <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
-                </span>
-                <div class="assistant-head-text">
-                  <div class="assistant-title">Assistant IA</div>
-                  <div class="assistant-meta" id="assistant-meta">…</div>
-                </div>
-              </div>
-              <div class="assistant-head-actions">
-                <button type="button" class="assistant-clear" id="assistant-clear" aria-label="Effacer la conversation" title="Effacer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6m-8 4h10m-9 0 .7 14h6.6L16 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <button type="button" class="assistant-close" id="assistant-close" aria-label="Fermer">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-                </button>
-              </div>
-            </header>
-            <div class="assistant-hero" aria-hidden="true">
-              <img class="assistant-hero-img" src="/static/assistant-bot.svg" alt="" />
-            </div>
-            <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
-            <form class="assistant-form" id="assistant-form">
-              <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une question…" maxlength="2000" />
-              <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
-              </button>
-            </form>
-            <div class="assistant-foot muted small" id="assistant-foot"></div>
-          </section>
-        </div>
 
         <!-- User section -->
         {% if request.state.user %}
@@ -180,6 +134,52 @@
         {% endif %}
 
       </aside>
+
+      <!-- Assistant IA (outside sidebar so position:fixed works correctly) -->
+      <div class="assistant-dock" id="assistant-dock">
+        <button type="button" class="assistant-launcher" id="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel" title="Assistant">
+          <span class="assistant-launcher-icon" aria-hidden="true">
+            <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
+          </span>
+          <span class="assistant-launcher-text">
+            <span class="assistant-launcher-title">Assistant IA</span>
+            <span class="assistant-launcher-sub">Pose une question</span>
+          </span>
+          <span class="assistant-fab-dot" id="assistant-dot" aria-hidden="true"></span>
+        </button>
+        <section class="assistant-panel" id="assistant-panel" hidden aria-label="Chat assistant">
+          <header class="assistant-head">
+            <div class="assistant-head-left">
+              <span class="assistant-head-icon" aria-hidden="true">
+                <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" />
+              </span>
+              <div class="assistant-head-text">
+                <div class="assistant-title">Assistant IA</div>
+                <div class="assistant-meta" id="assistant-meta">-</div>
+              </div>
+            </div>
+            <div class="assistant-head-actions">
+              <button type="button" class="assistant-clear" id="assistant-clear" aria-label="Effacer la conversation" title="Effacer">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6m-8 4h10m-9 0 .7 14h6.6L16 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button type="button" class="assistant-close" id="assistant-close" aria-label="Fermer">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </header>
+          <div class="assistant-hero" aria-hidden="true">
+            <img class="assistant-hero-img" src="/static/assistant-bot.svg" alt="" />
+          </div>
+          <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
+          <form class="assistant-form" id="assistant-form">
+            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une question…" maxlength="2000" />
+            <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
+            </button>
+          </form>
+          <div class="assistant-foot muted small" id="assistant-foot"></div>
+        </section>
+      </div>
 
       <!-- ── MAIN ───────────────────────────────── -->
       <main class="main">
