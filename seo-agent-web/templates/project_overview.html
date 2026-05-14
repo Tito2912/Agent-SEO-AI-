@@ -236,111 +236,6 @@
   {% endif %}
 
   {# ══════════════════════════════════════
-     SPLIT — actions (left) + history (right)
-  ══════════════════════════════════════ #}
-  <div class="ov-body">
-    <div class="ov-body-main">
-      <div class="ov-section-hd">
-        <span>Actions prioritaires</span>
-        {% if fix_pack_unlocked %}
-          <a class="muted small" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">Fix Pack ZIP →</a>
-        {% else %}
-          <a class="muted small" href="/billing">Débloquer Fix Pack →</a>
-        {% endif %}
-      </div>
-
-      {% if not top_actions %}
-        <p class="muted small">Aucune action prioritaire détectée pour ce crawl.</p>
-      {% else %}
-        <div class="action-list">
-          {% for a in top_actions %}
-            {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
-            {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
-            {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
-            <div class="action-item">
-              <div class="action-num">{{ loop.index }}</div>
-              <div class="action-body">
-                <div class="action-title">
-                  <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
-                  <span class="sev {{ a.severity }}" style="margin-left:10px;">{{ sev_label }}</span>
-                </div>
-                <div class="action-meta">
-                  <span class="mono">{{ a.count }}</span> occurrences
-                  &nbsp;·&nbsp; Priorité <strong>{{ priority_label }}</strong>
-                  &nbsp;·&nbsp; Effort {{ effort_label }}
-                </div>
-                {% if a.why %}
-                  <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
-                    {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(180, True, '…') }}{% endif %}
-                  </p>
-                {% endif %}
-                {% if fix_pack_unlocked and a.fix %}
-                  <ul class="examples" style="margin-top:8px;">
-                    {% for step in a.fix[:2] %}
-                      <li>{{ step }}</li>
-                    {% endfor %}
-                  </ul>
-                {% endif %}
-                <div style="margin-top:10px;">
-                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir le détail →</a>
-                </div>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    </div>
-
-    <div class="ov-body-side">
-      <div class="ov-section-hd"><span>Évolution du score</span></div>
-      {% if not project.history %}
-        <p class="muted small">Aucune donnée.</p>
-      {% else %}
-        <div class="history" style="gap:6px;">
-          {% for h in project.history %}
-            <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
-              <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
-              <div class="history-bar-label mono">{{ h.health_score }}</div>
-              <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
-            </a>
-          {% endfor %}
-        </div>
-      {% endif %}
-
-      <div style="margin-top:28px;">
-        <div class="ov-section-hd"><span>Répartition des URLs</span></div>
-        {% set tot_urls = sum.urls_crawled_distribution %}
-        {% set int_urls = sum.pages_crawled %}
-        {% set res_urls = sum.resources_crawled %}
-        {% set err_urls = sum.urls_with_errors %}
-        {% set ok_urls = sum.urls_without_errors %}
-        <div class="ov-breakdown">
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Internes</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--notice);width:{{ ((int_urls / tot_urls * 100)|round(0)|int if tot_urls else 100) }}%;"></div></div>
-            <span class="ov-bk-val">{{ int_urls }}</span>
-          </div>
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Ressources</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:rgba(255,255,255,.3);width:{{ ((res_urls / tot_urls * 100)|round(0)|int if tot_urls else 0) }}%;"></div></div>
-            <span class="ov-bk-val">{{ res_urls }}</span>
-          </div>
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Sans erreurs</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--ok);width:{{ ((ok_urls / int_urls * 100)|round(0)|int if int_urls else 100) }}%;"></div></div>
-            <span class="ov-bk-val">{{ ok_urls }}</span>
-          </div>
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Avec erreurs</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--err);width:{{ ((err_urls / int_urls * 100)|round(0)|int if int_urls else 0) }}%;"></div></div>
-            <span class="ov-bk-val" style="color:var(--err);">{{ err_urls }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {# ══════════════════════════════════════
      MAIN GRID
   ══════════════════════════════════════ #}
   <div class="grid">
@@ -414,35 +309,56 @@
       <p class="muted small" style="margin-top:14px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
     </section>
 
-    {# URLs discovered donut #}
+    {# Score history + URL breakdown #}
     <section class="card">
       <div class="card-title-row">
-        <h2>URLs découvertes</h2>
-        <span class="muted small mono">{{ sum.urls_discovered }}</span>
+        <h2>Évolution du score</h2>
+        <span class="muted small">derniers crawls</span>
       </div>
-      {% set found_total = sum.urls_discovered %}
-      {% set crawled_p = sum.pages_crawled %}
-      {% set uncrawled = sum.urls_uncrawled %}
-      {% set p_crawled = ( (crawled_p / found_total) * 100 ) if found_total else 100 %}
-      <div class="chart-row">
-        <div class="donut-svg-wrap">
-          <svg class="donut-svg" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="38" class="donut-track"/>
-            <circle cx="50" cy="50" r="38" class="donut-ring"
-              style="stroke:var(--ok); stroke-dasharray:{{ (p_crawled / 100 * 238.8)|round(1) }} 238.8;"
-              transform="rotate(-90 50 50)"/>
-          </svg>
-          <div class="donut-center">
-            <div class="donut-value mono">{{ crawled_p }}</div>
-            <div class="muted small">Explorées</div>
+      {% if not project.history %}
+        <p class="muted small">Aucune donnée.</p>
+      {% else %}
+        <div class="history" style="gap:5px;">
+          {% for h in project.history %}
+            <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
+              <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
+              <div class="history-bar-label mono">{{ h.health_score }}</div>
+              <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div style="margin-top:20px;">
+        <div class="ov-section-hd" style="margin-bottom:12px;"><span>Répartition des URLs</span></div>
+        {% set tot_urls = sum.urls_crawled_distribution %}
+        {% set int_urls = sum.pages_crawled %}
+        {% set res_urls = sum.resources_crawled %}
+        {% set err_urls = sum.urls_with_errors %}
+        {% set ok_urls = sum.urls_without_errors %}
+        <div class="ov-breakdown">
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Internes</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--notice);width:{{ ((int_urls / tot_urls * 100)|round(0)|int if tot_urls else 100) }}%;"></div></div>
+            <span class="ov-bk-val">{{ int_urls }}</span>
+          </div>
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Ressources</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:rgba(255,255,255,.3);width:{{ ((res_urls / tot_urls * 100)|round(0)|int if tot_urls else 0) }}%;"></div></div>
+            <span class="ov-bk-val">{{ res_urls }}</span>
+          </div>
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Sans erreurs</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--ok);width:{{ ((ok_urls / int_urls * 100)|round(0)|int if int_urls else 100) }}%;"></div></div>
+            <span class="ov-bk-val">{{ ok_urls }}</span>
+          </div>
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Avec erreurs</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--err);width:{{ ((err_urls / int_urls * 100)|round(0)|int if int_urls else 0) }}%;"></div></div>
+            <span class="ov-bk-val" style="color:var(--err);">{{ err_urls }}</span>
           </div>
         </div>
-        <div class="legend">
-          <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Explorées <span class="mono">{{ crawled_p }}</span></div>
-          <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Non explorées <span class="mono">{{ uncrawled }}</span></div>
-        </div>
       </div>
-      <p class="muted small">URLs trouvées: <span class="mono">{{ found_total }}</span></p>
     </section>
 
     {# Core Web Vitals — full width #}
@@ -695,6 +611,61 @@
     </div>
 
   </div>{# /grid #}
+
+  {# ══════════════════════════════════════
+     ACTIONS PRIORITAIRES (bottom)
+  ══════════════════════════════════════ #}
+  <section class="card" style="margin-top:8px;">
+    <div class="card-title-row">
+      <h2>Top 3 actions prioritaires</h2>
+      {% if fix_pack_unlocked %}
+        <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
+      {% else %}
+        <a class="muted small" href="/billing">Débloquer Fix Pack →</a>
+      {% endif %}
+    </div>
+
+    {% if not top_actions %}
+      <p class="muted">Aucune action prioritaire détectée pour ce crawl.</p>
+    {% else %}
+      <div class="action-list">
+        {% for a in top_actions %}
+          {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
+          {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
+          {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
+          <div class="action-item">
+            <div class="action-num">{{ loop.index }}</div>
+            <div class="action-body">
+              <div class="action-title">
+                <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
+                <span class="sev {{ a.severity }}" style="margin-left:10px;">{{ sev_label }}</span>
+              </div>
+              <div class="action-meta">
+                <span class="mono">{{ a.count }}</span> occurrences
+                &nbsp;·&nbsp; Priorité <strong>{{ priority_label }}</strong>
+                &nbsp;·&nbsp; Effort {{ effort_label }}
+              </div>
+              {% if a.why %}
+                <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
+                  {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}
+                </p>
+              {% endif %}
+              {% if fix_pack_unlocked and a.fix %}
+                <ul class="examples" style="margin-top:8px;">
+                  {% for step in a.fix[:3] %}
+                    <li>{{ step }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+              <div style="margin-top:10px;">
+                <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir le détail →</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
 
   {% endif %}{# /has current #}
 
