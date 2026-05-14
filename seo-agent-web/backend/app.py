@@ -243,6 +243,21 @@ def _ensure_runs_artifact_local(path: Path) -> bool:
     return target.exists()
 
 
+def _ensure_runs_file_local(path: Path) -> bool:
+    try:
+        target = path.resolve()
+    except Exception:
+        return False
+    if target.exists():
+        return True
+    root = DEFAULT_RUNS_DIR.resolve()
+    try:
+        target.relative_to(root)
+    except Exception:
+        return False
+    return bool(object_store.restore_runs_file(root, target))
+
+
 def _sync_runs_path_to_object_store(path: Path) -> None:
     try:
         object_store.upload_runs_path(DEFAULT_RUNS_DIR, path.resolve())
@@ -2272,7 +2287,7 @@ def _fix_suggestions_path(runs_dir: Path, slug: str, ts: str) -> Path:
 def _load_fix_suggestions_meta(runs_dir: Path, slug: str, ts: str) -> dict[str, Any] | None:
     path = _fix_suggestions_path(runs_dir, slug, ts)
     if not path.exists():
-        _ensure_runs_artifact_local(path)
+        _ensure_runs_file_local(path)
     if not path.exists() or not path.is_file():
         return None
     try:
@@ -2286,7 +2301,7 @@ def _load_fix_suggestions_meta(runs_dir: Path, slug: str, ts: str) -> dict[str, 
 def _load_fix_suggestion_for_issue(runs_dir: Path, slug: str, ts: str, issue_key: str) -> dict[str, Any] | None:
     path = _fix_suggestions_path(runs_dir, slug, ts)
     if not path.exists():
-        _ensure_runs_artifact_local(path)
+        _ensure_runs_file_local(path)
     if not path.exists() or not path.is_file():
         return None
     try:
@@ -9135,7 +9150,7 @@ def auth_logout(request: Request) -> RedirectResponse:
     return resp
 
 
-@app.get("/pricing", response_class=HTMLResponse)
+@app.api_route("/pricing", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def pricing_public(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "pricing_public.html",
@@ -9151,7 +9166,7 @@ def pricing_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/terms", response_class=HTMLResponse)
+@app.api_route("/terms", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def terms_public(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "terms_public.html",
@@ -9167,7 +9182,7 @@ def terms_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/privacy", response_class=HTMLResponse)
+@app.api_route("/privacy", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def privacy_public(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "privacy_public.html",
@@ -9183,7 +9198,7 @@ def privacy_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/support", response_class=HTMLResponse)
+@app.api_route("/support", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def support_public(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "support_public.html",
@@ -9197,7 +9212,7 @@ def support_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/status", response_class=HTMLResponse)
+@app.api_route("/status", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def status_public(request: Request) -> HTMLResponse:
     db_ok = False
     db_error = ""
@@ -9240,7 +9255,7 @@ def status_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/ressources-seo", response_class=HTMLResponse)
+@app.api_route("/ressources-seo", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resources_public(request: Request) -> HTMLResponse:
     resources = seo_resources.all_resources()
     return templates.TemplateResponse(
@@ -9257,7 +9272,7 @@ def seo_resources_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/ressources-seo/{slug}", response_class=HTMLResponse)
+@app.api_route("/ressources-seo/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
     resource = seo_resources.get_resource(slug)
     if not resource:
@@ -9311,7 +9326,7 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
     )
 
 
-@app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
+@app.api_route("/robots.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse, include_in_schema=False)
 def robots_txt(request: Request) -> PlainTextResponse:
     base = _public_base_url(request)
     sitemap_line = f"\nSitemap: {base}/sitemap.xml"
@@ -9336,7 +9351,7 @@ Disallow: /oauth/{sitemap_line}
     return PlainTextResponse(content.strip(), media_type="text/plain; charset=utf-8")
 
 
-@app.get("/sitemap.xml", include_in_schema=False)
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
 def sitemap_xml(request: Request) -> PlainTextResponse:
     base = _public_base_url(request)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -9593,7 +9608,7 @@ async def stripe_webhook(request: Request) -> JSONResponse:
     return JSONResponse({"ok": True})
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def projects(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
     runs_dir = _runs_dir_for_request(request)
@@ -12628,7 +12643,7 @@ def project_issue_detail(
     ts = str(data.get("timestamp") or "").strip()
     fix_path_obj = _fix_suggestions_path(runs_dir, slug, ts) if ts else None
     if fix_path_obj and not fix_path_obj.exists():
-        _ensure_runs_artifact_local(fix_path_obj)
+        _ensure_runs_file_local(fix_path_obj)
     fix_path = str(fix_path_obj) if (fix_path_obj and fix_path_obj.exists()) else ""
     fix_suggestion = _load_fix_suggestion_for_issue(runs_dir, slug, ts, issue_key) if ts else None
     if not fix_suggestion:
