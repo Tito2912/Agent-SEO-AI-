@@ -497,8 +497,13 @@
             </div>
           {% endif %}
 
-          {% if live_gsc.enabled %}
-            <div class="search-mini" data-search-mini data-source="gsc" data-slug="{{ project.slug }}" data-days-widget="gsc-live-widget" data-limit="12">
+          {% if live_gsc.enabled or (crawl_items and crawl_items.gsc and (crawl_items.gsc.query or crawl_items.gsc.page)) %}
+            {% if crawl_items and crawl_items.gsc and crawl_items.gsc.query %}<script type="application/json" id="gsc-crawl-query">{{ crawl_items.gsc.query | tojson }}</script>{% endif %}
+            {% if crawl_items and crawl_items.gsc and crawl_items.gsc.page %}<script type="application/json" id="gsc-crawl-page">{{ crawl_items.gsc.page | tojson }}</script>{% endif %}
+            <div class="search-mini" data-search-mini data-source="gsc" data-slug="{{ project.slug }}" data-days-widget="gsc-live-widget" data-limit="12"
+              {% if crawl_items and crawl_items.gsc and crawl_items.gsc.query %}data-crawl-query-id="gsc-crawl-query"{% endif %}
+              {% if crawl_items and crawl_items.gsc and crawl_items.gsc.page %}data-crawl-page-id="gsc-crawl-page"{% endif %}
+              {% if not live_gsc.enabled %}data-crawl-only{% endif %}>
               <div class="search-mini-head">
                 <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
                 <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">Voir tout</a>
@@ -572,8 +577,13 @@
             </div>
           {% endif %}
 
-          {% if live_bing.enabled %}
-            <div class="search-mini" data-search-mini data-source="bing" data-slug="{{ project.slug }}" data-days-widget="bing-live-widget" data-limit="12">
+          {% if live_bing.enabled or (crawl_items and crawl_items.bing and (crawl_items.bing.query or crawl_items.bing.page)) %}
+            {% if crawl_items and crawl_items.bing and crawl_items.bing.query %}<script type="application/json" id="bing-crawl-query">{{ crawl_items.bing.query | tojson }}</script>{% endif %}
+            {% if crawl_items and crawl_items.bing and crawl_items.bing.page %}<script type="application/json" id="bing-crawl-page">{{ crawl_items.bing.page | tojson }}</script>{% endif %}
+            <div class="search-mini" data-search-mini data-source="bing" data-slug="{{ project.slug }}" data-days-widget="bing-live-widget" data-limit="12"
+              {% if crawl_items and crawl_items.bing and crawl_items.bing.query %}data-crawl-query-id="bing-crawl-query"{% endif %}
+              {% if crawl_items and crawl_items.bing and crawl_items.bing.page %}data-crawl-page-id="bing-crawl-page"{% endif %}
+              {% if not live_bing.enabled %}data-crawl-only{% endif %}>
               <div class="search-mini-head">
                 <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
                 <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">Voir tout</a>

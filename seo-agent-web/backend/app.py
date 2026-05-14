@@ -12076,6 +12076,7 @@ def project_overview(
     fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
 
     top_actions: list[fix_pack.TopAction] = []
+    crawl_items: dict[str, dict[str, list[dict[str, Any]]]] = {"gsc": {"query": [], "page": []}, "bing": {"query": [], "page": []}}
     try:
         cur = data.get("current") if isinstance(data.get("current"), dict) else {}
         ts = str(cur.get("timestamp") or "").strip()
@@ -12087,8 +12088,32 @@ def project_overview(
                 base_url=str(data.get("base_url") or ""),
                 limit=3,
             )
+            meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
+            for src_key in ("gsc", "bing"):
+                if src_key == "gsc":
+                    src_meta = meta.get("gsc_api") if isinstance(meta.get("gsc_api"), dict) else {}
+                else:
+                    src_meta = meta.get("bing") if isinstance(meta.get("bing"), dict) else {}
+                if not src_meta.get("ok"):
+                    continue
+                for dim_key in ("query", "page"):
+                    csv_key = "queries_csv" if dim_key == "query" else "pages_csv"
+                    csv_path_str = str(src_meta.get(csv_key) or "").strip()
+                    if not csv_path_str:
+                        continue
+                    csv_path = Path(csv_path_str)
+                    if not csv_path.exists():
+                        _ensure_runs_artifact_local(csv_path)
+                    if not csv_path.exists():
+                        continue
+                    try:
+                        rows = _read_gsc_csv_rows(csv_path)
+                        rows.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
+                        crawl_items[src_key][dim_key] = rows[:12]
+                    except Exception:
+                        pass
     except Exception as e:
-        print(f"[FIX_PACK] top actions error: {type(e).__name__}: {e}")
+        print(f"[OVERVIEW] crawl items error: {type(e).__name__}: {e}")
 
     resp = templates.TemplateResponse(
         "project_overview.html",
@@ -12101,6 +12126,7 @@ def project_overview(
             "fix_pack_unlocked": bool(fix_pack_unlocked),
             "plan_key": plan_key,
             "live_series": live_series,
+            "crawl_items": crawl_items,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -12944,6 +12970,8 @@ def _crawl_items_fallback(
             continue
         csv_path = Path(csv_path_str)
         if not csv_path.exists():
+            _ensure_runs_artifact_local(csv_path)
+        if not csv_path.exists():
             continue
         try:
             rows = _read_gsc_csv_rows(csv_path)
@@ -13409,6 +13437,15 @@ def project_performance(
             dim=dimension,
             limit=fetch_limit,
         )
+
+    # Fallback to stored crawl CSV if live returned ok but empty items
+    if live_payload.get("ok") and not live_payload.get("items"):
+        fallback_items = _crawl_items_fallback(runs_dir, slug, src, dimension, fetch_limit)
+        if fallback_items:
+            live_payload = dict(live_payload)
+            live_payload["items"] = fallback_items
+            live_payload["live"] = False
+            live_payload["fallback"] = True
 
     perf_ok = bool(live_payload.get("ok"))
     needle = (q or "").strip().lower()

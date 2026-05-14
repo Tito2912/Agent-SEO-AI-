@@ -31,7 +31,16 @@
   {% else %}
     <div class="page-header">
       <h1>Performance</h1>
-      <p class="muted">{{ project.site_name }} · Live ({{ days }}j)</p>
+      <p class="muted">
+        {{ project.site_name }} ·
+        {% if live and live.fallback %}
+          Données du dernier crawl
+        {% elif live and live.ok and live.start_date %}
+          Live · {{ live.start_date }} → {{ live.end_date }} ({{ days }}j)
+        {% else %}
+          {{ days }}j
+        {% endif %}
+      </p>
     </div>
 
     <div class="data-toolbar">
@@ -85,7 +94,7 @@
     {% if not perf_ok %}
       <section class="card">
         <p class="muted" style="margin: 0;">
-          Données live {{ source|upper }} indisponibles
+          Données {{ source|upper }} indisponibles
           {% if live and (live.reason or live.error) %}
             : <span class="mono">{{ live.reason or live.error }}</span>.
           {% else %}
@@ -105,7 +114,11 @@
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ totals.clicks }}</div>
           <div class="stat-strip-lbl">Clics</div>
-          {% if live and live.ok %}<div class="stat-strip-sub">{{ live.start_date }} → {{ live.end_date }}</div>{% endif %}
+          {% if live and live.ok %}
+            <div class="stat-strip-sub">
+              {% if live.fallback %}Dernier crawl{% else %}{{ live.start_date }} → {{ live.end_date }}{% endif %}
+            </div>
+          {% endif %}
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
@@ -132,7 +145,10 @@
       <section class="card">
         <div class="card-title-row">
           <h2>Évolution</h2>
-          <span class="muted small">{{ source|upper }} · {{ days }}j</span>
+          <span class="muted small">
+            {{ source|upper }} ·
+            {% if live and live.fallback %}Dernier crawl{% else %}{{ days }}j · live{% endif %}
+          </span>
         </div>
 
         <div

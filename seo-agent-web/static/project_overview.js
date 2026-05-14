@@ -490,13 +490,28 @@
       btn.classList.toggle("active", isActive);
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     }
-    miniFetch(el);
+    // Show crawl data immediately while live fetches
+    const crawlItems = state.crawlData && state.crawlData[dim];
+    if (crawlItems && crawlItems.length) {
+      miniRender(el, { ok: true, items: crawlItems, fallback: true }, dim);
+    }
+    if (!el.hasAttribute("data-crawl-only")) miniFetch(el);
   }
 
   function miniRefreshForWidgetId(widgetId) {
     if (!widgetId) return;
     const widgets = document.querySelectorAll(`[data-search-mini][data-days-widget="${CSS.escape(widgetId)}"]`);
     for (const el of widgets) miniFetch(el);
+  }
+
+  function _readCrawlItems(id) {
+    if (!id) return [];
+    const el = document.getElementById(id);
+    if (!el) return [];
+    try {
+      const items = JSON.parse(el.textContent || "[]");
+      return Array.isArray(items) ? items : [];
+    } catch { return []; }
   }
 
   function initMiniTables() {
@@ -506,11 +521,22 @@
       const slug = String(el.getAttribute("data-slug") || "").trim();
       const daysWidgetId = String(el.getAttribute("data-days-widget") || "").trim();
       const limit = Math.max(1, Math.min(50, Number(el.getAttribute("data-limit") || 12) || 12));
-      if (!source || !slug || !daysWidgetId) continue;
+      const crawlOnly = el.hasAttribute("data-crawl-only");
+      if (!source || !slug || (!daysWidgetId && !crawlOnly)) continue;
 
-      const state = { source, slug, daysWidgetId, limit, dim: "query", requestId: 0 };
+      const crawlData = {
+        query: _readCrawlItems(String(el.getAttribute("data-crawl-query-id") || "").trim()),
+        page: _readCrawlItems(String(el.getAttribute("data-crawl-page-id") || "").trim()),
+      };
+
+      const state = { source, slug, daysWidgetId, limit, dim: "query", requestId: 0, crawlData };
       miniStates.set(el, state);
       miniUpdateLink(el, state.dim);
+
+      // Render crawl data immediately (no spinner) while live fetch happens
+      if (crawlData.query.length) {
+        miniRender(el, { ok: true, items: crawlData.query, fallback: true }, "query");
+      }
 
       for (const btn of el.querySelectorAll("button[data-dim]")) {
         btn.addEventListener("click", () => {
@@ -520,7 +546,7 @@
         });
       }
 
-      miniFetch(el);
+      if (!crawlOnly) miniFetch(el);
     }
   }
 
