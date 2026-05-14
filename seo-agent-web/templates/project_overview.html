@@ -27,142 +27,230 @@
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
-    <div class="project-hero">
-      <div>
-        <h1>{{ project.site_name }}</h1>
-        <div class="project-hero-meta">
-          <a href="{{ project.base_url }}" target="_blank" rel="noopener" style="color:var(--muted);">{{ project.base_url }}</a>
-          {% if project.current %}
-            <span>{{ project.crawls | length }} crawl{{ 's' if project.crawls | length > 1 else '' }} · dernier {{ project.crawls[0][6:8] }}/{{ project.crawls[0][4:6] }}/{{ project.crawls[0][:4] }}</span>
-          {% endif %}
-        </div>
-      </div>
-      {% if project.current %}
-        {% set hc = project.current.get('health', {}) %}
-        {% if hc.get('score') is not none %}
-          {% set sc = hc.get('score', 0)|int %}
-          {% set sc_color = 'var(--ok)' if sc >= 80 else ('var(--warn)' if sc >= 50 else 'var(--err)') %}
-          <div class="project-hero-score">
-            <div class="hero-score-num" style="color:{{ sc_color }};">{{ sc }}</div>
-            <div class="hero-score-lbl">Score de santé</div>
-          </div>
-        {% endif %}
-      {% endif %}
-    </div>
 
-    {% if live_job %}
-      <section
-        class="card"
-        id="live-job-card"
-        data-job-id="{{ live_job.id }}"
-        data-status="{{ live_job.status }}"
-        data-created-at="{{ live_job.created_at }}"
-        data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
-      >
-        <div class="card-title-row">
-          <h2>Crawl</h2>
-          <div class="muted small">
-            <span id="live-job-ts" class="mono"></span>
-            <span id="live-job-status" class="pill {{ live_job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live_job.status, live_job.status) }}</span>
-          </div>
-        </div>
-
-        <div id="live-job-progress" class="crawl-meter" style="display:none;">
-          <div class="crawl-meter-head">
-            <div class="crawl-meter-title">Exploration des pages</div>
-            <div class="crawl-meter-count mono" id="live-job-progress-count"></div>
-          </div>
-          <div class="progress slim crawl">
-            <div class="progress-fill" id="live-job-progress-fill" style="--p: 0;"></div>
-          </div>
-          <div class="muted small" id="live-job-progress-text"></div>
-        </div>
-
-        <div class="muted small log-line" id="live-job-logline"></div>
-
-        <details class="logs-details" id="live-job-logs-details" style="display:none;">
-          <summary class="muted small">Logs</summary>
-          <pre id="live-job-stdout"></pre>
-          <pre id="live-job-stderr"></pre>
-        </details>
-
-        <p class="muted small" style="margin: 10px 0 0;">
-          <a id="live-job-jobs-link" href="/jobs">Voir dans Exécutions</a>
-        </p>
-      </section>
-    {% endif %}
-
-    {% if not project.current %}
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Premier crawl</h2>
-          <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
-        </div>
-        <p class="muted" style="margin:0 0 12px;">Aucun crawl terminé pour ce projet.</p>
-        {% if live_job and live_job.status == 'failed' %}
-          <p class="muted small" style="margin:0 0 14px;">
-            Le dernier crawl a échoué. Ouvre les logs ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l'erreur complète.
-          </p>
-        {% endif %}
-        <div class="topbar-actions">
-          <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-            <button type="submit" class="btn primary">Lancer le premier crawl</button>
-          </form>
-          <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">Voir les exécutions</a>
-        </div>
-      </section>
-    {% else %}
+  {# ── Precompute health score ── #}
+  {% if project.current %}
+    {% set hc = project.current.get('health', {}) %}
+    {% set sc = hc.get('score', 0)|int if hc.get('score') is not none else none %}
+    {% set sc_color = 'var(--ok)' if sc is not none and sc >= 80 else ('var(--warn)' if sc is not none and sc >= 50 else 'var(--err)') %}
     {% set cur = project.current %}
     {% set sum = cur.summary %}
+  {% else %}
+    {% set sc = none %}
+    {% set sc_color = 'rgba(255,255,255,.3)' %}
+  {% endif %}
 
-    <div class="data-toolbar">
-      {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
-      <form method="get" class="filters" style="width:100%;">
-        {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
-        <label>
-          Crawl analysé
-          <select name="crawl">
-            {% for ts in project.crawls %}
-              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label>
-          Comparer avec
-          <select name="compare">
-            <option value="">— aucun —</option>
-            {% for ts in project.crawls %}
-              <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <button type="submit" class="btn">Appliquer</button>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center;">
-          <span class="muted small">Exports :</span>
-          <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
-          <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
-          <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
-          {% if fix_pack_unlocked %}
-            <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
-          {% else %}
-            <a class="btn" href="/billing" style="font-size:11px;padding:4px 10px;">Fix Pack · Solo+</a>
-          {% endif %}
-        </div>
-      </form>
+  {# ══════════════════════════════════════
+     HERO — arc gauge + site info + KPIs
+  ══════════════════════════════════════ #}
+  <div class="ov-hero">
+
+    {# Semi-circle arc gauge — viewBox 0 0 210 126, center (105,105), r=84 #}
+    {# Arc: M 21 105 A 84 84 0 0 1 189 105 — pathLength=264 (π*84≈264) #}
+    <div class="ov-gauge">
+      <svg viewBox="0 0 210 126" fill="none" aria-hidden="true">
+        {# Track #}
+        <path d="M 21 105 A 84 84 0 0 1 189 105"
+              stroke="rgba(255,255,255,.07)" stroke-width="14" stroke-linecap="round"/>
+        {# Fill #}
+        {% if sc is not none %}
+          <path d="M 21 105 A 84 84 0 0 1 189 105"
+                stroke="{{ sc_color }}" stroke-width="14" stroke-linecap="round"
+                pathLength="264"
+                stroke-dasharray="{{ (sc / 100 * 264)|round(1) }} 264"/>
+        {% endif %}
+        {# Score number #}
+        <text x="105" y="90"
+              text-anchor="middle"
+              fill="{{ sc_color }}"
+              style="font-size:52px;font-weight:900;letter-spacing:-2px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;">
+          {% if sc is not none %}{{ sc }}{% else %}—{% endif %}
+        </text>
+        {# Label #}
+        <text x="105" y="110"
+              text-anchor="middle"
+              fill="rgba(255,255,255,.4)"
+              style="font-size:10px;font-weight:700;letter-spacing:1.5px;font-family:ui-sans-serif,system-ui,sans-serif;">
+          SCORE DE SANTÉ
+        </text>
+      </svg>
     </div>
 
+    <div class="ov-info">
+      <h1>{{ project.site_name }}</h1>
+      <div class="ov-info-sub">
+        <a href="{{ project.base_url }}" target="_blank" rel="noopener">{{ project.base_url }}</a>
+        {% if project.crawls %}
+          <span>{{ project.crawls | length }} crawl{{ 's' if project.crawls | length > 1 else '' }} · dernier {{ project.crawls[0][6:8] }}/{{ project.crawls[0][4:6] }}/{{ project.crawls[0][:4] }}</span>
+        {% endif %}
+      </div>
+
+      {% if project.current %}
+        <div class="ov-kpis">
+          <a class="ov-kpi err" href="/projects/{{ project.slug }}/issues?severity=error&crawl={{ cur.timestamp }}">
+            <div class="ov-kpi-n">{{ sum.issues_distribution.error or 0 }}</div>
+            <div class="ov-kpi-l">Erreurs</div>
+          </a>
+          <a class="ov-kpi warn" href="/projects/{{ project.slug }}/issues?severity=warning&crawl={{ cur.timestamp }}">
+            <div class="ov-kpi-n">{{ sum.issues_distribution.warning or 0 }}</div>
+            <div class="ov-kpi-l">Avertissements</div>
+          </a>
+          <a class="ov-kpi ntc" href="/projects/{{ project.slug }}/issues?severity=notice&crawl={{ cur.timestamp }}">
+            <div class="ov-kpi-n">{{ sum.issues_distribution.notice or 0 }}</div>
+            <div class="ov-kpi-l">Infos</div>
+          </a>
+          <div class="ov-kpi">
+            <div class="ov-kpi-n">{{ sum.pages_crawled }}</div>
+            <div class="ov-kpi-l">Pages crawlées</div>
+          </div>
+          <div class="ov-kpi">
+            <div class="ov-kpi-n">{{ sum.urls_crawled_distribution }}</div>
+            <div class="ov-kpi-l">URLs totales</div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ══════════════════════════════════════
+     LIVE JOB CARD
+  ══════════════════════════════════════ #}
+  {% if live_job %}
+    <section
+      class="card"
+      id="live-job-card"
+      data-job-id="{{ live_job.id }}"
+      data-status="{{ live_job.status }}"
+      data-created-at="{{ live_job.created_at }}"
+      data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
+    >
+      <div class="card-title-row">
+        <h2>Crawl</h2>
+        <div class="muted small">
+          <span id="live-job-ts" class="mono"></span>
+          <span id="live-job-status" class="pill {{ live_job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live_job.status, live_job.status) }}</span>
+        </div>
+      </div>
+
+      <div id="live-job-progress" class="crawl-meter" style="display:none;">
+        <div class="crawl-meter-head">
+          <div class="crawl-meter-title">Exploration des pages</div>
+          <div class="crawl-meter-count mono" id="live-job-progress-count"></div>
+        </div>
+        <div class="progress slim crawl">
+          <div class="progress-fill" id="live-job-progress-fill" style="--p: 0;"></div>
+        </div>
+        <div class="muted small" id="live-job-progress-text"></div>
+      </div>
+
+      <div class="muted small log-line" id="live-job-logline"></div>
+
+      <details class="logs-details" id="live-job-logs-details" style="display:none;">
+        <summary class="muted small">Logs</summary>
+        <pre id="live-job-stdout"></pre>
+        <pre id="live-job-stderr"></pre>
+      </details>
+
+      <p class="muted small" style="margin: 10px 0 0;">
+        <a id="live-job-jobs-link" href="/jobs">Voir dans Exécutions</a>
+      </p>
+    </section>
+  {% endif %}
+
+  {# ══════════════════════════════════════
+     NO CRAWL YET
+  ══════════════════════════════════════ #}
+  {% if not project.current %}
     <section class="card">
       <div class="card-title-row">
-        <h2>Top 3 actions prioritaires</h2>
+        <h2>Premier crawl</h2>
+        <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
+      </div>
+      <p class="muted" style="margin:0 0 12px;">Aucun crawl terminé pour ce projet.</p>
+      {% if live_job and live_job.status == 'failed' %}
+        <p class="muted small" style="margin:0 0 14px;">
+          Le dernier crawl a échoué. Ouvre les logs ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l'erreur complète.
+        </p>
+      {% endif %}
+      <div class="topbar-actions">
+        <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+          <button type="submit" class="btn primary">Lancer le premier crawl</button>
+        </form>
+        <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">Voir les exécutions</a>
+      </div>
+    </section>
+
+  {% else %}
+
+  {# ══════════════════════════════════════
+     TOOLBAR — crawl selector + exports
+  ══════════════════════════════════════ #}
+  <div class="data-toolbar">
+    <form method="get" class="filters" style="width:100%;">
+      {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
+      <label>
+        Crawl analysé
+        <select name="crawl">
+          {% for ts in project.crawls %}
+            <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Comparer avec
+        <select name="compare">
+          <option value="">— aucun —</option>
+          {% for ts in project.crawls %}
+            <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn">Appliquer</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center;">
+        <span class="muted small">Exports :</span>
+        <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
+        <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
+        <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
         {% if fix_pack_unlocked %}
           <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
+        {% else %}
+          <a class="btn" href="/billing" style="font-size:11px;padding:4px 10px;">Fix Pack · Solo+</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  {# Old crawl notice #}
+  {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
+  {% if cur.used_fallback %}
+    <div class="alert notice" style="margin-bottom:20px;">
+      Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport.
+      Affichage du dernier terminé : <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
+      <a href="/jobs">Voir les jobs</a>.
+    </div>
+  {% elif cur.timestamp != latest_ts %}
+    <div class="alert notice" style="margin-bottom:20px;">
+      Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :
+      <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
+    </div>
+  {% endif %}
+
+  {# ══════════════════════════════════════
+     SPLIT — actions (left) + history (right)
+  ══════════════════════════════════════ #}
+  <div class="ov-body">
+    <div class="ov-body-main">
+      <div class="ov-section-hd">
+        <span>Actions prioritaires</span>
+        {% if fix_pack_unlocked %}
+          <a class="muted small" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">Fix Pack ZIP →</a>
         {% else %}
           <a class="muted small" href="/billing">Débloquer Fix Pack →</a>
         {% endif %}
       </div>
 
       {% if not top_actions %}
-        <p class="muted">Aucune action prioritaire détectée pour ce crawl.</p>
+        <p class="muted small">Aucune action prioritaire détectée pour ce crawl.</p>
       {% else %}
         <div class="action-list">
           {% for a in top_actions %}
@@ -183,796 +271,512 @@
                 </div>
                 {% if a.why %}
                   <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
-                    {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}
+                    {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(180, True, '…') }}{% endif %}
                   </p>
                 {% endif %}
                 {% if fix_pack_unlocked and a.fix %}
                   <ul class="examples" style="margin-top:8px;">
-                    {% for step in a.fix[:3] %}
+                    {% for step in a.fix[:2] %}
                       <li>{{ step }}</li>
                     {% endfor %}
                   </ul>
                 {% endif %}
                 <div style="margin-top:10px;">
-                  {% if fix_pack_unlocked %}
-                    <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir le détail →</a>
-                  {% else %}
-                    <a class="btn" href="/billing" style="font-size:12px;">Débloquer le Fix Pack</a>
-                  {% endif %}
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir le détail →</a>
                 </div>
               </div>
             </div>
           {% endfor %}
         </div>
       {% endif %}
-    </section>
+    </div>
 
-    {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
-    {% if cur.used_fallback %}
-      <section class="card">
-        <p class="muted">
-          Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport (en cours ou interrompu).
-          Affichage du dernier crawl terminé: <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
-          <a href="/jobs">Voir les jobs</a>.
-        </p>
-      </section>
-    {% elif cur.timestamp != latest_ts %}
-      <section class="card">
-        <p class="muted">
-          Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier crawl disponible:
-          <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
-        </p>
-      </section>
-    {% endif %}
-
-    {% if live_job %}
-      <script>
-        (() => {
-          const card = document.getElementById("live-job-card");
-          if (!card) return;
-
-          const jobId = card.dataset.jobId;
-          if (!jobId) return;
-
-          const initialStatus = String(card.dataset.status || "");
-          const createdAt = Number(card.dataset.createdAt || 0);
-          const runTs = String(card.dataset.runTs || "");
-
-          const pollMs = 1000;
-          const tail = 20000;
-
-          const tsEl = document.getElementById("live-job-ts");
-          const statusEl = document.getElementById("live-job-status");
-          const progressWrap = document.getElementById("live-job-progress");
-          const progressCount = document.getElementById("live-job-progress-count");
-          const progressFill = document.getElementById("live-job-progress-fill");
-          const progressText = document.getElementById("live-job-progress-text");
-          const logLineEl = document.getElementById("live-job-logline");
-          const logsDetails = document.getElementById("live-job-logs-details");
-          const stdoutEl = document.getElementById("live-job-stdout");
-          const stderrEl = document.getElementById("live-job-stderr");
-          const jobsLink = document.getElementById("live-job-jobs-link");
-
-          if (jobsLink) jobsLink.href = `/jobs?job=${encodeURIComponent(jobId)}`;
-
-          function isLiveStatus(status) {
-            return status === "queued" || status === "running" || status === "cancel_requested";
-          }
-
-          function formatShortDateFromRunTs(value) {
-            if (!value || !/^\d{8}-\d{6}$/.test(value)) return null;
-            const yy = value.slice(2, 4);
-            const mm = value.slice(4, 6);
-            const dd = value.slice(6, 8);
-            return `${dd}/${mm}/${yy}`;
-          }
-
-          function formatShortDateFromEpochSeconds(value) {
-            if (!Number.isFinite(value) || value <= 0) return "";
-            const d = new Date(value * 1000);
-            const dd = String(d.getDate()).padStart(2, "0");
-            const mm = String(d.getMonth() + 1).padStart(2, "0");
-            const yy = String(d.getFullYear()).slice(-2);
-            return `${dd}/${mm}/${yy}`;
-          }
-
-          const initialDate = formatShortDateFromRunTs(runTs) || formatShortDateFromEpochSeconds(createdAt);
-          if (tsEl) tsEl.textContent = initialDate;
-
-          function lastNonEmptyLine(value) {
-            if (!value || typeof value !== "string") return "";
-            const lines = value.split(/\r?\n/);
-            for (let i = lines.length - 1; i >= 0; i--) {
-              const line = String(lines[i] || "").trim();
-              if (line) return line;
-            }
-            return "";
-          }
-
-          function render(data) {
-            const status = (data && data.status) ? String(data.status) : "";
-            function statusLabel(status) {
-              const map = {
-                queued: "en attente",
-                running: "en cours",
-                cancel_requested: "annulation…",
-                done: "terminé",
-                failed: "échec",
-                canceled: "annulé",
-              };
-              return map[status] || status;
-            }
-            if (statusEl) {
-              statusEl.textContent = statusLabel(status);
-              statusEl.className = `pill ${status}`;
-            }
-
-            const resultTs = data && data.result ? data.result.timestamp : null;
-            const dateLabel = formatShortDateFromRunTs(String(resultTs || "")) || formatShortDateFromEpochSeconds(Number(data && data.created_at));
-            if (tsEl) tsEl.textContent = dateLabel;
-
-            const progress = data ? data.progress : null;
-            if (progressWrap && progressFill && progressText && progressCount && progress && progress.total) {
-              const cur = Number(progress.current || 0);
-              const tot = Number(progress.total || 0);
-              const isLive = status === "queued" || status === "running";
-              const isFinalizing = isLive && tot > 0 && cur >= tot;
-              let pct = tot ? Math.round((cur / tot) * 100) : 0;
-              if (isFinalizing && pct >= 100) pct = 99;
-              progressFill.style.setProperty("--p", String(pct));
-              progressCount.textContent = `${cur}/${tot}`;
-              progressText.textContent = isFinalizing ? `Pages explorées : ${cur}/${tot} · finalisation…` : `Pages explorées : ${cur}/${tot}`;
-              progressWrap.style.display = "";
-            } else if (progressWrap) {
-              progressWrap.style.display = "none";
-            }
-
-            const stdout = data && typeof data.stdout === "string" ? data.stdout : "";
-            const stderr = data && typeof data.stderr === "string" ? data.stderr : "";
-            const line = lastNonEmptyLine(stdout) || lastNonEmptyLine(stderr);
-            if (logLineEl) logLineEl.textContent = line ? line : "";
-
-            if (logsDetails && stdoutEl && stderrEl) {
-              const hasLogs = Boolean(stdout || stderr);
-              logsDetails.style.display = hasLogs ? "" : "none";
-              if (hasLogs) {
-                stdoutEl.textContent = stdout;
-                stderrEl.textContent = stderr;
-              }
-            }
-          }
-
-          async function poll() {
-            try {
-              const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=${tail}`, { cache: "no-store" });
-              if (!res.ok) return;
-              const data = await res.json();
-              render(data);
-
-              if (
-                isLiveStatus(initialStatus) &&
-                data &&
-                data.status === "done" &&
-                data.result &&
-                data.result.project_url
-              ) {
-                const targetUrl = new URL(String(data.result.project_url), window.location.origin);
-                const currentUrl = new URL(window.location.href);
-                if (targetUrl.pathname !== currentUrl.pathname || targetUrl.search !== currentUrl.search) {
-                  window.location.href = targetUrl.toString();
-                }
-              }
-            } catch (_) {
-              // ignore
-            }
-          }
-
-          if (isLiveStatus(initialStatus)) {
-            setInterval(poll, pollMs);
-          }
-          poll();
-        })();
-      </script>
-    {% endif %}
-
-    <div class="stat-strip">
-      <div class="stat-strip-item">
-        <div class="stat-strip-num">{{ sum.urls_crawled_distribution }}</div>
-        <div class="stat-strip-lbl">URLs crawlées</div>
-        <div class="stat-strip-sub">{{ sum.pages_crawled }} internes · {{ sum.resources_crawled }} ressources</div>
-      </div>
-      <div class="stat-strip-sep"></div>
-      <div class="stat-strip-item">
-        <div class="stat-strip-num">{{ sum.issues_total }}</div>
-        <div class="stat-strip-lbl">Anomalies</div>
-        <div class="stat-strip-sub"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="color:var(--muted);">voir le détail →</a></div>
-      </div>
-      <div class="stat-strip-sep"></div>
-      <div class="stat-strip-item">
-        <div class="stat-strip-num" style="color:{{ 'var(--err)' if (sum.issues_distribution.error or 0) > 0 else 'var(--text)' }};">{{ sum.issues_distribution.error or 0 }}</div>
-        <div class="stat-strip-lbl">Erreurs critiques</div>
-        <div class="stat-strip-sub">{{ sum.issues_distribution.warning or 0 }} avertissements · {{ sum.issues_distribution.notice or 0 }} infos</div>
-      </div>
-      {% if sum.pages_crawled %}
-        <div class="stat-strip-sep"></div>
-        <div class="stat-strip-item">
-          {% set err_pct = ((sum.urls_with_errors / sum.pages_crawled) * 100)|round(0)|int if sum.pages_crawled else 0 %}
-          <div class="stat-strip-num" style="color:{{ 'var(--err)' if err_pct > 20 else ('var(--warn)' if err_pct > 5 else 'var(--ok)') }};">{{ err_pct }}<span style="font-size:18px;font-weight:600;">%</span></div>
-          <div class="stat-strip-lbl">URLs en erreur</div>
-          <div class="stat-strip-sub">{{ sum.urls_with_errors }} / {{ sum.pages_crawled }}</div>
+    <div class="ov-body-side">
+      <div class="ov-section-hd"><span>Évolution du score</span></div>
+      {% if not project.history %}
+        <p class="muted small">Aucune donnée.</p>
+      {% else %}
+        <div class="history" style="gap:6px;">
+          {% for h in project.history %}
+            <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
+              <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
+              <div class="history-bar-label mono">{{ h.health_score }}</div>
+              <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
+            </a>
+          {% endfor %}
         </div>
       {% endif %}
-    </div>
 
-    <div class="grid">
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Répartition des URLs crawlées</h2>
-          <span class="muted small mono">{{ sum.urls_crawled_distribution }}</span>
-        </div>
-        {% set total = sum.urls_crawled_distribution %}
-        {% set internal = sum.pages_crawled %}
-        {% set resources = sum.resources_crawled %}
-        {% set p_internal = ( (internal / total) * 100 ) if total else 100 %}
-        <div class="chart-row">
-          <div class="donut-svg-wrap">
-            <svg class="donut-svg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="38" class="donut-track"/>
-              <circle cx="50" cy="50" r="38" class="donut-ring"
-                style="stroke:var(--notice); stroke-dasharray:{{ (p_internal / 100 * 238.8)|round(1) }} 238.8;"
-                transform="rotate(-90 50 50)"/>
-            </svg>
-            <div class="donut-center">
-              <div class="donut-value mono">{{ total }}</div>
-              <div class="muted small">URLs</div>
-            </div>
+      <div style="margin-top:28px;">
+        <div class="ov-section-hd"><span>Répartition des URLs</span></div>
+        {% set tot_urls = sum.urls_crawled_distribution %}
+        {% set int_urls = sum.pages_crawled %}
+        {% set res_urls = sum.resources_crawled %}
+        {% set err_urls = sum.urls_with_errors %}
+        {% set ok_urls = sum.urls_without_errors %}
+        <div class="ov-breakdown">
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Internes</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--notice);width:{{ ((int_urls / tot_urls * 100)|round(0)|int if tot_urls else 100) }}%;"></div></div>
+            <span class="ov-bk-val">{{ int_urls }}</span>
           </div>
-          <div class="legend">
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>Internes <span class="mono">{{ internal }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Ressources <span class="mono">{{ resources }}</span></div>
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Ressources</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:rgba(255,255,255,.3);width:{{ ((res_urls / tot_urls * 100)|round(0)|int if tot_urls else 0) }}%;"></div></div>
+            <span class="ov-bk-val">{{ res_urls }}</span>
           </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>URLs découvertes</h2>
-          <span class="muted small mono">{{ sum.urls_discovered }}</span>
-        </div>
-        {% set found_total = sum.urls_discovered %}
-        {% set crawled = sum.pages_crawled %}
-        {% set uncrawled = sum.urls_uncrawled %}
-        {% set p_crawled = ( (crawled / found_total) * 100 ) if found_total else 100 %}
-        <div class="chart-row">
-          <div class="donut-svg-wrap">
-            <svg class="donut-svg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="38" class="donut-track"/>
-              <circle cx="50" cy="50" r="38" class="donut-ring"
-                style="stroke:var(--ok); stroke-dasharray:{{ (p_crawled / 100 * 238.8)|round(1) }} 238.8;"
-                transform="rotate(-90 50 50)"/>
-            </svg>
-            <div class="donut-center">
-              <div class="donut-value mono">{{ crawled }}</div>
-              <div class="muted small">Explorées</div>
-            </div>
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Sans erreurs</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--ok);width:{{ ((ok_urls / int_urls * 100)|round(0)|int if int_urls else 100) }}%;"></div></div>
+            <span class="ov-bk-val">{{ ok_urls }}</span>
           </div>
-          <div class="legend">
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Explorées <span class="mono">{{ crawled }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Non explorées <span class="mono">{{ uncrawled }}</span></div>
+          <div class="ov-bk-row">
+            <span class="ov-bk-lbl">Avec erreurs</span>
+            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--err);width:{{ ((err_urls / int_urls * 100)|round(0)|int if int_urls else 0) }}%;"></div></div>
+            <span class="ov-bk-val" style="color:var(--err);">{{ err_urls }}</span>
           </div>
-        </div>
-        <p class="muted small">URLs trouvées: <span class="mono">{{ found_total }}</span></p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Répartition des anomalies</h2>
-          <span class="muted small mono">{{ sum.issues_total }}</span>
-        </div>
-        {% set e = sum.issues_distribution.error or 0 %}
-        {% set w = sum.issues_distribution.warning or 0 %}
-        {% set n = sum.issues_distribution.notice or 0 %}
-        {% set m = [e, w, n]|max %}
-        <div class="bars">
-          <div class="bar-row">
-            <span class="bar-label">Erreurs</span>
-            <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / m) * 100)|round(0) if m else 0 }};"></div></div>
-            <span class="mono">{{ e }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Avertissements</span>
-            <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / m) * 100)|round(0) if m else 0 }};"></div></div>
-            <span class="mono">{{ w }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Infos</span>
-            <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / m) * 100)|round(0) if m else 0 }};"></div></div>
-            <span class="mono">{{ n }}</span>
-          </div>
-        </div>
-        <p class="muted small"><a href="/projects/{{ project.slug }}/issues">Voir toutes les anomalies</a></p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Répartition des erreurs</h2>
-          <span class="muted small">URLs</span>
-        </div>
-        {% set err = sum.urls_with_errors %}
-        {% set ok = sum.urls_without_errors %}
-        {% set total = (err + ok) %}
-        {% set p = ( (err / total) * 100 ) if total else 0 %}
-        <div class="chart-row">
-          <div class="donut-svg-wrap">
-            <svg class="donut-svg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="38" class="donut-track"/>
-              <circle cx="50" cy="50" r="38" class="donut-ring"
-                style="stroke:var(--err); stroke-dasharray:{{ (p / 100 * 238.8)|round(1) }} 238.8;"
-                transform="rotate(-90 50 50)"/>
-            </svg>
-            <div class="donut-center">
-              <div class="donut-value mono">{{ err }}</div>
-              <div class="muted small">URLs en erreur</div>
-            </div>
-          </div>
-          <div class="legend">
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Avec erreurs <span class="mono">{{ err }}</span></div>
-            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Sans erreurs <span class="mono">{{ ok }}</span></div>
-          </div>
-        </div>
-      </section>
-
-      {% set ps = sum.pagespeed %}
-      {% set cwv = sum.cwv %}
-      <section class="card span-2">
-        <div class="card-title-row">
-          <h2>Core Web Vitals</h2>
-          {% if ps and ps.enabled %}
-            <span class="badge sm ok">activé</span>
-          {% else %}
-            <span class="badge sm notice">désactivé</span>
-          {% endif %}
-        </div>
-
-        {% if cwv %}
-          {% set psd = cwv.page_status if cwv.page_status else {} %}
-          {% set total_psd = (psd.good or 0) + (psd.ni or 0) + (psd.poor or 0) + (psd.na or 0) %}
-          {% set score = cwv.score if cwv.score is not none else 0 %}
-          {% if score == 0 and total_psd %}
-            {% set score = ((psd.good or 0) / total_psd * 100) | round(0) %}
-          {% endif %}
-          {% set score_badge = 'ok' if score >= 90 else ('warning' if score >= 70 else 'error') %}
-          {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
-
-          <div class="chart-row">
-            <div class="donut-svg-wrap">
-              <svg class="donut-svg" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="38" class="donut-track"/>
-                <circle cx="50" cy="50" r="38" class="donut-ring"
-                  style="stroke:{{ score_color }}; stroke-dasharray:{{ (score / 100 * 238.8)|round(1) }} 238.8;"
-                  transform="rotate(-90 50 50)"/>
-              </svg>
-              <div class="donut-center">
-                <div class="donut-value mono">{{ score }}%</div>
-                <div class="muted small">Score</div>
-              </div>
-            </div>
-            <div class="legend">
-              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Bon <span class="mono">{{ psd.good or 0 }}</span></div>
-              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--warn);"></span>Amélioration <span class="mono">{{ psd.ni or 0 }}</span></div>
-              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Médiocre <span class="mono">{{ psd.poor or 0 }}</span></div>
-              <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>N/A <span class="mono">{{ psd.na or 0 }}</span></div>
-            </div>
-          </div>
-
-          <p class="muted small">
-            Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Stratégie: <span class="mono">{{ cwv.strategy }}</span>
-          </p>
-
-          <div class="table-wrap">
-            <table class="table compact">
-              <thead>
-                <tr>
-                  <th>Métrique</th>
-                  <th>Statut</th>
-                  <th class="num">Pages affectées</th>
-                  <th class="num">Bon</th>
-                  <th class="num">Moyen</th>
-                  <th class="num">Médiocre</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for key, label, issue_key in [('lcp','LCP','cwv_lcp_pages_to_fix'), ('tbt','TBT','cwv_tbt_pages_to_fix'), ('cls','CLS','cwv_cls_pages_to_fix')] %}
-                  {% set m = cwv.metrics[key] %}
-                  {% set affected = (m.ni or 0) + (m.poor or 0) %}
-                  {% set st = 'error' if (m.poor or 0) > 0 else ('warning' if (m.ni or 0) > 0 else ('ok' if (m.good or 0) > 0 else 'notice')) %}
-                  {% set st_label = 'à corriger' if st == 'error' else ('moyen' if st == 'warning' else ('bon' if st == 'ok' else 'n/a')) %}
-                  <tr>
-                    <td><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ label }}</a></td>
-                    <td><span class="badge {{ st }}">{{ st_label }}</span></td>
-                    <td class="num mono"><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ affected }}</a></td>
-                    <td class="num mono">{{ m.good }}</td>
-                    <td class="num mono">{{ m.ni }}</td>
-                    <td class="num mono">{{ m.poor }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          {% if ps and ps.enabled %}
-            <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur ce crawl.</p>
-          {% else %}
-            <p class="muted">Active PageSpeed pour ajouter LCP/TBT/CLS. La clé API est gérée côté plateforme.</p>
-          {% endif %}
-        {% endif %}
-      </section>
-
-      {% set gsc = sum.gsc %}
-      {% set bing = sum.bing %}
-      {% set live_gsc = live_series.gsc if live_series and live_series.gsc else {} %}
-      {% set live_bing = live_series.bing if live_series and live_series.bing else {} %}
-      <div class="span-all">
-        <div class="grid two">
-          <section class="card">
-            {% set gsc_days = live_gsc.days if live_gsc and live_gsc.days else (gsc.days if gsc and gsc.days else 28) %}
-            <div class="card-title-row">
-              <h2>Google Search Console</h2>
-              <div class="card-title-actions">
-                <div class="pill-select" title="Période du graphique live">
-                  <label>Période</label>
-                  <select class="js-ts-days" data-widget-id="gsc-live-widget">
-                    {% for d in [7, 28, 90] %}
-                      <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                {% if gsc and gsc.ok %}
-                  <span class="badge ok">ok</span>
-                {% elif gsc and gsc.enabled %}
-                  <span class="badge warning">activé</span>
-                {% else %}
-                  <span class="badge notice">désactivé</span>
-                {% endif %}
-              </div>
-            </div>
-            <div class="search-source-summary" data-summary-block {% if not (gsc and gsc.ok) %}data-summary-fallback="true"{% endif %}>
-              {% if gsc and gsc.ok %}
-                <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
-                <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
-
-                {% if gsc.url_inspection and gsc.url_inspection.enabled %}
-                  <div class="issue-chips">
-                    <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}">
-                      <span class="dot error"></span>Erreurs <span class="mono">{{ gsc.url_inspection.errors }}</span>
-                    </a>
-                    <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}">
-                      <span class="dot warning"></span>Avertissements <span class="mono">{{ gsc.url_inspection.warnings }}</span>
-                    </a>
-                    <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}">
-                      <span class="dot notice"></span>Avis <span class="mono">{{ gsc.url_inspection.notices }}</span>
-                    </a>
-                  </div>
-                  {% if gsc.url_inspection.json %}
-                    <p class="muted small" style="margin-top: 8px;">
-                      Détails: <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a>
-                    </p>
-                  {% endif %}
-                {% endif %}
-
-                {% if gsc.queries_csv or gsc.pages_csv %}
-                  <p class="muted small" style="margin-top: 8px;">
-                    CSV:
-                    {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
-                    {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
-                    {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
-                    {% if gsc.daily_csv %} · <a href="/file?path={{ gsc.daily_csv }}">gsc-daily.csv</a>{% endif %}
-                  </p>
-                {% endif %}
-              {% elif gsc and gsc.enabled %}
-                <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
-                <p class="muted small">
-                  {% if gsc.reason == "missing_credentials" %}
-                    <a href="/settings/accounts#gsc-oauth-card">Connecter Google</a>
-                    ·
-                  {% endif %}
-                  <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
-                </p>
-              {% else %}
-                <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
-                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
-              {% endif %}
-            </div>
-
-            {% if live_gsc.enabled or (gsc and gsc.daily and (gsc.daily|length) >= 2) %}
-              <div
-                id="gsc-live-widget"
-                class="ts-widget"
-                data-default-metrics="clicks,impressions"
-                data-max-metrics="2"
-                {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}data-series-id="gsc-daily-series"{% endif %}
-                {% if live_gsc.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}
-              >
-                <div class="ts-metrics" aria-label="Métriques Google Search Console">
-                  <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">Clics</span>
-                    <span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "-" }}</span>
-                  </button>
-                  <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">Impressions</span>
-                    <span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "-" }}</span>
-                  </button>
-                  <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">CTR moyen</span>
-                    <span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span>
-                  </button>
-                  <button type="button" class="ts-metric" data-metric="position" aria-pressed="false">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">Position moyenne</span>
-                    <span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}-{% endif %}</span>
-                  </button>
-                </div>
-                <div class="ts-chart">
-                  <canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas>
-                  <div class="ts-empty">Chargement du graphique live…</div>
-                </div>
-                <div class="ts-meta muted small" data-ts-meta></div>
-                {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}
-                  <script type="application/json" id="gsc-daily-series">{{ gsc.daily | tojson }}</script>
-                {% endif %}
-              </div>
-            {% endif %}
-
-            {% if live_gsc.enabled %}
-              <div
-                class="search-mini"
-                data-search-mini
-                data-source="gsc"
-                data-slug="{{ project.slug }}"
-                data-days-widget="gsc-live-widget"
-                data-limit="12"
-              >
-                <div class="search-mini-head">
-                  <div class="tab-buttons">
-                    <button type="button" class="tab-btn active" data-dim="query">Requêtes</button>
-                    <button type="button" class="tab-btn" data-dim="page">Pages</button>
-                  </div>
-                  <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">Voir tout</a>
-                </div>
-                <div class="table-wrap">
-                  <table class="table compact mini-perf-table">
-                    <thead>
-                      <tr>
-                        <th>Requête / page</th>
-                        <th class="num">Clics</th>
-                        <th class="num">Impressions</th>
-                        <th class="num">CTR</th>
-                        <th class="num">Position</th>
-                      </tr>
-                    </thead>
-                    <tbody data-mini-body>
-                      <tr><td colspan="5" class="muted">Chargement…</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="muted small search-mini-meta" data-mini-meta></div>
-              </div>
-            {% endif %}
-          </section>
-
-          <section class="card">
-            {% set bing_days = live_bing.days if live_bing and live_bing.days else (bing.days if bing and bing.days else 28) %}
-            <div class="card-title-row">
-              <h2>Bing Webmaster Tools</h2>
-              <div class="card-title-actions">
-                <div class="pill-select" title="Période du graphique live">
-                  <label>Période</label>
-                  <select class="js-ts-days" data-widget-id="bing-live-widget">
-                    {% for d in [7, 28, 90] %}
-                      <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                {% if bing and bing.ok %}
-                  <span class="badge ok">ok</span>
-                {% elif bing and bing.enabled %}
-                  <span class="badge warning">activé</span>
-                {% else %}
-                  <span class="badge notice">désactivé</span>
-                {% endif %}
-              </div>
-            </div>
-            <div class="search-source-summary" data-summary-block>
-              {% if bing and bing.ok %}
-                {% if bing.site_url %}
-                  <p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>
-                {% endif %}
-                {% if bing.start_date and bing.end_date %}
-                  <p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>
-                {% endif %}
-
-                <div class="issue-chips">
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}">
-                    <span class="dot warning"></span>Problèmes de crawl <span class="mono">{{ bing.crawl_issues.rows }}</span>
-                  </a>
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}">
-                    <span class="dot error"></span>URLs bloquées <span class="mono">{{ bing.blocked_urls.rows }}</span>
-                  </a>
-                  <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}">
-                    <span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span>
-                  </a>
-                </div>
-
-                {% if bing.queries_csv or bing.pages_csv %}
-                  <p class="muted small" style="margin-top: 8px;">
-                    CSV:
-                    {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
-                    {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
-                    {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
-                  </p>
-                {% endif %}
-              {% elif bing and bing.enabled %}
-                <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
-                <p class="muted small">
-                  {% if bing.reason in ["missing_api_key", "missing_credentials"] %}
-                    <a href="/settings/accounts#bing-connect-card">Connecter Bing</a>
-                    ·
-                  {% endif %}
-                  <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
-                </p>
-              {% else %}
-                <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
-                <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
-              {% endif %}
-            </div>
-
-            {% if live_bing.enabled or (bing and bing.daily and (bing.daily|length) >= 2) %}
-              <div
-                id="bing-live-widget"
-                class="ts-widget"
-                data-default-metrics="clicks,impressions"
-                data-max-metrics="2"
-                {% if bing and bing.daily and (bing.daily|length) >= 2 %}data-series-id="bing-daily-series"{% endif %}
-                {% if live_bing.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}
-              >
-                <div class="ts-metrics" aria-label="Métriques Bing Webmaster Tools">
-                  <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">Clics</span>
-                    <span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "-" }}</span>
-                  </button>
-                  <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">Impressions</span>
-                    <span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "-" }}</span>
-                  </button>
-                  <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
-                    <span class="ts-metric-check">✓</span>
-                    <span class="ts-metric-label">CTR moyen</span>
-                    <span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span>
-                  </button>
-                </div>
-                <div class="ts-chart">
-                  <canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas>
-                  <div class="ts-empty">Chargement du graphique live…</div>
-                </div>
-                <div class="ts-meta muted small" data-ts-meta></div>
-                {% if bing and bing.daily and (bing.daily|length) >= 2 %}
-                  <script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>
-                {% endif %}
-              </div>
-            {% endif %}
-
-            {% if live_bing.enabled %}
-              <div
-                class="search-mini"
-                data-search-mini
-                data-source="bing"
-                data-slug="{{ project.slug }}"
-                data-days-widget="bing-live-widget"
-                data-limit="12"
-              >
-                <div class="search-mini-head">
-                  <div class="tab-buttons">
-                    <button type="button" class="tab-btn active" data-dim="query">Requêtes</button>
-                    <button type="button" class="tab-btn" data-dim="page">Pages</button>
-                  </div>
-                  <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">Voir tout</a>
-                </div>
-                <div class="table-wrap">
-                  <table class="table compact mini-perf-table">
-                    <thead>
-                      <tr>
-                        <th>Requête / page</th>
-                        <th class="num">Clics</th>
-                        <th class="num">Impressions</th>
-                        <th class="num">CTR</th>
-                        <th class="num">Position</th>
-                      </tr>
-                    </thead>
-                    <tbody data-mini-body>
-                      <tr><td colspan="5" class="muted">Chargement…</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="muted small search-mini-meta" data-mini-meta></div>
-              </div>
-            {% endif %}
-          </section>
         </div>
       </div>
-
-      <section class="card span-2">
-        <div class="card-title-row">
-          <h2>Principales anomalies</h2>
-          <span class="muted small">{{ cur.label }}</span>
-        </div>
-        {% if not sum.top_issues %}
-          <p class="muted">Aucune anomalie détectée.</p>
-        {% else %}
-	          <div class="table-wrap">
-	            <table class="table compact">
-              <thead>
-                <tr>
-                  <th>Anomalie</th>
-                  <th>Criticité</th>
-                  <th class="num">Occurrences</th>
-                  <th class="num">Évolution</th>
-                </tr>
-              </thead>
-	              <tbody>
-	                {% for it in sum.top_issues %}
-	                  <tr>
-	                    <td><a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a></td>
-                      {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
-	                    <td><span class="badge {{ it.severity }}">{{ sev_label }}</span></td>
-	                    <td class="num mono">
-	                      <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
-	                    </td>
-	                    <td class="num mono">
-	                      {% if it.change is not none %}
-	                        {% if it.change > 0 %}
-	                          <span class="delta up">+{{ it.change }}</span>
-	                        {% elif it.change < 0 %}
-	                          <span class="delta down">{{ it.change }}</span>
-	                        {% else %}
-	                          <span class="muted">0</span>
-	                        {% endif %}
-	                      {% else %}
-	                        <span class="muted">-</span>
-	                      {% endif %}
-	                    </td>
-	                  </tr>
-	                {% endfor %}
-	              </tbody>
-            </table>
-          </div>
-        {% endif %}
-      </section>
-
-      <section class="card span-2">
-        <div class="card-title-row">
-          <h2>Historique du score de santé</h2>
-          <span class="muted small">derniers crawls</span>
-        </div>
-        {% if not project.history %}
-          <p class="muted">Aucune donnée.</p>
-        {% else %}
-          <div class="history">
-            {% for h in project.history %}
-              <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
-                <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
-                <div class="history-bar-label mono">{{ h.health_score }}</div>
-                <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
-              </a>
-            {% endfor %}
-          </div>
-        {% endif %}
-      </section>
     </div>
-    {% endif %}
+  </div>
+
+  {# ══════════════════════════════════════
+     MAIN GRID
+  ══════════════════════════════════════ #}
+  <div class="grid">
+
+    {# Top issues table — full width #}
+    <section class="card span-2">
+      <div class="card-title-row">
+        <h2>Principales anomalies</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="muted small">{{ cur.label }}</span>
+          <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Toutes les anomalies →</a>
+        </div>
+      </div>
+      {% if not sum.top_issues %}
+        <p class="muted">Aucune anomalie détectée.</p>
+      {% else %}
+        <table class="ov-issue-table">
+          <tbody>
+            {% for it in sum.top_issues %}
+              <tr>
+                <td style="width:100%;">
+                  <span class="ov-sev-dot {{ it.severity }}"></span>
+                  <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
+                </td>
+                <td style="white-space:nowrap;padding-left:16px;">
+                  {% set sl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
+                  <span class="sev {{ it.severity }}">{{ sl }}</span>
+                </td>
+                <td class="mono" style="white-space:nowrap;padding-left:16px;">{{ it.count }}</td>
+                <td style="white-space:nowrap;padding-left:12px;width:60px;">
+                  {% if it.change is not none %}
+                    {% if it.change > 0 %}<span class="delta up">+{{ it.change }}</span>
+                    {% elif it.change < 0 %}<span class="delta down">{{ it.change }}</span>
+                    {% else %}<span class="muted">–</span>{% endif %}
+                  {% else %}<span class="muted">–</span>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </section>
+
+    {# Anomalies distribution bars #}
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Répartition des anomalies</h2>
+        <span class="muted small mono">{{ sum.issues_total }}</span>
+      </div>
+      {% set e = sum.issues_distribution.error or 0 %}
+      {% set w = sum.issues_distribution.warning or 0 %}
+      {% set n = sum.issues_distribution.notice or 0 %}
+      {% set m = [e, w, n]|max %}
+      <div class="bars">
+        <div class="bar-row">
+          <span class="bar-label">Erreurs</span>
+          <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / m) * 100)|round(0) if m else 0 }};"></div></div>
+          <span class="mono">{{ e }}</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Avertissements</span>
+          <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / m) * 100)|round(0) if m else 0 }};"></div></div>
+          <span class="mono">{{ w }}</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Infos</span>
+          <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / m) * 100)|round(0) if m else 0 }};"></div></div>
+          <span class="mono">{{ n }}</span>
+        </div>
+      </div>
+      <p class="muted small" style="margin-top:14px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
+    </section>
+
+    {# URLs discovered donut #}
+    <section class="card">
+      <div class="card-title-row">
+        <h2>URLs découvertes</h2>
+        <span class="muted small mono">{{ sum.urls_discovered }}</span>
+      </div>
+      {% set found_total = sum.urls_discovered %}
+      {% set crawled_p = sum.pages_crawled %}
+      {% set uncrawled = sum.urls_uncrawled %}
+      {% set p_crawled = ( (crawled_p / found_total) * 100 ) if found_total else 100 %}
+      <div class="chart-row">
+        <div class="donut-svg-wrap">
+          <svg class="donut-svg" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="38" class="donut-track"/>
+            <circle cx="50" cy="50" r="38" class="donut-ring"
+              style="stroke:var(--ok); stroke-dasharray:{{ (p_crawled / 100 * 238.8)|round(1) }} 238.8;"
+              transform="rotate(-90 50 50)"/>
+          </svg>
+          <div class="donut-center">
+            <div class="donut-value mono">{{ crawled_p }}</div>
+            <div class="muted small">Explorées</div>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Explorées <span class="mono">{{ crawled_p }}</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="--sw: var(--chart-muted);"></span>Non explorées <span class="mono">{{ uncrawled }}</span></div>
+        </div>
+      </div>
+      <p class="muted small">URLs trouvées: <span class="mono">{{ found_total }}</span></p>
+    </section>
+
+    {# Core Web Vitals — full width #}
+    {% set ps = sum.pagespeed %}
+    {% set cwv = sum.cwv %}
+    <section class="card span-2">
+      <div class="card-title-row">
+        <h2>Core Web Vitals</h2>
+        {% if ps and ps.enabled %}
+          <span class="badge sm ok">activé</span>
+        {% else %}
+          <span class="badge sm notice">désactivé</span>
+        {% endif %}
+      </div>
+
+      {% if cwv %}
+        {% set psd = cwv.page_status if cwv.page_status else {} %}
+        {% set total_psd = (psd.good or 0) + (psd.ni or 0) + (psd.poor or 0) + (psd.na or 0) %}
+        {% set score = cwv.score if cwv.score is not none else 0 %}
+        {% if score == 0 and total_psd %}
+          {% set score = ((psd.good or 0) / total_psd * 100) | round(0) %}
+        {% endif %}
+        {% set score_badge = 'ok' if score >= 90 else ('warning' if score >= 70 else 'error') %}
+        {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
+
+        <div class="chart-row">
+          <div class="donut-svg-wrap">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" class="donut-track"/>
+              <circle cx="50" cy="50" r="38" class="donut-ring"
+                style="stroke:{{ score_color }}; stroke-dasharray:{{ (score / 100 * 238.8)|round(1) }} 238.8;"
+                transform="rotate(-90 50 50)"/>
+            </svg>
+            <div class="donut-center">
+              <div class="donut-value mono">{{ score }}%</div>
+              <div class="muted small">Score</div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Bon <span class="mono">{{ psd.good or 0 }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--warn);"></span>Amélioration <span class="mono">{{ psd.ni or 0 }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--err);"></span>Médiocre <span class="mono">{{ psd.poor or 0 }}</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="--sw: var(--notice);"></span>N/A <span class="mono">{{ psd.na or 0 }}</span></div>
+          </div>
+        </div>
+
+        <p class="muted small">Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Stratégie: <span class="mono">{{ cwv.strategy }}</span></p>
+
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Métrique</th>
+                <th>Statut</th>
+                <th class="num">Pages affectées</th>
+                <th class="num">Bon</th>
+                <th class="num">Moyen</th>
+                <th class="num">Médiocre</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for key, label, issue_key in [('lcp','LCP','cwv_lcp_pages_to_fix'), ('tbt','TBT','cwv_tbt_pages_to_fix'), ('cls','CLS','cwv_cls_pages_to_fix')] %}
+                {% set m = cwv.metrics[key] %}
+                {% set affected = (m.ni or 0) + (m.poor or 0) %}
+                {% set st = 'error' if (m.poor or 0) > 0 else ('warning' if (m.ni or 0) > 0 else ('ok' if (m.good or 0) > 0 else 'notice')) %}
+                {% set st_label = 'à corriger' if st == 'error' else ('moyen' if st == 'warning' else ('bon' if st == 'ok' else 'n/a')) %}
+                <tr>
+                  <td><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ label }}</a></td>
+                  <td><span class="badge {{ st }}">{{ st_label }}</span></td>
+                  <td class="num mono"><a href="/projects/{{ project.slug }}/issues/{{ issue_key }}?crawl={{ cur.timestamp }}">{{ affected }}</a></td>
+                  <td class="num mono">{{ m.good }}</td>
+                  <td class="num mono">{{ m.ni }}</td>
+                  <td class="num mono">{{ m.poor }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        {% if ps and ps.enabled %}
+          <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur ce crawl.</p>
+        {% else %}
+          <p class="muted">Active PageSpeed pour ajouter LCP/TBT/CLS. La clé API est gérée côté plateforme.</p>
+        {% endif %}
+      {% endif %}
+    </section>
+
+    {# GSC + Bing #}
+    {% set gsc = sum.gsc %}
+    {% set bing = sum.bing %}
+    {% set live_gsc = live_series.gsc if live_series and live_series.gsc else {} %}
+    {% set live_bing = live_series.bing if live_series and live_series.bing else {} %}
+    <div class="span-all">
+      <div class="grid two">
+        <section class="card">
+          {% set gsc_days = live_gsc.days if live_gsc and live_gsc.days else (gsc.days if gsc and gsc.days else 28) %}
+          <div class="card-title-row">
+            <h2>Google Search Console</h2>
+            <div class="card-title-actions">
+              <div class="pill-select" title="Période du graphique live">
+                <label>Période</label>
+                <select class="js-ts-days" data-widget-id="gsc-live-widget">
+                  {% for d in [7, 28, 90] %}
+                    <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
+                  {% endfor %}
+                </select>
+              </div>
+              {% if gsc and gsc.ok %}<span class="badge ok">ok</span>
+              {% elif gsc and gsc.enabled %}<span class="badge warning">activé</span>
+              {% else %}<span class="badge notice">désactivé</span>{% endif %}
+            </div>
+          </div>
+          <div class="search-source-summary" data-summary-block {% if not (gsc and gsc.ok) %}data-summary-fallback="true"{% endif %}>
+            {% if gsc and gsc.ok %}
+              <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
+              <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
+              {% if gsc.url_inspection and gsc.url_inspection.enabled %}
+                <div class="issue-chips">
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_errors?crawl={{ cur.timestamp }}"><span class="dot error"></span>Erreurs <span class="mono">{{ gsc.url_inspection.errors }}</span></a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_warnings?crawl={{ cur.timestamp }}"><span class="dot warning"></span>Avertissements <span class="mono">{{ gsc.url_inspection.warnings }}</span></a>
+                  <a class="chip" href="/projects/{{ project.slug }}/issues/gsc_indexing_notices?crawl={{ cur.timestamp }}"><span class="dot notice"></span>Avis <span class="mono">{{ gsc.url_inspection.notices }}</span></a>
+                </div>
+                {% if gsc.url_inspection.json %}<p class="muted small" style="margin-top:8px;">Détails: <a href="/file?path={{ gsc.url_inspection.json }}">gsc-url-inspection.json</a></p>{% endif %}
+              {% endif %}
+              {% if gsc.queries_csv or gsc.pages_csv %}
+                <p class="muted small" style="margin-top:8px;">CSV:
+                  {% if gsc.queries_csv %}<a href="/file?path={{ gsc.queries_csv }}">gsc-queries.csv</a>{% endif %}
+                  {% if gsc.queries_csv and gsc.pages_csv %} · {% endif %}
+                  {% if gsc.pages_csv %}<a href="/file?path={{ gsc.pages_csv }}">gsc-pages.csv</a>{% endif %}
+                  {% if gsc.daily_csv %} · <a href="/file?path={{ gsc.daily_csv }}">gsc-daily.csv</a>{% endif %}
+                </p>
+              {% endif %}
+            {% elif gsc and gsc.enabled %}
+              <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
+              <p class="muted small">{% if gsc.reason == "missing_credentials" %}<a href="/settings/accounts#gsc-oauth-card">Connecter Google</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+            {% else %}
+              <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+            {% endif %}
+          </div>
+
+          {% if live_gsc.enabled or (gsc and gsc.daily and (gsc.daily|length) >= 2) %}
+            <div id="gsc-live-widget" class="ts-widget" data-default-metrics="clicks,impressions" data-max-metrics="2"
+              {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}data-series-id="gsc-daily-series"{% endif %}
+              {% if live_gsc.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}>
+              <div class="ts-metrics" aria-label="Métriques Google Search Console">
+                <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Clics</span><span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Impressions</span><span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">CTR moyen</span><span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
+                <button type="button" class="ts-metric" data-metric="position" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Position moyenne</span><span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}-{% endif %}</span></button>
+              </div>
+              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas><div class="ts-empty">Chargement du graphique live…</div></div>
+              <div class="ts-meta muted small" data-ts-meta></div>
+              {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}<script type="application/json" id="gsc-daily-series">{{ gsc.daily | tojson }}</script>{% endif %}
+            </div>
+          {% endif %}
+
+          {% if live_gsc.enabled %}
+            <div class="search-mini" data-search-mini data-source="gsc" data-slug="{{ project.slug }}" data-days-widget="gsc-live-widget" data-limit="12">
+              <div class="search-mini-head">
+                <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
+                <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">Voir tout</a>
+              </div>
+              <div class="table-wrap">
+                <table class="table compact mini-perf-table">
+                  <thead><tr><th>Requête / page</th><th class="num">Clics</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th></tr></thead>
+                  <tbody data-mini-body><tr><td colspan="5" class="muted">Chargement…</td></tr></tbody>
+                </table>
+              </div>
+              <div class="muted small search-mini-meta" data-mini-meta></div>
+            </div>
+          {% endif %}
+        </section>
+
+        <section class="card">
+          {% set bing_days = live_bing.days if live_bing and live_bing.days else (bing.days if bing and bing.days else 28) %}
+          <div class="card-title-row">
+            <h2>Bing Webmaster Tools</h2>
+            <div class="card-title-actions">
+              <div class="pill-select" title="Période du graphique live">
+                <label>Période</label>
+                <select class="js-ts-days" data-widget-id="bing-live-widget">
+                  {% for d in [7, 28, 90] %}
+                    <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
+                  {% endfor %}
+                </select>
+              </div>
+              {% if bing and bing.ok %}<span class="badge ok">ok</span>
+              {% elif bing and bing.enabled %}<span class="badge warning">activé</span>
+              {% else %}<span class="badge notice">désactivé</span>{% endif %}
+            </div>
+          </div>
+          <div class="search-source-summary" data-summary-block>
+            {% if bing and bing.ok %}
+              {% if bing.site_url %}<p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>{% endif %}
+              {% if bing.start_date and bing.end_date %}<p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>{% endif %}
+              <div class="issue-chips">
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_crawl_issues?crawl={{ cur.timestamp }}"><span class="dot warning"></span>Problèmes de crawl <span class="mono">{{ bing.crawl_issues.rows }}</span></a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_blocked_urls?crawl={{ cur.timestamp }}"><span class="dot error"></span>URLs bloquées <span class="mono">{{ bing.blocked_urls.rows }}</span></a>
+                <a class="chip" href="/projects/{{ project.slug }}/issues/bing_sitemaps?crawl={{ cur.timestamp }}"><span class="dot notice"></span>Sitemaps <span class="mono">{{ bing.sitemaps.rows }}</span></a>
+              </div>
+              {% if bing.queries_csv or bing.pages_csv %}
+                <p class="muted small" style="margin-top:8px;">CSV:
+                  {% if bing.queries_csv %}<a href="/file?path={{ bing.queries_csv }}">bing-queries.csv</a>{% endif %}
+                  {% if bing.queries_csv and bing.pages_csv %} · {% endif %}
+                  {% if bing.pages_csv %}<a href="/file?path={{ bing.pages_csv }}">bing-pages.csv</a>{% endif %}
+                </p>
+              {% endif %}
+            {% elif bing and bing.enabled %}
+              <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
+              <p class="muted small">{% if bing.reason in ["missing_api_key", "missing_credentials"] %}<a href="/settings/accounts#bing-connect-card">Connecter Bing</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+            {% else %}
+              <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+            {% endif %}
+          </div>
+
+          {% if live_bing.enabled or (bing and bing.daily and (bing.daily|length) >= 2) %}
+            <div id="bing-live-widget" class="ts-widget" data-default-metrics="clicks,impressions" data-max-metrics="2"
+              {% if bing and bing.daily and (bing.daily|length) >= 2 %}data-series-id="bing-daily-series"{% endif %}
+              {% if live_bing.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}>
+              <div class="ts-metrics" aria-label="Métriques Bing Webmaster Tools">
+                <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Clics</span><span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Impressions</span><span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "-" }}</span></button>
+                <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">CTR moyen</span><span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
+              </div>
+              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas><div class="ts-empty">Chargement du graphique live…</div></div>
+              <div class="ts-meta muted small" data-ts-meta></div>
+              {% if bing and bing.daily and (bing.daily|length) >= 2 %}<script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>{% endif %}
+            </div>
+          {% endif %}
+
+          {% if live_bing.enabled %}
+            <div class="search-mini" data-search-mini data-source="bing" data-slug="{{ project.slug }}" data-days-widget="bing-live-widget" data-limit="12">
+              <div class="search-mini-head">
+                <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
+                <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">Voir tout</a>
+              </div>
+              <div class="table-wrap">
+                <table class="table compact mini-perf-table">
+                  <thead><tr><th>Requête / page</th><th class="num">Clics</th><th class="num">Impressions</th><th class="num">CTR</th><th class="num">Position</th></tr></thead>
+                  <tbody data-mini-body><tr><td colspan="5" class="muted">Chargement…</td></tr></tbody>
+                </table>
+              </div>
+              <div class="muted small search-mini-meta" data-mini-meta></div>
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+
+  </div>{# /grid #}
+
+  {% endif %}{# /has current #}
+
+  {# ══════════════════════════════════════
+     LIVE JOB POLLING SCRIPT
+  ══════════════════════════════════════ #}
+  {% if live_job %}
+    <script>
+      (() => {
+        const card = document.getElementById("live-job-card");
+        if (!card) return;
+        const jobId = card.dataset.jobId;
+        if (!jobId) return;
+        const initialStatus = String(card.dataset.status || "");
+        const createdAt = Number(card.dataset.createdAt || 0);
+        const runTs = String(card.dataset.runTs || "");
+        const pollMs = 1000;
+        const tail = 20000;
+        const tsEl = document.getElementById("live-job-ts");
+        const statusEl = document.getElementById("live-job-status");
+        const progressWrap = document.getElementById("live-job-progress");
+        const progressCount = document.getElementById("live-job-progress-count");
+        const progressFill = document.getElementById("live-job-progress-fill");
+        const progressText = document.getElementById("live-job-progress-text");
+        const logLineEl = document.getElementById("live-job-logline");
+        const logsDetails = document.getElementById("live-job-logs-details");
+        const stdoutEl = document.getElementById("live-job-stdout");
+        const stderrEl = document.getElementById("live-job-stderr");
+        const jobsLink = document.getElementById("live-job-jobs-link");
+        if (jobsLink) jobsLink.href = `/jobs?job=${encodeURIComponent(jobId)}`;
+        function isLiveStatus(s) { return s === "queued" || s === "running" || s === "cancel_requested"; }
+        function fmtRunTs(v) { if (!v || !/^\d{8}-\d{6}$/.test(v)) return null; return `${v.slice(6,8)}/${v.slice(4,6)}/${v.slice(2,4)}`; }
+        function fmtEpoch(v) { if (!Number.isFinite(v) || v <= 0) return ""; const d = new Date(v*1000); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; }
+        const initialDate = fmtRunTs(runTs) || fmtEpoch(createdAt);
+        if (tsEl) tsEl.textContent = initialDate;
+        function lastLine(v) { if (!v) return ""; const ls = v.split(/\r?\n/); for (let i=ls.length-1;i>=0;i--) { const l=String(ls[i]||"").trim(); if(l) return l; } return ""; }
+        const statusMap = {queued:"en attente",running:"en cours",cancel_requested:"annulation…",done:"terminé",failed:"échec",canceled:"annulé"};
+        function render(data) {
+          const status = data && data.status ? String(data.status) : "";
+          if (statusEl) { statusEl.textContent = statusMap[status] || status; statusEl.className = `pill ${status}`; }
+          const rts = data && data.result ? data.result.timestamp : null;
+          if (tsEl) tsEl.textContent = fmtRunTs(String(rts||"")) || fmtEpoch(Number(data&&data.created_at));
+          const progress = data ? data.progress : null;
+          if (progressWrap && progressFill && progressText && progressCount && progress && progress.total) {
+            const cur2 = Number(progress.current||0), tot = Number(progress.total||0);
+            const isLive = status==="queued"||status==="running";
+            const isFin = isLive && tot>0 && cur2>=tot;
+            let pct = tot ? Math.round((cur2/tot)*100) : 0;
+            if (isFin && pct>=100) pct = 99;
+            progressFill.style.setProperty("--p",String(pct));
+            progressCount.textContent = `${cur2}/${tot}`;
+            progressText.textContent = isFin ? `Pages explorées : ${cur2}/${tot} · finalisation…` : `Pages explorées : ${cur2}/${tot}`;
+            progressWrap.style.display = "";
+          } else if (progressWrap) { progressWrap.style.display = "none"; }
+          const stdout = data && typeof data.stdout==="string" ? data.stdout : "";
+          const stderr = data && typeof data.stderr==="string" ? data.stderr : "";
+          const line = lastLine(stdout) || lastLine(stderr);
+          if (logLineEl) logLineEl.textContent = line;
+          if (logsDetails && stdoutEl && stderrEl) {
+            const hasLogs = Boolean(stdout||stderr);
+            logsDetails.style.display = hasLogs ? "" : "none";
+            if (hasLogs) { stdoutEl.textContent = stdout; stderrEl.textContent = stderr; }
+          }
+        }
+        async function poll() {
+          try {
+            const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=${tail}`,{cache:"no-store"});
+            if (!res.ok) return;
+            const data = await res.json();
+            render(data);
+            if (isLiveStatus(initialStatus) && data && data.status==="done" && data.result && data.result.project_url) {
+              const tgt = new URL(String(data.result.project_url),window.location.origin);
+              const cur3 = new URL(window.location.href);
+              if (tgt.pathname!==cur3.pathname||tgt.search!==cur3.search) window.location.href=tgt.toString();
+            }
+          } catch(_){}
+        }
+        if (isLiveStatus(initialStatus)) setInterval(poll, pollMs);
+        poll();
+      })();
+    </script>
   {% endif %}
+
+  {% endif %}{# /project exists #}
 {% endblock %}
