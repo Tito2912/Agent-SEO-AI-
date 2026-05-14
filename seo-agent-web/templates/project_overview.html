@@ -240,45 +240,6 @@
   ══════════════════════════════════════ #}
   <div class="grid">
 
-    {# Top issues table — full width #}
-    <section class="card span-2">
-      <div class="card-title-row">
-        <h2>Principales anomalies</h2>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span class="muted small">{{ cur.label }}</span>
-          <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Toutes les anomalies →</a>
-        </div>
-      </div>
-      {% if not sum.top_issues %}
-        <p class="muted">Aucune anomalie détectée.</p>
-      {% else %}
-        <table class="ov-issue-table">
-          <tbody>
-            {% for it in sum.top_issues %}
-              <tr>
-                <td style="width:100%;">
-                  <span class="ov-sev-dot {{ it.severity }}"></span>
-                  <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
-                </td>
-                <td style="white-space:nowrap;padding-left:16px;">
-                  {% set sl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
-                  <span class="sev {{ it.severity }}">{{ sl }}</span>
-                </td>
-                <td class="mono" style="white-space:nowrap;padding-left:16px;">{{ it.count }}</td>
-                <td style="white-space:nowrap;padding-left:12px;width:60px;">
-                  {% if it.change is not none %}
-                    {% if it.change > 0 %}<span class="delta up">+{{ it.change }}</span>
-                    {% elif it.change < 0 %}<span class="delta down">{{ it.change }}</span>
-                    {% else %}<span class="muted">–</span>{% endif %}
-                  {% else %}<span class="muted">–</span>{% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% endif %}
-    </section>
-
     {# Anomalies distribution bars #}
     <section class="card">
       <div class="card-title-row">
@@ -611,6 +572,47 @@
     </div>
 
   </div>{# /grid #}
+
+  {# ══════════════════════════════════════
+     PRINCIPALES ANOMALIES
+  ══════════════════════════════════════ #}
+  <section class="card" style="margin-top:8px;">
+    <div class="card-title-row">
+      <h2>Principales anomalies</h2>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="muted small">{{ cur.label }}</span>
+        <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Toutes les anomalies →</a>
+      </div>
+    </div>
+    {% if not sum.top_issues %}
+      <p class="muted">Aucune anomalie détectée.</p>
+    {% else %}
+      <table class="ov-issue-table">
+        <tbody>
+          {% for it in sum.top_issues %}
+            <tr>
+              <td style="width:100%;">
+                <span class="ov-sev-dot {{ it.severity }}"></span>
+                <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
+              </td>
+              <td style="white-space:nowrap;padding-left:16px;">
+                {% set sl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
+                <span class="sev {{ it.severity }}">{{ sl }}</span>
+              </td>
+              <td class="mono" style="white-space:nowrap;padding-left:16px;">{{ it.count }}</td>
+              <td style="white-space:nowrap;padding-left:12px;width:60px;">
+                {% if it.change is not none %}
+                  {% if it.change > 0 %}<span class="delta up">+{{ it.change }}</span>
+                  {% elif it.change < 0 %}<span class="delta down">{{ it.change }}</span>
+                  {% else %}<span class="muted">–</span>{% endif %}
+                {% else %}<span class="muted">–</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+  </section>
 
   {# ══════════════════════════════════════
      ACTIONS PRIORITAIRES (bottom)
