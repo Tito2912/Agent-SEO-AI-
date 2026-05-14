@@ -1,17 +1,17 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}SEO Agent{% endblock %}</title>
-    <link rel="stylesheet" href="/static/styles.css?v=8" />
+    <link rel="stylesheet" href="/static/styles.css?v=9" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
     <div class="app">
 
-      <!-- ── SIDEBAR ─────────────────────────────── -->
+      <!-- â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <aside class="sidebar">
 
         <!-- Brand -->
@@ -39,7 +39,7 @@
 
           <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-            Exécutions
+            ExÃ©cutions
           </a>
 
           <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">
@@ -54,7 +54,7 @@
             </a>
           {% endif %}
 
-          <div class="nav-section">Paramètres</div>
+          <div class="nav-section">ParamÃ¨tres</div>
 
           <a class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}" href="/settings/accounts">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/></svg>
@@ -64,7 +64,7 @@
           {% if request.state.can_access_system_settings %}
             <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}" href="/settings/system">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
-              Système
+              SystÃ¨me
             </a>
           {% endif %}
 
@@ -83,7 +83,7 @@
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}" href="/projects/{{ project.slug }}/settings/crawl">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
-              Paramètres de crawl
+              ParamÃ¨tres de crawl
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
@@ -98,7 +98,7 @@
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks/opportunities">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              Opportunités <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Solo+</span>
+              OpportunitÃ©s <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Solo+</span>
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}" href="/projects/{{ project.slug }}/issues">
@@ -125,7 +125,7 @@
             </div>
             <form method="post" action="/auth/logout">
               <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-              <button type="submit" class="sidebar-logout" title="Se déconnecter">
+              <button type="submit" class="sidebar-logout" title="Se dÃ©connecter">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
               </button>
             </form>
@@ -171,7 +171,7 @@
           </div>
           <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
           <form class="assistant-form" id="assistant-form">
-            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une question…" maxlength="2000" />
+            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une questionâ€¦" maxlength="2000" />
             <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
             </button>
@@ -180,7 +180,7 @@
         </section>
       </div>
 
-      <!-- ── MAIN ───────────────────────────────── -->
+      <!-- â”€â”€ MAIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
       <main class="main">
         <header class="topbar">
           <div class="crumbs">
@@ -200,7 +200,7 @@
 
     </div><!-- /.app -->
 
-    <!-- ── SCRIPTS ────────────────────────────── -->
+    <!-- â”€â”€ SCRIPTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <script>
       (() => {
         const meta = document.querySelector('meta[name="csrf-token"]');

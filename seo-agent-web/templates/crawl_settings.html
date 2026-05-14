@@ -1,6 +1,130 @@
 {% extends "layout.html" %}
 {% block title %}Paramètres de crawl - {{ project.site_name if project else slug }}{% endblock %}
 
+{% block head_extra %}
+<style>
+/* ── Crawl Settings v2 ───────────────────────────────── */
+.cs-page { display: flex; flex-direction: column; gap: 20px; }
+
+.cs-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cs-card-head {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+}
+.cs-card-icon {
+  width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+  background: rgba(var(--accent-rgb),.09); border: 1px solid rgba(var(--accent-rgb),.18);
+  color: var(--accent-2); display: flex; align-items: center; justify-content: center;
+}
+.cs-card-icon svg { width: 17px; height: 17px; }
+.cs-card-meta { flex: 1; }
+.cs-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
+.cs-card-desc  { font-size: 12px; color: var(--muted); }
+.cs-card-body  { padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+
+/* Field grid */
+.cs-grid { display: grid; gap: 14px; }
+.cs-grid.g2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.cs-grid.g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+@media (max-width: 680px) { .cs-grid.g2, .cs-grid.g3 { grid-template-columns: 1fr; } }
+.cs-span2 { grid-column: span 2; }
+@media (max-width: 680px) { .cs-span2 { grid-column: span 1; } }
+
+.cs-field { display: flex; flex-direction: column; gap: 5px; }
+.cs-label { font-size: 12px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; margin-bottom: 0; }
+.cs-hint  { font-size: 11px; color: var(--muted); line-height: 1.45; }
+.cs-req   { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--warn); text-transform: uppercase; padding: 1px 5px; background: rgba(245,158,11,.08); border-radius: 3px; }
+
+/* Toggle rows */
+.cs-toggle-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 13px 0; border-bottom: 1px solid var(--border);
+}
+.cs-toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cs-toggle-row:first-child { padding-top: 0; }
+.cs-toggle-info { flex: 1; min-width: 0; }
+.cs-toggle-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.cs-toggle-sub  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+/* CSS toggle switch */
+.cs-switch { position: relative; display: inline-flex; width: 42px; height: 24px; flex-shrink: 0; cursor: pointer; }
+.cs-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.cs-track {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,.09); border: 1px solid var(--border-2);
+  border-radius: 12px; transition: background .18s, border-color .18s;
+}
+.cs-thumb {
+  position: absolute; top: 4px; left: 4px; width: 14px; height: 14px;
+  background: rgba(255,255,255,.45); border-radius: 50%;
+  transition: transform .18s, background .18s; pointer-events: none;
+}
+.cs-switch input:checked ~ .cs-track { background: rgba(var(--accent-rgb),.28); border-color: rgba(var(--accent-rgb),.55); }
+.cs-switch input:checked ~ .cs-track .cs-thumb { transform: translateX(18px); background: var(--accent-2); }
+.cs-switch input:disabled ~ .cs-track { opacity: .4; cursor: not-allowed; }
+
+/* Module cards */
+.cs-modules { display: flex; flex-direction: column; gap: 10px; }
+.cs-mod { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; transition: border-color .15s; }
+.cs-mod.is-active { border-color: rgba(var(--accent-rgb),.3); }
+.cs-mod.is-soon { opacity: .6; pointer-events: none; }
+
+.cs-mod-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: rgba(255,255,255,.015); }
+.cs-mod-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cs-mod-icon svg { width: 16px; height: 16px; }
+.cs-mod-icon.audit { background: rgba(16,185,129,.10); color: var(--ok);     border: 1px solid rgba(16,185,129,.22); }
+.cs-mod-icon.res   { background: rgba(245,158,11,.08); color: var(--warn);   border: 1px solid rgba(245,158,11,.18); }
+.cs-mod-icon.cwv   { background: rgba(59,130,246,.08); color: #60a5fa;       border: 1px solid rgba(59,130,246,.18); }
+.cs-mod-icon.gsc   { background: rgba(234,67,53,.08);  color: #f87171;       border: 1px solid rgba(234,67,53,.18); }
+.cs-mod-icon.bing  { background: rgba(129,140,248,.08);color: var(--notice); border: 1px solid rgba(129,140,248,.18); }
+.cs-mod-icon.soon  { background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid var(--border); }
+
+.cs-mod-meta { flex: 1; min-width: 0; }
+.cs-mod-name { font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.cs-mod-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.cs-mod-body { padding: 16px 18px 18px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; }
+.cs-mod-divider { height: 1px; background: var(--border); }
+
+/* Connection badge */
+.cs-conn {
+  display: flex; align-items: center; gap: 8px; padding: 10px 13px;
+  background: rgba(255,255,255,.02); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); flex-wrap: wrap;
+}
+.cs-conn-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cs-conn-dot.ok   { background: var(--ok);   box-shadow: 0 0 5px rgba(16,185,129,.5); }
+.cs-conn-dot.warn { background: var(--warn); }
+.cs-conn-label { font-size: 12px; color: var(--text); flex: 1; }
+.cs-conn-btns  { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.cs-sub-head { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+.cs-warn-box {
+  display: flex; align-items: flex-start; gap: 9px; padding: 10px 13px;
+  background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.18);
+  border-radius: var(--radius-sm); font-size: 12px; color: #fbbf24;
+}
+.cs-info-box {
+  display: flex; align-items: flex-start; gap: 9px; padding: 10px 13px;
+  background: rgba(var(--accent-rgb),.05); border: 1px solid rgba(var(--accent-rgb),.15);
+  border-radius: var(--radius-sm); font-size: 12px; color: var(--muted);
+}
+.cs-warn-box svg, .cs-info-box svg { flex-shrink: 0; margin-top: 1px; }
+
+/* Advanced details */
+details.cs-card { overflow: visible; }
+details.cs-card > summary { display: flex; align-items: flex-start; gap: 14px; padding: 18px 22px; cursor: pointer; list-style: none; border-radius: var(--radius-lg); }
+details.cs-card > summary::-webkit-details-marker { display: none; }
+details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+</style>
+{% endblock %}
+
 {% block crumbs %}
   <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
@@ -14,14 +138,12 @@
 {% endblock %}
 
 {% block actions %}
-  {% if project %}
-    <a class="btn" href="/projects/{{ slug }}">Retour</a>
-  {% endif %}
+  {% if project %}<a class="btn" href="/projects/{{ slug }}">Retour</a>{% endif %}
 {% endblock %}
 
 {% block content %}
   {% if not project %}
-    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+    <section class="card"><p>Projet introuvable : <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     <div class="page-header">
       <h1>Paramètres de crawl</h1>
@@ -29,509 +151,640 @@
     </div>
 
     {% if err %}
-      <div class="alert error">
+      <div class="alert error" style="margin-bottom:16px;">
         <span class="badge error">erreur</span>
         <p class="muted small">{{ err }}</p>
       </div>
     {% elif msg %}
-      <div class="alert ok">
+      <div class="alert ok" style="margin-bottom:16px;">
         <span class="badge ok">ok</span>
         <p class="muted small">{{ msg }}</p>
       </div>
     {% endif %}
 
     <form method="post" action="/projects/{{ slug }}/settings/crawl">
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Général</h2>
-          <span class="muted small">Appliqué aux prochains crawls</span>
-        </div>
+      <div class="cs-page">
 
-        <div class="grid two">
-          <label>
-            Pages max à crawler
-            <input type="number" name="max_pages" min="1" max="200000" value="{{ crawl.max_pages }}" />
-          </label>
-          <label>
-            Concurrence (workers)
-            <input type="number" name="workers" min="1" max="32" value="{{ crawl.workers }}" />
-          </label>
-          <label>
-            Timeout (secondes)
-            <input type="number" name="timeout_s" min="1" max="120" step="0.5" value="{{ crawl.timeout_s }}" />
-          </label>
-        </div>
-      </section>
+        <!-- ══ 1. EXPLORATION ════════════════════════════ -->
+        <div class="cs-card">
+          <div class="cs-card-head">
+            <div class="cs-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
+            <div class="cs-card-meta">
+              <div class="cs-card-title">Exploration du site</div>
+              <div class="cs-card-desc">Contrôle la façon dont le robot parcourt votre site</div>
+            </div>
+          </div>
+          <div class="cs-card-body">
 
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Crawl</h2>
-          <span class="muted small">Règles de découverte</span>
-        </div>
-
-        <label class="checkbox">
-          <input type="checkbox" name="allow_subdomains" {% if crawl.allow_subdomains %}checked{% endif %} />
-          <span>Inclure les sous-domaines</span>
-        </label>
-
-        <label class="checkbox">
-          <input type="checkbox" name="ignore_robots" {% if crawl.ignore_robots %}checked{% endif %} />
-          <span>Ignorer robots.txt</span>
-          <span class="badge warning">risque</span>
-        </label>
-
-        <p class="muted small" style="margin: 10px 0 0;">
-          Par défaut, le crawl respecte <span class="mono">robots.txt</span>. Activez l'option “Ignorer robots.txt” uniquement si vous savez ce que vous faites.
-        </p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Modules</h2>
-          <span class="muted small">Active/désactive et règle chaque source</span>
-        </div>
-
-        <div class="modules-grid">
-          <section class="module-card">
-            <div class="module-head">
-              <div class="module-title">
-                <div class="module-name">Audit de site</div>
-                <div class="muted small">Indexabilité, contenu, liens, canonicals, erreurs HTTP…</div>
+            <div class="cs-grid g3">
+              <div class="cs-field">
+                <span class="cs-label">Pages à analyser</span>
+                <input type="number" name="max_pages" min="1" max="200000" value="{{ crawl.max_pages }}" />
+                <span class="cs-hint">Max d'URLs à crawler. 500 pour un petit site, 5 000+ pour un site large.</span>
               </div>
-              <span class="badge ok">activé</span>
-            </div>
-            <p class="muted small" style="margin: 8px 0 0;">Ce module est toujours activé.</p>
-          </section>
-
-          <section class="module-card">
-            <div class="module-head">
-              <label class="checkbox">
-                <input type="checkbox" name="check_resources" {% if crawl.check_resources %}checked{% endif %} />
-                <span>Ressources (CSS/JS/images)</span>
-              </label>
-              {% if crawl.check_resources %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
-            </div>
-            <div class="grid two module-body">
-              <label>
-                Max ressources / type
-                <input type="number" name="max_resources" min="0" max="20000" value="{{ crawl.max_resources }}" />
-              </label>
-            </div>
-          </section>
-
-          <section class="module-card">
-            <div class="module-head">
-              <label class="checkbox">
-                <input type="checkbox" name="pagespeed" {% if crawl.pagespeed %}checked{% endif %} />
-                <span>Core Web Vitals (PageSpeed)</span>
-              </label>
-              {% if crawl.pagespeed %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
-            </div>
-            <div class="grid two module-body">
-              <label>
-                Stratégie
-                <select name="pagespeed_strategy">
-                  <option value="mobile" {% if crawl.pagespeed_strategy == "mobile" %}selected{% endif %}>mobile</option>
-                  <option value="desktop" {% if crawl.pagespeed_strategy == "desktop" %}selected{% endif %}>desktop</option>
-                </select>
-              </label>
-              <label>
-                URLs max
-                <input type="number" name="pagespeed_max_urls" min="0" max="1000" value="{{ crawl.pagespeed_max_urls }}" />
-              </label>
-              <label>
-                Timeout (s)
-                <input type="number" name="pagespeed_timeout_s" min="1" max="180" step="1" value="{{ crawl.pagespeed_timeout_s }}" />
-              </label>
-              <label>
-                Parallélisme (workers)
-                <input type="number" name="pagespeed_workers" min="1" max="10" value="{{ crawl.pagespeed_workers }}" />
-              </label>
-            </div>
-            <p class="muted small" style="margin: 8px 0 0;">
-              Nécessite une clé PageSpeed fournie par la plateforme (sinon le module est ignoré).
-            </p>
-          </section>
-
-          <section class="module-card" id="gsc">
-            <div class="module-head">
-              <label class="checkbox">
-                <input type="checkbox" name="gsc_enabled" {% if gsc.enabled %}checked{% endif %} />
-                <span>Google Search Console (GSC)</span>
-              </label>
-              {% if gsc.enabled %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
+              <div class="cs-field">
+                <span class="cs-label">Connexions simultanées</span>
+                <input type="number" name="workers" min="1" max="32" value="{{ crawl.workers }}" />
+                <span class="cs-hint">Requêtes parallèles. Réduire si votre hébergeur est sensible (recommandé : 3–8).</span>
+              </div>
+              <div class="cs-field">
+                <span class="cs-label">Timeout par page (s)</span>
+                <input type="number" name="timeout_s" min="1" max="120" step="0.5" value="{{ crawl.timeout_s }}" />
+                <span class="cs-hint">Délai max avant d'abandonner une page. 10 s recommandé.</span>
+              </div>
             </div>
 
-            <div class="grid two module-body">
-              <label>
-                Période (jours)
-                <input type="number" name="gsc_days" min="1" max="365" value="{{ gsc.days }}" />
-              </label>
-              <label>
-                Impressions min (anomalies)
-                <input type="number" name="gsc_min_impressions" min="0" max="1000000" value="{{ gsc.min_impressions }}" />
-              </label>
-              <label>
-                Type de recherche
-                <select name="gsc_search_type">
-                  <option value="web" {% if gsc.search_type == "web" %}selected{% endif %}>web</option>
-                  <option value="image" {% if gsc.search_type == "image" %}selected{% endif %}>image</option>
-                  <option value="video" {% if gsc.search_type == "video" %}selected{% endif %}>video</option>
-                  <option value="news" {% if gsc.search_type == "news" %}selected{% endif %}>news</option>
-                  <option value="discover" {% if gsc.search_type == "discover" %}selected{% endif %}>discover</option>
-                </select>
-              </label>
-	              <label class="span-2">
-	                Propriété (optionnel)
-	                <input id="gsc-property-input" type="text" name="gsc_property" value="{{ gsc.property_url }}" placeholder="ex: sc-domain:example.com ou https://example.com/" />
-	              </label>
-	            </div>
-
-            <div class="module-divider"></div>
-
-            <div class="module-head">
-              <label class="checkbox sub">
-                <input type="checkbox" name="gsc_inspection_enabled" {% if gsc.inspection_enabled %}checked{% endif %} {% if not gsc.enabled %}disabled{% endif %} />
-                <span>Anomalies Google (URL Inspection)</span>
-              </label>
+            <div>
+              <div class="cs-toggle-row">
+                <div class="cs-toggle-info">
+                  <div class="cs-toggle-name">Inclure les sous-domaines</div>
+                  <div class="cs-toggle-sub">Crawle aussi blog.example.com, shop.example.com, etc.</div>
+                </div>
+                <label class="cs-switch">
+                  <input type="checkbox" name="allow_subdomains" {% if crawl.allow_subdomains %}checked{% endif %} />
+                  <span class="cs-track"><span class="cs-thumb"></span></span>
+                </label>
+              </div>
+              <div class="cs-toggle-row">
+                <div class="cs-toggle-info">
+                  <div class="cs-toggle-name">Ignorer robots.txt <span class="badge warning" style="font-size:10px;vertical-align:middle;">risque</span></div>
+                  <div class="cs-toggle-sub">À n'activer que sur vos propres sites. Peut surcharger le serveur.</div>
+                </div>
+                <label class="cs-switch">
+                  <input type="checkbox" name="ignore_robots" {% if crawl.ignore_robots %}checked{% endif %} />
+                  <span class="cs-track"><span class="cs-thumb"></span></span>
+                </label>
+              </div>
             </div>
 
-            <div class="grid two module-body">
-              <label>
-                URLs max (inspection)
-                <input type="number" name="gsc_inspection_max_urls" min="0" max="200" value="{{ gsc.inspection_max_urls }}" />
-              </label>
-              <label>
-                Timeout (s)
-                <input type="number" name="gsc_inspection_timeout_s" min="1" max="120" step="1" value="{{ gsc.inspection_timeout_s }}" />
-              </label>
-              <label class="span-2">
-                Langue (optionnel)
-                <input type="text" name="gsc_inspection_language" value="{{ gsc.inspection_language }}" placeholder="ex: fr" />
-              </label>
+            <!-- Filtres URL -->
+            <div>
+              <div class="cs-sub-head" style="margin-bottom:12px;">Filtres d'URL (optionnel)</div>
+              <div class="cs-grid g2">
+                <div class="cs-field">
+                  <span class="cs-label">Restreindre le crawl à ces URLs</span>
+                  <input type="text" name="include_regex" value="{{ crawl.include_regex }}" placeholder="ex: ^https://example.com/blog" />
+                  <span class="cs-hint">Regex — seules les URLs correspondantes sont crawlées.</span>
+                </div>
+                <div class="cs-field">
+                  <span class="cs-label">Exclure ces URLs</span>
+                  <input type="text" name="exclude_regex" value="{{ crawl.exclude_regex }}" placeholder="ex: /panier|/checkout|/compte" />
+                  <span class="cs-hint">Regex — les URLs correspondantes sont ignorées.</span>
+                </div>
+                <div class="cs-field cs-span2">
+                  <span class="cs-label">Paramètres de tracking à supprimer</span>
+                  <input type="text" name="strip_params" value="{{ (crawl.strip_params | join(', ')) if crawl.strip_params else '' }}" placeholder="ex: utm_source, utm_medium, gclid, fbclid" />
+                  <span class="cs-hint">Séparés par des virgules. Supprimés avant déduplication pour éviter les URLs dupliquées.</span>
+                </div>
+              </div>
             </div>
 
-            <p class="muted small" style="margin: 8px 0 0;">
-              {% if gsc_oauth and gsc_oauth.configured %}
-                {% if gsc_oauth.connected %}
-                  <span class="badge ok">OAuth connecté</span>
-                {% else %}
-                  <span class="badge notice">OAuth non connecté</span>
-                {% endif %}
-	                <span style="margin-left:6px;">(<a href="{{ gsc_oauth.settings_url }}">Paramètres</a>)</span>
-	                <div class="modal-actions between" style="margin-top:10px; gap:10px; align-items:center;">
-	                  <a class="btn {% if gsc_oauth.connected %}{% else %}primary{% endif %}" href="/projects/{{ slug }}/gsc/oauth/connect">
-	                    {% if gsc_oauth.connected %}Reconnecter Google{% else %}Connecter Google{% endif %}
-	                  </a>
-	                  {% if gsc_oauth.connected %}
-	                    <button
-	                      type="submit"
-	                      class="btn danger"
-	                      formmethod="post"
-	                      formaction="/projects/{{ slug }}/gsc/oauth/disconnect"
-	                      onclick="return confirm('Déconnecter Google pour ce projet ?');"
-	                    >
-	                      Déconnecter
-	                    </button>
-	                  {% endif %}
-	                  <button type="button" class="btn" id="gsc-oauth-properties-btn">Propriétés</button>
-	                  <button type="button" class="btn" id="gsc-oauth-test-btn">Tester</button>
-	                  <span class="muted small" id="gsc-oauth-test-result"></span>
-	                </div>
-	                <span class="muted small" id="gsc-oauth-properties-status" style="display:block; margin-top:10px;"></span>
-	                <div class="oauth-project-list" id="gsc-oauth-properties-list" style="display:none;"></div>
-	              {% else %}
-	                <span class="badge notice">OAuth à configurer</span>
-                <span style="margin-left:6px;">
-                  La connexion Google n'est pas encore disponible pour ce projet.
-                  {% if request.state.can_access_system_settings %}
-                    <a href="{{ (gsc_oauth.system_url if gsc_oauth else '/settings/system') }}">Configurer OAuth plateforme</a>.
-                  {% else %}
-                    Contacte l'administrateur de la plateforme.
-                  {% endif %}
-                </span>
-              {% endif %}
-            </p>
-          </section>
-
-          <section class="module-card" id="bing">
-            <div class="module-head">
-              <label class="checkbox">
-                <input type="checkbox" name="bing_enabled" {% if bing.enabled %}checked{% endif %} />
-                <span>Bing Webmaster Tools</span>
-              </label>
-              {% if bing.enabled %}<span class="badge ok">activé</span>{% else %}<span class="badge notice">désactivé</span>{% endif %}
-            </div>
-
-            <div class="grid two module-body">
-              <label>
-                Min impressions (issues)
-                <input type="number" name="bing_min_impressions" min="0" max="1000000" value="{{ bing.min_impressions }}" />
-              </label>
-              <label>
-                Période (jours)
-                <input type="number" name="bing_days" min="1" max="365" value="{{ bing.days }}" />
-              </label>
-              <label class="span-2">
-                siteUrl (optionnel)
-                <input type="text" name="bing_site_url" value="{{ bing.site_url }}" placeholder="ex: https://example.com/" />
-              </label>
-              <label>
-                UrlInfo (max URLs)
-                <input type="number" name="bing_urlinfo_max" min="0" max="50" value="{{ bing.urlinfo_max }}" />
-              </label>
-            </div>
-
-            <div class="module-divider"></div>
-
-            <label class="checkbox sub">
-              <input type="checkbox" name="bing_fetch_crawl_issues" {% if bing.fetch_crawl_issues %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
-              <span>Récupérer Crawl Issues (API)</span>
-            </label>
-            <label class="checkbox sub">
-              <input type="checkbox" name="bing_fetch_blocked_urls" {% if bing.fetch_blocked_urls %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
-              <span>Récupérer Blocked URLs (API)</span>
-            </label>
-            <label class="checkbox sub">
-              <input type="checkbox" name="bing_fetch_sitemaps" {% if bing.fetch_sitemaps %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
-              <span>Récupérer Sitemaps (API)</span>
-            </label>
-
-            <div class="grid two module-body">
-              <label class="span-2">
-                CSV queries (optionnel)
-                <input type="text" name="bing_queries_csv" value="{{ bing.queries_csv }}" placeholder="/chemin/vers/bing-queries.csv" />
-              </label>
-              <label class="span-2">
-                CSV pages (optionnel)
-                <input type="text" name="bing_pages_csv" value="{{ bing.pages_csv }}" placeholder="/chemin/vers/bing-pages.csv" />
-              </label>
-            </div>
-
-            <p class="muted small" style="margin: 8px 0 0;">
-              Utilise l'API si un compte Bing ou une clé manuelle est connecté sur ce compte, sinon les exports CSV.
-            </p>
-            {% if not bing_api_ready %}
-              <p class="muted small" style="margin: 8px 0 0;">
-                <a href="/settings/accounts#bing-connect-card">Connecter Bing</a> pour activer les données live et les imports API.
-              </p>
-            {% endif %}
-          </section>
-
-          <section class="module-card">
-            <div class="module-head">
-              <label class="checkbox">
-                <input type="checkbox" name="ai_keywords" {% if crawl.ai_keywords %}checked{% endif %} />
-                <span>Recherche mots-clés IA</span>
-              </label>
-              <span class="badge notice">bientôt</span>
-            </div>
-          </section>
-
-          <section class="module-card">
-            <div class="module-head">
-              <label class="checkbox">
-                <input type="checkbox" name="backlinks_research" {% if crawl.backlinks_research %}checked{% endif %} />
-                <span>Recherche backlinks</span>
-              </label>
-              <span class="badge notice">bientôt</span>
-            </div>
-          </section>
-        </div>
-      </section>
-
-      <details class="setting-details">
-        <summary>Avancé</summary>
-        <div class="setting-form">
-          <div class="grid two">
-            <label>
-              User-Agent
-              <input type="text" name="user_agent" value="{{ crawl.user_agent }}" />
-            </label>
-
-            <label>
-              Inclure (regex)
-              <input type="text" name="include_regex" value="{{ crawl.include_regex }}" placeholder="ex: ^https://example.com/..." />
-            </label>
-
-            <label>
-              Exclure (regex)
-              <input type="text" name="exclude_regex" value="{{ crawl.exclude_regex }}" placeholder="ex: /cart|/checkout" />
-            </label>
-
-            <label>
-              Profondeur max (anti-traps)
-              <input type="number" name="max_depth" min="0" max="50" value="{{ crawl.max_depth }}" />
-            </label>
-
-            <label>
-              Délai min / host (s)
-              <input type="number" name="min_delay_s" min="0" max="10" step="0.05" value="{{ crawl.min_delay_s }}" />
-            </label>
-
-            <label class="checkbox span-2">
-              <input type="checkbox" name="respect_robots_crawl_delay" {% if crawl.respect_robots_crawl_delay %}checked{% endif %} />
-              <span>Respecter Crawl-delay (robots.txt)</span>
-            </label>
-
-            <label class="checkbox span-2">
-              <input type="checkbox" name="follow_nofollow" {% if crawl.follow_nofollow %}checked{% endif %} />
-              <span>Suivre les liens rel=nofollow/sponsored/ugc</span>
-            </label>
-
-            <label>
-              Longueur URL max
-              <input type="number" name="max_url_length" min="128" max="8192" value="{{ crawl.max_url_length }}" />
-            </label>
-
-            <label>
-              Max query params
-              <input type="number" name="max_query_params" min="0" max="100" value="{{ crawl.max_query_params }}" />
-            </label>
-
-            <label class="span-2">
-              Strip params (séparés par virgules)
-              <input type="text" name="strip_params" value="{{ (crawl.strip_params | join(', ')) if crawl.strip_params else '' }}" placeholder="ex: utm_source, utm_medium, gclid, fbclid" />
-            </label>
-
-            <label class="span-2">
-              Deny param regex
-              <input type="text" name="deny_param_regex" value="{{ crawl.deny_param_regex }}" placeholder="ex: (utm_|gclid|fbclid|ref|session|sort|filter)" />
-            </label>
-
-            <p class="muted small" style="margin: 0;">
-              Astuce: utilise “Inclure/Exclure (regex)” pour limiter le crawl (ex: blog uniquement).
-            </p>
           </div>
         </div>
-      </details>
 
-      <div class="modal-actions between" style="margin-top: 12px;">
-        <a class="btn" href="/projects/{{ slug }}">Retour</a>
-        <button type="submit" class="btn primary">Enregistrer</button>
-      </div>
+        <!-- ══ 2. SOURCES DE DONNÉES ═════════════════════ -->
+        <div class="cs-card">
+          <div class="cs-card-head">
+            <div class="cs-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+            </div>
+            <div class="cs-card-meta">
+              <div class="cs-card-title">Sources de données</div>
+              <div class="cs-card-desc">Activez les modules pour enrichir l'analyse lors du crawl</div>
+            </div>
+          </div>
+          <div class="cs-card-body">
+            <div class="cs-modules">
+
+              <!-- Audit de site — always on -->
+              <div class="cs-mod is-active">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon audit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Audit de site <span class="badge ok" style="font-size:10px;">toujours actif</span></div>
+                    <div class="cs-mod-desc">Indexabilité, balises meta, liens internes, canonicals, erreurs HTTP, redirections…</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ressources -->
+              {% set res_on = crawl.check_resources %}
+              <div class="cs-mod {% if res_on %}is-active{% endif %}" id="mod-resources">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon res">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Ressources (CSS, JS, images)</div>
+                    <div class="cs-mod-desc">Détecte les ressources cassées ou trop lourdes chargées par vos pages.</div>
+                  </div>
+                  <label class="cs-switch">
+                    <input type="checkbox" name="check_resources" {% if res_on %}checked{% endif %} id="toggle-resources" />
+                    <span class="cs-track"><span class="cs-thumb"></span></span>
+                  </label>
+                </div>
+                <div class="cs-mod-body" id="body-resources" {% if not res_on %}style="display:none;"{% endif %}>
+                  <div class="cs-grid g2">
+                    <div class="cs-field">
+                      <span class="cs-label">Limite de ressources à vérifier</span>
+                      <input type="number" name="max_resources" min="0" max="20000" value="{{ crawl.max_resources }}" />
+                      <span class="cs-hint">Par type (CSS, JS, images). 0 = illimité.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Core Web Vitals -->
+              {% set cwv_on = crawl.pagespeed %}
+              <div class="cs-mod {% if cwv_on %}is-active{% endif %}" id="mod-cwv">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon cwv">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Core Web Vitals</div>
+                    <div class="cs-mod-desc">Mesure LCP, CLS et FID via l'API PageSpeed Insights de Google.</div>
+                  </div>
+                  <label class="cs-switch">
+                    <input type="checkbox" name="pagespeed" {% if cwv_on %}checked{% endif %} id="toggle-cwv" />
+                    <span class="cs-track"><span class="cs-thumb"></span></span>
+                  </label>
+                </div>
+                <div class="cs-mod-body" id="body-cwv" {% if not cwv_on %}style="display:none;"{% endif %}>
+                  <div class="cs-grid g2">
+                    <div class="cs-field">
+                      <span class="cs-label">Appareil testé</span>
+                      <select name="pagespeed_strategy">
+                        <option value="mobile"  {% if crawl.pagespeed_strategy == "mobile"  %}selected{% endif %}>Mobile (recommandé pour le SEO)</option>
+                        <option value="desktop" {% if crawl.pagespeed_strategy == "desktop" %}selected{% endif %}>Desktop</option>
+                      </select>
+                      <span class="cs-hint">Google privilégie le score mobile pour le référencement.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Pages à tester (max)</span>
+                      <input type="number" name="pagespeed_max_urls" min="0" max="1000" value="{{ crawl.pagespeed_max_urls }}" />
+                      <span class="cs-hint">Plus il y en a, plus le crawl dure longtemps.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Timeout par analyse (s)</span>
+                      <input type="number" name="pagespeed_timeout_s" min="1" max="180" value="{{ crawl.pagespeed_timeout_s }}" />
+                      <span class="cs-hint">L'API PageSpeed peut être lente. 30–60 s recommandés.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Requêtes simultanées</span>
+                      <input type="number" name="pagespeed_workers" min="1" max="10" value="{{ crawl.pagespeed_workers }}" />
+                      <span class="cs-hint">Limiter à 2–3 pour éviter les erreurs de quota API.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Google Search Console -->
+              {% set gsc_on = gsc.enabled %}
+              <div class="cs-mod {% if gsc_on %}is-active{% endif %}" id="gsc">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon gsc">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v8M8 12h8"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Google Search Console</div>
+                    <div class="cs-mod-desc">Importe clics, impressions, positions et anomalies d'indexation Google.</div>
+                  </div>
+                  <label class="cs-switch">
+                    <input type="checkbox" name="gsc_enabled" {% if gsc_on %}checked{% endif %} id="toggle-gsc" />
+                    <span class="cs-track"><span class="cs-thumb"></span></span>
+                  </label>
+                </div>
+                <div class="cs-mod-body" id="body-gsc" {% if not gsc_on %}style="display:none;"{% endif %}>
+
+                  {% if gsc_oauth and gsc_oauth.configured %}
+                    <div class="cs-conn">
+                      <span class="cs-conn-dot {% if gsc_oauth.connected %}ok{% else %}warn{% endif %}"></span>
+                      <span class="cs-conn-label">{% if gsc_oauth.connected %}Compte Google connecté{% else %}Compte Google non connecté{% endif %}</span>
+                      <div class="cs-conn-btns">
+                        <a class="btn small {% if not gsc_oauth.connected %}primary{% endif %}" href="/projects/{{ slug }}/gsc/oauth/connect">
+                          {% if gsc_oauth.connected %}Reconnecter{% else %}Connecter Google{% endif %}
+                        </a>
+                        {% if gsc_oauth.connected %}
+                          <button type="submit" class="btn small danger" formmethod="post" formaction="/projects/{{ slug }}/gsc/oauth/disconnect" onclick="return confirm('Déconnecter Google pour ce projet ?');">Déconnecter</button>
+                          <button type="button" class="btn small" id="gsc-oauth-properties-btn">Choisir propriété</button>
+                          <button type="button" class="btn small" id="gsc-oauth-test-btn">Tester</button>
+                        {% endif %}
+                      </div>
+                      <span class="cs-hint" id="gsc-oauth-test-result" style="width:100%;margin-top:4px;"></span>
+                    </div>
+                    <span class="cs-hint" id="gsc-oauth-properties-status" style="display:block;"></span>
+                    <div class="oauth-project-list" id="gsc-oauth-properties-list" style="display:none;"></div>
+                  {% else %}
+                    <div class="cs-info-box">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                      <span>Connexion Google non configurée.
+                        {% if request.state.can_access_system_settings %}
+                          <a href="{{ (gsc_oauth.system_url if gsc_oauth else '/settings/system') }}">Configurer OAuth</a>
+                        {% else %}
+                          Contactez l'administrateur.
+                        {% endif %}
+                      </span>
+                    </div>
+                  {% endif %}
+
+                  <div class="cs-grid g2">
+                    <div class="cs-field">
+                      <span class="cs-label">Période d'analyse (jours)</span>
+                      <input type="number" name="gsc_days" min="1" max="365" value="{{ gsc.days }}" />
+                      <span class="cs-hint">Données GSC à importer. 90 jours recommandé.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Impressions min pour les alertes</span>
+                      <input type="number" name="gsc_min_impressions" min="0" max="1000000" value="{{ gsc.min_impressions }}" />
+                      <span class="cs-hint">Pages sous ce seuil sont ignorées dans les anomalies.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Type de résultat</span>
+                      <select name="gsc_search_type">
+                        <option value="web"      {% if gsc.search_type == "web"      %}selected{% endif %}>Recherche web</option>
+                        <option value="image"    {% if gsc.search_type == "image"    %}selected{% endif %}>Images</option>
+                        <option value="video"    {% if gsc.search_type == "video"    %}selected{% endif %}>Vidéos</option>
+                        <option value="news"     {% if gsc.search_type == "news"     %}selected{% endif %}>Actualités</option>
+                        <option value="discover" {% if gsc.search_type == "discover" %}selected{% endif %}>Discover</option>
+                      </select>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Propriété GSC</span>
+                      <input id="gsc-property-input" type="text" name="gsc_property" value="{{ gsc.property_url }}" placeholder="sc-domain:example.com ou https://example.com/" />
+                      <span class="cs-hint">Laissez vide pour auto-détection, ou cliquez "Choisir propriété".</span>
+                    </div>
+                  </div>
+
+                  <div class="cs-mod-divider"></div>
+                  <div class="cs-sub-head">Inspection des URLs Google</div>
+
+                  <div class="cs-toggle-row">
+                    <div class="cs-toggle-info">
+                      <div class="cs-toggle-name">Vérifier l'indexation de chaque page</div>
+                      <div class="cs-toggle-sub">Interroge l'API Google pour connaître l'état d'indexation URL par URL.</div>
+                    </div>
+                    <label class="cs-switch">
+                      <input type="checkbox" name="gsc_inspection_enabled" {% if gsc.inspection_enabled %}checked{% endif %} {% if not gsc.enabled %}disabled{% endif %} />
+                      <span class="cs-track"><span class="cs-thumb"></span></span>
+                    </label>
+                  </div>
+
+                  <div class="cs-grid g2">
+                    <div class="cs-field">
+                      <span class="cs-label">Pages à inspecter (max)</span>
+                      <input type="number" name="gsc_inspection_max_urls" min="0" max="200" value="{{ gsc.inspection_max_urls }}" />
+                      <span class="cs-hint">Limiter pour réduire la durée du crawl (API Google lente).</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Timeout d'inspection (s)</span>
+                      <input type="number" name="gsc_inspection_timeout_s" min="1" max="120" value="{{ gsc.inspection_timeout_s }}" />
+                    </div>
+                    <div class="cs-field cs-span2">
+                      <span class="cs-label">Langue des résultats</span>
+                      <input type="text" name="gsc_inspection_language" value="{{ gsc.inspection_language }}" placeholder="ex: fr" />
+                      <span class="cs-hint">Code ISO optionnel (fr, en, de…). Laissez vide pour la langue par défaut.</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Bing Webmaster Tools -->
+              {% set bing_on = bing.enabled %}
+              <div class="cs-mod {% if bing_on %}is-active{% endif %}" id="bing">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon bing">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l4 1.5v9l4-2.5 4 6L4 21V4z"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Bing Webmaster Tools</div>
+                    <div class="cs-mod-desc">Importe clics, impressions et erreurs d'indexation depuis Bing.</div>
+                  </div>
+                  <label class="cs-switch">
+                    <input type="checkbox" name="bing_enabled" {% if bing_on %}checked{% endif %} id="toggle-bing" />
+                    <span class="cs-track"><span class="cs-thumb"></span></span>
+                  </label>
+                </div>
+                <div class="cs-mod-body" id="body-bing" {% if not bing_on %}style="display:none;"{% endif %}>
+
+                  {% if not bing_api_ready %}
+                    <div class="cs-info-box">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                      <span><a href="/settings/accounts#bing-connect-card">Connecter votre compte Bing</a> pour activer les données en direct.</span>
+                    </div>
+                  {% endif %}
+
+                  <div class="cs-field">
+                    <span class="cs-label">URL du site dans Bing Webmaster Tools <span class="cs-req">obligatoire</span></span>
+                    <input type="text" name="bing_site_url" value="{{ bing.site_url }}" placeholder="https://example.com/" {% if not bing.site_url %}style="border-color:rgba(245,158,11,.45);"{% endif %} />
+                    <span class="cs-hint">Doit correspondre exactement à l'URL déclarée dans Bing Webmaster Tools (attention au / final).</span>
+                  </div>
+
+                  {% if not bing.site_url %}
+                    <div class="cs-warn-box">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+                      <span>Ce champ est vide — c'est probablement la cause de l'erreur <strong>no_accessible_site</strong>. Renseignez l'URL exacte de votre site tel qu'il apparaît dans Bing Webmaster Tools.</span>
+                    </div>
+                  {% endif %}
+
+                  <div class="cs-grid g2">
+                    <div class="cs-field">
+                      <span class="cs-label">Période d'analyse (jours)</span>
+                      <input type="number" name="bing_days" min="1" max="365" value="{{ bing.days }}" />
+                      <span class="cs-hint">Données Bing à importer.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Impressions min pour les alertes</span>
+                      <input type="number" name="bing_min_impressions" min="0" max="1000000" value="{{ bing.min_impressions }}" />
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Pages à analyser en détail (max)</span>
+                      <input type="number" name="bing_urlinfo_max" min="0" max="50" value="{{ bing.urlinfo_max }}" />
+                      <span class="cs-hint">Données détaillées récupérées pour ces N pages prioritaires.</span>
+                    </div>
+                  </div>
+
+                  <div class="cs-mod-divider"></div>
+                  <div class="cs-sub-head">Données à importer</div>
+
+                  <div>
+                    <div class="cs-toggle-row">
+                      <div class="cs-toggle-info">
+                        <div class="cs-toggle-name">Erreurs de crawl Bing</div>
+                        <div class="cs-toggle-sub">Pages que Bing n'a pas pu indexer correctement.</div>
+                      </div>
+                      <label class="cs-switch">
+                        <input type="checkbox" name="bing_fetch_crawl_issues" {% if bing.fetch_crawl_issues %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
+                        <span class="cs-track"><span class="cs-thumb"></span></span>
+                      </label>
+                    </div>
+                    <div class="cs-toggle-row">
+                      <div class="cs-toggle-info">
+                        <div class="cs-toggle-name">URLs bloquées</div>
+                        <div class="cs-toggle-sub">Pages bloquées par robots.txt ou meta noindex.</div>
+                      </div>
+                      <label class="cs-switch">
+                        <input type="checkbox" name="bing_fetch_blocked_urls" {% if bing.fetch_blocked_urls %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
+                        <span class="cs-track"><span class="cs-thumb"></span></span>
+                      </label>
+                    </div>
+                    <div class="cs-toggle-row">
+                      <div class="cs-toggle-info">
+                        <div class="cs-toggle-name">Sitemaps déclarés</div>
+                        <div class="cs-toggle-sub">Récupère la liste des sitemaps dans Bing Webmaster Tools.</div>
+                      </div>
+                      <label class="cs-switch">
+                        <input type="checkbox" name="bing_fetch_sitemaps" {% if bing.fetch_sitemaps %}checked{% endif %} {% if not bing.enabled %}disabled{% endif %} />
+                        <span class="cs-track"><span class="cs-thumb"></span></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="cs-mod-divider"></div>
+                  <div class="cs-sub-head">Exports CSV (alternative à l'API)</div>
+                  <div class="cs-grid g2">
+                    <div class="cs-field">
+                      <span class="cs-label">Fichier CSV — requêtes</span>
+                      <input type="text" name="bing_queries_csv" value="{{ bing.queries_csv }}" placeholder="/chemin/vers/bing-queries.csv" />
+                      <span class="cs-hint">Export CSV depuis Bing Webmaster Tools, si l'API n'est pas disponible.</span>
+                    </div>
+                    <div class="cs-field">
+                      <span class="cs-label">Fichier CSV — pages</span>
+                      <input type="text" name="bing_pages_csv" value="{{ bing.pages_csv }}" placeholder="/chemin/vers/bing-pages.csv" />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Mots-clés IA (bientôt) -->
+              <div class="cs-mod is-soon">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon soon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Recherche de mots-clés IA <span class="badge notice" style="font-size:10px;">bientôt</span></div>
+                    <div class="cs-mod-desc">Suggestions de mots-clés générées par IA à partir de votre contenu.</div>
+                  </div>
+                  <label class="cs-switch"><input type="checkbox" name="ai_keywords" {% if crawl.ai_keywords %}checked{% endif %} disabled /><span class="cs-track"><span class="cs-thumb"></span></span></label>
+                </div>
+              </div>
+
+              <!-- Backlinks (bientôt) -->
+              <div class="cs-mod is-soon">
+                <div class="cs-mod-head">
+                  <div class="cs-mod-icon soon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                  </div>
+                  <div class="cs-mod-meta">
+                    <div class="cs-mod-name">Analyse de backlinks <span class="badge notice" style="font-size:10px;">bientôt</span></div>
+                    <div class="cs-mod-desc">Profil de backlinks, domaines référents et ancres de liens.</div>
+                  </div>
+                  <label class="cs-switch"><input type="checkbox" name="backlinks_research" {% if crawl.backlinks_research %}checked{% endif %} disabled /><span class="cs-track"><span class="cs-thumb"></span></span></label>
+                </div>
+              </div>
+
+            </div><!-- /cs-modules -->
+          </div>
+        </div>
+
+        <!-- ══ 3. PARAMÈTRES AVANCÉS ══════════════════════ -->
+        <details class="cs-card">
+          <summary>
+            <div class="cs-card-icon" style="margin-top:1px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
+            </div>
+            <div class="cs-card-meta">
+              <div class="cs-card-title">
+                Paramètres avancés
+                <svg id="cs-adv-chevron" style="width:14px;height:14px;color:var(--muted);transition:transform .2s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="cs-card-desc">User-agent, profondeur de crawl, gestion fine des paramètres d'URL…</div>
+            </div>
+          </summary>
+          <div class="cs-card-body">
+            <div class="cs-grid g2">
+              <div class="cs-field">
+                <span class="cs-label">User-Agent</span>
+                <input type="text" name="user_agent" value="{{ crawl.user_agent }}" />
+                <span class="cs-hint">Identifiant du robot. Laissez vide pour la valeur par défaut.</span>
+              </div>
+              <div class="cs-field">
+                <span class="cs-label">Profondeur max de crawl</span>
+                <input type="number" name="max_depth" min="0" max="50" value="{{ crawl.max_depth }}" />
+                <span class="cs-hint">Limite la profondeur pour éviter les pièges à URLs. 0 = illimité.</span>
+              </div>
+              <div class="cs-field">
+                <span class="cs-label">Délai entre requêtes / hôte (s)</span>
+                <input type="number" name="min_delay_s" min="0" max="10" step="0.05" value="{{ crawl.min_delay_s }}" />
+                <span class="cs-hint">Pause entre deux requêtes vers le même hôte. 0 = pas de pause.</span>
+              </div>
+              <div class="cs-field">
+                <span class="cs-label">Longueur max des URLs (caractères)</span>
+                <input type="number" name="max_url_length" min="128" max="8192" value="{{ crawl.max_url_length }}" />
+                <span class="cs-hint">URLs plus longues sont ignorées.</span>
+              </div>
+              <div class="cs-field">
+                <span class="cs-label">Paramètres d'URL max</span>
+                <input type="number" name="max_query_params" min="0" max="100" value="{{ crawl.max_query_params }}" />
+                <span class="cs-hint">URLs avec plus de N paramètres sont ignorées (évite l'explosion combinatoire).</span>
+              </div>
+              <div class="cs-field">
+                <span class="cs-label">Exclure les paramètres (regex)</span>
+                <input type="text" name="deny_param_regex" value="{{ crawl.deny_param_regex }}" placeholder="ex: utm_|gclid|fbclid|session|sort" />
+                <span class="cs-hint">Paramètres correspondant à ce motif sont supprimés avant déduplication.</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="cs-toggle-row">
+                <div class="cs-toggle-info">
+                  <div class="cs-toggle-name">Respecter le Crawl-delay de robots.txt</div>
+                  <div class="cs-toggle-sub">Ralentit le crawl selon les instructions du site (peut allonger la durée).</div>
+                </div>
+                <label class="cs-switch">
+                  <input type="checkbox" name="respect_robots_crawl_delay" {% if crawl.respect_robots_crawl_delay %}checked{% endif %} />
+                  <span class="cs-track"><span class="cs-thumb"></span></span>
+                </label>
+              </div>
+              <div class="cs-toggle-row">
+                <div class="cs-toggle-info">
+                  <div class="cs-toggle-name">Suivre les liens nofollow / sponsored</div>
+                  <div class="cs-toggle-sub">Par défaut ces liens sont ignorés. À activer pour un audit exhaustif.</div>
+                </div>
+                <label class="cs-switch">
+                  <input type="checkbox" name="follow_nofollow" {% if crawl.follow_nofollow %}checked{% endif %} />
+                  <span class="cs-track"><span class="cs-thumb"></span></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- ══ ENREGISTRER ══════════════════════════════ -->
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:4px 0;">
+          <a class="btn" href="/projects/{{ slug }}">Annuler</a>
+          <button type="submit" class="btn primary" style="padding:10px 28px;">Enregistrer les paramètres</button>
+        </div>
+
+      </div><!-- /cs-page -->
     </form>
 
-	    <script>
-	      (() => {
-	        const testBtn = document.getElementById("gsc-oauth-test-btn");
-	        const out = document.getElementById("gsc-oauth-test-result");
-	        const propsBtn = document.getElementById("gsc-oauth-properties-btn");
-	        const propsStatus = document.getElementById("gsc-oauth-properties-status");
-	        const propsList = document.getElementById("gsc-oauth-properties-list");
-	        const propInput = document.getElementById("gsc-property-input");
-	        const projectBaseUrl = {{ (project.base_url or "") | tojson }};
+    <script>
+      (() => {
+        // Show/hide module bodies on toggle
+        [
+          ["toggle-resources", "body-resources", "mod-resources"],
+          ["toggle-cwv",       "body-cwv",       "mod-cwv"],
+          ["toggle-gsc",       "body-gsc",       "gsc"],
+          ["toggle-bing",      "body-bing",      "bing"],
+        ].forEach(([tid, bid, mid]) => {
+          const toggle = document.getElementById(tid);
+          const body   = document.getElementById(bid);
+          const mod    = document.getElementById(mid);
+          if (!toggle || !body) return;
+          toggle.addEventListener("change", () => {
+            body.style.display = toggle.checked ? "" : "none";
+            if (mod) mod.classList.toggle("is-active", toggle.checked);
+          });
+        });
 
-	        function escapeHtml(value) {
-	          return String(value || "")
-	            .replaceAll("&", "&amp;")
-	            .replaceAll("<", "&lt;")
-	            .replaceAll(">", "&gt;")
-	            .replaceAll('"', "&quot;")
-	            .replaceAll("'", "&#39;");
-	        }
+        // Chevron for advanced details
+        const details = document.querySelector("details.cs-card");
+        const chevron = document.getElementById("cs-adv-chevron");
+        if (details && chevron) {
+          details.addEventListener("toggle", () => {
+            chevron.style.transform = details.open ? "rotate(180deg)" : "";
+          });
+        }
 
-	        function normalizeHost(value) {
-	          try {
-	            const host = new URL(String(value || ""), window.location.origin).hostname || "";
-	            return host.replace(/^www\\./, "").toLowerCase();
-	          } catch {
-	            return "";
-	          }
-	        }
+        // GSC OAuth
+        const testBtn    = document.getElementById("gsc-oauth-test-btn");
+        const testOut    = document.getElementById("gsc-oauth-test-result");
+        const propsBtn   = document.getElementById("gsc-oauth-properties-btn");
+        const propsStatus= document.getElementById("gsc-oauth-properties-status");
+        const propsList  = document.getElementById("gsc-oauth-properties-list");
+        const propInput  = document.getElementById("gsc-property-input");
+        const baseUrl    = {{ (project.base_url or "") | tojson }};
 
-	        const baseHost = normalizeHost(projectBaseUrl);
+        function esc(v) {
+          return String(v||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;");
+        }
+        function normHost(v) {
+          try { return new URL(String(v||""),location.origin).hostname.replace(/^www\./,"").toLowerCase(); } catch { return ""; }
+        }
+        const baseHost = normHost(baseUrl);
 
-	        async function testOauth() {
-	          if (!out) return;
-	          out.textContent = "Test en cours…";
-	          try {
-	            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, { headers: { "Accept": "application/json" }, cache: "no-store" });
-	            const data = await r.json();
-	            if (!data || !data.ok) {
-	              out.textContent = (data && data.error) ? data.error : "Erreur GSC OAuth";
-	              return;
-	            }
-	            const n = Array.isArray(data.properties) ? data.properties.length : 0;
-	            out.textContent = `${n} propriétés accessibles.`;
-	          } catch (e) {
-	            out.textContent = String(e);
-	          }
-	        }
+        async function testOauth() {
+          if (!testOut) return;
+          testOut.textContent = "Test en cours…";
+          try {
+            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, {headers:{"Accept":"application/json"},cache:"no-store"});
+            const d = await r.json();
+            testOut.textContent = (!d||!d.ok) ? (d&&d.error)||"Erreur GSC OAuth" : `${Array.isArray(d.properties)?d.properties.length:0} propriétés accessibles.`;
+          } catch(e) { testOut.textContent = String(e); }
+        }
 
-	        function renderProperties(items) {
-	          if (!propsList) return;
-	          propsList.innerHTML = "";
-	          const arr = Array.isArray(items) ? items : [];
-	          if (!arr.length) {
-	            propsList.innerHTML = `<div class="muted small setting-note">Aucune propriété détectée.</div>`;
-	            return;
-	          }
+        function renderProps(items) {
+          if (!propsList) return;
+          propsList.innerHTML = "";
+          const arr = Array.isArray(items) ? items : [];
+          if (!arr.length) { propsList.innerHTML = `<div class="muted small">Aucune propriété détectée.</div>`; return; }
+          arr.forEach(item => {
+            const url   = String(item.property_url||"").trim();
+            if (!url) return;
+            const title = String(item.domain||"").trim() || url;
+            const perm  = String(item.permission||"").trim();
+            const rec   = Boolean(item.is_recommended)||(baseHost&&(url.includes(baseHost)||title.toLowerCase().includes(baseHost)));
+            const row   = document.createElement("div");
+            row.className = "oauth-project-item";
+            row.innerHTML = `
+              <div>
+                <div class="oauth-project-title">${esc(title)}</div>
+                <div class="muted small"><span class="mono">${esc(url)}</span>${perm?` · ${esc(perm)}`:""}</div>
+              </div>
+              <div class="oauth-project-actions">
+                ${rec?`<span class="badge ok">recommandé</span>`:""}
+                <button type="button" class="btn primary" data-url="${esc(url)}">Utiliser</button>
+              </div>`;
+            row.querySelector("button[data-url]").addEventListener("click", () => {
+              if (propInput) propInput.value = url;
+              if (propsStatus) propsStatus.textContent = "Propriété sélectionnée. N'oubliez pas d'enregistrer.";
+              if (propsList) propsList.style.display = "none";
+            });
+            propsList.appendChild(row);
+          });
+        }
 
-	          arr.forEach((item) => {
-	            const url = String(item.property_url || "").trim();
-	            if (!url) return;
-	            const permission = String(item.permission || "").trim();
-	            const domain = String(item.domain || "").trim();
-	            const title = domain || url;
-	            const isRecommended = Boolean(item.is_recommended) || (baseHost && (url.includes(baseHost) || title.toLowerCase().includes(baseHost)));
+        async function loadProps() {
+          if (!propsStatus||!propsList) return;
+          if (propsList.dataset.loaded==="true") {
+            propsList.style.display = propsList.style.display==="none" ? "grid" : "none";
+            return;
+          }
+          propsStatus.textContent = "Chargement…";
+          propsList.style.display = "none";
+          try {
+            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, {headers:{"Accept":"application/json"},cache:"no-store"});
+            const d = await r.json();
+            if (!d||!d.ok) { propsStatus.textContent = (d&&d.error)||"Erreur GSC"; return; }
+            const items = Array.isArray(d.properties) ? d.properties : [];
+            propsStatus.textContent = `${items.length} propriété(s) détectée(s).`;
+            renderProps(items);
+            propsList.dataset.loaded = "true";
+            propsList.style.display = "grid";
+          } catch(e) { propsStatus.textContent = String(e); }
+        }
 
-	            const row = document.createElement("div");
-	            row.className = "oauth-project-item";
-	            const badges = isRecommended ? `<span class="badge ok">recommandé</span>` : "";
-	            row.innerHTML = `
-	              <div>
-	                <div class="oauth-project-title">${escapeHtml(title)}</div>
-	                <div class="muted small"><span class="mono">${escapeHtml(url)}</span>${permission ? ` · ${escapeHtml(permission)}` : ""}</div>
-	              </div>
-	              <div class="oauth-project-actions">
-	                ${badges}
-	                <button type="button" class="btn primary" data-use-url="${escapeHtml(url)}">Utiliser</button>
-	              </div>
-	            `;
-	            const useBtn = row.querySelector("button[data-use-url]");
-	            if (useBtn) {
-	              useBtn.addEventListener("click", () => {
-	                if (propInput) propInput.value = url;
-	                if (propsStatus) propsStatus.textContent = "Propriété sélectionnée. Pense à enregistrer.";
-	                if (propsList) propsList.style.display = "none";
-	              });
-	            }
-	            propsList.appendChild(row);
-	          });
-	        }
-
-	        async function loadProperties() {
-	          if (!propsStatus || !propsList) return;
-
-	          const alreadyLoaded = propsList.dataset.loaded === "true";
-	          if (alreadyLoaded) {
-	            propsList.style.display = propsList.style.display === "none" ? "grid" : "none";
-	            return;
-	          }
-
-	          propsStatus.textContent = "Chargement des propriétés…";
-	          propsList.style.display = "none";
-	          propsList.innerHTML = "";
-	          try {
-	            const r = await fetch(`/api/projects/{{ slug }}/gsc/properties`, { headers: { "Accept": "application/json" }, cache: "no-store" });
-	            const data = await r.json();
-	            if (!data || !data.ok) {
-	              propsStatus.textContent = (data && data.error) ? data.error : "Erreur Google Search Console";
-	              return;
-	            }
-	            const items = Array.isArray(data.properties) ? data.properties : [];
-	            propsStatus.textContent = `${items.length} propriété(s) détectée(s).`;
-	            renderProperties(items);
-	            propsList.dataset.loaded = "true";
-	            propsList.style.display = "grid";
-	          } catch (e) {
-	            propsStatus.textContent = String(e);
-	          }
-	        }
-	        if (testBtn) testBtn.addEventListener("click", testOauth);
-	        if (propsBtn) propsBtn.addEventListener("click", loadProperties);
-	      })();
-	    </script>
-	  {% endif %}
-	{% endblock %}
+        if (testBtn)  testBtn.addEventListener("click", testOauth);
+        if (propsBtn) propsBtn.addEventListener("click", loadProps);
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

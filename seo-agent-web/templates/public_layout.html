@@ -1,13 +1,13 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
-    <link rel="stylesheet" href="/static/styles.css?v=8" />
+    <link rel="stylesheet" href="/static/styles.css?v=9" />
     <style>
-      /* ── Public nav overrides ── */
+      /* â”€â”€ Public nav overrides â”€â”€ */
       .pub-nav {
         display: flex;
         align-items: center;
@@ -73,11 +73,11 @@
           <a class="btn" href="/">Tableau de bord</a>
           <form method="post" action="/auth/logout" class="inline">
             <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <button type="submit" class="btn">Se déconnecter</button>
+            <button type="submit" class="btn">Se dÃ©connecter</button>
           </form>
         {% else %}
           <a class="btn" href="/auth/login">Se connecter</a>
-          <a class="btn primary" href="/auth/signup">Commencer →</a>
+          <a class="btn primary" href="/auth/signup">Commencer â†’</a>
         {% endif %}
       </div>
     </header>
@@ -89,12 +89,12 @@
     <footer style="max-width:980px; margin:0 auto; padding:28px 24px 32px; border-top:1px solid var(--border);">
       <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
         <div style="font-size:13px; color:var(--muted);">
-          © {{ year }} {{ app_name }} · <a href="mailto:{{ support_email }}" style="color:var(--muted);">{{ support_email }}</a>
+          Â© {{ year }} {{ app_name }} Â· <a href="mailto:{{ support_email }}" style="color:var(--muted);">{{ support_email }}</a>
         </div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
           <a href="/pricing" style="color:var(--muted);">Pricing</a>
           <a href="/terms" style="color:var(--muted);">CGU</a>
-          <a href="/privacy" style="color:var(--muted);">Confidentialité</a>
+          <a href="/privacy" style="color:var(--muted);">ConfidentialitÃ©</a>
           <a href="/support" style="color:var(--muted);">Support</a>
           <a href="/status" style="color:var(--muted);">Statut</a>
         </div>
