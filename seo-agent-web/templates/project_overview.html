@@ -30,11 +30,10 @@
 
   {# ── Precompute health score ── #}
   {% if project.current %}
-    {% set hc = project.current.get('health', {}) %}
-    {% set sc = hc.get('score', 0)|int if hc.get('score') is not none else none %}
-    {% set sc_color = 'var(--ok)' if sc is not none and sc >= 80 else ('var(--warn)' if sc is not none and sc >= 50 else 'var(--err)') %}
     {% set cur = project.current %}
     {% set sum = cur.summary %}
+    {% set sc = sum.health_score|int if sum and sum.health_score is not none else none %}
+    {% set sc_color = 'var(--ok)' if sc is not none and sc >= 80 else ('var(--warn)' if sc is not none and sc >= 50 else 'var(--err)') %}
   {% else %}
     {% set sc = none %}
     {% set sc_color = 'rgba(255,255,255,.3)' %}
