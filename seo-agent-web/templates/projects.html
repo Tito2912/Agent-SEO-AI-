@@ -22,9 +22,6 @@
 
 {% block actions %}
   <button type="button" class="btn primary" id="add-project-open">Nouveau projet</button>
-  {% if request.state.user and request.state.user.is_admin %}
-    <a class="btn" href="/automation">Lancer un audit multi-sites</a>
-  {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -93,9 +90,6 @@
         <button type="button" class="btn primary" id="add-project-open" style="padding:10px 24px;">
           Ajouter mon premier site
         </button>
-        {% if request.state.user and request.state.user.is_admin %}
-          <a class="btn" href="/automation" style="padding:10px 24px;">Audit multi-sites</a>
-        {% endif %}
       </div>
       <div style="margin-top:40px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap;text-align:left;">
         <div style="max-width:160px;">
