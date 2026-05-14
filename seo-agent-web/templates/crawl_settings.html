@@ -472,23 +472,48 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                 </div>
                 <div class="cs-mod-body" id="body-bing" {% if not bing_on %}style="display:none;"{% endif %}>
 
-                  {% if not bing_api_ready %}
-                    <div class="cs-info-box">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                      <span><a href="/settings/accounts#bing-connect-card">Connecter votre compte Bing</a> pour activer les données en direct.</span>
-                    </div>
-                  {% endif %}
-
-                  <div class="cs-field">
-                    <span class="cs-label">URL du site dans Bing Webmaster Tools <span class="cs-req">obligatoire</span></span>
-                    <input type="text" name="bing_site_url" value="{{ bing.site_url }}" placeholder="https://example.com/" {% if not bing.site_url %}style="border-color:rgba(245,158,11,.45);"{% endif %} />
-                    <span class="cs-hint">Doit correspondre exactement à l'URL déclarée dans Bing Webmaster Tools (attention au / final).</span>
+                  <!-- Barre de connexion Bing -->
+                  <div class="cs-conn">
+                    {% if bing_api_ready %}
+                      <span class="cs-conn-dot ok"></span>
+                      <span class="cs-conn-label">Compte Bing connecté</span>
+                      <div class="cs-conn-btns">
+                        <button type="button" class="btn small" id="bing-pick-site-btn">Choisir mon site →</button>
+                        <span class="cs-hint" id="bing-sites-status" style="margin:0;"></span>
+                      </div>
+                    {% else %}
+                      <span class="cs-conn-dot" style="background:rgba(255,255,255,.2);"></span>
+                      <span class="cs-conn-label">Compte Bing non connecté</span>
+                      <div class="cs-conn-btns">
+                        <a class="btn small primary" href="/settings/accounts#bing-connect-card">Connecter Bing →</a>
+                      </div>
+                    {% endif %}
                   </div>
 
-                  {% if not bing.site_url %}
+                  <!-- Liste des sites Bing (chargée dynamiquement) -->
+                  <div class="oauth-project-list" id="bing-sites-list" style="display:none;"></div>
+
+                  <!-- Champ URL du site -->
+                  <div class="cs-field">
+                    <span class="cs-label">
+                      URL de ce site dans Bing Webmaster Tools
+                      {% if not bing_api_ready %}<span class="cs-req">obligatoire</span>{% endif %}
+                    </span>
+                    <input type="text" id="bing-site-url-input" name="bing_site_url"
+                           value="{{ bing.site_url }}"
+                           placeholder="https://www.exemple.com/"
+                           {% if not bing.site_url and not bing_api_ready %}style="border-color:rgba(245,158,11,.45);"{% endif %} />
+                    {% if bing_api_ready %}
+                      <span class="cs-hint">Clique sur « Choisir mon site » pour sélectionner automatiquement depuis ton compte Bing.</span>
+                    {% else %}
+                      <span class="cs-hint">Doit correspondre exactement à la propriété déclarée dans Bing Webmaster Tools (avec ou sans www, avec ou sans / final).</span>
+                    {% endif %}
+                  </div>
+
+                  {% if not bing.site_url and not bing_api_ready %}
                     <div class="cs-warn-box">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-                      <span>Ce champ est vide — c'est probablement la cause de l'erreur <strong>no_accessible_site</strong>. Renseignez l'URL exacte de votre site tel qu'il apparaît dans Bing Webmaster Tools.</span>
+                      <span>Ce champ est vide — c'est la cause de l'erreur <strong>no_accessible_site</strong>. Connecte ton compte Bing ou saisis l'URL exacte de ton site.</span>
                     </div>
                   {% endif %}
 
@@ -784,6 +809,80 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
 
         if (testBtn)  testBtn.addEventListener("click", testOauth);
         if (propsBtn) propsBtn.addEventListener("click", loadProps);
+
+        // ── Bing site picker ────────────────────────────
+        const bingPickBtn    = document.getElementById("bing-pick-site-btn");
+        const bingSiteInput  = document.getElementById("bing-site-url-input");
+        const bingSitesList  = document.getElementById("bing-sites-list");
+        const bingSitesStatus = document.getElementById("bing-sites-status");
+
+        function renderBingSites(items) {
+          if (!bingSitesList) return;
+          bingSitesList.innerHTML = "";
+          const arr = Array.isArray(items) ? items : [];
+          if (!arr.length) {
+            bingSitesList.innerHTML = `<div class="muted small" style="padding:10px 0;">Aucun site trouvé dans ce compte Bing.</div>`;
+            return;
+          }
+          arr.forEach(item => {
+            const url = String(item.site_url || "").trim();
+            if (!url) return;
+            const domain = String(item.domain || "").trim() || url;
+            const rec = Boolean(item.is_recommended);
+            const row = document.createElement("div");
+            row.className = "oauth-project-item";
+            row.innerHTML = `
+              <div>
+                <div class="oauth-project-title">${esc(domain)}</div>
+                <div class="muted small mono">${esc(url)}</div>
+              </div>
+              <div class="oauth-project-actions">
+                ${rec ? `<span class="badge ok">recommandé</span>` : ""}
+                <button type="button" class="btn primary" data-url="${esc(url)}">Utiliser</button>
+              </div>`;
+            row.querySelector("button[data-url]").addEventListener("click", () => {
+              if (bingSiteInput) bingSiteInput.value = url;
+              if (bingSitesStatus) bingSitesStatus.textContent = "Site sélectionné. N'oublie pas d'enregistrer.";
+              if (bingSitesList) bingSitesList.style.display = "none";
+            });
+            bingSitesList.appendChild(row);
+          });
+        }
+
+        async function loadBingSites() {
+          if (!bingSitesList) return;
+          if (bingSitesList.dataset.loaded === "true") {
+            bingSitesList.style.display = bingSitesList.style.display === "none" ? "grid" : "none";
+            return;
+          }
+          if (bingSitesStatus) bingSitesStatus.textContent = "Chargement…";
+          bingSitesList.style.display = "none";
+          try {
+            const r = await fetch(`/api/projects/{{ slug }}/bing/sites`, {headers:{"Accept":"application/json"}, cache:"no-store"});
+            const d = await r.json();
+            if (!d || !d.ok) {
+              if (bingSitesStatus) bingSitesStatus.textContent = (d && d.error) || "Erreur Bing";
+              return;
+            }
+            const items = Array.isArray(d.sites) ? d.sites : [];
+            if (bingSitesStatus) bingSitesStatus.textContent = `${items.length} site(s) détecté(s).`;
+            renderBingSites(items);
+            bingSitesList.dataset.loaded = "true";
+            bingSitesList.style.display = "grid";
+            // Auto-select recommended if field is empty
+            if (bingSiteInput && !bingSiteInput.value.trim()) {
+              const rec = items.find(i => i.is_recommended);
+              if (rec) {
+                bingSiteInput.value = rec.site_url;
+                if (bingSitesStatus) bingSitesStatus.textContent = `Site recommandé pré-sélectionné : ${rec.site_url}. Enregistre pour confirmer.`;
+              }
+            }
+          } catch(e) {
+            if (bingSitesStatus) bingSitesStatus.textContent = String(e);
+          }
+        }
+
+        if (bingPickBtn) bingPickBtn.addEventListener("click", loadBingSites);
       })();
     </script>
   {% endif %}

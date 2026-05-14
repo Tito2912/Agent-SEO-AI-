@@ -11150,6 +11150,96 @@ def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
     return JSONResponse(payload)
 
 
+@app.get("/api/projects/{slug}/bing/sites")
+def bing_sites_for_project(request: Request, slug: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
+
+    user_id = str(getattr(user, "id", "") or "")
+    auth = _effective_bing_connection(user_id=user_id)
+    if not auth.get("token"):
+        return JSONResponse({"ok": False, "error": "Bing non connecté pour ce compte."}, status_code=400)
+
+    try:
+        params: dict[str, Any] = {}
+        headers: dict[str, str] = {}
+        if auth.get("mode") == "oauth":
+            headers["Authorization"] = f"Bearer {auth.get('token')}"
+        else:
+            params["apikey"] = str(auth.get("token") or "")
+        r = requests.get(
+            "https://www.bing.com/webmaster/api.svc/json/GetUserSites",
+            params=params,
+            headers=headers,
+            timeout=20,
+        )
+        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else None
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"BingError: {type(e).__name__}: {e}"}, status_code=400)
+
+    if isinstance(data, dict) and isinstance(data.get("ErrorCode"), int) and int(data.get("ErrorCode")) != 0:
+        msg = str(data.get("Message") or "bing_api_error")
+        return JSONResponse({"ok": False, "error": f"BingError: {msg}"}, status_code=400)
+
+    # Extract sites from payload (robust across payload shapes)
+    sites: list[str] = []
+    try:
+        rows = _bing_extract_rows(data)
+        for row in rows:
+            for key in ("Url", "url", "SiteUrl", "siteUrl", "site_url"):
+                value = row.get(key)
+                if isinstance(value, str) and value.startswith(("http://", "https://")):
+                    if value not in sites:
+                        sites.append(value.strip())
+                    break
+        if not sites:
+            blob = json.dumps(data, ensure_ascii=False)
+            for u in re.findall(r"https?://[^\s\"\\\\]+", blob):
+                if u not in sites:
+                    sites.append(u)
+    except Exception:
+        pass
+
+    base_url = str(getattr(proj, "base_url", "") or "").strip()
+    existing_by_base = _db_project_lookup_by_base_url(user_id)
+    candidates = {c.rstrip("/").lower() for c in _bing_site_candidates(base_url, None)} if base_url else set()
+    host = (urlsplit(base_url).hostname or "").strip().lower()
+    host_no_www = host[4:] if host.startswith("www.") else host
+
+    def _score(site_url: str) -> int:
+        root = _root_url(site_url).rstrip("/").lower()
+        site_host = (urlsplit(site_url).hostname or "").lower()
+        pts = 0
+        if root in candidates:
+            pts += 3
+        if site_host and host and site_host == host:
+            pts += 2
+        if host_no_www and site_host == host_no_www:
+            pts += 2
+        return pts
+
+    items: list[dict[str, Any]] = []
+    for site_url in sites[:200]:
+        norm = _normalize_base_url(site_url) or ""
+        existing_slug = existing_by_base.get(norm)
+        sc = _score(site_url)
+        items.append({
+            "site_url": site_url,
+            "domain": (urlsplit(site_url).hostname or "").lower(),
+            "is_recommended": sc > 0,
+            "already_imported": bool(existing_slug),
+            "project_slug": existing_slug or "",
+        })
+
+    items.sort(key=lambda x: (0 if x["is_recommended"] else 1, x["domain"]))
+    payload: dict[str, Any] = {"ok": True, "sites": items}
+    if not items:
+        payload["hint"] = "Aucun site détecté dans ce compte Bing Webmaster Tools."
+    return JSONResponse(payload)
+
+
 @app.get("/api/gsc/properties")
 def gsc_properties(request: Request) -> JSONResponse:
     _ = _require_system_owner(request)
