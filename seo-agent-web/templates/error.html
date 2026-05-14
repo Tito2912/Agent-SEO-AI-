@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{% if status_code == 404 %}Page introuvable{% elif status_code == 403 %}Accès refusé{% else %}Erreur serveur{% endif %} - {{ app_name }}</title>
+    {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css" />
     <style>
       .error-page {

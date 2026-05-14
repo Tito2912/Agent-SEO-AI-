@@ -1,0 +1,170 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Ressources SEO - {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="description" content="{{ meta_description }}" />
+<link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Ressources SEO - {{ app_name }}" />
+<meta property="og:description" content="{{ meta_description }}" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
+<style>
+.resources-hero {
+  padding: 58px 0 42px;
+  text-align: center;
+}
+.resources-eyebrow {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 4px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-rgb), .24);
+  background: rgba(var(--accent-rgb), .10);
+  color: var(--accent-2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+.resources-hero h1 {
+  max-width: 780px;
+  margin: 0 auto 14px;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  font-weight: 900;
+}
+.resources-hero p {
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.resources-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 42px;
+}
+.resource-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 100%;
+  padding: 22px;
+}
+.resource-card:hover {
+  border-color: rgba(var(--accent-rgb), .28);
+}
+.resource-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.resource-kind {
+  color: var(--accent-2);
+  border: 1px solid rgba(var(--accent-rgb), .24);
+  background: rgba(var(--accent-rgb), .10);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-weight: 800;
+}
+.resource-card h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.25;
+}
+.resource-card h2 a {
+  color: var(--text);
+}
+.resource-card h2 a:hover {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+.resource-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.resource-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+.resource-tag {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.04);
+  color: var(--muted);
+  font-size: 11px;
+}
+.resource-cta {
+  margin-top: 4px;
+}
+.resources-note {
+  margin: 0 0 34px;
+  padding: 20px;
+  border: 1px solid rgba(var(--accent-rgb), .18);
+  border-radius: var(--radius-lg);
+  background: rgba(var(--accent-rgb), .06);
+}
+.resources-note h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.resources-note p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+@media (max-width: 720px) {
+  .resources-hero { padding: 42px 0 30px; }
+  .resources-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+  <header class="resources-hero">
+    <div class="resources-eyebrow">Guides SEO et tutoriels</div>
+    <h1>Ressources pratiques pour améliorer votre référencement naturel</h1>
+    <p>{{ meta_description }}</p>
+  </header>
+
+  <section class="resources-note">
+    <h2>Une base éditoriale pensée pour le référencement</h2>
+    <p>
+      Ces contenus ciblent des questions concrètes autour de l'audit SEO, du crawl, de Google Search Console,
+      des balises, des backlinks et de la performance. Ils sont publics, indexables et reliés depuis la home.
+    </p>
+  </section>
+
+  <div class="resources-grid">
+    {% for resource in resources %}
+      <article class="card resource-card">
+        <div class="resource-meta">
+          <span class="resource-kind">{{ resource.kind }}</span>
+          <span>{{ resource.reading_time }}</span>
+          <span>Mis à jour le {{ resource.updated_at }}</span>
+        </div>
+        <h2><a href="/ressources-seo/{{ resource.slug }}">{{ resource.title }}</a></h2>
+        <p>{{ resource.description }}</p>
+        <div class="resource-tags">
+          {% for keyword in resource.keywords[:4] %}
+            <span class="resource-tag">{{ keyword }}</span>
+          {% endfor %}
+        </div>
+        <div class="resource-cta">
+          <a class="btn" href="/ressources-seo/{{ resource.slug }}">Lire le guide</a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% endblock %}

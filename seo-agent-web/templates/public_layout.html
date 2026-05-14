@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=9" />
     <style>
       /* â”€â”€ Public nav overrides â”€â”€ */

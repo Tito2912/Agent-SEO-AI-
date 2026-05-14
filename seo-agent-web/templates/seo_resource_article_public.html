@@ -1,0 +1,309 @@
+{% extends "public_layout.html" %}
+
+{% block title %}{{ resource.meta_title or resource.title }} - {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="description" content="{{ resource.description }}" />
+<link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="{{ resource.title }}" />
+<meta property="og:description" content="{{ resource.description }}" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="{{ canonical_url }}" />
+<script type="application/ld+json">{{ json_ld | tojson }}</script>
+<style>
+.article-shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 46px 0 34px;
+}
+.article-breadcrumb {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.article-breadcrumb a {
+  color: var(--muted);
+}
+.article-breadcrumb a:hover {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+.article-header {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 30px;
+}
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.article-kind {
+  color: var(--accent-2);
+  border: 1px solid rgba(var(--accent-rgb), .24);
+  background: rgba(var(--accent-rgb), .10);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-weight: 800;
+}
+.article-header h1 {
+  margin: 0 0 16px;
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.08;
+  font-weight: 900;
+}
+.article-description {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
+.article-summary {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 30px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(var(--accent-rgb), .18);
+  background: rgba(var(--accent-rgb), .06);
+}
+.article-summary p {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.article-scenarios {
+  margin: 0 0 34px;
+}
+.article-scenarios h2,
+.article-faq h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.scenario-card {
+  padding: 18px;
+}
+.scenario-card h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.scenario-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.article-section {
+  margin: 34px 0;
+}
+.article-section h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.article-section p {
+  margin: 0 0 14px;
+  color: rgba(255,255,255,.72);
+  font-size: 15px;
+  line-height: 1.78;
+}
+.article-section ul,
+.article-checklist ul {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: rgba(255,255,255,.72);
+  line-height: 1.75;
+  font-size: 14px;
+}
+.article-checklist {
+  margin: 38px 0;
+  padding: 22px;
+}
+.article-checklist h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+.article-faq {
+  margin: 38px 0;
+}
+.faq-list {
+  display: grid;
+  gap: 10px;
+}
+.faq-item {
+  padding: 18px;
+}
+.faq-item h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.faq-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.article-cta {
+  margin: 40px 0 28px;
+  padding: 28px;
+  border: 1px solid rgba(var(--accent-rgb), .20);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), .08), rgba(var(--accent-rgb), .03));
+}
+.article-cta h2 {
+  margin: 0 0 10px;
+  font-size: 21px;
+}
+.article-cta p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.article-related {
+  margin-top: 34px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.article-related h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+}
+.related-list {
+  display: grid;
+  gap: 10px;
+}
+.related-link {
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  background: rgba(255,255,255,.025);
+}
+.related-link:hover {
+  border-color: rgba(var(--accent-rgb), .26);
+  color: var(--accent-2);
+  text-decoration: none;
+}
+@media (max-width: 640px) {
+  .article-shell { padding: 32px 0 24px; }
+  .scenario-grid { grid-template-columns: 1fr; }
+  .article-cta,
+  .scenario-card,
+  .faq-item,
+  .article-checklist,
+  .article-summary { padding: 18px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+  <article class="article-shell">
+    <nav class="article-breadcrumb" aria-label="Fil d'Ariane">
+      <a href="/">Accueil</a>
+      <span>/</span>
+      <a href="/ressources-seo">Ressources SEO</a>
+    </nav>
+
+    <header class="article-header">
+      <div class="article-meta">
+        <span class="article-kind">{{ resource.kind }}</span>
+        <span>{{ resource.reading_time }}</span>
+        <span>Mis à jour le {{ resource.updated_at }}</span>
+        <span>{{ resource.audience }}</span>
+      </div>
+      <h1>{{ resource.title }}</h1>
+      <p class="article-description">{{ resource.description }}</p>
+    </header>
+
+    <section class="article-summary" aria-label="Résumé">
+      {% for paragraph in resource.summary %}
+        <p>{{ paragraph }}</p>
+      {% endfor %}
+    </section>
+
+    {% if resource.scenarios %}
+      <section class="article-scenarios">
+        <h2>Cas d'usage fréquents</h2>
+        <div class="scenario-grid">
+          {% for scenario in resource.scenarios %}
+            <div class="card scenario-card">
+              <h3>{{ scenario.title }}</h3>
+              <p>{{ scenario.body }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% for section in resource.sections %}
+      <section class="article-section">
+        <h2>{{ section.heading }}</h2>
+        {% for paragraph in section.body %}
+          <p>{{ paragraph }}</p>
+        {% endfor %}
+        {% if section.bullets %}
+          <ul>
+            {% for item in section.bullets %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    {% endfor %}
+
+    <section class="card article-checklist">
+      <h2>Checklist rapide</h2>
+      <ul>
+        {% for item in resource.checklist %}
+          <li>{{ item }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {% if resource.faq %}
+      <section class="article-faq">
+        <h2>Questions fréquentes</h2>
+        <div class="faq-list">
+          {% for item in resource.faq %}
+            <div class="card faq-item">
+              <h3>{{ item.question }}</h3>
+              <p>{{ item.answer }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="article-cta">
+      <h2>Mettre ce guide en pratique</h2>
+      <p>{{ resource.cta }}</p>
+      <a class="btn primary" href="/auth/signup">Créer un compte gratuit</a>
+    </section>
+
+    <aside class="article-related" aria-label="Autres ressources SEO">
+      <h2>Autres ressources SEO</h2>
+      <div class="related-list">
+        {% for other in resources if other.slug != resource.slug %}
+          {% if loop.index <= 4 %}
+            <a class="related-link" href="/ressources-seo/{{ other.slug }}">{{ other.title }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </aside>
+  </article>
+{% endblock %}

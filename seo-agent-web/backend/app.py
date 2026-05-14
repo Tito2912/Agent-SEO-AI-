@@ -9263,8 +9263,7 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
     if not resource:
         raise HTTPException(status_code=404, detail="resource_not_found")
     path = f"/ressources-seo/{resource['slug']}"
-    json_ld = {
-        "@context": "https://schema.org",
+    article_schema = {
         "@type": "Article",
         "headline": resource.get("title"),
         "description": resource.get("description"),
@@ -9275,6 +9274,31 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
         "mainEntityOfPage": _public_url(request, path),
         "keywords": ", ".join(resource.get("keywords") or []),
     }
+    faq = resource.get("faq") if isinstance(resource, dict) else None
+    if isinstance(faq, list) and faq:
+        json_ld = {
+            "@context": "https://schema.org",
+            "@graph": [
+                article_schema,
+                {
+                    "@type": "FAQPage",
+                    "mainEntity": [
+                        {
+                            "@type": "Question",
+                            "name": str(item.get("question") or ""),
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": str(item.get("answer") or ""),
+                            },
+                        }
+                        for item in faq
+                        if isinstance(item, dict) and item.get("question") and item.get("answer")
+                    ],
+                },
+            ],
+        }
+    else:
+        json_ld = {"@context": "https://schema.org", **article_schema}
     return templates.TemplateResponse(
         "seo_resource_article_public.html",
         _public_template_context(
