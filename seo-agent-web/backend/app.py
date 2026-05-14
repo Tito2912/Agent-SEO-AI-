@@ -95,6 +95,13 @@ except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import object_store  # type: ignore
 
+try:
+    # When running as `uvicorn backend.app:app` (recommended).
+    from . import seo_resources as seo_resources  # type: ignore
+except ImportError:
+    # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
+    import seo_resources  # type: ignore
+
 
 try:
     from .db import Database  # type: ignore
@@ -2376,6 +2383,61 @@ def _openai_generate_issue_suggestions(
         return {}
     issues_out = parsed.get("issues") if isinstance(parsed, dict) else None
     return issues_out if isinstance(issues_out, dict) else {}
+
+
+def _openai_url_fix(
+    *,
+    issue_key: str,
+    issue_label: str,
+    url: str,
+    site_name: str,
+) -> dict[str, Any]:
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return {}
+    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
+    model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+    system = (
+        "Tu es un expert SEO technique. L'utilisateur te donne une URL précise affectée par une anomalie SEO.\n"
+        "Propose une correction concrète et actionnable pour cette URL spécifique.\n"
+        "Réponds STRICTEMENT en JSON: {\"fix\": \"explication de la correction (2-3 phrases max)\", "
+        "\"action\": \"action immédiate à réaliser sur cette URL\"}\n"
+        "Sois précis, concis, adapté au contexte de l'anomalie. Pas de généralités."
+    )
+    user_msg = json.dumps({
+        "site": site_name,
+        "anomalie": f"{issue_key} — {issue_label}",
+        "url": url,
+    }, ensure_ascii=False)
+    try:
+        resp = requests.post(
+            f"{base}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "temperature": 0.1,
+                "max_tokens": 350,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_msg},
+                ],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=30,
+        )
+    except Exception:
+        return {}
+    if resp.status_code != 200:
+        return {}
+    try:
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+        if isinstance(parsed, dict) and parsed.get("fix"):
+            return parsed
+    except Exception:
+        pass
+    return {}
 
 
 def _ensure_ai_suggestions_for_issues(
@@ -6369,6 +6431,21 @@ app = FastAPI(title="SEO Agent")
 app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "static")), name="static")
 
 
+@app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
+def favicon_ico() -> RedirectResponse:
+    return RedirectResponse(url="/static/favicon.ico?v=2", status_code=308)
+
+
+@app.api_route("/apple-touch-icon.png", methods=["GET", "HEAD"], include_in_schema=False)
+def apple_touch_icon() -> RedirectResponse:
+    return RedirectResponse(url="/static/apple-touch-icon.png?v=2", status_code=308)
+
+
+@app.api_route("/site.webmanifest", methods=["GET", "HEAD"], include_in_schema=False)
+def site_webmanifest() -> RedirectResponse:
+    return RedirectResponse(url="/static/site.webmanifest?v=2", status_code=308)
+
+
 @app.middleware("http")
 async def cors_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
     if request.method == "OPTIONS":
@@ -6434,6 +6511,11 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
     path = request.url.path
     if path.startswith("/static/") or path in {
         "/healthz",
+        "/favicon.ico",
+        "/apple-touch-icon.png",
+        "/site.webmanifest",
+        "/robots.txt",
+        "/sitemap.xml",
         "/stripe/webhook",
         "/",
         "/pricing",
@@ -6441,7 +6523,7 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
         "/privacy",
         "/support",
         "/status",
-    }:
+    } or path.startswith("/ressources-seo"):
         return await call_next(request)
 
     auth = str(request.headers.get("authorization") or "")
@@ -6554,6 +6636,33 @@ def _public_nav_items() -> list[dict[str, str]]:
         {"href": "/support", "label": "Support"},
         {"href": "/status", "label": "Statut"},
     ]
+
+
+def _public_base_url(request: Request) -> str:
+    base = str(_safe_env("PUBLIC_BASE_URL") or "").rstrip("/")
+    if base:
+        return base
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
+    return f"{proto}://{request.url.netloc}".rstrip("/")
+
+
+def _public_url(request: Request, path: str) -> str:
+    clean_path = str(path or "/").strip()
+    if not clean_path.startswith("/"):
+        clean_path = f"/{clean_path}"
+    return f"{_public_base_url(request)}{clean_path}"
+
+
+def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
+    ctx: dict[str, Any] = {
+        "request": request,
+        "app_name": _app_name(),
+        "support_email": _support_email(),
+        "year": datetime.now(timezone.utc).year,
+        "nav_items": _public_nav_items(),
+    }
+    ctx.update(extra)
+    return ctx
 
 
 def _legal_version() -> str:
@@ -7346,6 +7455,11 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
     path = request.url.path
     if path.startswith("/static/") or path in {
         "/healthz",
+        "/favicon.ico",
+        "/apple-touch-icon.png",
+        "/site.webmanifest",
+        "/robots.txt",
+        "/sitemap.xml",
         "/",
         "/pricing",
         "/terms",
@@ -7362,7 +7476,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/auth/verify/resend",
         "/stripe/webhook",
         "/cron/check-backlinks",
-    }:
+    } or path.startswith("/ressources-seo"):
         return await call_next(request)
 
     if not request.state.user:
@@ -9126,10 +9240,57 @@ def status_public(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/ressources-seo", response_class=HTMLResponse)
+def seo_resources_public(request: Request) -> HTMLResponse:
+    resources = seo_resources.all_resources()
+    return templates.TemplateResponse(
+        "seo_resources_public.html",
+        _public_template_context(
+            request,
+            resources=resources,
+            canonical_url=_public_url(request, "/ressources-seo"),
+            meta_description=(
+                "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, "
+                "suivre Google Search Console et améliorer le référencement naturel."
+            ),
+        ),
+    )
+
+
+@app.get("/ressources-seo/{slug}", response_class=HTMLResponse)
+def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
+    resource = seo_resources.get_resource(slug)
+    if not resource:
+        raise HTTPException(status_code=404, detail="resource_not_found")
+    path = f"/ressources-seo/{resource['slug']}"
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": resource.get("title"),
+        "description": resource.get("description"),
+        "dateModified": resource.get("updated_at"),
+        "datePublished": resource.get("updated_at"),
+        "author": {"@type": "Organization", "name": _app_name()},
+        "publisher": {"@type": "Organization", "name": _app_name()},
+        "mainEntityOfPage": _public_url(request, path),
+        "keywords": ", ".join(resource.get("keywords") or []),
+    }
+    return templates.TemplateResponse(
+        "seo_resource_article_public.html",
+        _public_template_context(
+            request,
+            resource=resource,
+            resources=seo_resources.all_resources(),
+            canonical_url=_public_url(request, path),
+            json_ld=json_ld,
+        ),
+    )
+
+
 @app.get("/robots.txt", response_class=PlainTextResponse, include_in_schema=False)
 def robots_txt(request: Request) -> PlainTextResponse:
-    base = str(_safe_env("PUBLIC_BASE_URL") or "").rstrip("/")
-    sitemap_line = f"\nSitemap: {base}/sitemap.xml" if base else ""
+    base = _public_base_url(request)
+    sitemap_line = f"\nSitemap: {base}/sitemap.xml"
     content = f"""User-agent: *
 Allow: /
 Allow: /pricing
@@ -9137,6 +9298,7 @@ Allow: /terms
 Allow: /privacy
 Allow: /support
 Allow: /status
+Allow: /ressources-seo
 Disallow: /auth/
 Disallow: /billing
 Disallow: /jobs
@@ -9152,15 +9314,32 @@ Disallow: /oauth/{sitemap_line}
 
 @app.get("/sitemap.xml", include_in_schema=False)
 def sitemap_xml(request: Request) -> PlainTextResponse:
-    base = str(_safe_env("PUBLIC_BASE_URL") or "").rstrip("/")
-    if not base:
-        proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
-        base = f"{proto}://{request.url.netloc}".rstrip("/")
+    base = _public_base_url(request)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    urls = ["/", "/pricing", "/terms", "/privacy", "/support", "/status"]
+    urls = [
+        {"path": "/", "lastmod": now, "changefreq": "weekly"},
+        {"path": "/pricing", "lastmod": now, "changefreq": "monthly"},
+        {"path": "/terms", "lastmod": now, "changefreq": "yearly"},
+        {"path": "/privacy", "lastmod": now, "changefreq": "yearly"},
+        {"path": "/support", "lastmod": now, "changefreq": "monthly"},
+        {"path": "/status", "lastmod": now, "changefreq": "weekly"},
+        {"path": "/ressources-seo", "lastmod": now, "changefreq": "weekly"},
+    ]
+    for resource in seo_resources.all_resources():
+        urls.append(
+            {
+                "path": f"/ressources-seo/{resource.get('slug')}",
+                "lastmod": str(resource.get("updated_at") or now),
+                "changefreq": "monthly",
+            }
+        )
     url_blocks = "\n".join(
-        f"  <url><loc>{base}{u}</loc><lastmod>{now}</lastmod><changefreq>monthly</changefreq></url>"
-        for u in urls
+        (
+            f"  <url><loc>{html.escape(base + str(item['path']))}</loc>"
+            f"<lastmod>{html.escape(str(item['lastmod']))}</lastmod>"
+            f"<changefreq>{html.escape(str(item['changefreq']))}</changefreq></url>"
+        )
+        for item in urls
     )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -9399,14 +9578,12 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
     if not user:
         return templates.TemplateResponse(
             "home_public.html",
-            {
-                "request": request,
-                "app_name": _app_name(),
-                "support_email": _support_email(),
-                "year": datetime.now(timezone.utc).year,
-                "nav_items": _public_nav_items(),
-                "catalog": billing.plan_catalog(),
-            },
+            _public_template_context(
+                request,
+                catalog=billing.plan_catalog(),
+                featured_resources=seo_resources.featured_resources(3),
+                canonical_url=_public_url(request, "/"),
+            ),
         )
     try:
         with DB.session() as db:
@@ -12460,6 +12637,30 @@ def project_issue_detail(
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@app.get("/api/projects/{slug}/issues/{issue_key}/url-fix")
+def api_issue_url_fix(
+    request: Request,
+    slug: str,
+    issue_key: str,
+    url: str = "",
+    crawl: str | None = None,
+) -> JSONResponse:
+    proj_row = _db_project_or_404(request, slug)
+    url = (url or "").strip()
+    if not url or not url.startswith(("http://", "https://")):
+        return JSONResponse({"error": "URL invalide"}, status_code=400)
+    meta = dash.issue_meta(issue_key)
+    result = _openai_url_fix(
+        issue_key=issue_key,
+        issue_label=meta.label if meta else issue_key,
+        url=url,
+        site_name=str(proj_row.site_name or slug),
+    )
+    if not result:
+        return JSONResponse({"error": "Service IA indisponible. Configure OPENAI_API_KEY."}, status_code=503)
+    return JSONResponse(result)
 
 
 @app.get("/projects/{slug}/export/report.csv")

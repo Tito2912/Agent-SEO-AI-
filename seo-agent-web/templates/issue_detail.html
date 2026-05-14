@@ -120,12 +120,22 @@
       </div>
 
       {% if fix_suggestion and fix_suggestion.sample_urls %}
-        <p class="muted small" style="margin-top: 10px;">Exemples (URLs impactées)</p>
-        <ul class="examples">
+        <div style="margin-top:14px;">
+          <p class="muted small" style="margin-bottom:4px;">URLs réelles affectées</p>
           {% for u in fix_suggestion.sample_urls %}
-            <li class="mono"><a href="{{ u }}" target="_blank" rel="noreferrer">{{ u }}</a></li>
+            <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <a href="{{ u }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;min-width:0;word-break:break-all;">{{ u }}</a>
+                <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+                  data-url="{{ u }}"
+                  data-issue="{{ project.issue.key }}"
+                  data-crawl="{{ project.timestamp }}"
+                  data-slug="{{ project.slug }}">Correction IA</button>
+              </div>
+              <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+            </div>
           {% endfor %}
-        </ul>
+        </div>
       {% endif %}
     </section>
 
@@ -262,9 +272,9 @@
           {% endif %}
         {% endif %}
       {% else %}
-        <h2>Exemples</h2>
+        <h2>URLs concernées</h2>
         {% if not project.issue.examples %}
-          <p class="muted">Aucun exemple disponible.</p>
+          <p class="muted">Aucune donnée disponible.</p>
         {% else %}
           {% if project.issue.cwv %}
           {% set m = project.issue.cwv.metric %}
@@ -318,37 +328,99 @@
             </table>
           </div>
 	        {% else %}
-	          <ul class="examples">
+	          <div style="margin-top:8px;">
 	            {% for ex in project.issue.examples %}
 	              {% if ex.startswith('http://') or ex.startswith('https://') %}
 	                {% if '->' in ex %}
 	                  {% set parts = ex.split('->', 1) %}
 	                  {% set src = parts[0].strip() %}
 	                  {% set tgt = parts[1].strip() %}
-	                  <li class="mono">
-	                    <a href="{{ src }}" target="_blank" rel="noreferrer">{{ src }}</a>
-	                    →
-	                    {% if tgt.startswith('http://') or tgt.startswith('https://') %}
-	                      <a href="{{ tgt }}" target="_blank" rel="noreferrer">{{ tgt }}</a>
-	                    {% else %}
-	                      <span class="muted">{{ tgt }}</span>
-	                    {% endif %}
-	                  </li>
+	                  <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
+	                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+	                      <span class="mono" style="font-size:12px;flex:1;word-break:break-all;">
+	                        <a href="{{ src }}" target="_blank" rel="noreferrer">{{ src }}</a>
+	                        → {% if tgt.startswith('http://') or tgt.startswith('https://') %}<a href="{{ tgt }}" target="_blank" rel="noreferrer">{{ tgt }}</a>{% else %}<span class="muted">{{ tgt }}</span>{% endif %}
+	                      </span>
+	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                    </div>
+	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+	                  </div>
 	                {% elif ' ' in ex %}
-	                  {% set url = ex.split(' ', 1)[0] %}
+	                  {% set u = ex.split(' ', 1)[0] %}
 	                  {% set tail = ex.split(' ', 1)[1] %}
-	                  <li class="mono"><a href="{{ url }}" target="_blank" rel="noreferrer">{{ url }}</a> <span class="muted">{{ tail }}</span></li>
+	                  <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
+	                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+	                      <span class="mono" style="font-size:12px;flex:1;word-break:break-all;"><a href="{{ u }}" target="_blank" rel="noreferrer">{{ u }}</a> <span class="muted">{{ tail }}</span></span>
+	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                    </div>
+	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+	                  </div>
 	                {% else %}
-	                  <li class="mono"><a href="{{ ex }}" target="_blank" rel="noreferrer">{{ ex }}</a></li>
+	                  <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
+	                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+	                      <a href="{{ ex }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;word-break:break-all;">{{ ex }}</a>
+	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                    </div>
+	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+	                  </div>
 	                {% endif %}
 	              {% else %}
-	                <li class="mono">{{ ex }}</li>
+	                <div class="mono" style="padding:5px 0;border-top:1px solid var(--border);font-size:12px;">{{ ex }}</div>
 	              {% endif %}
 	            {% endfor %}
-	          </ul>
+	          </div>
 		        {% endif %}
 		      {% endif %}
 	      {% endif %}
 	    </section>
 	  {% endif %}
 {% endblock %}
+
+{% block head_extra %}
+<script>
+(function () {
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.url-ai-btn');
+    if (!btn) return;
+    const row = btn.closest('.url-ai-row');
+    const result = row && row.querySelector('.url-ai-result');
+    if (!result) return;
+
+    const url = btn.dataset.url;
+    const issue = btn.dataset.issue;
+    const crawl = btn.dataset.crawl;
+    const slug = btn.dataset.slug;
+
+    btn.disabled = true;
+    btn.textContent = 'Analyse…';
+
+    fetch(`/api/projects/${encodeURIComponent(slug)}/issues/${encodeURIComponent(issue)}/url-fix?url=${encodeURIComponent(url)}&crawl=${encodeURIComponent(crawl || '')}`)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) {
+          btn.textContent = 'Erreur';
+          btn.disabled = false;
+          return;
+        }
+        let html = '';
+        if (data.fix) html += '<strong>Correction&nbsp;:</strong> ' + _esc(data.fix);
+        if (data.action) html += '<br><strong>Action&nbsp;:</strong> ' + _esc(data.action);
+        result.innerHTML = html;
+        result.style.display = 'block';
+        btn.style.display = 'none';
+      })
+      .catch(function () {
+        btn.textContent = 'Erreur';
+        btn.disabled = false;
+      });
+  });
+
+  function _esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+})();
+</script>
+{% endblock head_extra %}
