@@ -673,27 +673,6 @@
 	    })();
 	  </script>
 
-	  {% if jobs %}
-	    <section class="card">
-      <div class="card-title-row">
-        <h2>Exécutions récentes</h2>
-        <a class="muted small" href="/jobs">Voir tous</a>
-      </div>
-      <div class="job-grid">
-        {% for j in jobs[:8] %}
-          <a
-            class="job-chip"
-            href="/jobs?job={{ j.id }}"
-            data-job-id="{{ j.id }}"
-            data-live="{{ '1' if j.status in ['queued', 'running'] else '0' }}"
-          >
-            <span class="mono">{{ j.id[:8] }}</span>
-            <span class="pill {{ j.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
-          </a>
-        {% endfor %}
-	      </div>
-	    </section>
-	  {% endif %}
 
 	  <script>
 	    (() => {
