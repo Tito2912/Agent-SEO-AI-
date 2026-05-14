@@ -144,7 +144,7 @@
   {# ══════════════════════════════════════
      LIVE JOB CARD
   ══════════════════════════════════════ #}
-  {% if live_job %}
+  {% if live_job and live_job.status in ['queued', 'running', 'cancel_requested'] %}
     <section
       class="card"
       id="live-job-card"
@@ -673,7 +673,7 @@
   {# ══════════════════════════════════════
      LIVE JOB POLLING SCRIPT
   ══════════════════════════════════════ #}
-  {% if live_job %}
+  {% if live_job and live_job.status in ['queued', 'running', 'cancel_requested'] %}
     <script>
       (() => {
         const card = document.getElementById("live-job-card");
