@@ -39,11 +39,10 @@
         <label>
           Source
           <select name="source">
-            <option value="gsc" {% if source == 'gsc' %}selected{% endif %}>GSC</option>
-            <option value="bing" {% if source == 'bing' %}selected{% endif %}>Bing</option>
+            <option value="gsc" {% if source == 'gsc' %}selected{% endif %}>Google Search Console</option>
+            <option value="bing" {% if source == 'bing' %}selected{% endif %}>Bing Webmaster</option>
           </select>
         </label>
-
         <label>
           Dimension
           <select name="dim">
@@ -51,23 +50,20 @@
             <option value="page" {% if dim == 'page' %}selected{% endif %}>Pages</option>
           </select>
         </label>
-
         <label>
           Période
           <select name="days">
             {% for d in [7, 28, 90] %}
-              <option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }}j</option>
+              <option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }} jours</option>
             {% endfor %}
           </select>
         </label>
-
         <label class="grow">
           Recherche
-          <input name="q" value="{{ q }}" placeholder="{% if dim == 'page' %}url…{% else %}mot-clé…{% endif %}" />
+          <input name="q" value="{{ q }}" placeholder="{% if dim == 'page' %}filtrer par URL…{% else %}filtrer par mot-clé…{% endif %}" />
         </label>
-
         <label>
-          Tri
+          Trier par
           <select name="sort">
             <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>Clics</option>
             <option value="impressions" {% if sort == 'impressions' %}selected{% endif %}>Impressions</option>
@@ -75,16 +71,14 @@
             <option value="position" {% if sort == 'position' %}selected{% endif %}>Position</option>
           </select>
         </label>
-
         <label>
           Ordre
           <select name="dir">
-            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>Décroissant</option>
-            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>Croissant</option>
+            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>↓ Décroissant</option>
+            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>↑ Croissant</option>
           </select>
         </label>
-
-        <button type="submit" class="btn">Appliquer</button>
+        <button type="submit" class="btn primary">Appliquer</button>
       </form>
     </section>
 
@@ -109,19 +103,20 @@
     {% else %}
       <section class="card">
         <div class="card-title-row">
-          <h2>Résumé</h2>
-          {% if csv_url %}
-            <a class="muted small" href="{{ csv_url }}">Télécharger CSV</a>
-          {% endif %}
+          <h2>Résumé — {{ source|upper }} · {{ days }}j</h2>
+          <div style="display:flex;gap:6px;">
+            {% if csv_url %}
+              <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">Télécharger CSV</a>
+            {% endif %}
+          </div>
         </div>
         {% if live and live.ok %}
-          <p class="muted small" style="margin: 0 0 10px;">
-            {% if source == "gsc" %}Propriété: <span class="mono">{{ live.property }}</span>{% else %}siteUrl: <span class="mono">{{ live.site_url }}</span>{% endif %}
-            · <span class="mono">{{ live.start_date }}</span> → <span class="mono">{{ live.end_date }}</span>
-            ({{ live.days }}j)
+          <p class="muted small" style="margin:0 0 12px;">
+            {% if source == "gsc" %}Propriété : <span class="mono">{{ live.property }}</span>{% else %}Site : <span class="mono">{{ live.site_url }}</span>{% endif %}
+            &nbsp;·&nbsp; <span class="mono">{{ live.start_date }}</span> → <span class="mono">{{ live.end_date }}</span>
           </p>
         {% endif %}
-        <div class="metric-band" style="margin-top:4px;">
+        <div class="metric-band">
           <div class="metric-tile">
             <div class="metric-tile-label">Clics</div>
             <div class="metric-tile-value">{{ totals.clicks }}</div>
@@ -187,7 +182,7 @@
       <section class="card">
         <div class="card-title-row">
           <h2>{% if dim == 'page' %}Pages{% else %}Requêtes{% endif %}</h2>
-          <span class="muted small">{{ total_rows }} résultats</span>
+          <span class="muted small">{{ total_rows }} résultat{{ 's' if total_rows > 1 else '' }}</span>
         </div>
 
         {% if not rows %}
@@ -201,37 +196,50 @@
                   <th class="num">Clics</th>
                   <th class="num">Impressions</th>
                   <th class="num">CTR</th>
-                  <th class="num">Position</th>
+                  <th class="num">Pos. moy.</th>
                 </tr>
               </thead>
               <tbody>
                 {% for r in rows %}
+                  {% set pos = r.position or 0 %}
+                  {% set pos_cls = 'ok' if pos <= 3 else ('warning' if pos <= 10 else '') %}
                   <tr>
-                    <td><span class="mono">{{ r.keyword }}</span></td>
+                    <td>
+                      {% if dim == 'page' %}
+                        <a href="{{ r.keyword }}" target="_blank" rel="noopener" class="mono" style="font-size:12px;">{{ r.keyword }}</a>
+                      {% else %}
+                        <span class="mono">{{ r.keyword }}</span>
+                      {% endif %}
+                    </td>
                     <td class="num mono">{{ r.clicks }}</td>
                     <td class="num mono">{{ r.impressions }}</td>
-                    <td class="num mono">{{ "%.2f"|format((r.ctr or 0) * 100) }}%</td>
-                    <td class="num mono">{{ "%.2f"|format(r.position or 0) }}</td>
+                    <td class="num mono">{{ "%.1f"|format((r.ctr or 0) * 100) }}%</td>
+                    <td class="num mono">
+                      {% if pos_cls %}
+                        <span class="badge {{ pos_cls }}" style="font-size:11px;">{{ "%.1f"|format(pos) }}</span>
+                      {% else %}
+                        {{ "%.1f"|format(pos) }}
+                      {% endif %}
+                    </td>
                   </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
-        {% endif %}
 
-        {% if pages and pages > 1 %}
-          <div class="muted small" style="display:flex; justify-content:space-between; margin-top: 10px;">
-            <span>Page {{ page }} / {{ pages }}</span>
-            <span>
-              {% if page > 1 %}
-                <a href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}">Précédent</a>
-              {% endif %}
-              {% if page < pages %}
-                {% if page > 1 %} · {% endif %}
-                <a href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}">Suivant</a>
-              {% endif %}
-            </span>
-          </div>
+          {% if pages and pages > 1 %}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+              <span class="muted small">Page {{ page }} / {{ pages }}</span>
+              <div style="display:flex;gap:6px;">
+                {% if page > 1 %}
+                  <a class="btn" href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}" style="font-size:12px;">← Précédent</a>
+                {% endif %}
+                {% if page < pages %}
+                  <a class="btn" href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}" style="font-size:12px;">Suivant →</a>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
         {% endif %}
       </section>
     {% endif %}

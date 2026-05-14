@@ -130,27 +130,16 @@
           <input name="q" value="{{ q }}" placeholder="titre, canonical, sitemap…" />
         </label>
 
-        <button type="submit" class="btn">Appliquer</button>
+        <button type="submit" class="btn primary">Filtrer</button>
 
         {% set export_qs = "crawl=" ~ cur.timestamp %}
-        {% if project.compare and project.compare.timestamp %}
-          {% set export_qs = export_qs ~ "&compare=" ~ project.compare.timestamp %}
-        {% endif %}
-        {% if severity %}
-          {% set export_qs = export_qs ~ "&severity=" ~ severity %}
-        {% endif %}
-        {% if category %}
-          {% set export_qs = export_qs ~ "&category=" ~ category %}
-        {% endif %}
-        {% if q %}
-          {% set export_qs = export_qs ~ "&q=" ~ (q | urlencode) %}
-        {% endif %}
+        {% if project.compare and project.compare.timestamp %}{% set export_qs = export_qs ~ "&compare=" ~ project.compare.timestamp %}{% endif %}
+        {% if severity %}{% set export_qs = export_qs ~ "&severity=" ~ severity %}{% endif %}
+        {% if category %}{% set export_qs = export_qs ~ "&category=" ~ category %}{% endif %}
+        {% if q %}{% set export_qs = export_qs ~ "&q=" ~ (q | urlencode) %}{% endif %}
 
-        <div class="muted small" style="margin-left:auto;">
-          Exporter:
-          <a href="/projects/{{ project.slug }}/export/issues.csv?{{ export_qs }}">CSV</a>
-          · <a href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}">PDF</a>
-        </div>
+        <a class="btn" href="/projects/{{ project.slug }}/export/issues.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">CSV</a>
+        <a class="btn" href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">PDF</a>
       </form>
     </section>
 

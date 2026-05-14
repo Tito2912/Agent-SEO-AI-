@@ -134,15 +134,15 @@
         </label>
         <button type="submit" class="btn">Appliquer</button>
 
-        <div class="muted small">
-          Rapports: <a href="/file?path={{ cur.report_md }}">report.md</a> · <a href="/file?path={{ cur.report_json }}">report.json</a>
-          · Exports: <a href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">PDF</a>
-          · <a href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}">CSV</a>
-          · Fix Pack:
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;">
+          <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
+          <a class="btn" href="/file?path={{ cur.report_json }}" style="font-size:11px;padding:4px 10px;">JSON</a>
+          <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
+          <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
           {% if fix_pack_unlocked %}
-            <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">ZIP</a>
+            <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
           {% else %}
-            <a href="/billing">Débloquer (Solo+)</a>
+            <a class="btn" href="/billing" style="font-size:11px;padding:4px 10px;">Fix Pack <span class="badge notice" style="font-size:9px;padding:1px 5px;margin-left:3px;">Solo+</span></a>
           {% endif %}
         </div>
       </form>
@@ -392,6 +392,29 @@
         })();
       </script>
     {% endif %}
+
+    <div class="metric-band" style="margin-bottom:16px;">
+      <div class="metric-tile">
+        <div class="metric-tile-label">Score de santé</div>
+        <div class="metric-tile-value" style="color:{{ 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') }};">{{ sum.health_score }}<span style="font-size:15px;font-weight:600;color:var(--muted);">%</span></div>
+        <div class="metric-tile-sub">URLs sans erreur</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-tile-label">URLs crawlées</div>
+        <div class="metric-tile-value">{{ sum.urls_crawled_distribution }}</div>
+        <div class="metric-tile-sub">{{ sum.pages_crawled }} internes</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-tile-label">Anomalies</div>
+        <div class="metric-tile-value">{{ sum.issues_total }}</div>
+        <div class="metric-tile-sub"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="color:var(--muted);">voir le détail</a></div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-tile-label">Erreurs</div>
+        <div class="metric-tile-value" style="color:{{ 'var(--err)' if (sum.issues_distribution.error or 0) > 0 else 'var(--text)' }};">{{ sum.issues_distribution.error or 0 }}</div>
+        <div class="metric-tile-sub">{{ sum.issues_distribution.warning or 0 }} avert. · {{ sum.issues_distribution.notice or 0 }} infos</div>
+      </div>
+    </div>
 
     <div class="grid">
       <section class="card">

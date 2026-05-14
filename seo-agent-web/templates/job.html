@@ -99,34 +99,53 @@
           </p>
         </section>
 
+        {% if latest %}
         <section class="card">
-          <div class="card-title-row"><h2>Dernier run global</h2></div>
-          {% if latest %}
-            <p><span class="muted">Horodatage:</span> {{ latest.timestamp }}</p>
+          <div class="card-title-row">
+            <h2>Dernier run global</h2>
+            <span class="muted small mono">{{ latest.timestamp }}</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
             {% if latest.sites_summary_md %}
-              <p class="muted">Voir: {{ latest.sites_summary_md }}</p>
+              <a class="btn" href="/file?path={{ latest.sites_summary_md }}" style="font-size:12px;">sites-summary.md</a>
             {% endif %}
             {% if latest.interlinking_md %}
-              <p class="muted">Voir: {{ latest.interlinking_md }}</p>
+              <a class="btn" href="/file?path={{ latest.interlinking_md }}" style="font-size:12px;">interlinking-plan.md</a>
             {% endif %}
-          {% else %}
-            <p class="muted">Pas de run global détecté.</p>
-          {% endif %}
+          </div>
         </section>
+        {% endif %}
 
         <section class="card">
           <div class="card-title-row">
-            <h2>stdout</h2>
-            <span class="muted small">sortie standard</span>
+            <h2>Logs</h2>
+            <div class="tab-buttons" id="log-tabs" style="margin:0;">
+              <button type="button" class="tab-btn active" data-log-tab="stdout">Sortie standard</button>
+              <button type="button" class="tab-btn" data-log-tab="stderr">Erreurs</button>
+            </div>
           </div>
-          <pre id="job-stdout" style="max-height:400px; overflow-y:auto; font-size:11px; line-height:1.5;">{{ job.stdout or "" }}</pre>
-        </section>
-        <section class="card">
-          <div class="card-title-row">
-            <h2>stderr</h2>
-            <span class="muted small">sortie erreur</span>
+          <div id="log-stdout-wrap">
+            <pre id="job-stdout" style="max-height:420px;overflow-y:auto;font-size:11px;line-height:1.6;margin:0;">{{ job.stdout or "Aucune sortie." }}</pre>
           </div>
-          <pre id="job-stderr" style="max-height:300px; overflow-y:auto; font-size:11px; line-height:1.5; color:var(--err);">{{ job.stderr or "" }}</pre>
+          <div id="log-stderr-wrap" style="display:none;">
+            <pre id="job-stderr" style="max-height:420px;overflow-y:auto;font-size:11px;line-height:1.6;margin:0;color:{% if job.stderr %}var(--err){% else %}var(--muted){% endif %};">{{ job.stderr or "Aucune sortie d'erreur." }}</pre>
+          </div>
+          <script>
+            (() => {
+              const tabs = document.querySelectorAll('[data-log-tab]');
+              const stdoutWrap = document.getElementById('log-stdout-wrap');
+              const stderrWrap = document.getElementById('log-stderr-wrap');
+              tabs.forEach(btn => {
+                btn.addEventListener('click', () => {
+                  tabs.forEach(b => b.classList.remove('active'));
+                  btn.classList.add('active');
+                  const target = btn.dataset.logTab;
+                  if (stdoutWrap) stdoutWrap.style.display = target === 'stdout' ? '' : 'none';
+                  if (stderrWrap) stderrWrap.style.display = target === 'stderr' ? '' : 'none';
+                });
+              });
+            })();
+          </script>
         </section>
 
         {% set result = job.result if job.result else none %}

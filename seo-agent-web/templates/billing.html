@@ -31,10 +31,10 @@
     <div class="card">
       <div class="card-title-row">
         <h2>Plan actuel</h2>
-        <span class="badge notice">{{ plan.label }}</span>
+        <span class="badge notice" style="font-size:12px;padding:3px 10px;">{{ plan.label }}</span>
       </div>
 
-      <div class="muted">Prix : <strong>{{ plan.price_label }}</strong></div>
+      <div style="font-size:28px;font-weight:900;letter-spacing:-.03em;margin:8px 0 4px;">{{ plan.price_label }}</div>
 
       {% if subscription %}
         {% set sub_status = {
@@ -46,18 +46,19 @@
           'incomplete': 'incomplet',
           'incomplete_expired': 'expiré'
         }.get(subscription.status, subscription.status) %}
-        <div class="row muted small">
-          Statut : <span class="mono">{{ sub_status }}</span>
-          {% if subscription.cancel_at_period_end %} · Annulation en fin de période{% endif %}
+        {% set status_cls = 'ok' if subscription.status == 'active' else ('warning' if subscription.status in ['trialing','past_due'] else 'error') %}
+        <div class="muted small" style="margin-bottom:4px;">
+          Statut : <span class="badge {{ status_cls }}" style="font-size:10px;padding:1px 6px;">{{ sub_status }}</span>
+          {% if subscription.cancel_at_period_end %} <span class="muted">· Annulation en fin de période</span>{% endif %}
         </div>
         {% if subscription.current_period_end %}
-          <div class="row muted small">Renouvellement : {{ subscription.current_period_end.strftime("%d/%m/%Y") }}</div>
+          <div class="muted small">Prochain renouvellement : <span class="mono">{{ subscription.current_period_end.strftime("%d/%m/%Y") }}</span></div>
         {% endif %}
       {% else %}
-        <div class="row muted small">Aucun abonnement actif.</div>
+        <div class="muted small">Aucun abonnement actif.</div>
       {% endif %}
 
-      <div class="row-actions">
+      <div class="row-actions" style="margin-top:14px;">
         {% if stripe_ready %}
           <form method="post" action="/billing/portal" class="inline">
             <button type="submit" class="btn">Gérer l'abonnement</button>
@@ -71,34 +72,38 @@
     <div class="card">
       <div class="card-title-row">
         <h2>Quotas</h2>
-        <span class="muted small">Ce mois-ci</span>
+        <span class="muted small">Utilisation ce mois-ci</span>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr; gap:14px;">
-
+      <div style="display:flex;flex-direction:column;gap:16px;">
         <div>
-          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
-            <span style="font-size:12px; color:var(--muted);">Sites</span>
-            <span style="font-size:13px; font-weight:800;">{{ usage.projects }} <span class="muted" style="font-weight:400;">/ {{ limits_labels.projects }}</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:600;">Sites</span>
+            <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.projects }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.projects }}</span></span>
           </div>
         </div>
 
         <div>
-          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
-            <span style="font-size:12px; color:var(--muted);">Pages crawlées</span>
-            <span style="font-size:13px; font-weight:800;">{{ usage.pages_crawled_month }} <span class="muted" style="font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:600;">Pages crawlées</span>
+            <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.pages_crawled_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
           </div>
-          <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};"><div class="progress-fill"></div></div>
+          <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};background:rgba(255,255,255,.06);">
+            <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.pages_crawled_month >= 90 else ('var(--warn)' if usage_pct.pages_crawled_month >= 70 else 'var(--accent)') }};"></div>
+          </div>
+          <div class="muted small" style="margin-top:5px;">{{ usage_pct.pages_crawled_month }}% utilisé</div>
         </div>
 
         <div>
-          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
-            <span style="font-size:12px; color:var(--muted);">Messages IA</span>
-            <span style="font-size:13px; font-weight:800;">{{ usage.assistant_messages_month }} <span class="muted" style="font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:600;">Messages IA</span>
+            <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.assistant_messages_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
           </div>
-          <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};"><div class="progress-fill"></div></div>
+          <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};background:rgba(255,255,255,.06);">
+            <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.assistant_messages_month >= 90 else ('var(--warn)' if usage_pct.assistant_messages_month >= 70 else 'var(--accent)') }};"></div>
+          </div>
+          <div class="muted small" style="margin-top:5px;">{{ usage_pct.assistant_messages_month }}% utilisé</div>
         </div>
-
       </div>
     </div>
   </div>
