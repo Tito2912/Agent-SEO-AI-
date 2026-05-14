@@ -110,6 +110,35 @@
         </div>
       {% endif %}
     </div>
+
+    {# Anomalies breakdown — right column of hero #}
+    {% if project.current %}
+      {% set e = sum.issues_distribution.error or 0 %}
+      {% set w = sum.issues_distribution.warning or 0 %}
+      {% set n = sum.issues_distribution.notice or 0 %}
+      {% set mx = [e, w, n]|max %}
+      <div class="ov-hero-breakdown">
+        <div class="ov-section-hd" style="margin-bottom:14px;"><span>Répartition des anomalies</span></div>
+        <div class="bars">
+          <div class="bar-row">
+            <span class="bar-label">Erreurs</span>
+            <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / mx) * 100)|round(0) if mx else 0 }};"></div></div>
+            <span class="mono">{{ e }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Avertissements</span>
+            <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / mx) * 100)|round(0) if mx else 0 }};"></div></div>
+            <span class="mono">{{ w }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Infos</span>
+            <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / mx) * 100)|round(0) if mx else 0 }};"></div></div>
+            <span class="mono">{{ n }}</span>
+          </div>
+        </div>
+        <p class="muted small" style="margin-top:12px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
+      </div>
+    {% endif %}
   </div>
 
   {# ══════════════════════════════════════
@@ -239,36 +268,6 @@
      MAIN GRID
   ══════════════════════════════════════ #}
   <div class="grid">
-
-    {# Anomalies distribution bars #}
-    <section class="card">
-      <div class="card-title-row">
-        <h2>Répartition des anomalies</h2>
-        <span class="muted small mono">{{ sum.issues_total }}</span>
-      </div>
-      {% set e = sum.issues_distribution.error or 0 %}
-      {% set w = sum.issues_distribution.warning or 0 %}
-      {% set n = sum.issues_distribution.notice or 0 %}
-      {% set m = [e, w, n]|max %}
-      <div class="bars">
-        <div class="bar-row">
-          <span class="bar-label">Erreurs</span>
-          <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / m) * 100)|round(0) if m else 0 }};"></div></div>
-          <span class="mono">{{ e }}</span>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">Avertissements</span>
-          <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / m) * 100)|round(0) if m else 0 }};"></div></div>
-          <span class="mono">{{ w }}</span>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">Infos</span>
-          <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / m) * 100)|round(0) if m else 0 }};"></div></div>
-          <span class="mono">{{ n }}</span>
-        </div>
-      </div>
-      <p class="muted small" style="margin-top:14px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
-    </section>
 
     {# Score history + URL breakdown #}
     <section class="card">
