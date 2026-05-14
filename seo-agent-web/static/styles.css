@@ -1511,6 +1511,24 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
 }
 
 /* ═══════════════════════════════════════════════════════
+   Project hero header (score featured top-right)
+═══════════════════════════════════════════════════════ */
+.project-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.project-hero h1 { margin: 0 0 5px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.project-hero-meta { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.project-hero-score { text-align: right; flex-shrink: 0; }
+.hero-score-num { font-size: 68px; font-weight: 900; letter-spacing: -.05em; line-height: 1; }
+.hero-score-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-top: 6px; }
+
+/* ═══════════════════════════════════════════════════════
    Less-card layout utilities
 ═══════════════════════════════════════════════════════ */
 

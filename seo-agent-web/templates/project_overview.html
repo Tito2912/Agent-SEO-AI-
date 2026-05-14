@@ -27,19 +27,27 @@
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
-    <div class="page-header">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <h1 style="margin:0;">{{ project.site_name }}</h1>
-        {% if project.current %}
-          {% set hc = project.current.get('health', {}) %}
-          {% if hc.get('score') is not none %}
-            {% set sc = hc.get('score', 0)|int %}
-            {% if sc >= 80 %}{% set sc_class = 'ok' %}{% elif sc >= 50 %}{% set sc_class = 'warning' %}{% else %}{% set sc_class = 'error' %}{% endif %}
-            <span class="badge {{ sc_class }}" style="font-size:12px;">Santé {{ sc }}%</span>
+    <div class="project-hero">
+      <div>
+        <h1>{{ project.site_name }}</h1>
+        <div class="project-hero-meta">
+          <a href="{{ project.base_url }}" target="_blank" rel="noopener" style="color:var(--muted);">{{ project.base_url }}</a>
+          {% if project.current %}
+            <span>{{ project.crawls | length }} crawl{{ 's' if project.crawls | length > 1 else '' }} · dernier {{ project.crawls[0][6:8] }}/{{ project.crawls[0][4:6] }}/{{ project.crawls[0][:4] }}</span>
           {% endif %}
-        {% endif %}
+        </div>
       </div>
-      <p class="muted" style="margin:4px 0 0;"><a href="{{ project.base_url }}" target="_blank" rel="noopener" style="color:var(--muted);">{{ project.base_url }}</a></p>
+      {% if project.current %}
+        {% set hc = project.current.get('health', {}) %}
+        {% if hc.get('score') is not none %}
+          {% set sc = hc.get('score', 0)|int %}
+          {% set sc_color = 'var(--ok)' if sc >= 80 else ('var(--warn)' if sc >= 50 else 'var(--err)') %}
+          <div class="project-hero-score">
+            <div class="hero-score-num" style="color:{{ sc_color }};">{{ sc }}</div>
+            <div class="hero-score-lbl">Score de santé</div>
+          </div>
+        {% endif %}
+      {% endif %}
     </div>
 
     {% if live_job %}
@@ -369,12 +377,6 @@
 
     <div class="stat-strip">
       <div class="stat-strip-item">
-        <div class="stat-strip-num" style="color:{{ 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') }};">{{ sum.health_score }}<span style="font-size:18px;font-weight:600;">%</span></div>
-        <div class="stat-strip-lbl">Score de santé</div>
-        <div class="stat-strip-sub">URLs sans erreur</div>
-      </div>
-      <div class="stat-strip-sep"></div>
-      <div class="stat-strip-item">
         <div class="stat-strip-num">{{ sum.urls_crawled_distribution }}</div>
         <div class="stat-strip-lbl">URLs crawlées</div>
         <div class="stat-strip-sub">{{ sum.pages_crawled }} internes · {{ sum.resources_crawled }} ressources</div>
@@ -391,6 +393,15 @@
         <div class="stat-strip-lbl">Erreurs critiques</div>
         <div class="stat-strip-sub">{{ sum.issues_distribution.warning or 0 }} avertissements · {{ sum.issues_distribution.notice or 0 }} infos</div>
       </div>
+      {% if sum.pages_crawled %}
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          {% set err_pct = ((sum.urls_with_errors / sum.pages_crawled) * 100)|round(0)|int if sum.pages_crawled else 0 %}
+          <div class="stat-strip-num" style="color:{{ 'var(--err)' if err_pct > 20 else ('var(--warn)' if err_pct > 5 else 'var(--ok)') }};">{{ err_pct }}<span style="font-size:18px;font-weight:600;">%</span></div>
+          <div class="stat-strip-lbl">URLs en erreur</div>
+          <div class="stat-strip-sub">{{ sum.urls_with_errors }} / {{ sum.pages_crawled }}</div>
+        </div>
+      {% endif %}
     </div>
 
     <div class="grid">
@@ -451,27 +462,6 @@
           </div>
         </div>
         <p class="muted small">URLs trouvées: <span class="mono">{{ found_total }}</span></p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Score de santé</h2>
-          <span class="badge {{ 'ok' if sum.health_score >= 90 else ('warning' if sum.health_score >= 70 else 'error') }}">{{ sum.health_score }}%</span>
-        </div>
-        {% set gcolor = 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') %}
-        <div class="gauge-svg-wrap">
-          <svg class="gauge-svg" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" class="gauge-track"/>
-            <circle cx="50" cy="50" r="40" class="gauge-ring"
-              style="stroke:{{ gcolor }}; stroke-dasharray:{{ (sum.health_score / 100 * 251.3)|round(1) }} 251.3;"
-              transform="rotate(-90 50 50)"/>
-          </svg>
-          <div class="gauge-center">
-            <div class="gauge-value mono">{{ sum.health_score }}</div>
-            <div class="muted small">/ 100</div>
-          </div>
-        </div>
-        <p class="muted small">Proportion d'URLs internes sans erreurs.</p>
       </section>
 
       <section class="card">
