@@ -286,8 +286,8 @@
   ══════════════════════════════════════ #}
   <div class="grid">
 
-    {# Score history + URL breakdown #}
-    <section class="card">
+    {# Score history — span-2 so dates are readable #}
+    <section class="card span-2">
       <div class="card-title-row">
         <h2>Évolution du score</h2>
         <span class="muted small">derniers crawls</span>
@@ -295,7 +295,7 @@
       {% if not project.history %}
         <p class="muted small">Aucune donnée.</p>
       {% else %}
-        <div class="history" style="gap:5px;">
+        <div class="history">
           {% for h in project.history %}
             <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
               <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
@@ -305,35 +305,39 @@
           {% endfor %}
         </div>
       {% endif %}
+    </section>
 
-      <div style="margin-top:20px;">
-        <div class="ov-section-hd" style="margin-bottom:12px;"><span>Répartition des URLs</span></div>
-        {% set tot_urls = sum.urls_crawled_distribution %}
-        {% set int_urls = sum.pages_crawled %}
-        {% set res_urls = sum.resources_crawled %}
-        {% set err_urls = sum.urls_with_errors %}
-        {% set ok_urls = sum.urls_without_errors %}
-        <div class="ov-breakdown">
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Internes</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--notice);width:{{ ((int_urls / tot_urls * 100)|round(0)|int if tot_urls else 100) }}%;"></div></div>
-            <span class="ov-bk-val">{{ int_urls }}</span>
-          </div>
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Ressources</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:rgba(255,255,255,.3);width:{{ ((res_urls / tot_urls * 100)|round(0)|int if tot_urls else 0) }}%;"></div></div>
-            <span class="ov-bk-val">{{ res_urls }}</span>
-          </div>
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Sans erreurs</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--ok);width:{{ ((ok_urls / int_urls * 100)|round(0)|int if int_urls else 100) }}%;"></div></div>
-            <span class="ov-bk-val">{{ ok_urls }}</span>
-          </div>
-          <div class="ov-bk-row">
-            <span class="ov-bk-lbl">Avec erreurs</span>
-            <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--err);width:{{ ((err_urls / int_urls * 100)|round(0)|int if int_urls else 0) }}%;"></div></div>
-            <span class="ov-bk-val" style="color:var(--err);">{{ err_urls }}</span>
-          </div>
+    {# URL breakdown — 1 col #}
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Répartition des URLs</h2>
+        <span class="muted small mono">{{ sum.urls_crawled_distribution }}</span>
+      </div>
+      {% set tot_urls = sum.urls_crawled_distribution %}
+      {% set int_urls = sum.pages_crawled %}
+      {% set res_urls = sum.resources_crawled %}
+      {% set err_urls = sum.urls_with_errors %}
+      {% set ok_urls = sum.urls_without_errors %}
+      <div class="ov-breakdown">
+        <div class="ov-bk-row">
+          <span class="ov-bk-lbl">Internes</span>
+          <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--notice);width:{{ ((int_urls / tot_urls * 100)|round(0)|int if tot_urls else 100) }}%;"></div></div>
+          <span class="ov-bk-val">{{ int_urls }}</span>
+        </div>
+        <div class="ov-bk-row">
+          <span class="ov-bk-lbl">Ressources</span>
+          <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:rgba(255,255,255,.3);width:{{ ((res_urls / tot_urls * 100)|round(0)|int if tot_urls else 0) }}%;"></div></div>
+          <span class="ov-bk-val">{{ res_urls }}</span>
+        </div>
+        <div class="ov-bk-row">
+          <span class="ov-bk-lbl">Sans erreurs</span>
+          <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--ok);width:{{ ((ok_urls / int_urls * 100)|round(0)|int if int_urls else 100) }}%;"></div></div>
+          <span class="ov-bk-val">{{ ok_urls }}</span>
+        </div>
+        <div class="ov-bk-row">
+          <span class="ov-bk-lbl">Avec erreurs</span>
+          <div class="ov-bk-bar"><div class="ov-bk-fill" style="background:var(--err);width:{{ ((err_urls / int_urls * 100)|round(0)|int if int_urls else 0) }}%;"></div></div>
+          <span class="ov-bk-val" style="color:var(--err);">{{ err_urls }}</span>
         </div>
       </div>
     </section>
@@ -341,7 +345,7 @@
     {# Core Web Vitals — full width #}
     {% set ps = sum.pagespeed %}
     {% set cwv = sum.cwv %}
-    <section class="card span-2">
+    <section class="card span-all">
       <div class="card-title-row">
         <h2>Core Web Vitals</h2>
         {% if ps and ps.enabled %}
