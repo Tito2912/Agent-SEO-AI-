@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
-    <link rel="stylesheet" href="/static/styles.css?v=2" />
+    <link rel="stylesheet" href="/static/styles.css?v=3" />
     <style>
       /* ── Public nav overrides ── */
       .pub-nav {
@@ -14,7 +14,7 @@
         justify-content: space-between;
         padding: 14px 24px;
         border-bottom: 1px solid var(--border);
-        background: rgba(5, 5, 7, .72);
+        background: rgba(14, 14, 16, .88);
         backdrop-filter: blur(16px);
         position: sticky;
         top: 0;
