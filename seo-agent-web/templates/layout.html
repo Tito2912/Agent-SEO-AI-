@@ -122,6 +122,7 @@
             <div class="sidebar-user">
               <div class="avatar">{{ _initial }}</div>
               <div class="sidebar-user-email" title="{{ _email }}">{{ _email }}</div>
+              {% if request.state.user.is_admin %}<span style="flex-shrink:0;font-size:9px;font-weight:600;letter-spacing:.04em;color:var(--accent);opacity:.55;padding:1px 4px;border:1px solid currentColor;border-radius:3px;line-height:1.4;">admin</span>{% endif %}
             </div>
             <form method="post" action="/auth/logout">
               <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
