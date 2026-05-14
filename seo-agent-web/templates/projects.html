@@ -52,22 +52,26 @@
       {% set lc = (live_crawls.get(p.slug) if live_crawls else none) %}
       {% if lc and lc.status in ['queued', 'running', 'cancel_requested'] %}{% set ns.live_count = ns.live_count + 1 %}{% endif %}
     {% endfor %}
-    <div class="metric-band" style="margin-bottom:16px;">
-      <div class="metric-tile">
-        <div class="metric-tile-label">Sites</div>
-        <div class="metric-tile-value">{{ projects | length }}</div>
-        <div class="metric-tile-sub">projets configurés</div>
+    <div class="stat-strip">
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">{{ projects | length }}</div>
+        <div class="stat-strip-lbl">Sites</div>
+        <div class="stat-strip-sub">projets configurés</div>
       </div>
-      <div class="metric-tile">
-        <div class="metric-tile-label">Crawlés</div>
-        <div class="metric-tile-value">{{ ns.crawled_count }}</div>
-        <div class="metric-tile-sub">au moins un crawl</div>
+      <div class="stat-strip-sep"></div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">{{ ns.crawled_count }}</div>
+        <div class="stat-strip-lbl">Crawlés</div>
+        <div class="stat-strip-sub">au moins un crawl effectué</div>
       </div>
-      <div class="metric-tile">
-        <div class="metric-tile-label">En cours</div>
-        <div class="metric-tile-value">{{ ns.live_count }}</div>
-        <div class="metric-tile-sub">crawls actifs</div>
-      </div>
+      {% if ns.live_count %}
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num" style="color:var(--warn);">{{ ns.live_count }}</div>
+          <div class="stat-strip-lbl">En cours</div>
+          <div class="stat-strip-sub">crawl actif</div>
+        </div>
+      {% endif %}
     </div>
   {% endif %}
 

@@ -58,23 +58,26 @@
         {% elif it.severity == 'notice' %}{% set ns.notices = ns.notices + 1 %}
         {% endif %}
       {% endfor %}
-      <div class="metric-band">
-        <div class="metric-tile">
-          <div class="metric-tile-label">Erreurs</div>
-          <div class="metric-tile-value" style="color:var(--err);">{{ ns.errors }}</div>
+      <div class="stat-strip">
+        <div class="stat-strip-item">
+          <div class="stat-strip-num" style="color:var(--err);">{{ ns.errors }}</div>
+          <div class="stat-strip-lbl">Erreurs</div>
         </div>
-        <div class="metric-tile">
-          <div class="metric-tile-label">Avertissements</div>
-          <div class="metric-tile-value" style="color:var(--warn);">{{ ns.warnings }}</div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num" style="color:var(--warn);">{{ ns.warnings }}</div>
+          <div class="stat-strip-lbl">Avertissements</div>
         </div>
-        <div class="metric-tile">
-          <div class="metric-tile-label">Infos</div>
-          <div class="metric-tile-value" style="color:var(--notice);">{{ ns.notices }}</div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num" style="color:var(--notice);">{{ ns.notices }}</div>
+          <div class="stat-strip-lbl">Infos</div>
         </div>
-        <div class="metric-tile">
-          <div class="metric-tile-label">Total</div>
-          <div class="metric-tile-value">{{ issues | length }}</div>
-          <div class="metric-tile-sub">{{ "filtré" if (severity or category or q) else "toutes catégories" }}</div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num">{{ issues | length }}</div>
+          <div class="stat-strip-lbl">Total</div>
+          <div class="stat-strip-sub">{{ "filtré" if (severity or category or q) else "toutes catégories" }}</div>
         </div>
       </div>
     {% endif %}
@@ -98,8 +101,8 @@
       </form>
     </section>
 
-    <section class="card">
-      <form method="get" class="filters">
+    <div class="data-toolbar">
+      <form method="get" class="filters" style="width:100%;">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
         {% if project.compare and project.compare.timestamp %}
           <input type="hidden" name="compare" value="{{ project.compare.timestamp }}" />
@@ -141,7 +144,7 @@
         <a class="btn" href="/projects/{{ project.slug }}/export/issues.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">CSV</a>
         <a class="btn" href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">PDF</a>
       </form>
-    </section>
+    </div>
 
     <section class="card">
       {% if not issues %}
@@ -166,8 +169,8 @@
                     <div class="muted small mono">{{ it.key }}</div>
                   </td>
                   <td>{{ cat_labels.get(it.category, it.category) }}</td>
-                  {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
-                  <td><span class="badge {{ it.severity }}">{{ sev_label }}</span></td>
+                  {% set sev_label = {'error': 'erreur', 'warning': 'avert.', 'notice': 'info'}.get(it.severity, it.severity) %}
+                  <td><span class="sev {{ it.severity }}">{{ sev_label }}</span></td>
                   <td class="num mono">
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
                   </td>

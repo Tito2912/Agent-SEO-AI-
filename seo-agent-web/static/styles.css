@@ -293,12 +293,11 @@ a:hover { text-decoration: underline; }
    Cards
 ═══════════════════════════════════════════════════════ */
 .card {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,.014);
+  border: 1px solid rgba(255,255,255,.05);
   border-radius: var(--radius-lg);
   padding: 18px;
   margin-bottom: 12px;
-  box-shadow: var(--shadow-sm);
 }
 .card h2 { margin: 0 0 12px; font-size: 14px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
 .card-title-row {
@@ -1510,6 +1509,76 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
   .metric-band { grid-template-columns: 1fr 1fr; }
   .kv { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Less-card layout utilities
+═══════════════════════════════════════════════════════ */
+
+/* Borderless toolbar replacing card-wrapped filter forms */
+.data-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.data-toolbar .grow { flex: 1; min-width: 160px; }
+.data-toolbar label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+
+/* Stat strip — large typographic stats, no tile boxes */
+.stat-strip {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+  padding: 16px 0 18px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.stat-strip-item { display: flex; flex-direction: column; gap: 3px; padding: 0 28px 0 0; }
+.stat-strip-item:first-child { padding-left: 0; }
+.stat-strip-num  { font-size: 34px; font-weight: 900; letter-spacing: -.04em; line-height: 1; }
+.stat-strip-lbl  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.stat-strip-sub  { font-size: 12px; color: var(--muted); }
+.stat-strip-sep  { width: 1px; background: var(--border); align-self: stretch; margin: 0 28px 0 0; flex-shrink: 0; }
+
+/* Action list — replaces nested card grid for top-N items */
+.action-list { display: flex; flex-direction: column; }
+.action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.action-item:last-child { border-bottom: none; padding-bottom: 4px; }
+.action-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(var(--accent-rgb), .10);
+  border: 1px solid rgba(var(--accent-rgb), .20);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--accent-2);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.action-body  { flex: 1; min-width: 0; }
+.action-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; }
+.action-meta  { font-size: 12px; color: var(--muted); }
+
+/* Inline severity — colored text, no pill shape */
+.sev         { font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.sev::before { content: "●"; font-size: 8px; }
+.sev.error   { color: var(--err); }
+.sev.warning { color: var(--warn); }
+.sev.notice  { color: var(--notice); }
+.sev.ok      { color: var(--ok); }
 
 /* ═══════════════════════════════════════════════════════
    SVG Gauge & Donut charts

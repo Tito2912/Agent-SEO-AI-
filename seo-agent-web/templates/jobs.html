@@ -36,25 +36,28 @@
       {% elif j.status in ['failed', 'canceled'] %}{% set ns.failed = ns.failed + 1 %}
       {% endif %}
     {% endfor %}
-    <div class="metric-band" style="margin-bottom:16px;">
-      <div class="metric-tile">
-        <div class="metric-tile-label">Total</div>
-        <div class="metric-tile-value">{{ jobs | length }}</div>
+    <div class="stat-strip">
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">{{ jobs | length }}</div>
+        <div class="stat-strip-lbl">Total</div>
       </div>
       {% if ns.live %}
-        <div class="metric-tile">
-          <div class="metric-tile-label">En cours</div>
-          <div class="metric-tile-value" style="color:var(--warn);">{{ ns.live }}</div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num" style="color:var(--warn);">{{ ns.live }}</div>
+          <div class="stat-strip-lbl">En cours</div>
         </div>
       {% endif %}
-      <div class="metric-tile">
-        <div class="metric-tile-label">Terminés</div>
-        <div class="metric-tile-value">{{ ns.done }}</div>
+      <div class="stat-strip-sep"></div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">{{ ns.done }}</div>
+        <div class="stat-strip-lbl">Terminés</div>
       </div>
       {% if ns.failed %}
-        <div class="metric-tile">
-          <div class="metric-tile-label">Échecs</div>
-          <div class="metric-tile-value" style="color:var(--err);">{{ ns.failed }}</div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num" style="color:var(--err);">{{ ns.failed }}</div>
+          <div class="stat-strip-lbl">Échecs</div>
         </div>
       {% endif %}
     </div>

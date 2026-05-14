@@ -34,8 +34,8 @@
       <p class="muted">{{ project.site_name }} · Live ({{ days }}j)</p>
     </div>
 
-    <section class="card">
-      <form method="get" class="filters">
+    <div class="data-toolbar">
+      <form method="get" class="filters" style="width:100%;">
         <label>
           Source
           <select name="source">
@@ -80,7 +80,7 @@
         </label>
         <button type="submit" class="btn primary">Appliquer</button>
       </form>
-    </section>
+    </div>
 
     {% if not perf_ok %}
       <section class="card">
@@ -101,40 +101,33 @@
         </p>
       </section>
     {% else %}
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Résumé — {{ source|upper }} · {{ days }}j</h2>
-          <div style="display:flex;gap:6px;">
-            {% if csv_url %}
-              <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">Télécharger CSV</a>
-            {% endif %}
-          </div>
+      <div class="stat-strip">
+        <div class="stat-strip-item">
+          <div class="stat-strip-num">{{ totals.clicks }}</div>
+          <div class="stat-strip-lbl">Clics</div>
+          {% if live and live.ok %}<div class="stat-strip-sub">{{ live.start_date }} → {{ live.end_date }}</div>{% endif %}
         </div>
-        {% if live and live.ok %}
-          <p class="muted small" style="margin:0 0 12px;">
-            {% if source == "gsc" %}Propriété : <span class="mono">{{ live.property }}</span>{% else %}Site : <span class="mono">{{ live.site_url }}</span>{% endif %}
-            &nbsp;·&nbsp; <span class="mono">{{ live.start_date }}</span> → <span class="mono">{{ live.end_date }}</span>
-          </p>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num">{{ totals.impressions }}</div>
+          <div class="stat-strip-lbl">Impressions</div>
+        </div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num">{{ (totals.avg_ctr * 100)|round(1) }}<span style="font-size:18px;font-weight:600;">%</span></div>
+          <div class="stat-strip-lbl">CTR moyen</div>
+        </div>
+        <div class="stat-strip-sep"></div>
+        <div class="stat-strip-item">
+          <div class="stat-strip-num">{{ "%.1f"|format(totals.avg_position or 0) }}</div>
+          <div class="stat-strip-lbl">Position moyenne</div>
+        </div>
+        {% if csv_url %}
+          <div style="margin-left:auto;align-self:center;">
+            <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">CSV</a>
+          </div>
         {% endif %}
-        <div class="metric-band">
-          <div class="metric-tile">
-            <div class="metric-tile-label">Clics</div>
-            <div class="metric-tile-value">{{ totals.clicks }}</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-tile-label">Impressions</div>
-            <div class="metric-tile-value">{{ totals.impressions }}</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-tile-label">CTR moyen</div>
-            <div class="metric-tile-value">{{ (totals.avg_ctr * 100)|round(1) }}%</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-tile-label">Position moyenne</div>
-            <div class="metric-tile-value">{{ "%.1f"|format(totals.avg_position or 0) }}</div>
-          </div>
-        </div>
-      </section>
+      </div>
 
       <section class="card">
         <div class="card-title-row">

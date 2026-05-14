@@ -107,117 +107,91 @@
     {% set cur = project.current %}
     {% set sum = cur.summary %}
 
-    <section class="card">
-      <form method="get" class="filters">
-        {% if live_job %}
-          <input type="hidden" name="job" value="{{ live_job.id }}" />
-        {% endif %}
+    <div class="data-toolbar">
+      {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
+      <form method="get" class="filters" style="width:100%;">
+        {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
         <label>
-          Crawl
+          Crawl analysé
           <select name="crawl">
             {% for ts in project.crawls %}
-              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
+              <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}</option>
             {% endfor %}
           </select>
         </label>
-
         <label>
-          Comparer
+          Comparer avec
           <select name="compare">
-            <option value="">-</option>
+            <option value="">— aucun —</option>
             {% for ts in project.crawls %}
-              <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>
-                {{ ts }}
-              </option>
+              <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }}</option>
             {% endfor %}
           </select>
         </label>
         <button type="submit" class="btn">Appliquer</button>
-
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;">
-          <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
-          <a class="btn" href="/file?path={{ cur.report_json }}" style="font-size:11px;padding:4px 10px;">JSON</a>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center;">
+          <span class="muted small">Exports :</span>
           <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
           <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
+          <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
           {% if fix_pack_unlocked %}
             <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
           {% else %}
-            <a class="btn" href="/billing" style="font-size:11px;padding:4px 10px;">Fix Pack <span class="badge notice" style="font-size:9px;padding:1px 5px;margin-left:3px;">Solo+</span></a>
+            <a class="btn" href="/billing" style="font-size:11px;padding:4px 10px;">Fix Pack · Solo+</a>
           {% endif %}
         </div>
       </form>
-    </section>
+    </div>
 
     <section class="card">
       <div class="card-title-row">
-        <h2>Top 3 actions</h2>
-        <div class="muted small">
-          {% if fix_pack_unlocked %}
-            Fix pack débloqué · <a href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}">Télécharger ZIP</a>
-          {% else %}
-            Aperçu · <a href="/billing">Débloquer Fix Pack (Solo+)</a>
-          {% endif %}
-        </div>
+        <h2>Top 3 actions prioritaires</h2>
+        {% if fix_pack_unlocked %}
+          <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
+        {% else %}
+          <a class="muted small" href="/billing">Débloquer Fix Pack →</a>
+        {% endif %}
       </div>
-      <p class="muted small">Priorisation automatique (impact/effort) basée sur les issues détectées.</p>
 
       {% if not top_actions %}
         <p class="muted">Aucune action prioritaire détectée pour ce crawl.</p>
       {% else %}
-        <div class="grid">
+        <div class="action-list">
           {% for a in top_actions %}
-            <div class="card">
-              <div class="card-title-row">
-                <h2 style="margin:0;">
+            {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
+            {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
+            {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
+            <div class="action-item">
+              <div class="action-num">{{ loop.index }}</div>
+              <div class="action-body">
+                <div class="action-title">
                   <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
-                </h2>
-                {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
-                <span class="badge {{ a.severity }}">{{ sev_label }}</span>
-              </div>
-
-              <div class="muted small">
-                Occurrences: <span class="mono">{{ a.count }}</span>
-                {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
-                {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
-                · Priorité: <span class="mono">{{ priority_label }}</span>
-                · Effort: <span class="mono">{{ effort_label }}</span>
-              </div>
-
-              {% if a.why or (fix_pack_unlocked and a.fix) %}
-                <details class="top-action-details">
-                  <summary>
-                    <span class="top-action-toggle-closed">Afficher le contenu</span>
-                    <span class="top-action-toggle-open">Masquer le contenu</span>
-                  </summary>
-                  <div class="top-action-details-body">
-                    {% if a.why %}
-                      <p class="muted small top-action-copy">
-                        {% if fix_pack_unlocked %}
-                          {{ a.why }}
-                        {% else %}
-                          {{ a.why | truncate(180, True, '…') }}
-                        {% endif %}
-                      </p>
-                    {% endif %}
-
-                    {% if fix_pack_unlocked and a.fix %}
-                      <div class="muted small top-action-label">Actions recommandées</div>
-                      <ul class="examples">
-                        {% for step in a.fix[:4] %}
-                          <li>{{ step }}</li>
-                        {% endfor %}
-                      </ul>
-                    {% endif %}
-                  </div>
-                </details>
-              {% endif %}
-
-              <div class="row-actions" style="margin-top: 12px;">
-                {% if fix_pack_unlocked %}
-                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">Voir le détail</a>
-                {% else %}
-                  <a class="btn primary" href="/billing">Débloquer</a>
+                  <span class="sev {{ a.severity }}" style="margin-left:10px;">{{ sev_label }}</span>
+                </div>
+                <div class="action-meta">
+                  <span class="mono">{{ a.count }}</span> occurrences
+                  &nbsp;·&nbsp; Priorité <strong>{{ priority_label }}</strong>
+                  &nbsp;·&nbsp; Effort {{ effort_label }}
+                </div>
+                {% if a.why %}
+                  <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
+                    {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}
+                  </p>
                 {% endif %}
+                {% if fix_pack_unlocked and a.fix %}
+                  <ul class="examples" style="margin-top:8px;">
+                    {% for step in a.fix[:3] %}
+                      <li>{{ step }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+                <div style="margin-top:10px;">
+                  {% if fix_pack_unlocked %}
+                    <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir le détail →</a>
+                  {% else %}
+                    <a class="btn" href="/billing" style="font-size:12px;">Débloquer le Fix Pack</a>
+                  {% endif %}
+                </div>
               </div>
             </div>
           {% endfor %}
@@ -393,26 +367,29 @@
       </script>
     {% endif %}
 
-    <div class="metric-band" style="margin-bottom:16px;">
-      <div class="metric-tile">
-        <div class="metric-tile-label">Score de santé</div>
-        <div class="metric-tile-value" style="color:{{ 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') }};">{{ sum.health_score }}<span style="font-size:15px;font-weight:600;color:var(--muted);">%</span></div>
-        <div class="metric-tile-sub">URLs sans erreur</div>
+    <div class="stat-strip">
+      <div class="stat-strip-item">
+        <div class="stat-strip-num" style="color:{{ 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') }};">{{ sum.health_score }}<span style="font-size:18px;font-weight:600;">%</span></div>
+        <div class="stat-strip-lbl">Score de santé</div>
+        <div class="stat-strip-sub">URLs sans erreur</div>
       </div>
-      <div class="metric-tile">
-        <div class="metric-tile-label">URLs crawlées</div>
-        <div class="metric-tile-value">{{ sum.urls_crawled_distribution }}</div>
-        <div class="metric-tile-sub">{{ sum.pages_crawled }} internes</div>
+      <div class="stat-strip-sep"></div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">{{ sum.urls_crawled_distribution }}</div>
+        <div class="stat-strip-lbl">URLs crawlées</div>
+        <div class="stat-strip-sub">{{ sum.pages_crawled }} internes · {{ sum.resources_crawled }} ressources</div>
       </div>
-      <div class="metric-tile">
-        <div class="metric-tile-label">Anomalies</div>
-        <div class="metric-tile-value">{{ sum.issues_total }}</div>
-        <div class="metric-tile-sub"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="color:var(--muted);">voir le détail</a></div>
+      <div class="stat-strip-sep"></div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num">{{ sum.issues_total }}</div>
+        <div class="stat-strip-lbl">Anomalies</div>
+        <div class="stat-strip-sub"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="color:var(--muted);">voir le détail →</a></div>
       </div>
-      <div class="metric-tile">
-        <div class="metric-tile-label">Erreurs</div>
-        <div class="metric-tile-value" style="color:{{ 'var(--err)' if (sum.issues_distribution.error or 0) > 0 else 'var(--text)' }};">{{ sum.issues_distribution.error or 0 }}</div>
-        <div class="metric-tile-sub">{{ sum.issues_distribution.warning or 0 }} avert. · {{ sum.issues_distribution.notice or 0 }} infos</div>
+      <div class="stat-strip-sep"></div>
+      <div class="stat-strip-item">
+        <div class="stat-strip-num" style="color:{{ 'var(--err)' if (sum.issues_distribution.error or 0) > 0 else 'var(--text)' }};">{{ sum.issues_distribution.error or 0 }}</div>
+        <div class="stat-strip-lbl">Erreurs critiques</div>
+        <div class="stat-strip-sub">{{ sum.issues_distribution.warning or 0 }} avertissements · {{ sum.issues_distribution.notice or 0 }} infos</div>
       </div>
     </div>
 
