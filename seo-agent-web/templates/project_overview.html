@@ -144,6 +144,24 @@
   {# ══════════════════════════════════════
      LIVE JOB CARD
   ══════════════════════════════════════ #}
+  {% if live_job and live_job.status in ['failed', 'canceled'] %}
+    <div class="alert {{ 'error' if live_job.status == 'failed' else 'notice' }}" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <span>
+        {% if live_job.status == 'failed' %}
+          Le dernier crawl a <strong>échoué</strong>.
+        {% else %}
+          Le dernier crawl a été <strong>annulé</strong>.
+        {% endif %}
+      </span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">Voir les logs →</a>
+        <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+          <button type="submit" class="btn primary" style="font-size:12px;">Relancer un crawl</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
   {% if live_job and live_job.status in ['queued', 'running', 'cancel_requested'] %}
     <section
       class="card"
