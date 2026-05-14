@@ -405,7 +405,15 @@
     const body = el.querySelector("[data-mini-body]");
     if (!body) return;
     const meta = el.querySelector("[data-mini-meta]");
-    if (meta) meta.textContent = payload && payload.ok ? liveMetaText(payload) : `Live indisponible · ${errorLabel(payload || {})}`;
+    if (meta) {
+      if (payload && payload.ok) {
+        meta.textContent = payload.fallback
+          ? "Données du dernier crawl · live indisponible"
+          : liveMetaText(payload);
+      } else {
+        meta.textContent = `Live indisponible · ${errorLabel(payload || {})}`;
+      }
+    }
 
     if (!payload || !payload.ok) {
       body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(errorLabel(payload || {}))}</td></tr>`;

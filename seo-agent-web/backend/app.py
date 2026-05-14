@@ -4075,6 +4075,8 @@ def _fetch_gsc_live_items(
 
         fetch_limit = min(25000, max(500, int(limit or 200) * 10))
         last_error = ""
+        best_empty: dict[str, Any] | None = None
+
         for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
             try:
                 rows = gsc_fetch.fetch_gsc(
@@ -4101,7 +4103,8 @@ def _fetch_gsc_live_items(
             items.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
             if limit and limit > 0:
                 items = items[: int(limit)]
-            return {
+
+            result = {
                 "ok": True,
                 "enabled": True,
                 "source": "gsc",
@@ -4117,6 +4120,13 @@ def _fetch_gsc_live_items(
                 "totals": _timeseries_totals(items),
                 "data_delay_hint": "GSC a généralement 48–72h de décalage.",
             }
+            if items:
+                return result
+            if best_empty is None:
+                best_empty = result
+
+        if best_empty is not None:
+            return best_empty
 
         return {
             "ok": False,
@@ -11499,6 +11509,16 @@ def project_search_items(
     else:
         payload = {"ok": False, "error": "source must be gsc or bing"}
 
+    # Fallback: if live returned ok but no items, try stored crawl CSV
+    if payload.get("ok") and not payload.get("items"):
+        runs_dir = _runs_dir_for_request(request)
+        fallback_items = _crawl_items_fallback(runs_dir, slug, source_key, dimension, requested_limit)
+        if fallback_items:
+            payload = dict(payload)
+            payload["items"] = fallback_items
+            payload["live"] = False
+            payload["fallback"] = True
+
     status_code = 200 if payload.get("ok") else 400
     fmt = str(format or "").strip().lower()
     if fmt == "csv":
@@ -12898,6 +12918,41 @@ def _read_gsc_csv_rows(path: Path) -> list[dict[str, Any]]:
     except Exception:
         return []
     return rows
+
+
+def _crawl_items_fallback(
+    runs_dir: Path, slug: str, source: str, dim: str, limit: int
+) -> list[dict[str, Any]]:
+    """Read per-item data from the last successful crawl CSV when the live API returns no results."""
+    crawls = dash.list_project_crawls(runs_dir, slug)
+    for ts in reversed(crawls):
+        report = dash.load_report_json(runs_dir, slug, ts)
+        if not isinstance(report, dict):
+            continue
+        meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
+        if source == "gsc":
+            src_meta = meta.get("gsc_api") if isinstance(meta.get("gsc_api"), dict) else {}
+        elif source == "bing":
+            src_meta = meta.get("bing") if isinstance(meta.get("bing"), dict) else {}
+        else:
+            return []
+        if not src_meta.get("ok"):
+            continue
+        csv_key = "queries_csv" if dim == "query" else "pages_csv"
+        csv_path_str = str(src_meta.get(csv_key) or "").strip()
+        if not csv_path_str:
+            continue
+        csv_path = Path(csv_path_str)
+        if not csv_path.exists():
+            continue
+        try:
+            rows = _read_gsc_csv_rows(csv_path)
+        except Exception:
+            continue
+        if rows:
+            rows.sort(key=lambda r: (-_to_int(r.get("clicks")), -_to_int(r.get("impressions"))))
+            return rows[:limit]
+    return []
 
 
 def _norm_csv_header(value: str) -> str:
