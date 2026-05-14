@@ -404,7 +404,13 @@
         {% set resources = sum.resources_crawled %}
         {% set p_internal = ( (internal / total) * 100 ) if total else 100 %}
         <div class="chart-row">
-          <div class="donut" style="--p: {{ p_internal|round(0) }}; --c1: var(--notice); --c2: var(--chart-muted);">
+          <div class="donut-svg-wrap">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" class="donut-track"/>
+              <circle cx="50" cy="50" r="38" class="donut-ring"
+                style="stroke:var(--notice); stroke-dasharray:{{ (p_internal / 100 * 238.8)|round(1) }} 238.8;"
+                transform="rotate(-90 50 50)"/>
+            </svg>
             <div class="donut-center">
               <div class="donut-value mono">{{ total }}</div>
               <div class="muted small">URLs</div>
@@ -427,7 +433,13 @@
         {% set uncrawled = sum.urls_uncrawled %}
         {% set p_crawled = ( (crawled / found_total) * 100 ) if found_total else 100 %}
         <div class="chart-row">
-          <div class="donut" style="--p: {{ p_crawled|round(0) }}; --c1: var(--ok); --c2: var(--chart-muted);">
+          <div class="donut-svg-wrap">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" class="donut-track"/>
+              <circle cx="50" cy="50" r="38" class="donut-ring"
+                style="stroke:var(--ok); stroke-dasharray:{{ (p_crawled / 100 * 238.8)|round(1) }} 238.8;"
+                transform="rotate(-90 50 50)"/>
+            </svg>
             <div class="donut-center">
               <div class="donut-value mono">{{ crawled }}</div>
               <div class="muted small">Explorées</div>
@@ -447,8 +459,14 @@
           <span class="badge {{ 'ok' if sum.health_score >= 90 else ('warning' if sum.health_score >= 70 else 'error') }}">{{ sum.health_score }}%</span>
         </div>
         {% set gcolor = 'var(--ok)' if sum.health_score >= 90 else ('var(--warn)' if sum.health_score >= 70 else 'var(--err)') %}
-        <div class="gauge" style="--p: {{ sum.health_score }}; --c1: {{ gcolor }}; --c2: var(--chart-muted);">
-          <div class="gauge-inner">
+        <div class="gauge-svg-wrap">
+          <svg class="gauge-svg" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" class="gauge-track"/>
+            <circle cx="50" cy="50" r="40" class="gauge-ring"
+              style="stroke:{{ gcolor }}; stroke-dasharray:{{ (sum.health_score / 100 * 251.3)|round(1) }} 251.3;"
+              transform="rotate(-90 50 50)"/>
+          </svg>
+          <div class="gauge-center">
             <div class="gauge-value mono">{{ sum.health_score }}</div>
             <div class="muted small">/ 100</div>
           </div>
@@ -495,7 +513,13 @@
         {% set total = (err + ok) %}
         {% set p = ( (err / total) * 100 ) if total else 0 %}
         <div class="chart-row">
-          <div class="donut" style="--p: {{ p|round(0) }}; --c1: var(--err); --c2: var(--chart-muted);">
+          <div class="donut-svg-wrap">
+            <svg class="donut-svg" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="38" class="donut-track"/>
+              <circle cx="50" cy="50" r="38" class="donut-ring"
+                style="stroke:var(--err); stroke-dasharray:{{ (p / 100 * 238.8)|round(1) }} 238.8;"
+                transform="rotate(-90 50 50)"/>
+            </svg>
             <div class="donut-center">
               <div class="donut-value mono">{{ err }}</div>
               <div class="muted small">URLs en erreur</div>
@@ -531,7 +555,13 @@
           {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
 
           <div class="chart-row">
-            <div class="donut" style="--p: {{ score }}; --c1: {{ score_color }}; --c2: var(--chart-muted);">
+            <div class="donut-svg-wrap">
+              <svg class="donut-svg" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="38" class="donut-track"/>
+                <circle cx="50" cy="50" r="38" class="donut-ring"
+                  style="stroke:{{ score_color }}; stroke-dasharray:{{ (score / 100 * 238.8)|round(1) }} 238.8;"
+                  transform="rotate(-90 50 50)"/>
+              </svg>
               <div class="donut-center">
                 <div class="donut-value mono">{{ score }}%</div>
                 <div class="muted small">Score</div>
@@ -946,7 +976,7 @@
               <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}">
                 <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
                 <div class="history-bar-label mono">{{ h.health_score }}</div>
-                <div class="history-bar-ts muted small">{{ h.timestamp }}</div>
+                <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
               </a>
             {% endfor %}
           </div>

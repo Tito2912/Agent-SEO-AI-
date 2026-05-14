@@ -1510,3 +1510,20 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
   .metric-band { grid-template-columns: 1fr 1fr; }
   .kv { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   SVG Gauge & Donut charts
+═══════════════════════════════════════════════════════ */
+.gauge-svg-wrap  { position:relative; width:180px; max-width:100%; aspect-ratio:1; margin:10px auto; }
+.gauge-svg       { width:100%; height:100%; display:block; overflow:visible; }
+.gauge-track     { fill:none; stroke:rgba(255,255,255,.07); stroke-width:9; }
+.gauge-ring      { fill:none; stroke-width:9; stroke-linecap:round; transition:stroke-dasharray .6s ease; }
+.gauge-center    { position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
+.gauge-value     { font-size:40px; font-weight:900; line-height:1; letter-spacing:-.03em; }
+
+.donut-svg-wrap  { position:relative; width:120px; height:120px; flex:0 0 120px; }
+.donut-svg       { width:100%; height:100%; display:block; overflow:visible; }
+.donut-track     { fill:none; stroke:rgba(255,255,255,.07); stroke-width:14; }
+.donut-ring      { fill:none; stroke-width:14; stroke-linecap:round; transition:stroke-dasharray .4s ease; }
+.donut-center    { position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
+.donut-value     { font-size:18px; font-weight:800; line-height:1.2; }
