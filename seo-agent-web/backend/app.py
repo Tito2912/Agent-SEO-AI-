@@ -13357,6 +13357,203 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     })
 
 
+@app.post("/api/projects/{slug}/github/bulk-fix")
+def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
+    """Generate and push fixes for all crawl errors in a single PR."""
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    cfg = _project_github_cfg(proj)
+    if not cfg["repo"]:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+
+    # Load latest crawl with a report
+    runs_dir = _runs_dir_for_request(request)
+    crawls = dash.list_project_crawls(runs_dir, slug)
+    ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), None)
+    if not ts:
+        return JSONResponse({"ok": False, "error": "Aucun rapport de crawl disponible."}, status_code=400)
+    report = dash.load_report_json(runs_dir, slug, ts)
+    if not report:
+        return JSONResponse({"ok": False, "error": "Rapport de crawl introuvable."}, status_code=400)
+
+    issues_raw = report.get("issues") if isinstance(report.get("issues"), dict) else {}
+    site_name = str(proj.site_name or slug)
+
+    # Build list of fixable issues (only issue_keys that have known file candidates)
+    sev_order = {"error": 0, "warning": 1, "notice": 2}
+    fixable: list[dict[str, Any]] = []
+    for issue_key, block in issues_raw.items():
+        if not isinstance(block, dict):
+            continue
+        if issue_key not in _SEO_FILE_CANDIDATES:
+            continue
+        count = dash.issue_count(block)
+        if count == 0:
+            continue
+        meta = dash.issue_meta(issue_key)
+        sample_urls = _issue_sample_urls_from_report(report, issue_key, limit=3)
+        fixable.append({
+            "key": issue_key,
+            "label": meta.label if meta else issue_key,
+            "severity": meta.severity if meta else "notice",
+            "count": count,
+            "url": sample_urls[0] if sample_urls else str(proj.base_url or ""),
+        })
+    fixable.sort(key=lambda x: sev_order.get(x["severity"], 3))
+    fixable = fixable[:5]  # cap to avoid very long API chains
+
+    if not fixable:
+        return JSONResponse({"ok": False, "error": "Aucune erreur corrigeable trouvée dans le dernier crawl."}, status_code=400)
+
+    owner, repo_name = cfg["repo"].split("/", 1)
+    branch = cfg["branch"]
+    mode = cfg["mode"]
+
+    # Create fix branch
+    try:
+        ref_data = _github_api_get(f"/repos/{cfg['repo']}/git/ref/heads/{branch}", token=token)
+        base_sha = ref_data["object"]["sha"]
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
+
+    from datetime import datetime as _dt
+    import base64 as _b64
+    fix_branch = f"seo-fix/bulk-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+    try:
+        _github_api_post(f"/repos/{cfg['repo']}/git/refs", token=token, json_body={
+            "ref": f"refs/heads/{fix_branch}", "sha": base_sha,
+        })
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
+
+    # Process each issue sequentially; track file state to handle overlapping files
+    file_state: dict[str, dict[str, str]] = {}  # path → {sha, content}
+    results: list[dict[str, Any]] = []
+
+    for issue in fixable:
+        issue_key = issue["key"]
+        issue_label = issue["label"]
+        url = issue["url"]
+        try:
+            seo_files = _github_find_seo_files(owner, repo_name, branch, token, issue_key)
+        except RuntimeError:
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False, "error": "Fichier non trouvé"})
+            continue
+        best = seo_files[0]
+        file_path = best["path"]
+        # Use already-patched content if this file was already committed in this session
+        file_content = file_state[file_path]["content"] if file_path in file_state else best["content"]
+        patch = _openai_generate_file_patch(
+            file_path=file_path, file_content=file_content,
+            issue_key=issue_key, issue_label=issue_label, url=url, site_name=site_name,
+        )
+        if not patch:
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False, "error": "IA indisponible"})
+            continue
+        # Get current SHA from file_state or fetch from GitHub on the new branch
+        if file_path in file_state:
+            current_sha = file_state[file_path]["sha"]
+        else:
+            try:
+                fd = _github_api_get(f"/repos/{cfg['repo']}/contents/{file_path}", token=token, params={"ref": fix_branch})
+                current_sha = fd.get("sha", "")
+            except Exception:
+                current_sha = ""
+        encoded = _b64.b64encode(patch["patched_content"].encode("utf-8")).decode("ascii")
+        put_body: dict[str, Any] = {
+            "message": f"fix(seo): {issue_key} — {url[:60]}\n\nGenerated by SEO Agent",
+            "content": encoded, "branch": fix_branch,
+        }
+        if current_sha:
+            put_body["sha"] = current_sha
+        try:
+            put_resp = _github_api_put(f"/repos/{cfg['repo']}/contents/{file_path}", token=token, json_body=put_body)
+            new_sha = str(put_resp.get("commit", {}).get("sha") or "")
+            file_state[file_path] = {"sha": new_sha, "content": patch["patched_content"]}
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": True})
+        except Exception as e:
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": False, "error": str(e)})
+
+    fixed_results = [r for r in results if r.get("ok")]
+    if not fixed_results:
+        return JSONResponse({"ok": False, "error": "Aucune correction n'a pu être appliquée.", "results": results}, status_code=500)
+
+    # Build PR
+    pr_title = f"fix(seo): {len(fixed_results)} correction(s) automatique(s) — {site_name}"
+    pr_lines = [
+        "## Corrections SEO automatiques — audit complet\n",
+        f"**Site :** {site_name}  \n**Crawl :** `{ts}`  \n**Anomalies corrigées :** {len(fixed_results)}\n",
+    ]
+    for r in results:
+        icon = "✅" if r.get("ok") else "❌"
+        pr_lines.append(f"{icon} **{r['issue_label']}** — `{r.get('file', '?')}`")
+    pr_lines.append(f"\nCorrection générée par [SEO Agent](https://noyaru.com).")
+    pr_body = "\n".join(pr_lines)
+
+    try:
+        pr_data = _github_api_post(f"/repos/{cfg['repo']}/pulls", token=token, json_body={
+            "title": pr_title, "body": pr_body, "head": fix_branch, "base": branch,
+        })
+        pr_url = pr_data.get("html_url", "")
+        pr_number = pr_data.get("number", 0)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Erreur PR : {e}", "results": results}, status_code=400)
+
+    # Auto-merge if Full Access mode
+    _merged = False
+    if mode == "auto" and pr_number:
+        try:
+            _github_api_put(
+                f"/repos/{cfg['repo']}/pulls/{int(pr_number)}/merge",
+                token=token,
+                json_body={"merge_method": "squash", "commit_title": pr_title},
+            )
+            _merged = True
+        except Exception:
+            pass
+
+    # Save IssueTask records for each successful fix
+    final_status = "done" if _merged else "in_progress"
+    pr_note_base = {"pr_url": pr_url, "pr_number": int(pr_number), "branch": fix_branch, "bulk": True}
+    for r in fixed_results:
+        try:
+            _note = json.dumps({**pr_note_base, "file": r.get("file", "")}, ensure_ascii=False)
+            _meta = dash.issue_meta(r["issue_key"])
+            with DB.session() as _db:
+                _ex = _db.scalar(select(IssueTask).where(
+                    IssueTask.project_id == proj.id,
+                    IssueTask.issue_key == r["issue_key"],
+                    IssueTask.url == r["url"],
+                ))
+                if _ex:
+                    _ex.status = final_status
+                    _ex.note = _note
+                else:
+                    _db.add(IssueTask(
+                        project_id=str(proj.id),
+                        user_id=str(getattr(user, "id", "") or ""),
+                        issue_key=r["issue_key"], issue_label=r["issue_label"],
+                        crawl_ts=ts, url=r["url"], status=final_status,
+                        severity=str((_meta.severity if _meta else None) or "notice"),
+                        note=_note,
+                    ))
+                _db.commit()
+        except Exception:
+            pass
+
+    return JSONResponse({
+        "ok": True,
+        "pr_url": pr_url, "pr_number": pr_number,
+        "branch": fix_branch, "merged": _merged,
+        "fixed_count": len(fixed_results),
+        "total_count": len(results),
+        "results": results,
+    })
+
+
 _TASK_STATUSES = {"todo", "in_progress", "done", "ignored"}
 
 

@@ -118,6 +118,8 @@
       html += '<span class="badge notice" title="À corriger">' + (c.todo||0) + ' todo</span>';
       html += '<span class="badge warning" title="PR en cours">' + (c.in_progress||0) + ' PR</span>';
       html += '<span class="badge ok" title="Corrigés">' + (c.done||0) + ' ✓</span>';
+      html += '<button type="button" class="btn small primary" style="font-size:11px;margin-left:6px;" '
+        + 'data-slug="' + proj.slug + '" onclick="triggerGhBulkFix(this)" title="Générer et pousser 1 PR avec toutes les corrections du dernier crawl">⚡ Tout corriger</button>';
       html += '</div>';
 
       if (!proj.tasks || !proj.tasks.length) {
@@ -161,6 +163,44 @@
       .catch(function(e) {
         var body = document.getElementById('gh-corr-body');
         if (body) body.innerHTML = '<p class="muted small" style="color:var(--err);">Erreur de chargement.</p>';
+      });
+  }
+
+  function triggerGhBulkFix(btn) {
+    var slug = btn.dataset.slug;
+    var origText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Génération…';
+    fetch('/api/projects/' + slug + '/github/bulk-fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) {
+          var label = d.merged
+            ? '✓ ' + d.fixed_count + ' correction(s) mergée(s)'
+            : '✓ PR #' + d.pr_number + ' créé (' + d.fixed_count + ' fixes)';
+          btn.innerHTML = label;
+          btn.style.background = 'var(--accent)';
+          if (d.pr_url) {
+            var a = document.createElement('a');
+            a.href = d.pr_url; a.target = '_blank'; a.rel = 'noreferrer';
+            a.textContent = ' ↗'; a.style.color = '#fff';
+            btn.parentNode.insertBefore(a, btn.nextSibling);
+          }
+          setTimeout(loadGhCorrections, 1500);
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+          alert('Erreur : ' + (d.error || '?'));
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        alert('Erreur réseau');
       });
   }
 
