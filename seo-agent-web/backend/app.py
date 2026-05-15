@@ -13146,8 +13146,12 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         }
         if current_sha:
             put_body["sha"] = current_sha
+        commit_sha = ""
+        commit_url = ""
         try:
-            _github_api_put(f"/repos/{cfg['repo']}/contents/{body.file_path}", token=token, json_body=put_body)
+            put_resp = _github_api_put(f"/repos/{cfg['repo']}/contents/{body.file_path}", token=token, json_body=put_body)
+            commit_sha = str(put_resp.get("commit", {}).get("sha") or "")
+            commit_url = str(put_resp.get("commit", {}).get("html_url") or "")
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"Impossible de committer la correction : {e}"}, status_code=400)
         pr_title = f"fix(seo): {issue_label} — {url[:60]}"
@@ -13167,9 +13171,19 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 "base": branch,
             })
             pr_url = pr_data.get("html_url", "")
+            pr_number = pr_data.get("number", "")
         except Exception as e:
-            return JSONResponse({"ok": False, "error": f"PR créée mais erreur lors de la récupération du lien : {e}"}, status_code=400)
-        return JSONResponse({"ok": True, "pr_url": pr_url, "pr_title": pr_title, "branch": fix_branch})
+            return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
+        return JSONResponse({
+            "ok": True,
+            "pr_url": pr_url,
+            "pr_title": pr_title,
+            "pr_number": pr_number,
+            "branch": fix_branch,
+            "commit_sha": commit_sha[:7] if commit_sha else "",
+            "commit_url": commit_url,
+            "file": body.file_path,
+        })
 
     # ── Step 1: Find file + generate patch (preview) ─────────────────────
     try:
