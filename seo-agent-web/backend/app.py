@@ -173,7 +173,7 @@ _CSRF_COOKIE_NAME = "seo_agent_csrf"
 _CSRF_FORM_FIELD = "_csrf"
 _CSRF_HEADER_NAME = "x-csrf-token"
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks"}
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -4699,6 +4699,71 @@ def _load_latest_global_summary(runs_dir: Path) -> dict[str, Any] | None:
         "sites_summary_md": md if md.exists() else None,
         "interlinking_md": inter_md if inter_md.exists() else None,
     }
+
+
+def _parse_sites_summary_md(md_path: Path | None) -> list[dict[str, str]]:
+    if not md_path or not md_path.exists():
+        return []
+    try:
+        content = md_path.read_text(encoding="utf-8")
+    except Exception:
+        return []
+    rows: list[dict[str, str]] = []
+    headers: list[str] = []
+    separator_seen = False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            if headers:
+                break
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if not headers:
+            headers = cells
+            continue
+        if all(set(c) <= set("-: ") for c in cells):
+            separator_seen = True
+            continue
+        if separator_seen:
+            row = {headers[i]: (cells[i] if i < len(cells) else "") for i in range(len(headers))}
+            rows.append(row)
+    return rows
+
+
+def _read_inventory_domains(config_path: Path) -> tuple[str | None, str, str, list[str]]:
+    """Returns (csv_path_str, delimiter, domain_col, list_of_domains)."""
+    try:
+        cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None, ";", "domain", []
+    if not isinstance(cfg, dict):
+        return None, ";", "domain", []
+    inv = cfg.get("inventory") if isinstance(cfg.get("inventory"), dict) else {}
+    domains_csv = (inv or {}).get("domains_csv")
+    if not isinstance(domains_csv, str) or not domains_csv.strip():
+        return None, ";", "domain", []
+    delimiter = str((inv or {}).get("delimiter") or ";")
+    preferred_col = (inv or {}).get("domain_column") or "domain"
+    csv_path = Path(domains_csv).expanduser()
+    if not csv_path.is_absolute():
+        csv_path = (config_path.parent / csv_path).resolve()
+    if not csv_path.exists():
+        return str(csv_path), delimiter, str(preferred_col), []
+    try:
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.DictReader(f, delimiter=delimiter)
+            hdrs = list(reader.fieldnames or [])
+            col = hdrs[0] if hdrs else str(preferred_col)
+            pn = _norm_header(str(preferred_col))
+            for h in hdrs:
+                if _norm_header(h) == pn:
+                    col = h
+                    break
+            domains = [str(row.get(col) or "").strip() for row in reader]
+            domains = [d for d in domains if d]
+        return str(csv_path), delimiter, col, domains
+    except Exception:
+        return str(csv_path), delimiter, str(preferred_col), []
 
 
 @dataclass
@@ -11762,6 +11827,9 @@ def automation(request: Request) -> HTMLResponse:
     latest = _load_latest_global_summary(runs_dir) if runs_dir.exists() else None
 
     inventory = _inventory_preview(Path(config_path)) if config_path else None
+    _, _, _, all_domains = _read_inventory_domains(Path(config_path)) if config_path else (None, ";", "domain", [])
+    sites_rows = _parse_sites_summary_md(latest.get("sites_summary_md") if latest else None)
+
     try:
         cfg = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) if config_path else None
     except Exception:
@@ -11772,16 +11840,22 @@ def automation(request: Request) -> HTMLResponse:
 
     gsc_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     gsc_creds_exists = bool(gsc_creds and Path(gsc_creds).expanduser().exists())
+    cron_secret_set = bool(os.environ.get("CRON_SECRET"))
 
     env_status = {
         "pagespeed_api_key_set": bool(os.environ.get("PAGESPEED_API_KEY")),
         "gsc_credentials_set": bool(gsc_creds),
         "gsc_credentials_exists": gsc_creds_exists,
+        "cron_secret_set": cron_secret_set,
     }
     config_status = {
         "pagespeed_enabled": bool(crawl_defaults.get("pagespeed") or False),
         "gsc_api_enabled": bool(gsc_api_defaults.get("enabled") or False),
     }
+
+    all_jobs = _list_jobs(limit=50)
+    autopilot_jobs = [j for j in all_jobs if _job_kind_from_command(j.command) == "autopilot"]
+    current_job = next((j for j in autopilot_jobs if j.status in {"queued", "running"}), None)
 
     resp = templates.TemplateResponse(
         "automation.html",
@@ -11791,14 +11865,82 @@ def automation(request: Request) -> HTMLResponse:
             "config_path": str(config_path) if config_path else None,
             "runs_dir": str(runs_dir),
             "latest": latest,
-            "jobs": _list_jobs(),
+            "jobs": autopilot_jobs[:12],
+            "current_job": {"id": current_job.id, "status": current_job.status} if current_job else None,
             "inventory": inventory,
+            "all_domains": all_domains,
+            "sites_rows": sites_rows,
             "env_status": env_status,
             "config_status": config_status,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
     return resp
+
+
+@app.get("/api/automation/domains")
+def api_automation_domains_get(request: Request) -> JSONResponse:
+    _ = _require_admin(request)
+    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
+    if not config_path:
+        return JSONResponse({"error": "yml manquant"}, status_code=404)
+    csv_path_str, _, _, domains = _read_inventory_domains(Path(config_path))
+    return JSONResponse({"csv_path": csv_path_str, "domains": domains, "count": len(domains)})
+
+
+class _DomainsBody(BaseModel):
+    domains: list[str]
+
+
+@app.post("/api/automation/domains")
+def api_automation_domains_save(request: Request, body: _DomainsBody) -> JSONResponse:
+    _ = _require_admin(request)
+    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
+    if not config_path:
+        return JSONResponse({"error": "yml manquant"}, status_code=400)
+    csv_path_str, delimiter, domain_col, _ = _read_inventory_domains(Path(config_path))
+    if not csv_path_str:
+        return JSONResponse({"error": "domains_csv non défini dans le yml"}, status_code=400)
+    csv_path = Path(csv_path_str)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    seen: set[str] = set()
+    unique: list[str] = []
+    for d in body.domains:
+        d = d.strip()
+        if d and d not in seen:
+            seen.add(d)
+            unique.append(d)
+    try:
+        with csv_path.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=[domain_col], delimiter=delimiter)
+            writer.writeheader()
+            for d in unique:
+                writer.writerow({domain_col: d})
+        return JSONResponse({"ok": True, "count": len(unique)})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@app.get("/cron/autopilot")
+def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONResponse:
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
+    if not config_path:
+        return JSONResponse({"ok": False, "error": "yml manquant"}, status_code=500)
+    extra_args = ["--mode", "audit-only", "--no-auto-deploy", "--no-backlog"]
+    script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_autopilot.py"
+    job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(config_path))
+    job.command = [sys.executable, "-u", str(script), "--config", str(config_path)] + extra_args
+    job.result = {"type": "autopilot", "user_id": "cron", "run_policy": "verify"}
+    _save_job(job)
+    background_tasks.add_task(_run_autopilot_job, job.id, config_path, extra_args)
+    return JSONResponse({"ok": True, "job_id": job.id})
 
 
 @app.get("/jobs", response_class=HTMLResponse)

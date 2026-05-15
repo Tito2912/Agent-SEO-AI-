@@ -1,6 +1,107 @@
 {% extends "layout.html" %}
 {% block title %}Automatisation - SEO Audit{% endblock %}
 
+{% block head_extra %}
+<script>
+(function () {
+  /* ── Inventory management ── */
+  function loadDomains() {
+    fetch('/api/automation/domains')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var ta = document.getElementById('domains-textarea');
+        var ct = document.getElementById('domains-count');
+        if (ta) ta.value = (data.domains || []).join('\n');
+        if (ct) ct.textContent = (data.count || 0) + ' domaine' + ((data.count || 0) > 1 ? 's' : '');
+      })
+      .catch(function() {});
+  }
+
+  function saveDomains() {
+    var ta = document.getElementById('domains-textarea');
+    var btn = document.getElementById('domains-save-btn');
+    var msg = document.getElementById('domains-msg');
+    if (!ta) return;
+    var domains = ta.value.split('\n').map(function(d) { return d.trim(); }).filter(Boolean);
+    if (btn) { btn.disabled = true; btn.textContent = 'Sauvegarde…'; }
+    fetch('/api/automation/domains', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domains: domains })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sauvegarder'; }
+        if (msg) {
+          msg.textContent = data.ok ? (data.count + ' domaine(s) sauvegardé(s)') : ('Erreur : ' + (data.error || '?'));
+          msg.style.color = data.ok ? 'var(--accent)' : 'var(--err)';
+          setTimeout(function() { msg.textContent = ''; }, 3000);
+        }
+        if (data.ok) {
+          var ct = document.getElementById('domains-count');
+          if (ct) ct.textContent = data.count + ' domaine' + (data.count > 1 ? 's' : '');
+        }
+      })
+      .catch(function(e) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sauvegarder'; }
+        if (msg) { msg.textContent = 'Erreur réseau'; msg.style.color = 'var(--err)'; }
+      });
+  }
+
+  /* ── Live job logs ── */
+  var _pollTimer = null;
+  var _logOffset = 0;
+
+  function startLiveLogs(jobId) {
+    var panel = document.getElementById('live-logs-panel');
+    var logEl = document.getElementById('live-log-content');
+    var statusEl = document.getElementById('live-job-status');
+    if (!panel || !logEl) return;
+    panel.style.display = 'block';
+    _logOffset = 0;
+
+    function poll() {
+      fetch('/api/jobs/' + jobId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (statusEl) {
+            var labels = { queued: 'En attente', running: 'En cours', done: 'Terminé', failed: 'Échec', canceled: 'Annulé' };
+            statusEl.textContent = labels[data.status] || data.status;
+            statusEl.className = 'badge ' + (data.status === 'done' ? 'ok' : data.status === 'failed' ? 'error' : 'notice');
+          }
+          var stdout = data.stdout || '';
+          var lines = stdout.split('\n');
+          var last50 = lines.slice(-50).join('\n');
+          logEl.textContent = last50;
+          logEl.scrollTop = logEl.scrollHeight;
+
+          if (data.status === 'running' || data.status === 'queued') {
+            _pollTimer = setTimeout(poll, 2000);
+          } else {
+            if (_pollTimer) clearTimeout(_pollTimer);
+            setTimeout(function() { window.location.reload(); }, 3000);
+          }
+        })
+        .catch(function() {
+          _pollTimer = setTimeout(poll, 5000);
+        });
+    }
+    poll();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadDomains();
+
+    var saveBtn = document.getElementById('domains-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', saveDomains);
+
+    var jobId = (document.getElementById('auto-body') || {}).dataset.currentJobId;
+    if (jobId) startLiveLogs(jobId);
+  });
+})();
+</script>
+{% endblock %}
+
 {% block crumbs %}
   <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
@@ -8,105 +109,202 @@
 {% endblock %}
 
 {% block content %}
-  <div class="page-header">
-    <h1>Automatisation</h1>
-    <p class="muted">Lancez l'autopilot (audit multi-sites, GSC, backlog) et consultez le résumé global.</p>
-  </div>
+<div class="page-header">
+  <h1>Automatisation</h1>
+  <p class="muted">Audit multi-sites automatisé — gérez vos domaines, planifiez les runs et suivez les résultats.</p>
+</div>
 
-  <section class="card">
-    <div class="card-title-row">
-      <h2>Configuration</h2>
-      {% if config_path %}<span class="badge ok">yml trouvé</span>{% else %}<span class="badge error">yml manquant</span>{% endif %}
-    </div>
-    <div style="display:grid; gap:6px; margin-bottom:14px;">
-      <div class="muted small"><span style="color:var(--muted); min-width:80px; display:inline-block;">Dépôt</span> <span class="mono">{{ repo_root }}</span></div>
-      <div class="muted small"><span style="color:var(--muted); min-width:80px; display:inline-block;">Fichier</span> <span class="mono">{{ config_path or "seo-autopilot.yml introuvable" }}</span></div>
-      {% if inventory %}
-        <div class="muted small">
-          <span style="color:var(--muted); min-width:80px; display:inline-block;">Inventaire</span>
-          <span class="mono">{{ inventory.path }}</span>
-          {% if inventory.exists %} · <span class="mono">{{ inventory.count }}</span> domaines{% else %} <span class="badge error">introuvable</span>{% endif %}
-        </div>
-        {% if inventory.preview %}
-          <div class="muted small" style="padding-left:84px;">Extrait : <span class="mono">{{ inventory.preview | join(", ") }}</span></div>
-        {% endif %}
-        {% if inventory.error %}
-          <div class="muted small" style="padding-left:84px; color:var(--err);">{{ inventory.error }}</div>
-        {% endif %}
-      {% endif %}
-    </div>
-    {% if env_status and config_status %}
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
-        <span class="badge {{ 'ok' if config_status.pagespeed_enabled else 'notice' }}">PageSpeed {{ 'on' if config_status.pagespeed_enabled else 'off' }}</span>
-        <span class="badge {{ 'ok' if env_status.pagespeed_api_key_set else 'notice' }}">Clé API {{ 'ok' if env_status.pagespeed_api_key_set else 'manquante' }}</span>
-        <span class="badge {{ 'ok' if config_status.gsc_api_enabled else 'notice' }}">GSC {{ 'on' if config_status.gsc_api_enabled else 'off' }}</span>
-        <span class="badge {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'notice' }}">
-          Credentials {% if env_status.gsc_credentials_set and env_status.gsc_credentials_exists %}ok{% else %}manquant{% endif %}
-        </span>
+<div id="auto-body" data-current-job-id="{{ current_job.id if current_job else '' }}" style="display:contents;">
+
+{# ── Live job panel ── #}
+{% if current_job %}
+<section class="card" id="live-logs-panel" style="border:1px solid var(--accent);display:block;">
+  <div class="card-title-row">
+    <h2>Run en cours</h2>
+    <span id="live-job-status" class="badge notice">{{ current_job.status }}</span>
+  </div>
+  <pre id="live-log-content" style="max-height:220px;overflow-y:auto;font-size:11px;line-height:1.5;background:var(--bg);padding:10px;border-radius:4px;margin:0;">Chargement des logs…</pre>
+  <p class="muted small" style="margin:6px 0 0;">Mise à jour automatique toutes les 2s · <a href="/jobs?job={{ current_job.id }}">Voir la page complète</a></p>
+</section>
+{% else %}
+<div id="live-logs-panel" style="display:none;">
+  <pre id="live-log-content"></pre>
+  <span id="live-job-status"></span>
+</div>
+{% endif %}
+
+{# ── Config + Lancer ── #}
+<section class="card">
+  <div class="card-title-row">
+    <h2>Lancer un audit</h2>
+    {% if config_path %}<span class="badge ok">yml trouvé</span>{% else %}<span class="badge error">yml manquant</span>{% endif %}
+  </div>
+  <div style="display:grid;gap:5px;margin-bottom:14px;">
+    <div class="muted small"><span style="min-width:80px;display:inline-block;">Dépôt</span><span class="mono">{{ repo_root }}</span></div>
+    <div class="muted small"><span style="min-width:80px;display:inline-block;">Config</span><span class="mono">{{ config_path or "seo-autopilot.yml introuvable" }}</span></div>
+    {% if inventory %}
+      <div class="muted small">
+        <span style="min-width:80px;display:inline-block;">Inventaire</span>
+        <span class="mono">{{ inventory.path }}</span>
+        {% if inventory.exists %} · <span id="domains-count" class="mono">{{ inventory.count }} domaine{{ 's' if inventory.count > 1 else '' }}</span>{% else %} <span class="badge error">introuvable</span>{% endif %}
       </div>
     {% endif %}
-    <form method="post" action="/run" class="setting-form">
-      <label>
-        Chemin config
-        <input name="config_path" value="{{ config_path }}" />
-      </label>
-      <div>
-        <div class="muted small" style="margin-bottom:8px;">Mode</div>
-        <div class="radios">
-          <label class="radio"><input type="radio" name="run_policy" value="verify" checked /> Vérifier (audit + GSC si configuré)</label>
-          <label class="radio"><input type="radio" name="run_policy" value="auto" /> Déployer auto (execute)</label>
-        </div>
-        <label class="checkbox" style="margin-top:8px;">
-          <input type="checkbox" name="confirm_auto" value="yes" />
-          Je confirme l'exécution (déploiement auto)
-        </label>
-        <p class="muted small" style="margin:6px 0 0;">Le mode auto n'est lancé que si le choix = auto + la case est cochée.</p>
-      </div>
-      <div class="modal-actions between" style="margin-top:12px;">
-        <span></span>
-        <button type="submit" class="btn primary">Lancer audit multi-sites</button>
-      </div>
-    </form>
-  </section>
-
-  <div class="grid two">
-    <section class="card">
-      <div class="card-title-row">
-        <h2>Dernier run global</h2>
-        {% if latest %}<span class="muted small mono">{{ latest.timestamp }}</span>{% endif %}
-      </div>
-      {% if latest %}
-        <div style="display:grid; gap:8px;">
-          {% if latest.sites_summary_md %}
-            <a class="btn" href="/file?path={{ latest.sites_summary_md }}">Sites summary</a>
-          {% endif %}
-          {% if latest.interlinking_md %}
-            <a class="btn" href="/file?path={{ latest.interlinking_md }}">Interlinking plan</a>
-          {% endif %}
-        </div>
-        <div class="muted small" style="margin-top:10px;">Dossier : <span class="mono">{{ latest.dir }}</span></div>
-      {% else %}
-        <p class="muted">Aucun run global trouvé. Lance un audit pour commencer.</p>
-      {% endif %}
-    </section>
-
-    <section class="card">
-      <div class="card-title-row">
-        <h2>Exécutions récentes</h2>
-        {% if jobs %}<a class="muted small" href="/jobs">Voir tout</a>{% endif %}
-      </div>
-      {% if jobs %}
-        <div class="job-grid">
-          {% for j in jobs %}
-            <a class="job-chip" href="/jobs/{{ j.id }}">
-              <span class="mono">{{ j.id[:8] }}</span>
-              <span class="pill {{ j.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
-            </a>
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="muted">Aucun job.</p>
-      {% endif %}
-    </section>
   </div>
+  {% if env_status and config_status %}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      <span class="badge {{ 'ok' if config_status.pagespeed_enabled else 'notice' }}">PageSpeed {{ 'on' if config_status.pagespeed_enabled else 'off' }}</span>
+      <span class="badge {{ 'ok' if env_status.pagespeed_api_key_set else 'notice' }}">Clé API {{ 'ok' if env_status.pagespeed_api_key_set else 'manquante' }}</span>
+      <span class="badge {{ 'ok' if config_status.gsc_api_enabled else 'notice' }}">GSC {{ 'on' if config_status.gsc_api_enabled else 'off' }}</span>
+      <span class="badge {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'notice' }}">Credentials {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'manquant' }}</span>
+    </div>
+  {% endif %}
+  <form method="post" action="/run" class="setting-form">
+    <label>
+      Chemin config
+      <input name="config_path" value="{{ config_path }}" />
+    </label>
+    <div>
+      <div class="muted small" style="margin-bottom:8px;">Mode</div>
+      <div class="radios">
+        <label class="radio"><input type="radio" name="run_policy" value="verify" checked /> Vérifier (audit + GSC si configuré)</label>
+        <label class="radio"><input type="radio" name="run_policy" value="auto" /> Déployer auto (execute)</label>
+      </div>
+      <label class="checkbox" style="margin-top:8px;">
+        <input type="checkbox" name="confirm_auto" value="yes" />
+        Je confirme l'exécution (déploiement auto)
+      </label>
+      <p class="muted small" style="margin:6px 0 0;">Le mode auto n'est lancé que si le choix = auto + la case est cochée.</p>
+    </div>
+    <div class="modal-actions between" style="margin-top:12px;">
+      <span></span>
+      <button type="submit" class="btn primary" {% if current_job %}disabled title="Un run est déjà en cours"{% endif %}>
+        Lancer l'audit multi-sites
+      </button>
+    </div>
+  </form>
+</section>
+
+{# ── Inventaire de domaines ── #}
+<section class="card">
+  <div class="card-title-row">
+    <h2>Inventaire de domaines</h2>
+    <span id="domains-count" class="muted small">{{ inventory.count if (inventory and inventory.exists) else 0 }} domaine{{ 's' if (inventory and inventory.exists and inventory.count > 1) else '' }}</span>
+  </div>
+  {% if not config_path %}
+    <p class="muted">yml de configuration manquant — impossible de gérer l'inventaire.</p>
+  {% elif not inventory %}
+    <p class="muted">Section <code>inventory</code> absente dans le yml.</p>
+  {% else %}
+    <p class="muted small" style="margin-bottom:10px;">Un domaine par ligne. Les modifications sont sauvegardées dans <span class="mono">{{ inventory.path }}</span>.</p>
+    <textarea
+      id="domains-textarea"
+      rows="10"
+      style="width:100%;font-family:monospace;font-size:12px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:inherit;resize:vertical;"
+      placeholder="exemple.com&#10;monsite.fr&#10;autre-domaine.io"
+    >{{ all_domains | join('\n') }}</textarea>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+      <button id="domains-save-btn" type="button" class="btn primary">Sauvegarder</button>
+      <span id="domains-msg" class="muted small"></span>
+    </div>
+  {% endif %}
+</section>
+
+{# ── Planification automatique ── #}
+<section class="card">
+  <div class="card-title-row">
+    <h2>Planification automatique</h2>
+    {% if env_status.cron_secret_set %}<span class="badge ok">CRON_SECRET configuré</span>{% else %}<span class="badge notice">CRON_SECRET manquant</span>{% endif %}
+  </div>
+  <p class="muted small" style="margin-bottom:12px;">
+    Le endpoint <span class="mono">/cron/autopilot</span> déclenche un audit automatique.
+    Configurez-le dans Render (Cron Jobs) ou tout scheduler HTTP.
+  </p>
+  <div style="display:grid;gap:10px;">
+    <div>
+      <div class="muted small" style="margin-bottom:4px;">Endpoint</div>
+      <code style="display:block;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;font-size:12px;word-break:break-all;">
+        GET https://noyaru.com/cron/autopilot
+      </code>
+    </div>
+    <div>
+      <div class="muted small" style="margin-bottom:4px;">Header d'authentification</div>
+      <code style="display:block;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        Authorization: Bearer &lt;CRON_SECRET&gt;
+      </code>
+    </div>
+    {% if not env_status.cron_secret_set %}
+    <div class="muted small" style="padding:8px 10px;background:var(--bg-alt,#18181b);border-radius:4px;border-left:3px solid var(--accent);">
+      Ajoute <code>CRON_SECRET</code> dans les variables d'environnement Render, puis configure un Cron Job avec la fréquence souhaitée (ex: quotidien à 3h00).
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{# ── Résultats du dernier run ── #}
+{% if sites_rows %}
+<section class="card">
+  <div class="card-title-row">
+    <h2>Résultats du dernier run</h2>
+    {% if latest %}<span class="muted small mono">{{ latest.timestamp }}</span>{% endif %}
+  </div>
+  <div class="table-wrap">
+    <table class="table compact">
+      <thead>
+        <tr>
+          {% for col in sites_rows[0].keys() %}
+            <th>{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in sites_rows %}
+          <tr>
+            {% for v in row.values() %}
+              <td class="mono" style="font-size:12px;">{{ v }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if latest and latest.interlinking_md %}
+    <div style="margin-top:10px;">
+      <a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a>
+    </div>
+  {% endif %}
+</section>
+{% elif latest %}
+<section class="card">
+  <div class="card-title-row">
+    <h2>Dernier run global</h2>
+    <span class="muted small mono">{{ latest.timestamp }}</span>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {% if latest.sites_summary_md %}<a class="btn" href="/file?path={{ latest.sites_summary_md }}">Sites summary</a>{% endif %}
+    {% if latest.interlinking_md %}<a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+{# ── Exécutions récentes ── #}
+<section class="card">
+  <div class="card-title-row">
+    <h2>Exécutions récentes</h2>
+    {% if jobs %}<a class="muted small" href="/jobs">Voir tout</a>{% endif %}
+  </div>
+  {% if jobs %}
+    <div class="job-grid">
+      {% for j in jobs %}
+        <a class="job-chip" href="/jobs?job={{ j.id }}">
+          <span class="mono">{{ j.id[:8] }}</span>
+          <span class="pill {{ j.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">Aucun run encore.</p>
+  {% endif %}
+</section>
+
+</div>
 {% endblock %}
