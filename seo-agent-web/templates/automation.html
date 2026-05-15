@@ -9,7 +9,6 @@
 }
 .hub-section-label::after { content:"";flex:1;height:1px;background:var(--border); }
 
-/* ── Project summary tiles ── */
 .hub-proj-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:4px; }
 .hub-proj-tile {
   border:1px solid var(--border);border-radius:8px;padding:14px 16px;
@@ -24,38 +23,25 @@
 .stat-chip.pr      { background:rgba(245,158,11,.1);color:#fbbf24; }
 .stat-chip.done    { background:rgba(16,185,129,.1);color:#34d399; }
 .stat-chip.ignored { background:rgba(255,255,255,.06);color:var(--muted); }
-.hub-proj-no-gh { font-size:11px;color:var(--muted);font-style:italic; }
 
-/* ── Global stats bar ── */
 .hub-stats { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px; }
 .hub-stat-card { flex:1;min-width:80px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center; }
 .hub-stat-num { font-size:24px;font-weight:700; }
 .hub-stat-lbl { font-size:11px;color:var(--muted);margin-top:2px; }
-
-/* ── Cron blocks ── */
-.cron-block { padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:monospace;word-break:break-all; }
-.cron-lbl   { font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600; }
-
-/* ── Job chips ── */
-.hub-job-grid { display:flex;flex-wrap:wrap;gap:6px; }
-.hub-job-chip {
-  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
-  border:1px solid var(--border);border-radius:4px;font-size:11px;
-  text-decoration:none;color:var(--text);transition:border-color .12s,background .12s;
-}
-.hub-job-chip:hover { border-color:var(--border-2);background:rgba(255,255,255,.03); }
 </style>
 <script>
 (function(){
-  /* ── Load per-project GitHub correction summaries ── */
+  function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
   function loadProjCards(){
-    var grid = document.getElementById('hub-proj-grid');
-    if(!grid) return;
     fetch('/api/automation/github-corrections')
       .then(function(r){return r.json();})
       .then(function(data){
+        var statsEl = document.getElementById('hub-global-stats');
+        var grid    = document.getElementById('hub-proj-grid');
         if(!data.ok||!data.projects||!data.projects.length){
-          grid.innerHTML='<p class="muted small">Aucun projet avec GitHub connecté. <a href="/settings/accounts#github-connect-card">Connecter →</a></p>';
+          if(statsEl) statsEl.innerHTML='';
+          if(grid) grid.innerHTML='<p class="muted small">Aucun projet avec GitHub connecté. <a href="/settings/accounts#github-connect-card">Connecter →</a></p>';
           return;
         }
         /* Global totals */
@@ -64,7 +50,6 @@
           tot.todo+=p.counts.todo||0; tot.in_progress+=p.counts.in_progress||0;
           tot.done+=p.counts.done||0; tot.ignored+=p.counts.ignored||0;
         });
-        var statsEl=document.getElementById('hub-global-stats');
         if(statsEl){
           statsEl.innerHTML=
             '<div class="hub-stat-card"><div class="hub-stat-num" style="color:#a5b4fc;">'+tot.todo+'</div><div class="hub-stat-lbl">À corriger</div></div>'
@@ -73,88 +58,33 @@
            +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--muted);">'+tot.ignored+'</div><div class="hub-stat-lbl">Ignorés</div></div>';
         }
         /* Project tiles */
-        var html='';
-        data.projects.forEach(function(p){
-          var c=p.counts;
-          var modeBadge=p.github_mode==='auto'
-            ?'<span class="badge ok" style="font-size:9px;padding:1px 5px;">Full Access</span>'
-            :'<span class="badge notice" style="font-size:9px;padding:1px 5px;">Vérification</span>';
-          html+='<a class="hub-proj-tile" href="/projects/'+p.slug+'/automation">'
-            +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
-            +'<span class="hub-proj-name">'+escHtml(p.site_name||p.slug)+'</span>'+modeBadge+'</div>'
-            +'<div class="hub-proj-repo">'+escHtml(p.github_repo)+'</div>'
-            +'<div class="hub-proj-counts">'
-            +'<span class="stat-chip todo">'+( c.todo||0)+' todo</span>'
-            +'<span class="stat-chip pr">'+(c.in_progress||0)+' PR</span>'
-            +'<span class="stat-chip done">'+(c.done||0)+' ✓</span>'
-            +(c.ignored?'<span class="stat-chip ignored">'+(c.ignored||0)+' ignoré</span>':'')
-            +'</div></a>';
-        });
-        grid.innerHTML=html;
+        if(grid){
+          var html='';
+          data.projects.forEach(function(p){
+            var c=p.counts;
+            var modeBadge=p.github_mode==='auto'
+              ?'<span class="badge ok" style="font-size:9px;padding:1px 5px;">Full Access</span>'
+              :'<span class="badge notice" style="font-size:9px;padding:1px 5px;">Vérification</span>';
+            html+='<a class="hub-proj-tile" href="/projects/'+p.slug+'/automation">'
+              +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+              +'<span class="hub-proj-name">'+escHtml(p.site_name||p.slug)+'</span>'+modeBadge+'</div>'
+              +'<div class="hub-proj-repo">'+escHtml(p.github_repo)+'</div>'
+              +'<div class="hub-proj-counts">'
+              +'<span class="stat-chip todo">'+(c.todo||0)+' todo</span>'
+              +'<span class="stat-chip pr">'+(c.in_progress||0)+' PR</span>'
+              +'<span class="stat-chip done">'+(c.done||0)+' ✓</span>'
+              +(c.ignored?'<span class="stat-chip ignored">'+(c.ignored||0)+' ignoré</span>':'')
+              +'</div></a>';
+          });
+          grid.innerHTML=html;
+        }
       }).catch(function(){
         var grid=document.getElementById('hub-proj-grid');
         if(grid) grid.innerHTML='<p class="muted small" style="color:var(--err);">Erreur de chargement.</p>';
       });
   }
 
-  function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-  /* ── Live logs ── */
-  var _pollTimer=null;
-  function startLiveLogs(jobId){
-    var panel=document.getElementById('live-logs-panel');
-    var logEl=document.getElementById('live-log-content');
-    var statusEl=document.getElementById('live-job-status');
-    if(!panel||!logEl) return;
-    panel.style.display='block';
-    function poll(){
-      fetch('/api/jobs/'+jobId).then(function(r){return r.json();}).then(function(data){
-        if(statusEl){
-          var labels={queued:'En attente',running:'En cours',done:'Terminé',failed:'Échec',canceled:'Annulé'};
-          statusEl.textContent=labels[data.status]||data.status;
-          statusEl.className='badge '+(data.status==='done'?'ok':data.status==='failed'?'error':'notice');
-        }
-        var lines=(data.stdout||'').split('\n');
-        logEl.textContent=lines.slice(-50).join('\n'); logEl.scrollTop=logEl.scrollHeight;
-        if(data.status==='running'||data.status==='queued'){_pollTimer=setTimeout(poll,2000);}
-        else{if(_pollTimer)clearTimeout(_pollTimer);setTimeout(function(){window.location.reload();},3000);}
-      }).catch(function(){_pollTimer=setTimeout(poll,5000);});
-    }
-    poll();
-  }
-
-  /* ── Domains ── */
-  function loadDomains(){
-    fetch('/api/automation/domains').then(function(r){return r.json();}).then(function(data){
-      var ta=document.getElementById('domains-textarea');
-      var ct=document.getElementById('domains-count');
-      if(ta) ta.value=(data.domains||[]).join('\n');
-      if(ct) ct.textContent=(data.count||0)+' domaine'+((data.count||0)>1?'s':'');
-    }).catch(function(){});
-  }
-  function saveDomains(){
-    var ta=document.getElementById('domains-textarea');
-    var btn=document.getElementById('domains-save-btn');
-    var msg=document.getElementById('domains-msg');
-    if(!ta) return;
-    var domains=ta.value.split('\n').map(function(d){return d.trim();}).filter(Boolean);
-    if(btn){btn.disabled=true;btn.textContent='Sauvegarde…';}
-    fetch('/api/automation/domains',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domains:domains})})
-      .then(function(r){return r.json();})
-      .then(function(data){
-        if(btn){btn.disabled=false;btn.textContent='Sauvegarder';}
-        if(msg){msg.textContent=data.ok?(data.count+' domaine(s) sauvegardé(s)'):('Erreur : '+(data.error||'?'));msg.style.color=data.ok?'var(--accent)':'var(--err)';setTimeout(function(){msg.textContent='';},3000);}
-        if(data.ok){var ct=document.getElementById('domains-count');if(ct)ct.textContent=data.count+' domaine'+(data.count>1?'s':'');}
-      }).catch(function(){if(btn){btn.disabled=false;btn.textContent='Sauvegarder';}});
-  }
-
-  document.addEventListener('DOMContentLoaded',function(){
-    loadProjCards();
-    loadDomains();
-    var s=document.getElementById('domains-save-btn');if(s) s.addEventListener('click',saveDomains);
-    var jobId=(document.getElementById('auto-body')||{}).dataset.currentJobId;
-    if(jobId) startLiveLogs(jobId);
-  });
+  document.addEventListener('DOMContentLoaded', loadProjCards);
 })();
 </script>
 {% endblock %}
@@ -168,160 +98,19 @@
 {% block content %}
 <div class="page-header">
   <h1>Hub d'automatisation</h1>
-  <p class="muted">Vue globale de toutes les corrections et automatisations par projet.</p>
+  <p class="muted">Vue globale des corrections GitHub par projet.</p>
 </div>
 
-<div id="auto-body" data-current-job-id="{{ current_job.id if current_job else '' }}" style="display:contents;">
-
-{# ── Run en cours ── #}
-{% if current_job %}
-<section class="card" id="live-logs-panel" style="border:1px solid var(--accent);display:block;margin-bottom:20px;">
-  <div class="card-title-row">
-    <h2>Run en cours</h2>
-    <span id="live-job-status" class="badge notice">{{ current_job.status }}</span>
-  </div>
-  <pre id="live-log-content" style="max-height:200px;overflow-y:auto;font-size:11px;line-height:1.5;background:var(--bg);padding:10px;border-radius:4px;margin:0;">Chargement des logs…</pre>
-  <p class="muted small" style="margin:6px 0 0;">Mise à jour auto toutes les 2s · <a href="/jobs?job={{ current_job.id }}">Voir la page complète</a></p>
-</section>
-{% else %}
-<div id="live-logs-panel" style="display:none;"><pre id="live-log-content"></pre><span id="live-job-status"></span></div>
-{% endif %}
-
-{# ── Corrections GitHub — stats globales ── #}
-<div class="hub-section-label">Corrections GitHub — vue globale</div>
+{# ── Stats globales ── #}
 <div class="hub-stats" id="hub-global-stats">
   <div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--muted);">—</div><div class="hub-stat-lbl">Chargement…</div></div>
 </div>
+
+{# ── Tuiles projets ── #}
+<div class="hub-section-label">Projets</div>
 <div class="hub-proj-grid" id="hub-proj-grid">
   <p class="muted small">Chargement…</p>
 </div>
-<p class="muted small" style="margin-bottom:24px;">Clique sur un projet pour accéder à ses automatisations.</p>
+<p class="muted small" style="margin-top:10px;">Clique sur un projet pour gérer ses automatisations.</p>
 
-{# ── Audit multi-sites + Planification ── #}
-<div class="hub-section-label">Audit multi-sites</div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:24px;">
-
-  <section class="card" style="margin:0;">
-    <div class="card-title-row">
-      <h2>Lancer un audit</h2>
-      {% if config_path %}<span class="badge ok" style="font-size:10px;">yml trouvé</span>{% else %}<span class="badge error" style="font-size:10px;">yml manquant</span>{% endif %}
-    </div>
-    {% if env_status and config_status %}
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
-      <span class="badge {{ 'ok' if config_status.pagespeed_enabled else 'notice' }}" style="font-size:10px;">PageSpeed {{ 'on' if config_status.pagespeed_enabled else 'off' }}</span>
-      <span class="badge {{ 'ok' if env_status.pagespeed_api_key_set else 'notice' }}" style="font-size:10px;">Clé API {{ 'ok' if env_status.pagespeed_api_key_set else 'manquante' }}</span>
-      <span class="badge {{ 'ok' if config_status.gsc_api_enabled else 'notice' }}" style="font-size:10px;">GSC {{ 'on' if config_status.gsc_api_enabled else 'off' }}</span>
-      <span class="badge {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'notice' }}" style="font-size:10px;">Credentials {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'manquant' }}</span>
-    </div>
-    {% endif %}
-    {% if inventory %}
-    <p class="muted small" style="margin-bottom:10px;">
-      Inventaire : {% if inventory.exists %}<span id="domains-count" class="mono">{{ inventory.count }} domaine{{ 's' if inventory.count > 1 else '' }}</span>{% else %}<span class="badge error" style="font-size:10px;">introuvable</span>{% endif %}
-    </p>
-    {% endif %}
-    <form method="post" action="/run" class="setting-form">
-      <input type="hidden" name="config_path" value="{{ config_path }}" />
-      <div>
-        <div class="muted small" style="margin-bottom:6px;font-weight:600;">Mode</div>
-        <div class="radios">
-          <label class="radio"><input type="radio" name="run_policy" value="verify" checked /> Vérifier (audit + GSC)</label>
-          <label class="radio"><input type="radio" name="run_policy" value="auto" /> Déployer auto</label>
-        </div>
-        <label class="checkbox" style="margin-top:6px;">
-          <input type="checkbox" name="confirm_auto" value="yes" />
-          Je confirme l'exécution auto
-        </label>
-      </div>
-      <div style="margin-top:12px;">
-        <button type="submit" class="btn primary" {% if current_job %}disabled title="Un run est déjà en cours"{% endif %}>Lancer l'audit multi-sites</button>
-      </div>
-    </form>
-  </section>
-
-  <div style="display:flex;flex-direction:column;gap:16px;">
-    <section class="card" style="margin:0;">
-      <div class="card-title-row">
-        <h2>Planification automatique</h2>
-        {% if env_status.cron_secret_set %}<span class="badge ok" style="font-size:10px;">CRON_SECRET ok</span>{% else %}<span class="badge notice" style="font-size:10px;">CRON_SECRET manquant</span>{% endif %}
-      </div>
-      <div style="display:grid;gap:8px;">
-        <div><div class="cron-lbl">Endpoint</div><div class="cron-block">GET https://noyaru.com/cron/autopilot</div></div>
-        <div><div class="cron-lbl">Authentification</div><div class="cron-block">Authorization: Bearer &lt;CRON_SECRET&gt;</div></div>
-        {% if not env_status.cron_secret_set %}
-        <div class="muted small" style="padding:8px 10px;background:rgba(var(--accent-rgb),.06);border-radius:4px;border-left:2px solid var(--accent);">
-          Ajoute <code>CRON_SECRET</code> dans Render → Environment pour activer le scheduler.
-        </div>
-        {% endif %}
-      </div>
-    </section>
-
-    {% if config_path and inventory %}
-    <section class="card" style="margin:0;">
-      <div class="card-title-row">
-        <h2>Inventaire de domaines</h2>
-        <span id="domains-count" class="muted small">{{ inventory.count if inventory.exists else 0 }} domaine{{ 's' if (inventory.exists and inventory.count > 1) else '' }}</span>
-      </div>
-      <p class="muted small" style="margin-bottom:8px;">Un domaine par ligne · <span class="mono" style="font-size:10px;">{{ inventory.path }}</span></p>
-      <textarea id="domains-textarea" rows="5"
-        style="width:100%;font-family:monospace;font-size:12px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:inherit;resize:vertical;"
-        placeholder="exemple.com&#10;monsite.fr">{{ all_domains | join('\n') }}</textarea>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-        <button id="domains-save-btn" type="button" class="btn primary" style="font-size:12px;">Sauvegarder</button>
-        <span id="domains-msg" class="muted small"></span>
-      </div>
-    </section>
-    {% endif %}
-  </div>
-</div>
-
-{# ── Résultats run ── #}
-{% if sites_rows or latest %}
-<div class="hub-section-label">Résultats du dernier run</div>
-{% if sites_rows %}
-<section class="card" style="margin-bottom:16px;">
-  <div class="card-title-row">
-    <h2>Sites</h2>
-    {% if latest %}<span class="muted small mono">{{ latest.timestamp }}</span>{% endif %}
-  </div>
-  <div class="table-wrap">
-    <table class="table compact">
-      <thead><tr>{% for col in sites_rows[0].keys() %}<th>{{ col }}</th>{% endfor %}</tr></thead>
-      <tbody>{% for row in sites_rows %}<tr>{% for v in row.values() %}<td class="mono" style="font-size:12px;">{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody>
-    </table>
-  </div>
-  {% if latest and latest.interlinking_md %}<div style="margin-top:10px;"><a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a></div>{% endif %}
-</section>
-{% elif latest %}
-<section class="card" style="margin-bottom:16px;">
-  <div class="card-title-row"><h2>Dernier run global</h2><span class="muted small mono">{{ latest.timestamp }}</span></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    {% if latest.sites_summary_md %}<a class="btn" href="/file?path={{ latest.sites_summary_md }}">Sites summary</a>{% endif %}
-    {% if latest.interlinking_md %}<a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a>{% endif %}
-  </div>
-</section>
-{% endif %}
-{% endif %}
-
-{# ── Exécutions récentes ── #}
-<div class="hub-section-label">Exécutions récentes</div>
-<section class="card">
-  <div class="card-title-row">
-    <h2>Historique</h2>
-    {% if jobs %}<a class="muted small" href="/jobs">Voir tout →</a>{% endif %}
-  </div>
-  {% if jobs %}
-  <div class="hub-job-grid">
-    {% for j in jobs %}
-    <a class="hub-job-chip" href="/jobs?job={{ j.id }}">
-      <span class="mono" style="font-size:11px;color:var(--muted);">{{ j.id[:8] }}</span>
-      <span class="badge {{ 'ok' if j.status=='done' else 'error' if j.status=='failed' else 'notice' }}" style="font-size:9px;">{{ {'queued':'attente','running':'en cours','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status,j.status) }}</span>
-    </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <p class="muted">Aucun run encore.</p>
-  {% endif %}
-</section>
-
-</div>
 {% endblock %}
