@@ -1402,6 +1402,46 @@ def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = No
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
 
 
+def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    resp = requests.post(
+        f"https://api.github.com{path}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "seo-agent-web",
+        },
+        json=json_body,
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"GitHub {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    try:
+        return resp.json()
+    except Exception as e:
+        raise RuntimeError(f"GitHub JSON decode error: {e}") from e
+
+
+def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    resp = requests.put(
+        f"https://api.github.com{path}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "seo-agent-web",
+        },
+        json=json_body,
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"GitHub {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    try:
+        return resp.json()
+    except Exception as e:
+        raise RuntimeError(f"GitHub JSON decode error: {e}") from e
+
+
 def _netlify_api_get(path: str, *, token: str, params: dict[str, Any] | None = None, timeout_s: float = 30.0) -> Any:
     resp = requests.get(
         f"https://api.netlify.com{path}",
@@ -2467,6 +2507,147 @@ def _openai_url_fix(
         content = data["choices"][0]["message"]["content"]
         parsed = json.loads(content)
         if isinstance(parsed, dict) and parsed.get("fix"):
+            return parsed
+    except Exception:
+        pass
+    return {}
+
+
+# Maps issue_key → ordered list of candidate file names/patterns to look for in the repo
+_SEO_FILE_CANDIDATES: dict[str, list[str]] = {
+    "redirect_3xx": ["next.config.js", "next.config.ts", "next.config.mjs", "vercel.json", "netlify.toml", "_headers", ".htaccess", "nginx.conf"],
+    "missing_meta_description": ["layout.html", "base.html", "_layout.html", "app.html", "_document.tsx", "_document.jsx", "index.html", "layout.tsx"],
+    "missing_title": ["layout.html", "base.html", "_layout.html", "app.html", "_document.tsx", "_document.jsx", "index.html"],
+    "missing_h1": ["layout.html", "base.html", "index.html"],
+    "multiple_h1": ["layout.html", "base.html", "index.html"],
+    "image_missing_alt": ["index.html", "layout.html"],
+    "duplicate_content": ["layout.html", "base.html", "index.html"],
+    "slow_page": ["vercel.json", "netlify.toml", "_headers", ".htaccess"],
+}
+_SEO_FILE_CANDIDATES_DEFAULT = ["vercel.json", "netlify.toml", ".htaccess", "next.config.js", "layout.html", "index.html"]
+
+
+def _project_github_cfg(proj) -> dict[str, str]:
+    s = proj.settings if isinstance(proj.settings, dict) else {}
+    return {
+        "repo": str(s.get("github_repo") or "").strip(),
+        "branch": str(s.get("github_branch") or "main").strip(),
+        "mode": str(s.get("github_mode") or "review").strip(),
+    }
+
+
+def _github_find_seo_files(
+    owner: str, repo: str, branch: str, token: str, issue_key: str
+) -> list[dict[str, Any]]:
+    """Return [{path, content_str, sha}] for the most relevant SEO file in the repo."""
+    try:
+        tree_data = _github_api_get(
+            f"/repos/{owner}/{repo}/git/trees/{branch}",
+            token=token,
+            params={"recursive": "1"},
+            timeout_s=20,
+        )
+    except Exception as e:
+        raise RuntimeError(f"Impossible de lire l'arbre du repo : {e}") from e
+
+    all_paths: list[str] = [
+        item["path"] for item in (tree_data.get("tree") or [])
+        if isinstance(item, dict) and item.get("type") == "blob"
+    ]
+
+    candidates = _SEO_FILE_CANDIDATES.get(issue_key, _SEO_FILE_CANDIDATES_DEFAULT)
+    matches: list[str] = []
+    for candidate in candidates:
+        for p in all_paths:
+            filename = p.split("/")[-1]
+            if filename == candidate and p not in matches:
+                matches.append(p)
+                break
+    if not matches:
+        raise RuntimeError(
+            f"Aucun fichier pertinent trouvé pour l'anomalie « {issue_key} » dans le repo. "
+            f"Fichiers recherchés : {', '.join(candidates[:5])}."
+        )
+
+    results: list[dict[str, Any]] = []
+    for path in matches[:2]:
+        try:
+            file_data = _github_api_get(f"/repos/{owner}/{repo}/contents/{path}", token=token, params={"ref": branch})
+            import base64 as _b64
+            raw = _b64.b64decode(file_data.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+            if len(raw) > 80_000:
+                raw = raw[:80_000]
+            results.append({"path": path, "content": raw, "sha": file_data.get("sha", "")})
+        except Exception:
+            continue
+    if not results:
+        raise RuntimeError("Impossible de lire le contenu des fichiers trouvés.")
+    return results
+
+
+def _openai_generate_file_patch(
+    *,
+    file_path: str,
+    file_content: str,
+    issue_key: str,
+    issue_label: str,
+    url: str,
+    site_name: str,
+) -> dict[str, Any]:
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return {}
+    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
+    model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+    system = (
+        "Tu es un expert SEO technique qui génère des patches de code précis et applicables.\n"
+        "On te donne le contenu COMPLET d'un fichier de configuration/template, "
+        "une anomalie SEO précise, et l'URL affectée.\n"
+        "Tu dois retourner le fichier COMPLET modifié (pas un diff, le fichier entier) avec la correction appliquée.\n\n"
+        "Réponds STRICTEMENT en JSON :\n"
+        "{\n"
+        '  "pr_title": "fix: [description courte de la correction] (max 72 chars)",\n'
+        '  "description": "Explication en 2-3 phrases de ce qui a été changé et pourquoi",\n'
+        '  "patched_content": "contenu complet du fichier après correction"\n'
+        "}\n\n"
+        "RÈGLES ABSOLUES :\n"
+        "- patched_content = fichier COMPLET, pas juste le bloc modifié\n"
+        "- Ne modifie RIEN d'autre que ce qui est nécessaire pour corriger l'anomalie\n"
+        "- Si le fichier contient déjà la correction, indique-le dans description et renvoie le fichier tel quel\n"
+        "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)"
+    )
+    user_msg = json.dumps({
+        "site": site_name,
+        "anomalie": f"{issue_key} — {issue_label}",
+        "url_affectee": url,
+        "fichier": file_path,
+        "contenu_actuel": file_content,
+    }, ensure_ascii=False)
+    try:
+        resp = requests.post(
+            f"{base}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "temperature": 0.05,
+                "max_tokens": 4000,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_msg},
+                ],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=60,
+        )
+    except Exception:
+        return {}
+    if resp.status_code != 200:
+        return {}
+    try:
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+        if isinstance(parsed, dict) and parsed.get("patched_content"):
             return parsed
     except Exception:
         pass
@@ -12860,6 +13041,176 @@ def api_issue_url_fix(
     if not result:
         return JSONResponse({"error": "Service IA indisponible. Configure OPENAI_API_KEY."}, status_code=503)
     return JSONResponse(result)
+
+
+class _GithubConnectBody(BaseModel):
+    repo: str        # "owner/repo"
+    branch: str = "main"
+    mode: str = "review"   # "review" or "auto"
+
+
+class _GithubFixBody(BaseModel):
+    url: str
+    crawl_ts: str = ""
+    confirm: bool = False
+    file_path: str = ""
+    patched_content: str = ""
+
+
+@app.post("/api/projects/{slug}/github/connect")
+def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté. Va dans Comptes & connexions pour connecter GitHub."}, status_code=400)
+    repo = (body.repo or "").strip()
+    if not repo or "/" not in repo:
+        return JSONResponse({"ok": False, "error": "Format invalide. Utilise owner/repo."}, status_code=400)
+    try:
+        repo_info = _github_api_get(f"/repos/{repo}", token=token, timeout_s=10)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Dépôt introuvable ou inaccessible : {e}"}, status_code=400)
+    perms = repo_info.get("permissions") if isinstance(repo_info.get("permissions"), dict) else {}
+    if not perms.get("push"):
+        return JSONResponse({"ok": False, "error": "Ton token GitHub n'a pas les droits d'écriture sur ce dépôt. Utilise un token avec scope 'repo'."}, status_code=400)
+    mode = body.mode if body.mode in ("review", "auto") else "review"
+    branch = (body.branch or repo_info.get("default_branch") or "main").strip()
+    settings = dict(proj.settings) if isinstance(proj.settings, dict) else {}
+    settings["github_repo"] = repo
+    settings["github_branch"] = branch
+    settings["github_mode"] = mode
+    with DB.session() as db:
+        p = db.get(type(proj), proj.id)
+        if p:
+            p.settings = settings
+            db.commit()
+    return JSONResponse({"ok": True, "repo": repo, "branch": branch, "mode": mode, "html_url": str(repo_info.get("html_url") or "")})
+
+
+@app.get("/api/projects/{slug}/github/status")
+def api_github_status(request: Request, slug: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    cfg = _project_github_cfg(proj)
+    return JSONResponse({"ok": True, **cfg, "connected": bool(cfg["repo"])})
+
+
+@app.post("/api/projects/{slug}/issues/{issue_key}/github-fix")
+def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFixBody) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    cfg = _project_github_cfg(proj)
+    if not cfg["repo"]:
+        return JSONResponse({"ok": False, "error": "Aucun dépôt GitHub connecté à ce projet. Va dans Paramètres de crawl."}, status_code=400)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    url = (body.url or "").strip()
+    if not url:
+        return JSONResponse({"ok": False, "error": "URL manquante."}, status_code=400)
+    owner, repo_name = cfg["repo"].split("/", 1)
+    branch = cfg["branch"]
+    mode = cfg["mode"]
+    meta = dash.issue_meta(issue_key)
+    issue_label = meta.label if meta else issue_key
+    site_name = str(proj.site_name or slug)
+
+    # ── Step 2: Apply the fix (create branch + commit + PR) ──────────────
+    if body.confirm and body.file_path and body.patched_content:
+        import base64 as _b64
+        try:
+            ref_data = _github_api_get(f"/repos/{cfg['repo']}/git/ref/heads/{branch}", token=token)
+            base_sha = ref_data["object"]["sha"]
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
+        from datetime import datetime as _dt
+        fix_branch = f"seo-fix/{issue_key}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        try:
+            _github_api_post(f"/repos/{cfg['repo']}/git/refs", token=token, json_body={
+                "ref": f"refs/heads/{fix_branch}",
+                "sha": base_sha,
+            })
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"Impossible de créer la branche {fix_branch} : {e}"}, status_code=400)
+        try:
+            file_data = _github_api_get(f"/repos/{cfg['repo']}/contents/{body.file_path}", token=token, params={"ref": branch})
+            current_sha = file_data.get("sha", "")
+        except Exception:
+            current_sha = ""
+        encoded = _b64.b64encode(body.patched_content.encode("utf-8")).decode("ascii")
+        commit_msg = f"fix(seo): correct {issue_key} on {url[:80]}\n\nGenerated by SEO Agent — {site_name}"
+        put_body: dict[str, Any] = {
+            "message": commit_msg,
+            "content": encoded,
+            "branch": fix_branch,
+        }
+        if current_sha:
+            put_body["sha"] = current_sha
+        try:
+            _github_api_put(f"/repos/{cfg['repo']}/contents/{body.file_path}", token=token, json_body=put_body)
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"Impossible de committer la correction : {e}"}, status_code=400)
+        pr_title = f"fix(seo): {issue_label} — {url[:60]}"
+        pr_body = (
+            f"## Correction SEO automatique\n\n"
+            f"**Anomalie :** {issue_label} (`{issue_key}`)\n"
+            f"**URL affectée :** {url}\n"
+            f"**Fichier modifié :** `{body.file_path}`\n\n"
+            f"Correction générée par [SEO Agent](https://noyaru.com) pour **{site_name}**.\n\n"
+            f"> Vérifie les changements avant de merger."
+        )
+        try:
+            pr_data = _github_api_post(f"/repos/{cfg['repo']}/pulls", token=token, json_body={
+                "title": pr_title,
+                "body": pr_body,
+                "head": fix_branch,
+                "base": branch,
+            })
+            pr_url = pr_data.get("html_url", "")
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": f"PR créée mais erreur lors de la récupération du lien : {e}"}, status_code=400)
+        return JSONResponse({"ok": True, "pr_url": pr_url, "pr_title": pr_title, "branch": fix_branch})
+
+    # ── Step 1: Find file + generate patch (preview) ─────────────────────
+    try:
+        seo_files = _github_find_seo_files(owner, repo_name, branch, token, issue_key)
+    except RuntimeError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
+    best = seo_files[0]
+    patch = _openai_generate_file_patch(
+        file_path=best["path"],
+        file_content=best["content"],
+        issue_key=issue_key,
+        issue_label=issue_label,
+        url=url,
+        site_name=site_name,
+    )
+    if not patch:
+        return JSONResponse({"ok": False, "error": "Service IA indisponible ou réponse invalide."}, status_code=503)
+
+    # In auto mode: apply immediately without confirm step
+    if mode == "auto":
+        auto_body = _GithubFixBody(
+            url=url, crawl_ts=body.crawl_ts,
+            confirm=True,
+            file_path=best["path"],
+            patched_content=patch["patched_content"],
+        )
+        return api_github_fix(request, slug, issue_key, auto_body)
+
+    # Review mode: return preview
+    original_lines = best["content"].splitlines()
+    patched_lines = patch["patched_content"].splitlines()
+    return JSONResponse({
+        "ok": True,
+        "mode": "review",
+        "file": best["path"],
+        "pr_title": patch.get("pr_title", f"fix(seo): {issue_label}"),
+        "description": patch.get("description", ""),
+        "original_preview": "\n".join(original_lines[:30]),
+        "patched_preview": "\n".join(patched_lines[:30]),
+        "patched_content": patch["patched_content"],
+    })
 
 
 _TASK_STATUSES = {"todo", "in_progress", "done", "ignored"}

@@ -149,8 +149,14 @@
                   data-issue="{{ project.issue.key }}"
                   data-crawl="{{ project.timestamp }}"
                   data-slug="{{ project.slug }}">Correction IA</button>
+                <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+                  data-url="{{ u }}"
+                  data-issue="{{ project.issue.key }}"
+                  data-crawl="{{ project.timestamp }}"
+                  data-slug="{{ project.slug }}">&#8982; GitHub</button>
               </div>
               <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+              <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
             </div>
           {% endfor %}
         </div>
@@ -361,8 +367,11 @@
 	                      </span>
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
 	                    </div>
 	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+	                    <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
 	                  </div>
 	                {% elif ' ' in ex %}
 	                  {% set u = ex.split(' ', 1)[0] %}
@@ -372,8 +381,11 @@
 	                      <span class="mono" style="font-size:12px;flex:1;word-break:break-all;"><a href="{{ u }}" target="_blank" rel="noreferrer">{{ u }}</a> <span class="muted">{{ tail }}</span></span>
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
 	                    </div>
 	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+	                    <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
 	                  </div>
 	                {% else %}
 	                  <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
@@ -381,8 +393,11 @@
 	                      <a href="{{ ex }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;word-break:break-all;">{{ ex }}</a>
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
 	                    </div>
 	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
+	                    <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
 	                  </div>
 	                {% endif %}
 	              {% else %}
@@ -476,6 +491,90 @@
   function _esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
+
+  /* ── GitHub fix handler ── */
+  document.addEventListener('click', function(e) {
+    // Handle confirm button click (inside already-rendered preview)
+    var confirmBtn = e.target.closest('.gh-confirm-btn');
+    if (confirmBtn) {
+      var ghResultConfirm = confirmBtn.closest('.gh-fix-result');
+      if (!ghResultConfirm) return;
+      var filePath = confirmBtn.dataset.file;
+      var patchedContent = decodeURIComponent(confirmBtn.dataset.content);
+      var urlConfirm = confirmBtn.dataset.url;
+      var issueConfirm = confirmBtn.dataset.issue;
+      var slugConfirm = confirmBtn.dataset.slug;
+      confirmBtn.textContent = 'Création PR…';
+      confirmBtn.disabled = true;
+      fetch('/api/projects/' + encodeURIComponent(slugConfirm) + '/issues/' + encodeURIComponent(issueConfirm) + '/github-fix', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: urlConfirm, confirm: true, file_path: filePath, patched_content: patchedContent})
+      }).then(function(r){return r.json();}).then(function(d){
+        if (d.ok && d.pr_url) {
+          ghResultConfirm.innerHTML = '<div style="padding:10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:5px;font-size:12px;">PR créée : <a href="' + _esc(d.pr_url) + '" target="_blank" rel="noreferrer" style="color:var(--accent);">' + _esc(d.pr_title || d.pr_url) + '</a></div>';
+        } else {
+          ghResultConfirm.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">&#x2717; ' + _esc(d.error || 'Erreur') + '</p>';
+        }
+      }).catch(function(err){ ghResultConfirm.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">' + String(err) + '</p>'; });
+      return;
+    }
+
+    var btn = e.target.closest('.gh-fix-btn');
+    if (!btn) return;
+    var row = btn.closest('.url-ai-row');
+    var ghResult = row && row.querySelector('.gh-fix-result');
+    if (!ghResult) return;
+
+    var url = btn.dataset.url;
+    var issue = btn.dataset.issue;
+    var crawl = btn.dataset.crawl;
+    var slug = btn.dataset.slug;
+
+    btn.disabled = true;
+    btn.textContent = 'Analyse…';
+    ghResult.style.display = 'block';
+    ghResult.innerHTML = '<p style="font-size:12px;color:var(--muted);">Analyse du repo en cours…</p>';
+
+    fetch('/api/projects/' + encodeURIComponent(slug) + '/issues/' + encodeURIComponent(issue) + '/github-fix', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({url: url, crawl_ts: crawl || '', confirm: false})
+    }).then(function(r){return r.json();}).then(function(d){
+      btn.disabled = false;
+      btn.textContent = '&#8982; GitHub';
+      if (!d.ok) {
+        ghResult.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">&#x2717; ' + _esc(d.error || 'Erreur') + '</p>';
+        return;
+      }
+      if (d.pr_url) {
+        // auto mode — PR already created
+        ghResult.innerHTML = '<div style="padding:10px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:5px;font-size:12px;">PR créée : <a href="' + _esc(d.pr_url) + '" target="_blank" rel="noreferrer" style="color:var(--accent);">' + _esc(d.pr_title || d.pr_url) + '</a></div>';
+        btn.style.display = 'none';
+        return;
+      }
+      // review mode — show preview
+      var encodedContent = encodeURIComponent(d.patched_content || '');
+      var html = '<div style="font-size:12px;line-height:1.6;">';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
+      html += '<strong>Fichier :</strong> <code style="font-size:11px;">' + _esc(d.file) + '</code>';
+      html += '</div>';
+      if (d.description) html += '<p style="margin:0 0 8px;color:var(--muted);">' + _esc(d.description) + '</p>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
+      html += '<div><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">AVANT</div><pre style="margin:0;padding:8px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:4px;font-size:10px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + _esc(d.original_preview || '') + '</pre></div>';
+      html += '<div><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">APRES</div><pre style="margin:0;padding:8px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:4px;font-size:10px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + _esc(d.patched_preview || '') + '</pre></div>';
+      html += '</div>';
+      html += '<button type="button" class="btn primary gh-confirm-btn" data-file="' + _esc(d.file) + '" data-content="' + encodedContent + '" data-url="' + _esc(url) + '" data-issue="' + _esc(issue) + '" data-slug="' + _esc(slug) + '" style="font-size:12px;">Créer la Pull Request</button>';
+      html += ' <button type="button" onclick="this.closest(\'.gh-fix-result\').style.display=\'none\'" class="btn" style="font-size:12px;">Annuler</button>';
+      html += '</div>';
+      ghResult.innerHTML = html;
+    }).catch(function(err){
+      btn.disabled = false;
+      btn.textContent = '&#8982; GitHub';
+      ghResult.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">' + String(err) + '</p>';
+    });
+  });
+
 })();
 </script>
 {% endblock head_extra %}

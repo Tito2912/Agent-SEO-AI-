@@ -886,4 +886,205 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
       })();
     </script>
   {% endif %}
+
+  {# ── GitHub Repo card ───────────────────────────────────────────── #}
+  <div class="cs-card" id="github-repo" style="margin-top:20px;">
+    <div class="cs-card-head">
+      <div class="cs-card-icon" style="background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border);">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0112 6.8c.85.004 1.7.115 2.5.337 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/></svg>
+      </div>
+      <div class="cs-card-meta">
+        <div class="cs-card-title">Dépôt GitHub <span id="gh-repo-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--muted);margin-left:6px;">Non connecté</span></div>
+        <div class="cs-card-desc">Permet à l'agent de corriger les anomalies directement dans ton code via des Pull Requests</div>
+      </div>
+    </div>
+    <div class="cs-card-body">
+      <div id="gh-repo-status" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Dépôt (owner/repo)</label>
+          <div style="display:flex;gap:8px;">
+            <input id="gh-repo-input" type="text" placeholder="ex: moncompte/mon-site" style="flex:1;font-size:13px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:inherit;" />
+            <button type="button" id="gh-pick-repo-btn" class="btn" style="font-size:12px;white-space:nowrap;">Mes dépôts</button>
+          </div>
+          <div id="gh-repo-list" style="display:none;margin-top:6px;border:1px solid var(--border);border-radius:5px;max-height:180px;overflow-y:auto;background:var(--bg-card);"></div>
+        </div>
+
+        <div style="display:flex;gap:12px;">
+          <div style="flex:1;">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Branche cible</label>
+            <input id="gh-branch-input" type="text" value="main" style="width:100%;font-size:13px;padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:inherit;" />
+          </div>
+          <div style="flex:1.5;">
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;">Mode de correction</label>
+            <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:5px;overflow:hidden;">
+              <button type="button" id="gh-mode-review" class="gh-mode-btn" data-mode="review" style="flex:1;padding:7px 6px;font-size:11px;font-weight:600;background:var(--accent);color:#fff;border:none;cursor:pointer;">Vérification</button>
+              <button type="button" id="gh-mode-auto" class="gh-mode-btn" data-mode="auto" style="flex:1;padding:7px 6px;font-size:11px;font-weight:600;background:var(--bg);color:var(--muted);border:none;cursor:pointer;border-left:1px solid var(--border);">Full access</button>
+            </div>
+            <p class="muted small" id="gh-mode-hint" style="margin:4px 0 0;font-size:10px;">Vérification : tu valides chaque PR avant qu'elle soit créée.</p>
+          </div>
+        </div>
+
+        <div id="gh-auto-warning" style="display:none;padding:10px 12px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:5px;font-size:12px;">
+          <strong>Full access</strong> — l'agent créera des Pull Requests automatiquement sans te demander de confirmation à chaque fois. Les PRs sont toujours sur des branches séparées, jamais directement sur <code>main</code>.
+          <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;">
+            <input type="checkbox" id="gh-auto-confirm" /> J'autorise l'agent à créer des PRs automatiquement sur ce dépôt
+          </label>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button type="button" id="gh-connect-btn" class="btn primary" style="font-size:12px;">Connecter ce dépôt</button>
+          <button type="button" id="gh-disconnect-btn" class="btn" style="display:none;font-size:12px;color:var(--muted);">Déconnecter</button>
+          <span id="gh-connect-msg" style="font-size:12px;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    var _slug = {{ slug | tojson }};
+    var _selectedMode = 'review';
+
+    var repoInput = document.getElementById('gh-repo-input');
+    var branchInput = document.getElementById('gh-branch-input');
+    var connectBtn = document.getElementById('gh-connect-btn');
+    var disconnectBtn = document.getElementById('gh-disconnect-btn');
+    var connectMsg = document.getElementById('gh-connect-msg');
+    var repoList = document.getElementById('gh-repo-list');
+    var pickBtn = document.getElementById('gh-pick-repo-btn');
+    var badge = document.getElementById('gh-repo-badge');
+    var statusDiv = document.getElementById('gh-repo-status');
+    var autoWarning = document.getElementById('gh-auto-warning');
+    var autoConfirm = document.getElementById('gh-auto-confirm');
+    var modeHint = document.getElementById('gh-mode-hint');
+
+    // Load current status
+    fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/status', {cache:'no-store'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if (d.connected) {
+          repoInput.value = d.repo;
+          branchInput.value = d.branch;
+          _setMode(d.mode);
+          badge.textContent = d.repo;
+          badge.style.background = 'rgba(34,197,94,.1)';
+          badge.style.borderColor = 'rgba(34,197,94,.3)';
+          badge.style.color = '#4ade80';
+          disconnectBtn.style.display = '';
+          statusDiv.textContent = 'Dépôt connecté — les boutons "Corriger sur GitHub" apparaissent sur les pages d\'anomalies.';
+          statusDiv.style.color = 'var(--ok, #4ade80)';
+        }
+      }).catch(function(){});
+
+    // Mode toggle
+    document.querySelectorAll('.gh-mode-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { _setMode(btn.dataset.mode); });
+    });
+
+    function _setMode(mode) {
+      _selectedMode = mode;
+      document.querySelectorAll('.gh-mode-btn').forEach(function(b) {
+        var active = b.dataset.mode === mode;
+        b.style.background = active ? 'var(--accent)' : 'var(--bg)';
+        b.style.color = active ? '#fff' : 'var(--muted)';
+      });
+      autoWarning.style.display = mode === 'auto' ? '' : 'none';
+      modeHint.textContent = mode === 'auto'
+        ? 'Full access : les PRs sont créées directement, sans étape de confirmation.'
+        : 'Vérification : tu valides chaque PR avant qu\'elle soit créée.';
+    }
+
+    // Pick repo list
+    pickBtn.addEventListener('click', function() {
+      if (repoList.dataset.loaded) { repoList.style.display = repoList.style.display === 'none' ? '' : 'none'; return; }
+      pickBtn.textContent = 'Chargement…';
+      fetch('/api/github/repos', {cache:'no-store'})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          pickBtn.textContent = 'Mes dépôts';
+          if (!d.ok) { alert(d.error || 'Erreur GitHub'); return; }
+          repoList.innerHTML = '';
+          (d.repos || []).forEach(function(repo) {
+            var el = document.createElement('div');
+            el.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);';
+            el.innerHTML = '<strong>' + repo.full_name + '</strong>' + (repo.private ? ' <span style="font-size:10px;opacity:.5;">[privé]</span>' : '');
+            el.addEventListener('mouseenter', function(){ el.style.background='var(--bg)'; });
+            el.addEventListener('mouseleave', function(){ el.style.background=''; });
+            el.addEventListener('click', function() {
+              repoInput.value = repo.full_name;
+              branchInput.value = repo.default_branch || 'main';
+              repoList.style.display = 'none';
+            });
+            repoList.appendChild(el);
+          });
+          repoList.dataset.loaded = '1';
+          repoList.style.display = '';
+        })
+        .catch(function(e){ pickBtn.textContent = 'Mes dépôts'; alert(String(e)); });
+    });
+
+    // Connect
+    connectBtn.addEventListener('click', function() {
+      if (_selectedMode === 'auto' && !autoConfirm.checked) {
+        alert('Coche la case d\'autorisation pour activer le mode Full access.');
+        return;
+      }
+      var repo = (repoInput.value || '').trim();
+      var branch = (branchInput.value || 'main').trim();
+      if (!repo || !repo.includes('/')) { alert('Format invalide. Ex: moncompte/mon-site'); return; }
+      connectBtn.textContent = 'Connexion…';
+      connectBtn.disabled = true;
+      connectMsg.textContent = '';
+      fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/connect', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({repo: repo, branch: branch, mode: _selectedMode})
+      })
+        .then(function(r){return r.json();})
+        .then(function(d){
+          connectBtn.textContent = 'Connecter ce dépôt';
+          connectBtn.disabled = false;
+          if (d.ok) {
+            connectMsg.textContent = '✓ Dépôt connecté';
+            connectMsg.style.color = 'var(--ok, #4ade80)';
+            badge.textContent = d.repo;
+            badge.style.background = 'rgba(34,197,94,.1)';
+            badge.style.borderColor = 'rgba(34,197,94,.3)';
+            badge.style.color = '#4ade80';
+            disconnectBtn.style.display = '';
+            statusDiv.textContent = 'Dépôt connecté — les boutons "Corriger sur GitHub" apparaissent sur les pages d\'anomalies.';
+            statusDiv.style.color = 'var(--ok, #4ade80)';
+          } else {
+            connectMsg.textContent = '✗ ' + (d.error || 'Erreur');
+            connectMsg.style.color = 'var(--error, #f87171)';
+          }
+        })
+        .catch(function(e){
+          connectBtn.textContent = 'Connecter ce dépôt';
+          connectBtn.disabled = false;
+          connectMsg.textContent = String(e);
+        });
+    });
+
+    // Disconnect
+    disconnectBtn.addEventListener('click', function() {
+      if (!confirm('Déconnecter le dépôt GitHub de ce projet ?')) return;
+      fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/connect', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({repo: '', branch: 'main', mode: 'review'})
+      }).then(function(){
+        repoInput.value = '';
+        badge.textContent = 'Non connecté';
+        badge.style.background = '';
+        badge.style.borderColor = '';
+        badge.style.color = '';
+        disconnectBtn.style.display = 'none';
+        statusDiv.textContent = '';
+      });
+    });
+  })();
+  </script>
 {% endblock %}
