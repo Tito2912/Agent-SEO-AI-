@@ -141,9 +141,22 @@
         <div style="margin-top:14px;">
           <p class="muted small" style="margin-bottom:4px;">URLs réelles affectées</p>
           {% for u in fix_suggestion.sample_urls %}
+            {% set _gh = gh_tasks.get(u) if gh_tasks else none %}
+            {% set _gh_pr = _gh.pr if _gh else none %}
             <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <a href="{{ u }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;min-width:0;word-break:break-all;">{{ u }}</a>
+                {# ── GitHub PR badge ── #}
+                {% if _gh_pr and _gh_pr.pr_url %}
+                  {% if _gh.status == 'done' %}
+                    <span class="badge ok" style="font-size:10px;padding:2px 7px;">✓ Corrigé</span>
+                  {% else %}
+                    <span class="badge warning" style="font-size:10px;padding:2px 7px;">PR en cours</span>
+                  {% endif %}
+                  <a href="{{ _gh_pr.pr_url }}" target="_blank" rel="noreferrer"
+                     style="font-size:11px;color:var(--muted);text-decoration:none;padding:2px 7px;border:1px solid var(--border);border-radius:4px;font-family:monospace;"
+                     title="Voir le commit">{% if _gh_pr.pr_number %}#{{ _gh_pr.pr_number }}{% endif %}{% if _gh_pr.commit_sha %} {{ _gh_pr.commit_sha }}{% endif %} ↗</a>
+                {% endif %}
                 <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
                   data-url="{{ u }}"
                   data-issue="{{ project.issue.key }}"

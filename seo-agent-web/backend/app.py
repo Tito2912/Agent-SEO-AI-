@@ -13001,6 +13001,27 @@ def project_issue_detail(
             site_name=str(proj_row.site_name or slug),
             base_url=str(proj_row.base_url or ""),
         )
+    # Load existing GitHub PR tasks for this issue (keyed by URL)
+    gh_tasks: dict[str, dict[str, Any]] = {}
+    try:
+        with DB.session() as _db:
+            _tasks = list(_db.scalars(
+                select(IssueTask).where(
+                    IssueTask.project_id == proj_row.id,
+                    IssueTask.issue_key == issue_key,
+                )
+            ))
+        for _t in _tasks:
+            if not _t.url:
+                continue
+            try:
+                _note_data = json.loads(_t.note) if _t.note else {}
+            except Exception:
+                _note_data = {}
+            gh_tasks[_t.url] = {"status": _t.status, "pr": _note_data}
+    except Exception:
+        pass
+
     resp = templates.TemplateResponse(
         "issue_detail.html",
         {
@@ -13013,6 +13034,7 @@ def project_issue_detail(
             "q": (q or ""),
             "fix_suggestion": fix_suggestion,
             "fix_suggestions_path": fix_path,
+            "gh_tasks": gh_tasks,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -13174,6 +13196,38 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             pr_number = pr_data.get("number", "")
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
+        # Auto-record the PR as an IssueTask so the issue detail page shows it
+        try:
+            _pr_note = json.dumps({
+                "pr_url": pr_url, "pr_title": pr_title,
+                "pr_number": int(pr_number) if pr_number else 0,
+                "commit_sha": commit_sha[:7] if commit_sha else "",
+                "commit_url": commit_url, "branch": fix_branch, "file": body.file_path,
+            }, ensure_ascii=False)
+            with DB.session() as _db2:
+                _existing = _db2.scalar(select(IssueTask).where(
+                    IssueTask.project_id == proj.id,
+                    IssueTask.issue_key == issue_key,
+                    IssueTask.url == url,
+                ))
+                if _existing:
+                    _existing.status = "in_progress"
+                    _existing.note = _pr_note
+                    _existing.issue_label = issue_label
+                else:
+                    _db2.add(IssueTask(
+                        project_id=str(proj.id),
+                        user_id=str(getattr(user, "id", "") or ""),
+                        issue_key=issue_key, issue_label=issue_label,
+                        crawl_ts=str(body.crawl_ts or ""), url=url,
+                        status="in_progress", severity=str(
+                            (dash.issue_meta(issue_key).severity if dash.issue_meta(issue_key) else None) or "notice"
+                        ),
+                        note=_pr_note,
+                    ))
+                _db2.commit()
+        except Exception:
+            pass
         return JSONResponse({
             "ok": True,
             "pr_url": pr_url,
