@@ -53,6 +53,22 @@
 }
 .res-reply-status { font-size:11px;color:var(--muted);margin:4px 0;min-height:16px; }
 
+/* ── Queue cards ── */
+.queue-card {
+  border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;
+  transition:border-color .15s;
+}
+.queue-card:hover { border-color:var(--border-2); }
+.queue-card.approved { border-left:3px solid #34d399; }
+.queue-card.pending  { border-left:3px solid #a5b4fc; }
+.queue-card-header { display:flex;align-items:flex-start;gap:10px;padding:13px 15px; }
+.queue-card-body   { padding:0 15px 13px; }
+.queue-card-title  { font-size:13px;font-weight:600;flex:1;word-break:break-word;line-height:1.4; }
+.queue-card-url    { font-size:11px;color:var(--muted);font-family:monospace;margin:3px 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.queue-status-badge { display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;flex-shrink:0; }
+.queue-status-badge.pending  { background:rgba(129,140,248,.15);color:#a5b4fc; }
+.queue-status-badge.approved { background:rgba(16,185,129,.15);color:#34d399; }
+
 /* ── Saved opportunity cards ── */
 .opp-saved-card {
   border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;
@@ -103,6 +119,40 @@
 
 /* ── Pagination ── */
 .opp-pagination { display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px; }
+
+/* ── Auto-settings form ── */
+.auto-settings-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+@media(max-width:600px){ .auto-settings-grid { grid-template-columns:1fr; } }
+.auto-field { display:flex;flex-direction:column;gap:5px; }
+.auto-field label { font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em; }
+.auto-field input, .auto-field select, .auto-field textarea {
+  padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);font-size:12px;
+}
+.auto-field input:focus, .auto-field select:focus, .auto-field textarea:focus { outline:none;border-color:var(--accent); }
+.auto-field .hint { font-size:11px;color:var(--muted); }
+.toggle-row { display:flex;align-items:center;gap:10px;padding:10px 0; }
+.toggle-switch { position:relative;width:38px;height:20px;flex-shrink:0; }
+.toggle-switch input { opacity:0;width:0;height:0; }
+.toggle-slider {
+  position:absolute;inset:0;border-radius:20px;background:var(--border-2);cursor:pointer;transition:background .2s;
+}
+.toggle-slider:before {
+  content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;
+  top:3px;left:3px;transition:transform .2s;
+}
+.toggle-switch input:checked + .toggle-slider { background:var(--accent); }
+.toggle-switch input:checked + .toggle-slider:before { transform:translateX(18px); }
+.toggle-label { font-size:13px;font-weight:500; }
+.toggle-hint { font-size:11px;color:var(--muted); }
+.reddit-creds-card {
+  background:rgba(255,86,0,.04);border:1px solid rgba(255,86,0,.15);border-radius:8px;padding:14px 16px;margin-top:14px;
+}
+.auto-section-title {
+  font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+}
+.auto-section-title::after { content:"";flex:1;height:1px;background:var(--border); }
 </style>
 {% endblock %}
 
@@ -137,13 +187,82 @@
 
 <div class="page-header">
   <h1>Opportunités de backlinks</h1>
-  <p class="muted">{{ project.site_name }} · Reddit &amp; Google via SerpAPI · Réponses IA</p>
+  <p class="muted">{{ project.site_name }} · Reddit &amp; Google · Recherche automatique &amp; publication avec quotas</p>
 </div>
 
 {% if msg %}<div class="alert ok" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>{% endif %}
 {% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>{% endif %}
 
 <div class="opp-page">
+
+{# ── File d'attente ── #}
+{% if queue_items %}
+<section class="card">
+  <div class="card-title-row" style="margin-bottom:14px;">
+    <div>
+      <h2>File de publication</h2>
+      <p class="muted small" style="margin-top:2px;">Drafts IA en attente de validation · approuve pour publier sur Reddit</p>
+    </div>
+    {# Quota posts today #}
+    {% set max_ppd = auto_cfg.max_posts_per_day %}
+    {% set pct_p = [(posts_today / max_ppd * 100)|int, 100]|min if max_ppd else 0 %}
+    <div class="quota-item">
+      <span>{{ posts_today }}/{{ max_ppd }} posts aujourd'hui</span>
+      <div class="quota-bar-wrap">
+        <div class="quota-bar-fill" style="width:{{ pct_p }}%;background:{% if pct_p < 60 %}var(--accent){% elif pct_p < 90 %}#f59e0b{% else %}var(--err){% endif %};"></div>
+      </div>
+    </div>
+  </div>
+
+  {% for qopp in queue_items %}
+  {% set is_reddit = 'reddit.com' in (qopp.url or '') %}
+  <div class="queue-card {{ qopp.queue_status }}" id="qcard-{{ qopp.id }}">
+    <div class="queue-card-header">
+      <span class="queue-status-badge {{ qopp.queue_status }}">{{ '✓ Approuvé' if qopp.queue_status == 'approved' else '⏳ En attente' }}</span>
+      <span class="res-source-badge {{ qopp.source }}">{{ qopp.source|upper }}</span>
+      <div style="flex:1;min-width:0;">
+        <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="queue-card-title">{{ qopp.title[:90] }}{% if qopp.title|length > 90 %}…{% endif %}</a>
+        <div class="queue-card-url" title="{{ qopp.url }}">{{ qopp.url }}</div>
+        {% set sc = qopp.opportunity_score %}
+        {% set sc_col = '#34d399' if sc >= 70 else '#f59e0b' if sc >= 40 else '#f87171' %}
+        <div class="score-bar-wrap">
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:{{ sc }}%;background:{{ sc_col }};"></div></div>
+          <span class="score-label" style="color:{{ sc_col }};">{{ sc }}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;">
+        {% if qopp.queue_status == 'pending' %}
+          <button type="button" class="btn small" style="font-size:11px;background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3);"
+            onclick="queueAction('{{ qopp.id }}','approve')">✓ Approuver</button>
+          <button type="button" class="btn small" style="font-size:11px;"
+            onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
+        {% else %}
+          {% if is_reddit and has_reddit %}
+            <button type="button" class="btn small primary" style="font-size:11px;"
+              id="post-btn-{{ qopp.id }}" onclick="queuePost('{{ qopp.id }}')">Publier sur Reddit</button>
+          {% elif is_reddit and not has_reddit %}
+            <span class="muted" style="font-size:11px;" title="Configure tes identifiants Reddit dans Automatisation">Reddit non configuré</span>
+          {% else %}
+            <span class="muted" style="font-size:11px;">Approuvé (pub manuelle)</span>
+          {% endif %}
+          <button type="button" class="btn small" style="font-size:11px;"
+            onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
+        {% endif %}
+      </div>
+    </div>
+    {% if qopp.reply %}
+    <div class="queue-card-body">
+      <details>
+        <summary class="reply-toggle">▶ Voir le draft IA</summary>
+        <pre class="opp-reply-pre" style="margin-top:8px;">{{ qopp.reply }}</pre>
+      </details>
+    </div>
+    {% endif %}
+    <div id="qcard-msg-{{ qopp.id }}" style="padding:0 15px 10px;font-size:11px;color:var(--muted);display:none;"></div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
 
 {# ── Search ── #}
 <section class="card">
@@ -175,7 +294,6 @@
     </div>
   </div>
 
-  {# Search input + source toggle #}
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
     <input id="opp-query" class="input" type="text" placeholder="Ex: meilleur outil SEO gratuit…" style="flex:1;min-width:200px;" />
     <div class="src-toggle">
@@ -218,28 +336,26 @@
     {% endif %}
   </div>
   {% else %}
-  {% set status_labels = {'new':'Nouveau','contacted':'Contacté','won':'Obtenu','lost':'Perdu'} %}
   {% for opp in opportunities %}
   <div class="opp-saved-card">
     <div class="opp-saved-header">
-      {# Source badge #}
       <span class="res-source-badge {{ opp.source }}">{{ opp.source|upper }}</span>
-      {# Title + meta #}
       <div style="flex:1;min-width:0;">
         <a href="{{ opp.url }}" target="_blank" rel="noreferrer" class="opp-saved-title">{{ opp.title[:90] }}{% if opp.title|length > 90 %}…{% endif %}</a>
         <div class="opp-saved-url" title="{{ opp.url }}">{{ opp.url }}</div>
         {% if opp.target_url %}
         <div class="opp-saved-target">→ {{ opp.target_url[:70] }}{% if opp.target_url|length > 70 %}…{% endif %}</div>
         {% endif %}
-        {# Score bar #}
         {% set sc = opp.opportunity_score %}
         {% set sc_col = '#34d399' if sc >= 70 else '#f59e0b' if sc >= 40 else '#f87171' %}
         <div class="score-bar-wrap">
           <div class="score-bar-track"><div class="score-bar-fill" style="width:{{ sc }}%;background:{{ sc_col }};"></div></div>
           <span class="score-label" style="color:{{ sc_col }};">{{ sc }}</span>
         </div>
+        {% if opp.queue_status == 'posted' %}
+        <span style="font-size:10px;color:#34d399;font-weight:700;">✓ Publié{% if opp.posted_at %} le {{ opp.posted_at.strftime('%d/%m %H:%M') }}{% endif %}</span>
+        {% endif %}
       </div>
-      {# Actions #}
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
         <a href="{{ opp.url }}" target="_blank" rel="noreferrer" class="btn small" style="font-size:11px;">Ouvrir ↗</a>
         <form method="post" action="/projects/{{ slug }}/backlinks/opportunities/{{ opp.id }}/delete"
@@ -250,17 +366,15 @@
       </div>
     </div>
     <div class="opp-saved-body">
-      {# Status segmented control #}
       <div class="status-seg" data-opp-id="{{ opp.id }}" data-current="{{ opp.status }}">
         {% for st, lbl in [('new','Nouveau'),('contacted','Contacté'),('won','Obtenu ✓'),('lost','Perdu')] %}
         <button type="button" class="status-seg-btn {% if opp.status == st %}active-{{ st }}{% endif %}"
                 data-status="{{ st }}">{{ lbl }}</button>
         {% endfor %}
       </div>
-      {# Reply accordion #}
       {% if opp.reply %}
       <details style="margin-top:10px;">
-        <summary class="reply-toggle">▶ Voir la réponse IA générée</summary>
+        <summary class="reply-toggle">▶ Voir la réponse IA</summary>
         <pre class="opp-reply-pre" style="margin-top:8px;">{{ opp.reply }}</pre>
       </details>
       {% endif %}
@@ -276,6 +390,165 @@
   </div>
   {% endif %}
   {% endif %}
+</section>
+
+{# ── Automatisation settings ── #}
+<section class="card">
+  <details {% if auto_cfg.enabled %}open{% endif %}>
+    <summary style="cursor:pointer;display:flex;align-items:center;gap:10px;list-style:none;user-select:none;">
+      <h2 style="margin:0;">Automatisation</h2>
+      {% if auto_cfg.enabled %}
+        <span class="badge ok" style="font-size:10px;">Activée</span>
+      {% else %}
+        <span class="badge" style="font-size:10px;background:var(--border-2);color:var(--muted);">Désactivée</span>
+      {% endif %}
+      <span class="muted small" style="margin-left:auto;margin-right:4px;">▼</span>
+    </summary>
+
+    <div style="margin-top:16px;">
+
+    {# ── Auto-search ── #}
+    <div class="auto-section-title">Recherche automatique</div>
+    <div class="auto-settings-grid" style="margin-bottom:16px;">
+
+      <div class="auto-field" style="grid-column:1/-1;">
+        <label>Mots-clés (1 par ligne, max 20)</label>
+        <textarea id="as-keywords" rows="4" placeholder="meilleur outil SEO&#10;alternative à Ahrefs&#10;comment améliorer son référencement">{{ auto_cfg.keywords | join('\n') }}</textarea>
+        <span class="hint">L'agent cherchera ces mots-clés sur Reddit et Google.</span>
+      </div>
+
+      <div class="auto-field">
+        <label>Fréquence</label>
+        <select id="as-frequency">
+          <option value="daily"  {% if auto_cfg.frequency == 'daily'  %}selected{% endif %}>Quotidienne</option>
+          <option value="weekly" {% if auto_cfg.frequency == 'weekly' %}selected{% endif %}>Hebdomadaire</option>
+        </select>
+      </div>
+
+      <div class="auto-field">
+        <label>Max opportunités / run</label>
+        <input type="number" id="as-max-per-run" min="1" max="20" value="{{ auto_cfg.max_per_run }}" />
+      </div>
+
+      <div style="grid-column:1/-1;">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="as-src-reddit" {% if 'reddit' in auto_cfg.sources %}checked{% endif %} />
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Reddit</span>
+          <label class="toggle-switch" style="margin-left:16px;">
+            <input type="checkbox" id="as-src-google" {% if 'google' in auto_cfg.sources %}checked{% endif %} />
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Google</span>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="as-auto-draft" {% if auto_cfg.auto_draft %}checked{% endif %} />
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Générer un draft IA automatiquement</span>
+          <span class="toggle-hint" style="margin-left:8px;">(consomme des crédits réponses)</span>
+        </div>
+      </div>
+
+      <div style="grid-column:1/-1;">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="as-enabled" {% if auto_cfg.enabled %}checked{% endif %} />
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" style="font-weight:700;">Activer la recherche automatique</span>
+        </div>
+      </div>
+    </div>
+
+    {# ── Auto-post ── #}
+    <div class="auto-section-title">Publication automatique</div>
+    <div class="auto-settings-grid" style="margin-bottom:16px;">
+
+      <div style="grid-column:1/-1;">
+        <div class="toggle-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="as-auto-post" {% if auto_cfg.auto_post %}checked{% endif %} />
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">Publier automatiquement les opportunités approuvées</span>
+        </div>
+        <p class="muted small" style="margin:4px 0 0 48px;">Le cron postera les drafts approuvés en respectant les limites ci-dessous.</p>
+      </div>
+
+      <div class="auto-field">
+        <label>Max posts / jour</label>
+        <input type="number" id="as-max-posts-day" min="1" max="10" value="{{ auto_cfg.max_posts_per_day }}" />
+      </div>
+
+      <div class="auto-field">
+        <label>Délai minimum entre 2 posts (heures)</label>
+        <input type="number" id="as-min-interval" min="1" max="24" value="{{ auto_cfg.min_interval_hours }}" />
+      </div>
+
+      <div class="auto-field" style="grid-column:1/-1;">
+        <label>Cooldown par subreddit (heures)</label>
+        <input type="number" id="as-sub-cooldown" min="1" max="168" value="{{ auto_cfg.subreddit_cooldown_hours }}" style="max-width:160px;" />
+        <span class="hint">Évite de poster dans le même subreddit trop souvent.</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+      <button type="button" class="btn primary" id="btn-save-auto-settings">Enregistrer les paramètres</button>
+      <span id="auto-settings-status" class="muted small" style="align-self:center;"></span>
+    </div>
+
+    {# ── Reddit credentials ── #}
+    <div class="auto-section-title">Identifiants Reddit OAuth</div>
+    <div class="reddit-creds-card">
+      {% if has_reddit %}
+      <p class="muted small" style="margin:0 0 10px;">
+        <span class="badge ok" style="font-size:10px;">Configuré</span>
+        Identifiants Reddit enregistrés. Mets à jour ci-dessous si nécessaire.
+      </p>
+      {% else %}
+      <p class="muted small" style="margin:0 0 10px;">
+        <span class="badge notice" style="font-size:10px;">Non configuré</span>
+        Configure une app Reddit Script pour publier automatiquement.
+        <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noreferrer" style="color:var(--accent);">Créer une app Reddit →</a>
+      </p>
+      {% endif %}
+      <div class="auto-settings-grid">
+        <div class="auto-field">
+          <label>Client ID</label>
+          <input type="text" id="rdt-client-id" placeholder="Votre client_id Reddit" autocomplete="off" />
+        </div>
+        <div class="auto-field">
+          <label>Client Secret</label>
+          <input type="password" id="rdt-client-secret" placeholder="Votre client_secret Reddit" autocomplete="off" />
+        </div>
+        <div class="auto-field">
+          <label>Nom d'utilisateur Reddit</label>
+          <input type="text" id="rdt-username" placeholder="u/moncompte" autocomplete="off" />
+        </div>
+        <div class="auto-field">
+          <label>Mot de passe Reddit</label>
+          <input type="password" id="rdt-password" placeholder="Mot de passe du compte" autocomplete="off" />
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+        <button type="button" class="btn" id="btn-save-reddit-creds">Enregistrer les identifiants</button>
+        <span id="reddit-creds-status" class="muted small"></span>
+      </div>
+      <p class="muted small" style="margin:8px 0 0;">
+        Type d'app : <strong>script</strong>. Redirect URI : <code>http://localhost:8080</code> (non utilisée). Les credentials sont stockés chiffrés.
+      </p>
+    </div>
+
+    {% if auto_cfg.last_run %}
+    <p class="muted small" style="margin-top:14px;">Dernière exécution : {{ auto_cfg.last_run[:16] | replace('T',' ') }} UTC</p>
+    {% endif %}
+
+    </div>{# end details body #}
+  </details>
 </section>
 
 </div>{# end opp-page #}
@@ -297,12 +570,11 @@
 
   /* ── Search ── */
   function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
   function scoreColor(sc){ return sc>=70?'#34d399':sc>=40?'#f59e0b':'#f87171'; }
 
   function renderResults(items){
     var el = document.getElementById('search-results');
-    if(!items.length){ el.innerHTML='<div class="opp-empty"><div class="opp-empty-icon">🔍</div><p>Aucun résultat trouvé pour cette requête.</p></div>'; return; }
+    if(!items.length){ el.innerHTML='<div class="opp-empty"><div class="opp-empty-icon">🔍</div><p>Aucun résultat trouvé.</p></div>'; return; }
     el.innerHTML = items.map(function(item, i){
       var sc = item.opportunity_score;
       var col = scoreColor(sc);
@@ -365,8 +637,10 @@
     document.getElementById('save-form-'+i).appendChild(f); f.submit();
   };
 
-  document.getElementById('btn-search').addEventListener('click', function(){ doSearch(activeSource); });
-  document.getElementById('opp-query').addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(activeSource); });
+  var btnSearch = document.getElementById('btn-search');
+  if(btnSearch) btnSearch.addEventListener('click', function(){ doSearch(activeSource); });
+  var queryInput = document.getElementById('opp-query');
+  if(queryInput) queryInput.addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(activeSource); });
 
   function doSearch(source){
     var q = (document.getElementById('opp-query')||{}).value||'';
@@ -415,6 +689,108 @@
       if(s) s.textContent = (d.open ? '▼' : '▶') + s.textContent.slice(1);
     });
   });
+
+  /* ── Queue actions ── */
+  window.queueAction = function(oppId, action){
+    fetch('/api/projects/'+slug+'/backlinks/queue/'+oppId+'/'+action,{
+      method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
+      body:'{}'
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d.ok){ window.location.reload(); }
+      else {
+        var msgEl = document.getElementById('qcard-msg-'+oppId);
+        if(msgEl){ msgEl.textContent='❌ '+(d.error||'Erreur'); msgEl.style.display='block'; }
+      }
+    }).catch(function(e){
+      var msgEl = document.getElementById('qcard-msg-'+oppId);
+      if(msgEl){ msgEl.textContent='❌ Erreur réseau'; msgEl.style.display='block'; }
+    });
+  };
+
+  window.queuePost = function(oppId){
+    var btn = document.getElementById('post-btn-'+oppId);
+    if(btn){ btn.disabled=true; btn.textContent='Publication…'; }
+    fetch('/api/projects/'+slug+'/backlinks/queue/'+oppId+'/post',{
+      method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
+      body:'{}'
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d.ok){
+        if(btn){ btn.textContent='✓ Publié !'; btn.style.background='var(--accent)'; }
+        setTimeout(function(){ window.location.reload(); }, 1800);
+      } else {
+        if(btn){ btn.disabled=false; btn.textContent='Publier sur Reddit'; }
+        var msgEl = document.getElementById('qcard-msg-'+oppId);
+        if(msgEl){ msgEl.textContent='❌ '+(d.error||'Erreur'); msgEl.style.display='block'; }
+      }
+    }).catch(function(){
+      if(btn){ btn.disabled=false; btn.textContent='Publier sur Reddit'; }
+    });
+  };
+
+  /* ── Auto-settings save ── */
+  var btnSaveAuto = document.getElementById('btn-save-auto-settings');
+  if(btnSaveAuto) btnSaveAuto.addEventListener('click', function(){
+    var statusEl = document.getElementById('auto-settings-status');
+    var sources = [];
+    if(document.getElementById('as-src-reddit').checked) sources.push('reddit');
+    if(document.getElementById('as-src-google').checked) sources.push('google');
+    var body = {
+      enabled: document.getElementById('as-enabled').checked,
+      keywords: (document.getElementById('as-keywords')||{}).value||'',
+      sources: sources,
+      frequency: (document.getElementById('as-frequency')||{}).value||'daily',
+      max_per_run: parseInt((document.getElementById('as-max-per-run')||{}).value||'10'),
+      auto_draft: document.getElementById('as-auto-draft').checked,
+      auto_post: document.getElementById('as-auto-post').checked,
+      max_posts_per_day: parseInt((document.getElementById('as-max-posts-day')||{}).value||'3'),
+      min_interval_hours: parseInt((document.getElementById('as-min-interval')||{}).value||'2'),
+      subreddit_cooldown_hours: parseInt((document.getElementById('as-sub-cooldown')||{}).value||'48'),
+    };
+    btnSaveAuto.disabled=true;
+    statusEl.textContent='Enregistrement…';
+    fetch('/api/projects/'+slug+'/backlinks/auto-settings',{
+      method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
+      body: JSON.stringify(body)
+    }).then(function(r){return r.json();}).then(function(d){
+      btnSaveAuto.disabled=false;
+      statusEl.textContent = d.ok ? '✓ Paramètres enregistrés' : '❌ '+(d.error||'Erreur');
+      if(d.ok) setTimeout(function(){ statusEl.textContent=''; }, 3000);
+    }).catch(function(){
+      btnSaveAuto.disabled=false;
+      statusEl.textContent='❌ Erreur réseau';
+    });
+  });
+
+  /* ── Reddit credentials save ── */
+  var btnSaveReddit = document.getElementById('btn-save-reddit-creds');
+  if(btnSaveReddit) btnSaveReddit.addEventListener('click', function(){
+    var statusEl = document.getElementById('reddit-creds-status');
+    var body = {
+      client_id:     (document.getElementById('rdt-client-id')||{}).value||'',
+      client_secret: (document.getElementById('rdt-client-secret')||{}).value||'',
+      username:      (document.getElementById('rdt-username')||{}).value||'',
+      password:      (document.getElementById('rdt-password')||{}).value||'',
+    };
+    btnSaveReddit.disabled=true;
+    statusEl.textContent='Enregistrement…';
+    fetch('/api/projects/'+slug+'/backlinks/reddit-credentials',{
+      method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
+      body: JSON.stringify(body)
+    }).then(function(r){return r.json();}).then(function(d){
+      btnSaveReddit.disabled=false;
+      statusEl.textContent = d.ok ? '✓ Identifiants enregistrés' : '❌ '+(d.error||'Erreur');
+      if(d.ok){
+        ['rdt-client-id','rdt-client-secret','rdt-username','rdt-password'].forEach(function(id){
+          var el=document.getElementById(id); if(el) el.value='';
+        });
+        setTimeout(function(){ window.location.reload(); }, 1200);
+      }
+    }).catch(function(){
+      btnSaveReddit.disabled=false;
+      statusEl.textContent='❌ Erreur réseau';
+    });
+  });
+
 })();
 </script>
 

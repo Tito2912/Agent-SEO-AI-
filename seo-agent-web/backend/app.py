@@ -176,7 +176,7 @@ _CSRF_COOKIE_NAME = "seo_agent_csrf"
 _CSRF_FORM_FIELD = "_csrf"
 _CSRF_HEADER_NAME = "x-csrf-token"
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot"}
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/auto-search-backlinks", "/cron/auto-post-backlinks"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -15419,6 +15419,31 @@ def project_backlinks_opportunities(
     project_ctx = {"slug": slug, "site_name": proj.site_name, "base_url": proj.base_url}
     pages_total = max(1, math.ceil(total / page_size))
 
+    auto_cfg = _backlinks_auto_cfg(proj.settings or {})
+    has_reddit = bool(_get_reddit_creds(str(user.id)))
+
+    queue_items: list[BacklinkOpportunity] = []
+    posts_today = 0
+    if has_access:
+        with DB.session() as db2:
+            queue_items = list(db2.scalars(
+                select(BacklinkOpportunity)
+                .where(
+                    BacklinkOpportunity.project_id == str(proj.id),
+                    BacklinkOpportunity.user_id == str(user.id),
+                    BacklinkOpportunity.queue_status.in_(["pending", "approved"]),
+                )
+                .order_by(BacklinkOpportunity.opportunity_score.desc(), BacklinkOpportunity.created_at.desc())
+            ))
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            posts_today = int(db2.scalar(
+                select(func.count()).where(
+                    BacklinkOpportunity.user_id == str(user.id),
+                    BacklinkOpportunity.queue_status == "posted",
+                    BacklinkOpportunity.posted_at >= today_start,
+                )
+            ) or 0)
+
     resp = templates.TemplateResponse(
         "backlinks_opportunities.html",
         {
@@ -15436,6 +15461,10 @@ def project_backlinks_opportunities(
             "page_size": page_size,
             "search_remaining": search_remaining,
             "reply_remaining": reply_remaining,
+            "auto_cfg": auto_cfg,
+            "has_reddit": has_reddit,
+            "queue_items": queue_items,
+            "posts_today": posts_today,
             "msg": msg or "",
             "err": err or "",
         },
@@ -15720,6 +15749,270 @@ def backlinks_opportunity_status(
 
 
 # ---------------------------------------------------------------------------
+# Backlink automation — Reddit helpers
+# ---------------------------------------------------------------------------
+
+def _get_reddit_creds(user_id: str) -> dict | None:
+    client_id = _effective_user_connection_value(user_id, key="REDDIT_CLIENT_ID")
+    client_secret = _effective_user_connection_value(user_id, key="REDDIT_CLIENT_SECRET")
+    username = _effective_user_connection_value(user_id, key="REDDIT_USERNAME")
+    password = _effective_user_connection_value(user_id, key="REDDIT_PASSWORD")
+    if not (client_id and client_secret and username and password):
+        return None
+    return {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "username": username,
+        "password": password,
+        "user_agent": f"SEOAgent/1.0 by u/{username}",
+    }
+
+
+def _reddit_get_token(creds: dict) -> str:
+    resp = requests.post(
+        "https://www.reddit.com/api/v1/access_token",
+        auth=(creds["client_id"], creds["client_secret"]),
+        data={"grant_type": "password", "username": creds["username"], "password": creds["password"]},
+        headers={"User-Agent": creds["user_agent"]},
+        timeout=12,
+    )
+    data = resp.json()
+    if not resp.ok or "access_token" not in data:
+        raise ValueError(f"Reddit auth failed: {data.get('error', resp.status_code)}")
+    return str(data["access_token"])
+
+
+def _reddit_post_comment(opp_url: str, reply_text: str, creds: dict) -> dict:
+    m = re.search(r"/comments/([a-z0-9]+)", opp_url.lower())
+    if not m:
+        raise ValueError("Impossible d'extraire l'ID du post Reddit depuis l'URL")
+    post_id = m.group(1)
+    token = _reddit_get_token(creds)
+    resp = requests.post(
+        "https://oauth.reddit.com/api/comment",
+        headers={"Authorization": f"bearer {token}", "User-Agent": creds["user_agent"]},
+        data={"api_type": "json", "thing_id": f"t3_{post_id}", "text": reply_text},
+        timeout=15,
+    )
+    data = resp.json()
+    if not resp.ok:
+        raise ValueError(f"Reddit API error {resp.status_code}: {data}")
+    errors = ((data.get("json") or {}).get("errors")) or []
+    if errors:
+        raise ValueError(f"Reddit errors: {errors}")
+    things = ((data.get("json") or {}).get("data") or {}).get("things") or []
+    comment_id = (things[0].get("data") or {}).get("id", "") if things else ""
+    return {"comment_id": comment_id}
+
+
+def _backlinks_auto_cfg(proj_settings: dict) -> dict:
+    cfg = (proj_settings or {}).get("backlinks_auto") or {}
+    return {
+        "enabled": bool(cfg.get("enabled", False)),
+        "keywords": cfg.get("keywords") or [],
+        "sources": cfg.get("sources") or ["reddit", "google"],
+        "frequency": cfg.get("frequency", "daily"),
+        "max_per_run": int(cfg.get("max_per_run", 10)),
+        "auto_draft": bool(cfg.get("auto_draft", True)),
+        "auto_post": bool(cfg.get("auto_post", False)),
+        "max_posts_per_day": int(cfg.get("max_posts_per_day", 3)),
+        "min_interval_hours": int(cfg.get("min_interval_hours", 2)),
+        "subreddit_cooldown_hours": int(cfg.get("subreddit_cooldown_hours", 48)),
+        "last_run": cfg.get("last_run"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Backlink automation — API routes (settings, queue)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/projects/{slug}/backlinks/auto-settings")
+async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    with DB.session() as db:
+        if not _opp_has_access(db, user_id=str(user.id)):
+            return JSONResponse({"ok": False, "error": "Plan Solo+ requis"}, status_code=403)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "JSON invalide"}, status_code=400)
+
+    enabled = bool(body.get("enabled", False))
+    keywords_raw = str(body.get("keywords") or "").strip()
+    keywords = [k.strip() for k in keywords_raw.splitlines() if k.strip()][:20]
+    sources_raw = body.get("sources") or ["reddit", "google"]
+    sources = [s for s in (sources_raw if isinstance(sources_raw, list) else []) if s in {"reddit", "google"}] or ["reddit", "google"]
+    frequency = "weekly" if body.get("frequency") == "weekly" else "daily"
+    max_per_run = max(1, min(20, int(body.get("max_per_run") or 10)))
+    auto_draft = bool(body.get("auto_draft", True))
+    auto_post = bool(body.get("auto_post", False))
+    max_posts_per_day = max(1, min(10, int(body.get("max_posts_per_day") or 3)))
+    min_interval_hours = max(1, min(24, int(body.get("min_interval_hours") or 2)))
+    subreddit_cooldown_hours = max(1, min(168, int(body.get("subreddit_cooldown_hours") or 48)))
+
+    with DB.session() as db:
+        p = db.scalar(select(Project).where(Project.id == proj.id))
+        if not p:
+            return JSONResponse({"ok": False, "error": "Projet introuvable"}, status_code=404)
+        settings = dict(p.settings or {})
+        existing_cfg = settings.get("backlinks_auto") or {}
+        settings["backlinks_auto"] = {
+            "enabled": enabled,
+            "keywords": keywords,
+            "sources": sources,
+            "frequency": frequency,
+            "max_per_run": max_per_run,
+            "auto_draft": auto_draft,
+            "auto_post": auto_post,
+            "max_posts_per_day": max_posts_per_day,
+            "min_interval_hours": min_interval_hours,
+            "subreddit_cooldown_hours": subreddit_cooldown_hours,
+            "last_run": existing_cfg.get("last_run"),
+        }
+        p.settings = settings
+        db.add(p)
+        db.commit()
+
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/projects/{slug}/backlinks/reddit-credentials")
+async def backlinks_reddit_credentials_save(request: Request, slug: str) -> JSONResponse:
+    _db_project_or_404(request, slug)
+    user = request.state.user
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "JSON invalide"}, status_code=400)
+
+    fields = {
+        "REDDIT_CLIENT_ID": str(body.get("client_id") or "").strip(),
+        "REDDIT_CLIENT_SECRET": str(body.get("client_secret") or "").strip(),
+        "REDDIT_USERNAME": str(body.get("username") or "").strip(),
+        "REDDIT_PASSWORD": str(body.get("password") or "").strip(),
+    }
+    if not all(fields.values()):
+        return JSONResponse({"ok": False, "error": "Tous les champs Reddit sont requis"}, status_code=400)
+
+    with DB.session() as db:
+        for key, val in fields.items():
+            existing = db.scalar(
+                select(UserConnection).where(
+                    UserConnection.user_id == str(user.id),
+                    UserConnection.key == key,
+                )
+            )
+            if existing:
+                existing.secret_value = val
+                db.add(existing)
+            else:
+                db.add(UserConnection(user_id=str(user.id), key=key, secret_value=val))
+        db.commit()
+
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/projects/{slug}/backlinks/queue/{opp_id}/approve")
+def backlinks_queue_approve(request: Request, slug: str, opp_id: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+    with DB.session() as db:
+        opp = db.scalar(select(BacklinkOpportunity).where(
+            BacklinkOpportunity.id == opp_id,
+            BacklinkOpportunity.project_id == str(proj.id),
+            BacklinkOpportunity.user_id == str(user.id),
+        ))
+        if not opp:
+            return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
+        opp.queue_status = "approved"
+        db.add(opp)
+        db.commit()
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/projects/{slug}/backlinks/queue/{opp_id}/reject")
+def backlinks_queue_reject(request: Request, slug: str, opp_id: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+    with DB.session() as db:
+        opp = db.scalar(select(BacklinkOpportunity).where(
+            BacklinkOpportunity.id == opp_id,
+            BacklinkOpportunity.project_id == str(proj.id),
+            BacklinkOpportunity.user_id == str(user.id),
+        ))
+        if not opp:
+            return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
+        opp.queue_status = "rejected"
+        db.add(opp)
+        db.commit()
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/projects/{slug}/backlinks/queue/{opp_id}/post")
+def backlinks_queue_post(request: Request, slug: str, opp_id: str) -> JSONResponse:
+    proj = _db_project_or_404(request, slug)
+    user = request.state.user
+
+    creds = _get_reddit_creds(str(user.id))
+    if not creds:
+        return JSONResponse({"ok": False, "error": "Identifiants Reddit non configurés. Renseigne-les dans les paramètres."}, status_code=400)
+
+    auto_cfg = _backlinks_auto_cfg(proj.settings or {})
+    max_per_day = auto_cfg["max_posts_per_day"]
+
+    with DB.session() as db:
+        opp = db.scalar(select(BacklinkOpportunity).where(
+            BacklinkOpportunity.id == opp_id,
+            BacklinkOpportunity.project_id == str(proj.id),
+            BacklinkOpportunity.user_id == str(user.id),
+        ))
+        if not opp:
+            return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
+        if not opp.reply:
+            return JSONResponse({"ok": False, "error": "Aucun draft de réponse à publier"}, status_code=400)
+        if "reddit.com" not in str(opp.url or "").lower():
+            return JSONResponse({"ok": False, "error": "Publication automatique disponible uniquement pour Reddit"}, status_code=400)
+
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        posts_today = int(db.scalar(
+            select(func.count()).where(
+                BacklinkOpportunity.user_id == str(user.id),
+                BacklinkOpportunity.queue_status == "posted",
+                BacklinkOpportunity.posted_at >= today_start,
+            )
+        ) or 0)
+        if posts_today >= max_per_day:
+            return JSONResponse(
+                {"ok": False, "error": f"Quota journalier atteint ({posts_today}/{max_per_day} posts aujourd'hui)"},
+                status_code=429,
+            )
+
+        opp_url = str(opp.url or "")
+        reply_text = str(opp.reply or "")
+
+    try:
+        result = _reddit_post_comment(opp_url, reply_text, creds)
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
+
+    with DB.session() as db:
+        opp2 = db.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp_id))
+        if opp2:
+            opp2.queue_status = "posted"
+            opp2.posted_at = datetime.now(timezone.utc)
+            opp2.reddit_post_id = result.get("comment_id", "")
+            opp2.status = "contacted"
+            db.add(opp2)
+            db.commit()
+
+    return JSONResponse({"ok": True, "comment_id": result.get("comment_id", "")})
+
+
+# ---------------------------------------------------------------------------
 # Cron Render — vérification automatique des backlinks
 # ---------------------------------------------------------------------------
 
@@ -15815,6 +16108,293 @@ def cron_check_backlinks(request: Request) -> JSONResponse:
         "errors": len(check_errors),
         "error_details": check_errors[:10],
     })
+
+
+# ---------------------------------------------------------------------------
+# Cron Render — recherche automatique d'opportunités de backlinks
+# ---------------------------------------------------------------------------
+
+def _cron_auth_check(request: Request) -> bool:
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return False
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    return bool(token) and hmac.compare_digest(token, cron_secret)
+
+
+@app.get("/cron/auto-search-backlinks")
+def cron_auto_search_backlinks(request: Request) -> JSONResponse:
+    if not os.environ.get("CRON_SECRET"):
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    if not _cron_auth_check(request):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+
+    serpapi_key = str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip()
+    openai_key = str(os.environ.get("OPENAI_API_KEY") or "").strip()
+
+    with DB.session() as db:
+        all_projects = list(db.scalars(select(Project)))
+
+    total_found = 0
+    total_drafted = 0
+    project_results: list[dict] = []
+
+    for proj in all_projects:
+        auto_cfg = _backlinks_auto_cfg(proj.settings or {})
+        if not auto_cfg["enabled"] or not auto_cfg["keywords"]:
+            continue
+
+        last_run_str = auto_cfg.get("last_run")
+        if last_run_str:
+            try:
+                last_run = datetime.fromisoformat(last_run_str)
+                hours_since = (datetime.now(timezone.utc) - last_run).total_seconds() / 3600
+                min_hours = 20 if auto_cfg["frequency"] == "daily" else 160
+                if hours_since < min_hours:
+                    continue
+            except Exception:
+                pass
+
+        if not serpapi_key:
+            continue
+
+        user_id = str(proj.owner_user_id)
+        found_this_proj = 0
+        drafted_this_proj = 0
+
+        for kw in auto_cfg["keywords"][:5]:
+            for src in auto_cfg["sources"]:
+                search_q = f"site:reddit.com {kw}" if src == "reddit" else kw
+                try:
+                    resp = requests.get(
+                        "https://serpapi.com/search.json",
+                        params={"engine": "google", "q": search_q, "api_key": serpapi_key, "num": "10", "hl": "en"},
+                        timeout=20,
+                    )
+                    data = resp.json()
+                    if not resp.ok:
+                        continue
+                except Exception:
+                    continue
+
+                for r in (data.get("organic_results") or []):
+                    opp_url = str(r.get("link") or "").strip()
+                    if not opp_url:
+                        continue
+                    title = str(r.get("title") or "Untitled")
+                    snippet = str(r.get("snippet") or "")
+                    score = _score_opportunity(src, title, opp_url, snippet, kw)
+
+                    with DB.session() as db2:
+                        existing = db2.scalar(
+                            select(BacklinkOpportunity).where(
+                                BacklinkOpportunity.project_id == str(proj.id),
+                                BacklinkOpportunity.url == opp_url,
+                            )
+                        )
+                        if existing:
+                            continue
+                        new_opp = BacklinkOpportunity(
+                            project_id=str(proj.id),
+                            user_id=user_id,
+                            source=src,
+                            title=title,
+                            url=opp_url,
+                            snippet=snippet or None,
+                            opportunity_score=score,
+                            status="new",
+                            auto_found=True,
+                            queue_status="pending" if auto_cfg["auto_draft"] else None,
+                        )
+                        db2.add(new_opp)
+                        try:
+                            db2.commit()
+                        except Exception:
+                            db2.rollback()
+                            continue
+                        opp_id = new_opp.id
+                        found_this_proj += 1
+
+                    if auto_cfg["auto_draft"] and openai_key and proj.base_url:
+                        target_url = str(proj.base_url or "").rstrip("/")
+                        system_prompt = (
+                            "Tu es un expert en netlinking. Tu rédiges des réponses naturelles et utiles "
+                            "pour obtenir des backlinks. Sois authentique, apporte de la valeur, et mentionne "
+                            "le lien de façon naturelle. Réponds dans la langue de la discussion."
+                        )
+                        user_prompt = (
+                            f"Discussion : {title}\nURL : {opp_url}\nSite à promouvoir : {target_url}\n\n"
+                            "Rédige une réponse (150-250 mots) qui apporte de la valeur et mentionne "
+                            "naturellement l'URL du site."
+                        )
+                        try:
+                            ai_resp = requests.post(
+                                "https://api.openai.com/v1/chat/completions",
+                                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                                json={
+                                    "model": "gpt-4o-mini",
+                                    "messages": [
+                                        {"role": "system", "content": system_prompt},
+                                        {"role": "user", "content": user_prompt},
+                                    ],
+                                    "max_tokens": 600,
+                                    "temperature": 0.7,
+                                },
+                                timeout=30,
+                            )
+                            ai_data = ai_resp.json()
+                            draft = str(
+                                (((ai_data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
+                            ).strip()
+                            if draft:
+                                with DB.session() as db3:
+                                    opp3 = db3.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp_id))
+                                    if opp3:
+                                        opp3.reply = draft
+                                        db3.add(opp3)
+                                        db3.commit()
+                                drafted_this_proj += 1
+                        except Exception:
+                            pass
+
+                    if found_this_proj >= auto_cfg["max_per_run"]:
+                        break
+                if found_this_proj >= auto_cfg["max_per_run"]:
+                    break
+            if found_this_proj >= auto_cfg["max_per_run"]:
+                break
+
+        with DB.session() as db4:
+            p4 = db4.scalar(select(Project).where(Project.id == proj.id))
+            if p4:
+                settings4 = dict(p4.settings or {})
+                auto4 = dict(settings4.get("backlinks_auto") or {})
+                auto4["last_run"] = datetime.now(timezone.utc).isoformat()
+                settings4["backlinks_auto"] = auto4
+                p4.settings = settings4
+                db4.add(p4)
+                db4.commit()
+
+        total_found += found_this_proj
+        total_drafted += drafted_this_proj
+        project_results.append({"project": str(proj.slug), "found": found_this_proj, "drafted": drafted_this_proj})
+
+    return JSONResponse({"ok": True, "total_found": total_found, "total_drafted": total_drafted, "projects": project_results})
+
+
+@app.get("/cron/auto-post-backlinks")
+def cron_auto_post_backlinks(request: Request) -> JSONResponse:
+    if not os.environ.get("CRON_SECRET"):
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    if not _cron_auth_check(request):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+
+    with DB.session() as db:
+        approved = list(db.scalars(
+            select(BacklinkOpportunity)
+            .where(
+                BacklinkOpportunity.queue_status == "approved",
+                BacklinkOpportunity.reply.isnot(None),
+            )
+            .order_by(BacklinkOpportunity.updated_at.asc())
+            .limit(50)
+        ))
+
+    posted_count = 0
+    skipped_count = 0
+    errors: list[dict] = []
+
+    for opp in approved:
+        if "reddit.com" not in str(opp.url or "").lower():
+            skipped_count += 1
+            continue
+
+        user_id = str(opp.user_id or "")
+        creds = _get_reddit_creds(user_id)
+        if not creds:
+            skipped_count += 1
+            continue
+
+        with DB.session() as db2:
+            p2 = db2.scalar(select(Project).where(Project.id == opp.project_id))
+        if not p2:
+            skipped_count += 1
+            continue
+
+        auto_cfg = _backlinks_auto_cfg(p2.settings or {})
+        if not auto_cfg["auto_post"]:
+            skipped_count += 1
+            continue
+
+        max_per_day = auto_cfg["max_posts_per_day"]
+        min_interval_h = auto_cfg["min_interval_hours"]
+        sub_cooldown_h = auto_cfg["subreddit_cooldown_hours"]
+
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        with DB.session() as db3:
+            posts_today = int(db3.scalar(
+                select(func.count()).where(
+                    BacklinkOpportunity.user_id == user_id,
+                    BacklinkOpportunity.queue_status == "posted",
+                    BacklinkOpportunity.posted_at >= today_start,
+                )
+            ) or 0)
+            if posts_today >= max_per_day:
+                skipped_count += 1
+                continue
+
+            last_post = db3.scalar(
+                select(BacklinkOpportunity)
+                .where(
+                    BacklinkOpportunity.user_id == user_id,
+                    BacklinkOpportunity.queue_status == "posted",
+                )
+                .order_by(BacklinkOpportunity.posted_at.desc())
+                .limit(1)
+            )
+            if last_post and last_post.posted_at:
+                hours_since = (datetime.now(timezone.utc) - last_post.posted_at).total_seconds() / 3600
+                if hours_since < min_interval_h:
+                    skipped_count += 1
+                    continue
+
+            subreddit_m = re.search(r"reddit\.com/r/([^/]+)", str(opp.url or "").lower())
+            if subreddit_m:
+                subreddit = subreddit_m.group(1)
+                cutoff = datetime.now(timezone.utc) - __import__("datetime").timedelta(hours=sub_cooldown_h)
+                recent_sub = db3.scalar(
+                    select(BacklinkOpportunity)
+                    .where(
+                        BacklinkOpportunity.user_id == user_id,
+                        BacklinkOpportunity.queue_status == "posted",
+                        BacklinkOpportunity.posted_at >= cutoff,
+                        BacklinkOpportunity.url.ilike(f"%reddit.com/r/{subreddit}%"),
+                    )
+                    .limit(1)
+                )
+                if recent_sub:
+                    skipped_count += 1
+                    continue
+
+        try:
+            result = _reddit_post_comment(str(opp.url), str(opp.reply), creds)
+        except Exception as exc:
+            errors.append({"opp_id": str(opp.id), "error": str(exc)[:200]})
+            continue
+
+        with DB.session() as db4:
+            opp4 = db4.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp.id))
+            if opp4:
+                opp4.queue_status = "posted"
+                opp4.posted_at = datetime.now(timezone.utc)
+                opp4.reddit_post_id = result.get("comment_id", "")
+                opp4.status = "contacted"
+                db4.add(opp4)
+                db4.commit()
+        posted_count += 1
+
+    return JSONResponse({"ok": True, "posted": posted_count, "skipped": skipped_count, "errors": errors})
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
