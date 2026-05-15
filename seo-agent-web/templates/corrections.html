@@ -157,7 +157,6 @@
            style="border-left:3px solid {{ sev_color.get(task.severity, 'var(--border)') }};">
         <div class="corr-card-body">
 
-          {{/* Header: label + severity badge */}}
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
             <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
                class="corr-label">{{ task.issue_label }}</a>
@@ -166,29 +165,25 @@
             </span>
           </div>
 
-          {{/* URL */}}
           {% if task.url %}
           <a href="{{ task.url }}" target="_blank" rel="noreferrer" class="corr-url" title="{{ task.url }}">
             {{ task.url }}
           </a>
           {% endif %}
 
-          {{/* PR badge */}}
           {% if task.pr and task.pr.pr_url %}
           <a href="{{ task.pr.pr_url }}" target="_blank" rel="noreferrer" class="corr-pr-badge">
             <span>⎇</span>
             {% if task.pr.branch %}<span>{{ task.pr.branch }}</span>{% endif %}
             {% if task.pr.pr_number %}<span>· PR #{{ task.pr.pr_number }}</span>{% endif %}
             {% if task.pr.commit_sha %}<span>· {{ task.pr.commit_sha }}</span>{% endif %}
-            {% if task.pr.merged %}<span>· mergé ✓</span>{% endif %}
+            {% if task.pr.get('merged') %}<span>· mergé ✓</span>{% endif %}
             <span>↗</span>
           </a>
           {% endif %}
 
-          {{/* User note */}}
           <textarea class="corr-note" rows="2" placeholder="Note (optionnel)…">{{ task.user_note or '' }}</textarea>
 
-          {{/* Status segmented control */}}
           <div class="corr-segmented">
             {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Corrigé'),('ignored','Ignoré')] %}
             <button type="button"
@@ -198,7 +193,6 @@
             {% endfor %}
           </div>
 
-          {{/* Footer */}}
           <div class="corr-footer">
             <span class="corr-date">{% if task.updated_at %}{{ task.updated_at[:10] }}{% endif %}</span>
             <button type="button" class="corr-save-btn" data-note-save>Sauvegarder</button>
