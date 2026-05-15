@@ -13101,7 +13101,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     user = getattr(request.state, "user", None)
     cfg = _project_github_cfg(proj)
     if not cfg["repo"]:
-        return JSONResponse({"ok": False, "error": "Aucun dépôt GitHub connecté à ce projet. Va dans Paramètres de crawl."}, status_code=400)
+        return JSONResponse({"ok": False, "needs_setup": True, "slug": slug, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
     token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
