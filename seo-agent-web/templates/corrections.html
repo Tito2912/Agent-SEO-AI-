@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+{% block title %}Corrections - {{ project.site_name }}{% endblock %}
+
+{% block head_extra %}
+<script>
+(function () {
+  var _slug = {{ slug | tojson }};
+
+  function setStatus(issueKey, url, newStatus, cardEl) {
+    fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issueKey) + '/task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus, url: url || null })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) window.location.reload();
+      })
+      .catch(function() {});
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-set-status]');
+    if (!btn) return;
+    var card = btn.closest('[data-issue-key]');
+    if (!card) return;
+    var issueKey = card.dataset.issueKey;
+    var url = card.dataset.url || null;
+    setStatus(issueKey, url, btn.dataset.setStatus, card);
+  });
+
+  /* Note save */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-note-save]');
+    if (!btn) return;
+    var card = btn.closest('[data-issue-key]');
+    if (!card) return;
+    var ta = card.querySelector('textarea');
+    var issueKey = card.dataset.issueKey;
+    var url = card.dataset.url || null;
+    var status = card.dataset.status;
+    fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issueKey) + '/task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: status, url: url, note: ta ? ta.value : '' })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function() { btn.textContent = 'Sauvegardé'; setTimeout(function() { btn.textContent = 'Sauvegarder'; }, 1500); })
+      .catch(function() {});
+  });
+})();
+</script>
+{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Corrections</span>
+{% endblock %}
+
+{% block actions %}
+  <a class="btn" href="/projects/{{ slug }}/issues">Voir les anomalies</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Workflow corrections</h1>
+  <p class="muted">{{ total }} tâche{{ 's' if total > 1 else '' }} · {{ project.site_name }}</p>
+</div>
+
+{% if total == 0 %}
+  <section class="card">
+    <p class="muted">Aucune correction suivie pour l'instant.</p>
+    <p class="muted small">Sur la page d'une anomalie, utilise les boutons de statut pour commencer le suivi.</p>
+    <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:10px;display:inline-block;">Voir les anomalies</a>
+  </section>
+{% else %}
+
+{% set col_labels = {
+  'todo': 'À traiter',
+  'in_progress': 'En cours',
+  'done': 'Corrigé',
+  'ignored': 'Ignoré'
+} %}
+{% set col_badge = {
+  'todo': 'notice',
+  'in_progress': 'warning',
+  'done': 'ok',
+  'ignored': ''
+} %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;align-items:start;">
+  {% for col in ['todo','in_progress','done','ignored'] %}
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <h2 style="margin:0;font-size:14px;font-weight:600;">{{ col_labels[col] }}</h2>
+        {% if groups[col] %}
+          <span class="badge {{ col_badge[col] }}" style="font-size:11px;">{{ groups[col]|length }}</span>
+        {% endif %}
+      </div>
+
+      {% if not groups[col] %}
+        <p class="muted small" style="padding:10px 0;">—</p>
+      {% else %}
+        {% for task in groups[col] %}
+          <div
+            class="card"
+            data-issue-key="{{ task.issue_key }}"
+            data-url="{{ task.url or '' }}"
+            data-status="{{ task.status }}"
+            style="margin-bottom:10px;padding:12px 14px;"
+          >
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px;">
+              <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
+                 style="font-size:13px;font-weight:600;flex:1;word-break:break-word;">{{ task.issue_label }}</a>
+              <span class="badge {{ task.severity }}" style="font-size:10px;flex-shrink:0;">{{ {'error':'erreur','warning':'avertissement','notice':'info'}.get(task.severity, task.severity) }}</span>
+            </div>
+
+            {% if task.url %}
+              <div class="mono" style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:8px;">
+                <a href="{{ task.url }}" target="_blank" rel="noreferrer" style="color:inherit;">{{ task.url }}</a>
+              </div>
+            {% endif %}
+
+            <textarea
+              rows="2"
+              placeholder="Note (optionnel)…"
+              style="width:100%;font-size:11px;padding:5px 7px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:inherit;resize:vertical;margin-bottom:6px;"
+            >{{ task.note or '' }}</textarea>
+
+            <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:space-between;align-items:center;">
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Corrigé'),('ignored','Ignoré')] %}
+                  <button type="button"
+                    class="btn{% if task.status == st %} primary{% endif %}"
+                    style="font-size:10px;padding:2px 7px;"
+                    data-set-status="{{ st }}"
+                    {% if task.status == st %}disabled{% endif %}
+                  >{{ lbl }}</button>
+                {% endfor %}
+              </div>
+              <button type="button" class="btn" style="font-size:10px;padding:2px 7px;" data-note-save>Sauvegarder</button>
+            </div>
+
+            {% if task.updated_at %}
+              <p class="muted small" style="margin:6px 0 0;font-size:10px;">Modifié {{ task.updated_at[:10] }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

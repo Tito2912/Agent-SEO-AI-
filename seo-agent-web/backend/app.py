@@ -109,6 +109,7 @@ try:
         AuditLog,
         BacklinkOpportunity,
         EmailVerificationToken,
+        IssueTask,
         JobRecord,
         OAuthIdentity,
         PasswordResetToken,
@@ -124,6 +125,7 @@ except ImportError:
         AuditLog,
         BacklinkOpportunity,
         EmailVerificationToken,
+        IssueTask,
         JobRecord,
         OAuthIdentity,
         PasswordResetToken,
@@ -12842,6 +12844,108 @@ def api_issue_url_fix(
     if not result:
         return JSONResponse({"error": "Service IA indisponible. Configure OPENAI_API_KEY."}, status_code=503)
     return JSONResponse(result)
+
+
+_TASK_STATUSES = {"todo", "in_progress", "done", "ignored"}
+
+
+class _IssueTaskBody(BaseModel):
+    status: str
+    url: str | None = None
+    note: str | None = None
+    issue_label: str | None = None
+    crawl_ts: str | None = None
+    severity: str | None = None
+
+
+@app.post("/api/projects/{slug}/issues/{issue_key}/task")
+def api_issue_task_upsert(request: Request, slug: str, issue_key: str, body: _IssueTaskBody) -> JSONResponse:
+    user = _require_login(request)
+    proj_row = _db_project_or_404(request, slug)
+    status = body.status if body.status in _TASK_STATUSES else "todo"
+    url = (body.url or "").strip() or None
+    with DB.session() as db:
+        stmt = select(IssueTask).where(
+            IssueTask.project_id == proj_row.id,
+            IssueTask.issue_key == issue_key,
+            IssueTask.url == url,
+        )
+        task = db.scalar(stmt)
+        if task:
+            task.status = status
+            if body.note is not None:
+                task.note = (body.note or "").strip() or None
+        else:
+            task = IssueTask(
+                project_id=str(proj_row.id),
+                user_id=str(getattr(user, "id", "") or ""),
+                issue_key=issue_key,
+                issue_label=str(body.issue_label or issue_key),
+                crawl_ts=str(body.crawl_ts or ""),
+                url=url,
+                status=status,
+                note=(body.note or "").strip() or None,
+                severity=str(body.severity or "notice"),
+            )
+            db.add(task)
+        db.commit()
+        return JSONResponse({"ok": True, "status": status})
+
+
+@app.get("/api/projects/{slug}/tasks")
+def api_project_tasks(request: Request, slug: str) -> JSONResponse:
+    _ = _require_login(request)
+    proj_row = _db_project_or_404(request, slug)
+    with DB.session() as db:
+        tasks = list(db.scalars(
+            select(IssueTask)
+            .where(IssueTask.project_id == proj_row.id)
+            .order_by(IssueTask.updated_at.desc())
+        ))
+    return JSONResponse([{
+        "id": t.id,
+        "issue_key": t.issue_key,
+        "issue_label": t.issue_label,
+        "url": t.url,
+        "status": t.status,
+        "note": t.note,
+        "severity": t.severity,
+        "crawl_ts": t.crawl_ts,
+        "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+    } for t in tasks])
+
+
+@app.get("/projects/{slug}/corrections", response_class=HTMLResponse)
+def project_corrections(request: Request, slug: str) -> HTMLResponse:
+    _ = _require_login(request)
+    proj_row = _db_project_or_404(request, slug)
+    with DB.session() as db:
+        tasks = list(db.scalars(
+            select(IssueTask)
+            .where(IssueTask.project_id == proj_row.id)
+            .order_by(IssueTask.updated_at.desc())
+        ))
+    groups: dict[str, list[Any]] = {"todo": [], "in_progress": [], "done": [], "ignored": []}
+    for t in tasks:
+        s = t.status if t.status in groups else "todo"
+        groups[s].append({
+            "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
+            "url": t.url, "status": t.status, "note": t.note,
+            "severity": t.severity, "crawl_ts": t.crawl_ts,
+            "updated_at": t.updated_at.isoformat() if t.updated_at else "",
+        })
+    resp = templates.TemplateResponse(
+        "corrections.html",
+        {
+            "request": request,
+            "project": proj_row,
+            "slug": slug,
+            "groups": groups,
+            "total": len(tasks),
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.get("/projects/{slug}/export/report.csv")

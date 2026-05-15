@@ -279,6 +279,36 @@ class BacklinkOpportunity(Base):
     )
 
 
+class IssueTask(Base):
+    __tablename__ = "issue_tasks"
+    __table_args__ = (
+        UniqueConstraint("project_id", "issue_key", "url", name="uq_issue_task_project_issue_url"),
+        Index("ix_issue_tasks_project_status", "project_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
+    )
+
+    issue_key: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    issue_label: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    crawl_ts: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    severity: Mapped[str] = mapped_column(String(32), nullable=False, default="notice")
+
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="todo", index=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class RateLimitBucket(Base):
     __tablename__ = "rate_limit_buckets"
 

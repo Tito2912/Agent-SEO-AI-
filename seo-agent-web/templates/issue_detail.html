@@ -88,6 +88,24 @@
         </div>
       </div>
 
+      {# ── Suivi de correction ── #}
+      <div class="issue-task-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:8px 10px;background:var(--bg);border-radius:4px;border:1px solid var(--border);">
+        <span class="muted small" style="flex-shrink:0;">Statut :</span>
+        {% for st, lbl, icon in [('todo','À traiter','○'),('in_progress','En cours','◑'),('done','Corrigé','●'),('ignored','Ignoré','—')] %}
+          <button type="button"
+            class="btn task-status-btn"
+            style="font-size:11px;padding:3px 9px;"
+            data-status="{{ st }}"
+            data-issue="{{ project.issue.key }}"
+            data-label="{{ project.issue.label }}"
+            data-crawl="{{ project.timestamp }}"
+            data-severity="{{ project.issue.severity }}"
+            data-slug="{{ project.slug }}">{{ icon }} {{ lbl }}</button>
+        {% endfor %}
+        <span class="task-status-msg muted small" style="margin-left:4px;"></span>
+        <a href="/projects/{{ project.slug }}/corrections" class="muted small" style="margin-left:auto;">Voir toutes les corrections →</a>
+      </div>
+
       {% if fix_suggestion and fix_suggestion.why %}
         <p class="muted">{{ fix_suggestion.why }}</p>
       {% endif %}
@@ -382,6 +400,42 @@
 {% block head_extra %}
 <script>
 (function () {
+  /* ── Issue-level task status ── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.task-status-btn');
+    if (!btn) return;
+    var bar = btn.closest('.issue-task-bar');
+    var msg = bar && bar.querySelector('.task-status-msg');
+    var slug = btn.dataset.slug;
+    var issueKey = btn.dataset.issue;
+    var status = btn.dataset.status;
+    btn.disabled = true;
+    fetch('/api/projects/' + encodeURIComponent(slug) + '/issues/' + encodeURIComponent(issueKey) + '/task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: status,
+        issue_label: btn.dataset.label,
+        crawl_ts: btn.dataset.crawl,
+        severity: btn.dataset.severity,
+      })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false;
+        if (data.ok) {
+          var labels = { todo:'À traiter', in_progress:'En cours', done:'Corrigé', ignored:'Ignoré' };
+          if (msg) { msg.textContent = '✓ Statut mis à jour : ' + (labels[status] || status); }
+          bar && bar.querySelectorAll('.task-status-btn').forEach(function(b) {
+            b.style.fontWeight = b.dataset.status === status ? '700' : '';
+            b.style.opacity = b.dataset.status === status ? '1' : '0.6';
+          });
+        }
+      })
+      .catch(function() { btn.disabled = false; });
+  });
+
+  /* ── URL-level AI fix ── */
   document.addEventListener('click', function (e) {
     const btn = e.target.closest('.url-ai-btn');
     if (!btn) return;
