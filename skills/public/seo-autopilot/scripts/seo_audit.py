@@ -3680,7 +3680,13 @@ def _score_resource_issues(
     IMG_TOO_LARGE = 500 * 1024
     JS_TOO_LARGE = 200 * 1024
     CSS_TOO_LARGE = 100 * 1024
-    NOT_MINIFIED_TOO_LARGE = 1 * 1024
+    # 10 KB threshold: below this, minification savings are negligible and the signal is noisy.
+    # Files served with Content-Encoding gzip/br are already compressed for delivery — skip them.
+    NOT_MINIFIED_TOO_LARGE = 10 * 1024
+
+    def _is_compressed(r: dict[str, Any]) -> bool:
+        enc = (r.get("content_encoding") or "").lower()
+        return bool(enc and any(t in enc for t in ("gzip", "br", "deflate", "zstd")))
 
     broken_images = sorted({r["url"] for r in by_type.get("image", []) if is_broken(r)})
     broken_js = sorted({r["url"] for r in by_type.get("javascript", []) if is_broken(r)})
@@ -3698,14 +3704,18 @@ def _score_resource_issues(
         {
             r["url"]
             for r in by_type.get("css", [])
-            if is_large(r, NOT_MINIFIED_TOO_LARGE) and not _looks_minified_url(str(r.get("final_url") or r.get("url") or ""))
+            if is_large(r, NOT_MINIFIED_TOO_LARGE)
+            and not _is_compressed(r)
+            and not _looks_minified_url(str(r.get("final_url") or r.get("url") or ""))
         }
     )
     not_minified_js = sorted(
         {
             r["url"]
             for r in by_type.get("javascript", [])
-            if is_large(r, NOT_MINIFIED_TOO_LARGE) and not _looks_minified_url(str(r.get("final_url") or r.get("url") or ""))
+            if is_large(r, NOT_MINIFIED_TOO_LARGE)
+            and not _is_compressed(r)
+            and not _looks_minified_url(str(r.get("final_url") or r.get("url") or ""))
         }
     )
 
@@ -5172,11 +5182,12 @@ def _score_issues(
 
     # Ahrefs-like: more than one page for same language in hreflang.
     #
-    # Model: build a graph of *canonical* pages connected by their hreflang alternates.
-    # Include x-default targets because Ahrefs appears to treat it as part of the hreflang group.
+    # Model: build a graph of *canonical* pages connected by language-specific alternates only
+    # (x-default is excluded from graph edges to avoid merging all pages into one giant component
+    # when a shared x-default hub such as the homepage is used across all hreflang groups).
     #
-    # This avoids inflating the issue with non-canonical duplicates (e.g. URL variants that canonicalize to a page),
-    # while still catching cases where many canonical pages are incorrectly connected via a shared x-default.
+    # Within each connected component, check if the same exact hreflang language code maps
+    # to more than one distinct URL — that is the actual error Ahrefs flags.
     more_than_one_page_same_lang: set[str] = set()
 
     canonical_pages: dict[str, PageData] = {}
@@ -5206,7 +5217,12 @@ def _score_issues(
         hreflang = _hreflang_map_for(p)
         if not hreflang:
             continue
-        for href in hreflang.values():
+        for code, href in hreflang.items():
+            # Exclude x-default from graph edges: shared x-default hubs (e.g. homepage)
+            # would otherwise merge all hreflang groups into one component, causing massive
+            # false positives on sites with many pages per language.
+            if (code or "").strip().lower() == "x-default":
+                continue
             if not href:
                 continue
             dst = _canonical_node_for_url(href)
@@ -5230,18 +5246,26 @@ def _score_issues(
                     visited.add(nb)
                     stack.append(nb)
 
-        lang_counts: Counter[str] = Counter()
+        # Check if any exact hreflang language code maps to multiple different URLs within
+        # this component — that is the real "more than one page for same language" error.
+        code_to_urls: dict[str, set[str]] = defaultdict(set)
         for u in component:
             pg = canonical_pages.get(u)
-            lang = (pg.lang or "").strip().lower() if pg else ""
-            primary = lang.split("-", 1)[0] if lang else ""
-            if primary:
-                lang_counts[primary] += 1
+            hl = _hreflang_map_for(pg) if pg else None
+            if not hl:
+                continue
+            for code, href in hl.items():
+                code_norm = (code or "").strip().lower()
+                if code_norm == "x-default" or not code_norm:
+                    continue
+                href_norm = _norm_self(href) or (href or "").strip()
+                if href_norm:
+                    code_to_urls[code_norm].add(href_norm)
 
-        if any(c > 1 for c in lang_counts.values()):
+        if any(len(urls) > 1 for urls in code_to_urls.values()):
             more_than_one_page_same_lang.update(component)
 
-    # Ahrefs-like: don't count root / locale-root pages for this issue (prevents false positives on x-default hubs).
+    # Don't count root / locale-root pages for this issue (prevents false positives on x-default hubs).
     more_than_one_page_same_lang_filtered: set[str] = set()
     for u in more_than_one_page_same_lang:
         parts = urlsplit(u)
