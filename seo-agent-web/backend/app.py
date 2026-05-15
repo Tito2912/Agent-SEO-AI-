@@ -12861,8 +12861,8 @@ class _IssueTaskBody(BaseModel):
 
 @app.post("/api/projects/{slug}/issues/{issue_key}/task")
 def api_issue_task_upsert(request: Request, slug: str, issue_key: str, body: _IssueTaskBody) -> JSONResponse:
-    user = _require_login(request)
     proj_row = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
     status = body.status if body.status in _TASK_STATUSES else "todo"
     url = (body.url or "").strip() or None
     with DB.session() as db:
@@ -12895,7 +12895,6 @@ def api_issue_task_upsert(request: Request, slug: str, issue_key: str, body: _Is
 
 @app.get("/api/projects/{slug}/tasks")
 def api_project_tasks(request: Request, slug: str) -> JSONResponse:
-    _ = _require_login(request)
     proj_row = _db_project_or_404(request, slug)
     with DB.session() as db:
         tasks = list(db.scalars(
@@ -12918,7 +12917,6 @@ def api_project_tasks(request: Request, slug: str) -> JSONResponse:
 
 @app.get("/projects/{slug}/corrections", response_class=HTMLResponse)
 def project_corrections(request: Request, slug: str) -> HTMLResponse:
-    _ = _require_login(request)
     proj_row = _db_project_or_404(request, slug)
     project_ctx = {
         "slug": proj_row.slug,
