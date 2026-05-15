@@ -12129,42 +12129,27 @@ def api_automation_github_corrections(request: Request) -> JSONResponse:
     result: list[dict[str, Any]] = []
     try:
         with DB.session() as db:
-            projects = list(db.scalars(select(Project).where(Project.owner_user_id == str(user.id))))
+            projects = list(db.scalars(
+                select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name)
+            ))
             for proj in projects:
                 cfg = _project_github_cfg(proj)
-                if not cfg["repo"]:
-                    continue
-                tasks_raw = list(db.scalars(
-                    select(IssueTask)
-                    .where(IssueTask.project_id == proj.id)
-                    .order_by(IssueTask.updated_at.desc())
-                ))
-                task_list: list[dict[str, Any]] = []
                 counts: dict[str, int] = {"todo": 0, "in_progress": 0, "done": 0, "ignored": 0}
-                for t in tasks_raw:
-                    try:
-                        note_data = json.loads(t.note) if t.note else {}
-                    except Exception:
-                        note_data = {}
-                    st = str(t.status or "todo")
-                    counts[st] = counts.get(st, 0) + 1
-                    task_list.append({
-                        "id": str(t.id),
-                        "issue_key": str(t.issue_key),
-                        "issue_label": str(t.issue_label or t.issue_key),
-                        "url": str(t.url or ""),
-                        "status": st,
-                        "crawl_ts": str(t.crawl_ts or ""),
-                        "updated_at": t.updated_at.isoformat() if t.updated_at else "",
-                        "pr": note_data,
-                    })
+                if cfg["repo"]:
+                    tasks_raw = list(db.scalars(
+                        select(IssueTask)
+                        .where(IssueTask.project_id == proj.id)
+                        .order_by(IssueTask.updated_at.desc())
+                    ))
+                    for t in tasks_raw:
+                        st = str(t.status or "todo")
+                        counts[st] = counts.get(st, 0) + 1
                 result.append({
                     "slug": str(proj.slug),
                     "site_name": str(proj.site_name or proj.slug),
                     "github_repo": cfg["repo"],
                     "github_mode": cfg["mode"],
                     "github_branch": cfg["branch"],
-                    "tasks": task_list,
                     "counts": counts,
                 })
     except Exception as exc:

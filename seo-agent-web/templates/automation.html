@@ -41,12 +41,13 @@
         var grid    = document.getElementById('hub-proj-grid');
         if(!data.ok||!data.projects||!data.projects.length){
           if(statsEl) statsEl.innerHTML='';
-          if(grid) grid.innerHTML='<p class="muted small">Aucun projet avec GitHub connecté. <a href="/settings/accounts#github-connect-card">Connecter →</a></p>';
+          if(grid) grid.innerHTML='<p class="muted small">Aucun projet trouvé.</p>';
           return;
         }
-        /* Global totals */
+        /* Global totals — only projects with GitHub */
         var tot={todo:0,in_progress:0,done:0,ignored:0};
         data.projects.forEach(function(p){
+          if(!p.github_repo) return;
           tot.todo+=p.counts.todo||0; tot.in_progress+=p.counts.in_progress||0;
           tot.done+=p.counts.done||0; tot.ignored+=p.counts.ignored||0;
         });
@@ -57,24 +58,35 @@
            +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:#34d399;">'+tot.done+'</div><div class="hub-stat-lbl">Corrigés</div></div>'
            +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--muted);">'+tot.ignored+'</div><div class="hub-stat-lbl">Ignorés</div></div>';
         }
-        /* Project tiles */
+        /* Project tiles — all projects */
         if(grid){
           var html='';
           data.projects.forEach(function(p){
             var c=p.counts;
-            var modeBadge=p.github_mode==='auto'
-              ?'<span class="badge ok" style="font-size:9px;padding:1px 5px;">Full Access</span>'
-              :'<span class="badge notice" style="font-size:9px;padding:1px 5px;">Vérification</span>';
-            html+='<a class="hub-proj-tile" href="/projects/'+p.slug+'/automation">'
-              +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
-              +'<span class="hub-proj-name">'+escHtml(p.site_name||p.slug)+'</span>'+modeBadge+'</div>'
-              +'<div class="hub-proj-repo">'+escHtml(p.github_repo)+'</div>'
-              +'<div class="hub-proj-counts">'
-              +'<span class="stat-chip todo">'+(c.todo||0)+' todo</span>'
-              +'<span class="stat-chip pr">'+(c.in_progress||0)+' PR</span>'
-              +'<span class="stat-chip done">'+(c.done||0)+' ✓</span>'
-              +(c.ignored?'<span class="stat-chip ignored">'+(c.ignored||0)+' ignoré</span>':'')
-              +'</div></a>';
+            if(p.github_repo){
+              var modeBadge=p.github_mode==='auto'
+                ?'<span class="badge ok" style="font-size:9px;padding:1px 5px;">Full Access</span>'
+                :'<span class="badge notice" style="font-size:9px;padding:1px 5px;">Vérification</span>';
+              html+='<a class="hub-proj-tile" href="/projects/'+p.slug+'/automation">'
+                +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+                +'<span class="hub-proj-name">'+escHtml(p.site_name||p.slug)+'</span>'+modeBadge+'</div>'
+                +'<div class="hub-proj-repo">'+escHtml(p.github_repo)+'</div>'
+                +'<div class="hub-proj-counts">'
+                +'<span class="stat-chip todo">'+(c.todo||0)+' todo</span>'
+                +'<span class="stat-chip pr">'+(c.in_progress||0)+' PR</span>'
+                +'<span class="stat-chip done">'+(c.done||0)+' ✓</span>'
+                +(c.ignored?'<span class="stat-chip ignored">'+(c.ignored||0)+' ignoré</span>':'')
+                +'</div></a>';
+            } else {
+              html+='<a class="hub-proj-tile" href="/projects/'+p.slug+'/automation" style="opacity:.7;">'
+                +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+                +'<span class="hub-proj-name">'+escHtml(p.site_name||p.slug)+'</span>'
+                +'<span class="badge" style="font-size:9px;padding:1px 5px;background:var(--border-2);color:var(--muted);">Sans GitHub</span>'
+                +'</div>'
+                +'<div class="hub-proj-repo" style="color:var(--muted);">Aucun dépôt connecté</div>'
+                +'<div class="hub-proj-counts"><span class="stat-chip ignored">Connecter GitHub →</span></div>'
+                +'</a>';
+            }
           });
           grid.innerHTML=html;
         }
