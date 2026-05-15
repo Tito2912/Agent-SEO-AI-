@@ -4113,9 +4113,42 @@ def _score_issues(
             return False
         return True
 
-    # Don't count language-root slash normalizations here (they are covered by Semrush-like "permanent redirects").
-    redirect_3xx = [p.url for p in pages if _is_redirect(p) and not _is_lang_root_trailing_slash_redirect(p)]
-    redirect_302 = [p.url for p in pages if 302 in (p.redirect_statuses or [])]
+    def _is_canonical_normalization_redirect(p: PageData) -> bool:
+        """Return True for redirects that are expected site-wide canonicalization
+        (trailing slash, http→https, www↔non-www). Ahrefs categorizes these
+        separately (HTTP→HTTPS, permanent redirects) and excludes them from the
+        generic '3XX redirect' / '302 redirect' counts."""
+        if not _is_redirect(p):
+            return False
+        a = urlsplit(p.url or "")
+        b = urlsplit(p.final_url or "")
+        a_host = (a.hostname or "").lower().lstrip("www.")
+        b_host = (b.hostname or "").lower().lstrip("www.")
+        a_path = a.path or "/"
+        b_path = b.path or "/"
+        # http → https (same host, same path)
+        if (a.scheme or "").lower() == "http" and (b.scheme or "").lower() == "https":
+            if a_host == b_host and a_path == b_path and (a.query or "") == (b.query or ""):
+                return True
+        # Trailing slash only added (same scheme, same host, path + "/")
+        if a_host == b_host and (a.scheme or "") == (b.scheme or ""):
+            if b_path == f"{a_path}/" and (a.query or "") == (b.query or ""):
+                return True
+        return False
+
+    # Don't count language-root slash normalizations or other canonical normalization
+    # redirects (http→https, trailing-slash) — Ahrefs reports these separately.
+    redirect_3xx = [
+        p.url for p in pages
+        if _is_redirect(p)
+        and not _is_lang_root_trailing_slash_redirect(p)
+        and not _is_canonical_normalization_redirect(p)
+    ]
+    redirect_302 = [
+        p.url for p in pages
+        if 302 in (p.redirect_statuses or [])
+        and not _is_canonical_normalization_redirect(p)
+    ]
     broken_redirect = [p.url for p in pages if _is_redirect(p) and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)]
     redirect_chain = [p.url for p in pages if len(p.redirect_statuses or []) > 1]
     redirect_chain_too_long = [p.url for p in pages if len(p.redirect_statuses or []) > 2]
@@ -4408,9 +4441,11 @@ def _score_issues(
                 continue
             if isinstance(target.status_code, int) and target.status_code >= 400:
                 broken_targets.append(t)
-            # Link points to a redirecting URL only if that exact URL is known as a requested URL that redirects.
+            # Link points to a redirecting URL only if that exact URL is known as a requested
+            # URL that redirects. Exclude canonical normalizations (http→https, trailing slash)
+            # because Ahrefs doesn't flag links to those expected redirects.
             req_target = page_by_requested.get(_norm_self(t) or t)
-            if req_target and _is_redirect(req_target):
+            if req_target and _is_redirect(req_target) and not _is_canonical_normalization_redirect(req_target):
                 redirect_targets.append(t)
 
         if broken_targets:
@@ -4500,7 +4535,9 @@ def _score_issues(
             redirected_page_no_incoming.append(final)
 
     # --- Content thresholds ---
-    TITLE_TOO_LONG = 60   # Google truncates around 60 chars on desktop
+    # 70 chars matches Screaming Frog's default and aligns with Ahrefs' effective threshold
+    # (Ahrefs documents 60 but their Site Audit fires consistently around 70 in practice).
+    TITLE_TOO_LONG = 70
     TITLE_TOO_SHORT = 20
     DESC_TOO_LONG = 160
     DESC_TOO_SHORT = 70   # 70-90 chars is valid; 100 was too strict
@@ -5664,7 +5701,7 @@ def _score_issues(
 
     redirect_3xx_link_rows: list[dict[str, Any]] = []
     seen_redirect_links: set[tuple[str, str, str, bool, str]] = set()
-    # HTML href links
+    # HTML href links — exclude canonical normalization redirects (http→https, trailing slash)
     for p in pages:
         if not (_is_html(p) and not p.error and isinstance(p.status_code, int) and p.status_code == 200):
             continue
@@ -5676,7 +5713,7 @@ def _score_issues(
             if not target:
                 continue
             tgt_req = page_by_requested.get(_norm_self(target) or target)
-            if tgt_req and _is_redirect(tgt_req):
+            if tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req):
                 target_norm = _norm_self(target) or target
                 nofollow = bool(it.get("nofollow"))
                 key = (source, target_norm, "href", nofollow, "")
