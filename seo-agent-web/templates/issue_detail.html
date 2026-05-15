@@ -460,8 +460,9 @@
           return;
         }
         let html = '';
-        if (data.fix) html += '<strong>Correction&nbsp;:</strong> ' + _esc(data.fix);
-        if (data.action) html += '<br><strong>Action&nbsp;:</strong> ' + _esc(data.action);
+        if (data.fix) html += '<strong>Diagnostic&nbsp;:</strong> ' + _esc(data.fix);
+        if (data.code) html += '<br><strong>Code&nbsp;:</strong><pre style="margin:6px 0 4px;padding:8px 10px;background:var(--bg,#0d0d0f);border:1px solid var(--border);border-radius:4px;font-size:11px;white-space:pre-wrap;word-break:break-all;overflow-x:auto;font-family:monospace;">' + _esc(data.code) + '</pre>';
+        if (data.action) html += '<strong>Action&nbsp;:</strong> ' + _esc(data.action);
         result.innerHTML = html;
         result.style.display = 'block';
         btn.style.display = 'none';

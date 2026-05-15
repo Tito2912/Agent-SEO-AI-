@@ -2416,16 +2416,31 @@ def _openai_url_fix(
     base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
     model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
     system = (
-        "Tu es un expert SEO technique. L'utilisateur te donne une URL précise affectée par une anomalie SEO.\n"
-        "Propose une correction concrète et actionnable pour cette URL spécifique.\n"
-        "Réponds STRICTEMENT en JSON: {\"fix\": \"explication de la correction (2-3 phrases max)\", "
-        "\"action\": \"action immédiate à réaliser sur cette URL\"}\n"
-        "Sois précis, concis, adapté au contexte de l'anomalie. Pas de généralités."
+        "Tu es un expert SEO technique qui génère des corrections CODE-READY, immédiatement applicables.\n"
+        "Pour chaque anomalie et URL, produis une correction technique précise avec le code exact.\n\n"
+        "EXEMPLES DE CODE À GÉNÉRER selon l'anomalie :\n"
+        "- redirect_3xx HTTP→HTTPS : RewriteRule .htaccess ou return 301 nginx\n"
+        "- redirect_3xx www→non-www : règle de redirection canonique\n"
+        "- missing_meta_description : balise <meta name=\"description\" content=\"...\"> à ajouter\n"
+        "- missing_title : balise <title>...</title> à ajouter/modifier\n"
+        "- broken_link / http_404 : identifier l'URL cible correcte, proposer une redirection 301\n"
+        "- duplicate_content : balise <link rel=\"canonical\" href=\"...\"> à ajouter\n"
+        "- missing_h1 / multiple_h1 : balise <h1> à ajouter ou corriger dans le HTML\n"
+        "- image_missing_alt : attribut alt=\"...\" à ajouter sur la balise <img>\n"
+        "- slow_page : en-têtes Cache-Control ou config de compression à appliquer\n\n"
+        "Réponds STRICTEMENT en JSON avec ces 3 champs :\n"
+        "{\n"
+        "  \"fix\": \"Diagnostic précis : quel est le problème exact sur cette URL (1-2 phrases)\",\n"
+        "  \"code\": \"Le code exact à copier-coller (.htaccess, nginx.conf, balise HTML, etc.)\",\n"
+        "  \"action\": \"Où et comment appliquer ce code (fichier cible, étape précise)\"\n"
+        "}\n"
+        "Le champ 'code' doit contenir du vrai code, pas une description. Si plusieurs variantes "
+        "(Apache/Nginx/Cloudflare), donne la plus universelle. Ne mets JAMAIS de texte vague."
     )
     user_msg = json.dumps({
         "site": site_name,
         "anomalie": f"{issue_key} — {issue_label}",
-        "url": url,
+        "url_affectee": url,
     }, ensure_ascii=False)
     try:
         resp = requests.post(
@@ -2434,7 +2449,7 @@ def _openai_url_fix(
             json={
                 "model": model,
                 "temperature": 0.1,
-                "max_tokens": 350,
+                "max_tokens": 700,
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user_msg},
