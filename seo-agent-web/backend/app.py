@@ -12120,6 +12120,60 @@ def api_automation_domains_save(request: Request, body: _DomainsBody) -> JSONRes
         return JSONResponse({"error": str(exc)}, status_code=500)
 
 
+@app.get("/api/automation/github-corrections")
+def api_automation_github_corrections(request: Request) -> JSONResponse:
+    _ = _require_admin(request)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Non connecté."}, status_code=401)
+    result: list[dict[str, Any]] = []
+    try:
+        with DB.session() as db:
+            projects = list(db.scalars(select(Project).where(Project.owner_user_id == str(user.id))))
+            for proj in projects:
+                cfg = _project_github_cfg(proj)
+                if not cfg["repo"]:
+                    continue
+                tasks_raw = list(db.scalars(
+                    select(IssueTask)
+                    .where(IssueTask.project_id == proj.id)
+                    .order_by(IssueTask.updated_at.desc())
+                ))
+                task_list: list[dict[str, Any]] = []
+                counts: dict[str, int] = {"todo": 0, "in_progress": 0, "done": 0, "ignored": 0}
+                for t in tasks_raw:
+                    try:
+                        note_data = json.loads(t.note) if t.note else {}
+                    except Exception:
+                        note_data = {}
+                    st = str(t.status or "todo")
+                    counts[st] = counts.get(st, 0) + 1
+                    task_list.append({
+                        "id": str(t.id),
+                        "issue_key": str(t.issue_key),
+                        "issue_label": str(t.issue_label or t.issue_key),
+                        "url": str(t.url or ""),
+                        "status": st,
+                        "crawl_ts": str(t.crawl_ts or ""),
+                        "updated_at": t.updated_at.isoformat() if t.updated_at else "",
+                        "pr": note_data,
+                    })
+                result.append({
+                    "slug": str(proj.slug),
+                    "site_name": str(proj.site_name or proj.slug),
+                    "github_repo": cfg["repo"],
+                    "github_mode": cfg["mode"],
+                    "github_branch": cfg["branch"],
+                    "tasks": task_list,
+                    "counts": counts,
+                })
+    except Exception as exc:
+        import traceback
+        print(f"[api_automation_github_corrections] {exc}\n{traceback.format_exc()}", flush=True)
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+    return JSONResponse({"ok": True, "projects": result})
+
+
 @app.get("/cron/autopilot")
 def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONResponse:
     cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
@@ -13228,6 +13282,27 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 _db2.commit()
         except Exception:
             pass
+        # ── Auto-merge for Full Access mode ──────────────────────────────────
+        _merged = False
+        if mode == "auto" and pr_number:
+            try:
+                _github_api_put(
+                    f"/repos/{cfg['repo']}/pulls/{int(pr_number)}/merge",
+                    token=token,
+                    json_body={"merge_method": "squash", "commit_title": pr_title},
+                )
+                _merged = True
+                with DB.session() as _db3:
+                    _done = _db3.scalar(select(IssueTask).where(
+                        IssueTask.project_id == proj.id,
+                        IssueTask.issue_key == issue_key,
+                        IssueTask.url == url,
+                    ))
+                    if _done:
+                        _done.status = "done"
+                        _db3.commit()
+            except Exception:
+                pass  # PR created, merge failed — stays in_progress
         return JSONResponse({
             "ok": True,
             "pr_url": pr_url,
@@ -13237,6 +13312,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             "commit_sha": commit_sha[:7] if commit_sha else "",
             "commit_url": commit_url,
             "file": body.file_path,
+            "merged": _merged,
         })
 
     # ── Step 1: Find file + generate patch (preview) ─────────────────────

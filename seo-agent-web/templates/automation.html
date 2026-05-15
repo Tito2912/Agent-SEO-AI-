@@ -89,11 +89,117 @@
     poll();
   }
 
+  /* ── GitHub corrections ── */
+  function _ghStatusLabel(s) {
+    return { todo: 'À corriger', in_progress: 'PR en cours', done: 'Corrigé', ignored: 'Ignoré' }[s] || s;
+  }
+  function _ghStatusClass(s) {
+    return { todo: 'notice', in_progress: 'warning', done: 'ok', ignored: '' }[s] || '';
+  }
+
+  function renderGhCorrections(data) {
+    var body = document.getElementById('gh-corr-body');
+    if (!body) return;
+    if (!data.ok || !data.projects || !data.projects.length) {
+      body.innerHTML = '<p class="muted small">Aucun projet avec un dépôt GitHub connecté.</p>';
+      return;
+    }
+    var html = '';
+    data.projects.forEach(function(proj) {
+      var modeLabel = proj.github_mode === 'auto' ? 'Full Access (auto-merge)' : 'Vérification (PR)';
+      var modeBadge = proj.github_mode === 'auto' ? '<span class="badge ok" style="font-size:10px;">Full Access</span>' : '<span class="badge notice" style="font-size:10px;">Vérification</span>';
+      html += '<div style="border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px;">';
+      html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">';
+      html += '<strong>' + (proj.site_name || proj.slug) + '</strong>';
+      html += modeBadge;
+      html += '<span class="muted small mono" style="margin-left:4px;">' + proj.github_repo + '</span>';
+      html += '<span style="flex:1"></span>';
+      var c = proj.counts;
+      html += '<span class="badge notice" title="À corriger">' + (c.todo||0) + ' todo</span>';
+      html += '<span class="badge warning" title="PR en cours">' + (c.in_progress||0) + ' PR</span>';
+      html += '<span class="badge ok" title="Corrigés">' + (c.done||0) + ' ✓</span>';
+      html += '</div>';
+
+      if (!proj.tasks || !proj.tasks.length) {
+        html += '<p class="muted small" style="margin:0;">Aucune correction enregistrée.</p>';
+      } else {
+        html += '<div style="display:grid;gap:6px;">';
+        proj.tasks.forEach(function(t) {
+          var rowStyle = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 8px;background:var(--bg);border-radius:4px;font-size:12px;';
+          html += '<div style="' + rowStyle + '">';
+          html += '<span class="badge ' + _ghStatusClass(t.status) + '" style="font-size:10px;white-space:nowrap;">' + _ghStatusLabel(t.status) + '</span>';
+          html += '<span class="muted mono" style="white-space:nowrap;">' + (t.issue_label || t.issue_key) + '</span>';
+          html += '<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px;" title="' + t.url + '">' + t.url + '</span>';
+          if (t.pr && t.pr.pr_url) {
+            var sha = t.pr.commit_sha ? ' ' + t.pr.commit_sha : '';
+            var prNum = t.pr.pr_number ? '#' + t.pr.pr_number : '';
+            html += '<a href="' + t.pr.pr_url + '" target="_blank" rel="noreferrer" style="color:var(--accent);font-family:monospace;white-space:nowrap;">' + prNum + sha + ' ↗</a>';
+          }
+          html += '<span style="flex:1"></span>';
+          if (t.status === 'todo' && proj.github_mode === 'auto') {
+            html += '<button type="button" class="btn small" style="font-size:11px;" '
+              + 'data-slug="' + proj.slug + '" data-issue="' + t.issue_key + '" data-url="' + encodeURIComponent(t.url) + '" data-crawl="' + (t.crawl_ts||'') + '" '
+              + 'onclick="triggerGhFix(this)">Corriger</button>';
+          } else if (t.status === 'todo') {
+            html += '<a class="btn small" style="font-size:11px;" href="/projects/' + proj.slug + '/issues/' + t.issue_key + '">Voir le problème</a>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    body.innerHTML = html;
+  }
+
+  function loadGhCorrections() {
+    var body = document.getElementById('gh-corr-body');
+    if (body) body.innerHTML = '<p class="muted small">Chargement…</p>';
+    fetch('/api/automation/github-corrections')
+      .then(function(r) { return r.json(); })
+      .then(renderGhCorrections)
+      .catch(function(e) {
+        var body = document.getElementById('gh-corr-body');
+        if (body) body.innerHTML = '<p class="muted small" style="color:var(--err);">Erreur de chargement.</p>';
+      });
+  }
+
+  function triggerGhFix(btn) {
+    var slug = btn.dataset.slug;
+    var issue = btn.dataset.issue;
+    var url = decodeURIComponent(btn.dataset.url);
+    var crawl = btn.dataset.crawl || '';
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    fetch('/api/projects/' + slug + '/issues/' + issue + '/github-fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, crawl_ts: crawl, confirm: false })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.ok) {
+          btn.textContent = d.merged ? '✓ Mergé' : '✓ PR créé';
+          btn.style.background = 'var(--accent)';
+          setTimeout(loadGhCorrections, 1500);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Erreur';
+          btn.title = d.error || '?';
+        }
+      })
+      .catch(function() { btn.disabled = false; btn.textContent = 'Erreur réseau'; });
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     loadDomains();
+    loadGhCorrections();
 
     var saveBtn = document.getElementById('domains-save-btn');
     if (saveBtn) saveBtn.addEventListener('click', saveDomains);
+
+    var ghRefresh = document.getElementById('gh-corr-refresh');
+    if (ghRefresh) ghRefresh.addEventListener('click', loadGhCorrections);
 
     var jobId = (document.getElementById('auto-body') || {}).dataset.currentJobId;
     if (jobId) startLiveLogs(jobId);
@@ -238,6 +344,15 @@
     </div>
     {% endif %}
   </div>
+</section>
+
+{# ── Corrections GitHub automatiques ── #}
+<section class="card" id="gh-corr-card">
+  <div class="card-title-row">
+    <h2>Corrections GitHub automatiques</h2>
+    <button type="button" class="btn small" id="gh-corr-refresh">Actualiser</button>
+  </div>
+  <div id="gh-corr-body"><p class="muted small">Chargement…</p></div>
 </section>
 
 {# ── Résultats du dernier run ── #}
