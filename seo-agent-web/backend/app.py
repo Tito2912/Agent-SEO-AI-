@@ -15420,10 +15420,8 @@ def project_backlinks_opportunities(
     pages_total = max(1, math.ceil(total / page_size))
 
     auto_cfg = _backlinks_auto_cfg(proj.settings or {})
-    has_reddit = bool(_get_reddit_creds(str(user.id)))
 
     queue_items: list[BacklinkOpportunity] = []
-    posts_today = 0
     if has_access:
         with DB.session() as db2:
             queue_items = list(db2.scalars(
@@ -15435,14 +15433,6 @@ def project_backlinks_opportunities(
                 )
                 .order_by(BacklinkOpportunity.opportunity_score.desc(), BacklinkOpportunity.created_at.desc())
             ))
-            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-            posts_today = int(db2.scalar(
-                select(func.count()).where(
-                    BacklinkOpportunity.user_id == str(user.id),
-                    BacklinkOpportunity.queue_status == "posted",
-                    BacklinkOpportunity.posted_at >= today_start,
-                )
-            ) or 0)
 
     resp = templates.TemplateResponse(
         "backlinks_opportunities.html",
@@ -15462,9 +15452,7 @@ def project_backlinks_opportunities(
             "search_remaining": search_remaining,
             "reply_remaining": reply_remaining,
             "auto_cfg": auto_cfg,
-            "has_reddit": has_reddit,
             "queue_items": queue_items,
-            "posts_today": posts_today,
             "msg": msg or "",
             "err": err or "",
         },
@@ -15748,63 +15736,6 @@ def backlinks_opportunity_status(
     )
 
 
-# ---------------------------------------------------------------------------
-# Backlink automation — Reddit helpers
-# ---------------------------------------------------------------------------
-
-def _get_reddit_creds(user_id: str) -> dict | None:
-    client_id, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_CLIENT_ID")
-    client_secret, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_CLIENT_SECRET")
-    username, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_USERNAME")
-    password, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_PASSWORD")
-    if not (client_id and client_secret and username and password):
-        return None
-    return {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "username": username,
-        "password": password,
-        "user_agent": f"SEOAgent/1.0 by u/{username}",
-    }
-
-
-def _reddit_get_token(creds: dict) -> str:
-    resp = requests.post(
-        "https://www.reddit.com/api/v1/access_token",
-        auth=(creds["client_id"], creds["client_secret"]),
-        data={"grant_type": "password", "username": creds["username"], "password": creds["password"]},
-        headers={"User-Agent": creds["user_agent"]},
-        timeout=12,
-    )
-    data = resp.json()
-    if not resp.ok or "access_token" not in data:
-        raise ValueError(f"Reddit auth failed: {data.get('error', resp.status_code)}")
-    return str(data["access_token"])
-
-
-def _reddit_post_comment(opp_url: str, reply_text: str, creds: dict) -> dict:
-    m = re.search(r"/comments/([a-z0-9]+)", opp_url.lower())
-    if not m:
-        raise ValueError("Impossible d'extraire l'ID du post Reddit depuis l'URL")
-    post_id = m.group(1)
-    token = _reddit_get_token(creds)
-    resp = requests.post(
-        "https://oauth.reddit.com/api/comment",
-        headers={"Authorization": f"bearer {token}", "User-Agent": creds["user_agent"]},
-        data={"api_type": "json", "thing_id": f"t3_{post_id}", "text": reply_text},
-        timeout=15,
-    )
-    data = resp.json()
-    if not resp.ok:
-        raise ValueError(f"Reddit API error {resp.status_code}: {data}")
-    errors = ((data.get("json") or {}).get("errors")) or []
-    if errors:
-        raise ValueError(f"Reddit errors: {errors}")
-    things = ((data.get("json") or {}).get("data") or {}).get("things") or []
-    comment_id = (things[0].get("data") or {}).get("id", "") if things else ""
-    return {"comment_id": comment_id}
-
-
 def _backlinks_auto_cfg(proj_settings: dict) -> dict:
     cfg = (proj_settings or {}).get("backlinks_auto") or {}
     return {
@@ -15814,10 +15745,6 @@ def _backlinks_auto_cfg(proj_settings: dict) -> dict:
         "frequency": cfg.get("frequency", "daily"),
         "max_per_run": int(cfg.get("max_per_run", 10)),
         "auto_draft": bool(cfg.get("auto_draft", True)),
-        "auto_post": bool(cfg.get("auto_post", False)),
-        "max_posts_per_day": int(cfg.get("max_posts_per_day", 3)),
-        "min_interval_hours": int(cfg.get("min_interval_hours", 2)),
-        "subreddit_cooldown_hours": int(cfg.get("subreddit_cooldown_hours", 48)),
         "last_run": cfg.get("last_run"),
     }
 
@@ -15848,10 +15775,6 @@ async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONRespo
     frequency = "weekly" if body.get("frequency") == "weekly" else "daily"
     max_per_run = max(1, min(20, int(body.get("max_per_run") or 10)))
     auto_draft = bool(body.get("auto_draft", True))
-    auto_post = bool(body.get("auto_post", False))
-    max_posts_per_day = max(1, min(10, int(body.get("max_posts_per_day") or 3)))
-    min_interval_hours = max(1, min(24, int(body.get("min_interval_hours") or 2)))
-    subreddit_cooldown_hours = max(1, min(168, int(body.get("subreddit_cooldown_hours") or 48)))
 
     with DB.session() as db:
         p = db.scalar(select(Project).where(Project.id == proj.id))
@@ -15866,10 +15789,6 @@ async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONRespo
             "frequency": frequency,
             "max_per_run": max_per_run,
             "auto_draft": auto_draft,
-            "auto_post": auto_post,
-            "max_posts_per_day": max_posts_per_day,
-            "min_interval_hours": min_interval_hours,
-            "subreddit_cooldown_hours": subreddit_cooldown_hours,
             "last_run": existing_cfg.get("last_run"),
         }
         p.settings = settings
@@ -15877,26 +15796,6 @@ async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONRespo
         db.commit()
 
     return JSONResponse({"ok": True})
-
-
-@app.post("/api/projects/{slug}/backlinks/reddit-credentials")
-async def backlinks_reddit_credentials_save(request: Request, slug: str) -> JSONResponse:
-    _db_project_or_404(request, slug)
-    user = request.state.user
-
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse({"ok": False, "error": "JSON invalide"}, status_code=400)
-
-    fields = {
-        "REDDIT_CLIENT_ID": str(body.get("client_id") or "").strip(),
-        "REDDIT_CLIENT_SECRET": str(body.get("client_secret") or "").strip(),
-        "REDDIT_USERNAME": str(body.get("username") or "").strip(),
-        "REDDIT_PASSWORD": str(body.get("password") or "").strip(),
-    }
-    if not all(fields.values()):
-        return JSONResponse({"ok": False, "error": "Tous les champs Reddit sont requis"}, status_code=400)
 
     with DB.session() as db:
         for key, val in fields.items():
@@ -15952,18 +15851,11 @@ def backlinks_queue_reject(request: Request, slug: str, opp_id: str) -> JSONResp
     return JSONResponse({"ok": True})
 
 
-@app.post("/api/projects/{slug}/backlinks/queue/{opp_id}/post")
-def backlinks_queue_post(request: Request, slug: str, opp_id: str) -> JSONResponse:
+@app.post("/api/projects/{slug}/backlinks/queue/{opp_id}/mark-sent")
+def backlinks_queue_mark_sent(request: Request, slug: str, opp_id: str) -> JSONResponse:
+    """Mark an opportunity as manually sent (copy+open flow — no direct API posting)."""
     proj = _db_project_or_404(request, slug)
     user = request.state.user
-
-    creds = _get_reddit_creds(str(user.id))
-    if not creds:
-        return JSONResponse({"ok": False, "error": "Identifiants Reddit non configurés. Renseigne-les dans les paramètres."}, status_code=400)
-
-    auto_cfg = _backlinks_auto_cfg(proj.settings or {})
-    max_per_day = auto_cfg["max_posts_per_day"]
-
     with DB.session() as db:
         opp = db.scalar(select(BacklinkOpportunity).where(
             BacklinkOpportunity.id == opp_id,
@@ -15972,44 +15864,12 @@ def backlinks_queue_post(request: Request, slug: str, opp_id: str) -> JSONRespon
         ))
         if not opp:
             return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
-        if not opp.reply:
-            return JSONResponse({"ok": False, "error": "Aucun draft de réponse à publier"}, status_code=400)
-        if "reddit.com" not in str(opp.url or "").lower():
-            return JSONResponse({"ok": False, "error": "Publication automatique disponible uniquement pour Reddit"}, status_code=400)
-
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        posts_today = int(db.scalar(
-            select(func.count()).where(
-                BacklinkOpportunity.user_id == str(user.id),
-                BacklinkOpportunity.queue_status == "posted",
-                BacklinkOpportunity.posted_at >= today_start,
-            )
-        ) or 0)
-        if posts_today >= max_per_day:
-            return JSONResponse(
-                {"ok": False, "error": f"Quota journalier atteint ({posts_today}/{max_per_day} posts aujourd'hui)"},
-                status_code=429,
-            )
-
-        opp_url = str(opp.url or "")
-        reply_text = str(opp.reply or "")
-
-    try:
-        result = _reddit_post_comment(opp_url, reply_text, creds)
-    except Exception as exc:
-        return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
-
-    with DB.session() as db:
-        opp2 = db.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp_id))
-        if opp2:
-            opp2.queue_status = "posted"
-            opp2.posted_at = datetime.now(timezone.utc)
-            opp2.reddit_post_id = result.get("comment_id", "")
-            opp2.status = "contacted"
-            db.add(opp2)
-            db.commit()
-
-    return JSONResponse({"ok": True, "comment_id": result.get("comment_id", "")})
+        opp.queue_status = "posted"
+        opp.posted_at = datetime.now(timezone.utc)
+        opp.status = "contacted"
+        db.add(opp)
+        db.commit()
+    return JSONResponse({"ok": True})
 
 
 # ---------------------------------------------------------------------------
@@ -16285,116 +16145,10 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
 
 @app.get("/cron/auto-post-backlinks")
 def cron_auto_post_backlinks(request: Request) -> JSONResponse:
-    if not os.environ.get("CRON_SECRET"):
-        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    """Deprecated — automated Reddit posting removed. Publication is now manual (copy+open flow)."""
     if not _cron_auth_check(request):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
-
-    with DB.session() as db:
-        approved = list(db.scalars(
-            select(BacklinkOpportunity)
-            .where(
-                BacklinkOpportunity.queue_status == "approved",
-                BacklinkOpportunity.reply.isnot(None),
-            )
-            .order_by(BacklinkOpportunity.updated_at.asc())
-            .limit(50)
-        ))
-
-    posted_count = 0
-    skipped_count = 0
-    errors: list[dict] = []
-
-    for opp in approved:
-        if "reddit.com" not in str(opp.url or "").lower():
-            skipped_count += 1
-            continue
-
-        user_id = str(opp.user_id or "")
-        creds = _get_reddit_creds(user_id)
-        if not creds:
-            skipped_count += 1
-            continue
-
-        with DB.session() as db2:
-            p2 = db2.scalar(select(Project).where(Project.id == opp.project_id))
-        if not p2:
-            skipped_count += 1
-            continue
-
-        auto_cfg = _backlinks_auto_cfg(p2.settings or {})
-        if not auto_cfg["auto_post"]:
-            skipped_count += 1
-            continue
-
-        max_per_day = auto_cfg["max_posts_per_day"]
-        min_interval_h = auto_cfg["min_interval_hours"]
-        sub_cooldown_h = auto_cfg["subreddit_cooldown_hours"]
-
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        with DB.session() as db3:
-            posts_today = int(db3.scalar(
-                select(func.count()).where(
-                    BacklinkOpportunity.user_id == user_id,
-                    BacklinkOpportunity.queue_status == "posted",
-                    BacklinkOpportunity.posted_at >= today_start,
-                )
-            ) or 0)
-            if posts_today >= max_per_day:
-                skipped_count += 1
-                continue
-
-            last_post = db3.scalar(
-                select(BacklinkOpportunity)
-                .where(
-                    BacklinkOpportunity.user_id == user_id,
-                    BacklinkOpportunity.queue_status == "posted",
-                )
-                .order_by(BacklinkOpportunity.posted_at.desc())
-                .limit(1)
-            )
-            if last_post and last_post.posted_at:
-                hours_since = (datetime.now(timezone.utc) - last_post.posted_at).total_seconds() / 3600
-                if hours_since < min_interval_h:
-                    skipped_count += 1
-                    continue
-
-            subreddit_m = re.search(r"reddit\.com/r/([^/]+)", str(opp.url or "").lower())
-            if subreddit_m:
-                subreddit = subreddit_m.group(1)
-                cutoff = datetime.now(timezone.utc) - __import__("datetime").timedelta(hours=sub_cooldown_h)
-                recent_sub = db3.scalar(
-                    select(BacklinkOpportunity)
-                    .where(
-                        BacklinkOpportunity.user_id == user_id,
-                        BacklinkOpportunity.queue_status == "posted",
-                        BacklinkOpportunity.posted_at >= cutoff,
-                        BacklinkOpportunity.url.ilike(f"%reddit.com/r/{subreddit}%"),
-                    )
-                    .limit(1)
-                )
-                if recent_sub:
-                    skipped_count += 1
-                    continue
-
-        try:
-            result = _reddit_post_comment(str(opp.url), str(opp.reply), creds)
-        except Exception as exc:
-            errors.append({"opp_id": str(opp.id), "error": str(exc)[:200]})
-            continue
-
-        with DB.session() as db4:
-            opp4 = db4.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp.id))
-            if opp4:
-                opp4.queue_status = "posted"
-                opp4.posted_at = datetime.now(timezone.utc)
-                opp4.reddit_post_id = result.get("comment_id", "")
-                opp4.status = "contacted"
-                db4.add(opp4)
-                db4.commit()
-        posted_count += 1
-
-    return JSONResponse({"ok": True, "posted": posted_count, "skipped": skipped_count, "errors": errors})
+    return JSONResponse({"ok": True, "message": "Automated posting disabled. Use copy+open flow.", "posted": 0})
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)

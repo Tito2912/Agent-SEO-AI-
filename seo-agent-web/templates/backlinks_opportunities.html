@@ -201,21 +201,12 @@
   <div class="card-title-row" style="margin-bottom:14px;">
     <div>
       <h2>File de publication</h2>
-      <p class="muted small" style="margin-top:2px;">Drafts IA en attente de validation · approuve pour publier sur Reddit</p>
+      <p class="muted small" style="margin-top:2px;">Drafts IA en attente · approuve, puis clique "Répondre" pour copier &amp; ouvrir en 1 clic</p>
     </div>
-    {# Quota posts today #}
-    {% set max_ppd = auto_cfg.max_posts_per_day %}
-    {% set pct_p = [(posts_today / max_ppd * 100)|int, 100]|min if max_ppd else 0 %}
-    <div class="quota-item">
-      <span>{{ posts_today }}/{{ max_ppd }} posts aujourd'hui</span>
-      <div class="quota-bar-wrap">
-        <div class="quota-bar-fill" style="width:{{ pct_p }}%;background:{% if pct_p < 60 %}var(--accent){% elif pct_p < 90 %}#f59e0b{% else %}var(--err){% endif %};"></div>
-      </div>
-    </div>
+    <span class="badge notice" style="font-size:11px;">{{ queue_items|length }} en attente</span>
   </div>
 
   {% for qopp in queue_items %}
-  {% set is_reddit = 'reddit.com' in (qopp.url or '') %}
   <div class="queue-card {{ qopp.queue_status }}" id="qcard-{{ qopp.id }}">
     <div class="queue-card-header">
       <span class="queue-status-badge {{ qopp.queue_status }}">{{ '✓ Approuvé' if qopp.queue_status == 'approved' else '⏳ En attente' }}</span>
@@ -237,13 +228,15 @@
           <button type="button" class="btn small" style="font-size:11px;"
             onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
         {% else %}
-          {% if is_reddit and has_reddit %}
+          {% if qopp.reply %}
             <button type="button" class="btn small primary" style="font-size:11px;"
-              id="post-btn-{{ qopp.id }}" onclick="queuePost('{{ qopp.id }}')">Publier sur Reddit</button>
-          {% elif is_reddit and not has_reddit %}
-            <span class="muted" style="font-size:11px;" title="Configure tes identifiants Reddit dans Automatisation">Reddit non configuré</span>
+              id="reply-btn-{{ qopp.id }}"
+              data-url="{{ qopp.url }}"
+              data-reply="{{ qopp.reply | e }}"
+              data-opp-id="{{ qopp.id }}"
+              onclick="queueReply(this)">↗ Répondre</button>
           {% else %}
-            <span class="muted" style="font-size:11px;">Approuvé (pub manuelle)</span>
+            <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="btn small" style="font-size:11px;">Ouvrir ↗</a>
           {% endif %}
           <button type="button" class="btn small" style="font-size:11px;"
             onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
@@ -406,6 +399,7 @@
     </summary>
 
     <div style="margin-top:16px;">
+    <p class="muted small" style="margin:0 0 16px;">L'agent recherche des opportunités automatiquement et génère un draft IA. Tu valides chaque draft, puis cliques "Répondre" : le texte est copié et le thread s'ouvre.</p>
 
     {# ── Auto-search ── #}
     <div class="auto-section-title">Recherche automatique</div>
@@ -464,83 +458,9 @@
       </div>
     </div>
 
-    {# ── Auto-post ── #}
-    <div class="auto-section-title">Publication automatique</div>
-    <div class="auto-settings-grid" style="margin-bottom:16px;">
-
-      <div style="grid-column:1/-1;">
-        <div class="toggle-row">
-          <label class="toggle-switch">
-            <input type="checkbox" id="as-auto-post" {% if auto_cfg.auto_post %}checked{% endif %} />
-            <span class="toggle-slider"></span>
-          </label>
-          <span class="toggle-label">Publier automatiquement les opportunités approuvées</span>
-        </div>
-        <p class="muted small" style="margin:4px 0 0 48px;">Le cron postera les drafts approuvés en respectant les limites ci-dessous.</p>
-      </div>
-
-      <div class="auto-field">
-        <label>Max posts / jour</label>
-        <input type="number" id="as-max-posts-day" min="1" max="10" value="{{ auto_cfg.max_posts_per_day }}" />
-      </div>
-
-      <div class="auto-field">
-        <label>Délai minimum entre 2 posts (heures)</label>
-        <input type="number" id="as-min-interval" min="1" max="24" value="{{ auto_cfg.min_interval_hours }}" />
-      </div>
-
-      <div class="auto-field" style="grid-column:1/-1;">
-        <label>Cooldown par subreddit (heures)</label>
-        <input type="number" id="as-sub-cooldown" min="1" max="168" value="{{ auto_cfg.subreddit_cooldown_hours }}" style="max-width:160px;" />
-        <span class="hint">Évite de poster dans le même subreddit trop souvent.</span>
-      </div>
-    </div>
-
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
       <button type="button" class="btn primary" id="btn-save-auto-settings">Enregistrer les paramètres</button>
       <span id="auto-settings-status" class="muted small" style="align-self:center;"></span>
-    </div>
-
-    {# ── Reddit credentials ── #}
-    <div class="auto-section-title">Identifiants Reddit OAuth</div>
-    <div class="reddit-creds-card">
-      {% if has_reddit %}
-      <p class="muted small" style="margin:0 0 10px;">
-        <span class="badge ok" style="font-size:10px;">Configuré</span>
-        Identifiants Reddit enregistrés. Mets à jour ci-dessous si nécessaire.
-      </p>
-      {% else %}
-      <p class="muted small" style="margin:0 0 10px;">
-        <span class="badge notice" style="font-size:10px;">Non configuré</span>
-        Configure une app Reddit Script pour publier automatiquement.
-        <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noreferrer" style="color:var(--accent);">Créer une app Reddit →</a>
-      </p>
-      {% endif %}
-      <div class="auto-settings-grid">
-        <div class="auto-field">
-          <label>Client ID</label>
-          <input type="text" id="rdt-client-id" placeholder="Votre client_id Reddit" autocomplete="off" />
-        </div>
-        <div class="auto-field">
-          <label>Client Secret</label>
-          <input type="password" id="rdt-client-secret" placeholder="Votre client_secret Reddit" autocomplete="off" />
-        </div>
-        <div class="auto-field">
-          <label>Nom d'utilisateur Reddit</label>
-          <input type="text" id="rdt-username" placeholder="u/moncompte" autocomplete="off" />
-        </div>
-        <div class="auto-field">
-          <label>Mot de passe Reddit</label>
-          <input type="password" id="rdt-password" placeholder="Mot de passe du compte" autocomplete="off" />
-        </div>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;">
-        <button type="button" class="btn" id="btn-save-reddit-creds">Enregistrer les identifiants</button>
-        <span id="reddit-creds-status" class="muted small"></span>
-      </div>
-      <p class="muted small" style="margin:8px 0 0;">
-        Type d'app : <strong>script</strong>. Redirect URI : <code>http://localhost:8080</code> (non utilisée). Les credentials sont stockés chiffrés.
-      </p>
     </div>
 
     {% if auto_cfg.last_run %}
@@ -690,7 +610,7 @@
     });
   });
 
-  /* ── Queue actions ── */
+  /* ── Queue actions (approve / reject) ── */
   window.queueAction = function(oppId, action){
     fetch('/api/projects/'+slug+'/backlinks/queue/'+oppId+'/'+action,{
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
@@ -701,29 +621,41 @@
         var msgEl = document.getElementById('qcard-msg-'+oppId);
         if(msgEl){ msgEl.textContent='❌ '+(d.error||'Erreur'); msgEl.style.display='block'; }
       }
-    }).catch(function(e){
+    }).catch(function(){
       var msgEl = document.getElementById('qcard-msg-'+oppId);
       if(msgEl){ msgEl.textContent='❌ Erreur réseau'; msgEl.style.display='block'; }
     });
   };
 
-  window.queuePost = function(oppId){
-    var btn = document.getElementById('post-btn-'+oppId);
-    if(btn){ btn.disabled=true; btn.textContent='Publication…'; }
-    fetch('/api/projects/'+slug+'/backlinks/queue/'+oppId+'/post',{
+  /* ── Reply: copy draft + open thread + mark sent ── */
+  window.queueReply = function(btn){
+    var oppId  = btn.dataset.oppId;
+    var url    = btn.dataset.url;
+    var reply  = btn.dataset.reply;
+
+    /* 1. Copy to clipboard */
+    if(navigator.clipboard && reply){
+      navigator.clipboard.writeText(reply).catch(function(){});
+    }
+
+    /* 2. Open the thread in a new tab */
+    if(url){ window.open(url, '_blank', 'noopener'); }
+
+    /* 3. Mark as sent in DB */
+    btn.disabled = true;
+    btn.textContent = '✓ Envoyé';
+    btn.style.background = 'var(--accent)';
+    fetch('/api/projects/'+slug+'/backlinks/queue/'+oppId+'/mark-sent',{
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
       body:'{}'
     }).then(function(r){return r.json();}).then(function(d){
-      if(d.ok){
-        if(btn){ btn.textContent='✓ Publié !'; btn.style.background='var(--accent)'; }
-        setTimeout(function(){ window.location.reload(); }, 1800);
-      } else {
-        if(btn){ btn.disabled=false; btn.textContent='Publier sur Reddit'; }
+      if(!d.ok){
         var msgEl = document.getElementById('qcard-msg-'+oppId);
-        if(msgEl){ msgEl.textContent='❌ '+(d.error||'Erreur'); msgEl.style.display='block'; }
+        if(msgEl){ msgEl.textContent='⚠ '+(d.error||'Erreur de mise à jour'); msgEl.style.display='block'; }
       }
+      setTimeout(function(){ window.location.reload(); }, 1500);
     }).catch(function(){
-      if(btn){ btn.disabled=false; btn.textContent='Publier sur Reddit'; }
+      setTimeout(function(){ window.location.reload(); }, 1500);
     });
   };
 
@@ -741,10 +673,6 @@
       frequency: (document.getElementById('as-frequency')||{}).value||'daily',
       max_per_run: parseInt((document.getElementById('as-max-per-run')||{}).value||'10'),
       auto_draft: document.getElementById('as-auto-draft').checked,
-      auto_post: document.getElementById('as-auto-post').checked,
-      max_posts_per_day: parseInt((document.getElementById('as-max-posts-day')||{}).value||'3'),
-      min_interval_hours: parseInt((document.getElementById('as-min-interval')||{}).value||'2'),
-      subreddit_cooldown_hours: parseInt((document.getElementById('as-sub-cooldown')||{}).value||'48'),
     };
     btnSaveAuto.disabled=true;
     statusEl.textContent='Enregistrement…';
@@ -761,35 +689,6 @@
     });
   });
 
-  /* ── Reddit credentials save ── */
-  var btnSaveReddit = document.getElementById('btn-save-reddit-creds');
-  if(btnSaveReddit) btnSaveReddit.addEventListener('click', function(){
-    var statusEl = document.getElementById('reddit-creds-status');
-    var body = {
-      client_id:     (document.getElementById('rdt-client-id')||{}).value||'',
-      client_secret: (document.getElementById('rdt-client-secret')||{}).value||'',
-      username:      (document.getElementById('rdt-username')||{}).value||'',
-      password:      (document.getElementById('rdt-password')||{}).value||'',
-    };
-    btnSaveReddit.disabled=true;
-    statusEl.textContent='Enregistrement…';
-    fetch('/api/projects/'+slug+'/backlinks/reddit-credentials',{
-      method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
-      body: JSON.stringify(body)
-    }).then(function(r){return r.json();}).then(function(d){
-      btnSaveReddit.disabled=false;
-      statusEl.textContent = d.ok ? '✓ Identifiants enregistrés' : '❌ '+(d.error||'Erreur');
-      if(d.ok){
-        ['rdt-client-id','rdt-client-secret','rdt-username','rdt-password'].forEach(function(id){
-          var el=document.getElementById(id); if(el) el.value='';
-        });
-        setTimeout(function(){ window.location.reload(); }, 1200);
-      }
-    }).catch(function(){
-      btnSaveReddit.disabled=false;
-      statusEl.textContent='❌ Erreur réseau';
-    });
-  });
 
 })();
 </script>
