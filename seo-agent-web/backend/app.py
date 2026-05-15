@@ -13641,9 +13641,18 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             ))
         for t in tasks:
             s = t.status if t.status in groups else "todo"
+            # Separate internal PR JSON from user-written note
+            try:
+                _note_parsed = json.loads(t.note) if t.note else {}
+            except Exception:
+                _note_parsed = {}
+            _is_pr_note = bool(_note_parsed.get("pr_url"))
+            pr_data = _note_parsed if _is_pr_note else {}
+            user_note = "" if _is_pr_note else (t.note or "")
             groups[s].append({
                 "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
-                "url": t.url, "status": t.status, "note": t.note,
+                "url": t.url, "status": t.status,
+                "pr": pr_data, "user_note": user_note,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             })
