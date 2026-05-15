@@ -112,6 +112,11 @@
               Corrections
             </a>
 
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %}active{% endif %}" href="/projects/{{ project.slug }}/automation">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Automatisation
+            </a>
+
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}" href="/projects/{{ project.slug }}/crawls">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
               Historique des crawls

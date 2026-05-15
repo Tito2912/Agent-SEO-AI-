@@ -3,104 +3,101 @@
 
 {% block head_extra %}
 <style>
-/* ── Section headers ── */
-.auto-section-label {
+.hub-section-label {
   font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;
 }
-.auto-section-label::after { content:"";flex:1;height:1px;background:var(--border); }
+.hub-section-label::after { content:"";flex:1;height:1px;background:var(--border); }
 
-/* ── Project card (GitHub corrections) ── */
-.gh-proj-card {
-  border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;
+/* ── Project summary tiles ── */
+.hub-proj-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:4px; }
+.hub-proj-tile {
+  border:1px solid var(--border);border-radius:8px;padding:14px 16px;
+  text-decoration:none;color:var(--text);transition:border-color .15s,background .15s;display:block;
 }
-.gh-proj-header {
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  padding:12px 14px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--border);
-}
-.gh-proj-name { font-weight:700;font-size:13px; }
-.gh-proj-repo { font-size:11px;font-family:monospace;color:var(--muted); }
-.gh-proj-counts { display:flex;align-items:center;gap:5px;margin-left:auto; }
-.gh-proj-body { padding:10px 14px; }
-.gh-task-row {
-  display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:8px;
-  padding:7px 8px;border-radius:5px;font-size:12px;margin-bottom:4px;
-  background:var(--bg);
-}
-.gh-task-row:last-child { margin-bottom:0; }
-.gh-task-info { min-width:0; }
-.gh-task-label { font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.gh-task-url   { font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px; }
-.gh-pr-link {
-  display:inline-flex;align-items:center;gap:3px;font-size:10px;font-family:monospace;
-  color:var(--accent-2);white-space:nowrap;
-}
-.gh-pr-link:hover { text-decoration:underline; }
-.gh-empty { color:var(--muted);font-size:12px;padding:6px 0; }
+.hub-proj-tile:hover { border-color:var(--border-2);background:rgba(255,255,255,.02); }
+.hub-proj-name { font-weight:700;font-size:13px;margin-bottom:4px; }
+.hub-proj-repo { font-size:11px;font-family:monospace;color:var(--muted);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.hub-proj-counts { display:flex;gap:6px;flex-wrap:wrap; }
+.stat-chip { display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600; }
+.stat-chip.todo    { background:rgba(129,140,248,.1);color:#a5b4fc; }
+.stat-chip.pr      { background:rgba(245,158,11,.1);color:#fbbf24; }
+.stat-chip.done    { background:rgba(16,185,129,.1);color:#34d399; }
+.stat-chip.ignored { background:rgba(255,255,255,.06);color:var(--muted); }
+.hub-proj-no-gh { font-size:11px;color:var(--muted);font-style:italic; }
 
-/* ── Stat chips ── */
-.stat-chip {
-  display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;
-  border-radius:20px;font-weight:600;
-}
-.stat-chip.todo     { background:rgba(129,140,248,.1);color:#a5b4fc; }
-.stat-chip.pr       { background:rgba(245,158,11,.1);color:#fbbf24; }
-.stat-chip.done     { background:rgba(16,185,129,.1);color:#34d399; }
-.stat-chip.ignored  { background:rgba(255,255,255,.06);color:var(--muted); }
+/* ── Global stats bar ── */
+.hub-stats { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px; }
+.hub-stat-card { flex:1;min-width:80px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-align:center; }
+.hub-stat-num { font-size:24px;font-weight:700; }
+.hub-stat-lbl { font-size:11px;color:var(--muted);margin-top:2px; }
 
-/* ── Cron code blocks ── */
-.cron-block {
-  padding:9px 12px;background:var(--bg);border:1px solid var(--border);
-  border-radius:5px;font-size:12px;font-family:monospace;color:var(--text);
-  word-break:break-all;
-}
-.cron-label { font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600; }
+/* ── Cron blocks ── */
+.cron-block { padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:5px;font-size:12px;font-family:monospace;word-break:break-all; }
+.cron-lbl   { font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600; }
 
 /* ── Job chips ── */
-.auto-job-grid { display:flex;flex-wrap:wrap;gap:6px; }
-.auto-job-chip {
-  display:inline-flex;align-items:center;gap:6px;
-  padding:4px 10px;border:1px solid var(--border);border-radius:4px;
-  font-size:11px;text-decoration:none;color:var(--text);
-  transition:border-color .12s,background .12s;
+.hub-job-grid { display:flex;flex-wrap:wrap;gap:6px; }
+.hub-job-chip {
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  border:1px solid var(--border);border-radius:4px;font-size:11px;
+  text-decoration:none;color:var(--text);transition:border-color .12s,background .12s;
 }
-.auto-job-chip:hover { border-color:var(--border-2);background:rgba(255,255,255,.03); }
+.hub-job-chip:hover { border-color:var(--border-2);background:rgba(255,255,255,.03); }
 </style>
 <script>
-(function () {
-  /* ── Domains ── */
-  function loadDomains() {
-    fetch('/api/automation/domains')
+(function(){
+  /* ── Load per-project GitHub correction summaries ── */
+  function loadProjCards(){
+    var grid = document.getElementById('hub-proj-grid');
+    if(!grid) return;
+    fetch('/api/automation/github-corrections')
       .then(function(r){return r.json();})
       .then(function(data){
-        var ta=document.getElementById('domains-textarea');
-        var ct=document.getElementById('domains-count');
-        if(ta) ta.value=(data.domains||[]).join('\n');
-        if(ct) ct.textContent=(data.count||0)+' domaine'+((data.count||0)>1?'s':'');
-      }).catch(function(){});
-  }
-  function saveDomains(){
-    var ta=document.getElementById('domains-textarea');
-    var btn=document.getElementById('domains-save-btn');
-    var msg=document.getElementById('domains-msg');
-    if(!ta) return;
-    var domains=ta.value.split('\n').map(function(d){return d.trim();}).filter(Boolean);
-    if(btn){btn.disabled=true;btn.textContent='Sauvegarde…';}
-    fetch('/api/automation/domains',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domains:domains})})
-      .then(function(r){return r.json();})
-      .then(function(data){
-        if(btn){btn.disabled=false;btn.textContent='Sauvegarder';}
-        if(msg){
-          msg.textContent=data.ok?(data.count+' domaine(s) sauvegardé(s)'):('Erreur : '+(data.error||'?'));
-          msg.style.color=data.ok?'var(--accent)':'var(--err)';
-          setTimeout(function(){msg.textContent='';},3000);
+        if(!data.ok||!data.projects||!data.projects.length){
+          grid.innerHTML='<p class="muted small">Aucun projet avec GitHub connecté. <a href="/settings/accounts#github-connect-card">Connecter →</a></p>';
+          return;
         }
-        if(data.ok){var ct=document.getElementById('domains-count');if(ct)ct.textContent=data.count+' domaine'+(data.count>1?'s':'');}
+        /* Global totals */
+        var tot={todo:0,in_progress:0,done:0,ignored:0};
+        data.projects.forEach(function(p){
+          tot.todo+=p.counts.todo||0; tot.in_progress+=p.counts.in_progress||0;
+          tot.done+=p.counts.done||0; tot.ignored+=p.counts.ignored||0;
+        });
+        var statsEl=document.getElementById('hub-global-stats');
+        if(statsEl){
+          statsEl.innerHTML=
+            '<div class="hub-stat-card"><div class="hub-stat-num" style="color:#a5b4fc;">'+tot.todo+'</div><div class="hub-stat-lbl">À corriger</div></div>'
+           +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:#fbbf24;">'+tot.in_progress+'</div><div class="hub-stat-lbl">PR en cours</div></div>'
+           +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:#34d399;">'+tot.done+'</div><div class="hub-stat-lbl">Corrigés</div></div>'
+           +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--muted);">'+tot.ignored+'</div><div class="hub-stat-lbl">Ignorés</div></div>';
+        }
+        /* Project tiles */
+        var html='';
+        data.projects.forEach(function(p){
+          var c=p.counts;
+          var modeBadge=p.github_mode==='auto'
+            ?'<span class="badge ok" style="font-size:9px;padding:1px 5px;">Full Access</span>'
+            :'<span class="badge notice" style="font-size:9px;padding:1px 5px;">Vérification</span>';
+          html+='<a class="hub-proj-tile" href="/projects/'+p.slug+'/automation">'
+            +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+            +'<span class="hub-proj-name">'+escHtml(p.site_name||p.slug)+'</span>'+modeBadge+'</div>'
+            +'<div class="hub-proj-repo">'+escHtml(p.github_repo)+'</div>'
+            +'<div class="hub-proj-counts">'
+            +'<span class="stat-chip todo">'+( c.todo||0)+' todo</span>'
+            +'<span class="stat-chip pr">'+(c.in_progress||0)+' PR</span>'
+            +'<span class="stat-chip done">'+(c.done||0)+' ✓</span>'
+            +(c.ignored?'<span class="stat-chip ignored">'+(c.ignored||0)+' ignoré</span>':'')
+            +'</div></a>';
+        });
+        grid.innerHTML=html;
       }).catch(function(){
-        if(btn){btn.disabled=false;btn.textContent='Sauvegarder';}
-        if(msg){msg.textContent='Erreur réseau';msg.style.color='var(--err)';}
+        var grid=document.getElementById('hub-proj-grid');
+        if(grid) grid.innerHTML='<p class="muted small" style="color:var(--err);">Erreur de chargement.</p>';
       });
   }
+
+  function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
   /* ── Live logs ── */
   var _pollTimer=null;
@@ -118,8 +115,7 @@
           statusEl.className='badge '+(data.status==='done'?'ok':data.status==='failed'?'error':'notice');
         }
         var lines=(data.stdout||'').split('\n');
-        logEl.textContent=lines.slice(-50).join('\n');
-        logEl.scrollTop=logEl.scrollHeight;
+        logEl.textContent=lines.slice(-50).join('\n'); logEl.scrollTop=logEl.scrollHeight;
         if(data.status==='running'||data.status==='queued'){_pollTimer=setTimeout(poll,2000);}
         else{if(_pollTimer)clearTimeout(_pollTimer);setTimeout(function(){window.location.reload();},3000);}
       }).catch(function(){_pollTimer=setTimeout(poll,5000);});
@@ -127,135 +123,35 @@
     poll();
   }
 
-  /* ── GitHub corrections ── */
-  function _stLabel(s){return{todo:'À corriger',in_progress:'PR en cours',done:'Corrigé',ignored:'Ignoré'}[s]||s;}
-  function _stClass(s){return{todo:'notice',in_progress:'warning',done:'ok',ignored:''}[s]||'';}
-  function _badge(cls,txt){return'<span class="badge '+cls+'" style="font-size:10px;white-space:nowrap;">'+txt+'</span>';}
-
-  function renderGhCorrections(data){
-    var body=document.getElementById('gh-corr-body');
-    if(!body) return;
-    if(!data.ok||!data.projects||!data.projects.length){
-      body.innerHTML='<p class="gh-empty">Aucun projet avec un dépôt GitHub connecté. <a href="/settings/accounts#github-connect-card">Connecter GitHub →</a></p>';
-      return;
-    }
-    var html='';
-    data.projects.forEach(function(proj){
-      var c=proj.counts;
-      var isAuto=proj.github_mode==='auto';
-      var modeBadge=isAuto
-        ?'<span class="badge ok" style="font-size:10px;">Full Access</span>'
-        :'<span class="badge notice" style="font-size:10px;">Vérification</span>';
-      html+='<div class="gh-proj-card">';
-      /* Header */
-      html+='<div class="gh-proj-header">';
-      html+='<span class="gh-proj-name">'+escHtml(proj.site_name||proj.slug)+'</span>';
-      html+=modeBadge;
-      html+='<span class="gh-proj-repo">'+escHtml(proj.github_repo)+'</span>';
-      html+='<div class="gh-proj-counts">';
-      html+='<span class="stat-chip todo" title="À corriger">'+( c.todo||0)+' todo</span>';
-      html+='<span class="stat-chip pr"   title="PR en cours">'+(c.in_progress||0)+' PR</span>';
-      html+='<span class="stat-chip done" title="Corrigés">'+(c.done||0)+' ✓</span>';
-      if(c.ignored) html+='<span class="stat-chip ignored" title="Ignorés">'+(c.ignored||0)+' ignoré</span>';
-      html+='<button type="button" class="btn small primary" style="font-size:11px;margin-left:4px;" '
-        +'data-slug="'+proj.slug+'" onclick="triggerGhBulkFix(this)" '
-        +'title="Générer et pousher 1 PR avec toutes les erreurs du dernier crawl">⚡ Tout corriger</button>';
-      html+='</div></div>';
-      /* Tasks */
-      html+='<div class="gh-proj-body">';
-      if(!proj.tasks||!proj.tasks.length){
-        html+='<p class="gh-empty">Aucune correction enregistrée.</p>';
-      } else {
-        proj.tasks.forEach(function(t){
-          var hasPr=t.pr&&t.pr.pr_url;
-          html+='<div class="gh-task-row">';
-          html+=_badge(_stClass(t.status),_stLabel(t.status));
-          html+='<div class="gh-task-info">'
-            +'<div class="gh-task-label">'+escHtml(t.issue_label||t.issue_key)+'</div>'
-            +'<div class="gh-task-url" title="'+escHtml(t.url)+'">'+escHtml(t.url)+'</div>'
-            +'</div>';
-          /* Right action */
-          html+='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">';
-          if(hasPr){
-            var num=t.pr.pr_number?'#'+t.pr.pr_number:'';
-            var sha=t.pr.commit_sha?' · '+t.pr.commit_sha:'';
-            html+='<a href="'+t.pr.pr_url+'" target="_blank" rel="noreferrer" class="gh-pr-link">'+escHtml(num+sha)+' ↗</a>';
-          }
-          if(t.status==='todo'&&isAuto){
-            html+='<button type="button" class="btn small" style="font-size:10px;" '
-              +'data-slug="'+proj.slug+'" data-issue="'+t.issue_key+'" '
-              +'data-url="'+encodeURIComponent(t.url)+'" data-crawl="'+(t.crawl_ts||'')+'" '
-              +'onclick="triggerGhFix(this)">Corriger</button>';
-          } else if(t.status==='todo'){
-            html+='<a class="btn small" style="font-size:10px;" href="/projects/'+proj.slug+'/issues/'+t.issue_key+'">Voir →</a>';
-          }
-          html+='</div></div>';
-        });
-      }
-      html+='</div></div>';
-    });
-    body.innerHTML=html;
+  /* ── Domains ── */
+  function loadDomains(){
+    fetch('/api/automation/domains').then(function(r){return r.json();}).then(function(data){
+      var ta=document.getElementById('domains-textarea');
+      var ct=document.getElementById('domains-count');
+      if(ta) ta.value=(data.domains||[]).join('\n');
+      if(ct) ct.textContent=(data.count||0)+' domaine'+((data.count||0)>1?'s':'');
+    }).catch(function(){});
   }
-
-  function escHtml(s){
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function loadGhCorrections(){
-    var body=document.getElementById('gh-corr-body');
-    if(body) body.innerHTML='<p class="gh-empty">Chargement…</p>';
-    fetch('/api/automation/github-corrections')
+  function saveDomains(){
+    var ta=document.getElementById('domains-textarea');
+    var btn=document.getElementById('domains-save-btn');
+    var msg=document.getElementById('domains-msg');
+    if(!ta) return;
+    var domains=ta.value.split('\n').map(function(d){return d.trim();}).filter(Boolean);
+    if(btn){btn.disabled=true;btn.textContent='Sauvegarde…';}
+    fetch('/api/automation/domains',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domains:domains})})
       .then(function(r){return r.json();})
-      .then(renderGhCorrections)
-      .catch(function(){
-        var b=document.getElementById('gh-corr-body');
-        if(b) b.innerHTML='<p class="gh-empty" style="color:var(--err);">Erreur de chargement.</p>';
-      });
-  }
-
-  function triggerGhBulkFix(btn){
-    var slug=btn.dataset.slug;
-    var orig=btn.innerHTML;
-    btn.disabled=true; btn.innerHTML='⏳ Génération…';
-    fetch('/api/projects/'+slug+'/github/bulk-fix',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(d.ok){
-          btn.innerHTML=d.merged?'✓ '+d.fixed_count+' mergé(s)':'✓ PR #'+d.pr_number+' créé';
-          btn.style.background='var(--accent)';
-          if(d.pr_url){
-            var a=document.createElement('a');
-            a.href=d.pr_url;a.target='_blank';a.rel='noreferrer';
-            a.textContent=' ↗';a.style.cssText='color:#fff;margin-left:4px;';
-            btn.parentNode.insertBefore(a,btn.nextSibling);
-          }
-          setTimeout(loadGhCorrections,1500);
-        } else {
-          btn.disabled=false;btn.innerHTML=orig;
-          alert('Erreur : '+(d.error||'?'));
-        }
-      }).catch(function(){btn.disabled=false;btn.innerHTML=orig;alert('Erreur réseau');});
-  }
-
-  function triggerGhFix(btn){
-    var slug=btn.dataset.slug,issue=btn.dataset.issue;
-    var url=decodeURIComponent(btn.dataset.url),crawl=btn.dataset.crawl||'';
-    btn.disabled=true;btn.textContent='⏳';
-    fetch('/api/projects/'+slug+'/issues/'+issue+'/github-fix',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({url:url,crawl_ts:crawl,confirm:false})
-    }).then(function(r){return r.json();})
-      .then(function(d){
-        if(d.ok){btn.textContent=d.merged?'✓ Mergé':'✓ PR créé';btn.style.background='var(--accent)';setTimeout(loadGhCorrections,1500);}
-        else{btn.disabled=false;btn.textContent='Erreur';btn.title=d.error||'?';}
-      }).catch(function(){btn.disabled=false;btn.textContent='Erreur réseau';});
+      .then(function(data){
+        if(btn){btn.disabled=false;btn.textContent='Sauvegarder';}
+        if(msg){msg.textContent=data.ok?(data.count+' domaine(s) sauvegardé(s)'):('Erreur : '+(data.error||'?'));msg.style.color=data.ok?'var(--accent)':'var(--err)';setTimeout(function(){msg.textContent='';},3000);}
+        if(data.ok){var ct=document.getElementById('domains-count');if(ct)ct.textContent=data.count+' domaine'+(data.count>1?'s':'');}
+      }).catch(function(){if(btn){btn.disabled=false;btn.textContent='Sauvegarder';}});
   }
 
   document.addEventListener('DOMContentLoaded',function(){
+    loadProjCards();
     loadDomains();
-    loadGhCorrections();
     var s=document.getElementById('domains-save-btn');if(s) s.addEventListener('click',saveDomains);
-    var r=document.getElementById('gh-corr-refresh');if(r) r.addEventListener('click',loadGhCorrections);
     var jobId=(document.getElementById('auto-body')||{}).dataset.currentJobId;
     if(jobId) startLiveLogs(jobId);
   });
@@ -271,15 +167,15 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>Automatisation</h1>
-  <p class="muted">Corrections GitHub automatiques, audit multi-sites et planification.</p>
+  <h1>Hub d'automatisation</h1>
+  <p class="muted">Vue globale de toutes les corrections et automatisations par projet.</p>
 </div>
 
 <div id="auto-body" data-current-job-id="{{ current_job.id if current_job else '' }}" style="display:contents;">
 
 {# ── Run en cours ── #}
 {% if current_job %}
-<section class="card" id="live-logs-panel" style="border:1px solid var(--accent);display:block;margin-bottom:16px;">
+<section class="card" id="live-logs-panel" style="border:1px solid var(--accent);display:block;margin-bottom:20px;">
   <div class="card-title-row">
     <h2>Run en cours</h2>
     <span id="live-job-status" class="badge notice">{{ current_job.status }}</span>
@@ -291,49 +187,42 @@
 <div id="live-logs-panel" style="display:none;"><pre id="live-log-content"></pre><span id="live-job-status"></span></div>
 {% endif %}
 
-{# ── Corrections GitHub ── #}
-<div class="auto-section-label">Corrections GitHub automatiques</div>
-<section class="card" style="margin-bottom:24px;">
-  <div class="card-title-row" style="margin-bottom:14px;">
-    <h2 style="margin:0;">Projets connectés</h2>
-    <button type="button" class="btn small" id="gh-corr-refresh">Actualiser</button>
-  </div>
-  <div id="gh-corr-body"><p class="gh-empty">Chargement…</p></div>
-</section>
+{# ── Corrections GitHub — stats globales ── #}
+<div class="hub-section-label">Corrections GitHub — vue globale</div>
+<div class="hub-stats" id="hub-global-stats">
+  <div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--muted);">—</div><div class="hub-stat-lbl">Chargement…</div></div>
+</div>
+<div class="hub-proj-grid" id="hub-proj-grid">
+  <p class="muted small">Chargement…</p>
+</div>
+<p class="muted small" style="margin-bottom:24px;">Clique sur un projet pour accéder à ses automatisations.</p>
 
-{# ── Audit + Cron (2 columns) ── #}
-<div class="auto-section-label">Audit multi-sites</div>
+{# ── Audit multi-sites + Planification ── #}
+<div class="hub-section-label">Audit multi-sites</div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:24px;">
 
-  {# Lancer un audit #}
   <section class="card" style="margin:0;">
     <div class="card-title-row">
       <h2>Lancer un audit</h2>
       {% if config_path %}<span class="badge ok" style="font-size:10px;">yml trouvé</span>{% else %}<span class="badge error" style="font-size:10px;">yml manquant</span>{% endif %}
     </div>
-    <div style="display:grid;gap:4px;margin-bottom:12px;">
-      {% if env_status and config_status %}
-      <div style="display:flex;gap:5px;flex-wrap:wrap;">
-        <span class="badge {{ 'ok' if config_status.pagespeed_enabled else 'notice' }}" style="font-size:10px;">PageSpeed {{ 'on' if config_status.pagespeed_enabled else 'off' }}</span>
-        <span class="badge {{ 'ok' if env_status.pagespeed_api_key_set else 'notice' }}" style="font-size:10px;">Clé API {{ 'ok' if env_status.pagespeed_api_key_set else 'manquante' }}</span>
-        <span class="badge {{ 'ok' if config_status.gsc_api_enabled else 'notice' }}" style="font-size:10px;">GSC {{ 'on' if config_status.gsc_api_enabled else 'off' }}</span>
-        <span class="badge {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'notice' }}" style="font-size:10px;">Credentials {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'manquant' }}</span>
-      </div>
-      {% endif %}
-      {% if inventory %}
-      <div class="muted small" style="margin-top:4px;">
-        Inventaire :
-        {% if inventory.exists %}
-          <span id="domains-count" class="mono">{{ inventory.count }} domaine{{ 's' if inventory.count > 1 else '' }}</span>
-        {% else %}
-          <span class="badge error" style="font-size:10px;">introuvable</span>
-        {% endif %}
-      </div>
-      {% endif %}
+    {% if env_status and config_status %}
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;">
+      <span class="badge {{ 'ok' if config_status.pagespeed_enabled else 'notice' }}" style="font-size:10px;">PageSpeed {{ 'on' if config_status.pagespeed_enabled else 'off' }}</span>
+      <span class="badge {{ 'ok' if env_status.pagespeed_api_key_set else 'notice' }}" style="font-size:10px;">Clé API {{ 'ok' if env_status.pagespeed_api_key_set else 'manquante' }}</span>
+      <span class="badge {{ 'ok' if config_status.gsc_api_enabled else 'notice' }}" style="font-size:10px;">GSC {{ 'on' if config_status.gsc_api_enabled else 'off' }}</span>
+      <span class="badge {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'notice' }}" style="font-size:10px;">Credentials {{ 'ok' if (env_status.gsc_credentials_set and env_status.gsc_credentials_exists) else 'manquant' }}</span>
     </div>
+    {% endif %}
+    {% if inventory %}
+    <p class="muted small" style="margin-bottom:10px;">
+      Inventaire : {% if inventory.exists %}<span id="domains-count" class="mono">{{ inventory.count }} domaine{{ 's' if inventory.count > 1 else '' }}</span>{% else %}<span class="badge error" style="font-size:10px;">introuvable</span>{% endif %}
+    </p>
+    {% endif %}
     <form method="post" action="/run" class="setting-form">
+      <input type="hidden" name="config_path" value="{{ config_path }}" />
       <div>
-        <div class="muted small" style="margin-bottom:6px;font-weight:600;">Mode d'exécution</div>
+        <div class="muted small" style="margin-bottom:6px;font-weight:600;">Mode</div>
         <div class="radios">
           <label class="radio"><input type="radio" name="run_policy" value="verify" checked /> Vérifier (audit + GSC)</label>
           <label class="radio"><input type="radio" name="run_policy" value="auto" /> Déployer auto</label>
@@ -343,16 +232,12 @@
           Je confirme l'exécution auto
         </label>
       </div>
-      <input type="hidden" name="config_path" value="{{ config_path }}" />
-      <div style="margin-top:14px;">
-        <button type="submit" class="btn primary" {% if current_job %}disabled title="Un run est déjà en cours"{% endif %}>
-          Lancer l'audit multi-sites
-        </button>
+      <div style="margin-top:12px;">
+        <button type="submit" class="btn primary" {% if current_job %}disabled title="Un run est déjà en cours"{% endif %}>Lancer l'audit multi-sites</button>
       </div>
     </form>
   </section>
 
-  {# Planification + Inventaire #}
   <div style="display:flex;flex-direction:column;gap:16px;">
     <section class="card" style="margin:0;">
       <div class="card-title-row">
@@ -360,17 +245,11 @@
         {% if env_status.cron_secret_set %}<span class="badge ok" style="font-size:10px;">CRON_SECRET ok</span>{% else %}<span class="badge notice" style="font-size:10px;">CRON_SECRET manquant</span>{% endif %}
       </div>
       <div style="display:grid;gap:8px;">
-        <div>
-          <div class="cron-label">Endpoint</div>
-          <div class="cron-block">GET https://noyaru.com/cron/autopilot</div>
-        </div>
-        <div>
-          <div class="cron-label">Authentification</div>
-          <div class="cron-block">Authorization: Bearer &lt;CRON_SECRET&gt;</div>
-        </div>
+        <div><div class="cron-lbl">Endpoint</div><div class="cron-block">GET https://noyaru.com/cron/autopilot</div></div>
+        <div><div class="cron-lbl">Authentification</div><div class="cron-block">Authorization: Bearer &lt;CRON_SECRET&gt;</div></div>
         {% if not env_status.cron_secret_set %}
         <div class="muted small" style="padding:8px 10px;background:rgba(var(--accent-rgb),.06);border-radius:4px;border-left:2px solid var(--accent);">
-          Ajoute <code>CRON_SECRET</code> dans Render → Environment, puis configure un Cron Job (ex: quotidien 3h00).
+          Ajoute <code>CRON_SECRET</code> dans Render → Environment pour activer le scheduler.
         </div>
         {% endif %}
       </div>
@@ -383,7 +262,7 @@
         <span id="domains-count" class="muted small">{{ inventory.count if inventory.exists else 0 }} domaine{{ 's' if (inventory.exists and inventory.count > 1) else '' }}</span>
       </div>
       <p class="muted small" style="margin-bottom:8px;">Un domaine par ligne · <span class="mono" style="font-size:10px;">{{ inventory.path }}</span></p>
-      <textarea id="domains-textarea" rows="6"
+      <textarea id="domains-textarea" rows="5"
         style="width:100%;font-family:monospace;font-size:12px;padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:inherit;resize:vertical;"
         placeholder="exemple.com&#10;monsite.fr">{{ all_domains | join('\n') }}</textarea>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
@@ -395,13 +274,13 @@
   </div>
 </div>
 
-{# ── Résultats du dernier run ── #}
+{# ── Résultats run ── #}
 {% if sites_rows or latest %}
-<div class="auto-section-label">Résultats</div>
+<div class="hub-section-label">Résultats du dernier run</div>
 {% if sites_rows %}
 <section class="card" style="margin-bottom:16px;">
   <div class="card-title-row">
-    <h2>Dernier run</h2>
+    <h2>Sites</h2>
     {% if latest %}<span class="muted small mono">{{ latest.timestamp }}</span>{% endif %}
   </div>
   <div class="table-wrap">
@@ -410,16 +289,11 @@
       <tbody>{% for row in sites_rows %}<tr>{% for v in row.values() %}<td class="mono" style="font-size:12px;">{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody>
     </table>
   </div>
-  {% if latest and latest.interlinking_md %}
-  <div style="margin-top:10px;"><a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a></div>
-  {% endif %}
+  {% if latest and latest.interlinking_md %}<div style="margin-top:10px;"><a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a></div>{% endif %}
 </section>
 {% elif latest %}
 <section class="card" style="margin-bottom:16px;">
-  <div class="card-title-row">
-    <h2>Dernier run global</h2>
-    <span class="muted small mono">{{ latest.timestamp }}</span>
-  </div>
+  <div class="card-title-row"><h2>Dernier run global</h2><span class="muted small mono">{{ latest.timestamp }}</span></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     {% if latest.sites_summary_md %}<a class="btn" href="/file?path={{ latest.sites_summary_md }}">Sites summary</a>{% endif %}
     {% if latest.interlinking_md %}<a class="btn" href="/file?path={{ latest.interlinking_md }}">Plan d'interlinking</a>{% endif %}
@@ -429,20 +303,18 @@
 {% endif %}
 
 {# ── Exécutions récentes ── #}
-<div class="auto-section-label">Exécutions récentes</div>
+<div class="hub-section-label">Exécutions récentes</div>
 <section class="card">
   <div class="card-title-row">
     <h2>Historique</h2>
     {% if jobs %}<a class="muted small" href="/jobs">Voir tout →</a>{% endif %}
   </div>
   {% if jobs %}
-  <div class="auto-job-grid">
+  <div class="hub-job-grid">
     {% for j in jobs %}
-    <a class="auto-job-chip" href="/jobs?job={{ j.id }}">
+    <a class="hub-job-chip" href="/jobs?job={{ j.id }}">
       <span class="mono" style="font-size:11px;color:var(--muted);">{{ j.id[:8] }}</span>
-      <span class="badge {{ 'ok' if j.status=='done' else 'error' if j.status=='failed' else 'notice' }}" style="font-size:9px;">
-        {{ {'queued':'attente','running':'en cours','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}
-      </span>
+      <span class="badge {{ 'ok' if j.status=='done' else 'error' if j.status=='failed' else 'notice' }}" style="font-size:9px;">{{ {'queued':'attente','running':'en cours','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status,j.status) }}</span>
     </a>
     {% endfor %}
   </div>

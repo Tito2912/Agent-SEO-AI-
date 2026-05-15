@@ -1,0 +1,225 @@
+{% extends "layout.html" %}
+{% block title %}Automatisation - {{ project.site_name }}{% endblock %}
+
+{% block head_extra %}
+<style>
+.pa-stat { display:flex;flex-direction:column;align-items:center;padding:16px 20px;background:var(--bg);border:1px solid var(--border);border-radius:8px;gap:4px;min-width:80px; }
+.pa-stat-num { font-size:22px;font-weight:700; }
+.pa-stat-label { font-size:11px;color:var(--muted);text-align:center; }
+.pa-task-row {
+  display:grid;grid-template-columns:90px 1fr auto;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:6px;background:var(--bg);margin-bottom:5px;font-size:12px;
+}
+.pa-task-label { font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.pa-task-url   { font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px; }
+.pa-pr-link    { font-size:11px;font-family:monospace;color:var(--accent-2);white-space:nowrap;text-decoration:none; }
+.pa-pr-link:hover { text-decoration:underline; }
+.pa-empty { color:var(--muted);font-size:13px;padding:10px 0; }
+.pa-section { margin-bottom:24px; }
+.pa-section-title { font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px; }
+.pa-section-title::after { content:"";flex:1;height:1px;background:var(--border); }
+.gh-connect-card { border:1px dashed var(--border-2);border-radius:8px;padding:24px;text-align:center;background:rgba(255,255,255,.015); }
+</style>
+<script>
+(function(){
+  var _slug = {{ slug | tojson }};
+
+  /* ── Bulk fix ── */
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-bulk-fix]');
+    if(!btn) return;
+    var orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '⏳ Génération en cours…';
+    fetch('/api/projects/'+_slug+'/github/bulk-fix',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok){
+          var msg = d.merged ? '✓ '+d.fixed_count+' correction(s) mergée(s) sur main' : '✓ PR #'+d.pr_number+' créé ('+d.fixed_count+' fix)';
+          btn.innerHTML = msg;
+          btn.style.background = 'var(--accent)';
+          if(d.pr_url){
+            var a = document.createElement('a');
+            a.href=d.pr_url; a.target='_blank'; a.rel='noreferrer';
+            a.textContent=' ↗'; a.style.cssText='color:#fff;margin-left:6px;';
+            btn.parentNode.insertBefore(a, btn.nextSibling);
+          }
+          setTimeout(function(){window.location.reload();}, 2500);
+        } else {
+          btn.disabled=false; btn.innerHTML=orig;
+          var errEl = document.getElementById('bulk-fix-err');
+          if(errEl){ errEl.textContent = d.error||'Erreur inconnue'; errEl.style.display='block'; }
+        }
+      }).catch(function(){
+        btn.disabled=false; btn.innerHTML=orig;
+        var errEl = document.getElementById('bulk-fix-err');
+        if(errEl){ errEl.textContent='Erreur réseau'; errEl.style.display='block'; }
+      });
+  });
+
+  /* ── Single fix ── */
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-single-fix]');
+    if(!btn) return;
+    var issue = btn.dataset.issue;
+    var url = decodeURIComponent(btn.dataset.url);
+    var crawl = btn.dataset.crawl||'';
+    btn.disabled=true; btn.textContent='⏳';
+    fetch('/api/projects/'+_slug+'/issues/'+issue+'/github-fix',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url:url, crawl_ts:crawl, confirm:false})
+    }).then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok){ btn.textContent=d.merged?'✓ Mergé':'✓ PR créé'; btn.style.background='var(--accent)'; setTimeout(function(){window.location.reload();},1800); }
+        else { btn.disabled=false; btn.textContent='Erreur'; btn.title=d.error||'?'; }
+      }).catch(function(){ btn.disabled=false; btn.textContent='Erreur'; });
+  });
+})();
+</script>
+{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Automatisation</span>
+{% endblock %}
+
+{% block actions %}
+  <a class="btn" href="/projects/{{ slug }}/issues">Voir les anomalies</a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Automatisation</h1>
+  <p class="muted">Corrections GitHub automatiques pour {{ project.site_name }}</p>
+</div>
+
+{# ── Stats ── #}
+{% if total > 0 %}
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
+  <div class="pa-stat">
+    <span class="pa-stat-num" style="color:#a5b4fc;">{{ counts.todo }}</span>
+    <span class="pa-stat-label">À corriger</span>
+  </div>
+  <div class="pa-stat">
+    <span class="pa-stat-num" style="color:#fbbf24;">{{ counts.in_progress }}</span>
+    <span class="pa-stat-label">PR en cours</span>
+  </div>
+  <div class="pa-stat">
+    <span class="pa-stat-num" style="color:#34d399;">{{ counts.done }}</span>
+    <span class="pa-stat-label">Corrigés</span>
+  </div>
+  {% if counts.ignored %}
+  <div class="pa-stat">
+    <span class="pa-stat-num" style="color:var(--muted);">{{ counts.ignored }}</span>
+    <span class="pa-stat-label">Ignorés</span>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── GitHub connection ── #}
+<div class="pa-section">
+  <div class="pa-section-title">Dépôt GitHub</div>
+  {% if github_cfg.repo %}
+  <div class="card" style="padding:14px 16px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <svg style="width:18px;height:18px;flex-shrink:0;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      <div>
+        <div style="font-weight:600;font-size:13px;">{{ github_cfg.repo }}</div>
+        <div class="muted small">Branche : <span class="mono">{{ github_cfg.branch }}</span></div>
+      </div>
+      <span class="badge {{ 'ok' if github_cfg.mode == 'auto' else 'notice' }}" style="font-size:11px;">
+        {{ 'Full Access (auto-merge)' if github_cfg.mode == 'auto' else 'Vérification (PR)' }}
+      </span>
+      <span style="flex:1"></span>
+      <a class="btn small" href="/projects/{{ slug }}/settings/crawl#github-section">Modifier</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="gh-connect-card">
+    <svg style="width:32px;height:32px;margin-bottom:12px;color:var(--muted);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    <p style="margin:0 0 6px;font-weight:600;">Aucun dépôt GitHub connecté</p>
+    <p class="muted small" style="margin:0 0 16px;">Connecte un dépôt pour que l'agent pousse les corrections directement dans ton code.</p>
+    <a class="btn primary" href="/projects/{{ slug }}/settings/crawl#github-section">Connecter un dépôt →</a>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Bulk fix action ── #}
+{% if github_cfg.repo %}
+<div class="pa-section">
+  <div class="pa-section-title">Correction globale</div>
+  <div class="card" style="padding:16px 18px;">
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Corriger toutes les erreurs du crawl</div>
+        <div class="muted small">Analyse le dernier rapport, génère les patches IA pour chaque anomalie corrigeable et pousse <strong>1 seul PR</strong> avec tous les changements.</div>
+        {% if github_cfg.mode == 'auto' %}
+        <div class="muted small" style="margin-top:4px;color:#34d399;">⚡ Mode Full Access : le PR sera mergé automatiquement sur <span class="mono">{{ github_cfg.branch }}</span>.</div>
+        {% else %}
+        <div class="muted small" style="margin-top:4px;">Mode Vérification : tu devras merger le PR sur GitHub.</div>
+        {% endif %}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">⚡ Tout corriger en 1 PR</button>
+        <span id="bulk-fix-err" style="display:none;font-size:11px;color:var(--err);max-width:220px;text-align:right;"></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── Task list ── #}
+{% set sev_color = {'error': '#ef4444', 'warning': '#f59e0b', 'notice': '#818cf8'} %}
+{% set sev_lbl   = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'} %}
+
+{% if total == 0 %}
+<div class="card" style="text-align:center;padding:32px;">
+  <p class="muted">Aucune correction enregistrée pour ce projet.</p>
+  <p class="muted small" style="margin-top:6px;">Lance une correction depuis la page d'une anomalie ou utilise "Tout corriger" ci-dessus.</p>
+  <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">Voir les anomalies</a>
+</div>
+{% else %}
+
+{% for col, col_label in [('in_progress','En cours'), ('todo','À corriger'), ('done','Corrigés'), ('ignored','Ignorés')] %}
+{% if tasks_by_status[col] %}
+<div class="pa-section">
+  <div class="pa-section-title">
+    {{ col_label }}
+    <span class="badge {{ {'todo':'notice','in_progress':'warning','done':'ok','ignored':''}[col] }}" style="font-size:10px;">{{ tasks_by_status[col]|length }}</span>
+  </div>
+  {% for task in tasks_by_status[col] %}
+  <div class="pa-task-row" style="border-left:3px solid {{ sev_color.get(task.severity, 'var(--border)') }};">
+    <div>
+      <span class="badge {{ task.severity }}" style="font-size:10px;">{{ sev_lbl.get(task.severity, task.severity) }}</span>
+    </div>
+    <div>
+      <div class="pa-task-label">
+        <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}" style="color:var(--text);">{{ task.issue_label }}</a>
+      </div>
+      <div class="pa-task-url" title="{{ task.url or '' }}">{{ task.url or '—' }}</div>
+      {% if task.pr and task.pr.pr_url %}
+      <a href="{{ task.pr.pr_url }}" target="_blank" rel="noreferrer" class="pa-pr-link">
+        ⎇ {% if task.pr.branch %}{{ task.pr.branch }}{% endif %}{% if task.pr.pr_number %} · PR #{{ task.pr.pr_number }}{% endif %}{% if task.pr.commit_sha %} · {{ task.pr.commit_sha }}{% endif %}{% if task.pr.get('merged') %} · mergé ✓{% endif %} ↗
+      </a>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      {% if task.status == 'todo' and github_cfg.repo %}
+        <button type="button" class="btn small" style="font-size:10px;"
+          data-single-fix data-issue="{{ task.issue_key }}"
+          data-url="{{ task.url | urlencode }}"
+          data-crawl="{{ task.crawl_ts or '' }}">Corriger</button>
+      {% endif %}
+      <a class="btn small" style="font-size:10px;" href="/projects/{{ slug }}/corrections">Workflow</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endblock %}

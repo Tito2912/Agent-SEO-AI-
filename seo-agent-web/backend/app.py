@@ -13622,6 +13622,58 @@ def api_project_tasks(request: Request, slug: str) -> JSONResponse:
     } for t in tasks])
 
 
+@app.get("/projects/{slug}/automation", response_class=HTMLResponse)
+def project_automation(request: Request, slug: str) -> HTMLResponse:
+    proj_row = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    project_ctx = {
+        "slug": proj_row.slug,
+        "site_name": proj_row.site_name,
+        "base_url": proj_row.base_url,
+    }
+    cfg = _project_github_cfg(proj_row)
+    # Load IssueTask records for this project
+    tasks_by_status: dict[str, list[Any]] = {"todo": [], "in_progress": [], "done": [], "ignored": []}
+    counts: dict[str, int] = {"todo": 0, "in_progress": 0, "done": 0, "ignored": 0}
+    try:
+        with DB.session() as db:
+            tasks_raw = list(db.scalars(
+                select(IssueTask)
+                .where(IssueTask.project_id == proj_row.id)
+                .order_by(IssueTask.updated_at.desc())
+            ))
+        for t in tasks_raw:
+            try:
+                note_parsed = json.loads(t.note) if t.note else {}
+            except Exception:
+                note_parsed = {}
+            pr_data = note_parsed if note_parsed.get("pr_url") else {}
+            st = t.status if t.status in tasks_by_status else "todo"
+            counts[st] = counts.get(st, 0) + 1
+            tasks_by_status[st].append({
+                "id": str(t.id), "issue_key": t.issue_key, "issue_label": t.issue_label,
+                "url": t.url, "status": st, "pr": pr_data,
+                "severity": t.severity, "crawl_ts": t.crawl_ts,
+                "updated_at": t.updated_at.isoformat() if t.updated_at else "",
+            })
+    except Exception:
+        pass
+    resp = templates.TemplateResponse(
+        "project_automation.html",
+        {
+            "request": request,
+            "project": project_ctx,
+            "slug": proj_row.slug,
+            "github_cfg": cfg,
+            "tasks_by_status": tasks_by_status,
+            "counts": counts,
+            "total": sum(counts.values()),
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.get("/projects/{slug}/corrections", response_class=HTMLResponse)
 def project_corrections(request: Request, slug: str) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
