@@ -15753,10 +15753,10 @@ def backlinks_opportunity_status(
 # ---------------------------------------------------------------------------
 
 def _get_reddit_creds(user_id: str) -> dict | None:
-    client_id = _effective_user_connection_value(user_id, key="REDDIT_CLIENT_ID")
-    client_secret = _effective_user_connection_value(user_id, key="REDDIT_CLIENT_SECRET")
-    username = _effective_user_connection_value(user_id, key="REDDIT_USERNAME")
-    password = _effective_user_connection_value(user_id, key="REDDIT_PASSWORD")
+    client_id, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_CLIENT_ID")
+    client_secret, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_CLIENT_SECRET")
+    username, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_USERNAME")
+    password, _ = _effective_user_connection_value(user_id=user_id, key="REDDIT_PASSWORD")
     if not (client_id and client_secret and username and password):
         return None
     return {
