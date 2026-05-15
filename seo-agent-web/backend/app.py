@@ -12920,29 +12920,40 @@ def api_project_tasks(request: Request, slug: str) -> JSONResponse:
 def project_corrections(request: Request, slug: str) -> HTMLResponse:
     _ = _require_login(request)
     proj_row = _db_project_or_404(request, slug)
-    with DB.session() as db:
-        tasks = list(db.scalars(
-            select(IssueTask)
-            .where(IssueTask.project_id == proj_row.id)
-            .order_by(IssueTask.updated_at.desc())
-        ))
+    project_ctx = {
+        "slug": proj_row.slug,
+        "site_name": proj_row.site_name,
+        "base_url": proj_row.base_url,
+    }
     groups: dict[str, list[Any]] = {"todo": [], "in_progress": [], "done": [], "ignored": []}
-    for t in tasks:
-        s = t.status if t.status in groups else "todo"
-        groups[s].append({
-            "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
-            "url": t.url, "status": t.status, "note": t.note,
-            "severity": t.severity, "crawl_ts": t.crawl_ts,
-            "updated_at": t.updated_at.isoformat() if t.updated_at else "",
-        })
+    total = 0
+    try:
+        with DB.session() as db:
+            tasks = list(db.scalars(
+                select(IssueTask)
+                .where(IssueTask.project_id == proj_row.id)
+                .order_by(IssueTask.updated_at.desc())
+            ))
+        for t in tasks:
+            s = t.status if t.status in groups else "todo"
+            groups[s].append({
+                "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
+                "url": t.url, "status": t.status, "note": t.note,
+                "severity": t.severity, "crawl_ts": t.crawl_ts,
+                "updated_at": t.updated_at.isoformat() if t.updated_at else "",
+            })
+        total = len(tasks)
+    except Exception as exc:
+        import traceback
+        print(f"[corrections] DB error for slug={slug}: {exc}\n{traceback.format_exc()}", flush=True)
     resp = templates.TemplateResponse(
         "corrections.html",
         {
             "request": request,
-            "project": proj_row,
+            "project": project_ctx,
             "slug": slug,
             "groups": groups,
-            "total": len(tasks),
+            "total": total,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
