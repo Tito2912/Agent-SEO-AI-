@@ -13925,13 +13925,13 @@ def export_project_issues_all_urls_csv(
     """CSV with one row per (issue, affected URL) — all URLs, no sample limit."""
     _ = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_for_request(request)
-    data = dash.project_overview(runs_dir, slug, timestamp=crawl)
+    data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
 
-    cur = data["current"]
+    cur = data.get("current") or {}
     ts = str(cur.get("timestamp") or "")
-    summary = cur["summary"]
+    summary = cur.get("summary") or {}
     issues = summary.get("issues") if isinstance(summary.get("issues"), list) else []
     issues_filtered = dash.filter_issues(issues, severity=severity, category=category, query=q)
     report = dash.load_report_json(runs_dir, slug, ts) if ts else None
