@@ -4403,23 +4403,22 @@ def _score_issues(
         if nf > 0 and df > 0:
             nofollow_and_dofollow_incoming.append(eff_url)
 
-    # --- Semrush mega export: sitemap-file issues (best-effort) ---
-    # Semrush sometimes reports "Incorrect pages found in sitemap.xml" / "Orphaned sitemap pages" on
-    # the sitemap file URLs themselves. We emulate that by analyzing the URLsets we parsed.
+    # --- Sitemap-file issues ---
+    # Ahrefs-style: "Orphaned sitemap pages" = content pages listed in the sitemap that have
+    # 0 incoming internal links from other pages on the site. The sitemap FILE itself is never flagged.
     if sitemap_urlsets:
+        all_sitemap_locs: set[str] = set()
         for sitemap_url, locs in sitemap_urlsets.items():
             if not isinstance(sitemap_url, str) or not sitemap_url.strip():
                 continue
             if not isinstance(locs, list) or not locs:
                 continue
             any_incorrect = False
-            # Semrush mega export can report sitemap files as "orphaned pages" (0 internal incoming links).
-            # Since sitemap files are generally not linked from HTML pages, treat URLset sitemap files as orphaned.
-            any_orphan = True
             for loc in locs:
                 if not isinstance(loc, str) or not loc.startswith(("http://", "https://")):
                     continue
                 loc_norm = _norm_self(loc) or loc
+                all_sitemap_locs.add(loc_norm)
                 p = page_by_any.get(loc_norm)
                 if p:
                     is_4xx = bool(isinstance(p.status_code, int) and 400 <= p.status_code < 500)
@@ -4432,11 +4431,20 @@ def _score_issues(
                         any_incorrect = True
                 if any_incorrect:
                     break
-
             if any_incorrect:
                 incorrect_pages_found_in_sitemap_xml.append(sitemap_url)
-            if any_orphan:
-                orphaned_sitemap_pages.append(sitemap_url)
+
+        # Orphaned sitemap pages: OK HTML pages listed in sitemap with 0 incoming internal links.
+        for loc_norm in sorted(all_sitemap_locs):
+            p = page_by_any.get(loc_norm)
+            if not p:
+                continue
+            if not (isinstance(p.status_code, int) and p.status_code == 200 and _is_html(p) and not p.error):
+                continue
+            eff = _final_url(p)
+            df, nf, total = incoming_counts(eff)
+            if total == 0:
+                orphaned_sitemap_pages.append(eff)
 
     # Canonical URL has no incoming internal links
     canonical_no_incoming: list[str] = []
