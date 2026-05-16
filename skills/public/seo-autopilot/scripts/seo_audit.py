@@ -5277,103 +5277,23 @@ def _score_issues(
         if conflicts:
             hreflang_conflicts_within_page_source_code.append({"url": _final_url(p), "conflicts": conflicts})
 
-    # Ahrefs-like: more than one page for same language in hreflang.
-    #
-    # Model: build a graph of *canonical* pages connected by language-specific alternates only
-    # (x-default is excluded from graph edges to avoid merging all pages into one giant component
-    # when a shared x-default hub such as the homepage is used across all hreflang groups).
-    #
-    # Within each connected component, check if the same exact hreflang language code maps
-    # to more than one distinct URL — that is the actual error Ahrefs flags.
-    more_than_one_page_same_lang: set[str] = set()
-
-    canonical_pages: dict[str, PageData] = {}
+    # Ahrefs: "more than one page for same language in hreflang"
+    # Per-page check (matches official Ahrefs definition): flag any page whose HTML declares
+    # the same language code pointing to more than one distinct URL.
+    # hreflang_raw preserves all duplicate entries unlike the deduped hreflang dict.
+    _more_than_one_lang: list[str] = []
     for p in ok_html_pages:
-        if _is_non_canonical(p):
+        if not p.hreflang_raw:
             continue
-        canon = _norm_self(p.canonical) if p.canonical else _final_url(p)
-        if canon:
-            canonical_pages[canon] = p
-
-    nodes = set(canonical_pages.keys())
-    graph: dict[str, set[str]] = {n: set() for n in nodes}
-
-    def _canonical_node_for_url(u: str) -> str | None:
-        u_norm = _norm_self(u) or u
-        if u_norm in nodes:
-            return u_norm
-        t = page_by_any.get(u_norm)
-        if not t or _is_non_canonical(t):
-            return None
-        canon = _norm_self(t.canonical) if t.canonical else _final_url(t)
-        if canon in nodes:
-            return canon
-        return None
-
-    for canon_url, p in canonical_pages.items():
-        hreflang = _hreflang_map_for(p)
-        if not hreflang:
-            continue
-        for code, href in hreflang.items():
-            # Exclude x-default from graph edges: shared x-default hubs (e.g. homepage)
-            # would otherwise merge all hreflang groups into one component, causing massive
-            # false positives on sites with many pages per language.
-            if (code or "").strip().lower() == "x-default":
-                continue
-            if not href:
-                continue
-            dst = _canonical_node_for_url(href)
-            if not dst or dst == canon_url:
-                continue
-            graph[canon_url].add(dst)
-            graph[dst].add(canon_url)
-
-    visited: set[str] = set()
-    for start in nodes:
-        if start in visited or not graph.get(start):
-            continue
-        component: list[str] = []
-        stack = [start]
-        visited.add(start)
-        while stack:
-            cur = stack.pop()
-            component.append(cur)
-            for nb in graph.get(cur, set()):
-                if nb not in visited:
-                    visited.add(nb)
-                    stack.append(nb)
-
-        # Check if any exact hreflang language code maps to multiple different URLs within
-        # this component — that is the real "more than one page for same language" error.
-        code_to_urls: dict[str, set[str]] = defaultdict(set)
-        for u in component:
-            pg = canonical_pages.get(u)
-            hl = _hreflang_map_for(pg) if pg else None
-            if not hl:
-                continue
-            for code, href in hl.items():
-                code_norm = (code or "").strip().lower()
-                if code_norm == "x-default" or not code_norm:
-                    continue
-                href_norm = _norm_self(href) or (href or "").strip()
-                if href_norm:
-                    code_to_urls[code_norm].add(href_norm)
-
-        if any(len(urls) > 1 for urls in code_to_urls.values()):
-            more_than_one_page_same_lang.update(component)
-
-    # Don't count root / locale-root pages for this issue (prevents false positives on x-default hubs).
-    more_than_one_page_same_lang_filtered: set[str] = set()
-    for u in more_than_one_page_same_lang:
-        parts = urlsplit(u)
-        path = parts.path or "/"
-        if path in {"", "/"}:
-            continue
-        if re.fullmatch(r"/[a-z]{2}(-[a-z0-9]{2,8})?/?", path, re.IGNORECASE):
-            continue
-        more_than_one_page_same_lang_filtered.add(u)
-
-    more_than_one_page_for_same_language_in_hreflang = sorted(more_than_one_page_same_lang_filtered)
+        _code_to_urls: dict[str, set[str]] = defaultdict(set)
+        for entry in p.hreflang_raw:
+            code = (entry.get("hreflang") or "").strip().lower()
+            href = (entry.get("href") or "").strip()
+            if code and code != "x-default" and href:
+                _code_to_urls[code].add(href)
+        if any(len(urls) > 1 for urls in _code_to_urls.values()):
+            _more_than_one_lang.append(p.url or "")
+    more_than_one_page_for_same_language_in_hreflang = sorted(set(filter(None, _more_than_one_lang)))
 
     # --- Structured data (schema.org) ---
     # Ahrefs-like: be conservative to avoid false positives.
