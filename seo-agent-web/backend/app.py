@@ -1714,7 +1714,7 @@ def _csv_bytes(rows: list[dict[str, Any]], *, fieldnames: list[str]) -> bytes:
     writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(rows)
-    return buf.getvalue().encode("utf-8")
+    return b"\xef\xbb\xbf" + buf.getvalue().encode("utf-8")
 
 
 def _pdf_escape_text(value: str) -> bytes:

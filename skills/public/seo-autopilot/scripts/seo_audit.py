@@ -4193,13 +4193,12 @@ def _score_issues(
             return True
         return False
 
-    # Don't count language-root slash normalizations or other canonical normalization
-    # redirects (http→https, trailing-slash) — Ahrefs reports these separately.
+    # Don't count language-root slash normalizations but DO include http→https and
+    # www→non-www canonical redirects — Ahrefs counts those in its "3xx redirect" total.
     redirect_3xx = [
         p.url for p in pages
         if _is_redirect(p)
         and not _is_lang_root_trailing_slash_redirect(p)
-        and not _is_canonical_normalization_redirect(p)
     ]
     redirect_302 = [
         p.url for p in pages
@@ -4641,7 +4640,7 @@ def _score_issues(
             and re.fullmatch(r"/[a-z]{2}/", b.path or "")
         )
         if host_changed or scheme_changed or added_trailing_slash_lang_root:
-            permanent_redirects.append(_norm_self(fin) or fin)
+            permanent_redirects.append(req)
 
     # --- Semrush-like: low text to HTML ratio ---
     low_text_to_html_ratio: list[str] = []
@@ -4896,7 +4895,7 @@ def _score_issues(
                 slow_page_set.add(eff)
             continue
         if isinstance(p.elapsed_ms, int) and p.elapsed_ms > SLOW_PAGE_MS:
-            slow_page_set.add(eff)
+            slow_page_set.add(p.url)
 
     # Ahrefs-like fallback: even when no page crosses our absolute thresholds (often due to CDN / location),
     # still flag the slowest page by Lighthouse Speed Index when it is meaningfully high.
