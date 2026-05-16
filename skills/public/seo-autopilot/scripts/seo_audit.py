@@ -3855,6 +3855,7 @@ def _score_issues(
     *,
     output_dir: str | None = None,
     strict_link_counts: bool = False,
+    base_url: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     ISSUE_EXAMPLES_LIMIT = 200
     issues_dir = Path(str(output_dir)).resolve() / "issues" if output_dir else None
@@ -4004,10 +4005,33 @@ def _score_issues(
             existing_eff = prev_effective_pages.get(eff)
             prev_effective_pages[eff] = p if existing_eff is None else _pick_better(existing_eff, p, url_key=eff)
 
+    # Derive site hostname so external pages (e.g. Stripe checkout reached via 302)
+    # are never flagged for on-page SEO issues.
+    _site_host: str = ""
+    if base_url:
+        _site_host = (urlsplit(base_url).hostname or "").lower().lstrip("www.")
+    elif pages:
+        from collections import Counter as _Counter
+        _host_counts = _Counter(
+            (urlsplit(p.url or "").hostname or "").lower().lstrip("www.")
+            for p in pages if p.url
+        )
+        _site_host = _host_counts.most_common(1)[0][0] if _host_counts else ""
+
+    def _is_internal_url(url: str | None) -> bool:
+        if not url or not _site_host:
+            return True
+        host = (urlsplit(url).hostname or "").lower().lstrip("www.")
+        return host == _site_host or host.endswith("." + _site_host)
+
     # Prefer "effective" (final) pages for on-page analyses so redirect probes don't inflate counts.
+    # Only keep pages on the site's own domain — external redirect destinations (e.g. buy.stripe.com)
+    # must not be flagged for content, social-tag, or performance issues.
     html_pages = [p for p in effective_pages.values() if _is_html(p)]
     ok_html_pages = [
-        p for p in html_pages if isinstance(p.status_code, int) and p.status_code == 200 and not p.error
+        p for p in html_pages
+        if isinstance(p.status_code, int) and p.status_code == 200 and not p.error
+        and _is_internal_url(_final_url(p))
     ]
 
     # --- On-page basics (existing keys) ---
@@ -5592,17 +5616,10 @@ def _score_issues(
         "page_has_links_to_broken_page_links_not_indexable", broken_link_rows_not_indexable
     )
 
-    # Ahrefs-like: "Page has links to redirect" counts *pages* (unique source URLs), not individual links.
-    pages_linking_to_redirect = sorted(
-        {
-            str(r.get("source_url") or "").strip()
-            for r in (links_to_redirect or [])
-            if isinstance(r, dict) and isinstance(r.get("source_url"), str) and str(r.get("source_url") or "").strip()
-        }
-    )
-    redir_indexable, redir_not_indexable = _split_url_list(pages_linking_to_redirect)
-    issues["page_has_links_to_redirect_indexable"] = _issue_block("page_has_links_to_redirect_indexable", redir_indexable)
-    issues["page_has_links_to_redirect_not_indexable"] = _issue_block("page_has_links_to_redirect_not_indexable", redir_not_indexable)
+    # "Page has links to redirect" — source pages list. Kept as empty stubs; the canonical
+    # Ahrefs-style view is redirect_3xx_links (per source→target with link type details).
+    issues["page_has_links_to_redirect_indexable"] = _issue_block("page_has_links_to_redirect_indexable", [])
+    issues["page_has_links_to_redirect_not_indexable"] = _issue_block("page_has_links_to_redirect_not_indexable", [])
 
     # Ahrefs-like: per-link exports for redirect targets (split by indexable vs not indexable source pages).
     redirect_link_rows_indexable: list[dict[str, Any]] = []
@@ -5640,11 +5657,12 @@ def _score_issues(
                     continue
                 seen_redirect_link_no.add(key)
                 redirect_link_rows_not_indexable.append(row)
+    # Per-link redirect view — duplicate of redirect_3xx_links; suppressed to avoid triple-counting.
     issues["page_has_links_to_redirect_links_indexable"] = _issue_block(
-        "page_has_links_to_redirect_links_indexable", redirect_link_rows_indexable
+        "page_has_links_to_redirect_links_indexable", []
     )
     issues["page_has_links_to_redirect_links_not_indexable"] = _issue_block(
-        "page_has_links_to_redirect_links_not_indexable", redirect_link_rows_not_indexable
+        "page_has_links_to_redirect_links_not_indexable", []
     )
 
     # Ahrefs-like: per-link exports for broken/redirect targets (404/4xx/3xx links).
@@ -7265,6 +7283,7 @@ def main(argv: list[str]) -> int:
         previous_pages=prev_pages,
         output_dir=config.output_dir,
         strict_link_counts=bool(config.strict_link_counts),
+        base_url=config.base_url,
     )
 
     # --- Semrush-like robots/sitemap issues (system-level) ---
