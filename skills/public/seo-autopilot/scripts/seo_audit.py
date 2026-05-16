@@ -4156,10 +4156,12 @@ def _score_issues(
         return True
 
     def _is_canonical_normalization_redirect(p: PageData) -> bool:
-        """Return True for redirects that are expected site-wide canonicalization
-        (trailing slash, http→https, www↔non-www). Ahrefs categorizes these
-        separately (HTTP→HTTPS, permanent redirects) and excludes them from the
-        generic '3XX redirect' / '302 redirect' counts."""
+        """Return True for redirects that are expected site-wide canonicalization.
+        Ahrefs categorizes http→https and trailing-slash redirects separately and
+        does not include them in generic '3XX redirect' / '302 redirect' counts.
+        Root-path redirects (domain → /locale/ or domain/ → /locale/) are also
+        excluded: locale root pages commonly link to the bare domain which may
+        redirect to /fr/, /en/, etc., and Ahrefs never flags these."""
         if not _is_redirect(p):
             return False
         a = urlsplit(p.url or "")
@@ -4168,28 +4170,27 @@ def _score_issues(
         b_raw_host = (b.hostname or "").lower()
         a_host = a_raw_host.lstrip("www.")
         b_host = b_raw_host.lstrip("www.")
-        a_path = a.path or "/"
+        # Use raw a.path (may be "" for bare-domain URLs like https://example.com).
+        a_path_raw = a.path          # e.g. "" for https://example.com
+        a_path = a_path_raw or "/"   # normalized fallback for comparisons needing "/"
         b_path = b.path or "/"
         # http → https (same host after www-strip, same path)
         if (a.scheme or "").lower() == "http" and (b.scheme or "").lower() == "https":
             if a_host == b_host and a_path == b_path and (a.query or "") == (b.query or ""):
                 return True
-        # Trailing slash only added (same scheme, same host, path + "/")
+        # Trailing slash only added — use raw path so "" → "/" is detected correctly.
         if a_host == b_host and (a.scheme or "") == (b.scheme or ""):
-            if b_path == f"{a_path}/" and (a.query or "") == (b.query or ""):
+            if b_path == f"{a_path_raw}/" and (a.query or "") == (b.query or ""):
                 return True
         # www ↔ non-www (same scheme, same path, only www prefix differs)
         if (a.scheme or "") == (b.scheme or "") and a_host == b_host and a_raw_host != b_raw_host:
             if a_path == b_path and (a.query or "") == (b.query or ""):
                 return True
-        # Root-path homepage probe: http↔https or www↔non-www from "/" even when destination
-        # path differs (e.g. "/" → "/fr/").  Ahrefs never probes these root-variant URLs so it
-        # never counts them as redirect issues.
-        if a_path in ("/", "") and a_host == b_host:
-            if (a.scheme or "").lower() == "http" and (b.scheme or "").lower() == "https":
-                return True
-            if (a.scheme or "") == (b.scheme or "") and a_raw_host != b_raw_host:
-                return True
+        # Root-path redirect: any redirect from "" or "/" to the same host.
+        # Locale root pages link to the bare domain (prosperfactory.com) which may
+        # redirect to /fr/, /de/, etc. Ahrefs never flags these as link issues.
+        if not a_path_raw.strip("/") and a_host == b_host:
+            return True
         return False
 
     # Don't count language-root slash normalizations or other canonical normalization
