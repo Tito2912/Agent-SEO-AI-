@@ -5648,7 +5648,9 @@ def _score_issues(
             if not target:
                 continue
             tgt_req = page_by_requested.get(_norm_self(target) or target)
-            if not (tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req)):
+            # Include links to any redirect AND links to toomanyredirects pages (Ahrefs counts both).
+            _is_toomany = bool(tgt_req and tgt_req.error and "toomanyredirects" in (tgt_req.error or "").lower())
+            if not (tgt_req and (_is_redirect(tgt_req) or _is_toomany)):
                 continue
             target_norm = _norm_self(target) or target
             nofollow = bool(it.get("nofollow"))
@@ -6035,7 +6037,8 @@ def _score_issues(
     issues["multiple_meta_description_tags"] = _issue_block(
         "multiple_meta_description_tags", multiple_meta_description_tags
     )
-    issues["low_word_count"] = _issue_block("low_word_count", low_word_count)
+    # Suppressed: Ahrefs does not flag low word count with this threshold; count too many false positives.
+    issues["low_word_count"] = _issue_block("low_word_count", [])
     issues["pages_have_high_ai_content_levels"] = _issue_block(
         "pages_have_high_ai_content_levels", pages_have_high_ai_content_levels
     )
@@ -7316,8 +7319,9 @@ def main(argv: list[str]) -> int:
                 _write_issue_rows(Path(str(config.output_dir)).resolve() / "issues", "robots_invalid_format", [robots_url])
                 issues["robots_invalid_format"] = {"count": 1, "examples": [robots_url]}
             else:
-                _write_issue_rows(Path(str(config.output_dir)).resolve() / "issues", "robots_txt_not_found", [robots_url])
-                issues["robots_txt_not_found"] = {"count": 1, "examples": [robots_url]}
+                # Suppressed: Ahrefs does not flag missing robots.txt as a distinct issue.
+                _write_issue_rows(Path(str(config.output_dir)).resolve() / "issues", "robots_txt_not_found", [])
+                issues["robots_txt_not_found"] = {"count": 0, "examples": []}
 
     sitemap_fetches = [f for f in system_fetches if isinstance(f, dict) and f.get("type") == "sitemap"]
     sitemap_parse_fetches = [f for f in system_fetches if isinstance(f, dict) and f.get("type") == "sitemap_parse"]
@@ -7562,10 +7566,8 @@ def main(argv: list[str]) -> int:
     }
 
     if not llms_ok:
-        llms_url = urljoin(root, "/llms.txt")
-        issues_dir = Path(str(config.output_dir)).resolve() / "issues"
-        _write_issue_rows(issues_dir, "llms_txt_not_found", [llms_url])
-        issues["llms_txt_not_found"] = {"count": 1, "examples": [llms_url]}
+        # Suppressed: Ahrefs does not flag missing llms.txt as an issue.
+        issues["llms_txt_not_found"] = {"count": 0, "examples": []}
 
     report = {
         "meta": meta,
