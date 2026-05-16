@@ -3682,7 +3682,7 @@ def _score_resource_issues(
     CSS_TOO_LARGE = 100 * 1024
     # 10 KB threshold: below this, minification savings are negligible and the signal is noisy.
     # Files served with Content-Encoding gzip/br are already compressed for delivery — skip them.
-    NOT_MINIFIED_TOO_LARGE = 10 * 1024
+    NOT_MINIFIED_TOO_LARGE = 15 * 1024  # Ahrefs threshold: CSS files > 15 KB are flagged
 
     def _is_compressed(r: dict[str, Any]) -> bool:
         enc = (r.get("content_encoding") or "").lower()
