@@ -7369,10 +7369,14 @@ def main(argv: list[str]) -> int:
                     out["cipher"] = (ssock.cipher() or (None, None, None))[0]
                     cert = ssock.getpeercert() or {}
                     out["cert"] = cert
+                    # ssl.match_hostname was removed in Python 3.12; the TLS handshake
+                    # above already verifies the hostname via ctx.check_hostname=True,
+                    # so reaching this point means the hostname is valid.
                     try:
-                        ssl.match_hostname(cert, host)
+                        if hasattr(ssl, "match_hostname"):
+                            ssl.match_hostname(cert, host)  # type: ignore[attr-defined]
                         out["hostname_ok"] = True
-                    except Exception as e:
+                    except ssl.CertificateError as e:
                         out["hostname_ok"] = False
                         out["hostname_error"] = f"{type(e).__name__}: {e}"
                     not_after = cert.get("notAfter")
