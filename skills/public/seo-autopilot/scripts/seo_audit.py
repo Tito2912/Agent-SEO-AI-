@@ -4029,10 +4029,50 @@ def _score_issues(
 
     # Ahrefs-like: consider duplicates on indexable pages only (canonical + indexable).
     _dupe_pool = [p for p in ok_html_pages if _is_indexable(p)]
+
+    # Build hreflang alternates graph so we can exclude language-variant groups from duplicates.
+    # Ahrefs does NOT flag duplicate titles/descriptions when the pages are hreflang alternates
+    # of each other (e.g. /contact/ and /fr/contact/ with the same title is expected).
+    _hreflang_alts: dict[str, set[str]] = {}
+    for _hp in _dupe_pool:
+        _hurl = _norm_self(_final_url(_hp)) or _final_url(_hp)
+        if isinstance(_hp.hreflang, dict):
+            for _href in _hp.hreflang.values():
+                _href_n = _norm_self(_href) or _href
+                if _hurl != _href_n:
+                    _hreflang_alts.setdefault(_hurl, set()).add(_href_n)
+                    _hreflang_alts.setdefault(_href_n, set()).add(_hurl)
+
+    def _is_pure_hreflang_group(urls: list[str]) -> bool:
+        """Return True if every URL in the group is a hreflang alternate of every other."""
+        if len(urls) <= 1:
+            return False
+        url_set = set(urls)
+        for u in urls:
+            if not (url_set - {u}).issubset(_hreflang_alts.get(u, set())):
+                return False
+        return True
+
     title_counts = Counter([p.title.strip() for p in _dupe_pool if _non_empty(p.title)])
     duplicate_titles = {t: c for t, c in title_counts.items() if c > 1}
+    # Remove groups that are purely hreflang language variants (not real duplicates).
+    duplicate_titles = {
+        t: c for t, c in duplicate_titles.items()
+        if not _is_pure_hreflang_group([
+            _norm_self(_final_url(p)) or _final_url(p)
+            for p in _dupe_pool if _non_empty(p.title) and p.title.strip() == t
+        ])
+    }
+
     description_counts = Counter([p.meta_description.strip() for p in _dupe_pool if _non_empty(p.meta_description)])
     duplicate_descriptions = {d: c for d, c in description_counts.items() if c > 1}
+    duplicate_descriptions = {
+        d: c for d, c in duplicate_descriptions.items()
+        if not _is_pure_hreflang_group([
+            _norm_self(_final_url(p)) or _final_url(p)
+            for p in _dupe_pool if _non_empty(p.meta_description) and p.meta_description.strip() == d
+        ])
+    }
 
     def _short_text(value: str | None, max_len: int = 160) -> str | None:
         if not _non_empty(value):
