@@ -13913,6 +13913,129 @@ def export_project_issues_csv(
     return _download_response(content, media_type="text/csv; charset=utf-8", filename=filename)
 
 
+@app.get("/projects/{slug}/export/issues-all-urls.csv")
+def export_project_issues_all_urls_csv(
+    request: Request,
+    slug: str,
+    crawl: str | None = None,
+    severity: str | None = None,
+    category: str | None = None,
+    q: str | None = None,
+) -> Response:
+    """CSV with one row per (issue, affected URL) — all URLs, no sample limit."""
+    _ = _db_project_or_404(request, slug)
+    runs_dir = _runs_dir_for_request(request)
+    data = dash.project_overview(runs_dir, slug, timestamp=crawl)
+    if not data:
+        raise HTTPException(status_code=404, detail="Projet introuvable")
+
+    cur = data["current"]
+    ts = str(cur.get("timestamp") or "")
+    summary = cur["summary"]
+    issues = summary.get("issues") if isinstance(summary.get("issues"), list) else []
+    issues_filtered = dash.filter_issues(issues, severity=severity, category=category, query=q)
+    report = dash.load_report_json(runs_dir, slug, ts) if ts else None
+    raw_issues: dict[str, Any] = (report.get("issues") or {}) if isinstance(report, dict) else {}
+
+    def _extract_all_url_rows(issue_key: str, block: Any) -> list[dict[str, str]]:
+        """Return list of {url, detail} dicts for every affected URL in the block."""
+        out: list[dict[str, str]] = []
+        if not isinstance(block, dict):
+            return out
+        examples = block.get("examples")
+        if not isinstance(examples, list):
+            return out
+        seen: set[str] = set()
+        for ex in examples:
+            url = detail = ""
+            if isinstance(ex, str):
+                if "->" in ex:
+                    parts = ex.split("->", 1)
+                    url = parts[0].strip()
+                    detail = parts[1].strip()
+                elif " — " in ex:
+                    parts = ex.split(" — ", 1)
+                    url = parts[0].strip()
+                    detail = parts[1].strip()
+                else:
+                    url = ex.strip()
+            elif isinstance(ex, dict):
+                url = str(ex.get("source_url") or ex.get("source") or ex.get("url") or "")
+                tgt = ex.get("target_url") or ex.get("target") or ex.get("href") or ""
+                anchor = ex.get("anchor") or ex.get("text") or ""
+                extra_parts = []
+                if tgt:
+                    extra_parts.append(f"→ {tgt}")
+                if anchor:
+                    extra_parts.append(f'ancre: "{anchor}"')
+                for k in ("title", "meta_description", "canonical", "status_code", "value"):
+                    v = ex.get(k)
+                    if v is not None and str(v):
+                        extra_parts.append(f"{k}: {v}")
+                detail = " | ".join(extra_parts)
+            if url and url not in seen:
+                seen.add(url)
+                out.append({"url": url, "detail": detail})
+        return out
+
+    rows: list[dict[str, Any]] = []
+    site_name = str(data.get("site_name") or slug)
+    base_url = str(data.get("base_url") or "")
+
+    for it in issues_filtered:
+        issue_key = str(it.get("key") or "")
+        block = raw_issues.get(issue_key)
+        url_rows = _extract_all_url_rows(issue_key, block)
+        if not url_rows:
+            rows.append({
+                "timestamp": ts,
+                "site_name": site_name,
+                "base_url": base_url,
+                "severity": str(it.get("severity") or ""),
+                "category": str(it.get("category") or ""),
+                "issue_key": issue_key,
+                "issue_label": str(it.get("label") or ""),
+                "count": int(it.get("count") or 0),
+                "url": "",
+                "detail": "",
+            })
+        else:
+            for ur in url_rows:
+                rows.append({
+                    "timestamp": ts,
+                    "site_name": site_name,
+                    "base_url": base_url,
+                    "severity": str(it.get("severity") or ""),
+                    "category": str(it.get("category") or ""),
+                    "issue_key": issue_key,
+                    "issue_label": str(it.get("label") or ""),
+                    "count": int(it.get("count") or 0),
+                    "url": ur["url"],
+                    "detail": ur["detail"],
+                })
+
+    fieldnames = [
+        "timestamp",
+        "site_name",
+        "base_url",
+        "severity",
+        "category",
+        "issue_key",
+        "issue_label",
+        "count",
+        "url",
+        "detail",
+    ]
+    content = _csv_bytes(rows, fieldnames=fieldnames)
+    suffix = []
+    if severity:
+        suffix.append(str(severity))
+    if category:
+        suffix.append(str(category))
+    filename = f"{slug}-{ts}-issues-all-urls" + (f"-{'-'.join(suffix)}" if suffix else "") + ".csv"
+    return _download_response(content, media_type="text/csv; charset=utf-8", filename=filename)
+
+
 @app.get("/projects/{slug}/export/issues.pdf")
 def export_project_issues_pdf(
     request: Request,

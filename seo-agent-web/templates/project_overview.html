@@ -256,6 +256,7 @@
         <span class="muted small">Exports :</span>
         <a class="btn" href="/projects/{{ project.slug }}/export/report.pdf?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">PDF</a>
         <a class="btn" href="/projects/{{ project.slug }}/export/report.csv?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&compare={{ project.compare.timestamp }}{% endif %}" style="font-size:11px;padding:4px 10px;">CSV</a>
+        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;" title="CSV complet — une ligne par URL affectée par chaque issue">CSV (URLs)</a>
         <a class="btn" href="/file?path={{ cur.report_md }}" style="font-size:11px;padding:4px 10px;">MD</a>
         {% if fix_pack_unlocked %}
           <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
