@@ -762,20 +762,29 @@
             if (hasLogs) { stdoutEl.textContent = stdout; stderrEl.textContent = stderr; }
           }
         }
+        let pollTimer = null;
         async function poll() {
           try {
             const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=${tail}`,{cache:"no-store"});
             if (!res.ok) return;
             const data = await res.json();
             render(data);
-            if (isLiveStatus(initialStatus) && data && data.status==="done" && data.result && data.result.project_url) {
-              const tgt = new URL(String(data.result.project_url),window.location.origin);
-              const cur3 = new URL(window.location.href);
-              if (tgt.pathname!==cur3.pathname||tgt.search!==cur3.search) window.location.href=tgt.toString();
+            if (isLiveStatus(initialStatus) && data && (data.status==="done" || data.status==="failed" || data.status==="canceled")) {
+              if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+              if (data.status==="done") {
+                const destUrl = (data.result && data.result.project_url)
+                  ? new URL(String(data.result.project_url), window.location.origin)
+                  : new URL(window.location.pathname, window.location.origin);
+                const cur3 = new URL(window.location.href);
+                if (destUrl.pathname!==cur3.pathname||destUrl.search!==cur3.search) window.location.href=destUrl.toString();
+                else window.location.reload();
+              } else {
+                window.location.reload();
+              }
             }
           } catch(_){}
         }
-        if (isLiveStatus(initialStatus)) setInterval(poll, pollMs);
+        if (isLiveStatus(initialStatus)) { pollTimer = setInterval(poll, pollMs); }
         poll();
       })();
     </script>

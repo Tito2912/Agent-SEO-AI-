@@ -5870,6 +5870,13 @@ def _finalize_stale_job(job: Job) -> bool:
             if md_path.exists() and not job.result.get("report_md"):
                 job.result["report_md"] = str(md_path)
                 changed = True
+            # Ensure project_url is present so the frontend can redirect after polling.
+            if not job.result.get("project_url"):
+                _stale_slug = str(job.result.get("slug") or "").strip()
+                _stale_ts = str(job.result.get("timestamp") or "").strip()
+                if _stale_slug and _stale_ts:
+                    job.result["project_url"] = f"/projects/{_stale_slug}?crawl={_stale_ts}"
+                    changed = True
 
         if changed:
             _finalize_crawl_billing_after_stale(job, actual_pages_crawled=int(pages_crawled))
@@ -6415,7 +6422,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         "slug": slug,
         "user_id": str(user_id),
         "timestamp": timestamp,
-        "project_url": f"/projects/{slug}?crawl={timestamp}",
+        "project_url": f"/projects/{slug}?crawl={timestamp}&job={job_id}",
         "report_json": str((audit_dir / "report.json").resolve()),
         "report_md": str((audit_dir / "report.md").resolve()),
     }
@@ -6633,7 +6640,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 "slug": slug,
                 "user_id": str(user_id),
                 "timestamp": timestamp,
-                "project_url": f"/projects/{slug}?crawl={timestamp}",
+                "project_url": f"/projects/{slug}?crawl={timestamp}&job={job_id}",
                 "report_md": str((audit_dir / "report.md").resolve()),
                 "report_json": str((audit_dir / "report.json").resolve()),
             }
