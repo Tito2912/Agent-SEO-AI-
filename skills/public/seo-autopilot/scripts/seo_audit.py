@@ -4140,6 +4140,14 @@ def _score_issues(
         if (a.scheme or "") == (b.scheme or "") and a_host == b_host and a_raw_host != b_raw_host:
             if a_path == b_path and (a.query or "") == (b.query or ""):
                 return True
+        # Root-path homepage probe: http↔https or www↔non-www from "/" even when destination
+        # path differs (e.g. "/" → "/fr/").  Ahrefs never probes these root-variant URLs so it
+        # never counts them as redirect issues.
+        if a_path in ("/", "") and a_host == b_host:
+            if (a.scheme or "").lower() == "http" and (b.scheme or "").lower() == "https":
+                return True
+            if (a.scheme or "") == (b.scheme or "") and a_raw_host != b_raw_host:
+                return True
         return False
 
     # Don't count language-root slash normalizations or other canonical normalization
