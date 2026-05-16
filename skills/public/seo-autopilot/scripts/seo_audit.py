@@ -3677,7 +3677,7 @@ def _score_resource_issues(
         return path.endswith(".min.css") or path.endswith(".min.js")
 
     # CWV penalises images above 500 KB; 1 MB was too permissive.
-    IMG_TOO_LARGE = 500 * 1024
+    IMG_TOO_LARGE = 1024 * 1024  # 1 MB — Ahrefs threshold (500 KB caught too many false positives)
     JS_TOO_LARGE = 200 * 1024
     CSS_TOO_LARGE = 100 * 1024
     # 10 KB threshold: below this, minification savings are negligible and the signal is noisy.
@@ -4012,7 +4012,9 @@ def _score_issues(
 
     # --- On-page basics (existing keys) ---
     missing_title = [p.url for p in ok_html_pages if not _non_empty(p.title)]
-    missing_description = [p.url for p in ok_html_pages if not _non_empty(p.meta_description)]
+    # Non-indexable pages only — indexable missing descriptions are folded into
+    # meta_description_too_short_indexable below (mirrors Ahrefs behavior).
+    missing_description = [p.url for p in ok_html_pages if not _non_empty(p.meta_description) and not _is_indexable(p)]
     def _is_missing_h1(p: PageData) -> bool:
         return (p.h1_tag_count or 0) == 0 or ((p.h1_tag_count or 0) > 0 and not p.h1)
 
@@ -4672,8 +4674,11 @@ def _score_issues(
     meta_description_too_long_not_indexable = [
         p.url for p in not_indexable_html_pages if _non_empty(p.meta_description) and len(p.meta_description.strip()) > DESC_TOO_LONG
     ]
+    # Ahrefs combines "missing" and "too short" into a single "Meta description too short" issue
+    # for indexable pages. We mirror this: flag both absent and under-threshold descriptions.
     meta_description_too_short_indexable = [
-        p.url for p in indexable_html_pages if _non_empty(p.meta_description) and len(p.meta_description.strip()) < DESC_TOO_SHORT
+        p.url for p in indexable_html_pages
+        if not _non_empty(p.meta_description) or len(p.meta_description.strip()) < DESC_TOO_SHORT
     ]
     meta_description_too_short_not_indexable = [
         p.url
