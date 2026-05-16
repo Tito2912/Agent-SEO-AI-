@@ -4122,17 +4122,23 @@ def _score_issues(
             return False
         a = urlsplit(p.url or "")
         b = urlsplit(p.final_url or "")
-        a_host = (a.hostname or "").lower().lstrip("www.")
-        b_host = (b.hostname or "").lower().lstrip("www.")
+        a_raw_host = (a.hostname or "").lower()
+        b_raw_host = (b.hostname or "").lower()
+        a_host = a_raw_host.lstrip("www.")
+        b_host = b_raw_host.lstrip("www.")
         a_path = a.path or "/"
         b_path = b.path or "/"
-        # http → https (same host, same path)
+        # http → https (same host after www-strip, same path)
         if (a.scheme or "").lower() == "http" and (b.scheme or "").lower() == "https":
             if a_host == b_host and a_path == b_path and (a.query or "") == (b.query or ""):
                 return True
         # Trailing slash only added (same scheme, same host, path + "/")
         if a_host == b_host and (a.scheme or "") == (b.scheme or ""):
             if b_path == f"{a_path}/" and (a.query or "") == (b.query or ""):
+                return True
+        # www ↔ non-www (same scheme, same path, only www prefix differs)
+        if (a.scheme or "") == (b.scheme or "") and a_host == b_host and a_raw_host != b_raw_host:
+            if a_path == b_path and (a.query or "") == (b.query or ""):
                 return True
         return False
 
@@ -4146,7 +4152,7 @@ def _score_issues(
     ]
     redirect_302 = [
         p.url for p in pages
-        if 302 in (p.redirect_statuses or [])
+        if (p.redirect_statuses or []) and p.redirect_statuses[0] == 302
         and not _is_canonical_normalization_redirect(p)
     ]
     broken_redirect = [p.url for p in pages if _is_redirect(p) and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)]
@@ -5640,7 +5646,7 @@ def _score_issues(
             if not target:
                 continue
             tgt_req = page_by_requested.get(_norm_self(target) or target)
-            if not (tgt_req and _is_redirect(tgt_req)):
+            if not (tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req)):
                 continue
             target_norm = _norm_self(target) or target
             nofollow = bool(it.get("nofollow"))
@@ -5757,7 +5763,7 @@ def _score_issues(
             if not isinstance(code, str) or not isinstance(href, str):
                 continue
             tgt_req = page_by_requested.get(_norm_self(href) or href)
-            if tgt_req and _is_redirect(tgt_req):
+            if tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req):
                 href_norm = _norm_self(href) or href
                 key = (source, href_norm, "hreflang", False, code.strip().lower())
                 if key in seen_redirect_links:
@@ -5775,7 +5781,7 @@ def _score_issues(
         if not canon:
             continue
         tgt_req = page_by_requested.get(canon)
-        if not (tgt_req and _is_redirect(tgt_req)):
+        if not (tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req)):
             continue
         source = _final_url(p)
         key = (source, canon, "canonical", False, "")
@@ -5793,7 +5799,7 @@ def _score_issues(
                 if not isinstance(href, str):
                     continue
                 tgt_req = page_by_requested.get(_norm_self(href) or href)
-                if tgt_req and _is_redirect(tgt_req):
+                if tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req):
                     loc_norm = _norm_self(loc) or loc
                     href_norm = _norm_self(href) or href
                     key = (loc_norm, href_norm, "hreflang_sitemap", False, "")
