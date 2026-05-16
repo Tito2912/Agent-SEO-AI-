@@ -4014,7 +4014,7 @@ def _score_issues(
     missing_title = [p.url for p in ok_html_pages if not _non_empty(p.title)]
     # Non-indexable pages only — indexable missing descriptions are folded into
     # meta_description_too_short_indexable below (mirrors Ahrefs behavior).
-    missing_description = [p.url for p in indexable_html_pages if not _non_empty(p.meta_description)]
+    missing_description = [p.url for p in ok_html_pages if not _non_empty(p.meta_description) and not _is_indexable(p)]
     def _is_missing_h1(p: PageData) -> bool:
         return (p.h1_tag_count or 0) == 0 or ((p.h1_tag_count or 0) > 0 and not p.h1)
 
