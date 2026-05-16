@@ -3817,7 +3817,8 @@ def _score_resource_issues(
     issues["page_has_redirected_javascript"] = issue(
         "page_has_redirected_javascript", sorted(set(pages_with_redirected_js))
     )
-    issues["javascript_file_size_too_large"] = issue("javascript_file_size_too_large", large_js)
+    # Suppressed: Ahrefs does not flag JS file size as an SEO issue.
+    issues["javascript_file_size_too_large"] = issue("javascript_file_size_too_large", [])
 
     issues["css_broken"] = issue("css_broken", broken_css)
     issues["page_has_broken_css"] = issue("page_has_broken_css", sorted(set(pages_with_broken_css)))
@@ -4165,7 +4166,9 @@ def _score_issues(
     timeouts = [p.url for p in pages if _is_timeout(p)]
 
     # --- Redirects (Ahrefs-like) ---
-    redirect_loop = [p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()]
+    # Ahrefs counts too-many-redirects pages as regular 3XX redirects, not loops.
+    _redirect_loop_urls = {p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()}
+    redirect_loop: list[str] = []  # suppressed: Ahrefs has no "redirect loop" issue category
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False
@@ -4219,11 +4222,11 @@ def _score_issues(
 
     # Don't count language-root slash normalizations but DO include http→https and
     # www→non-www canonical redirects — Ahrefs counts those in its "3xx redirect" total.
-    redirect_3xx = [
-        p.url for p in pages
-        if _is_redirect(p)
-        and not _is_lang_root_trailing_slash_redirect(p)
-    ]
+    # Also include too-many-redirects pages: Ahrefs counts these as 3XX redirects, not loops.
+    redirect_3xx = sorted(set(
+        [p.url for p in pages if _is_redirect(p) and not _is_lang_root_trailing_slash_redirect(p)]
+        + list(_redirect_loop_urls)
+    ))
     redirect_302 = [
         p.url for p in pages
         if (p.redirect_statuses or []) and p.redirect_statuses[0] == 302
@@ -4626,7 +4629,7 @@ def _score_issues(
     # 70 chars matches Screaming Frog's default and aligns with Ahrefs' effective threshold
     # (Ahrefs documents 60 but their Site Audit fires consistently around 70 in practice).
     TITLE_TOO_LONG = 70
-    TITLE_TOO_SHORT = 20
+    TITLE_TOO_SHORT = 10  # Ahrefs threshold: < 10 chars
     DESC_TOO_LONG = 160
     DESC_TOO_SHORT = 100  # Ahrefs threshold: descriptions < 100 chars are flagged as too short
     LOW_WORD_COUNT = 150  # Service/landing pages with 150-200 words are legitimate
@@ -5451,7 +5454,8 @@ def _score_issues(
     # Suppressed: Ahrefs doesn't surface permanent_redirects as a distinct issue
     # (canonical 301s are already covered by http_to_https_redirect / redirect_3xx).
     issues["permanent_redirects"] = _issue_block("permanent_redirects", [])
-    issues["low_text_to_html_ratio"] = _issue_block("low_text_to_html_ratio", sorted(set(low_text_to_html_ratio)))
+    # Suppressed: Semrush-only issue, Ahrefs does not flag low text-to-HTML ratio.
+    issues["low_text_to_html_ratio"] = _issue_block("low_text_to_html_ratio", [])
     issues["incorrect_pages_found_in_sitemap_xml"] = _issue_block(
         "incorrect_pages_found_in_sitemap_xml", sorted(set(incorrect_pages_found_in_sitemap_xml))
     )
@@ -5629,10 +5633,15 @@ def _score_issues(
         "page_has_links_to_broken_page_links_not_indexable", []
     )
 
-    # "Page has links to redirect" — source pages list. Kept as empty stubs; the canonical
-    # Ahrefs-style view is redirect_3xx_links (per source→target with link type details).
-    issues["page_has_links_to_redirect_indexable"] = _issue_block("page_has_links_to_redirect_indexable", [])
-    issues["page_has_links_to_redirect_not_indexable"] = _issue_block("page_has_links_to_redirect_not_indexable", [])
+    # Ahrefs "Page has links to redirect" — source pages that contain at least one link to a redirect.
+    redirect_src_indexable = sorted(set(r["source_url"] for r in redirect_link_rows_indexable))
+    redirect_src_not_indexable = sorted(set(r["source_url"] for r in redirect_link_rows_not_indexable))
+    issues["page_has_links_to_redirect_indexable"] = _issue_block(
+        "page_has_links_to_redirect_indexable", redirect_src_indexable
+    )
+    issues["page_has_links_to_redirect_not_indexable"] = _issue_block(
+        "page_has_links_to_redirect_not_indexable", redirect_src_not_indexable
+    )
 
     # Ahrefs-like: per-link exports for redirect targets (split by indexable vs not indexable source pages).
     redirect_link_rows_indexable: list[dict[str, Any]] = []
@@ -6092,7 +6101,8 @@ def _score_issues(
     issues["more_than_one_page_for_same_language_in_hreflang"] = _issue_block(
         "more_than_one_page_for_same_language_in_hreflang", more_than_one_page_for_same_language_in_hreflang
     )
-    issues["missing_reciprocal_hreflang"] = _issue_block("missing_reciprocal_hreflang", missing_reciprocal_hreflang)
+    # Suppressed: Ahrefs does not flag missing reciprocal hreflang as a distinct issue.
+    issues["missing_reciprocal_hreflang"] = _issue_block("missing_reciprocal_hreflang", [])
     issues["structured_data_schema_org_validation_error"] = _issue_block(
         "structured_data_schema_org_validation_error", structured_data_schema_org_errors
     )
