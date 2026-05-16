@@ -5633,16 +5633,6 @@ def _score_issues(
         "page_has_links_to_broken_page_links_not_indexable", []
     )
 
-    # Ahrefs "Page has links to redirect" — source pages that contain at least one link to a redirect.
-    redirect_src_indexable = sorted(set(r["source_url"] for r in redirect_link_rows_indexable))
-    redirect_src_not_indexable = sorted(set(r["source_url"] for r in redirect_link_rows_not_indexable))
-    issues["page_has_links_to_redirect_indexable"] = _issue_block(
-        "page_has_links_to_redirect_indexable", redirect_src_indexable
-    )
-    issues["page_has_links_to_redirect_not_indexable"] = _issue_block(
-        "page_has_links_to_redirect_not_indexable", redirect_src_not_indexable
-    )
-
     # Ahrefs-like: per-link exports for redirect targets (split by indexable vs not indexable source pages).
     redirect_link_rows_indexable: list[dict[str, Any]] = []
     redirect_link_rows_not_indexable: list[dict[str, Any]] = []
@@ -5679,7 +5669,17 @@ def _score_issues(
                     continue
                 seen_redirect_link_no.add(key)
                 redirect_link_rows_not_indexable.append(row)
-    # Per-link redirect view — duplicate of redirect_3xx_links; suppressed to avoid triple-counting.
+
+    # Ahrefs "Page has links to redirect" — source pages that contain at least one link to a redirect.
+    redirect_src_indexable = sorted(set(r["source_url"] for r in redirect_link_rows_indexable))
+    redirect_src_not_indexable = sorted(set(r["source_url"] for r in redirect_link_rows_not_indexable))
+    issues["page_has_links_to_redirect_indexable"] = _issue_block(
+        "page_has_links_to_redirect_indexable", redirect_src_indexable
+    )
+    issues["page_has_links_to_redirect_not_indexable"] = _issue_block(
+        "page_has_links_to_redirect_not_indexable", redirect_src_not_indexable
+    )
+    # Per-link redirect view — suppressed to avoid triple-counting with redirect_3xx_links.
     issues["page_has_links_to_redirect_links_indexable"] = _issue_block(
         "page_has_links_to_redirect_links_indexable", []
     )
