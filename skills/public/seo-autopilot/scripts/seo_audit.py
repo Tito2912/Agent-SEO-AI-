@@ -5229,7 +5229,8 @@ def _score_issues(
                 continue
             t = page_by_any.get(_norm_self(href) or href)
             if t:
-                if _is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
+                _t_toomany = bool(t.error and "toomanyredirects" in (t.error or "").lower())
+                if _is_redirect(t) or _is_timeout(t) or _t_toomany or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
@@ -5394,7 +5395,10 @@ def _score_issues(
             continue
 
         is_timeout = _is_timeout(p)
-        is_redirect = bool(_is_redirect(p) and (u_norm in page_by_requested))
+        _is_toomany_redir = bool(p.error and "toomanyredirects" in (p.error or "").lower())
+        is_redirect = bool(
+            (_is_redirect(p) and (u_norm in page_by_requested)) or _is_toomany_redir
+        )
         is_4xx = bool(isinstance(p.status_code, int) and 400 <= p.status_code < 500)
         is_5xx = bool(isinstance(p.status_code, int) and 500 <= p.status_code < 600)
         is_noindex = bool(_looks_noindex(p.meta_robots) or _looks_noindex(p.x_robots_tag))
@@ -6136,7 +6140,8 @@ def _score_issues(
             t = page_by_any.get(href_norm)
             if not t:
                 continue
-            if not (_is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400)):
+            _t_toomany2 = bool(t.error and "toomanyredirects" in (t.error or "").lower())
+            if not (_is_redirect(t) or _is_timeout(t) or _t_toomany2 or (isinstance(t.status_code, int) and t.status_code >= 400)):
                 continue
             if not strict_link_counts:
                 key = (source, href_norm, code.strip().lower())
