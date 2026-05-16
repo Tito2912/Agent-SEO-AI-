@@ -5440,7 +5440,9 @@ def _score_issues(
     _write_issue_rows(issues_dir, "duplicate_meta_descriptions", duplicate_description_rows)
 
     # Semrush-like issues (mega export)
-    issues["permanent_redirects"] = _issue_block("permanent_redirects", sorted(set(permanent_redirects)))
+    # Suppressed: Ahrefs doesn't surface permanent_redirects as a distinct issue
+    # (canonical 301s are already covered by http_to_https_redirect / redirect_3xx).
+    issues["permanent_redirects"] = _issue_block("permanent_redirects", [])
     issues["low_text_to_html_ratio"] = _issue_block("low_text_to_html_ratio", sorted(set(low_text_to_html_ratio)))
     issues["incorrect_pages_found_in_sitemap_xml"] = _issue_block(
         "incorrect_pages_found_in_sitemap_xml", sorted(set(incorrect_pages_found_in_sitemap_xml))
@@ -5569,7 +5571,8 @@ def _score_issues(
     broken_union_rows = [
         {"source_url": src, "targets": sorted(tgts)[:50]} for src, tgts in sorted(broken_union.items()) if tgts
     ]
-    issues["broken_internal_links"] = _issue_block("broken_internal_links", broken_union_rows)
+    # Suppressed: duplicate of page_has_links_to_broken_page_indexable (same source pages, different format).
+    issues["broken_internal_links"] = _issue_block("broken_internal_links", [])
 
     # Ahrefs-like: per-link exports ("... - links") for broken targets.
     broken_link_rows_indexable: list[dict[str, Any]] = []
@@ -5609,11 +5612,13 @@ def _score_issues(
                     seen_broken_link_no.add(key)
                     broken_link_rows_not_indexable.append(row)
 
+    # Suppressed: per-link detail views — Ahrefs only shows source-page level via
+    # page_has_links_to_broken_page_indexable / page_has_links_to_broken_page_not_indexable.
     issues["page_has_links_to_broken_page_links_indexable"] = _issue_block(
-        "page_has_links_to_broken_page_links_indexable", broken_link_rows_indexable
+        "page_has_links_to_broken_page_links_indexable", []
     )
     issues["page_has_links_to_broken_page_links_not_indexable"] = _issue_block(
-        "page_has_links_to_broken_page_links_not_indexable", broken_link_rows_not_indexable
+        "page_has_links_to_broken_page_links_not_indexable", []
     )
 
     # "Page has links to redirect" — source pages list. Kept as empty stubs; the canonical
@@ -5693,8 +5698,10 @@ def _score_issues(
                     seen_4xx.add(key)
                     links_to_4xx.append({"source_url": source, "target_url": target_norm})
 
-    issues["links_to_404_page"] = _issue_block("links_to_404_page", links_to_404)
-    issues["links_to_4xx_page"] = _issue_block("links_to_4xx_page", links_to_4xx)
+    # Suppressed: per-link views — Ahrefs doesn't surface these as separate issues
+    # (covered at source-page level by page_has_links_to_broken_page_indexable).
+    issues["links_to_404_page"] = _issue_block("links_to_404_page", [])
+    issues["links_to_4xx_page"] = _issue_block("links_to_4xx_page", [])
 
     redirect_3xx_link_rows: list[dict[str, Any]] = []
     seen_redirect_links: set[tuple[str, str, str, bool, str]] = set()
@@ -6003,11 +6010,9 @@ def _score_issues(
         for url, tgts in sorted(nofollow_external_by_page.items())
         if tgts
     ]
-    _write_issue_rows(issues_dir, "nofollow_external_links", nofollow_external_pages)
-    issues["nofollow_external_links"] = {
-        "count": len(nofollow_external_pages),
-        "examples": [r["url"] for r in nofollow_external_pages[:ISSUE_EXAMPLES_LIMIT]],
-    }
+    # Suppressed: Ahrefs doesn't flag nofollow external links as an issue.
+    _write_issue_rows(issues_dir, "nofollow_external_links", [])
+    issues["nofollow_external_links"] = {"count": 0, "examples": []}
 
     issues["multiple_title_tags"] = _issue_block("multiple_title_tags", multiple_title_tags)
     issues["multiple_meta_description_tags"] = _issue_block(
@@ -6051,9 +6056,8 @@ def _score_issues(
     issues["cwv_tbt_pages_to_fix"] = _issue_block("cwv_tbt_pages_to_fix", cwv_tbt_pages_to_fix)
     issues["cwv_cls_pages_to_fix"] = _issue_block("cwv_cls_pages_to_fix", cwv_cls_pages_to_fix)
     issues["slow_page"] = _issue_block("slow_page", slow_page)
-    issues["page_and_serp_titles_do_not_match"] = _issue_block(
-        "page_and_serp_titles_do_not_match", page_and_serp_titles_do_not_match
-    )
+    # Suppressed: Ahrefs doesn't flag title vs og:title mismatches as a separate issue.
+    issues["page_and_serp_titles_do_not_match"] = _issue_block("page_and_serp_titles_do_not_match", [])
     issues["duplicate_pages_without_canonical"] = _issue_block(
         "duplicate_pages_without_canonical", duplicate_pages_without_canonical
     )
