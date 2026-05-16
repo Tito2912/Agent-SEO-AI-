@@ -11740,7 +11740,10 @@ def bing_sites_for_project(request: Request, slug: str) -> JSONResponse:
 @app.get("/api/gsc/properties")
 def gsc_properties(request: Request) -> JSONResponse:
     _ = _require_system_owner(request)
-    creds = (os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or "").strip()
+    # Use _env_effective_value so credentials saved via the UI (DATA_DIR/.env.gsc) are found
+    # even when os.environ wasn't updated (e.g. after a server restart on Render ephemeral disk).
+    creds_raw, _cred_src = _env_effective_value("GOOGLE_APPLICATION_CREDENTIALS")
+    creds = (creds_raw or "").strip().strip('"').strip("'")
     if not creds:
         return JSONResponse({"ok": False, "error": "GOOGLE_APPLICATION_CREDENTIALS not set"}, status_code=400)
 
