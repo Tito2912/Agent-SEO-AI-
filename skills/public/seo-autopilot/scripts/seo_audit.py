@@ -4014,7 +4014,7 @@ def _score_issues(
     missing_title = [p.url for p in ok_html_pages if not _non_empty(p.title)]
     # Non-indexable pages only — indexable missing descriptions are folded into
     # meta_description_too_short_indexable below (mirrors Ahrefs behavior).
-    missing_description = [p.url for p in ok_html_pages if not _non_empty(p.meta_description) and not _is_indexable(p)]
+    missing_description = [p.url for p in indexable_html_pages if not _non_empty(p.meta_description)]
     def _is_missing_h1(p: PageData) -> bool:
         return (p.h1_tag_count or 0) == 0 or ((p.h1_tag_count or 0) > 0 and not p.h1)
 
@@ -4597,7 +4597,7 @@ def _score_issues(
     TITLE_TOO_LONG = 70
     TITLE_TOO_SHORT = 20
     DESC_TOO_LONG = 160
-    DESC_TOO_SHORT = 70   # 70-90 chars is valid; 100 was too strict
+    DESC_TOO_SHORT = 100  # Ahrefs threshold: descriptions < 100 chars are flagged as too short
     LOW_WORD_COUNT = 150  # Service/landing pages with 150-200 words are legitimate
     # Ahrefs "AI content detection" is proprietary; we approximate it with a deterministic heuristic.
     # Keep this conservative to avoid false positives.
