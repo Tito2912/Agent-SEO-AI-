@@ -3898,23 +3898,22 @@ def _score_issues(
     def _is_redirect(p: PageData) -> bool:
         return bool(p.redirect_statuses)
 
-    def _toomany_is_cross_domain(p: PageData) -> bool:
-        """True if a toomanyredirects page crosses to a different domain — i.e. a genuine
-        external redirect rather than a same-domain loop.  Used to detect real redirect
-        targets in hreflang without including same-domain redirect loops as false positives."""
+    def _toomany_is_redirect_loop(p: PageData) -> bool:
+        """True if a toomanyredirects page is caught in a redirect loop (a URL appears twice
+        in the redirect_chain).  A loop means the page will never resolve to a 200 — it is
+        effectively a permanent redirect/broken target, matching Ahrefs behaviour for /de-style
+        language roots that redirect to themselves indefinitely."""
         if not (p.error and "toomanyredirects" in (p.error or "").lower()):
             return False
         chain = p.redirect_chain or []
         if not chain:
             return False
-        try:
-            original_host = urlparse(p.url).netloc.lower().removeprefix("www.")
-            for u in chain:
-                host = urlparse(u).netloc.lower().removeprefix("www.")
-                if host and host != original_host:
-                    return True
-        except Exception:
-            pass
+        seen: set[str] = set()
+        for u in chain:
+            key = u.rstrip("/").lower()
+            if key in seen:
+                return True
+            seen.add(key)
         return False
 
     def _is_timeout(p: PageData) -> bool:
@@ -5257,8 +5256,9 @@ def _score_issues(
             t = page_by_any.get(_norm_self(href) or href)
             if t:
                 # For toomanyredirects targets: only count as broken if the redirect chain
-                # crossed to a different domain (genuine external redirect, not a same-domain loop).
-                if _is_redirect(t) or _is_timeout(t) or _toomany_is_cross_domain(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
+                # contains a loop (URL visited twice) — a loop never resolves to 200, matching
+                # Ahrefs detection of /de-style language roots that redirect indefinitely.
+                if _is_redirect(t) or _is_timeout(t) or _toomany_is_redirect_loop(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
