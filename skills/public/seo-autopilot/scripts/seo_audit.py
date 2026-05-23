@@ -5200,6 +5200,10 @@ def _score_issues(
         # successfully, so their hreflang annotations don't represent the site's canonical structure.
         if p.error and "toomanyredirects" in (p.error or "").lower():
             continue
+        # Ahrefs-like: only evaluate hreflang target quality for indexable source pages.
+        # Non-indexable pages don't appear in search results, so their hreflang is irrelevant.
+        if not _is_indexable(p):
+            continue
 
         # Ahrefs-like: treat x-default missing as relevant only for indexable pages.
         if "x-default" not in hreflang and _is_indexable(p):
