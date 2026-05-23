@@ -5196,6 +5196,10 @@ def _score_issues(
         # The canonical URL should be the one carrying the hreflang annotations.
         if _is_non_canonical(p):
             continue
+        # Ahrefs-like: skip toomanyredirects pages as hreflang sources — they can't be crawled
+        # successfully, so their hreflang annotations don't represent the site's canonical structure.
+        if p.error and "toomanyredirects" in (p.error or "").lower():
+            continue
 
         # Ahrefs-like: treat x-default missing as relevant only for indexable pages.
         if "x-default" not in hreflang and _is_indexable(p):
@@ -6075,7 +6079,8 @@ def _score_issues(
     issues["pages_with_poor_lcp"] = _issue_block("pages_with_poor_lcp", pages_with_poor_lcp)
     issues["pages_with_poor_cls"] = _issue_block("pages_with_poor_cls", pages_with_poor_cls)
     issues["pages_with_poor_inp"] = _issue_block("pages_with_poor_inp", pages_with_poor_inp)
-    issues["pages_with_poor_tbt"] = _issue_block("pages_with_poor_tbt", pages_with_poor_tbt)
+    # Suppressed: Ahrefs does not surface TBT as a standalone issue in Site Audit.
+    issues["pages_with_poor_tbt"] = _issue_block("pages_with_poor_tbt", [])
     issues["cwv_lcp_pages_to_fix"] = _issue_block("cwv_lcp_pages_to_fix", cwv_lcp_pages_to_fix)
     issues["cwv_tbt_pages_to_fix"] = _issue_block("cwv_tbt_pages_to_fix", cwv_tbt_pages_to_fix)
     issues["cwv_cls_pages_to_fix"] = _issue_block("cwv_cls_pages_to_fix", cwv_cls_pages_to_fix)
@@ -6151,8 +6156,9 @@ def _score_issues(
             hreflang_to_redirect_or_broken_page_links.append(
                 {"source_url": source, "target_url": href_norm, "hreflang": code, "found_in": found_in}
             )
+    # Suppressed: Ahrefs does not expose per-link hreflang redirect/broken detail as a distinct issue.
     issues["hreflang_to_redirect_or_broken_page_links"] = _issue_block(
-        "hreflang_to_redirect_or_broken_page_links", hreflang_to_redirect_or_broken_page_links
+        "hreflang_to_redirect_or_broken_page_links", []
     )
     issues["hreflang_to_non_canonical"] = _issue_block("hreflang_to_non_canonical", hreflang_to_non_canonical)
     issues["x_default_hreflang_missing"] = _issue_block(
@@ -6259,7 +6265,8 @@ def _score_issues(
             "noindex_page_became_indexable", sorted(set(noindex_page_became_indexable))
         )
         issues["title_tag_changed"] = _issue_block("title_tag_changed", sorted(set(title_tag_changed)))
-        issues["meta_description_changed"] = _issue_block("meta_description_changed", sorted(set(meta_description_changed)))
+        # Suppressed: Ahrefs does not report meta description changes as a distinct Site Audit issue.
+        issues["meta_description_changed"] = _issue_block("meta_description_changed", [])
         issues["h1_tag_changed"] = _issue_block("h1_tag_changed", sorted(set(h1_tag_changed)))
         issues["word_count_changed"] = _issue_block("word_count_changed", sorted(set(word_count_changed)))
         issues["pages_to_submit_to_indexnow"] = _issue_block(
