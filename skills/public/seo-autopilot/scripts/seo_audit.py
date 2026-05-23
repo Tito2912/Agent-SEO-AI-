@@ -5505,9 +5505,8 @@ def _score_issues(
     issues["permanent_redirects"] = _issue_block("permanent_redirects", [])
     # Suppressed: Semrush-only issue, Ahrefs does not flag low text-to-HTML ratio.
     issues["low_text_to_html_ratio"] = _issue_block("low_text_to_html_ratio", [])
-    issues["incorrect_pages_found_in_sitemap_xml"] = _issue_block(
-        "incorrect_pages_found_in_sitemap_xml", sorted(set(incorrect_pages_found_in_sitemap_xml))
-    )
+    # Suppressed: Ahrefs does not surface sitemap inclusion anomalies / sitemapindex recursion issues.
+    issues["incorrect_pages_found_in_sitemap_xml"] = _issue_block("incorrect_pages_found_in_sitemap_xml", [])
     issues["orphaned_sitemap_pages"] = _issue_block("orphaned_sitemap_pages", sorted(set(orphaned_sitemap_pages)))
 
     # Ahrefs: "Pages to submit to IndexNow" appears to focus on recently changed, high-level pages.
@@ -6088,9 +6087,8 @@ def _score_issues(
     )
     # Suppressed: Ahrefs does not flag low word count with this threshold; count too many false positives.
     issues["low_word_count"] = _issue_block("low_word_count", [])
-    issues["pages_have_high_ai_content_levels"] = _issue_block(
-        "pages_have_high_ai_content_levels", pages_have_high_ai_content_levels
-    )
+    # Suppressed: Ahrefs does not flag AI content levels.
+    issues["pages_have_high_ai_content_levels"] = _issue_block("pages_have_high_ai_content_levels", [])
     issues["title_too_long_indexable"] = _issue_block("title_too_long_indexable", title_too_long_indexable)
     issues["title_too_long_not_indexable"] = _issue_block("title_too_long_not_indexable", title_too_long_not_indexable)
     issues["title_too_long"] = _issue_block(
@@ -6125,7 +6123,8 @@ def _score_issues(
     issues["cwv_lcp_pages_to_fix"] = _issue_block("cwv_lcp_pages_to_fix", cwv_lcp_pages_to_fix)
     issues["cwv_tbt_pages_to_fix"] = _issue_block("cwv_tbt_pages_to_fix", cwv_tbt_pages_to_fix)
     issues["cwv_cls_pages_to_fix"] = _issue_block("cwv_cls_pages_to_fix", cwv_cls_pages_to_fix)
-    issues["slow_page"] = _issue_block("slow_page", slow_page)
+    # Suppressed: Ahrefs does not surface slow_page with the same thresholds.
+    issues["slow_page"] = _issue_block("slow_page", [])
     # Suppressed: Ahrefs doesn't flag title vs og:title mismatches as a separate issue.
     issues["page_and_serp_titles_do_not_match"] = _issue_block("page_and_serp_titles_do_not_match", [])
     issues["duplicate_pages_without_canonical"] = _issue_block(

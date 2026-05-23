@@ -802,7 +802,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "sitemap_3xx_redirect": IssueMeta("sitemap_3xx_redirect", "Sitemap : URL en 3XX", "Sitemaps", "error"),
     "sitemap_4xx_page": IssueMeta("sitemap_4xx_page", "Sitemap : URL en 4XX", "Sitemaps", "error"),
     "sitemap_5xx_page": IssueMeta("sitemap_5xx_page", "Sitemap : URL en 5XX", "Sitemaps", "error"),
-    "sitemap_noindex_page": IssueMeta("sitemap_noindex_page", "Sitemap : URL noindex", "Sitemaps", "notice"),
+    "sitemap_noindex_page": IssueMeta("sitemap_noindex_page", "Sitemap : URL noindex", "Sitemaps", "error"),
     "sitemap_non_canonical_page": IssueMeta(
         "sitemap_non_canonical_page", "Sitemap : URL non-canonique", "Sitemaps", "notice"
     ),
