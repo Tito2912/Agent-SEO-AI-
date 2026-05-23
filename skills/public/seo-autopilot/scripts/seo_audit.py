@@ -5237,8 +5237,9 @@ def _score_issues(
                 continue
             t = page_by_any.get(_norm_self(href) or href)
             if t:
-                _t_toomany = bool(t.error and "toomanyredirects" in (t.error or "").lower())
-                if _is_redirect(t) or _is_timeout(t) or _t_toomany or (isinstance(t.status_code, int) and t.status_code >= 400):
+                # Note: toomanyredirects targets are excluded — the crawler couldn't resolve
+                # whether they are actual redirects or loops, causing false positives.
+                if _is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
@@ -6080,10 +6081,10 @@ def _score_issues(
         "meta_description_too_short",
         sorted(set(meta_description_too_short_indexable + meta_description_too_short_not_indexable)),
     )
-    issues["pages_with_poor_lcp"] = _issue_block("pages_with_poor_lcp", pages_with_poor_lcp)
-    issues["pages_with_poor_cls"] = _issue_block("pages_with_poor_cls", pages_with_poor_cls)
-    issues["pages_with_poor_inp"] = _issue_block("pages_with_poor_inp", pages_with_poor_inp)
-    # Suppressed: Ahrefs does not surface TBT as a standalone issue in Site Audit.
+    # Suppressed: Ahrefs does not surface individual CWV metrics as standalone Site Audit issues.
+    issues["pages_with_poor_lcp"] = _issue_block("pages_with_poor_lcp", [])
+    issues["pages_with_poor_cls"] = _issue_block("pages_with_poor_cls", [])
+    issues["pages_with_poor_inp"] = _issue_block("pages_with_poor_inp", [])
     issues["pages_with_poor_tbt"] = _issue_block("pages_with_poor_tbt", [])
     issues["cwv_lcp_pages_to_fix"] = _issue_block("cwv_lcp_pages_to_fix", cwv_lcp_pages_to_fix)
     issues["cwv_tbt_pages_to_fix"] = _issue_block("cwv_tbt_pages_to_fix", cwv_tbt_pages_to_fix)
@@ -6149,8 +6150,7 @@ def _score_issues(
             t = page_by_any.get(href_norm)
             if not t:
                 continue
-            _t_toomany2 = bool(t.error and "toomanyredirects" in (t.error or "").lower())
-            if not (_is_redirect(t) or _is_timeout(t) or _t_toomany2 or (isinstance(t.status_code, int) and t.status_code >= 400)):
+            if not (_is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400)):
                 continue
             if not strict_link_counts:
                 key = (source, href_norm, code.strip().lower())
