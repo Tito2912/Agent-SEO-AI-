@@ -3060,20 +3060,17 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             resp = session.get(url, timeout=config.timeout_s, allow_redirects=True)
             break
         except requests.exceptions.TooManyRedirects as e:
-            # Capture the redirect chain from the exception so that loop detection works.
-            # requests raises TooManyRedirects after following max_redirects hops; e.response
-            # holds the last redirect response with its .history of earlier responses.
+            # Capture redirect_chain only — NOT redirect_statuses.
+            # _is_redirect() = bool(redirect_statuses), so populating redirect_statuses would
+            # make toomanyredirects pages look like normal 3xx redirects everywhere and break
+            # broken_redirect, redirect_3xx_links, redirect_chain_too_long, etc.
+            # redirect_chain alone is enough for _toomany_is_redirect_loop() loop detection.
             try:
                 r = getattr(e, "response", None)
                 if r is not None:
                     hist = list(r.history or [])
                     all_resp = hist + [r]
                     page.redirect_chain = [rr.url for rr in all_resp]
-                    page.redirect_statuses = [
-                        int(rr.status_code)
-                        for rr in all_resp
-                        if isinstance(getattr(rr, "status_code", None), int)
-                    ]
             except Exception:
                 pass
             page.error = f"{type(e).__name__}: {e}"
