@@ -4203,7 +4203,14 @@ def _score_issues(
     # Ahrefs counts too-many-redirects pages as regular 3XX redirects, not loops.
     _redirect_loop_urls = {p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()}
     # Pages where the redirect_chain contains a repeated URL are genuine loops.
-    redirect_loop: list[str] = sorted(p.url for p in pages if _toomany_is_redirect_loop(p))
+    # Exclude locale-root paths (/xx or /xx/) — our crawler loops on these due to
+    # content-negotiation headers, but Ahrefs classifies them as normal 3xx redirects.
+    def _is_locale_root_url(url: str) -> bool:
+        return bool(re.fullmatch(r"/[a-z]{2}/?", urlsplit(url or "").path or ""))
+    redirect_loop: list[str] = sorted(
+        p.url for p in pages
+        if _toomany_is_redirect_loop(p) and not _is_locale_root_url(p.url or "")
+    )
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False
