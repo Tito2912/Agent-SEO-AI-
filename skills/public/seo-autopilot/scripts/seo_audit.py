@@ -3059,6 +3059,25 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
         try:
             resp = session.get(url, timeout=config.timeout_s, allow_redirects=True)
             break
+        except requests.exceptions.TooManyRedirects as e:
+            # Capture the redirect chain from the exception so that loop detection works.
+            # requests raises TooManyRedirects after following max_redirects hops; e.response
+            # holds the last redirect response with its .history of earlier responses.
+            try:
+                r = getattr(e, "response", None)
+                if r is not None:
+                    hist = list(r.history or [])
+                    all_resp = hist + [r]
+                    page.redirect_chain = [rr.url for rr in all_resp]
+                    page.redirect_statuses = [
+                        int(rr.status_code)
+                        for rr in all_resp
+                        if isinstance(getattr(rr, "status_code", None), int)
+                    ]
+            except Exception:
+                pass
+            page.error = f"{type(e).__name__}: {e}"
+            return page
         except requests.RequestException as e:
             last_err = f"{type(e).__name__}: {e}"
             _reset_session(config.user_agent, connection_close=bool(config.connection_close))
