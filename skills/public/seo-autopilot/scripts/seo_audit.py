@@ -29,7 +29,7 @@ from collections import Counter, defaultdict, deque
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin, urldefrag, urlsplit, urlunsplit
+from urllib.parse import urljoin, urldefrag, urlsplit, urlunsplit, urlparse
 from xml.etree import ElementTree
 
 import requests
@@ -3898,6 +3898,25 @@ def _score_issues(
     def _is_redirect(p: PageData) -> bool:
         return bool(p.redirect_statuses)
 
+    def _toomany_is_cross_domain(p: PageData) -> bool:
+        """True if a toomanyredirects page crosses to a different domain — i.e. a genuine
+        external redirect rather than a same-domain loop.  Used to detect real redirect
+        targets in hreflang without including same-domain redirect loops as false positives."""
+        if not (p.error and "toomanyredirects" in (p.error or "").lower()):
+            return False
+        chain = p.redirect_chain or []
+        if not chain:
+            return False
+        try:
+            original_host = urlparse(p.url).netloc.lower().removeprefix("www.")
+            for u in chain:
+                host = urlparse(u).netloc.lower().removeprefix("www.")
+                if host and host != original_host:
+                    return True
+        except Exception:
+            pass
+        return False
+
     def _is_timeout(p: PageData) -> bool:
         if not p.error:
             return False
@@ -5237,9 +5256,9 @@ def _score_issues(
                 continue
             t = page_by_any.get(_norm_self(href) or href)
             if t:
-                # Note: toomanyredirects targets are excluded — the crawler couldn't resolve
-                # whether they are actual redirects or loops, causing false positives.
-                if _is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
+                # For toomanyredirects targets: only count as broken if the redirect chain
+                # crossed to a different domain (genuine external redirect, not a same-domain loop).
+                if _is_redirect(t) or _is_timeout(t) or _toomany_is_cross_domain(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
