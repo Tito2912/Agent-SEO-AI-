@@ -1160,6 +1160,8 @@ pre {
 .progress.slim { height: 4px; margin-top: 0; }
 .progress.crawl { background: rgba(255,255,255,.05); }
 .progress.crawl .progress-fill { background: var(--accent); }
+.progress.pagespeed { background: rgba(255,255,255,.05); }
+.progress.pagespeed .progress-fill { background: #f5a623; }
 
 /* Crawl meter */
 .crawl-meter { margin-top: 10px; }
@@ -1177,6 +1179,47 @@ pre {
 .log-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
 .logs-details summary { cursor: pointer; font-size: 12px; color: var(--muted); }
 .logs-details pre { max-height: 260px; overflow: auto; }
+
+/* Live job card header */
+.live-job-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Pulsing dot on running badge */
+.pill.running { position: relative; padding-left: 20px; }
+.pill.running::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  50% { opacity: .35; transform: translateY(-50%) scale(.65); }
+}
+
+/* Cancel crawl button */
+.btn-cancel-crawl {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.05);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.btn-cancel-crawl:hover { background: rgba(255,80,80,.12); color: #ff6b6b; border-color: rgba(255,80,80,.3); }
+.btn-cancel-crawl:disabled { opacity: .45; cursor: default; }
 
 /* History bars */
 .history { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; align-items: end; }

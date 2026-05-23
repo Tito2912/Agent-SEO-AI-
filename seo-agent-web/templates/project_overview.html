@@ -172,9 +172,11 @@
     >
       <div class="card-title-row">
         <h2>Crawl</h2>
-        <div class="muted small">
-          <span id="live-job-ts" class="mono"></span>
+        <div class="live-job-header-right">
+          <span id="live-job-elapsed" class="muted small mono" style="display:none;"></span>
+          <span id="live-job-ts" class="muted small mono"></span>
           <span id="live-job-status" class="pill {{ live_job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live_job.status, live_job.status) }}</span>
+          <button id="live-job-cancel-btn" class="btn-cancel-crawl" title="Annuler le crawl" style="display:none;">Annuler</button>
         </div>
       </div>
 
@@ -187,6 +189,17 @@
           <div class="progress-fill" id="live-job-progress-fill" style="--p: 0;"></div>
         </div>
         <div class="muted small" id="live-job-progress-text"></div>
+      </div>
+
+      <div id="live-job-pagespeed" class="crawl-meter" style="display:none; margin-top: 12px;">
+        <div class="crawl-meter-head">
+          <div class="crawl-meter-title">PageSpeed</div>
+          <div class="crawl-meter-count mono" id="live-job-pagespeed-count"></div>
+        </div>
+        <div class="progress slim pagespeed">
+          <div class="progress-fill" id="live-job-pagespeed-fill" style="--p: 0;"></div>
+        </div>
+        <div class="muted small" id="live-job-pagespeed-text"></div>
       </div>
 
       <div class="muted small log-line" id="live-job-logline"></div>
@@ -719,15 +732,21 @@
         const tail = 20000;
         const tsEl = document.getElementById("live-job-ts");
         const statusEl = document.getElementById("live-job-status");
+        const elapsedEl = document.getElementById("live-job-elapsed");
         const progressWrap = document.getElementById("live-job-progress");
         const progressCount = document.getElementById("live-job-progress-count");
         const progressFill = document.getElementById("live-job-progress-fill");
         const progressText = document.getElementById("live-job-progress-text");
+        const psWrap = document.getElementById("live-job-pagespeed");
+        const psCount = document.getElementById("live-job-pagespeed-count");
+        const psFill = document.getElementById("live-job-pagespeed-fill");
+        const psText = document.getElementById("live-job-pagespeed-text");
         const logLineEl = document.getElementById("live-job-logline");
         const logsDetails = document.getElementById("live-job-logs-details");
         const stdoutEl = document.getElementById("live-job-stdout");
         const stderrEl = document.getElementById("live-job-stderr");
         const jobsLink = document.getElementById("live-job-jobs-link");
+        const cancelBtn = document.getElementById("live-job-cancel-btn");
         if (jobsLink) jobsLink.href = `/jobs?job=${encodeURIComponent(jobId)}`;
         function isLiveStatus(s) { return s === "queued" || s === "running" || s === "cancel_requested"; }
         function fmtRunTs(v) { if (!v || !/^\d{8}-\d{6}$/.test(v)) return null; return `${v.slice(6,8)}/${v.slice(4,6)}/${v.slice(2,4)}`; }
@@ -736,15 +755,51 @@
         if (tsEl) tsEl.textContent = initialDate;
         function lastLine(v) { if (!v) return ""; const ls = v.split(/\r?\n/); for (let i=ls.length-1;i>=0;i--) { const l=String(ls[i]||"").trim(); if(l) return l; } return ""; }
         const statusMap = {queued:"en attente",running:"en cours",cancel_requested:"annulation…",done:"terminé",failed:"échec",canceled:"annulé"};
+        function parsePageSpeed(stdout) {
+          const lines = (stdout||"").split(/\r?\n/);
+          for (let i=lines.length-1;i>=0;i--) {
+            const m = lines[i].match(/\[PAGESPEED\]\s+(\d+)\/(\d+)/);
+            if (m) return {current:Number(m[1]),total:Number(m[2])};
+          }
+          return null;
+        }
+        let elapsedTimer = null;
+        function startElapsed() {
+          if (!elapsedEl || elapsedTimer || !createdAt) return;
+          function tick() {
+            const sec = Math.max(0, Math.floor(Date.now()/1000 - createdAt));
+            const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+            const parts = h ? [String(h).padStart(2,'0'), String(m).padStart(2,'0'), String(s).padStart(2,'0')] : [String(m).padStart(2,'0'), String(s).padStart(2,'0')];
+            elapsedEl.textContent = parts.join(':');
+            elapsedEl.style.display = "";
+          }
+          tick();
+          elapsedTimer = setInterval(tick, 1000);
+        }
+        function stopElapsed() {
+          if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+          if (elapsedEl) elapsedEl.style.display = "none";
+        }
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', async () => {
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = "Annulation…";
+            try {
+              await fetch(`/jobs/${encodeURIComponent(jobId)}/cancel`, {method:'POST', redirect:'manual'});
+              if (statusEl) { statusEl.textContent = "annulation…"; statusEl.className = "pill cancel_requested"; }
+            } catch(_) { cancelBtn.disabled = false; cancelBtn.textContent = "Annuler"; }
+          });
+        }
         function render(data) {
           const status = data && data.status ? String(data.status) : "";
           if (statusEl) { statusEl.textContent = statusMap[status] || status; statusEl.className = `pill ${status}`; }
           const rts = data && data.result ? data.result.timestamp : null;
           if (tsEl) tsEl.textContent = fmtRunTs(String(rts||"")) || fmtEpoch(Number(data&&data.created_at));
+          const isLive = status==="queued"||status==="running";
+          if (cancelBtn) cancelBtn.style.display = isLive ? "" : "none";
           const progress = data ? data.progress : null;
           if (progressWrap && progressFill && progressText && progressCount && progress && progress.total) {
             const cur2 = Number(progress.current||0), tot = Number(progress.total||0);
-            const isLive = status==="queued"||status==="running";
             const isFin = isLive && tot>0 && cur2>=tot;
             let pct = tot ? Math.round((cur2/tot)*100) : 0;
             if (isFin && pct>=100) pct = 99;
@@ -755,6 +810,14 @@
           } else if (progressWrap) { progressWrap.style.display = "none"; }
           const stdout = data && typeof data.stdout==="string" ? data.stdout : "";
           const stderr = data && typeof data.stderr==="string" ? data.stderr : "";
+          const ps = parsePageSpeed(stdout);
+          if (ps && ps.total > 0 && psWrap && psFill && psCount && psText) {
+            const psPct = Math.round((ps.current/ps.total)*100);
+            psFill.style.setProperty("--p",String(psPct));
+            psCount.textContent = `${ps.current}/${ps.total}`;
+            psText.textContent = `Analyse PageSpeed : ${ps.current}/${ps.total}`;
+            psWrap.style.display = "";
+          } else if (psWrap) { psWrap.style.display = "none"; }
           const line = lastLine(stdout) || lastLine(stderr);
           if (logLineEl) logLineEl.textContent = line;
           if (logsDetails && stdoutEl && stderrEl) {
@@ -772,6 +835,7 @@
             render(data);
             if (isLiveStatus(initialStatus) && data && (data.status==="done" || data.status==="failed" || data.status==="canceled")) {
               if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+              stopElapsed();
               if (data.status==="done") {
                 const destUrl = (data.result && data.result.project_url)
                   ? new URL(String(data.result.project_url), window.location.origin)
@@ -785,7 +849,7 @@
             }
           } catch(_){}
         }
-        if (isLiveStatus(initialStatus)) { pollTimer = setInterval(poll, pollMs); }
+        if (isLiveStatus(initialStatus)) { pollTimer = setInterval(poll, pollMs); startElapsed(); }
         poll();
       })();
     </script>
