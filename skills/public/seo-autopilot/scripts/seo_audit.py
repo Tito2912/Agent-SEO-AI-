@@ -4202,7 +4202,8 @@ def _score_issues(
     # --- Redirects (Ahrefs-like) ---
     # Ahrefs counts too-many-redirects pages as regular 3XX redirects, not loops.
     _redirect_loop_urls = {p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()}
-    redirect_loop: list[str] = []  # suppressed: Ahrefs has no "redirect loop" issue category
+    # Pages where the redirect_chain contains a repeated URL are genuine loops.
+    redirect_loop: list[str] = sorted(p.url for p in pages if _toomany_is_redirect_loop(p))
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False
