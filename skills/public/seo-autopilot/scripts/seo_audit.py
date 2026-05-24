@@ -3074,27 +3074,6 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             except Exception:
                 pass
             page.error = f"{type(e).__name__}: {e}"
-            # Locale-root paths (/xx or /xx/) sometimes loop only because our plain
-            # requests session lacks Accept-Language, triggering content-negotiation
-            # redirects back to themselves. Retry with the matching language header:
-            # if the server resolves the page, clear redirect_chain so
-            # _toomany_is_redirect_loop() returns False (not a genuine loop).
-            # If it still loops, keep the chain — it is a real loop.
-            _locale_m = re.fullmatch(r"/([a-z]{2})/?", urlsplit(url or "").path or "")
-            if _locale_m:
-                _lang = _locale_m.group(1)
-                try:
-                    _get_session(config.user_agent).get(
-                        url,
-                        timeout=config.timeout_s,
-                        allow_redirects=True,
-                        headers={"Accept-Language": f"{_lang},{_lang}-*;q=0.9,*;q=0.5"},
-                    )
-                    page.redirect_chain = []  # resolved → not a genuine loop
-                except requests.exceptions.TooManyRedirects:
-                    pass  # still loops → genuine loop, keep redirect_chain
-                except Exception:
-                    pass  # network error on verify → leave chain as-is
             return page
         except requests.RequestException as e:
             last_err = f"{type(e).__name__}: {e}"
@@ -3936,15 +3915,29 @@ def _score_issues(
         return bool(p.redirect_statuses)
 
     def _toomany_is_redirect_loop(p: PageData) -> bool:
-        """True if a toomanyredirects page is caught in a redirect loop (a URL appears twice
-        in the redirect_chain).  A loop means the page will never resolve to a 200 — it is
-        effectively a permanent redirect/broken target, matching Ahrefs behaviour for /de-style
-        language roots that redirect to themselves indefinitely."""
+        """True if a toomanyredirects page is caught in a genuine redirect loop.
+
+        A loop requires that (a) a URL appears twice in the redirect_chain AND
+        (b) the chain contains more than one unique path (after stripping trailing
+        slash). Condition (b) excludes trailing-slash normalisation cycles such as
+        /de → /de/ → /de → /de/ … which our plain-requests session can trigger on
+        sites that use content-negotiation — Ahrefs resolves these with browser
+        headers and classifies them as 3XX redirects, not loops."""
         if not (p.error and "toomanyredirects" in (p.error or "").lower()):
             return False
         chain = p.redirect_chain or []
         if not chain:
             return False
+        # If every URL in the chain normalises to the same path, the "loop" is only a
+        # trailing-slash canonicalisation redirect — not a genuine cycle.
+        def _path_key(u: str) -> str:
+            try:
+                return urlsplit(u).path.rstrip("/").lower()
+            except Exception:
+                return u.lower()
+        if len({_path_key(u) for u in chain}) <= 1:
+            return False
+        # Multiple distinct paths — check whether any URL (normalised) repeats.
         seen: set[str] = set()
         for u in chain:
             key = u.rstrip("/").lower()
