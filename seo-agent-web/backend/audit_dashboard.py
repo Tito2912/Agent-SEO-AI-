@@ -685,13 +685,13 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "notice",
     ),
     "meta_description_too_short_indexable": IssueMeta(
-        "meta_description_too_short_indexable", "Meta description trop courte", "Content", "warning"
+        "meta_description_too_short_indexable", "Meta description trop courte", "Content", "notice"
     ),
     "meta_description_too_short_not_indexable": IssueMeta(
         "meta_description_too_short_not_indexable", "Meta description trop courte", "Content", "notice"
     ),
     "meta_description_too_short": IssueMeta(
-        "meta_description_too_short", "Meta description trop courte", "Content", "warning"
+        "meta_description_too_short", "Meta description trop courte", "Content", "notice"
     ),
     "page_and_serp_titles_do_not_match": IssueMeta(
         "page_and_serp_titles_do_not_match", "Titre de la page ≠ titre en SERP", "Content", "notice"
