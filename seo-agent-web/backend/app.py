@@ -9731,6 +9731,7 @@ def billing_page(
                 "pages_crawled_month": _limit_label("pages_crawled_month"),
                 "assistant_messages_month": _limit_label("assistant_messages_month"),
             },
+            "is_admin": bool(getattr(user, "is_admin", False)),
             "usage": {
                 "projects": projects_count,
                 "pages_crawled_month": used_pages,

@@ -86,23 +86,39 @@
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
             <span style="font-size:13px;font-weight:600;">Pages crawlées</span>
-            <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.pages_crawled_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
+            {% if is_admin %}
+              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
+            {% else %}
+              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.pages_crawled_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
+            {% endif %}
           </div>
-          <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};background:rgba(255,255,255,.06);">
-            <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.pages_crawled_month >= 90 else ('var(--warn)' if usage_pct.pages_crawled_month >= 70 else 'var(--accent)') }};"></div>
-          </div>
-          <div class="muted small" style="margin-top:5px;">{{ usage_pct.pages_crawled_month }}% utilisé</div>
+          {% if is_admin %}
+            <div class="muted small" style="margin-top:5px;">Compte admin – quotas non limités</div>
+          {% else %}
+            <div class="progress slim" style="--p: {{ usage_pct.pages_crawled_month }};background:rgba(255,255,255,.06);">
+              <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.pages_crawled_month >= 90 else ('var(--warn)' if usage_pct.pages_crawled_month >= 70 else 'var(--accent)') }};"></div>
+            </div>
+            <div class="muted small" style="margin-top:5px;">{{ usage_pct.pages_crawled_month }}% utilisé</div>
+          {% endif %}
         </div>
 
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
             <span style="font-size:13px;font-weight:600;">Messages IA</span>
-            <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.assistant_messages_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+            {% if is_admin %}
+              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+            {% else %}
+              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.assistant_messages_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+            {% endif %}
           </div>
-          <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};background:rgba(255,255,255,.06);">
-            <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.assistant_messages_month >= 90 else ('var(--warn)' if usage_pct.assistant_messages_month >= 70 else 'var(--accent)') }};"></div>
-          </div>
-          <div class="muted small" style="margin-top:5px;">{{ usage_pct.assistant_messages_month }}% utilisé</div>
+          {% if is_admin %}
+            <div class="muted small" style="margin-top:5px;">Compte admin – quotas non limités</div>
+          {% else %}
+            <div class="progress slim" style="--p: {{ usage_pct.assistant_messages_month }};background:rgba(255,255,255,.06);">
+              <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.assistant_messages_month >= 90 else ('var(--warn)' if usage_pct.assistant_messages_month >= 70 else 'var(--accent)') }};"></div>
+            </div>
+            <div class="muted small" style="margin-top:5px;">{{ usage_pct.assistant_messages_month }}% utilisé</div>
+          {% endif %}
         </div>
       </div>
     </div>
