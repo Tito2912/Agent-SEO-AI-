@@ -3074,6 +3074,27 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             except Exception:
                 pass
             page.error = f"{type(e).__name__}: {e}"
+            # Locale-root paths (/xx or /xx/) sometimes loop only because our plain
+            # requests session lacks Accept-Language, triggering content-negotiation
+            # redirects back to themselves. Retry with the matching language header:
+            # if the server resolves the page, clear redirect_chain so
+            # _toomany_is_redirect_loop() returns False (not a genuine loop).
+            # If it still loops, keep the chain — it is a real loop.
+            _locale_m = re.fullmatch(r"/([a-z]{2})/?", urlsplit(url or "").path or "")
+            if _locale_m:
+                _lang = _locale_m.group(1)
+                try:
+                    _get_session(config.user_agent).get(
+                        url,
+                        timeout=config.timeout_s,
+                        allow_redirects=True,
+                        headers={"Accept-Language": f"{_lang},{_lang}-*;q=0.9,*;q=0.5"},
+                    )
+                    page.redirect_chain = []  # resolved → not a genuine loop
+                except requests.exceptions.TooManyRedirects:
+                    pass  # still loops → genuine loop, keep redirect_chain
+                except Exception:
+                    pass  # network error on verify → leave chain as-is
             return page
         except requests.RequestException as e:
             last_err = f"{type(e).__name__}: {e}"
@@ -4203,14 +4224,9 @@ def _score_issues(
     # Ahrefs counts too-many-redirects pages as regular 3XX redirects, not loops.
     _redirect_loop_urls = {p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()}
     # Pages where the redirect_chain contains a repeated URL are genuine loops.
-    # Exclude locale-root paths (/xx or /xx/) — our crawler loops on these due to
-    # content-negotiation headers, but Ahrefs classifies them as normal 3xx redirects.
-    def _is_locale_root_url(url: str) -> bool:
-        return bool(re.fullmatch(r"/[a-z]{2}/?", urlsplit(url or "").path or ""))
-    redirect_loop: list[str] = sorted(
-        p.url for p in pages
-        if _toomany_is_redirect_loop(p) and not _is_locale_root_url(p.url or "")
-    )
+    # Locale-root false-positives are handled at crawl time via Accept-Language retry
+    # (redirect_chain is cleared when the retry resolves successfully).
+    redirect_loop: list[str] = sorted(p.url for p in pages if _toomany_is_redirect_loop(p))
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False
