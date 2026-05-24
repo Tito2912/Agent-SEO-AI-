@@ -5759,17 +5759,9 @@ def _finalize_stale_job(job: Job) -> bool:
 
         if not report_path.exists() or not report_path.is_file():
             # If the job process is still alive, keep it as running/queued.
+            # NOTE: only reliable when web and worker share a process/container.
             if _pid_is_alive(job.pid):
                 return False
-
-            # cancel_requested + dead PID → finalize immediately, no stale timeout needed.
-            if job.status == "cancel_requested":
-                job.status = "canceled"
-                job.returncode = job.returncode if job.returncode is not None else 130
-                job.finished_at = job.finished_at if job.finished_at is not None else time.time()
-                job.stderr = _trim_log((job.stderr or "") + "\n[STALE] Job annulé après redémarrage.\n")
-                _save_job(job)
-                return True
 
             # If the job has been "running" for a long time and there are still no artifacts,
             # treat it as stale to avoid projects being stuck "En cours" forever after a crash/reload.
@@ -5799,13 +5791,18 @@ def _finalize_stale_job(job: Job) -> bool:
             stale_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_JOB_SECONDS", "43200"))  # 12h fallback
             empty_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_EMPTY_SECONDS", "300"))  # 5m
             done_after_s = float(os.getenv("SEO_AGENT_STALE_CRAWL_DONE_SECONDS", "900"))  # 15m
+            # cancel_requested uses a short timeout: the worker SIGKILL completes in <10s, so
+            # if it's still cancel_requested after 30s the worker is dead and we can finalize.
+            cancel_after_s = float(os.getenv("SEO_AGENT_STALE_CANCEL_SECONDS", "30"))
 
             # Fast-path: empty dir or crawl completed but no report => likely interrupted.
-            if is_empty_dir and age_s < empty_after_s:
+            if job.status == "cancel_requested" and age_s >= cancel_after_s:
+                pass  # fall through to finalize
+            elif is_empty_dir and age_s < empty_after_s:
                 return False
-            if (progress_done or crawl_done_logged) and age_s < done_after_s:
+            elif (progress_done or crawl_done_logged) and age_s < done_after_s:
                 return False
-            if (not is_empty_dir) and (not (progress_done or crawl_done_logged)) and age_s < stale_after_s:
+            elif (not is_empty_dir) and (not (progress_done or crawl_done_logged)) and age_s < stale_after_s:
                 return False
 
             if job.status == "cancel_requested":
@@ -16398,14 +16395,10 @@ def job_cancel(request: Request, job_id: str) -> RedirectResponse:
         _cancel_queued_job(job)
         return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
-    # If running: request cancellation. The subprocess loop polls DB status and will terminate.
+    # If running: request cancellation. The worker subprocess loop polls DB and will SIGKILL.
+    # If the worker is dead, _finalize_stale_job will auto-finalize after 30s (cancel_after_s).
     job.status = "cancel_requested"
     _save_job(job)
-
-    # If the process is already dead (worker restarted / orphaned), finalize immediately.
-    if not _pid_is_alive(job.pid) and not _is_job_active(job.id):
-        _finalize_stale_job(job)
-
     return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
 
