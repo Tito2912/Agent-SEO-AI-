@@ -3116,8 +3116,9 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
                 await ctx.close()
                 await browser.close()
 
+    _total_timeout = float(config.timeout_s or 30) + 60
     try:
-        asyncio.run(_fetch_async())
+        asyncio.run(asyncio.wait_for(_fetch_async(), timeout=_total_timeout))
     except Exception as e:
         err_str = str(e)
         if (

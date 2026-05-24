@@ -5762,6 +5762,15 @@ def _finalize_stale_job(job: Job) -> bool:
             if _pid_is_alive(job.pid):
                 return False
 
+            # cancel_requested + dead PID → finalize immediately, no stale timeout needed.
+            if job.status == "cancel_requested":
+                job.status = "canceled"
+                job.returncode = job.returncode if job.returncode is not None else 130
+                job.finished_at = job.finished_at if job.finished_at is not None else time.time()
+                job.stderr = _trim_log((job.stderr or "") + "\n[STALE] Job annulé après redémarrage.\n")
+                _save_job(job)
+                return True
+
             # If the job has been "running" for a long time and there are still no artifacts,
             # treat it as stale to avoid projects being stuck "En cours" forever after a crash/reload.
             started_at = job.started_at or job.created_at or 0.0
