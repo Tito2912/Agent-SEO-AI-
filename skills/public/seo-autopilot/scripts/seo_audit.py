@@ -3088,7 +3088,9 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             pw_page = await ctx.new_page()
             try:
                 def _on_response(resp):
-                    if resp.status in (301, 302, 303, 307, 308):
+                    # Only capture navigation-level redirects, not sub-resource redirects
+                    # (images, CSS, fonts also redirect and would pollute redirect_chain).
+                    if resp.status in (301, 302, 303, 307, 308) and resp.request.resource_type == "document":
                         redirect_chain.append(resp.url)
                         redirect_statuses.append(resp.status)
 
