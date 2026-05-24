@@ -16401,6 +16401,11 @@ def job_cancel(request: Request, job_id: str) -> RedirectResponse:
     # If running: request cancellation. The subprocess loop polls DB status and will terminate.
     job.status = "cancel_requested"
     _save_job(job)
+
+    # If the process is already dead (worker restarted / orphaned), finalize immediately.
+    if not _pid_is_alive(job.pid) and not _is_job_active(job.id):
+        _finalize_stale_job(job)
+
     return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
 
