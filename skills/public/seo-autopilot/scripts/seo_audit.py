@@ -12,6 +12,7 @@ html.parser for portability; install richer parsers only if you extend it.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import concurrent.futures
 import dataclasses
 import datetime as dt
@@ -1017,46 +1018,52 @@ def _reset_session(user_agent: str, *, connection_close: bool = True) -> None:
     sessions[key] = session
 
 
-# --- Playwright browser singleton (one Chromium process shared across threads) ---
-_pw_lock = threading.Lock()
-_pw_playwright_instance = None  # playwright.sync_api.Playwright
-_pw_browser = None  # playwright.sync_api.Browser
+# --- Playwright: async event loop in a dedicated daemon thread ---
+# Worker threads submit coroutines via asyncio.run_coroutine_threadsafe(),
+# which avoids the greenlet cross-thread limitation of the sync API.
+_pw_init_lock = threading.Lock()
+_pw_loop: asyncio.AbstractEventLoop | None = None
+_pw_playwright_instance = None
+_pw_browser = None
+
+_PW_LAUNCH_ARGS = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-default-apps",
+    "--disable-sync",
+    "--mute-audio",
+]
 
 
-def _pw_get_browser():
-    """Return the shared Chromium browser, starting it on first call."""
-    global _pw_playwright_instance, _pw_browser
-    if _pw_browser is not None:
-        try:
-            if _pw_browser.is_connected():
-                return _pw_browser
-        except Exception:
-            pass
-    with _pw_lock:
-        if _pw_browser is not None:
-            try:
-                if _pw_browser.is_connected():
-                    return _pw_browser
-            except Exception:
-                pass
-        from playwright.sync_api import sync_playwright  # type: ignore
-        pw = sync_playwright().start()
-        browser = pw.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-extensions",
-                "--disable-background-networking",
-                "--disable-default-apps",
-                "--disable-sync",
-                "--mute-audio",
-            ],
-        )
-        _pw_playwright_instance = pw
-        _pw_browser = browser
-    return _pw_browser
+def _pw_ensure_started() -> asyncio.AbstractEventLoop:
+    """Start the Playwright event loop + Chromium browser on first call."""
+    global _pw_loop, _pw_playwright_instance, _pw_browser
+
+    if _pw_loop is not None and not _pw_loop.is_closed():
+        return _pw_loop
+
+    with _pw_init_lock:
+        if _pw_loop is not None and not _pw_loop.is_closed():
+            return _pw_loop
+
+        from playwright.async_api import async_playwright  # type: ignore
+
+        loop = asyncio.new_event_loop()
+        threading.Thread(target=loop.run_forever, name="pw-event-loop", daemon=True).start()
+
+        async def _launch() -> None:
+            global _pw_playwright_instance, _pw_browser
+            pw = await async_playwright().start()
+            _pw_playwright_instance = pw
+            _pw_browser = await pw.chromium.launch(headless=True, args=_PW_LAUNCH_ARGS)
+
+        asyncio.run_coroutine_threadsafe(_launch(), loop).result(timeout=60)
+        _pw_loop = loop
+
+    return _pw_loop
 
 
 def _get_pagespeed_session(user_agent: str) -> requests.Session:
@@ -3094,116 +3101,133 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
         page.error = "Blocked by robots.txt"
         return page
 
-    from playwright.sync_api import Error as PlaywrightError, TimeoutError as PlaywrightTimeoutError  # type: ignore
+    # Submit an async coroutine to the dedicated Playwright event loop.
+    # This avoids greenlet cross-thread errors from the sync API.
+    loop = _pw_ensure_started()
 
-    browser = _pw_get_browser()
-    ctx = browser.new_context(
-        user_agent=config.user_agent,
-        extra_http_headers={
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-        },
-        ignore_https_errors=True,
-    )
-    pw_page = ctx.new_page()
-    html: str | None = None
-    try:
-        # Block binary resources — they add no SEO signal and slow the crawl
-        pw_page.route(
-            "**/*",
-            lambda route: route.abort()
-            if route.request.resource_type in ("image", "media", "font")
-            else route.continue_(),
+    async def _fetch_async() -> tuple:
+        from playwright.async_api import Error as PlaywrightError, TimeoutError as PlaywrightTimeoutError  # type: ignore
+
+        ctx = await _pw_browser.new_context(
+            user_agent=config.user_agent,
+            extra_http_headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+            ignore_https_errors=True,
         )
+        pw_page = await ctx.new_page()
+        try:
+            # Block binary resources — they add no SEO signal and slow the crawl
+            async def _handle_route(route) -> None:
+                if route.request.resource_type in ("image", "media", "font"):
+                    await route.abort()
+                else:
+                    await route.continue_()
 
-        # Capture all main-frame navigation responses for redirect chain reconstruction
-        nav_responses: list = []
+            await pw_page.route("**/*", _handle_route)
 
-        def _on_response(response) -> None:
+            # Capture all main-frame navigation responses for redirect chain reconstruction
+            nav_responses: list = []
+
+            async def _on_response(response) -> None:
+                try:
+                    if response.request.is_navigation_request():
+                        nav_responses.append(response)
+                except Exception:
+                    pass
+
+            pw_page.on("response", _on_response)
+
+            t0 = time.monotonic()
+            timeout_ms = max(5000, int(config.timeout_s * 1000))
+
             try:
-                if response.request.is_navigation_request():
-                    nav_responses.append(response)
+                final_response = await pw_page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            except PlaywrightTimeoutError as e:
+                page.error = f"TimeoutError: {e}"
+                return page, None
+            except PlaywrightError as e:
+                err_str = str(e)
+                if "ERR_TOO_MANY_REDIRECTS" in err_str or "too many redirects" in err_str.lower():
+                    # Populate redirect_chain (not redirect_statuses) so _toomany_is_redirect_loop()
+                    # can detect genuine loops without making the page look like a normal 3xx redirect.
+                    page.redirect_chain = [r.url for r in nav_responses]
+                    page.error = f"TooManyRedirects: {err_str}"
+                else:
+                    page.error = f"{type(e).__name__}: {err_str}"
+                return page, None
+
+            page.elapsed_ms = int(round((time.monotonic() - t0) * 1000))
+
+            if final_response is None:
+                page.error = "No response"
+                return page, None
+
+            page.status_code = final_response.status
+            page.final_url = pw_page.url
+
+            # Intermediate redirects = all nav responses except the final one
+            if len(nav_responses) > 1:
+                page.redirect_chain = [r.url for r in nav_responses[:-1]]
+                page.redirect_statuses = []
+                for r in nav_responses[:-1]:
+                    try:
+                        page.redirect_statuses.append(r.status)
+                    except Exception:
+                        pass
+            else:
+                page.redirect_chain = []
+                page.redirect_statuses = []
+
+            # Response headers (Playwright uses lowercase keys)
+            try:
+                headers = final_response.headers or {}
+            except Exception:
+                headers = {}
+
+            page.x_robots_tag = (headers.get("x-robots-tag") or "").strip() or None
+            page.content_encoding = (headers.get("content-encoding") or "").strip() or None
+            raw_ct = (headers.get("content-type") or "").split(";")[0].strip().lower()
+            page.content_type = raw_ct or None
+
+            try:
+                body = await final_response.body()
+                page.response_bytes = len(body) if body else None
+            except Exception:
+                page.response_bytes = None
+
+            if not page.content_type or "html" not in page.content_type:
+                return page, None
+
+            try:
+                html = await pw_page.content()
+            except Exception as e:
+                page.error = f"content_error: {type(e).__name__}: {e}"
+                return page, None
+
+            return page, html
+
+        finally:
+            try:
+                await pw_page.close()
+            except Exception:
+                pass
+            try:
+                await ctx.close()
             except Exception:
                 pass
 
-        pw_page.on("response", _on_response)
-
-        t0 = time.monotonic()
-        timeout_ms = max(5000, int(config.timeout_s * 1000))
-
-        try:
-            final_response = pw_page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
-        except PlaywrightTimeoutError as e:
-            page.error = f"TimeoutError: {e}"
-            return page
-        except PlaywrightError as e:
-            err_str = str(e)
-            if "ERR_TOO_MANY_REDIRECTS" in err_str or "too many redirects" in err_str.lower():
-                # Populate redirect_chain (not redirect_statuses) so _toomany_is_redirect_loop()
-                # can detect genuine loops without making the page look like a normal 3xx redirect.
-                page.redirect_chain = [r.url for r in nav_responses]
-                page.error = f"TooManyRedirects: {err_str}"
-            else:
-                page.error = f"{type(e).__name__}: {err_str}"
-            return page
-
-        page.elapsed_ms = int(round((time.monotonic() - t0) * 1000))
-
-        if final_response is None:
-            page.error = "No response"
-            return page
-
-        page.status_code = final_response.status
-        page.final_url = pw_page.url
-
-        # Intermediate redirects = all nav responses except the final one
-        if len(nav_responses) > 1:
-            page.redirect_chain = [r.url for r in nav_responses[:-1]]
-            page.redirect_statuses = []
-            for r in nav_responses[:-1]:
-                try:
-                    page.redirect_statuses.append(r.status)
-                except Exception:
-                    pass
-        else:
-            page.redirect_chain = []
-            page.redirect_statuses = []
-
-        # Response headers (Playwright uses lowercase keys)
-        try:
-            headers = final_response.headers or {}
-        except Exception:
-            headers = {}
-
-        page.x_robots_tag = (headers.get("x-robots-tag") or "").strip() or None
-        page.content_encoding = (headers.get("content-encoding") or "").strip() or None
-        raw_ct = (headers.get("content-type") or "").split(";")[0].strip().lower()
-        page.content_type = raw_ct or None
-
-        try:
-            body = final_response.body()
-            page.response_bytes = len(body) if body else None
-        except Exception:
-            page.response_bytes = None
-
-        if not page.content_type or "html" not in page.content_type:
-            return page
-
-        try:
-            html = pw_page.content()
-        except Exception as e:
-            page.error = f"content_error: {type(e).__name__}: {e}"
-            return page
-
-    finally:
-        try:
-            pw_page.close()
-        except Exception:
-            pass
-        try:
-            ctx.close()
-        except Exception:
-            pass
+    fut = asyncio.run_coroutine_threadsafe(_fetch_async(), loop)
+    try:
+        page, html = fut.result(timeout=config.timeout_s + 60)
+    except concurrent.futures.TimeoutError:
+        fut.cancel()
+        page.error = "TimeoutError: worker timed out"
+        return page
+    except Exception as e:
+        page.error = f"PlaywrightError: {type(e).__name__}: {e}"
+        return page
 
     if html is None:
         return page
