@@ -28,20 +28,24 @@
           <thead>
             <tr>
               <th>Date</th>
+              <th>Heure</th>
+              <th>Durée</th>
               <th class="muted">Identifiant</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {% for ts in crawls %}
+              {% set t = timing.get(ts, {}) %}
               <tr>
                 <td>
                   <strong>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }}</strong>
-                  <span class="muted small"> {{ ts[9:11] }}:{{ ts[11:13] }}</span>
                   {% if loop.first %}
                     <span class="badge ok" style="font-size:10px;padding:1px 6px;margin-left:6px;">dernier</span>
                   {% endif %}
                 </td>
+                <td class="mono">{{ ts[9:11] }}:{{ ts[11:13] }}</td>
+                <td class="mono muted">{{ t.duration_label if t.duration_label else '—' }}</td>
                 <td class="mono muted small">{{ ts }}</td>
                 <td class="actions">
                   <a class="btn" href="/projects/{{ slug }}?crawl={{ ts }}">Ouvrir</a>

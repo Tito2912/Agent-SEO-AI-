@@ -133,7 +133,10 @@
                     <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
                   </div>
                 </td>
-                <td class="num mono" data-role="ts">{{ j.timestamp_label }}</td>
+                <td class="num mono" data-role="ts">
+                  <div>{{ j.timestamp_label }}</div>
+                  {% if j.duration_label %}<div class="muted small">{{ j.duration_label }}</div>{% endif %}
+                </td>
                 <td class="actions"><a class="btn" href="/jobs/{{ j.id }}">Ouvrir</a></td>
               </tr>
             {% endfor %}
@@ -173,7 +176,9 @@
           const yy = value.slice(2, 4);
           const mm = value.slice(4, 6);
           const dd = value.slice(6, 8);
-          return `${dd}/${mm}/${yy}`;
+          const hh = value.slice(9, 11);
+          const mn = value.slice(11, 13);
+          return `${dd}/${mm}/${yy} ${hh}:${mn}`;
         }
 
         async function pollOne(row) {

@@ -7633,6 +7633,35 @@ def _format_retry_after(retry_after_s: int) -> str:
     return f"{retry_after}s"
 
 
+def _fmt_duration(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds}s"
+    m, s = divmod(seconds, 60)
+    if m < 60:
+        return f"{m}m{s:02d}s" if s else f"{m}min"
+    h, m = divmod(m, 60)
+    return f"{h}h{m:02d}m"
+
+
+def _crawl_timing_map(slug: str) -> dict[str, dict[str, Any]]:
+    timing: dict[str, dict[str, Any]] = {}
+    for j in _list_jobs(limit=500):
+        r = j.result if isinstance(j.result, dict) else {}
+        if r.get("type") != "crawl" or str(r.get("slug") or "").strip() != slug:
+            continue
+        ts = str(r.get("timestamp") or "").strip()
+        if not ts:
+            continue
+        sa = float(j.started_at or j.created_at or 0)
+        fa = float(j.finished_at or 0)
+        dur_s = int(fa - sa) if fa > sa else None
+        timing[ts] = {
+            "duration_s": dur_s,
+            "duration_label": _fmt_duration(dur_s) if dur_s is not None else None,
+        }
+    return timing
+
+
 def _audit_log(
     request: Request,
     *,
@@ -12215,9 +12244,12 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
         run_ts = str(result.get("timestamp") or "").strip() if result else ""
         run_dt = dash.parse_timestamp(run_ts) if run_ts else None
         created_dt = datetime.fromtimestamp(float(j.created_at)) if j.created_at else None
-        ts_label = (run_dt.strftime("%d/%m/%y") if run_dt else None) or (
-            created_dt.strftime("%d/%m/%y") if created_dt else ""
+        ts_label = (run_dt.strftime("%d/%m/%y %H:%M") if run_dt else None) or (
+            created_dt.strftime("%d/%m/%y %H:%M") if created_dt else ""
         )
+        sa = float(j.started_at or j.created_at or 0)
+        fa = float(j.finished_at or 0)
+        dur_s = int(fa - sa) if fa > sa else None
         jobs_view.append(
             {
                 "id": j.id,
@@ -12227,6 +12259,9 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
                 "timestamp": run_ts,
                 "timestamp_label": ts_label,
                 "created_at": j.created_at,
+                "started_at": j.started_at,
+                "finished_at": j.finished_at,
+                "duration_label": _fmt_duration(dur_s) if dur_s is not None else None,
                 "progress": j.progress,
                 "result": result,
             }
@@ -12728,6 +12763,12 @@ def project_overview(
     except Exception as e:
         print(f"[OVERVIEW] crawl items error: {type(e).__name__}: {e}")
 
+    crawl_timing = _crawl_timing_map(slug)
+    for h in (data.get("history") or []):
+        t = crawl_timing.get(str(h.get("timestamp") or ""), {})
+        h["duration_s"] = t.get("duration_s")
+        h["duration_label"] = t.get("duration_label")
+
     resp = templates.TemplateResponse(
         "project_overview.html",
         {
@@ -12740,6 +12781,7 @@ def project_overview(
             "plan_key": plan_key,
             "live_series": live_series,
             "crawl_items": crawl_items,
+            "crawl_timing": crawl_timing,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -14279,6 +14321,7 @@ def project_crawls(request: Request, slug: str) -> HTMLResponse:
     _ = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_for_request(request)
     crawls = dash.list_project_crawls(runs_dir, slug)
+    timing = _crawl_timing_map(slug)
     resp = templates.TemplateResponse(
         "crawls.html",
         {
@@ -14286,6 +14329,7 @@ def project_crawls(request: Request, slug: str) -> HTMLResponse:
             "project": {"slug": slug},
             "slug": slug,
             "crawls": list(reversed(crawls)),
+            "timing": timing,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
