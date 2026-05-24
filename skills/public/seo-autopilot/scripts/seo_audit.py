@@ -3087,14 +3087,6 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             )
             pw_page = await ctx.new_page()
             try:
-                async def _handle_route(route):
-                    if route.request.resource_type in ("image", "media", "font", "stylesheet"):
-                        await route.abort()
-                    else:
-                        await route.continue_()
-
-                await pw_page.route("**/*", _handle_route)
-
                 def _on_response(resp):
                     if resp.status in (301, 302, 303, 307, 308):
                         redirect_chain.append(resp.url)
