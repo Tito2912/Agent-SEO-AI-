@@ -3049,63 +3049,115 @@ def _schema_types_from_ld_json(ld_json_texts: list[str]) -> list[str]:
     return sorted(types)
 
 
+_PW_LAUNCH_ARGS = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-default-apps",
+    "--disable-sync",
+    "--mute-audio",
+]
+
+
 def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_parts) -> PageData:
     page = PageData(url=url, fetched_at=_now_iso())
     if rp and not config.ignore_robots and not rp.can_fetch(config.user_agent, url):
         page.error = "Blocked by robots.txt"
         return page
 
-    session = _get_session(config.user_agent, connection_close=bool(config.connection_close))
-    last_err: str | None = None
-    attempts = max(1, int(getattr(config, "http_retries", 0) or 0) + 1)
-    for attempt in range(1, attempts + 1):
-        try:
-            resp = session.get(url, timeout=config.timeout_s, allow_redirects=True)
-            break
-        except requests.exceptions.TooManyRedirects as e:
-            # Capture redirect_chain only — NOT redirect_statuses.
-            # _is_redirect() = bool(redirect_statuses), so populating redirect_statuses would
-            # make toomanyredirects pages look like normal 3xx redirects everywhere and break
-            # broken_redirect, redirect_3xx_links, redirect_chain_too_long, etc.
-            # redirect_chain alone is enough for _toomany_is_redirect_loop() loop detection.
-            try:
-                r = getattr(e, "response", None)
-                if r is not None:
-                    hist = list(r.history or [])
-                    all_resp = hist + [r]
-                    page.redirect_chain = [rr.url for rr in all_resp]
-            except Exception:
-                pass
-            page.error = f"{type(e).__name__}: {e}"
-            return page
-        except requests.RequestException as e:
-            last_err = f"{type(e).__name__}: {e}"
-            _reset_session(config.user_agent, connection_close=bool(config.connection_close))
-            session = _get_session(config.user_agent, connection_close=bool(config.connection_close))
-            if attempt < attempts:
-                time.sleep(min(2.0, 0.4 * (2 ** (attempt - 1))))
-                continue
-            page.error = last_err
-            return page
+    redirect_chain: list[str] = []
+    redirect_statuses: list[int] = []
+    response_headers: dict[str, str] = {}
+    status_holder: list[int] = []
+    final_url_holder: list[str] = []
+    elapsed_holder: list[int] = []
+    html_holder: list[str] = []
 
-    page.status_code = resp.status_code
-    page.final_url = resp.url
+    async def _fetch_async() -> None:
+        import time as _time
+        from playwright.async_api import async_playwright
+
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=True, args=_PW_LAUNCH_ARGS)
+            ctx = await browser.new_context(
+                user_agent=config.user_agent,
+                ignore_https_errors=True,
+            )
+            pw_page = await ctx.new_page()
+            try:
+                async def _handle_route(route):
+                    if route.request.resource_type in ("image", "media", "font", "stylesheet"):
+                        await route.abort()
+                    else:
+                        await route.continue_()
+
+                await pw_page.route("**/*", _handle_route)
+
+                def _on_response(resp):
+                    if resp.status in (301, 302, 303, 307, 308):
+                        redirect_chain.append(resp.url)
+                        redirect_statuses.append(resp.status)
+
+                pw_page.on("response", _on_response)
+
+                t0 = _time.monotonic()
+                response = await pw_page.goto(
+                    url,
+                    wait_until="domcontentloaded",
+                    timeout=config.timeout_s * 1000,
+                )
+                elapsed_holder.append(int(round((_time.monotonic() - t0) * 1000)))
+
+                if response is not None:
+                    status_holder.append(response.status)
+                    final_url_holder.append(pw_page.url)
+                    headers = await response.all_headers()
+                    for k, v in headers.items():
+                        response_headers[k.lower()] = v
+                    ct = response_headers.get("content-type", "").split(";")[0].strip().lower()
+                    if ct and "html" in ct:
+                        html_holder.append(await pw_page.content())
+            finally:
+                await pw_page.close()
+                await ctx.close()
+                await browser.close()
+
     try:
-        page.elapsed_ms = int(round(float(resp.elapsed.total_seconds()) * 1000))
-    except Exception:
-        page.elapsed_ms = None
-    page.redirect_chain = [r.url for r in resp.history] if resp.history else []
-    page.redirect_statuses = [int(r.status_code) for r in resp.history if isinstance(getattr(r, "status_code", None), int)] if resp.history else []
-    page.x_robots_tag = (resp.headers.get("X-Robots-Tag") or "").strip() or None
-    page.content_encoding = (resp.headers.get("Content-Encoding") or "").strip() or None
-    page.content_type = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower() or None
-    page.response_bytes = len(resp.content) if resp.content is not None else None
+        asyncio.run(_fetch_async())
+    except Exception as e:
+        err_str = str(e)
+        if (
+            "err_too_many_redirects" in err_str.lower()
+            or "too many redirects" in err_str.lower()
+        ):
+            # Keep redirect_chain for _toomany_is_redirect_loop() detection.
+            # Do NOT populate redirect_statuses — _is_redirect() uses redirect_statuses,
+            # and setting it would make these pages look like normal 3xx redirects.
+            page.redirect_chain = redirect_chain
+            page.error = f"TooManyRedirects: {err_str}"
+            return page
+        page.error = f"PlaywrightError: {type(e).__name__}: {e}"
+        return page
+
+    page.status_code = status_holder[0] if status_holder else None
+    page.final_url = final_url_holder[0] if final_url_holder else url
+    page.elapsed_ms = elapsed_holder[0] if elapsed_holder else None
+    page.redirect_chain = redirect_chain
+    page.redirect_statuses = redirect_statuses
+    page.x_robots_tag = response_headers.get("x-robots-tag", "").strip() or None
+    page.content_encoding = response_headers.get("content-encoding", "").strip() or None
+    ct_raw = response_headers.get("content-type", "").split(";")[0].strip().lower()
+    page.content_type = ct_raw or None
+    page.response_bytes = None
+
+    html = html_holder[0] if html_holder else None
 
     if not page.content_type or "html" not in page.content_type:
         return page
-
-    resp.encoding = resp.encoding or "utf-8"
-    html = resp.text or ""
+    if not html:
+        return page
     parser = PageHTMLExtractor()
     try:
         parser.feed(html)

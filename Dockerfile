@@ -18,7 +18,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY seo-agent-web/requirements.txt seo-agent-web/requirements.txt
-RUN pip install --no-cache-dir -r seo-agent-web/requirements.txt
+RUN pip install --no-cache-dir -r seo-agent-web/requirements.txt \
+    && playwright install --with-deps chromium
 
 COPY seo-agent-web seo-agent-web
 COPY skills skills
