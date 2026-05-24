@@ -4269,7 +4269,28 @@ def _score_issues(
     # Pages where the redirect_chain contains a repeated URL are genuine loops.
     # Locale-root false-positives are handled at crawl time via Accept-Language retry
     # (redirect_chain is cleared when the retry resolves successfully).
-    redirect_loop: list[str] = sorted(p.url for p in pages if _toomany_is_redirect_loop(p))
+    _toomany_loops: list[str] = [p.url for p in pages if _toomany_is_redirect_loop(p)]
+
+    # Cross-page redirect loop detection (Ahrefs-like): A→B and B→A both flag as loops.
+    _redirect_map: dict[str, str] = {}
+    for _p in pages:
+        if _is_redirect(_p) and _p.final_url and _p.url != _p.final_url:
+            _redirect_map[_p.url.rstrip("/").lower()] = _p.final_url.rstrip("/").lower()
+
+    def _in_redirect_cycle(start: str) -> bool:
+        visited: set[str] = set()
+        cur = start.rstrip("/").lower()
+        while cur in _redirect_map:
+            if cur in visited:
+                return True
+            visited.add(cur)
+            cur = _redirect_map[cur]
+        return False
+
+    _cross_loops: list[str] = [
+        p.url for p in pages if _is_redirect(p) and _in_redirect_cycle(p.url)
+    ]
+    redirect_loop: list[str] = sorted(set(_toomany_loops) | set(_cross_loops))
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False

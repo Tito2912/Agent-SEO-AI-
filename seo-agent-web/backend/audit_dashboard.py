@@ -656,7 +656,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     # Redirects
     "broken_redirect": IssueMeta("broken_redirect", "Redirection cassée", "Redirects", "error"),
     "redirect_chain_too_long": IssueMeta("redirect_chain_too_long", "Chaîne de redirection trop longue", "Redirects", "warning"),
-    "redirect_loop": IssueMeta("redirect_loop", "Boucle de redirection", "Redirects", "error"),
+    "redirect_loop": IssueMeta("redirect_loop", "Boucle de redirection", "Redirects", "warning"),
     "redirect_3xx": IssueMeta("redirect_3xx", "Redirection 3XX", "Redirects", "notice"),
     "redirect_302": IssueMeta("redirect_302", "Redirection 302", "Redirects", "notice"),
     "https_to_http_redirect": IssueMeta("https_to_http_redirect", "Redirection HTTPS → HTTP", "Redirects", "warning"),
@@ -799,10 +799,10 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     ),
     "https_page_links_to_http_css": IssueMeta("https_page_links_to_http_css", "Page HTTPS → CSS HTTP", "CSS", "warning"),
     # Sitemaps
-    "sitemap_3xx_redirect": IssueMeta("sitemap_3xx_redirect", "Sitemap : URL en 3XX", "Sitemaps", "error"),
+    "sitemap_3xx_redirect": IssueMeta("sitemap_3xx_redirect", "Sitemap : URL en 3XX", "Sitemaps", "warning"),
     "sitemap_4xx_page": IssueMeta("sitemap_4xx_page", "Sitemap : URL en 4XX", "Sitemaps", "error"),
     "sitemap_5xx_page": IssueMeta("sitemap_5xx_page", "Sitemap : URL en 5XX", "Sitemaps", "error"),
-    "sitemap_noindex_page": IssueMeta("sitemap_noindex_page", "Sitemap : URL noindex", "Sitemaps", "error"),
+    "sitemap_noindex_page": IssueMeta("sitemap_noindex_page", "Sitemap : URL noindex", "Sitemaps", "warning"),
     "sitemap_non_canonical_page": IssueMeta(
         "sitemap_non_canonical_page", "Sitemap : URL non-canonique", "Sitemaps", "notice"
     ),
