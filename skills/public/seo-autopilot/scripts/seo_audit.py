@@ -4272,10 +4272,15 @@ def _score_issues(
     _redirect_loop_urls = {p.url for p in pages if _toomany_is_redirect_loop(p)}
 
     # Cross-page redirect loop detection: A→B and B→A both flagged as loops.
+    # Skip trailing-slash normalizations (url/→url normalize to the same key after rstrip)
+    # which would create self-referential entries and false-positive loop detection.
     _redirect_map: dict[str, str] = {}
     for _p in pages:
         if _is_redirect(_p) and _p.final_url and _p.url != _p.final_url:
-            _redirect_map[_p.url.rstrip("/").lower()] = _p.final_url.rstrip("/").lower()
+            _key = _p.url.rstrip("/").lower()
+            _val = _p.final_url.rstrip("/").lower()
+            if _key != _val:  # skip /en→/en/ type (same after normalisation)
+                _redirect_map[_key] = _val
 
     def _in_redirect_cycle(start: str) -> bool:
         visited: set[str] = set()
