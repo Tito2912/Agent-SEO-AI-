@@ -98,14 +98,14 @@
             <div class="ov-kpi-n">{{ sum.issues_distribution.notice or 0 }}</div>
             <div class="ov-kpi-l">Infos</div>
           </a>
-          <div class="ov-kpi">
+          <a class="ov-kpi" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
             <div class="ov-kpi-n">{{ sum.pages_crawled }}</div>
             <div class="ov-kpi-l">Pages crawlées</div>
-          </div>
-          <div class="ov-kpi">
+          </a>
+          <a class="ov-kpi" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
             <div class="ov-kpi-n">{{ sum.urls_crawled_distribution }}</div>
             <div class="ov-kpi-l">URLs totales</div>
-          </div>
+          </a>
         </div>
       {% endif %}
     </div>
