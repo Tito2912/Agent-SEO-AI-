@@ -1670,39 +1670,38 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
   margin-bottom: 28px;
   flex-wrap: wrap;
 }
-.ov-score {
+/* Thin ring gauge */
+.ov-ring-wrap {
+  position: relative;
   flex-shrink: 0;
-  width: 130px;
-  padding-top: 4px;
+  width: 120px;
+  height: 120px;
 }
-.ov-score-n {
-  font-size: 72px;
-  font-weight: 900;
-  letter-spacing: -.04em;
+.ov-ring-wrap.ov-ring-sm { width: 80px; height: 80px; }
+.ov-ring-svg { display: block; width: 100%; height: 100%; }
+.ov-ring-track { stroke: rgba(255,255,255,.07); stroke-width: 5; }
+.ov-ring-fill  { stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray .5s ease; }
+.ov-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.ov-ring-n {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -.02em;
   line-height: 1;
 }
-.ov-score-bar {
-  background: rgba(255,255,255,.07);
-  margin: 12px 0 8px;
-}
-.ov-score-label {
-  font-size: 10px;
-  font-weight: 700;
+.ov-ring-label {
+  font-size: 9px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: .1em;
+  letter-spacing: .09em;
   color: var(--muted);
-}
-.cwv-score { flex-shrink: 0; width: 110px; }
-.cwv-score-n {
-  font-size: 42px;
-  font-weight: 900;
-  letter-spacing: -.03em;
-  line-height: 1;
-}
-.cwv-score-bar {
-  background: rgba(255,255,255,.07);
-  margin: 10px 0 8px;
-  width: 90px;
 }
 
 .ov-info { flex: 1; min-width: 0; padding-top: 12px; }

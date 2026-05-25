@@ -44,12 +44,19 @@
   ══════════════════════════════════════ #}
   <div class="ov-hero">
 
-    <div class="ov-score">
-      <div class="ov-score-n" style="color:{{ sc_color }};">{% if sc is not none %}{{ sc }}{% else %}—{% endif %}</div>
-      <div class="progress slim ov-score-bar" style="--p:{{ sc if sc is not none else 0 }};">
-        <div class="progress-fill" style="background:{{ sc_color }};transition:width .5s ease;"></div>
+    <div class="ov-ring-wrap">
+      <svg class="ov-ring-svg" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+        <circle cx="60" cy="60" r="46" class="ov-ring-track"/>
+        {% if sc is not none %}
+          <circle cx="60" cy="60" r="46" class="ov-ring-fill"
+            style="stroke:{{ sc_color }}; stroke-dasharray:{{ (sc / 100 * 289.0)|round(1) }} 289;"
+            transform="rotate(-90 60 60)"/>
+        {% endif %}
+      </svg>
+      <div class="ov-ring-inner">
+        <div class="ov-ring-n" style="color:{{ sc_color }};">{% if sc is not none %}{{ sc }}{% else %}—{% endif %}</div>
+        <div class="ov-ring-label">Santé</div>
       </div>
-      <div class="ov-score-label">Score de santé</div>
     </div>
 
     <div class="ov-info">
@@ -361,12 +368,17 @@
         {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
 
         <div class="chart-row">
-          <div class="cwv-score">
-            <div class="cwv-score-n" style="color:{{ score_color }};">{{ score }}%</div>
-            <div class="progress slim cwv-score-bar" style="--p:{{ score }};">
-              <div class="progress-fill" style="background:{{ score_color }};transition:width .5s ease;"></div>
+          <div class="ov-ring-wrap ov-ring-sm">
+            <svg class="ov-ring-svg" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+              <circle cx="40" cy="40" r="30" class="ov-ring-track"/>
+              <circle cx="40" cy="40" r="30" class="ov-ring-fill"
+                style="stroke:{{ score_color }}; stroke-dasharray:{{ (score / 100 * 188.5)|round(1) }} 188.5;"
+                transform="rotate(-90 40 40)"/>
+            </svg>
+            <div class="ov-ring-inner">
+              <div class="ov-ring-n" style="color:{{ score_color }}; font-size:18px;">{{ score }}%</div>
+              <div class="ov-ring-label">CWV</div>
             </div>
-            <div class="ov-score-label">Score CWV</div>
           </div>
           <div class="legend">
             <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Bon <span class="mono">{{ psd.good or 0 }}</span></div>
