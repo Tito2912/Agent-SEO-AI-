@@ -3087,9 +3087,10 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             )
             pw_page = await ctx.new_page()
             try:
+                # _on_response is kept ONLY for the TooManyRedirects error path.
+                # For successful navigations we use request.redirected_from instead
+                # (more reliable: queried post-navigation, not subject to event timing).
                 def _on_response(resp):
-                    # is_navigation_request() is True for main-frame navigation steps only.
-                    # resource_type=="document" was too restrictive and missed some redirect steps.
                     if resp.status in (301, 302, 303, 307, 308) and resp.request.is_navigation_request():
                         redirect_chain.append(resp.url)
                         redirect_statuses.append(resp.status)
@@ -3110,6 +3111,24 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
                     headers = await response.all_headers()
                     for k, v in headers.items():
                         response_headers[k.lower()] = v
+
+                    # Walk the redirect chain backwards via request.redirected_from.
+                    # This is the canonical Playwright way to get the full redirect chain
+                    # after a successful navigation — avoids event handler timing issues.
+                    redirect_chain.clear()
+                    redirect_statuses.clear()
+                    tmp: list[tuple[str, int]] = []
+                    r = response.request
+                    while r.redirected_from is not None:
+                        prev_r = r.redirected_from
+                        prev_resp = await prev_r.response()
+                        if prev_resp is not None:
+                            tmp.insert(0, (prev_resp.url, prev_resp.status))
+                        r = prev_r
+                    for _u, _s in tmp:
+                        redirect_chain.append(_u)
+                        redirect_statuses.append(_s)
+
                     ct = response_headers.get("content-type", "").split(";")[0].strip().lower()
                     if ct and "html" in ct:
                         html_holder.append(await pw_page.content())
