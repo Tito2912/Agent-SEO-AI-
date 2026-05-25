@@ -26,6 +26,10 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
     projects: Mapped[list["Project"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
 

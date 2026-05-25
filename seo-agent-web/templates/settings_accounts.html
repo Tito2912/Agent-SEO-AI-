@@ -161,6 +161,169 @@
     </ul>
   </section>
 
+  {# ── Préférences utilisateur ── #}
+  <section class="card setting-card" id="preferences-card">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Préférences</h2>
+        <div class="muted small">Fuseau horaire, pays et langue d'affichage.</div>
+      </div>
+    </div>
+    <form method="post" action="/settings/account/preferences" style="margin-top:16px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+        <label class="field-label">
+          Fuseau horaire
+          <select name="timezone" class="input" style="margin-top:6px;">
+            <option value="">— automatique (navigateur) —</option>
+            <optgroup label="UTC">
+              <option value="UTC" {% if user_prefs.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+            </optgroup>
+            <optgroup label="Europe">
+              <option value="Europe/London"    {% if user_prefs.timezone == 'Europe/London'    %}selected{% endif %}>London (UTC±0/+1)</option>
+              <option value="Europe/Lisbon"    {% if user_prefs.timezone == 'Europe/Lisbon'    %}selected{% endif %}>Lisbon (UTC±0/+1)</option>
+              <option value="Europe/Paris"     {% if user_prefs.timezone == 'Europe/Paris'     %}selected{% endif %}>Paris / Brussels / Madrid (UTC+1/+2)</option>
+              <option value="Europe/Berlin"    {% if user_prefs.timezone == 'Europe/Berlin'    %}selected{% endif %}>Berlin / Rome / Vienna (UTC+1/+2)</option>
+              <option value="Europe/Amsterdam" {% if user_prefs.timezone == 'Europe/Amsterdam' %}selected{% endif %}>Amsterdam (UTC+1/+2)</option>
+              <option value="Europe/Zurich"    {% if user_prefs.timezone == 'Europe/Zurich'    %}selected{% endif %}>Zurich (UTC+1/+2)</option>
+              <option value="Europe/Warsaw"    {% if user_prefs.timezone == 'Europe/Warsaw'    %}selected{% endif %}>Warsaw / Prague (UTC+1/+2)</option>
+              <option value="Europe/Stockholm" {% if user_prefs.timezone == 'Europe/Stockholm' %}selected{% endif %}>Stockholm / Oslo / Copenhagen (UTC+1/+2)</option>
+              <option value="Europe/Helsinki"  {% if user_prefs.timezone == 'Europe/Helsinki'  %}selected{% endif %}>Helsinki / Tallinn / Riga (UTC+2/+3)</option>
+              <option value="Europe/Athens"    {% if user_prefs.timezone == 'Europe/Athens'    %}selected{% endif %}>Athens / Bucharest (UTC+2/+3)</option>
+              <option value="Europe/Moscow"    {% if user_prefs.timezone == 'Europe/Moscow'    %}selected{% endif %}>Moscow / Minsk (UTC+3)</option>
+              <option value="Europe/Istanbul"  {% if user_prefs.timezone == 'Europe/Istanbul'  %}selected{% endif %}>Istanbul (UTC+3)</option>
+            </optgroup>
+            <optgroup label="Afrique">
+              <option value="Africa/Casablanca"     {% if user_prefs.timezone == 'Africa/Casablanca'     %}selected{% endif %}>Casablanca / Tunis (UTC+1)</option>
+              <option value="Africa/Cairo"          {% if user_prefs.timezone == 'Africa/Cairo'          %}selected{% endif %}>Cairo (UTC+2)</option>
+              <option value="Africa/Nairobi"        {% if user_prefs.timezone == 'Africa/Nairobi'        %}selected{% endif %}>Nairobi / Addis Ababa (UTC+3)</option>
+              <option value="Africa/Lagos"          {% if user_prefs.timezone == 'Africa/Lagos'          %}selected{% endif %}>Lagos / Kinshasa (UTC+1)</option>
+              <option value="Africa/Johannesburg"   {% if user_prefs.timezone == 'Africa/Johannesburg'   %}selected{% endif %}>Johannesburg (UTC+2)</option>
+            </optgroup>
+            <optgroup label="Amérique">
+              <option value="America/New_York"              {% if user_prefs.timezone == 'America/New_York'              %}selected{% endif %}>New York / Toronto (UTC−5/−4)</option>
+              <option value="America/Chicago"               {% if user_prefs.timezone == 'America/Chicago'               %}selected{% endif %}>Chicago (UTC−6/−5)</option>
+              <option value="America/Denver"                {% if user_prefs.timezone == 'America/Denver'                %}selected{% endif %}>Denver / Phoenix (UTC−7/−6)</option>
+              <option value="America/Los_Angeles"           {% if user_prefs.timezone == 'America/Los_Angeles'           %}selected{% endif %}>Los Angeles / Vancouver (UTC−8/−7)</option>
+              <option value="America/Anchorage"             {% if user_prefs.timezone == 'America/Anchorage'             %}selected{% endif %}>Anchorage (UTC−9/−8)</option>
+              <option value="America/Honolulu"              {% if user_prefs.timezone == 'America/Honolulu'              %}selected{% endif %}>Honolulu (UTC−10)</option>
+              <option value="America/Mexico_City"           {% if user_prefs.timezone == 'America/Mexico_City'           %}selected{% endif %}>Mexico City (UTC−6/−5)</option>
+              <option value="America/Bogota"                {% if user_prefs.timezone == 'America/Bogota'                %}selected{% endif %}>Bogotá / Lima (UTC−5)</option>
+              <option value="America/Santiago"              {% if user_prefs.timezone == 'America/Santiago'              %}selected{% endif %}>Santiago (UTC−4/−3)</option>
+              <option value="America/Sao_Paulo"             {% if user_prefs.timezone == 'America/Sao_Paulo'             %}selected{% endif %}>São Paulo / Buenos Aires (UTC−3)</option>
+              <option value="America/Halifax"               {% if user_prefs.timezone == 'America/Halifax'               %}selected{% endif %}>Halifax (UTC−4/−3)</option>
+            </optgroup>
+            <optgroup label="Asie">
+              <option value="Asia/Dubai"       {% if user_prefs.timezone == 'Asia/Dubai'       %}selected{% endif %}>Dubai / Muscat (UTC+4)</option>
+              <option value="Asia/Tehran"      {% if user_prefs.timezone == 'Asia/Tehran'      %}selected{% endif %}>Tehran (UTC+3:30/+4:30)</option>
+              <option value="Asia/Karachi"     {% if user_prefs.timezone == 'Asia/Karachi'     %}selected{% endif %}>Karachi (UTC+5)</option>
+              <option value="Asia/Kolkata"     {% if user_prefs.timezone == 'Asia/Kolkata'     %}selected{% endif %}>Kolkata / Mumbai (UTC+5:30)</option>
+              <option value="Asia/Kathmandu"   {% if user_prefs.timezone == 'Asia/Kathmandu'   %}selected{% endif %}>Kathmandu (UTC+5:45)</option>
+              <option value="Asia/Tashkent"    {% if user_prefs.timezone == 'Asia/Tashkent'    %}selected{% endif %}>Tashkent / Almaty (UTC+5/+6)</option>
+              <option value="Asia/Bangkok"     {% if user_prefs.timezone == 'Asia/Bangkok'     %}selected{% endif %}>Bangkok / Jakarta (UTC+7)</option>
+              <option value="Asia/Shanghai"    {% if user_prefs.timezone == 'Asia/Shanghai'    %}selected{% endif %}>Shanghai / Beijing (UTC+8)</option>
+              <option value="Asia/Singapore"   {% if user_prefs.timezone == 'Asia/Singapore'   %}selected{% endif %}>Singapore / Kuala Lumpur (UTC+8)</option>
+              <option value="Asia/Hong_Kong"   {% if user_prefs.timezone == 'Asia/Hong_Kong'   %}selected{% endif %}>Hong Kong / Taipei (UTC+8)</option>
+              <option value="Asia/Seoul"       {% if user_prefs.timezone == 'Asia/Seoul'       %}selected{% endif %}>Seoul (UTC+9)</option>
+              <option value="Asia/Tokyo"       {% if user_prefs.timezone == 'Asia/Tokyo'       %}selected{% endif %}>Tokyo (UTC+9)</option>
+            </optgroup>
+            <optgroup label="Océanie">
+              <option value="Australia/Perth"     {% if user_prefs.timezone == 'Australia/Perth'     %}selected{% endif %}>Perth (UTC+8)</option>
+              <option value="Australia/Adelaide"  {% if user_prefs.timezone == 'Australia/Adelaide'  %}selected{% endif %}>Adelaide (UTC+9:30/+10:30)</option>
+              <option value="Australia/Brisbane"  {% if user_prefs.timezone == 'Australia/Brisbane'  %}selected{% endif %}>Brisbane (UTC+10)</option>
+              <option value="Australia/Sydney"    {% if user_prefs.timezone == 'Australia/Sydney'    %}selected{% endif %}>Sydney / Melbourne (UTC+10/+11)</option>
+              <option value="Pacific/Auckland"    {% if user_prefs.timezone == 'Pacific/Auckland'    %}selected{% endif %}>Auckland (UTC+12/+13)</option>
+              <option value="Pacific/Fiji"        {% if user_prefs.timezone == 'Pacific/Fiji'        %}selected{% endif %}>Fiji (UTC+12)</option>
+            </optgroup>
+          </select>
+        </label>
+
+        <label class="field-label">
+          Pays
+          <select name="country" class="input" style="margin-top:6px;">
+            <option value="">— non précisé —</option>
+            <option value="AE" {% if user_prefs.country == 'AE' %}selected{% endif %}>Émirats arabes unis</option>
+            <option value="AR" {% if user_prefs.country == 'AR' %}selected{% endif %}>Argentine</option>
+            <option value="AT" {% if user_prefs.country == 'AT' %}selected{% endif %}>Autriche</option>
+            <option value="AU" {% if user_prefs.country == 'AU' %}selected{% endif %}>Australie</option>
+            <option value="BE" {% if user_prefs.country == 'BE' %}selected{% endif %}>Belgique</option>
+            <option value="BR" {% if user_prefs.country == 'BR' %}selected{% endif %}>Brésil</option>
+            <option value="CA" {% if user_prefs.country == 'CA' %}selected{% endif %}>Canada</option>
+            <option value="CH" {% if user_prefs.country == 'CH' %}selected{% endif %}>Suisse</option>
+            <option value="CL" {% if user_prefs.country == 'CL' %}selected{% endif %}>Chili</option>
+            <option value="CN" {% if user_prefs.country == 'CN' %}selected{% endif %}>Chine</option>
+            <option value="CO" {% if user_prefs.country == 'CO' %}selected{% endif %}>Colombie</option>
+            <option value="CZ" {% if user_prefs.country == 'CZ' %}selected{% endif %}>République tchèque</option>
+            <option value="DE" {% if user_prefs.country == 'DE' %}selected{% endif %}>Allemagne</option>
+            <option value="DK" {% if user_prefs.country == 'DK' %}selected{% endif %}>Danemark</option>
+            <option value="EG" {% if user_prefs.country == 'EG' %}selected{% endif %}>Égypte</option>
+            <option value="ES" {% if user_prefs.country == 'ES' %}selected{% endif %}>Espagne</option>
+            <option value="FI" {% if user_prefs.country == 'FI' %}selected{% endif %}>Finlande</option>
+            <option value="FR" {% if user_prefs.country == 'FR' %}selected{% endif %}>France</option>
+            <option value="GB" {% if user_prefs.country == 'GB' %}selected{% endif %}>Royaume-Uni</option>
+            <option value="GR" {% if user_prefs.country == 'GR' %}selected{% endif %}>Grèce</option>
+            <option value="HK" {% if user_prefs.country == 'HK' %}selected{% endif %}>Hong Kong</option>
+            <option value="HR" {% if user_prefs.country == 'HR' %}selected{% endif %}>Croatie</option>
+            <option value="HU" {% if user_prefs.country == 'HU' %}selected{% endif %}>Hongrie</option>
+            <option value="ID" {% if user_prefs.country == 'ID' %}selected{% endif %}>Indonésie</option>
+            <option value="IE" {% if user_prefs.country == 'IE' %}selected{% endif %}>Irlande</option>
+            <option value="IL" {% if user_prefs.country == 'IL' %}selected{% endif %}>Israël</option>
+            <option value="IN" {% if user_prefs.country == 'IN' %}selected{% endif %}>Inde</option>
+            <option value="IT" {% if user_prefs.country == 'IT' %}selected{% endif %}>Italie</option>
+            <option value="JP" {% if user_prefs.country == 'JP' %}selected{% endif %}>Japon</option>
+            <option value="KR" {% if user_prefs.country == 'KR' %}selected{% endif %}>Corée du Sud</option>
+            <option value="MA" {% if user_prefs.country == 'MA' %}selected{% endif %}>Maroc</option>
+            <option value="MX" {% if user_prefs.country == 'MX' %}selected{% endif %}>Mexique</option>
+            <option value="MY" {% if user_prefs.country == 'MY' %}selected{% endif %}>Malaisie</option>
+            <option value="NG" {% if user_prefs.country == 'NG' %}selected{% endif %}>Nigeria</option>
+            <option value="NL" {% if user_prefs.country == 'NL' %}selected{% endif %}>Pays-Bas</option>
+            <option value="NO" {% if user_prefs.country == 'NO' %}selected{% endif %}>Norvège</option>
+            <option value="NZ" {% if user_prefs.country == 'NZ' %}selected{% endif %}>Nouvelle-Zélande</option>
+            <option value="PE" {% if user_prefs.country == 'PE' %}selected{% endif %}>Pérou</option>
+            <option value="PH" {% if user_prefs.country == 'PH' %}selected{% endif %}>Philippines</option>
+            <option value="PL" {% if user_prefs.country == 'PL' %}selected{% endif %}>Pologne</option>
+            <option value="PT" {% if user_prefs.country == 'PT' %}selected{% endif %}>Portugal</option>
+            <option value="RO" {% if user_prefs.country == 'RO' %}selected{% endif %}>Roumanie</option>
+            <option value="RU" {% if user_prefs.country == 'RU' %}selected{% endif %}>Russie</option>
+            <option value="SA" {% if user_prefs.country == 'SA' %}selected{% endif %}>Arabie saoudite</option>
+            <option value="SE" {% if user_prefs.country == 'SE' %}selected{% endif %}>Suède</option>
+            <option value="SG" {% if user_prefs.country == 'SG' %}selected{% endif %}>Singapour</option>
+            <option value="TH" {% if user_prefs.country == 'TH' %}selected{% endif %}>Thaïlande</option>
+            <option value="TR" {% if user_prefs.country == 'TR' %}selected{% endif %}>Turquie</option>
+            <option value="TW" {% if user_prefs.country == 'TW' %}selected{% endif %}>Taïwan</option>
+            <option value="UA" {% if user_prefs.country == 'UA' %}selected{% endif %}>Ukraine</option>
+            <option value="US" {% if user_prefs.country == 'US' %}selected{% endif %}>États-Unis</option>
+            <option value="VN" {% if user_prefs.country == 'VN' %}selected{% endif %}>Viêt Nam</option>
+            <option value="ZA" {% if user_prefs.country == 'ZA' %}selected{% endif %}>Afrique du Sud</option>
+          </select>
+        </label>
+
+        <label class="field-label">
+          Langue
+          <select name="language" class="input" style="margin-top:6px;">
+            <option value="">— automatique —</option>
+            <option value="ar" {% if user_prefs.language == 'ar' %}selected{% endif %}>العربية (Arabe)</option>
+            <option value="de" {% if user_prefs.language == 'de' %}selected{% endif %}>Deutsch (Allemand)</option>
+            <option value="en" {% if user_prefs.language == 'en' %}selected{% endif %}>English (Anglais)</option>
+            <option value="es" {% if user_prefs.language == 'es' %}selected{% endif %}>Español (Espagnol)</option>
+            <option value="fr" {% if user_prefs.language == 'fr' %}selected{% endif %}>Français</option>
+            <option value="it" {% if user_prefs.language == 'it' %}selected{% endif %}>Italiano (Italien)</option>
+            <option value="ja" {% if user_prefs.language == 'ja' %}selected{% endif %}>日本語 (Japonais)</option>
+            <option value="ko" {% if user_prefs.language == 'ko' %}selected{% endif %}>한국어 (Coréen)</option>
+            <option value="nl" {% if user_prefs.language == 'nl' %}selected{% endif %}>Nederlands (Néerlandais)</option>
+            <option value="pl" {% if user_prefs.language == 'pl' %}selected{% endif %}>Polski (Polonais)</option>
+            <option value="pt" {% if user_prefs.language == 'pt' %}selected{% endif %}>Português (Portugais)</option>
+            <option value="ru" {% if user_prefs.language == 'ru' %}selected{% endif %}>Русский (Russe)</option>
+            <option value="tr" {% if user_prefs.language == 'tr' %}selected{% endif %}>Türkçe (Turc)</option>
+            <option value="zh" {% if user_prefs.language == 'zh' %}selected{% endif %}>中文 (Chinois)</option>
+          </select>
+        </label>
+      </div>
+      <div style="margin-top:16px;">
+        <button type="submit" class="btn">Enregistrer</button>
+      </div>
+    </form>
+  </section>
+
   <section class="card setting-card" id="security-card">
     <div class="setting-head">
       <div>

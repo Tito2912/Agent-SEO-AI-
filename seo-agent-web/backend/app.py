@@ -10133,6 +10133,11 @@ def settings_accounts(
             },
             "msg": str(msg or "").strip(),
             "err": str(err or "").strip(),
+            "user_prefs": {
+                "timezone": str(getattr(user, "timezone", "") or ""),
+                "country": str(getattr(user, "country", "") or ""),
+                "language": str(getattr(user, "language", "") or ""),
+            },
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -10361,6 +10366,63 @@ def settings_account_password(
 
     _audit_log(request, action="account.password_change", status="ok", user=user)
     return RedirectResponse(url=_path_with_flash(back, msg="Mot de passe mis à jour."), status_code=303)
+
+
+_VALID_TIMEZONES: set[str] = {
+    "Africa/Abidjan","Africa/Accra","Africa/Cairo","Africa/Casablanca","Africa/Lagos",
+    "Africa/Nairobi","Africa/Tunis","Africa/Johannesburg",
+    "America/Anchorage","America/Argentina/Buenos_Aires","America/Bogota","America/Chicago",
+    "America/Denver","America/Halifax","America/Havana","America/Honolulu","America/Lima",
+    "America/Los_Angeles","America/Mexico_City","America/New_York","America/Phoenix",
+    "America/Santiago","America/Sao_Paulo","America/Toronto","America/Vancouver",
+    "Asia/Almaty","Asia/Baghdad","Asia/Bangkok","Asia/Colombo","Asia/Dubai",
+    "Asia/Hong_Kong","Asia/Jakarta","Asia/Karachi","Asia/Kathmandu","Asia/Kolkata",
+    "Asia/Kuala_Lumpur","Asia/Manila","Asia/Seoul","Asia/Shanghai","Asia/Singapore",
+    "Asia/Taipei","Asia/Tashkent","Asia/Tehran","Asia/Tokyo","Asia/Yekaterinburg",
+    "Atlantic/Azores","Atlantic/Reykjavik",
+    "Australia/Adelaide","Australia/Brisbane","Australia/Melbourne","Australia/Perth","Australia/Sydney",
+    "Europe/Amsterdam","Europe/Athens","Europe/Belgrade","Europe/Berlin","Europe/Brussels",
+    "Europe/Bucharest","Europe/Budapest","Europe/Copenhagen","Europe/Dublin","Europe/Helsinki",
+    "Europe/Istanbul","Europe/Kiev","Europe/Lisbon","Europe/Ljubljana","Europe/London",
+    "Europe/Madrid","Europe/Minsk","Europe/Moscow","Europe/Oslo","Europe/Paris",
+    "Europe/Prague","Europe/Riga","Europe/Rome","Europe/Sofia","Europe/Stockholm",
+    "Europe/Tallinn","Europe/Vienna","Europe/Vilnius","Europe/Warsaw","Europe/Zurich",
+    "Pacific/Auckland","Pacific/Fiji","Pacific/Honolulu","Pacific/Noumea","Pacific/Tahiti",
+    "UTC",
+}
+_VALID_LANGUAGES: set[str] = {"ar","de","en","es","fr","it","ja","ko","nl","pl","pt","ru","tr","zh"}
+_VALID_COUNTRIES: set[str] = {
+    "AE","AR","AT","AU","BE","BR","CA","CH","CL","CN","CO","CZ","DE","DK","EG","ES",
+    "FI","FR","GB","GR","HK","HR","HU","ID","IE","IL","IN","IT","JP","KR","MA","MX",
+    "MY","NG","NL","NO","NZ","PE","PH","PL","PT","RO","RU","SA","SE","SG","TH","TR",
+    "TW","UA","US","VN","ZA",
+}
+
+
+@app.post("/settings/account/preferences")
+def settings_account_preferences_save(
+    request: Request,
+    timezone: str = Form(default=""),
+    country: str = Form(default=""),
+    language: str = Form(default=""),
+) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)  # type: ignore[return-value]
+    tz = timezone.strip() if timezone.strip() in _VALID_TIMEZONES else None
+    co = country.strip().upper() if country.strip().upper() in _VALID_COUNTRIES else None
+    la = language.strip().lower() if language.strip().lower() in _VALID_LANGUAGES else None
+    with DB.session() as db:
+        u = db.get(User, str(user.id))
+        if u:
+            u.timezone = tz
+            u.country = co
+            u.language = la
+            db.commit()
+    return RedirectResponse(
+        url=_path_with_flash("/settings/accounts", msg="Préférences enregistrées.") + "#preferences-card",
+        status_code=303,
+    )
 
 
 @app.get("/settings/system", response_class=HTMLResponse)

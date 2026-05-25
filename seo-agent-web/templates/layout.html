@@ -300,6 +300,10 @@
     <script>
       /* ── Localize all UTC timestamps to the visitor's local timezone ── */
       (function () {
+        var _tz = {{ (request.state.user.timezone or '')|tojson if request.state.user else '""' }};
+        var _locale = {{ (request.state.user.language or '')|tojson if request.state.user else '""' }};
+        var _tzOpts = (_tz && _tz !== '') ? { timeZone: _tz } : {};
+        var _localeStr = (_locale && _locale !== '') ? _locale : undefined;
         function parseTsUTC(ts) {
           if (!ts || !/^\d{8}-\d{6}$/.test(ts)) return null;
           return new Date(Date.UTC(
@@ -308,13 +312,11 @@
           ));
         }
         function fmtTime(d) {
-          return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return d.toLocaleTimeString(_localeStr, Object.assign({ hour: '2-digit', minute: '2-digit' }, _tzOpts));
         }
         function fmtShortDate(d) {
-          const dd = String(d.getDate()).padStart(2,'0');
-          const mm = String(d.getMonth()+1).padStart(2,'0');
-          const yy = String(d.getFullYear()).slice(-2);
-          return `${dd}/${mm}/${yy}`;
+          var opts = Object.assign({ day: '2-digit', month: '2-digit', year: '2-digit' }, _tzOpts);
+          return d.toLocaleDateString(_localeStr, opts);
         }
         function localizeAll() {
           /* [data-ts-time] — replace inner text with local HH:MM */
