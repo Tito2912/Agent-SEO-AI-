@@ -44,35 +44,12 @@
   ══════════════════════════════════════ #}
   <div class="ov-hero">
 
-    {# Semi-circle arc gauge — viewBox 0 0 210 126, center (105,105), r=84 #}
-    {# Arc: M 21 105 A 84 84 0 0 1 189 105 — pathLength=264 (π*84≈264) #}
-    <div class="ov-gauge">
-      <svg viewBox="0 0 210 126" fill="none" aria-hidden="true">
-        {# Track #}
-        <path d="M 21 105 A 84 84 0 0 1 189 105"
-              stroke="rgba(255,255,255,.07)" stroke-width="14" stroke-linecap="round"/>
-        {# Fill #}
-        {% if sc is not none %}
-          <path d="M 21 105 A 84 84 0 0 1 189 105"
-                stroke="{{ sc_color }}" stroke-width="14" stroke-linecap="round"
-                pathLength="264"
-                stroke-dasharray="{{ (sc / 100 * 264)|round(1) }} 264"/>
-        {% endif %}
-        {# Score number #}
-        <text x="105" y="90"
-              text-anchor="middle"
-              fill="{{ sc_color }}"
-              style="font-size:52px;font-weight:900;letter-spacing:-2px;font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;">
-          {% if sc is not none %}{{ sc }}{% else %}—{% endif %}
-        </text>
-        {# Label #}
-        <text x="105" y="110"
-              text-anchor="middle"
-              fill="rgba(255,255,255,.4)"
-              style="font-size:10px;font-weight:700;letter-spacing:1.5px;font-family:ui-sans-serif,system-ui,sans-serif;">
-          SCORE DE SANTÉ
-        </text>
-      </svg>
+    <div class="ov-score">
+      <div class="ov-score-n" style="color:{{ sc_color }};">{% if sc is not none %}{{ sc }}{% else %}—{% endif %}</div>
+      <div class="progress slim ov-score-bar" style="--p:{{ sc if sc is not none else 0 }};">
+        <div class="progress-fill" style="background:{{ sc_color }};transition:width .5s ease;"></div>
+      </div>
+      <div class="ov-score-label">Score de santé</div>
     </div>
 
     <div class="ov-info">
@@ -384,17 +361,12 @@
         {% set score_color = 'var(--ok)' if score_badge == 'ok' else ('var(--warn)' if score_badge == 'warning' else 'var(--err)') %}
 
         <div class="chart-row">
-          <div class="donut-svg-wrap">
-            <svg class="donut-svg" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="38" class="donut-track"/>
-              <circle cx="50" cy="50" r="38" class="donut-ring"
-                style="stroke:{{ score_color }}; stroke-dasharray:{{ (score / 100 * 238.8)|round(1) }} 238.8;"
-                transform="rotate(-90 50 50)"/>
-            </svg>
-            <div class="donut-center">
-              <div class="donut-value mono">{{ score }}%</div>
-              <div class="muted small">Score</div>
+          <div class="cwv-score">
+            <div class="cwv-score-n" style="color:{{ score_color }};">{{ score }}%</div>
+            <div class="progress slim cwv-score-bar" style="--p:{{ score }};">
+              <div class="progress-fill" style="background:{{ score_color }};transition:width .5s ease;"></div>
             </div>
+            <div class="ov-score-label">Score CWV</div>
           </div>
           <div class="legend">
             <div class="legend-item"><span class="legend-swatch" style="--sw: var(--ok);"></span>Bon <span class="mono">{{ psd.good or 0 }}</span></div>
