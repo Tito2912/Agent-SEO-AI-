@@ -3160,6 +3160,15 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.elapsed_ms = elapsed_holder[0] if elapsed_holder else None
     page.redirect_chain = redirect_chain
     page.redirect_statuses = redirect_statuses
+    # Fallback: if Playwright changed page.url but no redirect status was captured by
+    # _on_response or redirected_from (common for same-origin HTTPS redirects),
+    # infer a redirect from the URL change so _is_redirect() works correctly.
+    if not page.redirect_statuses:
+        u_clean = (url or "").rstrip("/").lower()
+        f_clean = (page.final_url or "").rstrip("/").lower()
+        if u_clean and f_clean and u_clean != f_clean:
+            page.redirect_chain = [url]
+            page.redirect_statuses = [301]
     page.x_robots_tag = response_headers.get("x-robots-tag", "").strip() or None
     page.content_encoding = response_headers.get("content-encoding", "").strip() or None
     ct_raw = response_headers.get("content-type", "").split(";")[0].strip().lower()
@@ -3984,29 +3993,11 @@ def _score_issues(
         return bool(p.redirect_statuses)
 
     def _toomany_is_redirect_loop(p: PageData) -> bool:
-        """True if a toomanyredirects page is a genuine redirect loop (Ahrefs-like).
+        """Any TooManyRedirects page is a redirect loop (Ahrefs-like).
 
-        Playwright gives only [A, B] in the chain (not [A, B, A]) because Chrome
-        raises ERR_TOO_MANY_REDIRECTS before the third step fires a response event.
-        So we cannot require a URL to repeat — instead we require only that the chain
-        contains ≥2 distinct paths. A single repeated path (trailing-slash cycle like
-        /de → /de/ → /de) is classified as a 3XX redirect, not a loop."""
-        if not (p.error and "toomanyredirects" in (p.error or "").lower()):
-            return False
-        chain = p.redirect_chain or []
-        if not chain:
-            # No chain captured — assume genuine loop (can't distinguish).
-            return True
-        def _path_key(u: str) -> str:
-            try:
-                return urlsplit(u).path.rstrip("/").lower()
-            except Exception:
-                return u.lower()
-        # Trailing-slash cycle: all URLs share the same normalised path → 3XX, not a loop.
-        if len({_path_key(u) for u in chain}) <= 1:
-            return False
-        # ≥2 distinct paths with TooManyRedirects → genuine loop.
-        return True
+        Trailing-slash cycles (/de → /de/ → /de) never terminate and Ahrefs
+        classifies them as redirect loops, so we do the same."""
+        return bool(p.error and "toomanyredirects" in (p.error or "").lower())
 
     def _is_timeout(p: PageData) -> bool:
         if not p.error:
@@ -4351,11 +4342,10 @@ def _score_issues(
             return True
         return False
 
-    # Don't count language-root slash normalizations but DO include http→https and
-    # www→non-www canonical redirects — Ahrefs counts those in its "3xx redirect" total.
-    # Also include too-many-redirects pages: Ahrefs counts these as 3XX redirects, not loops.
+    # All redirecting pages go into redirect_3xx — Ahrefs counts http→https, www→non-www,
+    # lang-root slash normalizations (/en→/en/), AND redirect loops in this total.
     redirect_3xx = sorted(set(
-        [p.url for p in pages if _is_redirect(p) and not _is_lang_root_trailing_slash_redirect(p)]
+        [p.url for p in pages if _is_redirect(p)]
         + list(_redirect_loop_urls)
     ))
     redirect_302 = [
