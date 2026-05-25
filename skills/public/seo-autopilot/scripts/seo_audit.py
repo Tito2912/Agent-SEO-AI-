@@ -3965,36 +3965,29 @@ def _score_issues(
         return bool(p.redirect_statuses)
 
     def _toomany_is_redirect_loop(p: PageData) -> bool:
-        """True if a toomanyredirects page is caught in a genuine redirect loop.
+        """True if a toomanyredirects page is a genuine redirect loop (Ahrefs-like).
 
-        A loop requires that (a) a URL appears twice in the redirect_chain AND
-        (b) the chain contains more than one unique path (after stripping trailing
-        slash). Condition (b) excludes trailing-slash normalisation cycles such as
-        /de → /de/ → /de → /de/ … which our plain-requests session can trigger on
-        sites that use content-negotiation — Ahrefs resolves these with browser
-        headers and classifies them as 3XX redirects, not loops."""
+        Playwright gives only [A, B] in the chain (not [A, B, A]) because Chrome
+        raises ERR_TOO_MANY_REDIRECTS before the third step fires a response event.
+        So we cannot require a URL to repeat — instead we require only that the chain
+        contains ≥2 distinct paths. A single repeated path (trailing-slash cycle like
+        /de → /de/ → /de) is classified as a 3XX redirect, not a loop."""
         if not (p.error and "toomanyredirects" in (p.error or "").lower()):
             return False
         chain = p.redirect_chain or []
         if not chain:
-            return False
-        # If every URL in the chain normalises to the same path, the "loop" is only a
-        # trailing-slash canonicalisation redirect — not a genuine cycle.
+            # No chain captured — assume genuine loop (can't distinguish).
+            return True
         def _path_key(u: str) -> str:
             try:
                 return urlsplit(u).path.rstrip("/").lower()
             except Exception:
                 return u.lower()
+        # Trailing-slash cycle: all URLs share the same normalised path → 3XX, not a loop.
         if len({_path_key(u) for u in chain}) <= 1:
             return False
-        # Multiple distinct paths — check whether any URL (normalised) repeats.
-        seen: set[str] = set()
-        for u in chain:
-            key = u.rstrip("/").lower()
-            if key in seen:
-                return True
-            seen.add(key)
-        return False
+        # ≥2 distinct paths with TooManyRedirects → genuine loop.
+        return True
 
     def _is_timeout(p: PageData) -> bool:
         if not p.error:
@@ -4264,11 +4257,9 @@ def _score_issues(
     timeouts = [p.url for p in pages if _is_timeout(p)]
 
     # --- Redirects (Ahrefs-like) ---
-    # Ahrefs classifies TooManyRedirects pages as redirect loops (no separate issue).
-    # Playwright raises ERR_TOO_MANY_REDIRECTS after seeing A→B (before A repeats),
-    # so the chain is [A, B] — not [A, B, A]. We cannot rely on chain cycle-detection;
-    # instead all TooManyRedirects pages are treated as loops, matching Ahrefs.
-    _redirect_loop_urls = {p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()}
+    # TooManyRedirects pages that ARE genuine loops (≥2 distinct paths in chain).
+    # Trailing-slash cycles (/de → /de/ → /de …) return False and stay as 3XX redirects.
+    _redirect_loop_urls = {p.url for p in pages if _toomany_is_redirect_loop(p)}
 
     # Cross-page redirect loop detection: A→B and B→A both flagged as loops.
     _redirect_map: dict[str, str] = {}
