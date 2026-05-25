@@ -4264,14 +4264,13 @@ def _score_issues(
     timeouts = [p.url for p in pages if _is_timeout(p)]
 
     # --- Redirects (Ahrefs-like) ---
-    # Ahrefs counts too-many-redirects pages as regular 3XX redirects, not loops.
+    # Ahrefs classifies TooManyRedirects pages as redirect loops (no separate issue).
+    # Playwright raises ERR_TOO_MANY_REDIRECTS after seeing A→B (before A repeats),
+    # so the chain is [A, B] — not [A, B, A]. We cannot rely on chain cycle-detection;
+    # instead all TooManyRedirects pages are treated as loops, matching Ahrefs.
     _redirect_loop_urls = {p.url for p in pages if p.error and "toomanyredirects" in p.error.lower()}
-    # Pages where the redirect_chain contains a repeated URL are genuine loops.
-    # Locale-root false-positives are handled at crawl time via Accept-Language retry
-    # (redirect_chain is cleared when the retry resolves successfully).
-    _toomany_loops: list[str] = [p.url for p in pages if _toomany_is_redirect_loop(p)]
 
-    # Cross-page redirect loop detection (Ahrefs-like): A→B and B→A both flag as loops.
+    # Cross-page redirect loop detection: A→B and B→A both flagged as loops.
     _redirect_map: dict[str, str] = {}
     for _p in pages:
         if _is_redirect(_p) and _p.final_url and _p.url != _p.final_url:
@@ -4290,7 +4289,7 @@ def _score_issues(
     _cross_loops: list[str] = [
         p.url for p in pages if _is_redirect(p) and _in_redirect_cycle(p.url)
     ]
-    redirect_loop: list[str] = sorted(set(_toomany_loops) | set(_cross_loops))
+    redirect_loop: list[str] = sorted(_redirect_loop_urls | set(_cross_loops))
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False
