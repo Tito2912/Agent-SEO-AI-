@@ -252,7 +252,7 @@
         <select name="crawl">
           {% for ts in project.crawls %}
             {% set t = crawl_timing.get(ts, {}) if crawl_timing is defined else {} %}
-            <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}{% if t.duration_label %} · {{ t.duration_label }}{% endif %}</option>
+            <option value="{{ ts }}" data-ts="{{ ts }}" data-dur="{{ t.duration_label or '' }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}{% if t.duration_label %} · {{ t.duration_label }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -262,7 +262,7 @@
           <option value="">— aucun —</option>
           {% for ts in project.crawls %}
             {% set t = crawl_timing.get(ts, {}) if crawl_timing is defined else {} %}
-            <option value="{{ ts }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}{% if t.duration_label %} · {{ t.duration_label }}{% endif %}</option>
+            <option value="{{ ts }}" data-ts="{{ ts }}" data-dur="{{ t.duration_label or '' }}" {% if project.compare and ts == project.compare.timestamp %}selected{% endif %}>{{ ts[6:8] }}/{{ ts[4:6] }}/{{ ts[:4] }} {{ ts[9:11] }}:{{ ts[11:13] }}{% if t.duration_label %} · {{ t.duration_label }}{% endif %}</option>
           {% endfor %}
         </select>
       </label>
@@ -317,7 +317,7 @@
               <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
               <div class="history-bar-label mono">{{ h.health_score }}</div>
               <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
-              <div class="history-bar-ts muted small">{{ h.timestamp[9:11] }}:{{ h.timestamp[11:13] }}</div>
+              <div class="history-bar-ts muted small" data-ts-time="{{ h.timestamp }}">{{ h.timestamp[9:11] }}:{{ h.timestamp[11:13] }}</div>
               {% if h.duration_label %}<div class="history-bar-ts muted small">{{ h.duration_label }}</div>{% endif %}
             </a>
           {% endfor %}

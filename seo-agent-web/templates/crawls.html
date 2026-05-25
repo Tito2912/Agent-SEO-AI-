@@ -44,7 +44,7 @@
                     <span class="badge ok" style="font-size:10px;padding:1px 6px;margin-left:6px;">dernier</span>
                   {% endif %}
                 </td>
-                <td class="mono">{{ ts[9:11] }}:{{ ts[11:13] }}</td>
+                <td class="mono" data-ts-time="{{ ts }}">{{ ts[9:11] }}:{{ ts[11:13] }}</td>
                 <td class="mono muted">{{ t.duration_label if t.duration_label else '—' }}</td>
                 <td class="mono muted small">{{ ts }}</td>
                 <td class="actions">

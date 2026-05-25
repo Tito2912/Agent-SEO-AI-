@@ -297,5 +297,50 @@
         }
       })();
     </script>
+    <script>
+      /* ── Localize all UTC timestamps to the visitor's local timezone ── */
+      (function () {
+        function parseTsUTC(ts) {
+          if (!ts || !/^\d{8}-\d{6}$/.test(ts)) return null;
+          return new Date(Date.UTC(
+            +ts.slice(0,4), +ts.slice(4,6)-1, +ts.slice(6,8),
+            +ts.slice(9,11), +ts.slice(11,13), +ts.slice(13,15)
+          ));
+        }
+        function fmtTime(d) {
+          return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        function fmtShortDate(d) {
+          const dd = String(d.getDate()).padStart(2,'0');
+          const mm = String(d.getMonth()+1).padStart(2,'0');
+          const yy = String(d.getFullYear()).slice(-2);
+          return `${dd}/${mm}/${yy}`;
+        }
+        function localizeAll() {
+          /* [data-ts-time] — replace inner text with local HH:MM */
+          document.querySelectorAll('[data-ts-time]').forEach(function(el) {
+            var d = parseTsUTC(el.dataset.tsTime);
+            if (d) el.textContent = fmtTime(d);
+          });
+          /* [data-ts-datetime] — replace inner text with local DD/MM/YY HH:MM */
+          document.querySelectorAll('[data-ts-datetime]').forEach(function(el) {
+            var d = parseTsUTC(el.dataset.tsDatetime);
+            if (d) el.textContent = fmtShortDate(d) + ' ' + fmtTime(d);
+          });
+          /* select option[data-ts] — rebuild option label with local time */
+          document.querySelectorAll('select option[data-ts]').forEach(function(opt) {
+            var d = parseTsUTC(opt.dataset.ts);
+            if (!d) return;
+            var dur = opt.dataset.dur || '';
+            opt.textContent = fmtShortDate(d) + ' ' + fmtTime(d) + (dur ? ' · ' + dur : '');
+          });
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', localizeAll);
+        } else {
+          localizeAll();
+        }
+      })();
+    </script>
   </body>
 </html>

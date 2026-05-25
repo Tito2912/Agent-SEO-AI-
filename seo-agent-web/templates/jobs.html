@@ -134,7 +134,7 @@
                   </div>
                 </td>
                 <td class="num mono" data-role="ts">
-                  <div>{{ j.timestamp_label }}</div>
+                  <div {% if j.timestamp %}data-ts-datetime="{{ j.timestamp }}"{% endif %}>{{ j.timestamp_label }}</div>
                   {% if j.duration_label %}<div class="muted small">{{ j.duration_label }}</div>{% endif %}
                 </td>
                 <td class="actions"><a class="btn" href="/jobs/{{ j.id }}">Ouvrir</a></td>
