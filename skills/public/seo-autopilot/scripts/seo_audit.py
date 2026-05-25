@@ -4292,10 +4292,10 @@ def _score_issues(
             cur = _redirect_map[cur]
         return False
 
-    _cross_loops: list[str] = [
-        p.url for p in pages if _is_redirect(p) and _in_redirect_cycle(p.url)
-    ]
-    redirect_loop: list[str] = sorted(_redirect_loop_urls | set(_cross_loops))
+    # Ahrefs flags only TooManyRedirects pages as redirect loops, not cross-page A→B→A
+    # cycles (those are counted as 3XX redirects). Cross-page detection caused
+    # false positives (both A and B counted for each loop pair).
+    redirect_loop: list[str] = sorted(_redirect_loop_urls)
     def _is_lang_root_trailing_slash_redirect(p: PageData) -> bool:
         if not _is_redirect(p):
             return False
