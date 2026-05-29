@@ -4267,9 +4267,16 @@ def _score_issues(
     timeouts = [p.url for p in pages if _is_timeout(p)]
 
     # --- Redirects (Ahrefs-like) ---
-    # TooManyRedirects pages that ARE genuine loops (≥2 distinct paths in chain).
-    # Trailing-slash cycles (/de → /de/ → /de …) return False and stay as 3XX redirects.
-    _redirect_loop_urls = {p.url for p in pages if _toomany_is_redirect_loop(p)}
+    # All TooManyRedirects pages are redirect loops.
+    # Trailing-slash loop pairs (/de and /de/) both throw TooManyRedirects but
+    # Ahrefs counts each loop once. Deduplicate: if both /de and /de/ are in the set,
+    # keep only /de (the non-slash version = the "entry" URL of the loop).
+    _all_toomany = {p.url for p in pages if _toomany_is_redirect_loop(p)}
+    _redirect_loop_urls: set[str] = set()
+    for _u in _all_toomany:
+        if _u.endswith("/") and _u.rstrip("/") in _all_toomany:
+            continue  # skip /de/ when /de is already counted
+        _redirect_loop_urls.add(_u)
 
     # Cross-page redirect loop detection: A→B and B→A both flagged as loops.
     # Skip trailing-slash normalizations (url/→url normalize to the same key after rstrip)
