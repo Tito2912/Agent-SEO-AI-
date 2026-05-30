@@ -465,11 +465,11 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "noindex_in_html_and_http_header": IssueMeta(
         "noindex_in_html_and_http_header", "Noindex (HTML + header)", "Indexability", "notice"
     ),
-    "noindex_page": IssueMeta("noindex_page", "Page en noindex", "Indexability", "notice"),
+    "noindex_page": IssueMeta("noindex_page", "Page en noindex", "Indexability", "warning"),
     "noindex_and_nofollow_page": IssueMeta(
         "noindex_and_nofollow_page", "Page noindex + nofollow", "Indexability", "notice"
     ),
-    "noindex_follow_page": IssueMeta("noindex_follow_page", "Page noindex, follow", "Indexability", "notice"),
+    "noindex_follow_page": IssueMeta("noindex_follow_page", "Page noindex, follow", "Indexability", "warning"),
     # Content changes (diff vs previous crawl)
     "title_tag_changed": IssueMeta("title_tag_changed", "Balise title modifiée", "Content", "notice"),
     "meta_description_changed": IssueMeta("meta_description_changed", "Meta description changed", "Content", "notice"),
@@ -542,13 +542,13 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "page_has_links_to_redirect_indexable",
         "Page → lien vers redirection (indexable)",
         "Links",
-        "notice",
+        "warning",
     ),
     "page_has_links_to_redirect_not_indexable": IssueMeta(
         "page_has_links_to_redirect_not_indexable",
         "Page → lien vers redirection (non indexable)",
         "Links",
-        "notice",
+        "warning",
     ),
     "page_has_links_to_redirect_links_indexable": IssueMeta(
         "page_has_links_to_redirect_links_indexable",
@@ -656,11 +656,11 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     # Redirects
     "broken_redirect": IssueMeta("broken_redirect", "Redirection cassée", "Redirects", "error"),
     "redirect_chain_too_long": IssueMeta("redirect_chain_too_long", "Chaîne de redirection trop longue", "Redirects", "warning"),
-    "redirect_loop": IssueMeta("redirect_loop", "Boucle de redirection", "Redirects", "warning"),
+    "redirect_loop": IssueMeta("redirect_loop", "Boucle de redirection", "Redirects", "error"),
     "redirect_3xx": IssueMeta("redirect_3xx", "Redirection 3XX", "Redirects", "notice"),
     "redirect_302": IssueMeta("redirect_302", "Redirection 302", "Redirects", "notice"),
     "https_to_http_redirect": IssueMeta("https_to_http_redirect", "Redirection HTTPS → HTTP", "Redirects", "warning"),
-    "http_to_https_redirect": IssueMeta("http_to_https_redirect", "Redirection HTTP → HTTPS", "Redirects", "notice"),
+    "http_to_https_redirect": IssueMeta("http_to_https_redirect", "Redirection HTTP → HTTPS", "Redirects", "warning"),
     "meta_refresh_redirect": IssueMeta("meta_refresh_redirect", "Meta refresh redirect", "Redirects", "warning"),
     "redirect_chain": IssueMeta("redirect_chain", "Chaîne de redirection", "Redirects", "notice"),
     # Content (on-page)
@@ -676,7 +676,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "missing_meta_description": IssueMeta("missing_meta_description", "Meta description manquante / vide", "Content", "warning"),
     "meta_description_too_long": IssueMeta("meta_description_too_long", "Meta description trop longue", "Content", "warning"),
     "meta_description_too_long_indexable": IssueMeta(
-        "meta_description_too_long_indexable", "Meta description trop longue (indexable)", "Content", "notice"
+        "meta_description_too_long_indexable", "Meta description trop longue (indexable)", "Content", "warning"
     ),
     "meta_description_too_long_not_indexable": IssueMeta(
         "meta_description_too_long_not_indexable",
@@ -685,7 +685,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "notice",
     ),
     "meta_description_too_short_indexable": IssueMeta(
-        "meta_description_too_short_indexable", "Meta description trop courte", "Content", "notice"
+        "meta_description_too_short_indexable", "Meta description trop courte", "Content", "warning"
     ),
     "meta_description_too_short_not_indexable": IssueMeta(
         "meta_description_too_short_not_indexable", "Meta description trop courte", "Content", "notice"
@@ -721,7 +721,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "hreflang_annotation_invalid": IssueMeta("hreflang_annotation_invalid", "Hreflang invalide", "Localization", "warning"),
     "hreflang_to_non_canonical": IssueMeta("hreflang_to_non_canonical", "Hreflang vers non-canonical", "Localization", "warning"),
     "hreflang_to_redirect_or_broken_page": IssueMeta(
-        "hreflang_to_redirect_or_broken_page", "Hreflang vers redirect / URL cassée", "Localization", "warning"
+        "hreflang_to_redirect_or_broken_page", "Hreflang vers redirect / URL cassée", "Localization", "error"
     ),
     "hreflang_to_redirect_or_broken_page_links": IssueMeta(
         "hreflang_to_redirect_or_broken_page_links",
@@ -799,10 +799,10 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     ),
     "https_page_links_to_http_css": IssueMeta("https_page_links_to_http_css", "Page HTTPS → CSS HTTP", "CSS", "warning"),
     # Sitemaps
-    "sitemap_3xx_redirect": IssueMeta("sitemap_3xx_redirect", "Sitemap : URL en 3XX", "Sitemaps", "warning"),
+    "sitemap_3xx_redirect": IssueMeta("sitemap_3xx_redirect", "Sitemap : URL en 3XX", "Sitemaps", "error"),
     "sitemap_4xx_page": IssueMeta("sitemap_4xx_page", "Sitemap : URL en 4XX", "Sitemaps", "error"),
     "sitemap_5xx_page": IssueMeta("sitemap_5xx_page", "Sitemap : URL en 5XX", "Sitemaps", "error"),
-    "sitemap_noindex_page": IssueMeta("sitemap_noindex_page", "Sitemap : URL noindex", "Sitemaps", "warning"),
+    "sitemap_noindex_page": IssueMeta("sitemap_noindex_page", "Sitemap : URL noindex", "Sitemaps", "error"),
     "sitemap_non_canonical_page": IssueMeta(
         "sitemap_non_canonical_page", "Sitemap : URL non-canonique", "Sitemaps", "notice"
     ),
