@@ -5372,11 +5372,8 @@ def _score_issues(
                 continue
             t = page_by_any.get(_norm_self(href) or href)
             if t:
-                # toomanyredirects targets are excluded: our crawler cannot distinguish a
-                # genuine redirect loop (stays 301) from a deep chain that resolves to 200
-                # (Ahrefs navigates past the limit for /en, /es but not /de). Including them
-                # causes false positives. Only real 3xx status codes and 4xx/5xx are counted.
-                if _is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
+                _is_toomany_target = bool(t.error and "toomanyredirects" in (t.error or "").lower())
+                if _is_redirect(t) or _is_toomany_target or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
