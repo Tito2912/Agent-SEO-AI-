@@ -465,7 +465,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "noindex_in_html_and_http_header": IssueMeta(
         "noindex_in_html_and_http_header", "Noindex (HTML + header)", "Indexability", "notice"
     ),
-    "noindex_page": IssueMeta("noindex_page", "Page en noindex", "Indexability", "warning"),
+    "noindex_page": IssueMeta("noindex_page", "Page en noindex", "Indexability", "notice"),
     "noindex_and_nofollow_page": IssueMeta(
         "noindex_and_nofollow_page", "Page noindex + nofollow", "Indexability", "notice"
     ),
@@ -542,7 +542,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "page_has_links_to_redirect_indexable",
         "Page → lien vers redirection (indexable)",
         "Links",
-        "warning",
+        "notice",
     ),
     "page_has_links_to_redirect_not_indexable": IssueMeta(
         "page_has_links_to_redirect_not_indexable",
@@ -676,7 +676,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "missing_meta_description": IssueMeta("missing_meta_description", "Meta description manquante / vide", "Content", "warning"),
     "meta_description_too_long": IssueMeta("meta_description_too_long", "Meta description trop longue", "Content", "warning"),
     "meta_description_too_long_indexable": IssueMeta(
-        "meta_description_too_long_indexable", "Meta description trop longue (indexable)", "Content", "warning"
+        "meta_description_too_long_indexable", "Meta description trop longue (indexable)", "Content", "notice"
     ),
     "meta_description_too_long_not_indexable": IssueMeta(
         "meta_description_too_long_not_indexable",
