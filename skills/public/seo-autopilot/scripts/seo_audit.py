@@ -4356,9 +4356,11 @@ def _score_issues(
 
     # All redirecting pages go into redirect_3xx — Ahrefs counts http→https, www→non-www,
     # lang-root slash normalizations (/en→/en/), AND redirect loops in this total.
+    # Use _all_toomany (not deduplicated _redirect_loop_urls) so both sides of each
+    # trailing-slash loop pair (/de AND /de/) are included in the 3XX count.
     redirect_3xx = sorted(set(
         [p.url for p in pages if _is_redirect(p)]
-        + list(_redirect_loop_urls)
+        + list(_all_toomany)
     ))
     redirect_302 = [
         p.url for p in pages
