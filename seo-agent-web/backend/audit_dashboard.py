@@ -469,7 +469,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "noindex_and_nofollow_page": IssueMeta(
         "noindex_and_nofollow_page", "Page noindex + nofollow", "Indexability", "notice"
     ),
-    "noindex_follow_page": IssueMeta("noindex_follow_page", "Page noindex, follow", "Indexability", "warning"),
+    "noindex_follow_page": IssueMeta("noindex_follow_page", "Page noindex, follow", "Indexability", "notice"),
     # Content changes (diff vs previous crawl)
     "title_tag_changed": IssueMeta("title_tag_changed", "Balise title modifiée", "Content", "notice"),
     "meta_description_changed": IssueMeta("meta_description_changed", "Meta description changed", "Content", "notice"),
@@ -548,7 +548,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "page_has_links_to_redirect_not_indexable",
         "Page → lien vers redirection (non indexable)",
         "Links",
-        "warning",
+        "notice",
     ),
     "page_has_links_to_redirect_links_indexable": IssueMeta(
         "page_has_links_to_redirect_links_indexable",
@@ -657,10 +657,10 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "broken_redirect": IssueMeta("broken_redirect", "Redirection cassée", "Redirects", "error"),
     "redirect_chain_too_long": IssueMeta("redirect_chain_too_long", "Chaîne de redirection trop longue", "Redirects", "warning"),
     "redirect_loop": IssueMeta("redirect_loop", "Boucle de redirection", "Redirects", "error"),
-    "redirect_3xx": IssueMeta("redirect_3xx", "Redirection 3XX", "Redirects", "notice"),
+    "redirect_3xx": IssueMeta("redirect_3xx", "Redirection 3XX", "Redirects", "warning"),
     "redirect_302": IssueMeta("redirect_302", "Redirection 302", "Redirects", "notice"),
     "https_to_http_redirect": IssueMeta("https_to_http_redirect", "Redirection HTTPS → HTTP", "Redirects", "warning"),
-    "http_to_https_redirect": IssueMeta("http_to_https_redirect", "Redirection HTTP → HTTPS", "Redirects", "warning"),
+    "http_to_https_redirect": IssueMeta("http_to_https_redirect", "Redirection HTTP → HTTPS", "Redirects", "notice"),
     "meta_refresh_redirect": IssueMeta("meta_refresh_redirect", "Meta refresh redirect", "Redirects", "warning"),
     "redirect_chain": IssueMeta("redirect_chain", "Chaîne de redirection", "Redirects", "notice"),
     # Content (on-page)
