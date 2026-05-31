@@ -3992,12 +3992,22 @@ def _score_issues(
     def _is_redirect(p: PageData) -> bool:
         return bool(p.redirect_statuses)
 
-    def _toomany_is_redirect_loop(p: PageData) -> bool:
-        """Any TooManyRedirects page is a redirect loop (Ahrefs-like).
-
-        Trailing-slash cycles (/de → /de/ → /de) never terminate and Ahrefs
-        classifies them as redirect loops, so we do the same."""
+    def _is_toomany_page(p: PageData) -> bool:
         return bool(p.error and "toomanyredirects" in (p.error or "").lower())
+
+    def _toomany_is_redirect_loop(p: PageData) -> bool:
+        """A TooManyRedirects page is a redirect LOOP only if its chain cycles through
+        ≥2 distinct URLs (e.g. /de ↔ /de/). A self-redirect (/de → /de, a single
+        repeated URL) is classified by Ahrefs as a plain 3XX redirect, not a loop.
+
+        Both still count in redirect_3xx (via _all_toomany); only genuine multi-URL
+        cycles are surfaced as redirect_loop."""
+        if not _is_toomany_page(p):
+            return False
+        distinct = {str(u).strip().lower() for u in (p.redirect_chain or []) if u}
+        if p.url:
+            distinct.add(str(p.url).strip().lower())
+        return len(distinct) >= 2
 
     def _is_timeout(p: PageData) -> bool:
         if not p.error:
@@ -4267,14 +4277,16 @@ def _score_issues(
     timeouts = [p.url for p in pages if _is_timeout(p)]
 
     # --- Redirects (Ahrefs-like) ---
-    # All TooManyRedirects pages are redirect loops.
-    # Trailing-slash loop pairs (/de and /de/) both throw TooManyRedirects but
-    # Ahrefs counts each loop once. Deduplicate: if both /de and /de/ are in the set,
-    # keep only /de (the non-slash version = the "entry" URL of the loop).
-    _all_toomany = {p.url for p in pages if _toomany_is_redirect_loop(p)}
+    # _all_toomany = every TooManyRedirects page (self-redirects AND multi-URL loops);
+    # these all count in redirect_3xx. _loop_toomany = only genuine multi-URL cycles,
+    # which are the ones Ahrefs surfaces as "Redirect loop".
+    # Trailing-slash loop pairs (/de and /de/) both throw TooManyRedirects but Ahrefs
+    # counts each loop once. Deduplicate: keep /de when both /de and /de/ are present.
+    _all_toomany = {p.url for p in pages if _is_toomany_page(p)}
+    _loop_toomany = {p.url for p in pages if _toomany_is_redirect_loop(p)}
     _redirect_loop_urls: set[str] = set()
-    for _u in _all_toomany:
-        if _u.endswith("/") and _u.rstrip("/") in _all_toomany:
+    for _u in _loop_toomany:
+        if _u.endswith("/") and _u.rstrip("/") in _loop_toomany:
             continue  # skip /de/ when /de is already counted
         _redirect_loop_urls.add(_u)
 
