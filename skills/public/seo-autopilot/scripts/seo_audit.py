@@ -4352,12 +4352,37 @@ def _score_issues(
             return True
         return False
 
-    # All redirecting pages go into redirect_3xx — Ahrefs counts http→https, www→non-www,
-    # lang-root slash normalizations (/en→/en/), AND redirect loops in this total.
+    def _is_trailing_slash_redirect_to_200(p: PageData) -> bool:
+        """True for a pure trailing-slash redirect (path → path/) on the SAME scheme
+        and SAME host that resolves cleanly to 200.
+
+        Ahrefs excludes these from its '3XX redirect' count (e.g. /de → /de/ → 200)
+        but DOES count http→https and www→non-www redirects, so this helper is
+        intentionally narrower than _is_canonical_normalization_redirect.
+        Redirect loops (TooManyRedirects, never reaching 200) are NOT matched, so they
+        remain counted — which keeps easyshopbuilder's loop URLs in the 3XX total."""
+        if not _is_redirect(p) or p.error:
+            return False
+        if not (isinstance(p.status_code, int) and p.status_code == 200):
+            return False
+        a = urlsplit(p.url or "")
+        b = urlsplit(p.final_url or "")
+        if (a.scheme or "") != (b.scheme or ""):
+            return False
+        if (a.hostname or "").lower() != (b.hostname or "").lower():
+            return False  # www↔non-www differs → not matched (Ahrefs counts those)
+        if (a.query or "") != (b.query or ""):
+            return False
+        return (b.path or "/") == f"{a.path}/"
+
+    # redirect_3xx — Ahrefs counts http→https, www→non-www, AND redirect loops, but
+    # EXCLUDES pure trailing-slash redirects that resolve to 200 (/de → /de/ → 200).
+    # On easyshopbuilder /de loops (never 200) so they stay counted; on elevenmusic
+    # /de → /de/ resolves to 200 so it's excluded — matching Ahrefs on both.
     # Use _all_toomany (not deduplicated _redirect_loop_urls) so both sides of each
     # trailing-slash loop pair (/de AND /de/) are included in the 3XX count.
     redirect_3xx = sorted(set(
-        [p.url for p in pages if _is_redirect(p)]
+        [p.url for p in pages if _is_redirect(p) and not _is_trailing_slash_redirect_to_200(p)]
         + list(_all_toomany)
     ))
     redirect_302 = [
@@ -5378,7 +5403,11 @@ def _score_issues(
             if t:
                 # TooManyRedirects targets count as broken (Ahrefs flags hreflang→redirect-loop).
                 _t_toomany = bool(t.error and "toomanyredirects" in (t.error or "").lower())
-                if _is_redirect(t) or _t_toomany or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
+                # A hreflang pointing to a clean canonical-normalization redirect
+                # (http→https, www, /de→/de/ → 200) is NOT flagged by Ahrefs — only
+                # genuinely broken targets (loops, 4xx, timeouts) are.
+                _t_redirect = _is_redirect(t) and not _is_canonical_normalization_redirect(t)
+                if _t_redirect or _t_toomany or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
@@ -5544,8 +5573,11 @@ def _score_issues(
 
         is_timeout = _is_timeout(p)
         _is_toomany_redir = bool(p.error and "toomanyredirects" in (p.error or "").lower())
+        # Exclude clean trailing-slash redirects to 200 (e.g. base → base/, /de → /de/):
+        # Ahrefs does not flag these as "3XX redirect in sitemap". Loops (toomany) stay.
         is_redirect = bool(
-            (_is_redirect(p) and (u_norm in page_by_requested)) or _is_toomany_redir
+            (_is_redirect(p) and not _is_trailing_slash_redirect_to_200(p) and (u_norm in page_by_requested))
+            or _is_toomany_redir
         )
         is_4xx = bool(isinstance(p.status_code, int) and 400 <= p.status_code < 500)
         is_5xx = bool(isinstance(p.status_code, int) and 500 <= p.status_code < 600)
@@ -5799,9 +5831,12 @@ def _score_issues(
             if not target:
                 continue
             tgt_req = page_by_requested.get(_norm_self(target) or target)
-            # Include links to any redirect AND links to toomanyredirects pages (Ahrefs counts both).
+            # Include links to genuine redirects AND to toomanyredirects pages (Ahrefs counts both),
+            # but NOT links to clean canonical-normalization redirects (http→https, www, /de→/de/→200)
+            # which Ahrefs treats as expected and does not flag.
             _is_toomany = bool(tgt_req and tgt_req.error and "toomanyredirects" in (tgt_req.error or "").lower())
-            if not (tgt_req and (_is_redirect(tgt_req) or _is_toomany)):
+            _tgt_redirect = bool(tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req))
+            if not (tgt_req and (_tgt_redirect or _is_toomany)):
                 continue
             target_norm = _norm_self(target) or target
             nofollow = bool(it.get("nofollow"))
@@ -5913,7 +5948,7 @@ def _score_issues(
                 if not isinstance(loc, str) or not loc.startswith(("http://", "https://")):
                     continue
                 tgt_req = page_by_requested.get(_norm_self(loc) or loc)
-                if tgt_req and _is_redirect(tgt_req):
+                if tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req):
                     loc_norm = _norm_self(loc) or loc
                     key = (sitemap_url, loc_norm, "sitemap", False, "")
                     if key in seen_redirect_links:
