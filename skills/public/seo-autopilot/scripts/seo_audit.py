@@ -5357,6 +5357,7 @@ def _score_issues(
     hreflang_url_to_redirect_or_broken: list[str] = []
     hreflang_to_non_canonical: list[str] = []
     hreflang_referenced_multi_lang: list[str] = []
+    hreflang_html_lang_mismatch: list[str] = []
     missing_reciprocal_hreflang_set: set[str] = set()
 
     for p in hreflang_source_pages:
@@ -5382,6 +5383,28 @@ def _score_issues(
         # Non-indexable pages don't appear in search results, so their hreflang is irrelevant.
         if not _is_indexable(p):
             continue
+
+        # Hreflang ↔ HTML lang mismatch: the page's self-referencing hreflang language
+        # must match its <html lang> primary subtag (e.g. <html lang="en"> but the page's
+        # own hreflang declares it as "fr"). Missing html lang is covered separately.
+        if _non_empty(p.lang):
+            _self_urls = {
+                _norm_self(p.url) or (p.url or ""),
+                _norm_self(p.final_url) if p.final_url else "",
+                _final_url(p),
+            }
+            _self_urls.discard("")
+            _html_primary = str(p.lang or "").strip().lower().split("-", 1)[0]
+            for code, href in hreflang.items():
+                code_norm = str(code or "").strip().lower()
+                if code_norm == "x-default" or not HREFLANG_RE.match(code):
+                    continue
+                href_norm = _norm_self(href) or str(href or "").strip()
+                if href_norm in _self_urls:
+                    _hl_primary = code_norm.split("-", 1)[0]
+                    if _html_primary and _hl_primary and _html_primary != _hl_primary:
+                        hreflang_html_lang_mismatch.append(p.url)
+                    break
 
         # Ahrefs-like: treat x-default missing as relevant only for indexable pages.
         if "x-default" not in hreflang and _is_indexable(p):
@@ -6296,6 +6319,9 @@ def _score_issues(
 
     issues["html_lang_attribute_missing"] = _issue_block("html_lang_attribute_missing", html_lang_missing)
     issues["html_lang_attribute_invalid"] = _issue_block("html_lang_attribute_invalid", html_lang_invalid)
+    issues["hreflang_and_html_lang_mismatch"] = _issue_block(
+        "hreflang_and_html_lang_mismatch", sorted(set(hreflang_html_lang_mismatch))
+    )
     issues["hreflang_defined_but_html_lang_missing"] = _issue_block(
         "hreflang_defined_but_html_lang_missing", hreflang_defined_but_html_lang_missing
     )

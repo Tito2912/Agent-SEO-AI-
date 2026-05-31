@@ -742,6 +742,9 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "hreflang_defined_but_html_lang_missing", "Hreflang défini mais HTML lang manquant", "Localization", "notice"
     ),
     "html_lang_attribute_missing": IssueMeta("html_lang_attribute_missing", "Attribut HTML lang manquant", "Localization", "notice"),
+    "hreflang_and_html_lang_mismatch": IssueMeta(
+        "hreflang_and_html_lang_mismatch", "Hreflang et HTML lang incohérents", "Localization", "error"
+    ),
     "page_referenced_for_more_than_one_language_in_hreflang": IssueMeta(
         "page_referenced_for_more_than_one_language_in_hreflang",
         "Page référencée pour plusieurs langues",
