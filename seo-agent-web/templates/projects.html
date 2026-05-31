@@ -70,6 +70,44 @@
     </div>
   {% endif %}
 
+  {% if projects and onboarding and not onboarding.complete %}
+    <section class="card onboarding-card">
+      <div class="card-title-row">
+        <div>
+          <h2>Prochaines étapes</h2>
+          <p class="muted small" style="margin:4px 0 0;">{{ onboarding.required_done }}/{{ onboarding.total_required }} étapes essentielles terminées.</p>
+        </div>
+        <span class="badge {{ 'ok' if onboarding.progress_pct >= 100 else 'warning' }}">{{ onboarding.progress_pct }}%</span>
+      </div>
+      <div class="progress slim" aria-hidden="true">
+        <div class="progress-fill" style="--p: {{ onboarding.progress_pct }};"></div>
+      </div>
+      <div class="onboarding-steps">
+        {% for step in onboarding.steps %}
+          <div class="onboarding-step {{ 'done' if step.done else '' }}">
+            <div class="onboarding-step-mark">{{ '✓' if step.done else loop.index }}</div>
+            <div class="onboarding-step-body">
+              <div class="onboarding-step-title">
+                {{ step.label }}
+                {% if step.optional %}<span class="muted small">optionnel</span>{% endif %}
+              </div>
+              <div class="muted small">{{ step.detail }}</div>
+            </div>
+            {% if not step.done %}
+              {% if step.action_dialog %}
+                <button type="button" class="btn" data-open-add-project>{{ step.action_label }}</button>
+              {% elif step.action_href and not step.disabled %}
+                <a class="btn" href="{{ step.action_href }}">{{ step.action_label }}</a>
+              {% else %}
+                <button type="button" class="btn" disabled>{{ step.action_label }}</button>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
   <form id="batch-crawl-form" method="post" action="/projects/crawl-batch">
     <input type="hidden" name="config_path" value="{{ config_path }}" />
   </form>
@@ -85,7 +123,7 @@
         Commencez par ajouter votre premier site. L'outil crawlera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
       </p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <button type="button" class="btn primary" id="add-project-open" style="padding:10px 24px;">
+        <button type="button" class="btn primary" id="add-project-open" data-open-add-project style="padding:10px 24px;">
           Ajouter mon premier site
         </button>
       </div>
@@ -116,7 +154,7 @@
 	          <button type="submit" form="delete-projects-form" class="btn danger" id="delete-projects-btn" disabled>
 	            Supprimer
 	          </button>
-	          <button type="button" class="btn primary" id="add-project-open">Nouveau projet</button>
+	          <button type="button" class="btn primary" id="add-project-open" data-open-add-project>Nouveau projet</button>
 	        </div>
 	      </div>
 	      <div class="table-wrap">
@@ -572,11 +610,12 @@
 
 	  <script>
 	    (() => {
-	      const openBtn = document.getElementById("add-project-open");
 	      const dialog = document.getElementById("add-project-dialog");
-	      if (!openBtn || !dialog || typeof dialog.showModal !== "function") return;
+	      if (!dialog || typeof dialog.showModal !== "function") return;
 
-	      openBtn.addEventListener("click", () => dialog.showModal());
+	      document.querySelectorAll("[data-open-add-project]").forEach((button) => {
+	        button.addEventListener("click", () => dialog.showModal());
+	      });
 
 	      const tabs = dialog.querySelectorAll(".tab-btn");
 	      const panels = dialog.querySelectorAll(".tab-panel");

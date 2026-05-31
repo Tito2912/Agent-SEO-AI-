@@ -140,6 +140,34 @@ def test_operations_page_renders_for_system_owner() -> None:
     assert "Readiness ouverture" in response.text
 
 
+def test_dashboard_onboarding_renders_for_authenticated_user() -> None:
+    suffix = os.urandom(4).hex()
+    email = f"onboarding-{suffix}@example.com"
+    with app_module.DB.session() as db:
+        user = app_module.User(email=email, password_hash=app_module.auth.hash_password("test-password"), is_admin=False)
+        db.add(user)
+        db.flush()
+        db.add(
+            app_module.Project(
+                owner_user_id=str(user.id),
+                slug=f"onboarding-{suffix}",
+                base_url=f"https://onboarding-{suffix}.example.com",
+                site_name="Onboarding Test",
+            )
+        )
+        db.commit()
+        user_id = str(user.id)
+
+    token = app_module.auth.make_session_token(user_id=user_id, secret=os.environ["SEO_AGENT_SECRET_KEY"])
+    with TestClient(app) as client:
+        client.cookies.set(app_module.auth.SESSION_COOKIE_NAME, token)
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Prochaines étapes" in response.text
+    assert "Lancer un premier crawl" in response.text
+
+
 def test_strict_config_rejects_weak_or_missing_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SEO_AGENT_STRICT_CONFIG", "true")
     monkeypatch.delenv("DATABASE_URL", raising=False)

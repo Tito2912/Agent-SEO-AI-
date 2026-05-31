@@ -10606,6 +10606,13 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             "progress": j.progress,
         }
 
+    onboarding = _dashboard_onboarding_state(
+        user=user,
+        projects=projects,
+        recent_crawl_jobs=recent_crawl_jobs,
+        live_crawls=live_crawls,
+    )
+
     resp = templates.TemplateResponse(
         "projects.html",
         {
@@ -10615,6 +10622,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             "jobs": jobs,
             "live_crawls": live_crawls,
             "recent_crawl_jobs": recent_crawl_jobs,
+            "onboarding": onboarding,
             "msg": (msg or "").strip(),
             "err": (err or "").strip(),
         },
@@ -11402,6 +11410,108 @@ def _production_operations_snapshot() -> dict[str, Any]:
             "netlify_oauth": bool(_netlify_oauth_client_id()),
             "bing_oauth": bool(_bing_oauth_client()[0] and _bing_oauth_client()[1]),
         },
+    }
+
+
+def _dashboard_onboarding_state(
+    *,
+    user: User,
+    projects: list[dict[str, Any]],
+    recent_crawl_jobs: dict[str, dict[str, Any]],
+    live_crawls: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    user_id = str(getattr(user, "id", "") or "")
+    has_projects = bool(projects)
+    crawled_projects = [p for p in projects if str(p.get("timestamp") or "").strip()]
+    has_completed_crawl = bool(crawled_projects)
+    has_active_crawl = bool(live_crawls)
+    has_attempted_crawl = has_completed_crawl or has_active_crawl or any(
+        str(job.get("status") or "") in {"queued", "running", "done", "failed", "canceled", "cancel_requested"}
+        for job in recent_crawl_jobs.values()
+    )
+    first_project = projects[0] if projects else {}
+    first_slug = str(first_project.get("slug") or "").strip()
+    first_crawled_slug = str((crawled_projects[0].get("slug") if crawled_projects else "") or "").strip()
+
+    gsc_connected = False
+    if user_id:
+        for project in projects:
+            slug = str(project.get("slug") or "").strip()
+            if slug and _gsc_oauth_connected(user_id, slug):
+                gsc_connected = True
+                break
+
+    github_connected = False
+    try:
+        with DB.session() as db:
+            github_connected = bool(_build_github_connection_state(user_id=user_id, db=db).get("connected"))
+    except Exception:
+        github_connected = False
+
+    can_review_issues = bool(first_crawled_slug)
+    steps = [
+        {
+            "key": "project",
+            "label": "Ajouter un site",
+            "done": has_projects,
+            "detail": "Projet créé." if has_projects else "Crée le premier projet à auditer.",
+            "action_label": "Ajouter",
+            "action_href": "",
+            "action_dialog": "add-project-dialog",
+        },
+        {
+            "key": "crawl",
+            "label": "Lancer un premier crawl",
+            "done": has_attempted_crawl,
+            "detail": (
+                "Crawl terminé."
+                if has_completed_crawl
+                else ("Crawl en cours." if has_active_crawl else "Analyse les pages du site pour générer le rapport.")
+            ),
+            "action_label": "Démarrer",
+            "action_href": f"/projects/{first_slug}" if first_slug else "",
+            "disabled": not first_slug,
+        },
+        {
+            "key": "issues",
+            "label": "Traiter les anomalies",
+            "done": can_review_issues,
+            "detail": "Rapport disponible." if can_review_issues else "Les anomalies apparaîtront après le premier crawl.",
+            "action_label": "Voir",
+            "action_href": f"/projects/{first_crawled_slug}/issues" if first_crawled_slug else "",
+            "disabled": not first_crawled_slug,
+        },
+        {
+            "key": "gsc",
+            "label": "Connecter Search Console",
+            "done": gsc_connected,
+            "detail": "Données search connectées." if gsc_connected else "Ajoute les performances réelles de recherche.",
+            "action_label": "Connecter",
+            "action_href": "/settings/accounts#gsc-oauth-card",
+            "optional": True,
+        },
+        {
+            "key": "github",
+            "label": "Connecter GitHub",
+            "done": github_connected,
+            "detail": "Correction via PR disponible." if github_connected else "Permet de proposer des corrections dans le code.",
+            "action_label": "Connecter",
+            "action_href": "/settings/accounts#github-connect-card",
+            "optional": True,
+        },
+    ]
+    required = [step for step in steps if not step.get("optional")]
+    required_done = sum(1 for step in required if step["done"])
+    total_required = len(required)
+    done_total = sum(1 for step in steps if step["done"])
+    return {
+        "steps": steps,
+        "required_done": required_done,
+        "total_required": total_required,
+        "done_total": done_total,
+        "total": len(steps),
+        "progress_pct": int(round((required_done / total_required) * 100)) if total_required else 100,
+        "complete": required_done >= total_required,
     }
 
 

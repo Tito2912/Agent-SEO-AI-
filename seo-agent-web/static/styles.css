@@ -1472,6 +1472,58 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
 .top-action-label { margin-top: 12px; font-weight: 700; font-size: 12px; }
 
 /* ═══════════════════════════════════════════════════════
+   Onboarding
+═══════════════════════════════════════════════════════ */
+.onboarding-card { margin-bottom: 20px; }
+.onboarding-card .progress { margin: 12px 0 16px; }
+.onboarding-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.onboarding-step {
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.018);
+}
+.onboarding-step-mark {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--accent-rgb), .28);
+  color: var(--accent-2);
+  font-size: 12px;
+  font-weight: 800;
+}
+.onboarding-step.done .onboarding-step-mark {
+  background: rgba(var(--accent-rgb), .12);
+  border-color: rgba(var(--accent-rgb), .34);
+}
+.onboarding-step-body {
+  flex: 1;
+  min-width: 0;
+}
+.onboarding-step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.onboarding-step .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════
    Empty states
 ═══════════════════════════════════════════════════════ */
 .empty-state {
@@ -1546,11 +1598,14 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
   .span-2     { grid-column: span 1; }
   .history    { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .metric-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .onboarding-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
   .metric-band { grid-template-columns: 1fr 1fr; }
   .kv { grid-template-columns: 1fr; }
+  .onboarding-steps { grid-template-columns: 1fr; }
+  .onboarding-step { min-height: 0; }
 }
 
 /* ═══════════════════════════════════════════════════════
