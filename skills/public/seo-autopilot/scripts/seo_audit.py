@@ -5333,6 +5333,12 @@ def _score_issues(
         # successfully, so their hreflang annotations don't represent the site's canonical structure.
         if p.error and "toomanyredirects" in (p.error or "").lower():
             continue
+        # Ahrefs-like: a page that is itself a redirect (http→https, www→non-www, trailing
+        # slash, etc.) is not a distinct hreflang source — its annotations belong to the
+        # final destination. Skip it so the canonical page is counted once instead of once
+        # per protocol/www variant (e.g. http://, http://www, https://www all → https://).
+        if _is_redirect(p):
+            continue
         # Ahrefs-like: only evaluate hreflang target quality for indexable source pages.
         # Non-indexable pages don't appear in search results, so their hreflang is irrelevant.
         if not _is_indexable(p):
