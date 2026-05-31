@@ -5569,7 +5569,10 @@ def _score_issues(
 
     for u in sitemap_urls:
         u_norm = _norm_self(u) or u
-        p = page_by_any.get(u_norm)
+        # Prefer the page AS REQUESTED at this exact sitemap URL. page_by_any can resolve
+        # a 200 sitemap URL to a different page object whose final_url merely matches it
+        # (e.g. the http→https redirect page), which wrongly flagged a 200 homepage as 3XX.
+        p = page_by_requested.get(u_norm) or page_by_any.get(u_norm)
         if not p:
             continue
 
