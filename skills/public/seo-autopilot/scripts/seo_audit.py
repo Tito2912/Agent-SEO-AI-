@@ -3158,10 +3158,12 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.elapsed_ms = elapsed_holder[0] if elapsed_holder else None
     page.redirect_chain = redirect_chain
     page.redirect_statuses = redirect_statuses
-    # Fallback: if Playwright changed page.url but no redirect status was captured by
-    # _on_response or redirected_from (common for same-origin HTTPS redirects),
-    # infer a redirect from the URL change so _is_redirect() works correctly.
-    if not page.redirect_statuses:
+    # Fallback: infer a redirect from a URL change ONLY when the navigation did NOT
+    # cleanly resolve to 200. Genuine HTTP redirects are already captured above via
+    # request.redirected_from. If redirect_statuses is empty AND the final status is
+    # 200, any url != final_url is a client-side (JS/SPA history) change — NOT an HTTP
+    # 3XX — and must not be counted (this caused 200 homepages to be flagged as 3XX).
+    if not page.redirect_statuses and not (isinstance(page.status_code, int) and page.status_code == 200):
         u_clean = (url or "").rstrip("/").lower()
         f_clean = (page.final_url or "").rstrip("/").lower()
         if u_clean and f_clean and u_clean != f_clean:
