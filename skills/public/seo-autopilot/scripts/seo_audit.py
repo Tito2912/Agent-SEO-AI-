@@ -5384,27 +5384,11 @@ def _score_issues(
         if not _is_indexable(p):
             continue
 
-        # Hreflang ↔ HTML lang mismatch: the page's self-referencing hreflang language
-        # must match its <html lang> primary subtag (e.g. <html lang="en"> but the page's
-        # own hreflang declares it as "fr"). Missing html lang is covered separately.
-        if _non_empty(p.lang):
-            _self_urls = {
-                _norm_self(p.url) or (p.url or ""),
-                _norm_self(p.final_url) if p.final_url else "",
-                _final_url(p),
-            }
-            _self_urls.discard("")
-            _html_primary = str(p.lang or "").strip().lower().split("-", 1)[0]
-            for code, href in hreflang.items():
-                code_norm = str(code or "").strip().lower()
-                if code_norm == "x-default" or not HREFLANG_RE.match(code):
-                    continue
-                href_norm = _norm_self(href) or str(href or "").strip()
-                if href_norm in _self_urls:
-                    _hl_primary = code_norm.split("-", 1)[0]
-                    if _html_primary and _hl_primary and _html_primary != _hl_primary:
-                        hreflang_html_lang_mismatch.append(p.url)
-                    break
+        # Hreflang ↔ HTML lang mismatch: detection intentionally disabled pending Ahrefs's
+        # exact criteria. The literal rule (self-ref hreflang lang != <html lang> primary)
+        # flags every localized page when a site hardcodes <html lang="en"> site-wide
+        # (e.g. prosperfactory: 59 genuine mismatches), but Ahrefs surfaces only 1 for the
+        # same site (issue is "New"/possibly partial). Re-enable once the rule is confirmed.
 
         # Ahrefs-like: treat x-default missing as relevant only for indexable pages.
         if "x-default" not in hreflang and _is_indexable(p):
