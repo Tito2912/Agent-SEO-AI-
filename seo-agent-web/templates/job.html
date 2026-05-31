@@ -37,11 +37,13 @@
               <span id="job-status-pill" class="pill {{ job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(job.status, job.status) }}</span>
               {% if job.status in ['queued', 'running', 'cancel_requested'] %}
                 <form method="post" action="/jobs/{{ job.id }}/cancel" class="inline">
+                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                   <button type="submit" class="btn danger">Annuler</button>
                 </form>
               {% endif %}
               {% if job.status in ['failed', 'canceled'] %}
                 <form method="post" action="/jobs/{{ job.id }}/retry" class="inline">
+                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                   <button type="submit" class="btn primary">Relancer</button>
                 </form>
               {% endif %}
@@ -181,6 +183,7 @@
           <p>L'agent a identifié les corrections potentielles suivantes. Vérifiez-les avant de les appliquer.</p>
 
           <form action="/jobs/{{ job.id }}/apply-corrections" method="post">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <input type="hidden" name="plan_path" value="{{ corrections_plan_path }}" />
             
             <div class="table-wrap">

@@ -11,9 +11,9 @@ fi
 
 if [ "$MODE" = "worker" ]; then
   echo "[ENTRYPOINT] mode=worker"
+  alembic -c alembic.ini upgrade head
   exec python -m backend.worker_main
 fi
 
 echo "[ENTRYPOINT] unknown SEO_AGENT_SERVICE_MODE: $MODE" >&2
 exit 2
-

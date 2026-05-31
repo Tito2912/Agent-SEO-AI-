@@ -28,7 +28,7 @@ import csv
 
 logger = logging.getLogger("seo_agent")
 from collections import deque
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -109,6 +109,7 @@ try:
     from .models import (  # type: ignore
         AuditLog,
         BacklinkOpportunity,
+        BillingSubscription,
         EmailVerificationToken,
         IssueTask,
         JobRecord,
@@ -125,6 +126,7 @@ except ImportError:
     from models import (  # type: ignore
         AuditLog,
         BacklinkOpportunity,
+        BillingSubscription,
         EmailVerificationToken,
         IssueTask,
         JobRecord,
@@ -470,12 +472,102 @@ def _env_bool(name: str) -> bool:
     return v in {"1", "true", "yes", "y", "on"}
 
 
+def _env_bool_default(name: str, default: bool) -> bool:
+    raw = _safe_env(name).lower()
+    if not raw:
+        return bool(default)
+    if raw in {"1", "true", "yes", "y", "on"}:
+        return True
+    if raw in {"0", "false", "no", "n", "off"}:
+        return False
+    return bool(default)
+
+
 def _env_list(name: str) -> list[str]:
     raw = _safe_env(name)
     if not raw:
         return []
     parts = [p.strip() for p in re.split(r"[,\n;]+", raw) if p and p.strip()]
     return [p for p in parts if p]
+
+
+def _prod_like_environment() -> bool:
+    env_names = [
+        _safe_env("SENTRY_ENVIRONMENT"),
+        _safe_env("SEO_AGENT_ENV"),
+        _safe_env("APP_ENV"),
+        _safe_env("ENVIRONMENT"),
+    ]
+    if any(v.lower() in {"prod", "production"} for v in env_names if v):
+        return True
+    return bool(_safe_env("RENDER") or _safe_env("RENDER_SERVICE_NAME"))
+
+
+def _strict_config_enabled() -> bool:
+    return _env_bool_default("SEO_AGENT_STRICT_CONFIG", _prod_like_environment())
+
+
+def _trust_proxy_headers() -> bool:
+    return _env_bool_default("SEO_AGENT_TRUST_PROXY_HEADERS", _prod_like_environment())
+
+
+def _csp_enabled() -> bool:
+    return _env_bool_default("SEO_AGENT_CSP_ENABLED", True)
+
+
+def _csp_report_only() -> bool:
+    return _env_bool("SEO_AGENT_CSP_REPORT_ONLY")
+
+
+def _content_security_policy(request: Request) -> str:
+    custom = _safe_env("SEO_AGENT_CSP")
+    if custom:
+        return re.sub(r"\s+", " ", custom).strip()
+
+    directives = [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        "img-src 'self' data: https:",
+        "font-src 'self' data:",
+        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+        "frame-src 'none'",
+        "manifest-src 'self'",
+    ]
+    if _request_is_secure(request):
+        directives.append("upgrade-insecure-requests")
+    return "; ".join(directives)
+
+
+def _weak_secret(value: str) -> bool:
+    raw = str(value or "").strip()
+    low = raw.lower()
+    if len(raw) < 32:
+        return True
+    weak_exact = {
+        "change_me",
+        "changeme",
+        "replace_me",
+        "replace_me_with_long_random_secret",
+        "test-secret",
+        "test-session-secret",
+        "test-encryption-secret",
+    }
+    return low in weak_exact or low.startswith(("change_me", "replace_me", "test-"))
+
+
+def _current_encryption_seed() -> str:
+    raw_keys = _safe_env("SEO_AGENT_ENCRYPTION_KEYS")
+    if raw_keys:
+        for part in re.split(r"[,\n;]+", raw_keys):
+            seed = part.strip()
+            if seed:
+                return seed
+    return _safe_env("SEO_AGENT_ENCRYPTION_KEY")
 
 _SECRET_PREFIX = "enc:"
 
@@ -977,8 +1069,9 @@ def _public_base_url(request: Request) -> str:
     if configured:
         return configured
 
-    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
-    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc or "").split(",")[0].strip()
+    proto = "https" if _request_is_secure(request) else (request.url.scheme or "http")
+    forwarded_host = request.headers.get("x-forwarded-host") if _trust_proxy_headers() else ""
+    host = (forwarded_host or request.headers.get("host") or request.url.netloc or "").split(",")[0].strip()
     if not host:
         host = request.url.netloc
     return f"{proto}://{host}".rstrip("/")
@@ -1103,7 +1196,7 @@ def _gsc_oauth_connection_key(slug: str) -> str:
     prefix = "GSC_OAUTH:"
     if len(safe_slug) <= 80:
         return f"{prefix}{safe_slug}"
-    digest = hashlib.sha1(safe_slug.encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha256(safe_slug.encode("utf-8")).hexdigest()[:8]
     return f"{prefix}{safe_slug[:80]}:{digest}"
 
 
@@ -1382,9 +1475,87 @@ def _github_oauth_exchange_code(
     return data
 
 
+_GITHUB_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+_GITHUB_BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$")
+_GITHUB_MAX_FILE_PATH_LEN = 500
+_GITHUB_MAX_PATCHED_CONTENT_BYTES = 250_000
+
+
+def _github_repo_parts(repo: str) -> tuple[str, str] | None:
+    candidate = (repo or "").strip()
+    if not _GITHUB_REPO_RE.fullmatch(candidate):
+        return None
+    owner, repo_name = candidate.split("/", 1)
+    if owner in {".", ".."} or repo_name in {".", ".."}:
+        return None
+    return owner, repo_name
+
+
+def _github_branch_allowed(branch: str) -> bool:
+    candidate = (branch or "").strip()
+    if not _GITHUB_BRANCH_RE.fullmatch(candidate):
+        return False
+    if candidate.startswith("/") or candidate.endswith("/") or candidate.endswith("."):
+        return False
+    if ".." in candidate or "//" in candidate or "@{" in candidate or "\\" in candidate:
+        return False
+    return all(part not in {"", ".", ".."} and not part.endswith(".lock") for part in candidate.split("/"))
+
+
+def _github_file_path_allowed(path: str) -> bool:
+    candidate = (path or "").strip()
+    if not candidate or len(candidate) > _GITHUB_MAX_FILE_PATH_LEN:
+        return False
+    if candidate.startswith("/") or "\\" in candidate or _has_control_chars(candidate):
+        return False
+    parts = candidate.split("/")
+    return all(part not in {"", ".", ".."} for part in parts)
+
+
+def _github_patched_content_error(content: str) -> str | None:
+    if not content:
+        return "Contenu patché manquant."
+    if len(content.encode("utf-8")) > _GITHUB_MAX_PATCHED_CONTENT_BYTES:
+        return f"Contenu patché trop volumineux ({_GITHUB_MAX_PATCHED_CONTENT_BYTES // 1000} kB max)."
+    return None
+
+
+def _safe_github_branch_suffix(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", (value or "").strip()).strip(".-")
+    return (slug[:60] or "issue").rstrip(".")
+
+
+def _github_api_path(*parts: str) -> str:
+    cleaned: list[str] = []
+    for part in parts:
+        value = str(part)
+        if not value or _has_control_chars(value):
+            raise ValueError("Invalid GitHub API path segment")
+        cleaned.append(quote(value, safe=""))
+    return "/" + "/".join(cleaned)
+
+
+def _github_content_api_path(owner: str, repo: str, path: str) -> str:
+    if not _github_file_path_allowed(path):
+        raise ValueError("Invalid GitHub file path")
+    return _github_api_path("repos", owner, repo, "contents", *path.split("/"))
+
+
+def _github_ref_api_path(owner: str, repo: str, branch: str) -> str:
+    if not _github_branch_allowed(branch):
+        raise ValueError("Invalid GitHub branch")
+    return _github_api_path("repos", owner, repo, "git", "ref", "heads", *branch.split("/"))
+
+
+def _github_api_url(path: str) -> str:
+    if not path.startswith("/") or path.startswith("//") or _has_control_chars(path):
+        raise RuntimeError("Invalid GitHub API path")
+    return f"https://api.github.com{path}"
+
+
 def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = None, timeout_s: float = 30.0) -> Any:
     resp = requests.get(
-        f"https://api.github.com{path}",
+        _github_api_url(path),
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
@@ -1404,7 +1575,7 @@ def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = No
 
 def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
     resp = requests.post(
-        f"https://api.github.com{path}",
+        _github_api_url(path),
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
@@ -1424,7 +1595,7 @@ def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeou
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
     resp = requests.put(
-        f"https://api.github.com{path}",
+        _github_api_url(path),
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
@@ -1442,9 +1613,15 @@ def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
 
 
+def _netlify_api_url(path: str) -> str:
+    if not path.startswith("/") or path.startswith("//") or _has_control_chars(path):
+        raise RuntimeError("Invalid Netlify API path")
+    return f"https://api.netlify.com{path}"
+
+
 def _netlify_api_get(path: str, *, token: str, params: dict[str, Any] | None = None, timeout_s: float = 30.0) -> Any:
     resp = requests.get(
-        f"https://api.netlify.com{path}",
+        _netlify_api_url(path),
         headers={"Authorization": f"Bearer {token}"},
         params=params or {},
         timeout=timeout_s,
@@ -1465,7 +1642,7 @@ def _netlify_api_post(
     timeout_s: float = 30.0,
 ) -> Any:
     resp = requests.post(
-        f"https://api.netlify.com{path}",
+        _netlify_api_url(path),
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -1670,6 +1847,46 @@ def _resolve_path_under_root(raw: str, root: Path) -> Path:
     return p
 
 
+_CONFIG_FILE_SUFFIXES = {".json", ".yaml", ".yml"}
+
+
+def _resolve_config_path(raw: str | Path | None) -> Path:
+    value = str(raw or "").strip()
+    p = Path(value).expanduser() if value else DEFAULT_CONFIG
+    if not p.is_absolute():
+        p = (REPO_ROOT / p).resolve()
+    else:
+        p = p.resolve()
+    return p
+
+
+def _allowed_config_roots() -> list[Path]:
+    roots: list[Path] = []
+    for root in [REPO_ROOT, DEFAULT_CONFIG.parent, DATA_DIR]:
+        resolved = root.resolve()
+        if resolved not in roots:
+            roots.append(resolved)
+    return roots
+
+
+def _config_path_allowed(path: Path) -> bool:
+    p = path.resolve()
+    if p.suffix.lower() not in _CONFIG_FILE_SUFFIXES:
+        return False
+    return any(p.is_relative_to(root) for root in _allowed_config_roots())
+
+
+def _resolve_request_config_path(request: Request, raw: str | Path | None) -> Path:
+    p = _resolve_config_path(raw)
+    user = getattr(request.state, "user", None)
+    is_admin = bool(getattr(user, "is_admin", False))
+    if not is_admin and p != DEFAULT_CONFIG.resolve():
+        raise HTTPException(status_code=403, detail="Config path not allowed")
+    if not _config_path_allowed(p):
+        raise HTTPException(status_code=403, detail="Config path not allowed")
+    return p
+
+
 _TITLE_RE = re.compile(r"(<title\b[^>]*>)(.*?)(</title>)", re.IGNORECASE | re.DOTALL)
 _HEAD_OPEN_RE = re.compile(r"<head\b[^>]*>", re.IGNORECASE)
 _HEAD_CLOSE_RE = re.compile(r"</head\s*>", re.IGNORECASE)
@@ -1709,11 +1926,43 @@ def _download_response(content: bytes, *, media_type: str, filename: str) -> Res
     return resp
 
 
+def _file_view_max_bytes() -> int:
+    raw = _safe_env("SEO_AGENT_FILE_VIEW_MAX_BYTES")
+    try:
+        value = int(raw) if raw else 2 * 1024 * 1024
+    except Exception:
+        value = 2 * 1024 * 1024
+    return max(64 * 1024, min(value, 20 * 1024 * 1024))
+
+
+def _csrf_body_max_bytes() -> int:
+    raw = _safe_env("SEO_AGENT_CSRF_BODY_MAX_BYTES")
+    try:
+        value = int(raw) if raw else 12 * 1024 * 1024
+    except Exception:
+        value = 12 * 1024 * 1024
+    return max(64 * 1024, min(value, 50 * 1024 * 1024))
+
+
+def _csv_safe_value(value: Any) -> Any:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value
+    text = str(value)
+    if text and text[0] in {"=", "+", "-", "@", "\t", "\r"}:
+        return "'" + text
+    return text
+
+
 def _csv_bytes(rows: list[dict[str, Any]], *, fieldnames: list[str]) -> bytes:
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
-    writer.writerows(rows)
+    for row in rows:
+        writer.writerow({field: _csv_safe_value(row.get(field)) for field in fieldnames})
     return b"\xef\xbb\xbf" + buf.getvalue().encode("utf-8")
 
 
@@ -2529,10 +2778,11 @@ _SEO_FILE_CANDIDATES_DEFAULT = ["vercel.json", "netlify.toml", ".htaccess", "nex
 
 def _project_github_cfg(proj) -> dict[str, str]:
     s = proj.settings if isinstance(proj.settings, dict) else {}
+    mode = str(s.get("github_mode") or "review").strip()
     return {
         "repo": str(s.get("github_repo") or "").strip(),
         "branch": str(s.get("github_branch") or "main").strip(),
-        "mode": str(s.get("github_mode") or "review").strip(),
+        "mode": mode if mode in {"review", "auto"} else "review",
     }
 
 
@@ -2540,9 +2790,13 @@ def _github_find_seo_files(
     owner: str, repo: str, branch: str, token: str, issue_key: str
 ) -> list[dict[str, Any]]:
     """Return [{path, content_str, sha}] for the most relevant SEO file in the repo."""
+    if _github_repo_parts(f"{owner}/{repo}") is None:
+        raise RuntimeError("Dépôt GitHub invalide.")
+    if not _github_branch_allowed(branch):
+        raise RuntimeError("Branche GitHub invalide.")
     try:
         tree_data = _github_api_get(
-            f"/repos/{owner}/{repo}/git/trees/{branch}",
+            _github_api_path("repos", owner, repo, "git", "trees", branch),
             token=token,
             params={"recursive": "1"},
             timeout_s=20,
@@ -2552,7 +2806,7 @@ def _github_find_seo_files(
 
     all_paths: list[str] = [
         item["path"] for item in (tree_data.get("tree") or [])
-        if isinstance(item, dict) and item.get("type") == "blob"
+        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
 
     candidates = _SEO_FILE_CANDIDATES.get(issue_key, _SEO_FILE_CANDIDATES_DEFAULT)
@@ -2572,7 +2826,7 @@ def _github_find_seo_files(
     results: list[dict[str, Any]] = []
     for path in matches[:2]:
         try:
-            file_data = _github_api_get(f"/repos/{owner}/{repo}/contents/{path}", token=token, params={"ref": branch})
+            file_data = _github_api_get(_github_content_api_path(owner, repo, path), token=token, params={"ref": branch})
             import base64 as _b64
             raw = _b64.b64decode(file_data.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
             if len(raw) > 80_000:
@@ -2756,7 +3010,7 @@ def _reportlab_build_pdf(
 
 def _reportlab_project_report_pdf(runs_dir: Path, data: dict[str, Any]) -> bytes:
     from reportlab.lib import colors
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.platypus import LongTable, Paragraph, Spacer, TableStyle
 
@@ -4521,6 +4775,9 @@ def _validate_public_crawl_target(base_url: str) -> str | None:
     """
     allow_private = str(os.environ.get("SEO_AGENT_ALLOW_PRIVATE_HOSTS") or "").strip().lower() in {"1", "true", "yes"}
     parts = urlsplit(base_url or "")
+    scheme = (parts.scheme or "").strip().lower()
+    if scheme not in {"http", "https"}:
+        return "Schéma non autorisé (http/https uniquement)."
     host = (parts.hostname or "").strip().lower()
     if not host:
         return "URL invalide (host manquant)."
@@ -4642,7 +4899,23 @@ def _upsert_project(*, base_url: str, site_name: str | None = None) -> str | Non
     return slug
 
 
-templates = Jinja2Templates(directory=str(REPO_ROOT / "seo-agent-web" / "templates"))
+class CompatJinja2Templates(Jinja2Templates):
+    def TemplateResponse(self, *args: Any, **kwargs: Any) -> Any:
+        if args and isinstance(args[0], str):
+            name = args[0]
+            context = args[1] if len(args) >= 2 else kwargs.pop("context", None)
+            if context is None:
+                context = {}
+            if not isinstance(context, dict):
+                return super().TemplateResponse(*args, **kwargs)
+            request = kwargs.pop("request", None) or context.get("request")
+            if request is None:
+                raise ValueError("TemplateResponse context must include request")
+            return super().TemplateResponse(request, name, context, *args[2:], **kwargs)
+        return super().TemplateResponse(*args, **kwargs)
+
+
+templates = CompatJinja2Templates(directory=str(REPO_ROOT / "seo-agent-web" / "templates"))
 
 
 def _db_project(user_id: str, slug: str) -> Project | None:
@@ -5220,14 +5493,19 @@ def _execute_queued_job(job_id: str) -> None:
     if jtype == "crawl":
         user_id = str(result.get("user_id") or "").strip()
         slug = str(result.get("slug") or "").strip()
-        cfg = Path(job.config_path).expanduser() if job.config_path else None
-        if cfg and not cfg.is_absolute():
-            cfg = (REPO_ROOT / cfg).resolve()
+        cfg = _resolve_config_path(job.config_path) if job.config_path else None
+        if cfg and not _config_path_allowed(cfg):
+            job.status = "failed"
+            job.returncode = 2
+            job.stderr = (job.stderr or "") + "\n[WORKER] Config path not allowed\n"
+            job.finished_at = time.time()
+            _save_job(job)
+            return
         _run_crawl_job(job.id, user_id, slug, cfg)
         return
 
     if jtype == "autopilot":
-        cfg = Path(job.config_path).expanduser() if job.config_path else None
+        cfg = _resolve_config_path(job.config_path) if job.config_path else None
         if not cfg:
             job.status = "failed"
             job.returncode = 2
@@ -5235,8 +5513,13 @@ def _execute_queued_job(job_id: str) -> None:
             job.finished_at = time.time()
             _save_job(job)
             return
-        if not cfg.is_absolute():
-            cfg = (REPO_ROOT / cfg).resolve()
+        if not _config_path_allowed(cfg):
+            job.status = "failed"
+            job.returncode = 2
+            job.stderr = (job.stderr or "") + "\n[WORKER] Config path not allowed\n"
+            job.finished_at = time.time()
+            _save_job(job)
+            return
         extra_args = result.get("extra_args") if isinstance(result, dict) else None
         extra = extra_args if isinstance(extra_args, list) and all(isinstance(x, str) for x in extra_args) else None
         _run_autopilot_job(job.id, cfg, extra)
@@ -5452,6 +5735,64 @@ def _sentry_capture_exception(exc: Exception, *, where: str = "", meta: dict[str
             sentry_sdk.capture_exception(exc)
     except Exception:
         return
+
+
+def _run_alembic_upgrade_head() -> None:
+    web_root = REPO_ROOT / "seo-agent-web"
+    alembic_ini = web_root / "alembic.ini"
+    if not alembic_ini.exists():
+        DB.create_tables()
+        return
+    proc = subprocess.run(
+        [sys.executable, "-m", "alembic", "-c", str(alembic_ini), "upgrade", "head"],
+        cwd=str(web_root),
+        env=os.environ.copy(),
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        raise RuntimeError(f"alembic upgrade head failed: {detail[:2000]}")
+
+
+def _validate_startup_config() -> None:
+    if not _strict_config_enabled():
+        return
+
+    errors: list[str] = []
+    public_base = _safe_env("PUBLIC_BASE_URL").rstrip("/")
+    session_secret = _safe_env("SEO_AGENT_SECRET_KEY")
+    encryption_seed = _current_encryption_seed()
+    cron_secret = _safe_env("CRON_SECRET")
+
+    if not _safe_env("DATABASE_URL"):
+        errors.append("DATABASE_URL is required when SEO_AGENT_STRICT_CONFIG is enabled")
+
+    if not public_base:
+        errors.append("PUBLIC_BASE_URL is required when SEO_AGENT_STRICT_CONFIG is enabled")
+    else:
+        parsed = urlsplit(public_base)
+        host = (parsed.hostname or "").lower()
+        if parsed.scheme != "https":
+            errors.append("PUBLIC_BASE_URL must use https in strict config")
+        if host in {"localhost", "127.0.0.1", "::1"}:
+            errors.append("PUBLIC_BASE_URL must not point to localhost in strict config")
+
+    if _weak_secret(session_secret):
+        errors.append("SEO_AGENT_SECRET_KEY must be a long random value")
+
+    if _weak_secret(encryption_seed):
+        errors.append("SEO_AGENT_ENCRYPTION_KEY or SEO_AGENT_ENCRYPTION_KEYS must be set to a long random value")
+    elif session_secret and encryption_seed == session_secret:
+        errors.append("SEO_AGENT_ENCRYPTION_KEY must be distinct from SEO_AGENT_SECRET_KEY")
+
+    if _weak_secret(cron_secret):
+        errors.append("CRON_SECRET must be set to a long random value")
+
+    if errors:
+        raise RuntimeError("Invalid production configuration: " + "; ".join(errors))
 
 
 _LOG_LIMIT_CHARS = 200_000
@@ -6719,7 +7060,33 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
-app = FastAPI(title="SEO Agent")
+def _startup() -> None:
+    _validate_startup_config()
+    # Render entrypoint runs Alembic before web/worker startup. Local SQLite needs
+    # the same migration path because `create_all()` does not alter stale tables.
+    if (not _safe_env("DATABASE_URL")) or _env_bool("SEO_AGENT_DB_AUTO_MIGRATE"):
+        _run_alembic_upgrade_head()
+    elif _env_bool("SEO_AGENT_DB_AUTO_CREATE"):
+        DB.create_tables()
+    _init_sentry()
+    _start_job_worker()
+    _start_retention()
+
+
+def _shutdown() -> None:
+    _WORKER_STOP.set()
+
+
+@asynccontextmanager
+async def _app_lifespan(_app: FastAPI):
+    _startup()
+    try:
+        yield
+    finally:
+        _shutdown()
+
+
+app = FastAPI(title="SEO Agent", lifespan=_app_lifespan)
 app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "static")), name="static")
 
 
@@ -6743,7 +7110,7 @@ async def cors_middleware(request: Request, call_next):  # type: ignore[no-untyp
     if request.method == "OPTIONS":
         origin = request.headers.get("origin", "")
         allowed_origin = str(os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/")
-        if origin and (not allowed_origin or origin == allowed_origin):
+        if origin and allowed_origin and origin == allowed_origin:
             return Response(
                 status_code=204,
                 headers={
@@ -6757,7 +7124,7 @@ async def cors_middleware(request: Request, call_next):  # type: ignore[no-untyp
     response = await call_next(request)
     origin = request.headers.get("origin", "")
     allowed_origin = str(os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/")
-    if origin and (not allowed_origin or origin == allowed_origin):
+    if origin and allowed_origin and origin == allowed_origin:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
@@ -6772,8 +7139,11 @@ async def security_headers_middleware(request: Request, call_next):  # type: ign
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if _csp_enabled():
+        csp_header = "Content-Security-Policy-Report-Only" if _csp_report_only() else "Content-Security-Policy"
+        response.headers.setdefault(csp_header, _content_security_policy(request))
     # HSTS only when served over HTTPS
-    if request.headers.get("x-forwarded-proto", "http") == "https":
+    if _request_is_secure(request):
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return response
 
@@ -6835,22 +7205,6 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
     return await call_next(request)
 
 
-@app.on_event("startup")
-def _startup() -> None:
-    # In production (Render/Postgres), schema is managed via Alembic migrations (see `seo-agent-web/alembic.ini`).
-    # Keep auto-create for local dev (SQLite) and opt-in environments only.
-    if (not _safe_env("DATABASE_URL")) or _env_bool("SEO_AGENT_DB_AUTO_CREATE"):
-        DB.create_tables()
-    _init_sentry()
-    _start_job_worker()
-    _start_retention()
-
-
-@app.on_event("shutdown")
-def _shutdown() -> None:
-    _WORKER_STOP.set()
-
-
 def _normalize_email(value: str) -> str:
     return str(value or "").strip().lower()
 
@@ -6859,18 +7213,16 @@ def _safe_next_path(next_path: str | None) -> str:
     n = str(next_path or "").strip()
     if not n:
         return "/"
+    if any(ch in n for ch in ("\r", "\n", "\t", "\\")):
+        return "/"
     if not n.startswith("/"):
         return "/"
     if n.startswith("//"):
         return "/"
+    parts = urlsplit(n)
+    if parts.scheme or parts.netloc:
+        return "/"
     return n
-
-
-def _env_bool_default(name: str, default: bool) -> bool:
-    raw = _safe_env(name)
-    if raw == "":
-        return default
-    return raw.lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _smtp_config() -> dict[str, Any] | None:
@@ -6928,14 +7280,6 @@ def _public_nav_items() -> list[dict[str, str]]:
         {"href": "/support", "label": "Support"},
         {"href": "/status", "label": "Statut"},
     ]
-
-
-def _public_base_url(request: Request) -> str:
-    base = str(_safe_env("PUBLIC_BASE_URL") or "").rstrip("/")
-    if base:
-        return base
-    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
-    return f"{proto}://{request.url.netloc}".rstrip("/")
 
 
 def _public_url(request: Request, path: str) -> str:
@@ -7442,7 +7786,8 @@ def _send_welcome_email(*, to_email: str, dashboard_url: str) -> None:
 
 
 def _request_is_secure(request: Request) -> bool:
-    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip().lower()
+    forwarded_proto = request.headers.get("x-forwarded-proto") if _trust_proxy_headers() else ""
+    proto = (forwarded_proto or request.url.scheme or "http").split(",")[0].strip().lower()
     return proto == "https"
 
 
@@ -7501,7 +7846,26 @@ async def _buffer_body_for_downstream(request: Request) -> bytes:
     We buffer the body once and replace `request._receive` with a replayable receive so the
     rest of the app can read it normally.
     """
-    body = await request.body()
+    max_bytes = _csrf_body_max_bytes()
+    content_length = str(request.headers.get("content-length") or "").strip()
+    if content_length:
+        try:
+            if int(content_length) > max_bytes:
+                raise HTTPException(status_code=413, detail="Request body too large")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=413, detail="Request body too large")
+        chunks.append(chunk)
+    body = b"".join(chunks)
+    request._body = body  # type: ignore[attr-defined]
     request._receive = _make_replay_receive(body)  # type: ignore[attr-defined]
     return body
 
@@ -7543,21 +7907,31 @@ def _csrf_failure_response(request: Request, *, token_to_set: str = "") -> Respo
     return response
 
 
+def _valid_ip_string(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        return str(ipaddress.ip_address(raw))
+    except Exception:
+        return ""
+
+
 def _request_client_ip(request: Request) -> str:
     candidates: list[str] = []
-    xff = str(request.headers.get("x-forwarded-for") or "").strip()
-    if xff:
-        candidates.extend(part.strip() for part in xff.split(","))
-    xri = str(request.headers.get("x-real-ip") or "").strip()
-    if xri:
-        candidates.append(xri)
+    if _trust_proxy_headers():
+        xff = str(request.headers.get("x-forwarded-for") or "").strip()
+        if xff:
+            candidates.extend(part.strip() for part in xff.split(","))
+        xri = str(request.headers.get("x-real-ip") or "").strip()
+        if xri:
+            candidates.append(xri)
     if request.client and request.client.host:
         candidates.append(str(request.client.host))
     for raw in candidates:
-        try:
-            return str(ipaddress.ip_address(raw))
-        except Exception:
-            continue
+        ip = _valid_ip_string(raw)
+        if ip:
+            return ip
     return ""
 
 
@@ -7797,6 +8171,9 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/auth/verify/resend",
         "/stripe/webhook",
         "/cron/check-backlinks",
+        "/cron/autopilot",
+        "/cron/auto-search-backlinks",
+        "/cron/auto-post-backlinks",
     } or path.startswith("/ressources-seo"):
         return await call_next(request)
 
@@ -8121,7 +8498,7 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
     "SEO_AGENT_SECRET_KEY": {
         "label": "App secret",
         "hint": "Signature OAuth state (requis)",
-        "group": "Google",
+        "group": "Sécurité",
         "order": 44,
         "editable": True,
         "help": {
@@ -8131,6 +8508,84 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
                 "Définis une valeur longue et aléatoire (32+ chars).",
             ],
         },
+    },
+    "SEO_AGENT_ENCRYPTION_KEY": {
+        "label": "Clé de chiffrement",
+        "hint": "Secret dédié au chiffrement des connexions",
+        "group": "Sécurité",
+        "order": 45,
+        "editable": True,
+        "help": {
+            "title": "SEO_AGENT_ENCRYPTION_KEY",
+            "steps": [
+                "Secret dédié au chiffrement des tokens stockés en base.",
+                "Doit être long, aléatoire, et différent de SEO_AGENT_SECRET_KEY.",
+                "Pour une rotation, préfère SEO_AGENT_ENCRYPTION_KEYS avec la nouvelle clé en premier.",
+            ],
+        },
+    },
+    "SEO_AGENT_ENCRYPTION_KEYS": {
+        "label": "Clés de chiffrement (rotation)",
+        "hint": "Nouvelle clé en premier, anciennes ensuite",
+        "group": "Sécurité",
+        "order": 46,
+        "editable": True,
+    },
+    "CRON_SECRET": {
+        "label": "Secret cron",
+        "hint": "Bearer token des endpoints /cron/*",
+        "group": "Sécurité",
+        "order": 47,
+        "editable": True,
+    },
+    "SEO_AGENT_STRICT_CONFIG": {
+        "label": "Configuration stricte",
+        "hint": "true en production",
+        "group": "Sécurité",
+        "order": 48,
+        "editable": True,
+    },
+    "SEO_AGENT_TRUST_PROXY_HEADERS": {
+        "label": "Headers proxy",
+        "hint": "true sur Render/proxy de confiance",
+        "group": "Sécurité",
+        "order": 49,
+        "editable": True,
+    },
+    "SEO_AGENT_CSP_ENABLED": {
+        "label": "CSP active",
+        "hint": "true recommandé",
+        "group": "Sécurité",
+        "order": 50,
+        "editable": True,
+    },
+    "SEO_AGENT_CSP_REPORT_ONLY": {
+        "label": "CSP report-only",
+        "hint": "true pour observer sans bloquer",
+        "group": "Sécurité",
+        "order": 51,
+        "editable": True,
+    },
+    "SEO_AGENT_CSP": {
+        "label": "CSP personnalisée",
+        "hint": "override avancé",
+        "group": "Sécurité",
+        "order": 52,
+        "editable": True,
+    },
+    "SEO_AGENT_FILE_VIEW_MAX_BYTES": {
+        "label": "Prévisualisation fichiers",
+        "hint": "taille max en octets",
+        "group": "Sécurité",
+        "order": 53,
+        "editable": True,
+    },
+    "SEO_AGENT_CSRF_BODY_MAX_BYTES": {
+        "label": "CSRF body max",
+        "hint": "taille max body formulaire",
+        "group": "Sécurité",
+        "order": 54,
+        "editable": True,
     },
     "APP_NAME": {
         "label": "App — Nom",
@@ -8246,6 +8701,128 @@ _INTERNAL_SETTINGS_KEYS: set[str] = {
     "GOOGLE_GEMINI_API_KEY",
     "SEO_AUDIT_ASSISTANT_GEMINI_MODEL",
 }
+
+
+_SETTINGS_BOOL_KEYS = {
+    "SEO_AGENT_STRICT_CONFIG",
+    "SEO_AGENT_TRUST_PROXY_HEADERS",
+    "SEO_AGENT_CSP_ENABLED",
+    "SEO_AGENT_CSP_REPORT_ONLY",
+    "SMTP_STARTTLS",
+    "SMTP_SSL",
+    "EMAIL_VERIFICATION_DISABLED",
+}
+_SETTINGS_URL_KEYS = {
+    "PUBLIC_BASE_URL",
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    "GITHUB_OAUTH_REDIRECT_URI",
+    "NETLIFY_OAUTH_REDIRECT_URI",
+    "BING_OAUTH_REDIRECT_URI",
+}
+_SETTINGS_STRONG_SECRET_KEYS = {
+    "SEO_AGENT_SECRET_KEY",
+    "SEO_AGENT_ENCRYPTION_KEY",
+    "CRON_SECRET",
+}
+
+
+def _has_control_chars(value: str) -> bool:
+    return any(ord(ch) < 32 or ord(ch) == 127 for ch in value)
+
+
+def _validate_settings_url(value: str) -> str | None:
+    try:
+        parts = urlsplit(value)
+    except Exception:
+        return "URL invalide."
+    if parts.scheme not in {"http", "https"} or not parts.hostname:
+        return "URL invalide (http/https requis)."
+    if parts.username or parts.password:
+        return "URL invalide (identifiants interdits)."
+    return None
+
+
+def _validate_settings_env_value(key: str, value: str) -> str | None:
+    k = (key or "").strip()
+    v = (value or "").strip()
+    if not v:
+        return "Valeur manquante."
+    if len(v) > 8192:
+        return "Valeur trop longue."
+    if "\r" in v or "\n" in v or "\x00" in v:
+        return "Valeur invalide (caractère de contrôle)."
+
+    if k in _SETTINGS_BOOL_KEYS and v.lower() not in {"1", "0", "true", "false", "yes", "no", "y", "n", "on", "off"}:
+        return "Valeur booléenne attendue (true/false)."
+
+    if k in _SETTINGS_URL_KEYS:
+        err = _validate_settings_url(v)
+        if err:
+            return err
+
+    if k == "GOOGLE_APPLICATION_CREDENTIALS":
+        p = Path(v).expanduser()
+        if not p.is_absolute():
+            p = (REPO_ROOT / p).resolve()
+        else:
+            p = p.resolve()
+        allowed = any(p.is_relative_to(root.resolve()) for root in [REPO_ROOT, DATA_DIR])
+        if not allowed:
+            return "Chemin JSON refusé."
+        if p.suffix.lower() != ".json":
+            return "Fichier JSON attendu."
+
+    if k in _SETTINGS_STRONG_SECRET_KEYS and _weak_secret(v):
+        return "Secret trop faible (32+ caractères aléatoires requis)."
+
+    if k == "SEO_AGENT_ENCRYPTION_KEY":
+        session_secret = _safe_env("SEO_AGENT_SECRET_KEY")
+        if session_secret and hmac.compare_digest(v, session_secret):
+            return "La clé de chiffrement doit être différente du secret de session."
+
+    if k == "SEO_AGENT_ENCRYPTION_KEYS":
+        seeds = [part.strip() for part in re.split(r"[,\n;]+", v) if part and part.strip()]
+        if not seeds:
+            return "Au moins une clé de chiffrement est requise."
+        if any(_weak_secret(seed) for seed in seeds):
+            return "Une clé de chiffrement est trop faible."
+        session_secret = _safe_env("SEO_AGENT_SECRET_KEY")
+        if session_secret and any(hmac.compare_digest(seed, session_secret) for seed in seeds):
+            return "Les clés de chiffrement doivent être différentes du secret de session."
+
+    if k == "SEO_AUDIT_ASSISTANT_PROVIDER" and v.lower() not in {"auto", "gemini", "openai", "none"}:
+        return "Fournisseur IA invalide."
+
+    if k == "SMTP_PORT":
+        try:
+            port = int(v)
+        except Exception:
+            return "Port numérique attendu."
+        if port < 1 or port > 65535:
+            return "Port hors plage."
+
+    if k in {
+        "SMTP_TIMEOUT_SECONDS",
+        "EMAIL_VERIFY_TTL_SECONDS",
+        "PASSWORD_RESET_TTL_SECONDS",
+        "SEO_AGENT_FILE_VIEW_MAX_BYTES",
+        "SEO_AGENT_CSRF_BODY_MAX_BYTES",
+    }:
+        try:
+            n = int(v)
+        except Exception:
+            return "Nombre entier attendu."
+        if k in {"SEO_AGENT_FILE_VIEW_MAX_BYTES", "SEO_AGENT_CSRF_BODY_MAX_BYTES"}:
+            max_bytes = 20 * 1024 * 1024 if k == "SEO_AGENT_FILE_VIEW_MAX_BYTES" else 50 * 1024 * 1024
+            if n < 65536 or n > max_bytes:
+                return f"Taille hors plage (65536 à {max_bytes} octets)."
+        elif n < 1 or n > 60 * 60 * 24 * 30:
+            return "Durée hors plage."
+
+    if _has_control_chars(v):
+        return "Valeur invalide (caractère de contrôle)."
+
+    return None
 
 
 @app.get("/auth/forgot", response_class=HTMLResponse)
@@ -10425,6 +11002,412 @@ def settings_account_preferences_save(
     )
 
 
+_OPS_OK_AUDIT_STATUSES = {"ok", "saved", "cleared", "noop", "requested"}
+
+
+def _ops_check(*, group: str, label: str, ok: bool, detail: str = "", severity: str = "error") -> dict[str, Any]:
+    status = "ok" if ok else ("warning" if severity == "warning" else "error")
+    return {
+        "group": group,
+        "label": label,
+        "status": status,
+        "detail": str(detail or "").strip(),
+    }
+
+
+def _ops_badge(status: str) -> str:
+    value = str(status or "").strip().lower()
+    if value in {"ok", "done", "active", "trialing"}:
+        return "ok"
+    if value in {"warning", "queued", "running", "notice", "noop", "saved", "cleared"}:
+        return "warning"
+    if value in {"error", "failed", "canceled"}:
+        return "error"
+    return "notice"
+
+
+def _ops_unix_ts_label(value: float | int | None) -> str:
+    if not value:
+        return ""
+    try:
+        return datetime.fromtimestamp(float(value), tz=timezone.utc).strftime("%d/%m/%y %H:%M UTC")
+    except Exception:
+        return ""
+
+
+def _ops_dt_label(value: datetime | None) -> str:
+    if not value:
+        return ""
+    try:
+        dt_value = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return dt_value.astimezone(timezone.utc).strftime("%d/%m/%y %H:%M UTC")
+    except Exception:
+        return ""
+
+
+def _ops_age_label(seconds: float | int | None) -> str:
+    if seconds is None:
+        return ""
+    try:
+        return _fmt_duration(max(0, int(seconds)))
+    except Exception:
+        return ""
+
+
+def _ops_bytes_label(value: int | float | None) -> str:
+    try:
+        amount = float(value or 0)
+    except Exception:
+        amount = 0.0
+    units = ["o", "Ko", "Mo", "Go", "To"]
+    idx = 0
+    while amount >= 1024 and idx < len(units) - 1:
+        amount /= 1024
+        idx += 1
+    if idx == 0:
+        return f"{int(amount)} {units[idx]}"
+    return f"{amount:.1f} {units[idx]}"
+
+
+def _ops_disk_snapshot(label: str, path: Path) -> dict[str, Any]:
+    target = path if path.exists() else path.parent
+    try:
+        usage = shutil.disk_usage(target)
+        free_pct = (usage.free / usage.total * 100.0) if usage.total else 0.0
+        status = "ok" if free_pct >= 20 else ("warning" if free_pct >= 10 else "error")
+        return {
+            "label": label,
+            "path": str(path),
+            "status": status,
+            "total": _ops_bytes_label(usage.total),
+            "used": _ops_bytes_label(usage.used),
+            "free": _ops_bytes_label(usage.free),
+            "free_pct": round(free_pct, 1),
+        }
+    except Exception as e:
+        return {
+            "label": label,
+            "path": str(path),
+            "status": "warning",
+            "total": "-",
+            "used": "-",
+            "free": "-",
+            "free_pct": 0,
+            "error": f"{type(e).__name__}: {str(e)[:160]}",
+        }
+
+
+def _ops_job_item(job: JobRecord, *, now_ts: float) -> dict[str, Any]:
+    result = job.result if isinstance(job.result, dict) else {}
+    updated_at = float(job.updated_at or job.created_at or 0)
+    return {
+        "id": str(job.id or ""),
+        "short_id": str(job.id or "")[:8],
+        "status": str(job.status or ""),
+        "status_badge": _ops_badge(str(job.status or "")),
+        "kind": str(job.kind or _job_kind_from_command(job.command) or result.get("type") or ""),
+        "slug": str(job.slug or result.get("slug") or ""),
+        "owner_user_id": str(job.owner_user_id or result.get("user_id") or ""),
+        "created_at": _ops_unix_ts_label(job.created_at),
+        "updated_at": _ops_unix_ts_label(updated_at),
+        "age": _ops_age_label(now_ts - updated_at) if updated_at else "",
+        "attempts": int(job.attempts or 0),
+        "error": ((str(job.stderr or "").strip().splitlines() or [""])[-1])[:240],
+    }
+
+
+def _ops_audit_item(row: AuditLog) -> dict[str, Any]:
+    return {
+        "created_at": _ops_dt_label(row.created_at),
+        "action": str(row.action or ""),
+        "status": str(row.status or ""),
+        "status_badge": _ops_badge(str(row.status or "")),
+        "actor": _mask_email(str(row.actor_email or "")) if row.actor_email else "",
+        "target_type": str(row.target_type or ""),
+        "target_id": str(row.target_id or "")[:96],
+    }
+
+
+def _production_operations_snapshot() -> dict[str, Any]:
+    now_ts = time.time()
+    now_dt = datetime.now(timezone.utc)
+    checks: list[dict[str, Any]] = []
+
+    public_base = _safe_env("PUBLIC_BASE_URL").rstrip("/")
+    public_error = _validate_settings_url(public_base) if public_base else "PUBLIC_BASE_URL manquant."
+    public_scheme = (urlsplit(public_base).scheme or "").lower() if public_base else ""
+    checks.append(
+        _ops_check(
+            group="Configuration",
+            label="PUBLIC_BASE_URL HTTPS",
+            ok=bool(public_base and not public_error and public_scheme == "https"),
+            detail=public_error or ("OK" if public_scheme == "https" else "HTTPS requis en production."),
+        )
+    )
+    checks.append(
+        _ops_check(
+            group="Configuration",
+            label="Mode strict production",
+            ok=_strict_config_enabled(),
+            detail="SEO_AGENT_STRICT_CONFIG actif." if _strict_config_enabled() else "Active SEO_AGENT_STRICT_CONFIG sur Render.",
+            severity="warning",
+        )
+    )
+    try:
+        _validate_startup_config()
+        strict_detail = "Validation startup OK." if _strict_config_enabled() else "Non bloquant tant que le mode strict est désactivé."
+        checks.append(
+            _ops_check(
+                group="Configuration",
+                label="Validation startup",
+                ok=True,
+                detail=strict_detail,
+            )
+        )
+    except Exception as e:
+        checks.append(
+            _ops_check(
+                group="Configuration",
+                label="Validation startup",
+                ok=False,
+                detail=str(e)[:300],
+            )
+        )
+
+    checks.extend(
+        [
+            _ops_check(
+                group="Secrets",
+                label="DATABASE_URL",
+                ok=bool(_safe_env("DATABASE_URL")),
+                detail="Postgres configuré." if _safe_env("DATABASE_URL") else "DATABASE_URL manquant.",
+            ),
+            _ops_check(
+                group="Secrets",
+                label="SEO_AGENT_SECRET_KEY",
+                ok=not _weak_secret(_safe_env("SEO_AGENT_SECRET_KEY")),
+                detail="Secret session robuste." if not _weak_secret(_safe_env("SEO_AGENT_SECRET_KEY")) else "Secret session trop faible ou absent.",
+            ),
+            _ops_check(
+                group="Secrets",
+                label="Chiffrement secrets DB",
+                ok=bool(_secret_storage_health().get("configured")),
+                detail="Chiffrement actif." if bool(_secret_storage_health().get("configured")) else "Configure SEO_AGENT_ENCRYPTION_KEY(S).",
+            ),
+            _ops_check(
+                group="Secrets",
+                label="CRON_SECRET",
+                ok=not _weak_secret(_safe_env("CRON_SECRET")),
+                detail="Secret cron robuste." if not _weak_secret(_safe_env("CRON_SECRET")) else "CRON_SECRET faible ou absent.",
+            ),
+        ]
+    )
+
+    smtp_ready = bool(_smtp_config())
+    stripe_ready = bool(
+        billing.stripe_enabled()
+        and _safe_env("STRIPE_WEBHOOK_SECRET")
+        and billing.price_id_for_plan("solo")
+        and billing.price_id_for_plan("pro")
+        and billing.price_id_for_plan("business")
+    )
+    assistant_ready = _assistant_effective_provider() != "none"
+    checks.extend(
+        [
+            _ops_check(
+                group="Produit",
+                label="Emails transactionnels",
+                ok=smtp_ready,
+                detail="SMTP/SendGrid configuré." if smtp_ready else "SMTP non configuré: reset password et vérification email indisponibles.",
+                severity="warning",
+            ),
+            _ops_check(
+                group="Produit",
+                label="Stripe live",
+                ok=stripe_ready,
+                detail="Stripe + prix + webhook configurés." if stripe_ready else "Vérifie STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET et les price ids.",
+                severity="warning",
+            ),
+            _ops_check(
+                group="Produit",
+                label="Assistant IA",
+                ok=assistant_ready,
+                detail=f"Provider actif: {_assistant_effective_provider()}." if assistant_ready else "Aucun provider IA configuré.",
+                severity="warning",
+            ),
+        ]
+    )
+
+    checks.extend(
+        [
+            _ops_check(
+                group="Sécurité",
+                label="CSP active",
+                ok=_csp_enabled(),
+                detail="CSP active." if _csp_enabled() else "Réactive SEO_AGENT_CSP_ENABLED avant ouverture.",
+                severity="warning",
+            ),
+            _ops_check(
+                group="Sécurité",
+                label="Headers proxy",
+                ok=_trust_proxy_headers(),
+                detail="Headers proxy pris en compte." if _trust_proxy_headers() else "Active SEO_AGENT_TRUST_PROXY_HEADERS sur Render.",
+                severity="warning",
+            ),
+        ]
+    )
+
+    backup_ready = bool(_safe_env("S3_BUCKET_NAME") and _safe_env("AWS_ACCESS_KEY_ID") and _safe_env("AWS_SECRET_ACCESS_KEY"))
+    object_store_ready = object_store.s3_enabled()
+    checks.extend(
+        [
+            _ops_check(
+                group="Données",
+                label="Object storage runs",
+                ok=object_store_ready,
+                detail="S3 runs actif." if object_store_ready else f"S3 runs inactif ({object_store.s3_available_reason() or 'non configuré'}).",
+                severity="warning",
+            ),
+            _ops_check(
+                group="Données",
+                label="Backups S3",
+                ok=backup_ready,
+                detail="Backup S3 configurable." if backup_ready else "Configure S3_BUCKET_NAME et credentials AWS pour le cron backup.",
+                severity="warning",
+            ),
+        ]
+    )
+
+    db_stats: dict[str, Any] = {
+        "ok": False,
+        "users": 0,
+        "projects": 0,
+        "jobs": {},
+        "active_subscriptions": 0,
+        "recent_audit_problem_count": 0,
+    }
+    recent_problem_jobs: list[dict[str, Any]] = []
+    stale_jobs: list[dict[str, Any]] = []
+    recent_audit: list[dict[str, Any]] = []
+    try:
+        with DB.session() as db:
+            db_stats["users"] = int(db.scalar(select(func.count()).select_from(User)) or 0)
+            db_stats["projects"] = int(db.scalar(select(func.count()).select_from(Project)) or 0)
+            db_stats["active_subscriptions"] = int(
+                db.scalar(
+                    select(func.count())
+                    .select_from(BillingSubscription)
+                    .where(BillingSubscription.status.in_(billing.ACTIVE_SUB_STATUSES))
+                )
+                or 0
+            )
+            db_stats["jobs"] = {
+                str(status or "unknown"): int(count or 0)
+                for status, count in db.execute(select(JobRecord.status, func.count()).group_by(JobRecord.status)).all()
+            }
+            recent_problem_rows = list(
+                db.scalars(
+                    select(JobRecord)
+                    .where(JobRecord.status.in_(["failed", "canceled"]))
+                    .order_by(JobRecord.updated_at.desc())
+                    .limit(10)
+                )
+            )
+            recent_problem_jobs = [_ops_job_item(row, now_ts=now_ts) for row in recent_problem_rows]
+            stale_cutoff = now_ts - (2 * 60 * 60)
+            stale_rows = list(
+                db.scalars(
+                    select(JobRecord)
+                    .where(JobRecord.status.in_(["queued", "running", "cancel_requested"]))
+                    .where(JobRecord.updated_at < stale_cutoff)
+                    .order_by(JobRecord.updated_at.asc())
+                    .limit(20)
+                )
+            )
+            stale_jobs = [_ops_job_item(row, now_ts=now_ts) for row in stale_rows]
+            recent_audit_rows = list(db.scalars(select(AuditLog).order_by(AuditLog.created_at.desc()).limit(20)))
+            recent_audit = [_ops_audit_item(row) for row in recent_audit_rows]
+            audit_cutoff = now_dt - timedelta(hours=24)
+            db_stats["recent_audit_problem_count"] = int(
+                db.scalar(
+                    select(func.count())
+                    .select_from(AuditLog)
+                    .where(AuditLog.created_at >= audit_cutoff)
+                    .where(AuditLog.status.notin_(_OPS_OK_AUDIT_STATUSES))
+                )
+                or 0
+            )
+            db_stats["ok"] = True
+    except Exception as e:
+        db_stats["error"] = f"{type(e).__name__}: {str(e)[:240]}"
+
+    checks.append(
+        _ops_check(
+            group="Données",
+            label="Base de données",
+            ok=bool(db_stats.get("ok")),
+            detail="Lecture DB OK." if db_stats.get("ok") else str(db_stats.get("error") or "Lecture DB impossible."),
+        )
+    )
+    checks.append(
+        _ops_check(
+            group="Exécution",
+            label="Jobs bloqués",
+            ok=not stale_jobs,
+            detail="Aucun job actif > 2h." if not stale_jobs else f"{len(stale_jobs)} job(s) actif(s) depuis plus de 2h.",
+            severity="warning",
+        )
+    )
+
+    status_counts = {
+        "ok": sum(1 for item in checks if item["status"] == "ok"),
+        "warning": sum(1 for item in checks if item["status"] == "warning"),
+        "error": sum(1 for item in checks if item["status"] == "error"),
+    }
+    return {
+        "generated_at": now_dt.strftime("%d/%m/%y %H:%M UTC"),
+        "ready": status_counts["error"] == 0,
+        "status_counts": status_counts,
+        "checks": checks,
+        "db": db_stats,
+        "recent_problem_jobs": recent_problem_jobs,
+        "stale_jobs": stale_jobs,
+        "recent_audit": recent_audit,
+        "disk": [
+            _ops_disk_snapshot("Data", DATA_DIR),
+            _ops_disk_snapshot("Runs", DEFAULT_RUNS_DIR),
+        ],
+        "integrations": {
+            "google_oauth": bool(_google_oauth_client()[0] and _google_oauth_client()[1]),
+            "github_oauth": bool(_github_oauth_client()[0] and _github_oauth_client()[1]),
+            "netlify_oauth": bool(_netlify_oauth_client_id()),
+            "bing_oauth": bool(_bing_oauth_client()[0] and _bing_oauth_client()[1]),
+        },
+    }
+
+
+@app.get("/settings/operations", response_class=HTMLResponse)
+def settings_operations(request: Request) -> HTMLResponse:
+    _ = _require_system_owner(request)
+    snapshot = _production_operations_snapshot()
+    resp = templates.TemplateResponse(
+        "settings_operations.html",
+        {
+            "request": request,
+            "project": None,
+            "snapshot": snapshot,
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.get("/api/settings/operations", response_class=JSONResponse)
+def api_settings_operations(request: Request) -> JSONResponse:
+    _ = _require_system_owner(request)
+    return JSONResponse({"ok": True, "snapshot": _production_operations_snapshot()})
+
+
 @app.get("/settings/system", response_class=HTMLResponse)
 def settings_system(request: Request) -> HTMLResponse:
     _ = _require_system_owner(request)
@@ -10432,6 +11415,25 @@ def settings_system(request: Request) -> HTMLResponse:
     err = str(request.query_params.get("err") or "").strip()
 
     system_sections = [
+        {
+            "id": "security-system",
+            "title": "Sécurité — secrets serveur",
+            "description": "Secrets de signature, chiffrement et crons. En production, ils doivent être longs, aléatoires et distincts.",
+            "items": [
+                _build_env_setting_item("PUBLIC_BASE_URL"),
+                _build_env_setting_item("SEO_AGENT_STRICT_CONFIG"),
+                _build_env_setting_item("SEO_AGENT_SECRET_KEY"),
+                _build_env_setting_item("SEO_AGENT_ENCRYPTION_KEY"),
+                _build_env_setting_item("SEO_AGENT_ENCRYPTION_KEYS"),
+                _build_env_setting_item("CRON_SECRET"),
+                _build_env_setting_item("SEO_AGENT_TRUST_PROXY_HEADERS"),
+                _build_env_setting_item("SEO_AGENT_CSP_ENABLED"),
+                _build_env_setting_item("SEO_AGENT_CSP_REPORT_ONLY"),
+                _build_env_setting_item("SEO_AGENT_CSP"),
+                _build_env_setting_item("SEO_AGENT_FILE_VIEW_MAX_BYTES"),
+                _build_env_setting_item("SEO_AGENT_CSRF_BODY_MAX_BYTES"),
+            ],
+        },
         {
             "id": "gsc-oauth-system",
             "title": "OAuth Google — plateforme",
@@ -10659,8 +11661,9 @@ def settings_system_save(
             _write_env_key(target, key, None)
         else:
             v = (value or "").strip()
-            if not v:
-                return RedirectResponse(url=_path_with_flash("/settings/system", err="Valeur manquante."), status_code=303)
+            validation_err = _validate_settings_env_value(key, v)
+            if validation_err:
+                return RedirectResponse(url=_path_with_flash("/settings/system", err=validation_err), status_code=303)
             _write_env_key(target, key, v)
     except Exception as e:
         _audit_log(
@@ -12038,7 +13041,7 @@ def _perf_items_csv(items: list[dict[str, Any]], *, dim: str) -> bytes:
             continue
         writer.writerow(
             {
-                dimension_header: str(it.get("keyword") or ""),
+                dimension_header: _csv_safe_value(str(it.get("keyword") or "")),
                 "clicks": _to_int(it.get("clicks")),
                 "impressions": _to_int(it.get("impressions")),
                 "ctr": _to_float(it.get("ctr")),
@@ -12357,6 +13360,13 @@ def view_file(request: Request, path: str) -> HTMLResponse:
         _ensure_runs_artifact_local(raw_path)
     if not raw_path.exists() or not raw_path.is_file():
         return HTMLResponse("File not found", status_code=404)
+    max_bytes = _file_view_max_bytes()
+    try:
+        size = raw_path.stat().st_size
+    except Exception:
+        size = 0
+    if size > max_bytes:
+        return HTMLResponse(f"File too large to preview ({size} bytes, max {max_bytes})", status_code=413)
 
     content = raw_path.read_text(encoding="utf-8", errors="replace")
     return templates.TemplateResponse(
@@ -12390,9 +13400,18 @@ def run(
             url=_path_with_flash("/automation", err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
             status_code=303,
         )
-    cfg = Path(config_path).expanduser()
-    if not cfg.is_absolute():
-        cfg = (REPO_ROOT / cfg).resolve()
+    try:
+        cfg = _resolve_request_config_path(request, config_path)
+    except HTTPException:
+        return RedirectResponse(
+            url=_path_with_flash("/automation", err="Fichier de configuration refusé."),
+            status_code=303,
+        )
+    if not cfg.exists():
+        return RedirectResponse(
+            url=_path_with_flash("/automation", err="Fichier de configuration introuvable."),
+            status_code=303,
+        )
 
     extra_args: list[str] = []
 
@@ -12463,9 +13482,13 @@ def crawl_project(
         if _client_wants_json(request):
             return JSONResponse({"ok": False, "error": msg}, status_code=429, headers={"Retry-After": str(retry_after)})
         return RedirectResponse(url=f"/projects/{slug}?err={quote(msg)}", status_code=303)
-    cfg = Path(config_path).expanduser()
-    if not cfg.is_absolute():
-        cfg = (REPO_ROOT / cfg).resolve()
+    try:
+        cfg = _resolve_request_config_path(request, config_path)
+    except HTTPException as exc:
+        msg = "Fichier de configuration refusé."
+        if _client_wants_json(request):
+            return JSONResponse({"ok": False, "error": msg}, status_code=int(exc.status_code or 403))
+        return RedirectResponse(url=f"/projects/{slug}?err={quote(msg)}", status_code=303)
 
     project_settings = proj.settings if isinstance(proj.settings, dict) else {}
     crawl_cfg, _, _ = _effective_project_crawl_settings(
@@ -12567,9 +13590,13 @@ def crawl_projects_batch(
         if _client_wants_json(request):
             return JSONResponse({"ok": False, "error": msg}, status_code=429, headers={"Retry-After": str(retry_after)})
         return RedirectResponse(url=_path_with_flash("/", err=msg), status_code=303)
-    cfg = Path(config_path).expanduser()
-    if not cfg.is_absolute():
-        cfg = (REPO_ROOT / cfg).resolve()
+    try:
+        cfg = _resolve_request_config_path(request, config_path)
+    except HTTPException as exc:
+        msg = "Fichier de configuration refusé."
+        if _client_wants_json(request):
+            return JSONResponse({"ok": False, "error": msg}, status_code=int(exc.status_code or 403))
+        return RedirectResponse(url=_path_with_flash("/", err=msg), status_code=303)
 
     normalized: list[str] = []
     seen: set[str] = set()
@@ -13210,9 +14237,23 @@ def api_issue_url_fix(
     crawl: str | None = None,
 ) -> JSONResponse:
     proj_row = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    retry_after = _rate_limit_retry_after(
+        bucket="issue_url_fix_user",
+        subject=str(getattr(user, "id", "")),
+        limit=30,
+        window_s=60 * 60,
+    )
+    if isinstance(retry_after, int):
+        return JSONResponse(
+            {"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
     url = (url or "").strip()
-    if not url or not url.startswith(("http://", "https://")):
-        return JSONResponse({"error": "URL invalide"}, status_code=400)
+    url_error = _validate_settings_url(url)
+    if url_error:
+        return JSONResponse({"ok": False, "error": url_error}, status_code=400)
     meta = dash.issue_meta(issue_key)
     result = _openai_url_fix(
         issue_key=issue_key,
@@ -13247,10 +14288,13 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté. Va dans Comptes & connexions pour connecter GitHub."}, status_code=400)
     repo = (body.repo or "").strip()
-    if not repo or "/" not in repo:
+    repo_parts = _github_repo_parts(repo)
+    if repo_parts is None:
         return JSONResponse({"ok": False, "error": "Format invalide. Utilise owner/repo."}, status_code=400)
+    owner, repo_name = repo_parts
+    repo = f"{owner}/{repo_name}"
     try:
-        repo_info = _github_api_get(f"/repos/{repo}", token=token, timeout_s=10)
+        repo_info = _github_api_get(_github_api_path("repos", owner, repo_name), token=token, timeout_s=10)
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Dépôt introuvable ou inaccessible : {e}"}, status_code=400)
     perms = repo_info.get("permissions") if isinstance(repo_info.get("permissions"), dict) else {}
@@ -13258,6 +14302,8 @@ def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) ->
         return JSONResponse({"ok": False, "error": "Ton token GitHub n'a pas les droits d'écriture sur ce dépôt. Utilise un token avec scope 'repo'."}, status_code=400)
     mode = body.mode if body.mode in ("review", "auto") else "review"
     branch = (body.branch or repo_info.get("default_branch") or "main").strip()
+    if not _github_branch_allowed(branch):
+        return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
     settings = dict(proj.settings) if isinstance(proj.settings, dict) else {}
     settings["github_repo"] = repo
     settings["github_branch"] = branch
@@ -13287,35 +14333,61 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    retry_after = _rate_limit_retry_after(
+        bucket="github_fix_user",
+        subject=str(getattr(user, "id", "")),
+        limit=20,
+        window_s=60 * 60,
+    )
+    if isinstance(retry_after, int):
+        return JSONResponse(
+            {"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+    repo_parts = _github_repo_parts(cfg["repo"])
+    if repo_parts is None:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
+    owner, repo_name = repo_parts
+    branch = cfg["branch"]
+    if not _github_branch_allowed(branch):
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Branche GitHub invalide."}, status_code=400)
+    mode = cfg["mode"]
     url = (body.url or "").strip()
     if not url:
         return JSONResponse({"ok": False, "error": "URL manquante."}, status_code=400)
-    owner, repo_name = cfg["repo"].split("/", 1)
-    branch = cfg["branch"]
-    mode = cfg["mode"]
+    url_error = _validate_settings_url(url)
+    if url_error:
+        return JSONResponse({"ok": False, "error": url_error}, status_code=400)
     meta = dash.issue_meta(issue_key)
     issue_label = meta.label if meta else issue_key
     site_name = str(proj.site_name or slug)
 
     # ── Step 2: Apply the fix (create branch + commit + PR) ──────────────
-    if body.confirm and body.file_path and body.patched_content:
+    if body.confirm:
         import base64 as _b64
+        file_path = (body.file_path or "").strip()
+        if not _github_file_path_allowed(file_path):
+            return JSONResponse({"ok": False, "error": "Chemin de fichier GitHub invalide."}, status_code=400)
+        content_error = _github_patched_content_error(body.patched_content)
+        if content_error:
+            return JSONResponse({"ok": False, "error": content_error}, status_code=400)
         try:
-            ref_data = _github_api_get(f"/repos/{cfg['repo']}/git/ref/heads/{branch}", token=token)
+            ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
             base_sha = ref_data["object"]["sha"]
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
         from datetime import datetime as _dt
-        fix_branch = f"seo-fix/{issue_key}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        fix_branch = f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
         try:
-            _github_api_post(f"/repos/{cfg['repo']}/git/refs", token=token, json_body={
+            _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={
                 "ref": f"refs/heads/{fix_branch}",
                 "sha": base_sha,
             })
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"Impossible de créer la branche {fix_branch} : {e}"}, status_code=400)
         try:
-            file_data = _github_api_get(f"/repos/{cfg['repo']}/contents/{body.file_path}", token=token, params={"ref": branch})
+            file_data = _github_api_get(_github_content_api_path(owner, repo_name, file_path), token=token, params={"ref": branch})
             current_sha = file_data.get("sha", "")
         except Exception:
             current_sha = ""
@@ -13331,7 +14403,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         commit_sha = ""
         commit_url = ""
         try:
-            put_resp = _github_api_put(f"/repos/{cfg['repo']}/contents/{body.file_path}", token=token, json_body=put_body)
+            put_resp = _github_api_put(_github_content_api_path(owner, repo_name, file_path), token=token, json_body=put_body)
             commit_sha = str(put_resp.get("commit", {}).get("sha") or "")
             commit_url = str(put_resp.get("commit", {}).get("html_url") or "")
         except Exception as e:
@@ -13341,12 +14413,12 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             f"## Correction SEO automatique\n\n"
             f"**Anomalie :** {issue_label} (`{issue_key}`)\n"
             f"**URL affectée :** {url}\n"
-            f"**Fichier modifié :** `{body.file_path}`\n\n"
+            f"**Fichier modifié :** `{file_path}`\n\n"
             f"Correction générée par [SEO Agent](https://noyaru.com) pour **{site_name}**.\n\n"
             f"> Vérifie les changements avant de merger."
         )
         try:
-            pr_data = _github_api_post(f"/repos/{cfg['repo']}/pulls", token=token, json_body={
+            pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={
                 "title": pr_title,
                 "body": pr_body,
                 "head": fix_branch,
@@ -13362,7 +14434,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 "pr_url": pr_url, "pr_title": pr_title,
                 "pr_number": int(pr_number) if pr_number else 0,
                 "commit_sha": commit_sha[:7] if commit_sha else "",
-                "commit_url": commit_url, "branch": fix_branch, "file": body.file_path,
+                "commit_url": commit_url, "branch": fix_branch, "file": file_path,
             }, ensure_ascii=False)
             with DB.session() as _db2:
                 _existing = _db2.scalar(select(IssueTask).where(
@@ -13393,7 +14465,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         if mode == "auto" and pr_number:
             try:
                 _github_api_put(
-                    f"/repos/{cfg['repo']}/pulls/{int(pr_number)}/merge",
+                    _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
                     token=token,
                     json_body={"merge_method": "squash", "commit_title": pr_title},
                 )
@@ -13417,7 +14489,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             "branch": fix_branch,
             "commit_sha": commit_sha[:7] if commit_sha else "",
             "commit_url": commit_url,
-            "file": body.file_path,
+            "file": file_path,
             "merged": _merged,
         })
 
@@ -13437,6 +14509,9 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     )
     if not patch:
         return JSONResponse({"ok": False, "error": "Service IA indisponible ou réponse invalide."}, status_code=503)
+    content_error = _github_patched_content_error(str(patch.get("patched_content") or ""))
+    if content_error:
+        return JSONResponse({"ok": False, "error": content_error}, status_code=400)
 
     # In auto mode: apply immediately without confirm step
     if mode == "auto":
@@ -13474,6 +14549,26 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    retry_after = _rate_limit_retry_after(
+        bucket="github_bulk_fix_user",
+        subject=str(getattr(user, "id", "")),
+        limit=5,
+        window_s=60 * 60,
+    )
+    if isinstance(retry_after, int):
+        return JSONResponse(
+            {"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+    repo_parts = _github_repo_parts(cfg["repo"])
+    if repo_parts is None:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
+    owner, repo_name = repo_parts
+    branch = cfg["branch"]
+    if not _github_branch_allowed(branch):
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Branche GitHub invalide."}, status_code=400)
+    mode = cfg["mode"]
 
     # Load latest crawl with a report
     runs_dir = _runs_dir_for_request(request)
@@ -13514,13 +14609,9 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     if not fixable:
         return JSONResponse({"ok": False, "error": "Aucune erreur corrigeable trouvée dans le dernier crawl."}, status_code=400)
 
-    owner, repo_name = cfg["repo"].split("/", 1)
-    branch = cfg["branch"]
-    mode = cfg["mode"]
-
     # Create fix branch
     try:
-        ref_data = _github_api_get(f"/repos/{cfg['repo']}/git/ref/heads/{branch}", token=token)
+        ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
         base_sha = ref_data["object"]["sha"]
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
@@ -13529,7 +14620,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     import base64 as _b64
     fix_branch = f"seo-fix/bulk-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
     try:
-        _github_api_post(f"/repos/{cfg['repo']}/git/refs", token=token, json_body={
+        _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={
             "ref": f"refs/heads/{fix_branch}", "sha": base_sha,
         })
     except Exception as e:
@@ -13564,10 +14655,14 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             current_sha = file_state[file_path]["sha"]
         else:
             try:
-                fd = _github_api_get(f"/repos/{cfg['repo']}/contents/{file_path}", token=token, params={"ref": fix_branch})
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, file_path), token=token, params={"ref": fix_branch})
                 current_sha = fd.get("sha", "")
             except Exception:
                 current_sha = ""
+        content_error = _github_patched_content_error(patch["patched_content"])
+        if content_error:
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": False, "error": content_error})
+            continue
         encoded = _b64.b64encode(patch["patched_content"].encode("utf-8")).decode("ascii")
         put_body: dict[str, Any] = {
             "message": f"fix(seo): {issue_key} — {url[:60]}\n\nGenerated by SEO Agent",
@@ -13576,7 +14671,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         if current_sha:
             put_body["sha"] = current_sha
         try:
-            put_resp = _github_api_put(f"/repos/{cfg['repo']}/contents/{file_path}", token=token, json_body=put_body)
+            put_resp = _github_api_put(_github_content_api_path(owner, repo_name, file_path), token=token, json_body=put_body)
             new_sha = str(put_resp.get("commit", {}).get("sha") or "")
             file_state[file_path] = {"sha": new_sha, "content": patch["patched_content"]}
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": True})
@@ -13596,11 +14691,11 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     for r in results:
         icon = "✅" if r.get("ok") else "❌"
         pr_lines.append(f"{icon} **{r['issue_label']}** — `{r.get('file', '?')}`")
-    pr_lines.append(f"\nCorrection générée par [SEO Agent](https://noyaru.com).")
+    pr_lines.append("\nCorrection générée par [SEO Agent](https://noyaru.com).")
     pr_body = "\n".join(pr_lines)
 
     try:
-        pr_data = _github_api_post(f"/repos/{cfg['repo']}/pulls", token=token, json_body={
+        pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={
             "title": pr_title, "body": pr_body, "head": fix_branch, "base": branch,
         })
         pr_url = pr_data.get("html_url", "")
@@ -13613,7 +14708,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     if mode == "auto" and pr_number:
         try:
             _github_api_put(
-                f"/repos/{cfg['repo']}/pulls/{int(pr_number)}/merge",
+                _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
                 token=token,
                 json_body={"merge_method": "squash", "commit_title": pr_title},
             )
@@ -13731,7 +14826,6 @@ def api_project_tasks(request: Request, slug: str) -> JSONResponse:
 @app.get("/projects/{slug}/automation", response_class=HTMLResponse)
 def project_automation(request: Request, slug: str) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
-    user = getattr(request.state, "user", None)
     project_ctx = {
         "slug": proj_row.slug,
         "site_name": proj_row.site_name,
@@ -15694,7 +16788,7 @@ def project_backlinks_opportunities(
 
 @app.post("/api/projects/{slug}/backlinks/search")
 async def api_backlinks_search(request: Request, slug: str) -> JSONResponse:
-    proj = _db_project_or_404(request, slug)
+    _db_project_or_404(request, slug)
     user = request.state.user
 
     with DB.session() as db:
@@ -15762,7 +16856,7 @@ async def api_backlinks_search(request: Request, slug: str) -> JSONResponse:
 
 @app.post("/api/projects/{slug}/backlinks/generate-reply")
 async def api_backlinks_generate_reply(request: Request, slug: str) -> JSONResponse:
-    proj = _db_project_or_404(request, slug)
+    _db_project_or_404(request, slug)
     user = request.state.user
 
     with DB.session() as db:
@@ -16028,23 +17122,6 @@ async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONRespo
 
     return JSONResponse({"ok": True})
 
-    with DB.session() as db:
-        for key, val in fields.items():
-            existing = db.scalar(
-                select(UserConnection).where(
-                    UserConnection.user_id == str(user.id),
-                    UserConnection.key == key,
-                )
-            )
-            if existing:
-                existing.secret_value = val
-                db.add(existing)
-            else:
-                db.add(UserConnection(user_id=str(user.id), key=key, secret_value=val))
-        db.commit()
-
-    return JSONResponse({"ok": True})
-
 
 @app.post("/api/projects/{slug}/backlinks/queue/{opp_id}/approve")
 def backlinks_queue_approve(request: Request, slug: str, opp_id: str) -> JSONResponse:
@@ -16155,9 +17232,14 @@ def cron_check_backlinks(request: Request) -> JSONResponse:
         target = str(opp.target_url or "").strip().lower()
         if not target:
             continue
+        source_url = str(opp.url or "").strip()
+        validation_err = _validate_public_crawl_target(source_url)
+        if validation_err:
+            check_errors.append({"url": source_url[:200], "error": validation_err})
+            continue
         try:
             resp = requests.get(
-                str(opp.url),
+                source_url,
                 timeout=12,
                 allow_redirects=True,
                 headers={"User-Agent": "Mozilla/5.0 (compatible; SEOAgentBot/1.0)"},
@@ -16535,11 +17617,12 @@ def job_retry(request: Request, job_id: str) -> RedirectResponse:
 
     if jtype == "autopilot":
         _ = _require_admin(request)
-        cfg = Path(job.config_path or "").expanduser() if job.config_path else None
-        if not cfg:
+        if not job.config_path:
             return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
-        if not cfg.is_absolute():
-            cfg = (REPO_ROOT / cfg).resolve()
+        try:
+            cfg = _resolve_request_config_path(request, job.config_path)
+        except HTTPException:
+            return RedirectResponse(url=_path_with_flash(f"/jobs/{job_id}", err="Fichier de configuration refusé."), status_code=303)
         extra_args = result.get("extra_args") if isinstance(result, dict) else None
         extra = extra_args if isinstance(extra_args, list) and all(isinstance(x, str) for x in extra_args) else []
         new_job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
@@ -16599,11 +17682,20 @@ def _apply_corrections_worker(plan_path_str: str):
     if not plan_path.exists() or not plan_path.is_file():
         print(f"[FIXER] Plan file not found: {plan_path}")
         return
+    try:
+        if plan_path.stat().st_size > 1024 * 1024:
+            print(f"[FIXER] ERROR: Plan file too large: {plan_path}")
+            return
+    except Exception:
+        return
 
     print(f"[FIXER] Applying corrections from: {plan_path}")
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     if not isinstance(plan, list):
         print("[FIXER] ERROR: Invalid plan format (expected a JSON list).")
+        return
+    if len(plan) > 500:
+        print("[FIXER] ERROR: Plan contains too many corrections.")
         return
 
     backup_root = (plan_path.parent / f"corrections-backup-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}").resolve()
@@ -16763,17 +17855,51 @@ def _apply_corrections_worker(plan_path_str: str):
 
 @app.post("/jobs/{job_id}/apply-corrections")
 def apply_corrections(
+    request: Request,
     job_id: str,
-    background_tasks: BackgroundTasks,
     plan_path: str = Form(...),
 ) -> RedirectResponse:
+    user = _require_admin(request)
+    job = _load_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
     # Guardrail: only accept plans inside `seo-runs/` (prevents arbitrary file reads/writes via crafted form input).
-    _ = _resolve_path_under_root(plan_path, DEFAULT_RUNS_DIR)
+    try:
+        resolved_plan = _resolve_path_under_root(plan_path, DEFAULT_RUNS_DIR)
+    except HTTPException:
+        _audit_log(
+            request,
+            action="jobs.apply_corrections",
+            status="blocked",
+            user=user,
+            target_type="job",
+            target_id=job_id,
+            meta={"reason": "plan_path_not_allowed"},
+        )
+        return RedirectResponse(
+            url=_path_with_flash(f"/jobs/{job_id}", err="Plan de corrections refusé."),
+            status_code=303,
+        )
+    if not resolved_plan.exists() or not resolved_plan.is_file():
+        return RedirectResponse(
+            url=_path_with_flash(f"/jobs/{job_id}", err="Plan de corrections introuvable."),
+            status_code=303,
+        )
 
     # For now, running this synchronously.
     # In a real app, you'd use the background_tasks or a proper worker queue.
     # background_tasks.add_task(_apply_corrections_worker, plan_path)
-    _apply_corrections_worker(plan_path)
+    _apply_corrections_worker(str(resolved_plan))
+    _audit_log(
+        request,
+        action="jobs.apply_corrections",
+        status="ok",
+        user=user,
+        target_type="job",
+        target_id=job_id,
+        meta={"plan_path": str(resolved_plan)},
+    )
 
     return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 

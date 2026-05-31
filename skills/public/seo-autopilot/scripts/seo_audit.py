@@ -30,13 +30,11 @@ from collections import Counter, defaultdict, deque
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
-from urllib.parse import urljoin, urldefrag, urlsplit, urlunsplit, urlparse
-from xml.etree import ElementTree
+from urllib.parse import urljoin, urldefrag, urlsplit, urlunsplit
+from defusedxml import ElementTree
+from defusedxml.common import DefusedXmlException
 
 import requests
-import zipfile
-from io import BytesIO, TextIOWrapper
-import csv
 
 
 @dataclasses.dataclass(frozen=True)
@@ -2759,7 +2757,7 @@ def _iter_sitemap_urls(
                 # Fall back to raw bytes; some servers mislabel content-types.
                 pass
         root = ElementTree.fromstring(xml_bytes)
-    except ElementTree.ParseError:
+    except (ElementTree.ParseError, DefusedXmlException):
         if system_fetches is not None:
             system_fetches.append(
                 {
@@ -3791,7 +3789,7 @@ def _score_resource_issues(
     redirected_css = sorted({r["url"] for r in by_type.get("css", []) if is_redirect(r)})
 
     large_images = sorted({r["url"] for r in by_type.get("image", []) if is_large(r, IMG_TOO_LARGE)})
-    large_js = sorted({r["url"] for r in by_type.get("javascript", []) if is_large(r, JS_TOO_LARGE)})
+    _large_js = sorted({r["url"] for r in by_type.get("javascript", []) if is_large(r, JS_TOO_LARGE)})
     large_css = sorted({r["url"] for r in by_type.get("css", []) if is_large(r, CSS_TOO_LARGE)})
 
     not_minified_css = sorted(
@@ -4146,7 +4144,7 @@ def _score_issues(
 
     missing_h1_indexable = [p.url for p in ok_html_pages if _is_indexable(p) and _is_missing_h1(p)]
     missing_h1_not_indexable = [p.url for p in ok_html_pages if (not _is_indexable(p)) and _is_missing_h1(p)]
-    missing_h1 = list(dict.fromkeys([*missing_h1_indexable, *missing_h1_not_indexable]))
+    _missing_h1 = list(dict.fromkeys([*missing_h1_indexable, *missing_h1_not_indexable]))
     multiple_h1 = [p.url for p in ok_html_pages if (p.h1_tag_count or 0) > 1]
     missing_canonical = [p.url for p in ok_html_pages if not _non_empty(p.canonical)]
 
@@ -4775,8 +4773,8 @@ def _score_issues(
     # "Slow page" in Ahrefs is a crawl-based signal (not CWV). We approximate with PSI overall category
     # (when field data exists) and a conservative Lighthouse LCP threshold.
     SLOW_PAGE_MS = 2000
-    SLOW_PAGE_LCP_MS = 2500  # Google "Good" threshold; 3500 was the "Needs Improvement" boundary
-    SLOW_PAGE_SPEED_INDEX_MS = 2500
+    _SLOW_PAGE_LCP_MS = 2500  # Google "Good" threshold; 3500 was the "Needs Improvement" boundary
+    _SLOW_PAGE_SPEED_INDEX_MS = 2500
     CWV_LCP_GOOD_MS = 2500
     CWV_LCP_POOR_MS = 4000
     CWV_CLS_GOOD = 0.1
@@ -4859,7 +4857,7 @@ def _score_issues(
 
     primary_lang = _primary_lang_hint()
 
-    low_word_count = [
+    _low_word_count = [
         p.url
         for p in ok_html_pages
         if _is_semrush_indexable(p)
@@ -4919,7 +4917,7 @@ def _score_issues(
             if privacy_rgpd_re.search(title) or privacy_rgpd_re.search(h1):
                 pages_have_high_ai_content_levels_set.add(eff)
 
-    pages_have_high_ai_content_levels = sorted(pages_have_high_ai_content_levels_set)
+    _pages_have_high_ai_content_levels = sorted(pages_have_high_ai_content_levels_set)
 
     def _ps_dict(p: PageData) -> dict[str, Any] | None:
         ps = getattr(p, "pagespeed", None)
@@ -5025,7 +5023,7 @@ def _score_issues(
 
     pages_with_poor_lcp = [p.url for p in ok_html_pages if _ps_metric_is_poor(p, "lcp")]
     pages_with_poor_cls = [p.url for p in ok_html_pages if _ps_metric_is_poor(p, "cls")]
-    pages_with_poor_inp = [p.url for p in ok_html_pages if _ps_metric_is_poor(p, "inp")]
+    _pages_with_poor_inp = [p.url for p in ok_html_pages if _ps_metric_is_poor(p, "inp")]
     pages_with_poor_tbt = [p.url for p in ok_html_pages if _ps_metric_is_poor(p, "tbt")]
     pages_with_ni_lcp = [p.url for p in ok_html_pages if _ps_metric_is_ni(p, "lcp")]
     pages_with_ni_cls = [p.url for p in ok_html_pages if _ps_metric_is_ni(p, "cls")]
@@ -5098,7 +5096,7 @@ def _score_issues(
                     if si == max_si:
                         slow_page_set.add(u)
 
-    slow_page = sorted(slow_page_set)
+    _slow_page = sorted(slow_page_set)
 
     # --- SERP heuristics (best-effort) ---
     # Ahrefs uses SERP titles from their own data sources. Locally we approximate:
@@ -5226,7 +5224,7 @@ def _score_issues(
             ):
                 page_and_serp_titles_do_not_match_set.add(_final_url(p))
 
-    page_and_serp_titles_do_not_match = sorted(page_and_serp_titles_do_not_match_set)
+    _page_and_serp_titles_do_not_match = sorted(page_and_serp_titles_do_not_match_set)
 
     duplicate_pages_without_canonical = [
         p.url
@@ -5422,7 +5420,7 @@ def _score_issues(
                     missing_reciprocal_hreflang_set.add(this_key)
                     break
 
-    missing_reciprocal_hreflang = sorted(missing_reciprocal_hreflang_set)
+    _missing_reciprocal_hreflang = sorted(missing_reciprocal_hreflang_set)
 
     # Semrush-like: hreflang conflicts within page source code.
     hreflang_conflicts_within_page_source_code: list[dict[str, Any]] = []
@@ -5725,7 +5723,7 @@ def _score_issues(
         for t in tgts:
             if isinstance(t, str) and t.strip():
                 broken_union[src].add(t.strip())
-    broken_union_rows = [
+    _broken_union_rows = [
         {"source_url": src, "targets": sorted(tgts)[:50]} for src, tgts in sorted(broken_union.items()) if tgts
     ]
     # Suppressed: duplicate of page_has_links_to_broken_page_indexable (same source pages, different format).
@@ -6169,7 +6167,7 @@ def _score_issues(
         for u in getattr(p, "external_links_nofollow", []) or []:
             if isinstance(u, str) and u.startswith(("http://", "https://")):
                 nofollow_external_by_page[pid].append(u)
-    nofollow_external_pages = [
+    _nofollow_external_pages = [
         {"url": url, "targets": sorted(set(tgts))[:100], "count": len(set(tgts))}
         for url, tgts in sorted(nofollow_external_by_page.items())
         if tgts

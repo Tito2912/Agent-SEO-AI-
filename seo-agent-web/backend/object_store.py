@@ -214,6 +214,10 @@ def restore_runs_tree(runs_dir: Path, path: Path) -> bool:
         rel_path = Path(PurePosixPath(rel_key))
         target = (runs_dir / rel_path).resolve()
         try:
+            target.relative_to(runs_dir.resolve())
+        except ValueError:
+            continue
+        try:
             target.parent.mkdir(parents=True, exist_ok=True)
             client.download_file(bucket, key, str(target))
             restored = True

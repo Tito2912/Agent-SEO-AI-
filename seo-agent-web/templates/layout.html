@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
@@ -12,7 +12,7 @@
   <body>
     <div class="app">
 
-      <!-- â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- SIDEBAR -->
       <aside class="sidebar">
 
         <!-- Brand -->
@@ -63,6 +63,10 @@
           </a>
 
           {% if request.state.can_access_system_settings %}
+            <a class="nav-item {% if request.url.path.startswith('/settings/operations') %}active{% endif %}" href="/settings/operations">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>
+              Exploitation
+            </a>
             <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}" href="/settings/system">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
               Système
@@ -183,7 +187,7 @@
           </div>
           <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
           <form class="assistant-form" id="assistant-form">
-            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une questionâ€¦" maxlength="2000" />
+            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une question..." maxlength="2000" />
             <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
             </button>
@@ -192,7 +196,7 @@
         </section>
       </div>
 
-      <!-- â”€â”€ MAIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+      <!-- MAIN -->
       <main class="main">
         <header class="topbar">
           <div class="crumbs">
@@ -212,7 +216,7 @@
 
     </div><!-- /.app -->
 
-    <!-- â”€â”€ SCRIPTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <!-- SCRIPTS -->
     <script>
       (() => {
         const meta = document.querySelector('meta[name="csrf-token"]');

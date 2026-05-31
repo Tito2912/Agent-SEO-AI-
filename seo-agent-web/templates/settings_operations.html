@@ -1,0 +1,263 @@
+{% extends "layout.html" %}
+{% block title %}Paramètres - Exploitation{% endblock %}
+
+{% block crumbs %}
+  <a href="/">Projets</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Paramètres</span>
+  <span class="crumb-sep">/</span>
+  <span class="crumb-current">Exploitation</span>
+{% endblock %}
+
+{% block actions %}
+  <a class="btn" href="/api/settings/operations" target="_blank" rel="noreferrer">JSON</a>
+  <a class="btn" href="/settings/system">Système</a>
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Exploitation prod</h1>
+    <p class="muted">Vue propriétaire pour vérifier l'ouverture, les jobs, les intégrations et les signaux récents.</p>
+  </div>
+
+  <div class="stat-strip">
+    <div class="stat-strip-item">
+      <div class="stat-strip-num">{{ snapshot.db.users or 0 }}</div>
+      <div class="stat-strip-lbl">Utilisateurs</div>
+    </div>
+    <div class="stat-strip-sep"></div>
+    <div class="stat-strip-item">
+      <div class="stat-strip-num">{{ snapshot.db.projects or 0 }}</div>
+      <div class="stat-strip-lbl">Projets</div>
+    </div>
+    <div class="stat-strip-sep"></div>
+    <div class="stat-strip-item">
+      <div class="stat-strip-num">{{ snapshot.db.active_subscriptions or 0 }}</div>
+      <div class="stat-strip-lbl">Abonnements actifs</div>
+    </div>
+    <div class="stat-strip-sep"></div>
+    <div class="stat-strip-item">
+      <div class="stat-strip-num" style="{% if snapshot.status_counts.error %}color:var(--err);{% elif snapshot.status_counts.warning %}color:var(--warn);{% else %}color:var(--accent-2);{% endif %}">
+        {{ snapshot.status_counts.error }}
+      </div>
+      <div class="stat-strip-lbl">Bloquants</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Readiness ouverture</h2>
+      {% if snapshot.ready %}
+        <span class="badge ok">ouvrable</span>
+      {% else %}
+        <span class="badge error">bloquants</span>
+      {% endif %}
+    </div>
+    <p class="muted small" style="margin-top:0;">Généré le {{ snapshot.generated_at }}</p>
+
+    <div class="table-wrap">
+      <table class="table compact">
+        <thead>
+          <tr>
+            <th>Groupe</th>
+            <th>Contrôle</th>
+            <th>Statut</th>
+            <th>Détail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for check in snapshot.checks %}
+            <tr>
+              <td class="muted small">{{ check.group }}</td>
+              <td>{{ check.label }}</td>
+              <td><span class="badge {{ check.status }}">{{ check.status }}</span></td>
+              <td class="muted small">{{ check.detail or "-" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="grid two">
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Jobs</h2>
+      </div>
+      <div class="kv setting-kv">
+        <div class="kv-item">
+          <span class="muted">En attente</span>
+          <div class="mono">{{ snapshot.db.jobs.get("queued", 0) }}</div>
+        </div>
+        <div class="kv-item">
+          <span class="muted">En cours</span>
+          <div class="mono">{{ snapshot.db.jobs.get("running", 0) }}</div>
+        </div>
+        <div class="kv-item">
+          <span class="muted">Échecs</span>
+          <div class="mono">{{ snapshot.db.jobs.get("failed", 0) }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Stockage</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="table compact">
+          <thead>
+            <tr>
+              <th>Volume</th>
+              <th>Libre</th>
+              <th>Total</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for disk in snapshot.disk %}
+              <tr>
+                <td>
+                  <div>{{ disk.label }}</div>
+                  <div class="muted small mono">{{ disk.path }}</div>
+                </td>
+                <td class="mono">{{ disk.free }} · {{ disk.free_pct }}%</td>
+                <td class="mono">{{ disk.total }}</td>
+                <td><span class="badge {{ disk.status }}">{{ disk.status }}</span></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Intégrations plateforme</h2>
+    </div>
+    <div class="kv setting-kv">
+      <div class="kv-item">
+        <span class="muted">Google OAuth</span>
+        <div><span class="badge {{ 'ok' if snapshot.integrations.google_oauth else 'warning' }}">{{ 'ok' if snapshot.integrations.google_oauth else 'à configurer' }}</span></div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">GitHub OAuth</span>
+        <div><span class="badge {{ 'ok' if snapshot.integrations.github_oauth else 'warning' }}">{{ 'ok' if snapshot.integrations.github_oauth else 'à configurer' }}</span></div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Netlify OAuth</span>
+        <div><span class="badge {{ 'ok' if snapshot.integrations.netlify_oauth else 'warning' }}">{{ 'ok' if snapshot.integrations.netlify_oauth else 'à configurer' }}</span></div>
+      </div>
+      <div class="kv-item">
+        <span class="muted">Bing OAuth</span>
+        <div><span class="badge {{ 'ok' if snapshot.integrations.bing_oauth else 'warning' }}">{{ 'ok' if snapshot.integrations.bing_oauth else 'à configurer' }}</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid two">
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Jobs bloqués</h2>
+      </div>
+      {% if not snapshot.stale_jobs %}
+        <p class="muted">Aucun job actif depuis plus de deux heures.</p>
+      {% else %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Statut</th>
+                <th>Site</th>
+                <th>Âge</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in snapshot.stale_jobs %}
+                <tr>
+                  <td><a class="mono" href="/jobs/{{ job.id }}">{{ job.short_id }}</a></td>
+                  <td><span class="badge {{ job.status_badge }}">{{ job.status }}</span></td>
+                  <td>{{ job.slug or "-" }}</td>
+                  <td class="mono">{{ job.age }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2>Derniers jobs en erreur</h2>
+      </div>
+      {% if not snapshot.recent_problem_jobs %}
+        <p class="muted">Aucun échec récent dans les derniers jobs.</p>
+      {% else %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Site</th>
+                <th>Statut</th>
+                <th>Erreur</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in snapshot.recent_problem_jobs %}
+                <tr>
+                  <td><a class="mono" href="/jobs/{{ job.id }}">{{ job.short_id }}</a></td>
+                  <td>{{ job.slug or "-" }}</td>
+                  <td><span class="badge {{ job.status_badge }}">{{ job.status }}</span></td>
+                  <td class="muted small">{{ job.error or "-" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Audit logs récents</h2>
+      {% if snapshot.db.recent_audit_problem_count %}
+        <span class="badge warning">{{ snapshot.db.recent_audit_problem_count }} signalement(s) 24h</span>
+      {% else %}
+        <span class="badge ok">calme 24h</span>
+      {% endif %}
+    </div>
+    {% if not snapshot.recent_audit %}
+      <p class="muted">Aucun événement d'audit.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table class="table compact">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Action</th>
+              <th>Statut</th>
+              <th>Acteur</th>
+              <th>Cible</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for event in snapshot.recent_audit %}
+              <tr>
+                <td class="mono">{{ event.created_at }}</td>
+                <td>{{ event.action }}</td>
+                <td><span class="badge {{ event.status_badge }}">{{ event.status }}</span></td>
+                <td class="muted small">{{ event.actor or "-" }}</td>
+                <td class="muted small">{{ event.target_type }}{% if event.target_id %}: {{ event.target_id }}{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

@@ -7,14 +7,34 @@
 - **Disque Render** (`/var/data`) : data locale (ex: `seo-runs`, `data/`).
 - **S3** : artefacts de runs (si configuré).
 
+## Configuration stricte
+
+En production, `SEO_AGENT_STRICT_CONFIG=true` bloque le démarrage si les secrets critiques sont absents ou faibles.
+
+Variables obligatoires en mode strict :
+- `DATABASE_URL`
+- `PUBLIC_BASE_URL` en `https://...`
+- `SEO_AGENT_SECRET_KEY` long et aléatoire
+- `SEO_AGENT_ENCRYPTION_KEY` ou `SEO_AGENT_ENCRYPTION_KEYS`, long, aléatoire et distinct de `SEO_AGENT_SECRET_KEY`
+- `CRON_SECRET` long et aléatoire
+
+Sur Render, `SEO_AGENT_TRUST_PROXY_HEADERS=true` permet d'utiliser `X-Forwarded-For` / `X-Forwarded-Proto` pour l'IP client et les cookies `Secure`. Ne l'active pas hors proxy de confiance.
+
+La Content Security Policy est active par défaut (`SEO_AGENT_CSP_ENABLED=true`). Pour tester une politique sans blocage, définir `SEO_AGENT_CSP_REPORT_ONLY=true`. `SEO_AGENT_CSP` permet de remplacer entièrement la politique par défaut si nécessaire.
+La prévisualisation `/file` est limitée par `SEO_AGENT_FILE_VIEW_MAX_BYTES` (2 Mo par défaut, maximum 20 Mo) pour éviter de charger de gros artefacts en mémoire.
+Le body lu par le middleware CSRF est limité par `SEO_AGENT_CSRF_BODY_MAX_BYTES` (12 Mo par défaut, maximum 50 Mo), ce qui couvre les imports CSV actuels sans ouvrir un chemin de déni de service mémoire.
+
 ## Migrations DB (Alembic)
 
 Le schéma est géré via Alembic (dossier `seo-agent-web/alembic/`). En production, le container exécute automatiquement `alembic upgrade head` au démarrage (voir `Dockerfile`).
+En développement local SQLite (sans `DATABASE_URL`), l'app applique aussi `alembic upgrade head` au démarrage pour éviter les bases en retard.
 
 ### Appliquer les migrations (manuel)
 
 Depuis `seo-agent-web/` :
 - `alembic -c alembic.ini upgrade head`
+
+Pour forcer ce comportement sur une base configurée via `DATABASE_URL`, définir `SEO_AGENT_DB_AUTO_MIGRATE=true`.
 
 ### Créer une nouvelle migration
 
@@ -48,6 +68,15 @@ Idée simple :
 
 - **Sentry** : configure `SENTRY_DSN` + vérifie la réception d’une erreur test.
 - **Santé** : endpoint `GET /healthz` utilisé par Render.
+- **Exploitation prod** : connecte-toi avec le compte propriétaire système puis ouvre `/settings/operations`.
+  Cette page vérifie sans afficher les secrets : configuration stricte, secrets critiques, Stripe, emails, IA, S3/backups, stockage disque, jobs bloqués et audit logs récents.
+
+Avant ouverture publique, viser :
+- 0 contrôle `error` sur `/settings/operations`
+- backups S3 configurés et au moins un manifest vérifié
+- Stripe en mode live testé de bout en bout
+- aucun job actif bloqué depuis plus de 2h
+- reset password et emails transactionnels testés
 
 ## Backups automatiques (S3)
 

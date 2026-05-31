@@ -13,6 +13,7 @@ seo-agent-web/.venv/
 .env
 .env.*
 !.env.example
+seo-agent-web.env
 
 # Common credential files / keys
 gen-lang-client-*.json
