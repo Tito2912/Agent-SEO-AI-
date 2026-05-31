@@ -17651,6 +17651,11 @@ def job_api(request: Request, job_id: str, tail: int = 20_000) -> JSONResponse:
         if owner_id != str(getattr(user, "id", "")):
             raise HTTPException(status_code=404, detail="Job not found")
 
+    # Auto-finalize orphaned jobs (e.g. cancel_requested whose worker died, or stale
+    # running/queued jobs) directly from the live poll, so the frontend reloads without
+    # requiring a manual page refresh. No-op for jobs active in this process.
+    _finalize_stale_job(job)
+
     before_progress = job.progress
     _normalize_completed_job(job)
     if job.progress != before_progress:
