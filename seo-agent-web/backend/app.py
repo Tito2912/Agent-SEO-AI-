@@ -2279,12 +2279,14 @@ def _extract_urls_from_issue_examples(examples: list[Any], limit: int) -> list[s
         url: str | None = None
         if isinstance(ex, str):
             s = ex.strip()
-            if "->" in s:
+            if s.startswith(("http://", "https://")) and " " not in s and "->" not in s:
+                url = s
+            elif "->" in s:
                 left = s.split("->", 1)[0].strip()
                 if left.startswith(("http://", "https://")):
                     url = left
             if not url:
-                m = re.search(r"https?://\\S+", s)
+                m = re.search(r"https?://\S+", s)
                 if m:
                     url = m.group(0).rstrip(").,;")
         elif isinstance(ex, dict):
@@ -2764,16 +2766,82 @@ def _openai_url_fix(
 
 # Maps issue_key → ordered list of candidate file names/patterns to look for in the repo
 _SEO_FILE_CANDIDATES: dict[str, list[str]] = {
-    "redirect_3xx": ["next.config.js", "next.config.ts", "next.config.mjs", "vercel.json", "netlify.toml", "_headers", ".htaccess", "nginx.conf"],
-    "missing_meta_description": ["layout.html", "base.html", "_layout.html", "app.html", "_document.tsx", "_document.jsx", "index.html", "layout.tsx"],
-    "missing_title": ["layout.html", "base.html", "_layout.html", "app.html", "_document.tsx", "_document.jsx", "index.html"],
-    "missing_h1": ["layout.html", "base.html", "index.html"],
-    "multiple_h1": ["layout.html", "base.html", "index.html"],
-    "image_missing_alt": ["index.html", "layout.html"],
-    "duplicate_content": ["layout.html", "base.html", "index.html"],
-    "slow_page": ["vercel.json", "netlify.toml", "_headers", ".htaccess"],
+    "redirect_3xx": [
+        "next.config.js", "next.config.ts", "next.config.mjs", "vercel.json", "netlify.toml", "_headers",
+        ".htaccess", "nginx.conf", "wrangler.toml",
+    ],
+    "missing_meta_description": [
+        "app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "pages/_app.tsx", "layout.html",
+        "base.html", "_layout.html", "app.html", "_document.tsx", "_document.jsx", "index.html", "layout.tsx",
+    ],
+    "missing_title": [
+        "app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "pages/_app.tsx", "layout.html",
+        "base.html", "_layout.html", "app.html", "_document.tsx", "_document.jsx", "index.html", "layout.tsx",
+    ],
+    "missing_h1": ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "layout.html", "base.html", "index.html"],
+    "multiple_h1": ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "layout.html", "base.html", "index.html"],
+    "image_missing_alt": ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "index.html", "layout.html"],
+    "duplicate_content": ["app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "index.html"],
+    "slow_page": ["next.config.js", "next.config.ts", "vercel.json", "netlify.toml", "_headers", ".htaccess"],
 }
-_SEO_FILE_CANDIDATES_DEFAULT = ["vercel.json", "netlify.toml", ".htaccess", "next.config.js", "layout.html", "index.html"]
+_SEO_FILE_CANDIDATES_DEFAULT = [
+    "app/layout.tsx", "src/app/layout.tsx", "app/page.tsx", "src/app/page.tsx",
+    "pages/_document.tsx", "pages/_app.tsx", "pages/index.tsx",
+    "vercel.json", "netlify.toml", ".htaccess", "_headers", "next.config.js", "next.config.ts",
+    "layout.html", "base.html", "index.html",
+]
+
+
+def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
+    key = (issue_key or "").strip().lower()
+    if key in _SEO_FILE_CANDIDATES:
+        return _SEO_FILE_CANDIDATES[key]
+    if key in {"duplicate_titles", "multiple_title_tags"} or key.startswith("title_too_"):
+        return _SEO_FILE_CANDIDATES["missing_title"]
+    if (
+        key in {"duplicate_meta_descriptions", "multiple_meta_description_tags"}
+        or key.startswith("meta_description_")
+    ):
+        return _SEO_FILE_CANDIDATES["missing_meta_description"]
+    if key.startswith("missing_h1") or key in {"multiple_h1", "h1_tag_changed"}:
+        return _SEO_FILE_CANDIDATES["missing_h1"]
+    if "canonical" in key:
+        return [
+            "app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html",
+            "index.html", "head.tsx", "seo.tsx",
+        ]
+    if "redirect" in key or key in {"http_404", "http_4xx", "links_to_404_page", "links_to_4xx_page"}:
+        return _SEO_FILE_CANDIDATES["redirect_3xx"]
+    if "sitemap" in key:
+        return ["next-sitemap.config.js", "next-sitemap.config.cjs", "sitemap.xml", "robots.txt", "nuxt.config.ts"]
+    if "robots" in key or "noindex" in key or "nofollow" in key:
+        return ["robots.txt", "app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "_headers"]
+    if "open_graph" in key or "twitter_card" in key:
+        return ["app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html", "seo.tsx"]
+    if "hreflang" in key or "html_lang" in key or key.endswith("_lang_missing"):
+        return ["app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html", "i18n.ts"]
+    if "structured" in key or "schema" in key:
+        return ["app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "schema.ts", "seo.tsx"]
+    if "javascript" in key or "css" in key:
+        return ["next.config.js", "next.config.ts", "vercel.json", "netlify.toml", "_headers", "package.json"]
+    if "image" in key or "alt" in key:
+        return _SEO_FILE_CANDIDATES["image_missing_alt"]
+    if key in {"low_word_count", "page_and_serp_titles_do_not_match"}:
+        return ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "index.html", "content.ts", "seo.tsx"]
+    return _SEO_FILE_CANDIDATES_DEFAULT
+
+
+def _github_issue_auto_fixable(issue_key: str) -> bool:
+    key = (issue_key or "").strip().lower()
+    if not key:
+        return False
+    excluded_prefixes = ("gsc_", "bing_", "pages_to_submit_to_indexnow")
+    if key.startswith(excluded_prefixes):
+        return False
+    excluded_tokens = ("backlink", "certificate", "dns_", "tls", "ai_content")
+    if any(tok in key for tok in excluded_tokens):
+        return False
+    return _seo_file_candidates_for_issue(key) != _SEO_FILE_CANDIDATES_DEFAULT or key in _SEO_FILE_CANDIDATES
 
 
 def _project_github_cfg(proj) -> dict[str, str]:
@@ -2809,12 +2877,12 @@ def _github_find_seo_files(
         if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
 
-    candidates = _SEO_FILE_CANDIDATES.get(issue_key, _SEO_FILE_CANDIDATES_DEFAULT)
+    candidates = _seo_file_candidates_for_issue(issue_key)
     matches: list[str] = []
     for candidate in candidates:
         for p in all_paths:
             filename = p.split("/")[-1]
-            if filename == candidate and p not in matches:
+            if (p == candidate or p.endswith(f"/{candidate}") or filename == candidate) and p not in matches:
                 matches.append(p)
                 break
     if not matches:
@@ -2906,6 +2974,69 @@ def _openai_generate_file_patch(
     except Exception:
         pass
     return {}
+
+
+def _github_fixable_issue_candidates(
+    *,
+    report: dict[str, Any],
+    proj,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    summary = dash.summarize_report(report)
+    issues = summary.get("issues") if isinstance(summary.get("issues"), list) else []
+    site_name = str(getattr(proj, "site_name", "") or getattr(proj, "slug", "") or "")
+    base_url = str(getattr(proj, "base_url", "") or "")
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+
+    candidates: list[dict[str, Any]] = []
+    for it in issues:
+        if not isinstance(it, dict):
+            continue
+        issue_key = str(it.get("key") or "").strip()
+        if not issue_key or not _github_issue_auto_fixable(issue_key):
+            continue
+        count = int(it.get("count") or 0)
+        if count <= 0:
+            continue
+        sample_urls = _issue_sample_urls_from_report(report, issue_key, limit=3)
+        primary_url = sample_urls[0] if sample_urls else base_url
+        if _validate_settings_url(primary_url):
+            primary_url = base_url if not _validate_settings_url(base_url) else ""
+        suggestion = fix_suggestions.suggest_issue_fix(
+            issue_key=issue_key,
+            label=str(it.get("label") or issue_key),
+            category=str(it.get("category") or ""),
+            severity=str(it.get("severity") or ""),
+            count=count,
+            report=report,
+            site_name=site_name,
+            base_url=base_url,
+        )
+        candidates.append(
+            {
+                "key": issue_key,
+                "label": str(suggestion.get("label") or it.get("label") or issue_key),
+                "category": str(suggestion.get("category") or it.get("category") or ""),
+                "severity": str(suggestion.get("severity") or it.get("severity") or "notice"),
+                "count": count,
+                "priority": str(suggestion.get("priority") or "medium"),
+                "effort": str(suggestion.get("effort") or "medium"),
+                "url": primary_url,
+                "sample_urls": sample_urls,
+                "candidate_files": _seo_file_candidates_for_issue(issue_key)[:5],
+                "why": str(suggestion.get("why") or ""),
+            }
+        )
+
+    candidates.sort(
+        key=lambda x: (
+            priority_order.get(str(x.get("priority") or ""), 9),
+            dash.SEVERITY_ORDER.get(str(x.get("severity") or "notice"), 99),
+            -int(x.get("count") or 0),
+            str(x.get("label") or ""),
+        )
+    )
+    return candidates[: max(0, int(limit))]
 
 
 def _ensure_ai_suggestions_for_issues(
@@ -14709,31 +14840,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     if not report:
         return JSONResponse({"ok": False, "error": "Rapport de crawl introuvable."}, status_code=400)
 
-    issues_raw = report.get("issues") if isinstance(report.get("issues"), dict) else {}
     site_name = str(proj.site_name or slug)
 
-    # Build list of fixable issues (only issue_keys that have known file candidates)
-    sev_order = {"error": 0, "warning": 1, "notice": 2}
-    fixable: list[dict[str, Any]] = []
-    for issue_key, block in issues_raw.items():
-        if not isinstance(block, dict):
-            continue
-        if issue_key not in _SEO_FILE_CANDIDATES:
-            continue
-        count = dash.issue_count(block)
-        if count == 0:
-            continue
-        meta = dash.issue_meta(issue_key)
-        sample_urls = _issue_sample_urls_from_report(report, issue_key, limit=3)
-        fixable.append({
-            "key": issue_key,
-            "label": meta.label if meta else issue_key,
-            "severity": meta.severity if meta else "notice",
-            "count": count,
-            "url": sample_urls[0] if sample_urls else str(proj.base_url or ""),
-        })
-    fixable.sort(key=lambda x: sev_order.get(x["severity"], 3))
-    fixable = fixable[:5]  # cap to avoid very long API chains
+    # Keep this capped: each item can trigger GitHub + LLM calls.
+    fixable = _github_fixable_issue_candidates(report=report, proj=proj, limit=5)
 
     if not fixable:
         return JSONResponse({"ok": False, "error": "Aucune erreur corrigeable trouvée dans le dernier crawl."}, status_code=400)
@@ -15011,7 +15121,9 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         "site_name": proj_row.site_name,
         "base_url": proj_row.base_url,
     }
+    github_cfg = _project_github_cfg(proj_row)
     groups: dict[str, list[Any]] = {"todo": [], "in_progress": [], "done": [], "ignored": []}
+    task_lookup: dict[tuple[str, str], dict[str, Any]] = {}
     total = 0
     try:
         with DB.session() as db:
@@ -15030,17 +15142,36 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             _is_pr_note = bool(_note_parsed.get("pr_url"))
             pr_data = _note_parsed if _is_pr_note else {}
             user_note = "" if _is_pr_note else (t.note or "")
-            groups[s].append({
+            task_ctx = {
                 "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
                 "url": t.url, "status": t.status,
                 "pr": pr_data, "user_note": user_note,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
-            })
+            }
+            groups[s].append(task_ctx)
+            task_lookup[(str(t.issue_key or ""), str(t.url or ""))] = task_ctx
         total = len(tasks)
     except Exception as exc:
         import traceback
         print(f"[corrections] DB error for slug={slug}: {exc}\n{traceback.format_exc()}", flush=True)
+
+    runs_dir = _runs_dir_for_request(request)
+    current_crawl_ts = ""
+    fix_candidates: list[dict[str, Any]] = []
+    try:
+        crawls = dash.list_project_crawls(runs_dir, slug)
+        current_crawl_ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), "")
+        report = dash.load_report_json(runs_dir, slug, current_crawl_ts) if current_crawl_ts else None
+        if isinstance(report, dict):
+            fix_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
+            for candidate in fix_candidates:
+                linked = task_lookup.get((str(candidate.get("key") or ""), str(candidate.get("url") or "")))
+                candidate["task_status"] = str(linked.get("status") or "") if linked else ""
+                candidate["pr"] = linked.get("pr") if linked else {}
+    except Exception as exc:
+        logger.warning("[corrections] failed to build correction candidates for %s: %s", slug, exc)
+
     resp = templates.TemplateResponse(
         "corrections.html",
         {
@@ -15049,6 +15180,9 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "slug": slug,
             "groups": groups,
             "total": total,
+            "github_cfg": github_cfg,
+            "current_crawl_ts": current_crawl_ts,
+            "fix_candidates": fix_candidates,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

@@ -57,19 +57,34 @@
   });
 
   /* ── Single fix ── */
+  function runSingleFix(btn, issue, url, crawl) {
+    return fetch('/api/projects/'+_slug+'/issues/'+encodeURIComponent(issue)+'/github-fix',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url:url, crawl_ts:crawl||'', confirm:false})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok) return d;
+      if(d.pr_url) return d;
+      if(!d.file || !d.patched_content) return {ok:false,error:'Prévisualisation incomplète.'};
+      return fetch('/api/projects/'+_slug+'/issues/'+encodeURIComponent(issue)+'/github-fix',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          url:url, crawl_ts:crawl||'', confirm:true,
+          file_path:d.file, patched_content:d.patched_content
+        })
+      }).then(function(r){return r.json();});
+    });
+  }
+
   document.addEventListener('click', function(e){
     var btn = e.target.closest('[data-single-fix]');
     if(!btn) return;
     var issue = btn.dataset.issue;
-    var url = decodeURIComponent(btn.dataset.url);
+    var url = btn.dataset.url || '';
     var crawl = btn.dataset.crawl||'';
-    btn.disabled=true; btn.textContent='⏳';
-    fetch('/api/projects/'+_slug+'/issues/'+issue+'/github-fix',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({url:url, crawl_ts:crawl, confirm:false})
-    }).then(function(r){return r.json();})
+    btn.disabled=true; btn.textContent='Création PR...';
+    runSingleFix(btn, issue, url, crawl)
       .then(function(d){
-        if(d.ok){ btn.textContent=d.merged?'✓ Mergé':'✓ PR créé'; btn.style.background='var(--accent)'; setTimeout(function(){window.location.reload();},1800); }
+        if(d.ok){ btn.textContent=d.merged?'Mergé':'PR créée'; btn.style.background='var(--accent)'; setTimeout(function(){window.location.reload();},1800); }
         else { btn.disabled=false; btn.textContent='Erreur'; btn.title=d.error||'?'; }
       }).catch(function(){ btn.disabled=false; btn.textContent='Erreur'; });
   });
@@ -210,7 +225,7 @@
       {% if task.status == 'todo' and github_cfg.repo %}
         <button type="button" class="btn small" style="font-size:10px;"
           data-single-fix data-issue="{{ task.issue_key }}"
-          data-url="{{ task.url | urlencode }}"
+          data-url="{{ task.url or '' }}"
           data-crawl="{{ task.crawl_ts or '' }}">Corriger</button>
       {% endif %}
       <a class="btn small" style="font-size:10px;" href="/projects/{{ slug }}/corrections">Workflow</a>

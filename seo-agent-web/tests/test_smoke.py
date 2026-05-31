@@ -168,6 +168,35 @@ def test_dashboard_onboarding_renders_for_authenticated_user() -> None:
     assert "Lancer un premier crawl" in response.text
 
 
+def test_corrections_page_renders_accelerator_for_authenticated_user() -> None:
+    suffix = os.urandom(4).hex()
+    email = f"corrections-{suffix}@example.com"
+    slug = f"corrections-{suffix}"
+    with app_module.DB.session() as db:
+        user = app_module.User(email=email, password_hash=app_module.auth.hash_password("test-password"), is_admin=False)
+        db.add(user)
+        db.flush()
+        db.add(
+            app_module.Project(
+                owner_user_id=str(user.id),
+                slug=slug,
+                base_url=f"https://{slug}.example.com",
+                site_name="Corrections Test",
+            )
+        )
+        db.commit()
+        user_id = str(user.id)
+
+    token = app_module.auth.make_session_token(user_id=user_id, secret=os.environ["SEO_AGENT_SECRET_KEY"])
+    with TestClient(app) as client:
+        client.cookies.set(app_module.auth.SESSION_COOKIE_NAME, token)
+        response = client.get(f"/projects/{slug}/corrections")
+
+    assert response.status_code == 200
+    assert "Accélérateur de correction" in response.text
+    assert "Connecter GitHub" in response.text
+
+
 def test_strict_config_rejects_weak_or_missing_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SEO_AGENT_STRICT_CONFIG", "true")
     monkeypatch.delenv("DATABASE_URL", raising=False)
@@ -364,6 +393,47 @@ def test_github_patched_content_has_size_limit() -> None:
     assert "volumineux" in (
         app_module._github_patched_content_error("x" * (app_module._GITHUB_MAX_PATCHED_CONTENT_BYTES + 1)) or ""
     )
+
+
+def test_github_fixable_issue_detection_covers_common_audit_keys() -> None:
+    assert app_module._github_issue_auto_fixable("duplicate_titles")
+    assert app_module._github_issue_auto_fixable("title_too_long_indexable")
+    assert app_module._github_issue_auto_fixable("http_404")
+    assert app_module._github_issue_auto_fixable("missing_alt_text")
+    assert not app_module._github_issue_auto_fixable("gsc_indexing_errors")
+
+    title_candidates = app_module._seo_file_candidates_for_issue("duplicate_titles")
+    assert "app/layout.tsx" in title_candidates
+
+    redirect_candidates = app_module._seo_file_candidates_for_issue("http_404")
+    assert "netlify.toml" in redirect_candidates
+
+
+def test_github_fixable_issue_candidates_are_prioritized() -> None:
+    proj = type(
+        "ProjectCtx",
+        (),
+        {
+            "slug": "demo",
+            "site_name": "Demo",
+            "base_url": "https://example.com",
+        },
+    )()
+    report = {
+        "meta": {"pages_crawled": 1},
+        "pages": [{"url": "https://example.com/a", "status_code": 404}],
+        "issues": {
+            "missing_title": {"count": 2, "examples": ["https://example.com/a"]},
+            "gsc_indexing_errors": {"count": 9, "examples": ["https://example.com/gsc"]},
+            "http_404": {"count": 1, "examples": ["https://example.com/missing"]},
+        },
+    }
+
+    candidates = app_module._github_fixable_issue_candidates(report=report, proj=proj, limit=10)
+
+    assert [c["key"] for c in candidates] == ["http_404", "missing_title"]
+    assert candidates[0]["url"] == "https://example.com/missing"
+    assert candidates[0]["priority"] == "high"
 
 
 def test_provider_api_url_helpers_reject_ambiguous_paths() -> None:

@@ -57,10 +57,119 @@
   cursor: pointer; transition: color .12s, border-color .12s;
 }
 .corr-save-btn:hover { border-color: var(--accent); color: var(--accent-2); }
+.corr-flow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 14px; }
+.corr-flow-item {
+  padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: rgba(255,255,255,.018);
+}
+.corr-flow-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.corr-flow-title { font-size: 13px; font-weight: 700; line-height: 1.35; }
+.corr-flow-meta { display: flex; gap: 6px; flex-wrap: wrap; margin: 7px 0; }
+.corr-flow-url {
+  display: block; font-family: monospace; font-size: 11px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 8px 0 10px;
+}
+.corr-flow-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.corr-flow-status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 18px; }
 </style>
 <script>
 (function () {
   var _slug = {{ slug | tojson }};
+
+  function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function showFlowStatus(message, kind) {
+    var el = document.getElementById('correction-flow-status');
+    if (!el) return;
+    el.innerHTML = message;
+    el.style.color = kind === 'error' ? 'var(--err)' : (kind === 'ok' ? 'var(--ok,#34d399)' : 'var(--muted)');
+  }
+
+  function runSingleFix(issue, url, crawl) {
+    return fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/github-fix', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url: url, crawl_ts: crawl || '', confirm: false})
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (!d.ok) return d;
+      if (d.pr_url) return d;
+      if (!d.file || !d.patched_content) return {ok: false, error: 'Prévisualisation incomplète.'};
+      return fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/github-fix', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          url: url, crawl_ts: crawl || '', confirm: true,
+          file_path: d.file, patched_content: d.patched_content
+        })
+      }).then(function(r) { return r.json(); });
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-correction-bulk-fix]');
+    if (!btn) return;
+    var original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Création de la PR...';
+    showFlowStatus('Analyse du dernier crawl et génération des corrections...', '');
+    fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/bulk-fix', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: '{}'
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok) {
+          btn.disabled = false;
+          btn.textContent = original;
+          showFlowStatus(esc(d.error || 'Erreur pendant la correction globale.'), 'error');
+          return;
+        }
+        var label = d.merged ? 'Corrections mergées' : 'PR créée';
+        var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
+        showFlowStatus(label + ' (' + esc(d.fixed_count || 0) + '/' + esc(d.total_count || 0) + ')' + link, 'ok');
+        setTimeout(function() { window.location.reload(); }, 2200);
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = original;
+        showFlowStatus('Erreur réseau pendant la correction globale.', 'error');
+      });
+  });
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-correction-single-fix]');
+    if (!btn) return;
+    var original = btn.textContent;
+    var issue = btn.dataset.issue || '';
+    var url = btn.dataset.url || '';
+    var crawl = btn.dataset.crawl || '';
+    btn.disabled = true;
+    btn.textContent = 'Création PR...';
+    runSingleFix(issue, url, crawl)
+      .then(function(d) {
+        if (!d.ok) {
+          btn.disabled = false;
+          btn.textContent = 'Erreur';
+          btn.title = d.error || 'Erreur';
+          showFlowStatus(esc(d.error || 'Erreur pendant la correction.'), 'error');
+          setTimeout(function() { btn.textContent = original; }, 1600);
+          return;
+        }
+        btn.textContent = d.merged ? 'Mergé' : 'PR créée';
+        var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
+        showFlowStatus((d.merged ? 'Correction mergée.' : 'Pull Request créée.') + link, 'ok');
+        setTimeout(function() { window.location.reload(); }, 1800);
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Erreur';
+        showFlowStatus('Erreur réseau pendant la correction.', 'error');
+        setTimeout(function() { btn.textContent = original; }, 1600);
+      });
+  });
 
   function setStatus(issueKey, url, newStatus) {
     fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issueKey) + '/task', {
@@ -118,10 +227,87 @@
   <p class="muted">{{ total }} tâche{{ 's' if total > 1 else '' }} · {{ project.site_name }}</p>
 </div>
 
+<section class="card">
+  <div class="card-title-row">
+    <div>
+      <h2>Accélérateur de correction</h2>
+      <p class="muted small" style="margin:4px 0 0;">
+        {% if current_crawl_ts %}
+          Crawl courant <span class="mono">{{ current_crawl_ts }}</span> · {{ fix_candidates|length }} anomalie{{ 's' if fix_candidates|length > 1 else '' }} candidate{{ 's' if fix_candidates|length > 1 else '' }}.
+        {% else %}
+          Aucun crawl exploitable pour générer des corrections.
+        {% endif %}
+      </p>
+    </div>
+    <div class="card-title-actions">
+      <a class="btn" href="/projects/{{ slug }}/issues{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Anomalies</a>
+      {% if current_crawl_ts %}
+        <a class="btn" href="/projects/{{ slug }}/export/fix-pack.zip?crawl={{ current_crawl_ts }}">Fix Pack ZIP</a>
+      {% endif %}
+      {% if github_cfg and github_cfg.repo and fix_candidates %}
+        <button type="button" class="btn primary" data-correction-bulk-fix>Tout corriger en 1 PR</button>
+      {% elif not (github_cfg and github_cfg.repo) %}
+        <a class="btn primary" href="/projects/{{ slug }}/settings/crawl#github-section">Connecter GitHub</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if github_cfg and github_cfg.repo %}
+    <p class="muted small" style="margin:8px 0 0;">
+      Dépôt connecté : <span class="mono">{{ github_cfg.repo }}</span> · branche <span class="mono">{{ github_cfg.branch }}</span> · mode {{ 'auto-merge' if github_cfg.mode == 'auto' else 'PR à vérifier' }}.
+    </p>
+  {% endif %}
+  <div id="correction-flow-status" class="corr-flow-status"></div>
+
+  {% if fix_candidates %}
+    <div class="corr-flow-grid">
+      {% for candidate in fix_candidates %}
+        {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(candidate.severity, candidate.severity) %}
+        {% set p_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(candidate.priority, candidate.priority) %}
+        <div class="corr-flow-item">
+          <div class="corr-flow-head">
+            <div class="corr-flow-title">{{ candidate.label }}</div>
+            <span class="badge {{ candidate.severity }}" style="font-size:10px;">{{ sev_label }}</span>
+          </div>
+          <div class="corr-flow-meta">
+            <span class="badge {{ 'error' if candidate.priority == 'high' else ('warning' if candidate.priority == 'medium' else 'notice') }}" style="font-size:10px;">priorité {{ p_label }}</span>
+            <span class="muted small mono">{{ candidate.count }} occ.</span>
+            {% if candidate.task_status %}<span class="muted small">{{ candidate.task_status }}</span>{% endif %}
+          </div>
+          {% if candidate.url %}
+            <a class="corr-flow-url" href="{{ candidate.url }}" target="_blank" rel="noreferrer" title="{{ candidate.url }}">{{ candidate.url }}</a>
+          {% else %}
+            <span class="corr-flow-url">URL non détectée</span>
+          {% endif %}
+          <div class="corr-flow-actions">
+            <a class="btn" style="font-size:11px;padding:3px 10px;" href="/projects/{{ slug }}/issues/{{ candidate.key }}{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Voir</a>
+            {% if github_cfg and github_cfg.repo and candidate.url %}
+              <button type="button"
+                class="btn primary"
+                style="font-size:11px;padding:3px 10px;"
+                data-correction-single-fix
+                data-issue="{{ candidate.key }}"
+                data-url="{{ candidate.url }}"
+                data-crawl="{{ current_crawl_ts }}">Créer PR</button>
+            {% elif not (github_cfg and github_cfg.repo) %}
+              <span class="muted small">GitHub requis</span>
+            {% endif %}
+            {% if candidate.pr and candidate.pr.pr_url %}
+              <a href="{{ candidate.pr.pr_url }}" target="_blank" rel="noreferrer" class="muted small">PR existante</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted small" style="margin-top:12px;">Aucune anomalie corrigeable automatiquement trouvée sur le dernier crawl.</p>
+  {% endif %}
+</section>
+
 {% if total == 0 %}
   <section class="card">
     <p class="muted">Aucune correction suivie pour l'instant.</p>
-    <p class="muted small" style="margin-top:6px;">Sur la page d'une anomalie, utilise les boutons de statut pour commencer le suivi.</p>
+    <p class="muted small" style="margin-top:6px;">Tu peux créer une PR depuis l'accélérateur ci-dessus, ou utiliser les boutons de statut sur la page d'une anomalie.</p>
     <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">Voir les anomalies</a>
   </section>
 {% else %}
