@@ -6238,7 +6238,12 @@ def _score_issues(
     issues["https_page_links_to_http_css"] = _issue_block("https_page_links_to_http_css", https_page_http_css)
     issues["https_http_mixed_content"] = _issue_block("https_http_mixed_content", https_mixed_content)
 
-    # Semrush-like: links with no anchor text (count per affected page, not per link).
+    # Links with no anchor text (count per affected page, not per link).
+    # Ahrefs parity: "Links with no anchor text" is an INTERNAL-links issue — external
+    # links (e.g. a legal page linking to https://www.cnil.fr with the raw URL as its
+    # visible text) are out of scope and must not be counted. The per-row `internal`
+    # flag is computed at detection time; filter on it here so only internal empty-anchor
+    # links contribute. This can only lower the count, never invent issues on other sites.
     links_no_anchor_by_page: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for p in ok_html_pages:
         rows = getattr(p, "links_without_anchor_text", None)
@@ -6246,7 +6251,7 @@ def _score_issues(
             continue
         pid = _final_url(p)
         for r in rows:
-            if isinstance(r, dict) and r.get("target_url"):
+            if isinstance(r, dict) and r.get("target_url") and r.get("internal"):
                 links_no_anchor_by_page[pid].append(r)
     links_no_anchor_pages = [
         {"url": url, "links": rows[:50], "count": len(rows)} for url, rows in sorted(links_no_anchor_by_page.items())
