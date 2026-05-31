@@ -7360,11 +7360,21 @@ def main(argv: list[str]) -> int:
             seen.add(u)
             queue.append(u)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=config.workers) as executor:
+    # Each crawled page launches a fresh headless Chromium (~250-400MB RAM). Cap the
+    # number of concurrent browsers to avoid OOM on memory-constrained hosts, regardless
+    # of config.workers. Tune with SEO_AGENT_BROWSER_WORKERS (raise it if more RAM).
+    try:
+        _browser_cap = int(os.getenv("SEO_AGENT_BROWSER_WORKERS", "3"))
+    except ValueError:
+        _browser_cap = 3
+    _crawl_workers = max(1, min(int(config.workers), _browser_cap))
+    print(f"[CRAWL] browser concurrency = {_crawl_workers} (config.workers={config.workers}, cap={_browser_cap})", flush=True)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=_crawl_workers) as executor:
         last_progress = time.monotonic()
         while queue and len(pages) < config.max_pages:
             batch: list[str] = []
-            while queue and len(batch) < config.workers and (len(pages) + len(batch)) < config.max_pages:
+            while queue and len(batch) < _crawl_workers and (len(pages) + len(batch)) < config.max_pages:
                 u = queue.popleft()
                 if u in pages:
                     continue
