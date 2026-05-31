@@ -6080,6 +6080,25 @@ def _finalize_stale_job(job: Job) -> bool:
         if kind != "crawl":
             return False
 
+        # cancel_requested fast-path — runs BEFORE report/output-dir resolution.
+        # The worker SIGKILL completes in <10s, so a job still cancel_requested after
+        # cancel_after_s means the worker is gone. Finalize as canceled even when no
+        # output dir / report can be located (a job cancelled early may have neither),
+        # otherwise the projects list and overview stay stuck on "annulation…" forever.
+        if job.status == "cancel_requested":
+            _started_at = job.started_at or job.created_at or 0.0
+            _age_s = max(0.0, time.time() - float(_started_at))
+            _cancel_after_s = float(os.getenv("SEO_AGENT_STALE_CANCEL_SECONDS", "30"))
+            if _age_s >= _cancel_after_s:
+                job.status = "canceled"
+                job.returncode = job.returncode if job.returncode is not None else 130
+                job.finished_at = job.finished_at if job.finished_at is not None else time.time()
+                if not (job.stderr or "").strip():
+                    job.stderr = f"[STALE] Job annulé (worker arrêté, âge={int(_age_s)}s)."
+                _finalize_crawl_billing_after_stale(job, actual_pages_crawled=None)
+                _save_job(job)
+                return True
+
         out_dir = _command_arg(job.command, "--output-dir")
         report_path: Path | None = None
         if out_dir:
