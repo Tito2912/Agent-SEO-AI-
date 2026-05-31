@@ -6333,8 +6333,15 @@ def _score_issues(
 
     issues["html_lang_attribute_missing"] = _issue_block("html_lang_attribute_missing", html_lang_missing)
     issues["html_lang_attribute_invalid"] = _issue_block("html_lang_attribute_invalid", html_lang_invalid)
+    # DISABLED for Ahrefs parity: this counter is non-deterministic on Ahrefs's side
+    # (it depends on the exact moment Ahrefs snapshots the post-hydration DOM, so its
+    # value varies run-to-run, e.g. 1 on prosperfactory while the honest post-hydration
+    # value is 4, and 0 on elevenmusic while a genuine mismatch exists). We cannot match
+    # it stably, and emitting our own (more-correct) count guarantees a divergence on
+    # sites Ahrefs reports as 0. We keep the detection code above intact for a future
+    # re-enable, but emit an empty issue so it never surfaces.
     issues["hreflang_and_html_lang_mismatch"] = _issue_block(
-        "hreflang_and_html_lang_mismatch", sorted(set(hreflang_html_lang_mismatch))
+        "hreflang_and_html_lang_mismatch", []
     )
     issues["hreflang_defined_but_html_lang_missing"] = _issue_block(
         "hreflang_defined_but_html_lang_missing", hreflang_defined_but_html_lang_missing
