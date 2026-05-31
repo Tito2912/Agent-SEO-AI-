@@ -5370,7 +5370,9 @@ def _score_issues(
                 continue
             t = page_by_any.get(_norm_self(href) or href)
             if t:
-                if _is_redirect(t) or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
+                # TooManyRedirects targets count as broken (Ahrefs flags hreflang→redirect-loop).
+                _t_toomany = bool(t.error and "toomanyredirects" in (t.error or "").lower())
+                if _is_redirect(t) or _t_toomany or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
                 if _is_non_canonical(t):
                     any_non_canonical = True
