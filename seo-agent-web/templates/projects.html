@@ -262,7 +262,7 @@
                               <span class="pill {{ recent_job.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(recent_job.status, recent_job.status) }}</span>
                               <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}-{% endif %}</span>
                             </div>
-                            <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
+                            <div class="progress slim crawl" data-role="progress-bar" {% if not tot or recent_job.status == 'done' %}style="display:none;"{% endif %}>
                               <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
                             </div>
                           </div>
@@ -757,7 +757,10 @@
 	        const count = el.querySelector('[data-role="progress-count"]');
 	        if (fill && bar) {
 	          const { cur, tot, pct } = pctDisplay(progress, status);
-	          if (tot > 0) {
+	          if (status === "done") {
+	            bar.style.display = "none";
+	            if (count) count.textContent = tot ? `${cur}/${tot}` : "-";
+	          } else if (tot > 0) {
 	            fill.style.setProperty("--p", String(pct));
 	            bar.style.display = "";
 	            if (count) count.textContent = `${cur}/${tot}`;
