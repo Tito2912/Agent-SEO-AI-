@@ -246,7 +246,7 @@
 	                          <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
 	                        </div>
 	                      </div>
-                        {% elif recent_job and recent_job.status in ['failed', 'canceled', 'done'] %}
+                        {% elif recent_job and recent_job.status in ['failed', 'canceled'] %}
                           {% set progress = recent_job.progress if recent_job.progress else none %}
                           {% if progress and progress.total %}
                             {% set cur = progress.current|int %}
@@ -262,7 +262,7 @@
                               <span class="pill {{ recent_job.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(recent_job.status, recent_job.status) }}</span>
                               <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}-{% endif %}</span>
                             </div>
-                            <div class="progress slim crawl" data-role="progress-bar" {% if not tot or recent_job.status == 'done' %}style="display:none;"{% endif %}>
+                            <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
                               <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
                             </div>
                           </div>
@@ -772,6 +772,7 @@
 
 	        if (status === "done" || status === "failed" || status === "canceled") {
 	          el.dataset.live = "0";
+	          if (status === "done") el.style.display = "none";
 	          const slug = el.dataset.projectSlug;
 	          if (slug) {
 	            const esc = (window.CSS && typeof window.CSS.escape === "function")
