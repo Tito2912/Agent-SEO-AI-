@@ -4834,7 +4834,7 @@ def _score_issues(
     # 70 chars matches Screaming Frog's default and aligns with Ahrefs' effective threshold
     # (Ahrefs documents 60 but their Site Audit fires consistently around 70 in practice).
     TITLE_TOO_LONG = 70
-    TITLE_TOO_SHORT = 10  # Ahrefs threshold: < 10 chars
+    TITLE_TOO_SHORT = 15  # Ahrefs threshold: < 15 chars (verified on avis-invest: <15 = 15 exactly)
     DESC_TOO_LONG = 160
     DESC_TOO_SHORT = 100  # Ahrefs threshold: descriptions < 100 chars are flagged as too short
     LOW_WORD_COUNT = 150  # Service/landing pages with 150-200 words are legitimate
@@ -6366,12 +6366,16 @@ def _score_issues(
         "page_has_no_outgoing_links_not_indexable", no_out_not_indexable
     )
 
+    # SUPPRESSED for Ahrefs parity: Ahrefs does not track "page has nofollow outgoing internal
+    # links" as an issue — it never surfaced across 10 reference sites, including affiliate-heavy
+    # ones whose sponsored CTA links (rel="sponsored" to /sources/etoro-en#open-account, a cloaked
+    # internal→external redirect) Noyaru was counting. Emit empty; detection kept for re-enable.
     nf_out_indexable, nf_out_not_indexable = _split_url_list(pages_with_nofollow_outgoing_internal)
     issues["page_has_nofollow_outgoing_internal_links_indexable"] = _issue_block(
-        "page_has_nofollow_outgoing_internal_links_indexable", nf_out_indexable
+        "page_has_nofollow_outgoing_internal_links_indexable", []
     )
     issues["page_has_nofollow_outgoing_internal_links_not_indexable"] = _issue_block(
-        "page_has_nofollow_outgoing_internal_links_not_indexable", nf_out_not_indexable
+        "page_has_nofollow_outgoing_internal_links_not_indexable", []
     )
 
     issues["https_page_has_internal_links_to_http"] = _issue_block(
