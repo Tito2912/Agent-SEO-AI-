@@ -5541,19 +5541,41 @@ def _score_issues(
             hreflang_conflicts_within_page_source_code.append({"url": _final_url(p), "conflicts": conflicts})
 
     # Ahrefs: "more than one page for same language in hreflang"
-    # Per-page check (matches official Ahrefs definition): flag any page whose HTML declares
-    # the same language code pointing to more than one distinct URL.
-    # hreflang_raw preserves all duplicate entries unlike the deduped hreflang dict.
+    # Official Ahrefs definition: flag a page that references more than one page for the same
+    # language (or language-location) in its hreflang annotations. Crucially, Ahrefs reads
+    # hreflang from BOTH the page source code AND the XML sitemap, and x-default counts as a
+    # language slot. A real-world trigger (verified on templated sites: elevenlabs/elevenmusic)
+    # is x-default pointing to the localized self URL in the sitemap but to the English version
+    # in the page source — so x-default resolves to 2 distinct URLs for that page. We therefore
+    # MERGE source-code hreflang (hreflang_raw, which preserves region-variant duplicates) with
+    # the page's sitemap hreflang, normalize targets, and include x-default. URLs are normalized
+    # so trailing-slash/scheme differences between the two sources don't create false positives.
+    def _sitemap_hreflang_only(p: PageData) -> dict[str, str]:
+        if not sitemap_hreflang:
+            return {}
+        for key in (_final_url(p), _norm_self(p.url) or p.url, _norm_self(p.final_url) if p.final_url else None):
+            if not key:
+                continue
+            key_norm = _norm_self(key) or key
+            if key_norm in sitemap_hreflang:
+                return sitemap_hreflang[key_norm]
+        return {}
+
     _more_than_one_lang: list[str] = []
     for p in ok_html_pages:
-        if not p.hreflang_raw:
-            continue
         _code_to_urls: dict[str, set[str]] = defaultdict(set)
-        for entry in p.hreflang_raw:
+        # 1) page source-code hreflang (raw preserves region-variant duplicates)
+        for entry in (p.hreflang_raw or []):
             code = (entry.get("hreflang") or "").strip().lower()
             href = (entry.get("href") or "").strip()
-            if code and code != "x-default" and href:
-                _code_to_urls[code].add(href)
+            if code and href:
+                _code_to_urls[code].add(_norm_self(href) or href)
+        # 2) XML sitemap hreflang for this same page URL
+        for code, href in (_sitemap_hreflang_only(p) or {}).items():
+            code = str(code or "").strip().lower()
+            href = str(href or "").strip()
+            if code and href:
+                _code_to_urls[code].add(_norm_self(href) or href)
         if any(len(urls) > 1 for urls in _code_to_urls.values()):
             _more_than_one_lang.append(p.url or "")
     more_than_one_page_for_same_language_in_hreflang = sorted(set(filter(None, _more_than_one_lang)))
