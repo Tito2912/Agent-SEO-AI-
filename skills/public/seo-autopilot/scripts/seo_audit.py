@@ -5594,6 +5594,39 @@ def _score_issues(
             _more_than_one_lang.append(p.url or "")
     more_than_one_page_for_same_language_in_hreflang = sorted(set(filter(None, _more_than_one_lang)))
 
+    # Ahrefs flags EVERY member of a conflicting hreflang group. A page whose own source
+    # hreflang failed to capture (e.g. the seed/redirect-resolved homepage) is still a group
+    # member via its sitemap alternates, which point at already-flagged pages. Propagate the
+    # flag across group links (source + sitemap targets) to fixpoint. This only adds pages
+    # that share a group with a per-page-detected conflict, so clean sites stay at 0.
+    if more_than_one_page_for_same_language_in_hreflang:
+        _mto_flagged_keys = set(more_than_one_page_for_same_language_in_hreflang)
+        _mto_flagged_norm = {_norm_self(u) or u for u in _mto_flagged_keys}
+        _mto_targets: dict[str, set[str]] = {}
+        _mto_self: dict[str, str] = {}
+        for p in ok_html_pages:
+            _k = p.url or _final_url(p)
+            _tg: set[str] = set()
+            for _c, _h in _source_hreflang_pairs(p):
+                _tg.add(_norm_self(_h) or _h)
+            for _c, _h in (_sitemap_hreflang_only(p) or {}).items():
+                _hs = str(_h or "").strip()
+                if _hs:
+                    _tg.add(_norm_self(_hs) or _hs)
+            _mto_targets[_k] = _tg
+            _mto_self[_k] = _norm_self(_final_url(p)) or _final_url(p)
+        _changed = True
+        while _changed:
+            _changed = False
+            for _k, _tg in _mto_targets.items():
+                if _k in _mto_flagged_keys:
+                    continue
+                if _tg & _mto_flagged_norm:
+                    _mto_flagged_keys.add(_k)
+                    _mto_flagged_norm.add(_mto_self[_k])
+                    _changed = True
+        more_than_one_page_for_same_language_in_hreflang = sorted(filter(None, _mto_flagged_keys))
+
     # --- Structured data (schema.org) ---
     # Ahrefs-like: be conservative to avoid false positives.
     # - schema.org validation errors: only hard parse/type errors
