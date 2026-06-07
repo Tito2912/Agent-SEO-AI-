@@ -13184,6 +13184,25 @@ def gsc_properties(request: Request) -> JSONResponse:
         props.append({"property_url": site_url, "permission": perm, "domain": domain, "suggested_base_url": suggested})
 
     props.sort(key=lambda p: (p.get("domain") or p.get("property_url") or "").lower())
+
+    # Mark properties that are already added as projects for this user
+    user = getattr(request.state, "user", None)
+    existing_domains: set[str] = set()
+    if user:
+        with _db() as db:
+            existing = db.query(Project).filter(Project.owner_user_id == str(user.id)).all()
+            for proj in existing:
+                h = (urlsplit(proj.base_url).hostname or "").lower().lstrip("www.")
+                if h:
+                    existing_domains.add(h)
+                slug_domain = (proj.slug or "").lower().lstrip("www.")
+                if slug_domain:
+                    existing_domains.add(slug_domain)
+
+    for p in props:
+        d = (p.get("domain") or "").lower().lstrip("www.")
+        p["already_added"] = d in existing_domains
+
     return JSONResponse({"ok": True, "properties": props})
 
 

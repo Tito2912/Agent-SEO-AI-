@@ -672,18 +672,29 @@
 
 	            items.forEach((p) => {
 	              const label = document.createElement("label");
-	              label.className = "checkbox";
 	              const value = String(p.property_url || "").trim();
 	              const domain = String(p.domain || "").trim();
-	              label.innerHTML = `
-	                <input type="checkbox" name="gsc_urls" value="${value.replaceAll('"', '&quot;')}" />
-	                <span class="mono">${domain || value}</span>
-	                <span class="muted small">${value}</span>
-	              `;
+	              if (p.already_added) {
+	                label.className = "checkbox gsc-already-added";
+	                label.title = "Déjà dans vos projets";
+	                label.innerHTML = `
+	                  <input type="checkbox" name="gsc_urls" value="${value.replaceAll('"', '&quot;')}" disabled />
+	                  <span class="mono">${domain || value}</span>
+	                  <span class="muted small">${value}</span>
+	                  <span class="badge ok" style="margin-left:auto;font-size:10px;">Ajouté</span>
+	                `;
+	              } else {
+	                label.className = "checkbox";
+	                label.innerHTML = `
+	                  <input type="checkbox" name="gsc_urls" value="${value.replaceAll('"', '&quot;')}" />
+	                  <span class="mono">${domain || value}</span>
+	                  <span class="muted small">${value}</span>
+	                `;
+	              }
 	              gscList.appendChild(label);
 	            });
 
-	            const boxes = Array.from(gscList.querySelectorAll("input[type=checkbox][name=gsc_urls]"));
+	            const boxes = Array.from(gscList.querySelectorAll("input[type=checkbox][name=gsc_urls]")).filter((b) => !b.disabled);
 	            function syncSelectAll() {
 	              const checked = boxes.filter((b) => b.checked).length;
 	              if (selectAll) {

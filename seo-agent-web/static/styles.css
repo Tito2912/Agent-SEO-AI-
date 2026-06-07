@@ -1434,6 +1434,7 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
   background: rgba(255,255,255,.015);
 }
 .gsc-list .checkbox { justify-content: flex-start; gap: 10px; }
+.gsc-list .gsc-already-added { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .gsc-selectall      { padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
 
 /* ═══════════════════════════════════════════════════════
