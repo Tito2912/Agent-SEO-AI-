@@ -3281,6 +3281,12 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     external_df: list[str] = []
     external_nf: list[str] = []
     for raw_href, raw_rel in parser.links:
+        # Same-page anchor links (href="#section") are not outgoing links — they defrag to the
+        # page's own URL. Ahrefs does not count them as outgoing internal links (this was
+        # over-reporting page_has_nofollow_outgoing_internal_links on pages with nofollow'd
+        # in-page CTA anchors, e.g. #konto-eroeffnen).
+        if (raw_href or "").strip().startswith("#"):
+            continue
         norm = _normalize_url(raw_href, base=base_for_urls)
         if not norm:
             continue
@@ -5739,7 +5745,8 @@ def _score_issues(
     _missing_recip_set: set[str] = set()
     if sitemap_set_norm:
         _out_of_sitemap_targets: set[str] = set()
-        _recip_candidates: list[tuple[PageData, set[str]]] = []
+        _recip_candidates: list[tuple[PageData, str, set[str]]] = []
+        _recip_hf_by_norm: dict[str, set[str]] = {}
         for p in ok_html_pages:
             if _is_non_canonical(p) or _is_redirect(p) or not _is_indexable(p):
                 continue
@@ -5755,15 +5762,28 @@ def _score_issues(
             _targets.discard("")
             if not _targets:
                 continue
-            _recip_candidates.append((p, _targets))
+            _recip_candidates.append((p, _self_norm, _targets))
+            _recip_hf_by_norm[_self_norm] = _targets
             _out = {t for t in _targets if t not in sitemap_set_norm}
             if _out:
                 _missing_recip_set.add(p.url or _final_url(p))
                 _out_of_sitemap_targets |= _out
         # Also flag the out-of-sitemap alternate pages themselves (members of a broken group).
-        for p, _targets in _recip_candidates:
-            if (_norm_self(_final_url(p)) or _final_url(p)) in _out_of_sitemap_targets:
+        for p, _self_norm, _targets in _recip_candidates:
+            if _self_norm in _out_of_sitemap_targets:
                 _missing_recip_set.add(p.url or _final_url(p))
+        # Source-reciprocity: P references alternate T but T does not reference P back. Only
+        # consider T that is itself a crawled, indexable, non-redirect page WITH hreflang
+        # (it appears in _recip_hf_by_norm). A hreflang to a redirect/non-indexable/uncrawled
+        # target is a different issue (hreflang_to_redirect / out-of-sitemap), so it is skipped
+        # here — this is what keeps self-redirect sites like make-avis at 0. Validated:
+        # tradingview 2 (de/es guide pages have incomplete hreflang), elevenlabs 8, others 0.
+        for p, _self_norm, _targets in _recip_candidates:
+            for t in _targets:
+                t_hf = _recip_hf_by_norm.get(t)
+                if t_hf is not None and _self_norm not in t_hf:
+                    _missing_recip_set.add(p.url or _final_url(p))
+                    break
     _missing_reciprocal_hreflang_v2 = sorted(_missing_recip_set)
 
     issues: dict[str, dict[str, Any]] = {}
