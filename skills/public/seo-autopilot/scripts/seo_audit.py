@@ -5606,6 +5606,13 @@ def _score_issues(
     # flag across group links (source + sitemap targets) to fixpoint. This only adds pages
     # that share a group with a per-page-detected conflict, so clean sites stay at 0.
     if more_than_one_page_for_same_language_in_hreflang:
+        # Restrict propagation to pages that are themselves in the XML sitemap: the
+        # more_than_one conflict is a source-vs-sitemap x-default mismatch, which requires a
+        # sitemap entry. Out-of-sitemap alternates (e.g. de/es legal pages discovered via
+        # hreflang) have no sitemap entry and belong to missing_reciprocal, not this issue —
+        # propagating to them wrongly inflated elevenlabs from 24 to 28. The elevenmusic
+        # homepage IS in the sitemap, so it is still recovered here.
+        _mto_sitemap_norm = {_norm_self(u) or u for u in (sitemap_urls or [])}
         _mto_flagged_keys = set(more_than_one_page_for_same_language_in_hreflang)
         _mto_flagged_norm = {_norm_self(u) or u for u in _mto_flagged_keys}
         _mto_targets: dict[str, set[str]] = {}
@@ -5626,6 +5633,8 @@ def _score_issues(
             _changed = False
             for _k, _tg in _mto_targets.items():
                 if _k in _mto_flagged_keys:
+                    continue
+                if _mto_sitemap_norm and _mto_self[_k] not in _mto_sitemap_norm:
                     continue
                 if _tg & _mto_flagged_norm:
                     _mto_flagged_keys.add(_k)
