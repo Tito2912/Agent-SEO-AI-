@@ -5682,6 +5682,45 @@ def _score_issues(
         if sitemap_set_norm and eff not in sitemap_set_norm:
             indexable_not_in_sitemap.append(eff)
 
+    # Ahrefs "Missing reciprocal hreflang (no return-tag)" — a hreflang group whose alternates
+    # include an indexable page that is ABSENT from the XML sitemap has no sitemap-level return
+    # tag, so the group's reciprocity is broken. Ahrefs flags every member of such a group (both
+    # the in-sitemap pages that reference the out-of-sitemap alternate AND the out-of-sitemap
+    # pages themselves). Targets are taken from BOTH the page source code and the sitemap hreflang
+    # (same dual-source model as more_than_one_page). Validated against ground truth: elevenlabs 8,
+    # elevenmusic/creativeai/make-avis/prosperfactory/easyshopbuilder 0 (all alternates in sitemap).
+    _missing_recip_set: set[str] = set()
+    if sitemap_set_norm:
+        _out_of_sitemap_targets: set[str] = set()
+        _recip_candidates: list[tuple[PageData, set[str]]] = []
+        for p in ok_html_pages:
+            if _is_non_canonical(p) or _is_redirect(p) or not _is_indexable(p):
+                continue
+            _self_norm = _norm_self(_final_url(p)) or _final_url(p)
+            _targets: set[str] = set()
+            for entry in (p.hreflang_raw or []):
+                code = (entry.get("hreflang") or "").strip().lower()
+                href = (entry.get("href") or "").strip()
+                if code and code != "x-default" and href:
+                    _targets.add(_norm_self(href) or href)
+            for code, href in (_sitemap_hreflang_only(p) or {}).items():
+                if str(code or "").strip().lower() != "x-default" and href:
+                    _targets.add(_norm_self(str(href)) or str(href))
+            _targets.discard(_self_norm)
+            _targets.discard("")
+            if not _targets:
+                continue
+            _recip_candidates.append((p, _targets))
+            _out = {t for t in _targets if t not in sitemap_set_norm}
+            if _out:
+                _missing_recip_set.add(p.url or _final_url(p))
+                _out_of_sitemap_targets |= _out
+        # Also flag the out-of-sitemap alternate pages themselves (members of a broken group).
+        for p, _targets in _recip_candidates:
+            if (_norm_self(_final_url(p)) or _final_url(p)) in _out_of_sitemap_targets:
+                _missing_recip_set.add(p.url or _final_url(p))
+    _missing_reciprocal_hreflang_v2 = sorted(_missing_recip_set)
+
     issues: dict[str, dict[str, Any]] = {}
 
     # Existing keys (keep stable)
@@ -6382,8 +6421,11 @@ def _score_issues(
     issues["more_than_one_page_for_same_language_in_hreflang"] = _issue_block(
         "more_than_one_page_for_same_language_in_hreflang", more_than_one_page_for_same_language_in_hreflang
     )
-    # Suppressed: Ahrefs does not flag missing reciprocal hreflang as a distinct issue.
-    issues["missing_reciprocal_hreflang"] = _issue_block("missing_reciprocal_hreflang", [])
+    # Ahrefs DOES flag this (verified on elevenlabs-avis). Driven by a hreflang group whose
+    # alternates include an indexable page absent from the sitemap (no sitemap-level return tag).
+    issues["missing_reciprocal_hreflang"] = _issue_block(
+        "missing_reciprocal_hreflang", _missing_reciprocal_hreflang_v2
+    )
     issues["structured_data_schema_org_validation_error"] = _issue_block(
         "structured_data_schema_org_validation_error", structured_data_schema_org_errors
     )

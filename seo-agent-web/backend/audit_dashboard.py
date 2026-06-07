@@ -732,11 +732,11 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "more_than_one_page_for_same_language_in_hreflang",
         "Plusieurs pages pour une même langue dans hreflang",
         "Localization",
-        "warning",
+        "error",
     ),
     "html_lang_attribute_invalid": IssueMeta("html_lang_attribute_invalid", "Attribut HTML lang invalide", "Localization", "notice"),
     "missing_reciprocal_hreflang": IssueMeta(
-        "missing_reciprocal_hreflang", "Hreflang réciproque manquant", "Localization", "warning"
+        "missing_reciprocal_hreflang", "Hreflang réciproque manquant", "Localization", "error"
     ),
     "hreflang_defined_but_html_lang_missing": IssueMeta(
         "hreflang_defined_but_html_lang_missing", "Hreflang défini mais HTML lang manquant", "Localization", "notice"
