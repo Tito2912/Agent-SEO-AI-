@@ -5561,15 +5561,29 @@ def _score_issues(
                 return sitemap_hreflang[key_norm]
         return {}
 
+    def _source_hreflang_pairs(p: PageData) -> list[tuple[str, str]]:
+        # Source-code hreflang from BOTH hreflang_raw (preserves region-variant duplicates)
+        # and the deduped p.hreflang dict. Some page objects (notably the seed/redirect-resolved
+        # homepage) populate one but not the other, so we union them for robustness.
+        pairs: list[tuple[str, str]] = []
+        for entry in (p.hreflang_raw or []):
+            c = (entry.get("hreflang") or "").strip().lower()
+            h = (entry.get("href") or "").strip()
+            if c and h:
+                pairs.append((c, h))
+        for c, h in (p.hreflang or {}).items():
+            c = str(c or "").strip().lower()
+            h = str(h or "").strip()
+            if c and h:
+                pairs.append((c, h))
+        return pairs
+
     _more_than_one_lang: list[str] = []
     for p in ok_html_pages:
         _code_to_urls: dict[str, set[str]] = defaultdict(set)
-        # 1) page source-code hreflang (raw preserves region-variant duplicates)
-        for entry in (p.hreflang_raw or []):
-            code = (entry.get("hreflang") or "").strip().lower()
-            href = (entry.get("href") or "").strip()
-            if code and href:
-                _code_to_urls[code].add(_norm_self(href) or href)
+        # 1) page source-code hreflang (raw duplicates + deduped dict)
+        for code, href in _source_hreflang_pairs(p):
+            _code_to_urls[code].add(_norm_self(href) or href)
         # 2) XML sitemap hreflang for this same page URL
         for code, href in (_sitemap_hreflang_only(p) or {}).items():
             code = str(code or "").strip().lower()
@@ -5698,10 +5712,8 @@ def _score_issues(
                 continue
             _self_norm = _norm_self(_final_url(p)) or _final_url(p)
             _targets: set[str] = set()
-            for entry in (p.hreflang_raw or []):
-                code = (entry.get("hreflang") or "").strip().lower()
-                href = (entry.get("href") or "").strip()
-                if code and code != "x-default" and href:
+            for code, href in _source_hreflang_pairs(p):
+                if code != "x-default":
                     _targets.add(_norm_self(href) or href)
             for code, href in (_sitemap_hreflang_only(p) or {}).items():
                 if str(code or "").strip().lower() != "x-default" and href:
