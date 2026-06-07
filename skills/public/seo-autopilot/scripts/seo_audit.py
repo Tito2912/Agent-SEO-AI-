@@ -4383,6 +4383,13 @@ def _score_issues(
         # redirect to /fr/, /de/, etc. Ahrefs never flags these as link issues.
         if not a_path_raw.strip("/") and a_host == b_host:
             return True
+        # Extension removal (path.html → path) — cosmetic URL cleanup, same family as
+        # trailing-slash. Some sites footer-link legal pages as *.html which 301 to the
+        # extensionless URL; Ahrefs does not flag these (e.g. systeme-avis.com).
+        if a_host == b_host and (a.scheme or "") == (b.scheme or "") and (a.query or "") == (b.query or ""):
+            for _ext in (".html", ".htm"):
+                if a_path_raw.endswith(_ext) and b_path == a_path_raw[: -len(_ext)]:
+                    return True
         return False
 
     def _is_trailing_slash_redirect_to_200(p: PageData) -> bool:
@@ -4406,7 +4413,14 @@ def _score_issues(
             return False  # www↔non-www differs → not matched (Ahrefs counts those)
         if (a.query or "") != (b.query or ""):
             return False
-        return (b.path or "/") == f"{a.path}/"
+        if (b.path or "/") == f"{a.path}/":
+            return True
+        # Extension removal to 200 (path.html → path) — Ahrefs excludes these from the
+        # generic 3XX redirect count, same as trailing-slash.
+        for _ext in (".html", ".htm"):
+            if a.path.endswith(_ext) and (b.path or "") == a.path[: -len(_ext)]:
+                return True
+        return False
 
     # redirect_3xx — Ahrefs counts http→https, www→non-www, AND redirect loops, but
     # EXCLUDES pure trailing-slash redirects that resolve to 200 (/de → /de/ → 200).
