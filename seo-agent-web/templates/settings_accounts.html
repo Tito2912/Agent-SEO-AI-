@@ -1175,8 +1175,23 @@
               gscSyncBtn.disabled = false;
               return;
             }
-            const items = (Array.isArray(data.properties) ? data.properties : [])
-              .filter((p) => !p.already_added);
+            // Build set of domains already in the app (any variant: sc-domain, URL, subfolder)
+            const allProps = Array.isArray(data.properties) ? data.properties : [];
+            const importedDomains = new Set(
+              allProps
+                .filter((p) => p.already_imported)
+                .map((p) => (p.domain || "").toLowerCase())
+                .filter(Boolean)
+            );
+            // Deduplicate: one entry per domain, skip already-imported domains
+            const seenDomains = new Set();
+            const items = allProps.filter((p) => {
+              const d = (p.domain || "").toLowerCase();
+              if (!d || importedDomains.has(d)) return false;
+              if (seenDomains.has(d)) return false;
+              seenDomains.add(d);
+              return true;
+            });
             if (items.length === 0) {
               gscSyncStatus.textContent = "Tous vos sites GSC sont déjà dans l'app.";
               gscSyncBtn.disabled = false;
