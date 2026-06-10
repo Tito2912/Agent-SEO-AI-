@@ -12436,6 +12436,29 @@ def project_gsc_oauth_disconnect(
     return RedirectResponse(url=_path_with_flash(return_to, msg="Google déconnecté."), status_code=303)
 
 
+@app.post("/settings/accounts/gsc/disconnect-all")
+def gsc_disconnect_all_projects(request: Request) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+    with DB.session() as db:
+        projects = list(db.scalars(select(Project).where(Project.owner_user_id == str(user.id))))
+    count = 0
+    for proj in projects:
+        slug = str(getattr(proj, "slug", "") or "").strip()
+        if not slug:
+            continue
+        if _gsc_oauth_connected(str(user.id), slug):
+            token = _gsc_oauth_refresh_token(str(user.id), slug)
+            if token:
+                _google_oauth_revoke_token(token)
+            _gsc_oauth_clear(str(user.id), slug)
+            count += 1
+    msg = f"{count} connexion{'s' if count > 1 else ''} Google déconnectée{'s' if count > 1 else ''}." if count else "Aucune connexion Google active."
+    _audit_log(request, action="oauth.google.disconnect-all", status="ok", user=user)
+    return RedirectResponse(url=_path_with_flash("/settings/accounts#gsc-oauth-card", msg=msg), status_code=303)
+
+
 @app.get("/oauth/github/connect")
 def github_oauth_connect(request: Request, next: str | None = None) -> RedirectResponse:
     user = getattr(request.state, "user", None)

@@ -403,9 +403,12 @@
 
     <div class="grid two">
       <section class="card setting-card span-2" id="gsc-oauth-card">
-        {% set gsc_ns = namespace(connected=0, broken=0) %}
+        {% set gsc_ns = namespace(connected=0, broken=0, first_props_url='') %}
         {% for p in gsc_oauth.projects %}
-          {% if p.oauth_connected and p.oauth_status.ready %}{% set gsc_ns.connected = gsc_ns.connected + 1 %}{% endif %}
+          {% if p.oauth_connected and p.oauth_status.ready %}
+            {% set gsc_ns.connected = gsc_ns.connected + 1 %}
+            {% if not gsc_ns.first_props_url %}{% set gsc_ns.first_props_url = p.properties_url %}{% endif %}
+          {% endif %}
           {% if p.oauth_connected and not p.oauth_status.ready %}{% set gsc_ns.broken = gsc_ns.broken + 1 %}{% endif %}
         {% endfor %}
 
@@ -424,7 +427,17 @@
               {% if gsc_ns.broken %}<span class="badge error">{{ gsc_ns.broken }} erreur{{ 's' if gsc_ns.broken > 1 }}</span>{% endif %}
               {% if gsc_ns.connected %}
                 <span class="badge ok">{{ gsc_ns.connected }} connecté{{ 's' if gsc_ns.connected > 1 }}</span>
-              {% elif not gsc_ns.broken %}
+                <button type="button" class="btn" id="gsc-sync-btn"
+                  data-url="{{ gsc_ns.first_props_url }}"
+                  title="Comparer vos propriétés GSC avec les projets de l'app">
+                  Synchroniser GSC
+                </button>
+                <form method="post" action="/settings/accounts/gsc/disconnect-all" style="display:inline-flex;">
+                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                  <button class="btn-link btn-link-danger" type="submit"
+                    onclick="return confirm('Déconnecter Google de tous les projets ?');">Déconnecter tout</button>
+                </form>
+              {% else %}
                 <span class="badge notice">non connecté</span>
               {% endif %}
             {% else %}
@@ -497,6 +510,16 @@
               {% endfor %}
 
             </div>
+
+            {# ── Sync panel (populated by JS) ─────────────── #}
+            <div id="gsc-sync-panel" style="display:none;margin-top:14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+                <span class="muted small" style="font-weight:600;">Propriétés GSC manquantes dans l'app</span>
+                <span class="muted small" id="gsc-sync-status"></span>
+              </div>
+              <div id="gsc-sync-list"></div>
+            </div>
+
           {% else %}
             <p class="muted small setting-note">Aucun projet configuré dans l'app.</p>
           {% endif %}
@@ -1128,6 +1151,61 @@
         } catch (error) {
           gscStatus.textContent = String(error);
         }
+      }
+
+      // GSC Sync button
+      const gscSyncBtn = document.getElementById("gsc-sync-btn");
+      const gscSyncPanel = document.getElementById("gsc-sync-panel");
+      const gscSyncStatus = document.getElementById("gsc-sync-status");
+      const gscSyncList = document.getElementById("gsc-sync-list");
+
+      if (gscSyncBtn && gscSyncPanel && gscSyncStatus && gscSyncList) {
+        gscSyncBtn.addEventListener("click", async () => {
+          const url = gscSyncBtn.dataset.url;
+          if (!url) return;
+          gscSyncPanel.style.display = "block";
+          gscSyncStatus.textContent = "Chargement…";
+          gscSyncList.innerHTML = "";
+          gscSyncBtn.disabled = true;
+          try {
+            const r = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+            const data = await r.json();
+            if (!data || !data.ok) {
+              gscSyncStatus.textContent = (data && data.error) ? data.error : "Erreur GSC";
+              gscSyncBtn.disabled = false;
+              return;
+            }
+            const items = (Array.isArray(data.properties) ? data.properties : [])
+              .filter((p) => !p.already_added);
+            if (items.length === 0) {
+              gscSyncStatus.textContent = "Tous vos sites GSC sont déjà dans l'app.";
+              gscSyncBtn.disabled = false;
+              return;
+            }
+            gscSyncStatus.textContent = `${items.length} site${items.length > 1 ? "s" : ""} GSC non encore importé${items.length > 1 ? "s" : ""}.`;
+            items.forEach((p) => {
+              const domain = escapeHtml(p.domain || p.property_url || "");
+              const importUrl = escapeHtml(p.suggested_base_url || "");
+              const row = document.createElement("div");
+              row.className = "gsc-proj-row";
+              row.style.marginBottom = "4px";
+              row.innerHTML = `
+                <span class="gsc-dot off"></span>
+                <div class="gsc-proj-meta">
+                  <div class="gsc-proj-name">${domain}</div>
+                  <div class="muted small">${escapeHtml(p.property_url || "")}</div>
+                </div>
+                <div class="gsc-proj-act">
+                  ${importUrl ? importFormHtml({ url: importUrl, next: "/settings/accounts#gsc-oauth-card", label: "Ajouter", siteName: domain }) : ""}
+                </div>
+              `;
+              gscSyncList.appendChild(row);
+            });
+          } catch (e) {
+            gscSyncStatus.textContent = String(e);
+          }
+          gscSyncBtn.disabled = false;
+        });
       }
 
       if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
