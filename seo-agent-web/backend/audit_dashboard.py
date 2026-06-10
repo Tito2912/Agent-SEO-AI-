@@ -700,7 +700,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "title_too_long_not_indexable": IssueMeta(
         "title_too_long_not_indexable", "Balise title trop longue (non indexable)", "Content", "notice"
     ),
-    "title_too_short": IssueMeta("title_too_short", "Balise title trop courte", "Content", "notice"),
+    "title_too_short": IssueMeta("title_too_short", "Balise title trop courte", "Content", "warning"),
     "multiple_h1": IssueMeta("multiple_h1", "Plusieurs H1", "Content", "warning"),
     # Social tags
     "open_graph_tags_incomplete": IssueMeta("open_graph_tags_incomplete", "Open Graph incomplet", "Social tags", "warning"),
