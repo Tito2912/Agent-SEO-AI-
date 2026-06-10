@@ -511,14 +511,6 @@
 
             </div>
 
-            {# ── Sync panel (populated by JS) ─────────────── #}
-            <div id="gsc-sync-panel" style="display:none;margin-top:14px;">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
-                <span class="muted small" style="font-weight:600;">Propriétés GSC manquantes dans l'app</span>
-                <span class="muted small" id="gsc-sync-status"></span>
-              </div>
-              <div id="gsc-sync-list"></div>
-            </div>
 
           {% else %}
             <p class="muted small setting-note">Aucun projet configuré dans l'app.</p>
@@ -1155,27 +1147,25 @@
 
       // GSC Sync button
       const gscSyncBtn = document.getElementById("gsc-sync-btn");
-      const gscSyncPanel = document.getElementById("gsc-sync-panel");
-      const gscSyncStatus = document.getElementById("gsc-sync-status");
-      const gscSyncList = document.getElementById("gsc-sync-list");
+      const gscProjList = document.querySelector(".gsc-proj-list");
 
-      if (gscSyncBtn && gscSyncPanel && gscSyncStatus && gscSyncList) {
+      if (gscSyncBtn && gscProjList) {
         gscSyncBtn.addEventListener("click", async () => {
           const url = gscSyncBtn.dataset.url;
           if (!url) return;
-          gscSyncPanel.style.display = "block";
-          gscSyncStatus.textContent = "Chargement…";
-          gscSyncList.innerHTML = "";
           gscSyncBtn.disabled = true;
+          gscSyncBtn.textContent = "Chargement…";
+          // Remove any previously injected sync rows
+          gscProjList.querySelectorAll(".gsc-sync-injected").forEach((el) => el.remove());
           try {
             const r = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
             const data = await r.json();
             if (!data || !data.ok) {
-              gscSyncStatus.textContent = (data && data.error) ? data.error : "Erreur GSC";
+              gscSyncBtn.textContent = "Synchroniser GSC";
               gscSyncBtn.disabled = false;
+              alert((data && data.error) ? data.error : "Erreur GSC");
               return;
             }
-            // Build set of domains already in the app (any variant: sc-domain, URL, subfolder)
             const allProps = Array.isArray(data.properties) ? data.properties : [];
             const importedDomains = new Set(
               allProps
@@ -1183,27 +1173,33 @@
                 .map((p) => (p.domain || "").toLowerCase())
                 .filter(Boolean)
             );
-            // Deduplicate: one entry per domain, skip already-imported domains
             const seenDomains = new Set();
-            const items = allProps.filter((p) => {
+            const missing = allProps.filter((p) => {
               const d = (p.domain || "").toLowerCase();
               if (!d || importedDomains.has(d)) return false;
               if (seenDomains.has(d)) return false;
               seenDomains.add(d);
               return true;
             });
-            if (items.length === 0) {
-              gscSyncStatus.textContent = "Tous vos sites GSC sont déjà dans l'app.";
-              gscSyncBtn.disabled = false;
-              return;
-            }
-            gscSyncStatus.textContent = `${items.length} site${items.length > 1 ? "s" : ""} GSC non encore importé${items.length > 1 ? "s" : ""}.`;
-            items.forEach((p) => {
+
+            gscSyncBtn.textContent = missing.length
+              ? `Synchroniser GSC (${missing.length} nouveau${missing.length > 1 ? "x" : ""})`
+              : "Synchroniser GSC ✓";
+            gscSyncBtn.disabled = false;
+
+            if (missing.length === 0) return;
+
+            // Separator
+            const sep = document.createElement("div");
+            sep.className = "gsc-sync-injected gsc-sync-sep";
+            sep.textContent = `${missing.length} site${missing.length > 1 ? "s" : ""} GSC non encore dans l'app`;
+            gscProjList.appendChild(sep);
+
+            missing.forEach((p) => {
               const domain = escapeHtml(p.domain || p.property_url || "");
               const importUrl = escapeHtml(p.suggested_base_url || "");
               const row = document.createElement("div");
-              row.className = "gsc-proj-row";
-              row.style.marginBottom = "4px";
+              row.className = "gsc-proj-row gsc-sync-injected";
               row.innerHTML = `
                 <span class="gsc-dot off"></span>
                 <div class="gsc-proj-meta">
@@ -1214,12 +1210,12 @@
                   ${importUrl ? importFormHtml({ url: importUrl, next: "/settings/accounts#gsc-oauth-card", label: "Ajouter", siteName: domain }) : ""}
                 </div>
               `;
-              gscSyncList.appendChild(row);
+              gscProjList.appendChild(row);
             });
           } catch (e) {
-            gscSyncStatus.textContent = String(e);
+            gscSyncBtn.textContent = "Synchroniser GSC";
+            gscSyncBtn.disabled = false;
           }
-          gscSyncBtn.disabled = false;
         });
       }
 
