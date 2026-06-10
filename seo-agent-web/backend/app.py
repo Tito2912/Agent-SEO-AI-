@@ -681,10 +681,7 @@ def _project_meta(settings: dict[str, Any] | None) -> dict[str, Any]:
 
 def _project_visible_in_connections(project: Project) -> bool:
     meta = _project_meta(project.settings if isinstance(project.settings, dict) else {})
-    if bool(meta.get("hide_from_connections")):
-        return False
-    import_source = str(meta.get("import_source") or "").strip().lower()
-    return import_source not in {"legacy_registry", "legacy_import"}
+    return not bool(meta.get("hide_from_connections"))
 
 def _effective_user_connection_value(*, user_id: str, key: str, db=None) -> tuple[str, str]:
     normalized_key = str(key or "").strip()
