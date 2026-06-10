@@ -463,7 +463,7 @@ label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color:
 
 .row     { margin-top: 12px; }
 .radios  { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
-.radio, .checkbox { display: flex; gap: 8px; align-items: center; margin: 5px 0; color: var(--text); font-size: 13px; }
+.radio, .checkbox { display: flex; flex-direction: row; gap: 8px; align-items: center; margin: 5px 0; color: var(--text); font-size: 13px; }
 .radio input, .checkbox input { width: auto; }
 .checkbox.sub { margin-left: 18px; font-size: 13px; color: var(--muted); }
 
@@ -1371,27 +1371,69 @@ pre {
    Modal
 ═══════════════════════════════════════════════════════ */
 dialog.modal {
-  border: 1px solid var(--border-2);
-  background: var(--panel);
+  position: relative;
+  border: 1px solid rgba(var(--accent-rgb), .24);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.008) 38%),
+    linear-gradient(145deg, rgba(var(--accent-rgb), .11), transparent 34%),
+    var(--surface-card-2);
   color: var(--text);
   border-radius: var(--radius-lg);
   padding: 0;
   width: min(720px, calc(100vw - 48px));
-  box-shadow: var(--shadow-lg);
+  max-height: min(86vh, 760px);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,.58), 0 0 0 1px rgba(255,255,255,.035);
 }
-dialog.modal::backdrop { background: rgba(0,0,0,.60); }
+dialog.modal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), .72), transparent);
+  pointer-events: none;
+}
+dialog.modal::backdrop {
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(4px);
+}
 .modal-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 14px 16px;
+  gap: 16px;
+  padding: 18px 20px 16px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,.015);
+  background: rgba(255,255,255,.025);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-.modal-head h2   { margin: 0; font-size: 15px; font-weight: 700; }
-.modal-body      { padding: 16px; }
-.modal-actions   { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.modal-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.modal-title-icon {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  color: var(--accent-2);
+  background: rgba(var(--accent-rgb), .13);
+  border: 1px solid rgba(var(--accent-rgb), .28);
+}
+.modal-title-icon svg { width: 18px; height: 18px; }
+.modal-title-copy { min-width: 0; }
+.modal-head h2   { margin: 0; font-size: 17px; line-height: 1.25; font-weight: 800; letter-spacing: -.01em; }
+.modal-subtitle,
+.modal-lede      { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+.modal-head form { flex: 0 0 auto; }
+.modal-head .btn { min-height: 34px; padding: 6px 12px; }
+.modal-body      { padding: 18px 20px 20px; overflow: auto; max-height: calc(min(86vh, 760px) - 72px); }
+.modal-body label + label { margin-top: 12px; }
+.modal-actions   { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
 /* ═══════════════════════════════════════════════════════
    Tabs
@@ -1399,6 +1441,10 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
 .tab-buttons { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
 .tab-btn {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   border: 1px solid var(--border-2);
   background: transparent;
   color: var(--muted);
@@ -1418,24 +1464,201 @@ dialog.modal::backdrop { background: rgba(0,0,0,.60); }
 .tab-panel        { display: none; }
 .tab-panel.active { display: block; }
 
+dialog.modal .tab-buttons {
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  margin: 14px 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(0,0,0,.16);
+}
+dialog.modal .tab-btn {
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border-color: transparent;
+  background: transparent;
+}
+dialog.modal .tab-btn:hover {
+  background: rgba(255,255,255,.055);
+}
+dialog.modal .tab-btn.active {
+  background: rgba(var(--accent-rgb), .16);
+  border-color: rgba(var(--accent-rgb), .28);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), .08);
+}
+.google-logo {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex: 0 0 16px;
+}
+.btn.google-btn,
+.tab-btn.google-tab {
+  gap: 8px;
+}
+.btn.google-btn {
+  background: #fff;
+  border-color: rgba(255,255,255,.72);
+  color: #202124;
+  box-shadow: 0 1px 2px rgba(0,0,0,.22);
+}
+.btn.google-btn:hover {
+  background: #f8fafd;
+  border-color: #fff;
+}
+
 /* ═══════════════════════════════════════════════════════
    GSC / OAuth lists
 ═══════════════════════════════════════════════════════ */
-.gsc-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.gsc-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,.018);
+}
+.gsc-toolbar select {
+  flex: 1 1 240px;
+  min-width: 180px;
+}
+.gsc-toolbar .btn {
+  flex: 0 0 auto;
+}
+.gsc-toolbar .muted {
+  min-width: 0;
+}
 .gsc-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 148px;
   max-height: 320px;
   overflow: auto;
   padding: 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: rgba(255,255,255,.015);
+  border-radius: var(--radius-md);
+  background: rgba(0,0,0,.14);
 }
-.gsc-list .checkbox { justify-content: flex-start; gap: 10px; }
+.gsc-list.is-empty,
+.gsc-list.is-loading {
+  display: grid;
+  place-items: center;
+}
+.gsc-empty-state {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.gsc-empty-state .google-logo {
+  width: 22px;
+  height: 22px;
+  opacity: .88;
+}
+.gsc-list .checkbox {
+  justify-content: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.022);
+  transition: background .12s ease, border-color .12s ease;
+}
+.gsc-list .checkbox .mono,
+.gsc-list .checkbox .muted {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gsc-list .checkbox .badge {
+  flex: 0 0 auto;
+}
+.gsc-list .checkbox:hover {
+  background: rgba(255,255,255,.045);
+  border-color: rgba(255,255,255,.12);
+}
 .gsc-list .gsc-already-added { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .gsc-selectall      { padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.gsc-selectall .checkbox { background: rgba(var(--accent-rgb), .08); border-color: rgba(var(--accent-rgb), .20); }
+
+@media (max-width: 640px) {
+  dialog.modal {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    min-width: 0;
+  }
+  .modal-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 16px;
+    min-width: 0;
+  }
+  .modal-body {
+    padding: 16px;
+    min-width: 0;
+  }
+  .modal-title {
+    min-width: 0;
+  }
+  .modal-title-icon {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+  .modal-subtitle {
+    line-height: 1.45;
+  }
+  dialog.modal .tab-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  dialog.modal .tab-btn {
+    min-width: 0;
+    white-space: normal;
+  }
+  dialog.modal .tab-btn.google-tab {
+    grid-column: 1 / -1;
+  }
+  .gsc-toolbar {
+    justify-content: flex-start;
+  }
+  .gsc-toolbar .btn,
+  .modal-actions .btn {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .modal-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .gsc-list .checkbox {
+    flex-wrap: wrap;
+  }
+  .gsc-list .checkbox .mono {
+    flex: 1 1 calc(100% - 30px);
+    max-width: calc(100% - 30px);
+  }
+  .gsc-list .checkbox .muted {
+    flex: 1 1 calc(100% - 30px);
+    max-width: calc(100% - 30px);
+  }
+}
 
 /* ═══════════════════════════════════════════════════════
    Top action expand

@@ -537,21 +537,32 @@
 
 	  <dialog id="add-project-dialog" class="modal">
 	    <div class="modal-head">
-	      <h2>Ajouter un projet</h2>
+	      <div class="modal-title">
+	        <span class="modal-title-icon" aria-hidden="true">
+	          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+	            <circle cx="11" cy="11" r="7" />
+	            <path d="m20 20-4.4-4.4" />
+	            <path d="M11 8v6M8 11h6" />
+	          </svg>
+	        </span>
+	        <div class="modal-title-copy">
+	          <h2>Ajouter un projet</h2>
+	          <div class="modal-subtitle">Ajoute un domaine, une URL précise ou importe tes propriétés Search Console.</div>
+	        </div>
+	      </div>
 	      <form method="dialog">
 	        <button class="btn">Fermer</button>
 	      </form>
 	    </div>
 	    <div class="modal-body">
-	      <p class="muted small" style="margin-top:0;">
-	        Ajoute un site à la liste des projets (domaine ou URL).
-	      </p>
-
 	      <div class="tab-buttons" id="add-project-tabs">
 	        <button type="button" class="tab-btn active" data-tab="domain">Domaine</button>
 	        <button type="button" class="tab-btn" data-tab="url">URL</button>
 	        {% if request.state.user and request.state.user.is_admin %}
-	          <button type="button" class="tab-btn" data-tab="gsc">Google Search Console</button>
+	          <button type="button" class="tab-btn google-tab" data-tab="gsc">
+	            <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+	            Search Console
+	          </button>
 	        {% endif %}
 	      </div>
 
@@ -594,10 +605,18 @@
 	          <form method="post" action="/projects/add" id="gsc-add-form">
 	            <input type="hidden" name="mode" value="gsc" />
 	            <div class="gsc-toolbar">
-	              <button type="button" class="btn" id="gsc-load">Charger les propriétés</button>
+	              <button type="button" class="btn google-btn" id="gsc-load">
+	                <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+	                Charger depuis Google
+	              </button>
 	              <span class="muted small" id="gsc-status"></span>
 	            </div>
-	            <div class="gsc-list" id="gsc-list"></div>
+	            <div class="gsc-list is-empty" id="gsc-list">
+	              <div class="gsc-empty-state">
+	                <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+	                <span>Charge les propriétés accessibles avec ton compte Google.</span>
+	              </div>
+	            </div>
 	            <div class="modal-actions">
 	              <span class="muted small" id="gsc-count">0 sélectionné</span>
 	              <button type="submit" class="btn primary" id="gsc-submit" disabled>Ajouter la sélection</button>
@@ -633,6 +652,27 @@
 	      const gscSubmit = document.getElementById("gsc-submit");
 
 	      if (gscLoad && gscList && gscStatus && gscCount && gscSubmit) {
+	        function escapeHtml(value) {
+	          return String(value || "").replace(/[&<>"']/g, (char) => ({
+	            "&": "&amp;",
+	            "<": "&lt;",
+	            ">": "&gt;",
+	            '"': "&quot;",
+	            "'": "&#39;",
+	          })[char]);
+	        }
+
+	        function setGscEmpty(message, loading = false) {
+	          gscList.classList.toggle("is-empty", !loading);
+	          gscList.classList.toggle("is-loading", loading);
+	          gscList.innerHTML = `
+	            <div class="gsc-empty-state">
+	              <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+	              <span>${escapeHtml(message)}</span>
+	            </div>
+	          `;
+	        }
+
 	        function renderGscState() {
 	          const boxes = Array.from(gscList.querySelectorAll("input[type=checkbox][name=gsc_urls]"));
 	          const checked = boxes.filter((b) => b.checked).length;
@@ -642,21 +682,26 @@
 
 	        async function loadGsc() {
 	          gscStatus.textContent = "Chargement…";
-	          gscList.innerHTML = "";
+	          setGscEmpty("Connexion à Google Search Console…", true);
 	          gscSubmit.disabled = true;
 	          try {
 	            const r = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" } });
 	            const data = await r.json();
 	            if (!data || !data.ok) {
-	              gscStatus.textContent = (data && data.error) ? data.error : "Erreur GSC";
+	              const errorMessage = (data && data.error) ? data.error : "Erreur GSC";
+	              gscStatus.textContent = errorMessage;
+	              setGscEmpty(errorMessage);
 	              return;
 	            }
 	            const items = Array.isArray(data.properties) ? data.properties : [];
 	            if (items.length === 0) {
 	              gscStatus.textContent = "Aucune propriété accessible.";
+	              setGscEmpty("Aucune propriété accessible avec ce compte Google.");
 	              return;
 	            }
 	            gscStatus.textContent = `${items.length} propriétés`;
+	            gscList.classList.remove("is-empty", "is-loading");
+	            gscList.innerHTML = "";
 
 	            const header = document.createElement("div");
 	            header.className = "gsc-selectall";
@@ -674,21 +719,23 @@
 	              const label = document.createElement("label");
 	              const value = String(p.property_url || "").trim();
 	              const domain = String(p.domain || "").trim();
+	              const safeValue = escapeHtml(value);
+	              const safeDomain = escapeHtml(domain || value);
 	              if (p.already_added) {
 	                label.className = "checkbox gsc-already-added";
 	                label.title = "Déjà dans vos projets";
 	                label.innerHTML = `
-	                  <input type="checkbox" name="gsc_urls" value="${value.replaceAll('"', '&quot;')}" disabled />
-	                  <span class="mono">${domain || value}</span>
-	                  <span class="muted small">${value}</span>
+	                  <input type="checkbox" name="gsc_urls" value="${safeValue}" disabled />
+	                  <span class="mono">${safeDomain}</span>
+	                  <span class="muted small">${safeValue}</span>
 	                  <span class="badge ok" style="margin-left:auto;font-size:10px;">Ajouté</span>
 	                `;
 	              } else {
 	                label.className = "checkbox";
 	                label.innerHTML = `
-	                  <input type="checkbox" name="gsc_urls" value="${value.replaceAll('"', '&quot;')}" />
-	                  <span class="mono">${domain || value}</span>
-	                  <span class="muted small">${value}</span>
+	                  <input type="checkbox" name="gsc_urls" value="${safeValue}" />
+	                  <span class="mono">${safeDomain}</span>
+	                  <span class="muted small">${safeValue}</span>
 	                `;
 	              }
 	              gscList.appendChild(label);
@@ -713,7 +760,9 @@
 	            }
 	            syncSelectAll();
 	          } catch (e) {
-	            gscStatus.textContent = String(e);
+	            const message = String(e);
+	            gscStatus.textContent = message;
+	            setGscEmpty(message);
 	          }
 	        }
 
