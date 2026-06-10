@@ -403,20 +403,30 @@
 
     <div class="grid two">
       <section class="card setting-card span-2" id="gsc-oauth-card">
-        {% set gsc_connected = namespace(count=0) %}
-        {% for project_item in gsc_oauth.projects %}
-          {% if project_item.oauth_connected and project_item.oauth_status.ready %}
-            {% set gsc_connected.count = gsc_connected.count + 1 %}
-          {% endif %}
+        {% set gsc_ns = namespace(connected=0, broken=0) %}
+        {% for p in gsc_oauth.projects %}
+          {% if p.oauth_connected and p.oauth_status.ready %}{% set gsc_ns.connected = gsc_ns.connected + 1 %}{% endif %}
+          {% if p.oauth_connected and not p.oauth_status.ready %}{% set gsc_ns.broken = gsc_ns.broken + 1 %}{% endif %}
         {% endfor %}
+
         <div class="setting-head">
-          <div>
-            <h2 class="setting-title">Connexion Google Search Console</h2>
-            <div class="muted small">Connexion projet par projet via OAuth. C'est le chemin recommandé pour les données live et les imports GSC.</div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span class="modal-title-icon" aria-hidden="true" style="flex-shrink:0;margin-top:1px;">
+              <img src="/static/google.svg" style="width:18px;height:18px;" alt="" />
+            </span>
+            <div>
+              <h2 class="setting-title">Google Search Console</h2>
+              <div class="muted small">OAuth par projet — connexion nécessaire pour les données live et les imports GSC.</div>
+            </div>
           </div>
           <div class="setting-actions">
             {% if gsc_oauth.configured %}
-              <span class="badge ok">oauth prêt</span>
+              {% if gsc_ns.broken %}<span class="badge error">{{ gsc_ns.broken }} erreur{{ 's' if gsc_ns.broken > 1 }}</span>{% endif %}
+              {% if gsc_ns.connected %}
+                <span class="badge ok">{{ gsc_ns.connected }} connecté{{ 's' if gsc_ns.connected > 1 }}</span>
+              {% elif not gsc_ns.broken %}
+                <span class="badge notice">non connecté</span>
+              {% endif %}
             {% else %}
               <span class="badge notice">indisponible</span>
             {% endif %}
@@ -425,74 +435,70 @@
 
         {% if gsc_oauth.configured %}
           {% if gsc_oauth.projects %}
-            <div class="muted small setting-note">Projets configurés dans l'app</div>
-            {% if gsc_connected.count %}
-              <div class="gsc-toolbar">
-                <select id="gsc-project-picker" aria-label="Projet Google connecté">
-                  {% for project_item in gsc_oauth.projects %}
-                    {% if project_item.oauth_connected and project_item.oauth_status.ready %}
-                      <option
-                        value="{{ project_item.properties_url }}"
-                        data-project-name="{{ project_item.site_name }}"
-                      >
-                        {{ project_item.site_name }}
-                      </option>
-                    {% endif %}
-                  {% endfor %}
-                </select>
-                <button type="button" class="btn primary" id="gsc-load-properties">Voir les propriétés</button>
-              </div>
-            {% endif %}
-            <div class="oauth-project-list">
-              {% for project_item in gsc_oauth.projects %}
-                <div class="oauth-project-item">
-                  <div>
-                    <div class="oauth-project-title">{{ project_item.site_name }}</div>
-                    <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
-                    {% if project_item.oauth_connected and not project_item.oauth_status.ready and project_item.oauth_status_hint %}
-                      <div class="muted small" style="margin-top:6px;">{{ project_item.oauth_status_hint }}</div>
-                    {% endif %}
-                  </div>
-                  <div class="oauth-project-actions">
-                    {% if project_item.oauth_connected and project_item.oauth_status.ready %}
-                      <span class="badge ok">oauth connecté</span>
-                    {% elif project_item.oauth_connected %}
-                      <span class="badge error">connexion à réparer</span>
-                    {% elif project_item.gsc_enabled %}
-                      <span class="badge notice">non connecté</span>
-                    {% else %}
-                      <span class="badge notice">gsc désactivé</span>
-                    {% endif %}
-                    {% if project_item.oauth_connected %}
-                      <a class="btn" href="{{ project_item.connect_url }}">Relancer OAuth</a>
-                      <form method="post" action="{{ project_item.disconnect_url }}" style="display:inline-flex;">
+            <div class="gsc-proj-list">
+
+              {# ── Connectés ──────────────────────────────── #}
+              {% for p in gsc_oauth.projects %}
+                {% if p.oauth_connected and p.oauth_status.ready %}
+                  <div class="gsc-proj-row gsc-row-ok">
+                    <span class="gsc-dot ok"></span>
+                    <div class="gsc-proj-meta">
+                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="muted small">{{ p.base_url or p.slug }}</div>
+                    </div>
+                    <div class="gsc-proj-act">
+                      <form method="post" action="{{ p.disconnect_url }}" style="display:contents;">
                         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                         <input type="hidden" name="next" value="/settings/accounts#gsc-oauth-card" />
-                        <button
-                          class="btn danger"
-                          type="submit"
-                          onclick="return confirm('Déconnecter Google Search Console pour ce projet ?');"
-                        >
-                          Déconnecter
-                        </button>
+                        <button class="btn-link btn-link-danger" type="submit"
+                          onclick="return confirm('Déconnecter Google pour ce projet ?');">Déconnecter</button>
                       </form>
-                    {% else %}
-                      <a class="btn primary" href="{{ project_item.connect_url }}">Connecter Google</a>
-                    {% endif %}
-                    <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
+                    </div>
                   </div>
-                </div>
+                {% endif %}
               {% endfor %}
-            </div>
-            <div class="setting-note">
-              <div class="card-title-row" style="margin-top:16px;">
-                <h3 style="margin:0; font-size:15px;">Propriétés Google importables</h3>
-                <span class="muted small" id="gsc-properties-status">Choisis un projet connecté ci-dessus pour charger ses propriétés.</span>
-              </div>
-              <div class="oauth-project-list" id="gsc-properties-list"></div>
+
+              {# ── Connexion brisée ───────────────────────── #}
+              {% for p in gsc_oauth.projects %}
+                {% if p.oauth_connected and not p.oauth_status.ready %}
+                  <div class="gsc-proj-row gsc-row-err">
+                    <span class="gsc-dot err"></span>
+                    <div class="gsc-proj-meta">
+                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="muted small">{{ p.base_url or p.slug }}</div>
+                      {% if p.oauth_status_hint %}
+                        <div class="small" style="color:var(--err);margin-top:2px;">{{ p.oauth_status_hint }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="gsc-proj-act">
+                      <a class="btn" href="{{ p.connect_url }}">Réparer la connexion</a>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+
+              {# ── Non connectés ──────────────────────────── #}
+              {% for p in gsc_oauth.projects %}
+                {% if not p.oauth_connected %}
+                  <div class="gsc-proj-row">
+                    <span class="gsc-dot off"></span>
+                    <div class="gsc-proj-meta">
+                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="muted small">{{ p.base_url or p.slug }}</div>
+                    </div>
+                    <div class="gsc-proj-act">
+                      <a class="btn google-btn" href="{{ p.connect_url }}">
+                        <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+                        Connecter
+                      </a>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+
             </div>
           {% else %}
-            <p class="muted small setting-note">Aucun projet éligible n'est affiché dans cette section.</p>
+            <p class="muted small setting-note">Aucun projet configuré dans l'app.</p>
           {% endif %}
         {% else %}
           <p class="muted small setting-note">
