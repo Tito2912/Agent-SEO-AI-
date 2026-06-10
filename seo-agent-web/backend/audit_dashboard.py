@@ -1076,8 +1076,11 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
     pages_crawled = meta.get("pages_crawled") if isinstance(meta.get("pages_crawled"), int) else len(pages)
     resources_crawled = len([r for r in resources if isinstance(r, dict) and str(r.get("type") or "").strip().lower() in {"image", "javascript", "css"}])
     system_urls_crawled = len([r for r in system_fetches if isinstance(r, dict)])
-    # Ahrefs-like: health score is based on internal URLs (not assets/system fetches).
-    internal_urls_crawled = int(pages_crawled)
+    # Ahrefs health-score base = internal pages + internal resources (CSS/JS/images),
+    # i.e. the "Crawled URLs distribution" total — NOT pages-only. Resources count as
+    # error-free unless they returned an error. system_fetches stay excluded.
+    # Validated rayzvideoai: (83-7)/83 -> 92 = Ahrefs (pages-only gave 59/66 -> 89).
+    internal_urls_crawled = int(pages_crawled) + int(resources_crawled)
     urls_crawled = int(pages_crawled) + int(resources_crawled) + int(system_urls_crawled)
     urls_crawled_distribution = int(pages_crawled) + int(resources_crawled)
 
