@@ -13192,15 +13192,12 @@ def gsc_properties(request: Request) -> JSONResponse:
     existing_domains: set[str] = set()
     if user:
         try:
-            with _db() as db:
-                existing = db.query(Project).filter(Project.owner_user_id == str(user.id)).all()
+            with DB.session() as db:
+                existing = list(db.scalars(select(Project).where(Project.owner_user_id == str(user.id))))
                 for proj in existing:
                     h = (urlsplit(proj.base_url).hostname or "").lower().lstrip("www.")
                     if h:
                         existing_domains.add(h)
-                    slug_domain = (proj.slug or "").lower().lstrip("www.")
-                    if slug_domain:
-                        existing_domains.add(slug_domain)
         except Exception as e:
             logger.warning("[GSC] existing-projects lookup failed: %s: %s", type(e).__name__, e)
 
