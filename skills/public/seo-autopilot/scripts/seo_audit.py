@@ -4673,8 +4673,26 @@ def _score_issues(
             canon = _norm_self(canon_req.final_url) or canon
         canonical_urls.add(canon)
 
+    # Ahrefs-like: a page that is a hreflang alternate of the cluster is "connected" via the
+    # hreflang graph and is NOT reported as orphan even with 0 incoming internal href links
+    # (e.g. cityscootlab /de/ /es/ localized pages reachable only through their hreflang cluster:
+    # Noyaru flagged 2 orphans, Ahrefs 0). Build the set of all hreflang-referenced URLs (page
+    # source hreflang + sitemap hreflang) and exclude them.
+    _hreflang_referenced: set[str] = set()
+    for _p in ok_html_pages:
+        for _href in (getattr(_p, "hreflang", None) or {}).values():
+            _n = _norm_self(str(_href)) if _href else None
+            if _n:
+                _hreflang_referenced.add(_n)
+    if isinstance(sitemap_hreflang, dict):
+        for _lang_map in sitemap_hreflang.values():
+            for _href in (_lang_map or {}).values():
+                _n = _norm_self(str(_href)) if _href else None
+                if _n:
+                    _hreflang_referenced.add(_n)
+
     # Avoid duplicating Ahrefs-like reporting: canonical URLs with 0 incoming links are tracked separately.
-    orphan_pages = [u for u in orphan_pages if u not in canonical_urls]
+    orphan_pages = [u for u in orphan_pages if u not in canonical_urls and u not in _hreflang_referenced]
     for canon in sorted(canonical_urls):
         df, _nf, _total = incoming_counts(canon)
         if df > 0:
@@ -6214,7 +6232,11 @@ def _score_issues(
                     seen_redirect_links.add(key)
                     redirect_3xx_link_rows.append({"source_url": loc_norm, "target_url": href_norm, "nofollow": False, "link_type": "hreflang_sitemap"})
 
-    issues["redirect_3xx_links"] = _issue_block("redirect_3xx_links", redirect_3xx_link_rows)
+    # SUPPRESSED for Ahrefs parity: Ahrefs has only the PAGE-level "Page has links to redirect"
+    # (page_has_links_to_redirect_indexable, which we match), not a per-link redirect-links issue.
+    # This per-link view (e.g. cityscootlab 34 vs Ahrefs's page-level 4) is Noyaru-only. Emit
+    # empty; rows still written to disk via _write_issue_rows for drill-down/export.
+    issues["redirect_3xx_links"] = _issue_block("redirect_3xx_links", [])
 
     # Ahrefs-like: per-link export for "Timed out - links".
     # Ahrefs exports include multiple link sources (href/hreflang/canonical/sitemaps/redirects).
@@ -6506,9 +6528,13 @@ def _score_issues(
     )
     issues["hreflang_annotation_invalid"] = _issue_block("hreflang_annotation_invalid", hreflang_annotation_invalid)
     _write_issue_rows(issues_dir, "hreflang_conflicts_within_page_source_code", hreflang_conflicts_within_page_source_code)
+    # SUPPRESSED for Ahrefs parity: "Hreflang conflicts within page source code" is a Semrush
+    # issue name (note the untranslated English label), not an Ahrefs issue type. Ahrefs's
+    # hreflang issues are more_than_one / missing_reciprocal / hreflang_to_redirect / x_default /
+    # html-lang-mismatch / annotation_invalid — none is this. Emit empty (rows kept on disk).
     issues["hreflang_conflicts_within_page_source_code"] = {
-        "count": len(hreflang_conflicts_within_page_source_code),
-        "examples": [str(r.get("url") or "") for r in hreflang_conflicts_within_page_source_code[:ISSUE_EXAMPLES_LIMIT]],
+        "count": 0,
+        "examples": [],
     }
     issues["more_than_one_page_for_same_language_in_hreflang"] = _issue_block(
         "more_than_one_page_for_same_language_in_hreflang", more_than_one_page_for_same_language_in_hreflang
