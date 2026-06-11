@@ -1149,74 +1149,72 @@
       const gscSyncBtn = document.getElementById("gsc-sync-btn");
       const gscProjList = document.querySelector(".gsc-proj-list");
 
-      if (gscSyncBtn && gscProjList) {
-        gscSyncBtn.addEventListener("click", async () => {
-          const url = gscSyncBtn.dataset.url;
-          if (!url) return;
-          gscSyncBtn.disabled = true;
-          gscSyncBtn.textContent = "Chargement…";
-          // Remove any previously injected sync rows
-          gscProjList.querySelectorAll(".gsc-sync-injected").forEach((el) => el.remove());
-          try {
-            const r = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
-            const data = await r.json();
-            if (!data || !data.ok) {
-              gscSyncBtn.textContent = "Synchroniser GSC";
-              gscSyncBtn.disabled = false;
-              alert((data && data.error) ? data.error : "Erreur GSC");
-              return;
-            }
-            const allProps = Array.isArray(data.properties) ? data.properties : [];
-            const importedDomains = new Set(
-              allProps
-                .filter((p) => p.already_imported)
-                .map((p) => (p.domain || "").toLowerCase())
-                .filter(Boolean)
-            );
-            const seenDomains = new Set();
-            const missing = allProps.filter((p) => {
-              const d = (p.domain || "").toLowerCase();
-              if (!d || importedDomains.has(d)) return false;
-              if (seenDomains.has(d)) return false;
-              seenDomains.add(d);
-              return true;
-            });
+      async function runGscSync(url, { silent = false } = {}) {
+        if (!url || !gscProjList) return;
+        if (gscSyncBtn) { gscSyncBtn.disabled = true; gscSyncBtn.textContent = "Chargement…"; }
+        gscProjList.querySelectorAll(".gsc-sync-injected").forEach((el) => el.remove());
+        try {
+          const r = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+          const data = await r.json();
+          if (!data || !data.ok) {
+            if (gscSyncBtn) { gscSyncBtn.textContent = "Synchroniser GSC"; gscSyncBtn.disabled = false; }
+            if (!silent) alert((data && data.error) ? data.error : "Erreur GSC");
+            return;
+          }
+          const allProps = Array.isArray(data.properties) ? data.properties : [];
+          const importedDomains = new Set(
+            allProps.filter((p) => p.already_imported).map((p) => (p.domain || "").toLowerCase()).filter(Boolean)
+          );
+          const seenDomains = new Set();
+          const missing = allProps.filter((p) => {
+            const d = (p.domain || "").toLowerCase();
+            if (!d || importedDomains.has(d)) return false;
+            if (seenDomains.has(d)) return false;
+            seenDomains.add(d);
+            return true;
+          });
 
+          if (gscSyncBtn) {
             gscSyncBtn.textContent = missing.length
               ? `Synchroniser GSC (${missing.length} nouveau${missing.length > 1 ? "x" : ""})`
               : "Synchroniser GSC ✓";
             gscSyncBtn.disabled = false;
-
-            if (missing.length === 0) return;
-
-            // Separator
-            const sep = document.createElement("div");
-            sep.className = "gsc-sync-injected gsc-sync-sep";
-            sep.textContent = `${missing.length} site${missing.length > 1 ? "s" : ""} GSC non encore dans l'app`;
-            gscProjList.appendChild(sep);
-
-            missing.forEach((p) => {
-              const domain = escapeHtml(p.domain || p.property_url || "");
-              const importUrl = escapeHtml(p.suggested_base_url || "");
-              const row = document.createElement("div");
-              row.className = "gsc-proj-row gsc-sync-injected";
-              row.innerHTML = `
-                <span class="gsc-dot off"></span>
-                <div class="gsc-proj-meta">
-                  <div class="gsc-proj-name">${domain}</div>
-                  <div class="muted small">${escapeHtml(p.property_url || "")}</div>
-                </div>
-                <div class="gsc-proj-act">
-                  ${importUrl ? importFormHtml({ url: importUrl, next: "/settings/accounts#gsc-oauth-card", label: "Ajouter", siteName: domain }) : ""}
-                </div>
-              `;
-              gscProjList.appendChild(row);
-            });
-          } catch (e) {
-            gscSyncBtn.textContent = "Synchroniser GSC";
-            gscSyncBtn.disabled = false;
           }
-        });
+
+          if (missing.length === 0) return;
+
+          const sep = document.createElement("div");
+          sep.className = "gsc-sync-injected gsc-sync-sep";
+          sep.textContent = `${missing.length} site${missing.length > 1 ? "s" : ""} GSC non encore dans l'app`;
+          gscProjList.appendChild(sep);
+
+          missing.forEach((p) => {
+            const domain = escapeHtml(p.domain || p.property_url || "");
+            const importUrl = escapeHtml(p.suggested_base_url || "");
+            const row = document.createElement("div");
+            row.className = "gsc-proj-row gsc-sync-injected";
+            row.innerHTML = `
+              <span class="gsc-dot off"></span>
+              <div class="gsc-proj-meta">
+                <div class="gsc-proj-name">${domain}</div>
+                <div class="muted small">${escapeHtml(p.property_url || "")}</div>
+              </div>
+              <div class="gsc-proj-act">
+                ${importUrl ? importFormHtml({ url: importUrl, next: "/settings/accounts#gsc-oauth-card", label: "Ajouter", siteName: domain }) : ""}
+              </div>
+            `;
+            gscProjList.appendChild(row);
+          });
+        } catch (e) {
+          if (gscSyncBtn) { gscSyncBtn.textContent = "Synchroniser GSC"; gscSyncBtn.disabled = false; }
+        }
+      }
+
+      if (gscSyncBtn) {
+        // Auto-sync silently on page load
+        runGscSync(gscSyncBtn.dataset.url, { silent: true });
+        // Manual re-sync on click
+        gscSyncBtn.addEventListener("click", () => runGscSync(gscSyncBtn.dataset.url));
       }
 
       if (bingTestBtn) bingTestBtn.addEventListener("click", testBing);
