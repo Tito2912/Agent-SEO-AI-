@@ -6699,7 +6699,10 @@ def _score_issues(
         # Suppressed: Ahrefs does not report meta description changes as a distinct Site Audit issue.
         issues["meta_description_changed"] = _issue_block("meta_description_changed", [])
         issues["h1_tag_changed"] = _issue_block("h1_tag_changed", sorted(set(h1_tag_changed)))
-        issues["word_count_changed"] = _issue_block("word_count_changed", sorted(set(word_count_changed)))
+        # Suppressed for Ahrefs parity: word_count_changed is a Noyaru-only between-crawl
+        # delta Ahrefs does not track, and networkidle word-count jitter makes it fire
+        # spurious +N on every re-crawl. Detection kept above; emission zeroed.
+        issues["word_count_changed"] = _issue_block("word_count_changed", [])
         issues["pages_to_submit_to_indexnow"] = _issue_block(
             "pages_to_submit_to_indexnow", sorted(set(pages_to_submit_to_indexnow))
         )
