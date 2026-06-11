@@ -867,7 +867,10 @@ class PageHTMLExtractor(HTMLParser):
             self._current_h1_parts.append(data)
         elif self._in_h2:
             self._current_h2_parts.append(data)
-        elif self._in_a:
+        # Anchor text must be captured independently of headings: a link nested in a
+        # heading (<h2><a>Title</a></h2>) still has anchor text. Using `elif` here dropped
+        # it (text went to the heading only), wrongly flagging links_with_no_anchor_text.
+        if self._in_a:
             self._current_a_parts.append(data)
         if self._skip_text_stack:
             return
