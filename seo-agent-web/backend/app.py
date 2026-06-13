@@ -13228,6 +13228,126 @@ def gsc_properties(request: Request) -> JSONResponse:
     return JSONResponse({"ok": True, "properties": props})
 
 
+@app.get("/api/gsc/properties/via-oauth")
+def gsc_properties_via_oauth(request: Request) -> JSONResponse:
+    """Return all GSC properties via the user's first connected OAuth project (not service account)."""
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    user_id = str(user.id)
+
+    # Find first project with a valid OAuth refresh token
+    with DB.session() as db:
+        all_projects = list(
+            db.scalars(select(Project).where(Project.owner_user_id == user_id).order_by(Project.site_name))
+        )
+
+    connected_slug: str | None = None
+    for proj in all_projects:
+        slug = str(getattr(proj, "slug", "") or "").strip()
+        if slug and _gsc_oauth_connected(user_id, slug):
+            rt = _gsc_oauth_refresh_token(user_id, slug)
+            if rt:
+                connected_slug = slug
+                break
+
+    if not connected_slug:
+        return JSONResponse(
+            {"ok": False, "error": "Aucun projet connecté à Google Search Console. Connecte un projet dans Paramètres → Comptes & connexions."},
+            status_code=400,
+        )
+
+    client_id, client_secret = _google_oauth_client()
+    if not client_id or not client_secret:
+        return JSONResponse({"ok": False, "error": "Google OAuth non configuré (client id/secret)."}, status_code=400)
+
+    refresh_token = _gsc_oauth_refresh_token(user_id, connected_slug)
+    try:
+        access_token = _google_oauth_refresh_access_token(
+            refresh_token=refresh_token,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+    except Exception as e:
+        reason = _classify_google_oauth_failure(e)
+        if reason == "oauth_invalid_grant":
+            _clear_stale_gsc_oauth(user_id=user_id, slug=connected_slug, reason=reason)
+        return JSONResponse({"ok": False, "error": f"AuthError: {type(e).__name__}: {e}"}, status_code=400)
+
+    try:
+        resp = requests.get(
+            "https://searchconsole.googleapis.com/webmasters/v3/sites",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=30,
+        )
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"RequestError: {type(e).__name__}: {e}"}, status_code=400)
+
+    if resp.status_code != 200:
+        return JSONResponse({"ok": False, "error": f"HTTP {resp.status_code}"}, status_code=400)
+
+    try:
+        data = resp.json()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"JSONDecodeError: {e}"}, status_code=400)
+
+    entries = data.get("siteEntry") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        entries = []
+
+    # Build existing project domains for already_added flag
+    existing_domains: set[str] = set()
+    try:
+        with DB.session() as db:
+            existing = list(db.scalars(select(Project).where(Project.owner_user_id == user_id)))
+            for proj in existing:
+                h = (urlsplit(proj.base_url).hostname or "").lower().lstrip("www.")
+                if h:
+                    existing_domains.add(h)
+    except Exception as e:
+        logger.warning("[GSC via-oauth] existing-projects lookup failed: %s: %s", type(e).__name__, e)
+
+    # Deduplicate by domain (prefer sc-domain over URL-prefix)
+    seen_domains: dict[str, dict[str, Any]] = {}
+    for it in entries:
+        if not isinstance(it, dict):
+            continue
+        site_url = str(it.get("siteUrl") or "").strip()
+        perm = str(it.get("permissionLevel") or "").strip()
+        if not site_url or perm.lower() in {"siteunverifieduser"}:
+            continue
+
+        suggested = ""
+        domain = ""
+        if site_url.startswith("sc-domain:"):
+            domain = site_url.split(":", 1)[1].strip()
+            suggested = _normalize_base_url(domain) or ""
+        elif site_url.startswith(("http://", "https://")):
+            suggested = _normalize_base_url(site_url) or ""
+            domain = (urlsplit(suggested).hostname or "").lower() if suggested else ""
+        else:
+            domain = site_url
+            suggested = _normalize_base_url(site_url) or ""
+
+        d_key = domain.lower().lstrip("www.")
+        if not d_key:
+            continue
+        # Prefer sc-domain entry; skip URL-prefix duplicates for same domain
+        if d_key not in seen_domains or site_url.startswith("sc-domain:"):
+            h = domain.lower().lstrip("www.")
+            seen_domains[d_key] = {
+                "property_url": site_url,
+                "permission": perm,
+                "domain": domain,
+                "suggested_base_url": suggested,
+                "already_added": h in existing_domains,
+            }
+
+    props = sorted(seen_domains.values(), key=lambda p: (p.get("domain") or "").lower())
+    return JSONResponse({"ok": True, "properties": props})
+
+
 @app.get("/api/bing/sites")
 def bing_sites(request: Request) -> JSONResponse:
     user = getattr(request.state, "user", None)

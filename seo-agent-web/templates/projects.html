@@ -685,8 +685,17 @@
 	          setGscEmpty("Connexion à Google Search Console…", true);
 	          gscSubmit.disabled = true;
 	          try {
-	            const r = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" } });
-	            const data = await r.json();
+	            // Try per-user OAuth first (full list), fall back to service account
+	            let data = null;
+	            try {
+	              const r1 = await fetch("/api/gsc/properties/via-oauth", { headers: { "Accept": "application/json" } });
+	              const d1 = await r1.json();
+	              if (d1 && d1.ok) data = d1;
+	            } catch (_) {}
+	            if (!data) {
+	              const r2 = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" } });
+	              data = await r2.json();
+	            }
 	            if (!data || !data.ok) {
 	              const errorMessage = (data && data.error) ? data.error : "Erreur GSC";
 	              gscStatus.textContent = errorMessage;
