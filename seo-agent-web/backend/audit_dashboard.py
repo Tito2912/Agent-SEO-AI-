@@ -706,7 +706,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "open_graph_tags_incomplete": IssueMeta("open_graph_tags_incomplete", "Open Graph incomplet", "Social tags", "warning"),
     "open_graph_tags_missing": IssueMeta("open_graph_tags_missing", "Open Graph manquant", "Social tags", "notice"),
     "open_graph_url_not_matching_canonical": IssueMeta(
-        "open_graph_url_not_matching_canonical", "OG URL ≠ canonical", "Social tags", "notice"
+        "open_graph_url_not_matching_canonical", "OG URL ≠ canonical", "Social tags", "warning"
     ),
     "twitter_card_incomplete": IssueMeta("twitter_card_incomplete", "Twitter card incomplète", "Social tags", "notice"),
     "twitter_card_missing": IssueMeta("twitter_card_missing", "Twitter card manquante", "Social tags", "notice"),
