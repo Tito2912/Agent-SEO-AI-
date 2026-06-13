@@ -4292,10 +4292,13 @@ def _score_issues(
             )
 
     # --- HTTP status (Ahrefs-like) ---
-    http_404 = [p.url for p in pages if p.status_code == 404]
-    http_4xx = [p.url for p in pages if isinstance(p.status_code, int) and 400 <= p.status_code < 500]
-    http_500 = [p.url for p in pages if p.status_code == 500]
-    http_5xx = [p.url for p in pages if isinstance(p.status_code, int) and 500 <= p.status_code < 600]
+    # Immediate-status model: a URL that 3xx-redirects to a 4xx/5xx is a REDIRECT (counted in
+    # redirect_3xx), NOT a 4xx/5xx page. The broken page is the redirect's FINAL target. Count
+    # distinct final URLs so N protocol/www variants redirecting to the same broken page → 1.
+    http_404 = sorted({_final_url(p) for p in pages if p.status_code == 404})
+    http_4xx = sorted({_final_url(p) for p in pages if isinstance(p.status_code, int) and 400 <= p.status_code < 500})
+    http_500 = sorted({_final_url(p) for p in pages if p.status_code == 500})
+    http_5xx = sorted({_final_url(p) for p in pages if isinstance(p.status_code, int) and 500 <= p.status_code < 600})
     timeouts = [p.url for p in pages if _is_timeout(p)]
 
     # --- Redirects (Ahrefs-like) ---
@@ -4440,7 +4443,17 @@ def _score_issues(
         if (p.redirect_statuses or []) and p.redirect_statuses[0] == 302
         and not _is_canonical_normalization_redirect(p)
     ]
-    broken_redirect = [p.url for p in pages if _is_redirect(p) and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)]
+    # A "broken redirect" points DIRECTLY (single hop) to a 4xx/5xx target. Multi-hop variants
+    # (http→https→…→404) point immediately to another redirect, not to the broken page — they're
+    # plain 3XX redirects. redirect_statuses holds only the 3xx hops, so len<=1 == single hop to
+    # the (broken) final. Matches Ahrefs dedup (4 chains to one broken page → 1 broken redirect).
+    broken_redirect = [
+        p.url
+        for p in pages
+        if _is_redirect(p)
+        and len(p.redirect_statuses or []) <= 1
+        and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)
+    ]
     redirect_chain = [p.url for p in pages if len(p.redirect_statuses or []) > 1]
     redirect_chain_too_long = [p.url for p in pages if len(p.redirect_statuses or []) > 2]
     http_to_https_redirect = [
@@ -4756,13 +4769,27 @@ def _score_issues(
             target = page_by_any.get(_norm_self(t) or t)
             if not target:
                 continue
-            if isinstance(target.status_code, int) and target.status_code >= 400:
+            # Classify by the target's IMMEDIATE status. A target that 3xx-redirects is a "link
+            # to redirect" even if its chain ends in 4xx; only a DIRECT (non-redirect) 4xx/5xx
+            # target is a "link to broken page" (mirrors Ahrefs).
+            if isinstance(target.status_code, int) and target.status_code >= 400 and not _is_redirect(target):
                 broken_targets.append(t)
             # Link points to a redirecting URL only if that exact URL is known as a requested
-            # URL that redirects. Exclude canonical normalizations (http→https, trailing slash)
-            # because Ahrefs doesn't flag links to those expected redirects.
+            # URL that redirects. Exclude canonical normalizations (http→https, trailing slash,
+            # root→locale) ONLY when they cleanly resolve to 200 — a "canonical" redirect that
+            # actually lands on a 4xx (e.g. root → /:splat → 404) IS flagged by Ahrefs as a
+            # link to redirect.
             req_target = page_by_requested.get(_norm_self(t) or t)
-            if req_target and _is_redirect(req_target) and not _is_canonical_normalization_redirect(req_target):
+            if (
+                req_target
+                and _is_redirect(req_target)
+                and not (
+                    _is_canonical_normalization_redirect(req_target)
+                    and isinstance(req_target.status_code, int)
+                    and req_target.status_code == 200
+                    and not req_target.error
+                )
+            ):
                 redirect_targets.append(t)
 
         if broken_targets:
@@ -5752,8 +5779,11 @@ def _score_issues(
             (_is_redirect(p) and not _is_trailing_slash_redirect_to_200(p) and (u_norm in page_by_requested))
             or _is_toomany_redir
         )
-        is_4xx = bool(isinstance(p.status_code, int) and 400 <= p.status_code < 500)
-        is_5xx = bool(isinstance(p.status_code, int) and 500 <= p.status_code < 600)
+        # Immediate-status: a sitemap URL that itself returns a 3xx is a "3XX in sitemap"
+        # (above), NOT a 4xx/5xx page, even if its redirect chain ends in 4xx/5xx. Only a
+        # DIRECT (non-redirect) 4xx/5xx sitemap URL counts here.
+        is_4xx = bool(isinstance(p.status_code, int) and 400 <= p.status_code < 500 and not _is_redirect(p))
+        is_5xx = bool(isinstance(p.status_code, int) and 500 <= p.status_code < 600 and not _is_redirect(p))
         is_noindex = bool(_looks_noindex(p.meta_robots) or _looks_noindex(p.x_robots_tag))
 
         if is_timeout:
