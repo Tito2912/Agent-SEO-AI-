@@ -6089,9 +6089,20 @@ def _score_issues(
             tgt_req = page_by_requested.get(_norm_self(target) or target)
             # Include links to genuine redirects AND to toomanyredirects pages (Ahrefs counts both),
             # but NOT links to clean canonical-normalization redirects (http→https, www, /de→/de/→200)
-            # which Ahrefs treats as expected and does not flag.
+            # which Ahrefs treats as expected. The canonical-normalization exclusion applies ONLY when
+            # the redirect cleanly resolves to 200 — a "canonical" root/trailing redirect that lands on
+            # a 4xx (e.g. root → /:splat → 404) IS a link-to-redirect per Ahrefs.
             _is_toomany = bool(tgt_req and tgt_req.error and "toomanyredirects" in (tgt_req.error or "").lower())
-            _tgt_redirect = bool(tgt_req and _is_redirect(tgt_req) and not _is_canonical_normalization_redirect(tgt_req))
+            _tgt_redirect = bool(
+                tgt_req
+                and _is_redirect(tgt_req)
+                and not (
+                    _is_canonical_normalization_redirect(tgt_req)
+                    and isinstance(tgt_req.status_code, int)
+                    and tgt_req.status_code == 200
+                    and not tgt_req.error
+                )
+            )
             if not (tgt_req and (_tgt_redirect or _is_toomany)):
                 continue
             target_norm = _norm_self(target) or target
