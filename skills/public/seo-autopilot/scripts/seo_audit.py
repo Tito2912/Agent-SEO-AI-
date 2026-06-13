@@ -4603,13 +4603,11 @@ def _score_issues(
         nf = len(incoming_nf_raw.get(url, set()))
         return df, nf, df + nf
 
-    # Now that the incoming link graph is built, we can compute "noindex pages with dofollow incoming links".
-    noindex_with_dofollow_links: list[str] = []
-    for u in noindex_pages_all:
-        df, _nf, _total = incoming_counts(u)
-        if df > 0:
-            noindex_with_dofollow_links.append(u)
-    noindex_page = noindex_with_dofollow_links
+    # Ahrefs "Noindex page" counts ALL noindex pages, not only those with a dofollow incoming
+    # link. The old dofollow-incoming scoping matched Ahrefs only by coincidence on sites where
+    # every noindex page happened to be dofollow-linked; videocaptionstudio's noindex affiliate
+    # /go/ pages are nofollow-linked, so it under-counted (2 vs Ahrefs 4).
+    noindex_page = list(noindex_pages_all)
 
     orphan_pages: list[str] = []
     only_one_dofollow_incoming: list[str] = []
@@ -5915,7 +5913,10 @@ def _score_issues(
     issues["redirect_302"] = _issue_block("redirect_302", redirect_302)
     issues["broken_redirect"] = _issue_block("broken_redirect", broken_redirect)
     issues["redirect_chain"] = _issue_block("redirect_chain", redirect_chain)
-    issues["redirect_chain_too_long"] = _issue_block("redirect_chain_too_long", redirect_chain_too_long)
+    # Suppressed for Ahrefs parity: Ahrefs has a single "Redirect chain" issue (any chain >1 hop)
+    # and no separate "chain too long" tier. Noyaru's >2-hop subset double-reported chains already
+    # counted in redirect_chain. Emission zeroed; detection retained.
+    issues["redirect_chain_too_long"] = _issue_block("redirect_chain_too_long", [])
     issues["http_to_https_redirect"] = _issue_block("http_to_https_redirect", http_to_https_redirect)
     issues["https_to_http_redirect"] = _issue_block("https_to_http_redirect", https_to_http_redirect)
     issues["meta_refresh_redirect"] = _issue_block("meta_refresh_redirect", meta_refresh_redirect)
@@ -5978,20 +5979,21 @@ def _score_issues(
         "page_has_only_one_dofollow_incoming_internal_link_not_indexable", one_df_not_indexable
     )
 
-    nf_only_indexable, nf_only_not_indexable = _split_url_list(nofollow_incoming_only)
+    # Suppressed for Ahrefs parity: Ahrefs Site Audit has no "nofollow incoming internal links"
+    # issue type (it only surfaces dofollow-incoming issues like "only one dofollow incoming
+    # internal link"). These Semrush-heritage keys are Noyaru-only — emission zeroed, detection
+    # (nofollow_incoming_only / nofollow_and_dofollow_incoming) retained.
     issues["page_has_nofollow_incoming_internal_links_only_indexable"] = _issue_block(
-        "page_has_nofollow_incoming_internal_links_only_indexable", nf_only_indexable
+        "page_has_nofollow_incoming_internal_links_only_indexable", []
     )
     issues["page_has_nofollow_incoming_internal_links_only_not_indexable"] = _issue_block(
-        "page_has_nofollow_incoming_internal_links_only_not_indexable", nf_only_not_indexable
+        "page_has_nofollow_incoming_internal_links_only_not_indexable", []
     )
-
-    nf_mix_indexable, nf_mix_not_indexable = _split_url_list(nofollow_and_dofollow_incoming)
     issues["page_has_nofollow_and_dofollow_incoming_internal_links_indexable"] = _issue_block(
-        "page_has_nofollow_and_dofollow_incoming_internal_links_indexable", nf_mix_indexable
+        "page_has_nofollow_and_dofollow_incoming_internal_links_indexable", []
     )
     issues["page_has_nofollow_and_dofollow_incoming_internal_links_not_indexable"] = _issue_block(
-        "page_has_nofollow_and_dofollow_incoming_internal_links_not_indexable", nf_mix_not_indexable
+        "page_has_nofollow_and_dofollow_incoming_internal_links_not_indexable", []
     )
 
     issues["redirected_page_has_no_incoming_internal_links"] = _issue_block(
