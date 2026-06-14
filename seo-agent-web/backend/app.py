@@ -6144,6 +6144,23 @@ def _finalize_stale_job(job: Job) -> bool:
         if cur_status:
             job.status = cur_status
 
+        # Cross-container liveness guard. Web and worker run as SEPARATE Render containers, so
+        # _pid_is_alive() is always False for a worker-launched job. But the worker streams
+        # stdout/progress to the DB every ~0.6s (bumping updated_at). A recently-updated row means
+        # the worker IS alive — typically mid-PageSpeed, which runs for MANY minutes AFTER the
+        # "[CRAWL] Done" log line and before report.json is written. Without this, a long crawl
+        # (e.g. 19 min with a 17-min PageSpeed phase) trips the done_after_s/stale heuristics below
+        # and gets wrongly marked "failed" until a manual refresh re-reads it as done.
+        if job.status in {"queued", "running"}:
+            _hb_s = float(os.getenv("SEO_AGENT_JOB_ACTIVE_HEARTBEAT_SECONDS", "240"))
+            try:
+                _fresh = _load_job(job.id)
+                _upd = float((_fresh.updated_at if _fresh else None) or job.updated_at or 0.0)
+            except Exception:
+                _upd = float(job.updated_at or 0.0)
+            if _hb_s > 0 and _upd > 0 and (time.time() - _upd) < _hb_s:
+                return False
+
         kind = _job_kind_from_command(job.command)
         if kind == "autopilot":
             started_at = job.started_at or job.created_at or 0.0
