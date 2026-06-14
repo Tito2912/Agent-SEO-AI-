@@ -432,6 +432,7 @@ class PageData:
     meta_robots_tag_count: int = 0
     meta_viewport: str | None = None
     meta_viewport_tag_count: int = 0
+    plugin_tag_count: int = 0
     meta_refresh: str | None = None
     meta_refresh_tag_count: int = 0
     canonical: str | None = None
@@ -647,6 +648,7 @@ class PageHTMLExtractor(HTMLParser):
         self.meta_description_tag_count: int = 0
         self.meta_robots_tag_count: int = 0
         self.meta_viewport_tag_count: int = 0
+        self.plugin_tag_count: int = 0  # deprecated plugins (Flash/Java/Silverlight via applet/embed/object)
         self.meta_refresh_tag_count: int = 0
         self.meta_refresh: str | None = None
         self.canonical: str | None = None
@@ -794,6 +796,22 @@ class PageHTMLExtractor(HTMLParser):
             # Semrush-like: treat image alt text as anchor text when <img> is nested inside <a>.
             if self._in_a and alt:
                 self._current_a_parts.append(alt)
+        elif tag in ("applet", "embed", "object"):
+            # Ahrefs/Lighthouse "Document uses plugins": deprecated plugin embeds (Flash, Java,
+            # Silverlight, Director). <applet> is always one; <embed>/<object> only when the type/src
+            # is a known plugin (NOT for SVG/PDF/image/video <object>/<embed>, which are fine).
+            if tag == "applet":
+                self.plugin_tag_count += 1
+            else:
+                _ptype = (attrs_dict.get("type") or "").strip().lower()
+                _psrc = (attrs_dict.get("src") or attrs_dict.get("data") or "").strip().lower().split("?")[0]
+                _plugin_types = ("application/x-shockwave-flash", "application/x-silverlight",
+                                 "application/x-java", "application/x-director", "application/futuresplash")
+                _plugin_ext = (".swf", ".xap", ".jar", ".class", ".dcr", ".dir")
+                if (any(pt in _ptype for pt in _plugin_types)
+                        or any(_psrc.endswith(e) for e in _plugin_ext)
+                        or "classid" in attrs_dict):
+                    self.plugin_tag_count += 1
         elif tag == "h1":
             self._in_h1 = True
             self.h1_tag_count += 1
@@ -3216,6 +3234,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.meta_robots_tag_count = int(parser.meta_robots_tag_count)
     page.meta_viewport = (parser.meta.get("viewport") or "").strip() or None
     page.meta_viewport_tag_count = int(parser.meta_viewport_tag_count)
+    page.plugin_tag_count = int(parser.plugin_tag_count)
     page.meta_refresh = (parser.meta_refresh or "").strip() or None
     page.meta_refresh_tag_count = int(parser.meta_refresh_tag_count)
 
@@ -5971,6 +5990,9 @@ def _score_issues(
     # Ahrefs "Viewport not set": indexable HTML pages with no <meta name="viewport"> tag.
     viewport_not_set = [p.url for p in indexable_html_pages if (p.meta_viewport_tag_count or 0) == 0]
     issues["viewport_not_set"] = _issue_block("viewport_not_set", viewport_not_set)
+    # Ahrefs "Document uses plugins": pages embedding deprecated plugins (Flash/Java/Silverlight).
+    document_uses_plugins = [p.url for p in ok_html_pages if (p.plugin_tag_count or 0) > 0]
+    issues["document_uses_plugins"] = _issue_block("document_uses_plugins", document_uses_plugins)
     issues["redirect_loop"] = _issue_block("redirect_loop", redirect_loop)
     issues["redirect_3xx"] = _issue_block("redirect_3xx", redirect_3xx)
     issues["redirect_302"] = _issue_block("redirect_302", redirect_302)

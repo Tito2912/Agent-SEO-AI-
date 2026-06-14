@@ -158,6 +158,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "blocked_by_robots": IssueMeta("blocked_by_robots", "Bloqué par robots.txt", "Other", "warning"),
     "slow_page": IssueMeta("slow_page", "Slow page", "Usability and performance", "warning"),
     "viewport_not_set": IssueMeta("viewport_not_set", "Viewport non défini", "Usability and performance", "warning"),
+    "document_uses_plugins": IssueMeta("document_uses_plugins", "Le document utilise des plugins", "Usability and performance", "warning"),
     "pages_with_poor_lcp": IssueMeta(
         "pages_with_poor_lcp", "Pages with poor LCP", "Usability and performance", "warning"
     ),
