@@ -190,6 +190,12 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "Other",
         "notice",
     ),
+    "more_than_three_parameters_in_url": IssueMeta(
+        "more_than_three_parameters_in_url",
+        "Plus de 3 paramètres dans l'URL",
+        "Other",
+        "notice",
+    ),
     "page_has_links_to_redirect_links_not_indexable": IssueMeta(
         "page_has_links_to_redirect_links_not_indexable",
         "Liens vers redirections (non indexable) — détails",

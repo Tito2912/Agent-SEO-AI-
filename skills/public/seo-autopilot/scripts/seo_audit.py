@@ -3882,6 +3882,26 @@ def _score_resource_issues(
                 pages_with_not_minified_js.append(f"{pid} -> {js_match}")
 
     issues: dict[str, dict[str, Any]] = {}
+
+    # Ahrefs "More than three parameters in URL": any crawled URL (page OR resource) whose query
+    # string has >3 parameters. Common real case: Next.js image optimizer
+    # /_next/image?url=&w=&q=&dpl= (4 params). Resource URLs preserve their query (the JS chunks
+    # carry only ?dpl=, so they don't trip it). Validated on oryvalo = 1 (the _next/image logo).
+    def _param_count(u: str) -> int:
+        try:
+            return len([x for x in urlsplit(u).query.split("&") if x])
+        except Exception:
+            return 0
+    _many_param_urls = sorted({
+        u
+        for u in (
+            [str(p.url) for p in pages if getattr(p, "url", None)]
+            + [str(r.get("url")) for r in resources if isinstance(r, dict) and r.get("url")]
+        )
+        if _param_count(u) > 3
+    })
+    issues["more_than_three_parameters_in_url"] = issue("more_than_three_parameters_in_url", _many_param_urls)
+
     issues["image_broken"] = issue("image_broken", broken_images)
     issues["page_has_broken_image"] = issue("page_has_broken_image", sorted(set(pages_with_broken_image)))
     issues["image_redirects"] = issue("image_redirects", redirected_images)
