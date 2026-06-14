@@ -677,7 +677,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "missing_h1": IssueMeta("missing_h1", "H1 manquant / vide", "Content", "warning"),
     "missing_h1_indexable": IssueMeta("missing_h1_indexable", "H1 manquant / vide", "Content", "warning"),
     "missing_h1_not_indexable": IssueMeta("missing_h1_not_indexable", "H1 manquant / vide", "Content", "notice"),
-    "low_word_count": IssueMeta("low_word_count", "Faible nombre de mots", "Content", "notice"),
+    "low_word_count": IssueMeta("low_word_count", "Faible nombre de mots", "Content", "warning"),
     "missing_meta_description": IssueMeta("missing_meta_description", "Meta description manquante / vide", "Content", "warning"),
     "meta_description_too_long": IssueMeta("meta_description_too_long", "Meta description trop longue", "Content", "warning"),
     "meta_description_too_long_indexable": IssueMeta(
