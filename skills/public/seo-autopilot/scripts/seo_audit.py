@@ -468,6 +468,10 @@ class PageData:
     external_links: list[str] = dataclasses.field(default_factory=list)
     internal_links_dofollow: list[str] = dataclasses.field(default_factory=list)
     internal_links_nofollow: list[str] = dataclasses.field(default_factory=list)
+    # Links whose rel contains the literal `nofollow` token (NOT sponsored/ugc alone). Ahrefs's
+    # "Page has nofollow outgoing internal links" counts these; rel="sponsored" without nofollow
+    # is a different relation and is not counted.
+    internal_links_strict_nofollow: list[str] = dataclasses.field(default_factory=list)
     external_links_dofollow: list[str] = dataclasses.field(default_factory=list)
     external_links_nofollow: list[str] = dataclasses.field(default_factory=list)
     internal_link_items: list[dict[str, Any]] = dataclasses.field(default_factory=list)
@@ -3281,6 +3285,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     external: list[str] = []
     internal_df: list[str] = []
     internal_nf: list[str] = []
+    internal_strict_nf: list[str] = []
     external_df: list[str] = []
     external_nf: list[str] = []
     for raw_href, raw_rel in parser.links:
@@ -3297,12 +3302,15 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             continue
         rel_tokens = {t for t in re.split(r"\s+", (raw_rel or "").strip().lower()) if t}
         nofollow = bool(rel_tokens & {"nofollow", "sponsored", "ugc"})
+        strict_nofollow = "nofollow" in rel_tokens
         if _is_allowed_host(norm, base_parts=base_parts, allow_subdomains=config.allow_subdomains):
             internal.append(norm)
             if nofollow:
                 internal_nf.append(norm)
             else:
                 internal_df.append(norm)
+            if strict_nofollow:
+                internal_strict_nf.append(norm)
         else:
             external.append(norm)
             if nofollow:
@@ -3313,6 +3321,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.external_links = sorted(set(external))
     page.internal_links_dofollow = sorted(set(internal_df))
     page.internal_links_nofollow = sorted(set(internal_nf))
+    page.internal_links_strict_nofollow = sorted(set(internal_strict_nf))
     page.external_links_dofollow = sorted(set(external_df))
     page.external_links_nofollow = sorted(set(external_nf))
 
@@ -4763,7 +4772,7 @@ def _score_issues(
         if not p.internal_links and not p.external_links:
             pages_no_outgoing.append(source)
 
-        if p.internal_links_nofollow:
+        if p.internal_links_strict_nofollow:
             pages_with_nofollow_outgoing_internal.append(source)
 
         page_scheme = _scheme(source)
@@ -6464,16 +6473,17 @@ def _score_issues(
         "page_has_no_outgoing_links_not_indexable", no_out_not_indexable
     )
 
-    # SUPPRESSED for Ahrefs parity: Ahrefs does not track "page has nofollow outgoing internal
-    # links" as an issue — it never surfaced across 10 reference sites, including affiliate-heavy
-    # ones whose sponsored CTA links (rel="sponsored" to /sources/etoro-en#open-account, a cloaked
-    # internal→external redirect) Noyaru was counting. Emit empty; detection kept for re-enable.
+    # Ahrefs DOES track "Page has nofollow outgoing internal links" (seen on homegearwise.com=1).
+    # The earlier global suppression was wrong; it stemmed from over-counting `rel="sponsored"` CTAs
+    # (avis-invest /sources/etoro-en) which carry NO `nofollow` token. `pages_with_nofollow_outgoing_internal`
+    # now keys off `internal_links_strict_nofollow` (rel must contain the literal `nofollow`), so a
+    # sponsored-only link is excluded while homegearwise's `rel="sponsored nofollow"` placeholder counts.
     nf_out_indexable, nf_out_not_indexable = _split_url_list(pages_with_nofollow_outgoing_internal)
     issues["page_has_nofollow_outgoing_internal_links_indexable"] = _issue_block(
-        "page_has_nofollow_outgoing_internal_links_indexable", []
+        "page_has_nofollow_outgoing_internal_links_indexable", nf_out_indexable
     )
     issues["page_has_nofollow_outgoing_internal_links_not_indexable"] = _issue_block(
-        "page_has_nofollow_outgoing_internal_links_not_indexable", []
+        "page_has_nofollow_outgoing_internal_links_not_indexable", nf_out_not_indexable
     )
 
     issues["https_page_has_internal_links_to_http"] = _issue_block(
