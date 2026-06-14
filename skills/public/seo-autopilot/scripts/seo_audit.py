@@ -4883,7 +4883,9 @@ def _score_issues(
     TITLE_TOO_SHORT = 15  # Ahrefs threshold: < 15 chars (verified on avis-invest: <15 = 15 exactly)
     DESC_TOO_LONG = 160
     DESC_TOO_SHORT = 100  # Ahrefs threshold: descriptions < 100 chars are flagged as too short
-    LOW_WORD_COUNT = 150  # Service/landing pages with 150-200 words are legitimate
+    LOW_WORD_COUNT = 100  # Ahrefs "Low word count" threshold: flags indexable pages < 100 words
+    # (calibrated on oryvalo /contact=13 flagged vs /about=102 not; videocaptionstudio lowest
+    #  indexable page=113 stays unflagged → both match Ahrefs. 150 over-reported.)
     # Ahrefs "AI content detection" is proprietary; we approximate it with a deterministic heuristic.
     # Keep this conservative to avoid false positives.
     AI_HIGH_CONTENT_WORD_COUNT = 2000
@@ -6503,8 +6505,10 @@ def _score_issues(
     issues["multiple_meta_description_tags"] = _issue_block(
         "multiple_meta_description_tags", multiple_meta_description_tags
     )
-    # Suppressed: Ahrefs does not flag low word count with this threshold; count too many false positives.
-    issues["low_word_count"] = _issue_block("low_word_count", [])
+    # Ahrefs DOES flag "Low word count" (seen on oryvalo.com = 1). Re-enabled with the calibrated
+    # 100-word threshold (was suppressed when the threshold was 150 and over-reported). Indexable +
+    # primary-language only (see _low_word_count).
+    issues["low_word_count"] = _issue_block("low_word_count", _low_word_count)
     # Suppressed: Ahrefs does not flag AI content levels.
     issues["pages_have_high_ai_content_levels"] = _issue_block("pages_have_high_ai_content_levels", [])
     issues["title_too_long_indexable"] = _issue_block("title_too_long_indexable", title_too_long_indexable)
@@ -8052,7 +8056,7 @@ def main(argv: list[str]) -> int:
             "title_too_short_chars": 20,
             "meta_description_too_long_chars": 160,
             "meta_description_too_short_chars": 70,
-            "low_word_count": 150,
+            "low_word_count": 100,
             "redirect_chain_too_long_hops": 2,
             "image_file_size_too_large_bytes": 500 * 1024,
             "javascript_file_size_too_large_bytes": 200 * 1024,
