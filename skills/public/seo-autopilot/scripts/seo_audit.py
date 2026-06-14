@@ -3911,6 +3911,23 @@ def _score_resource_issues(
     })
     issues["more_than_three_parameters_in_url"] = issue("more_than_three_parameters_in_url", _many_param_urls)
 
+    # Ahrefs "Double slash in URL": a crawled URL (page OR resource) whose PATH contains `//`
+    # (e.g. /blog//post) — the scheme separator `://` is excluded since we look at the path only.
+    def _has_double_slash(u: str) -> bool:
+        try:
+            return "//" in (urlsplit(u).path or "")
+        except Exception:
+            return False
+    _double_slash_urls = sorted({
+        u
+        for u in (
+            [str(p.url) for p in pages if getattr(p, "url", None)]
+            + [str(r.get("url")) for r in resources if isinstance(r, dict) and r.get("url")]
+        )
+        if _has_double_slash(u)
+    })
+    issues["double_slash_in_url"] = issue("double_slash_in_url", _double_slash_urls)
+
     issues["image_broken"] = issue("image_broken", broken_images)
     issues["page_has_broken_image"] = issue("page_has_broken_image", sorted(set(pages_with_broken_image)))
     issues["image_redirects"] = issue("image_redirects", redirected_images)
@@ -4488,9 +4505,11 @@ def _score_issues(
         and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)
     ]
     redirect_chain = [p.url for p in pages if len(p.redirect_statuses or []) > 1]
-    # redirect_chain_too_long detection removed: Ahrefs has no "chain too long" tier (the issue is
-    # emitted empty for parity). Re-derive `[p.url for p in pages if len(p.redirect_statuses or [])>2]`
-    # if ever re-enabled.
+    # Ahrefs DOES track "Redirect chain too long" (in the 173-issue catalog) as a separate tier
+    # above "Redirect chain". Threshold raised to >4 hops (was >2, which over-reported: on
+    # videocaptionstudio a 3-hop chain was flagged while Ahrefs showed 0). >4 keeps that site at 0;
+    # recalibrate if a site ever shows Ahrefs "Redirect chain too long" > 0.
+    redirect_chain_too_long = [p.url for p in pages if len(p.redirect_statuses or []) > 4]
     http_to_https_redirect = [
         p.url
         for p in pages
@@ -5949,15 +5968,17 @@ def _score_issues(
     issues["http_5xx"] = _issue_block("http_5xx", http_5xx)
     issues["timed_out"] = _issue_block("timed_out", timeouts)
 
+    # Ahrefs "Viewport not set": indexable HTML pages with no <meta name="viewport"> tag.
+    viewport_not_set = [p.url for p in indexable_html_pages if (p.meta_viewport_tag_count or 0) == 0]
+    issues["viewport_not_set"] = _issue_block("viewport_not_set", viewport_not_set)
     issues["redirect_loop"] = _issue_block("redirect_loop", redirect_loop)
     issues["redirect_3xx"] = _issue_block("redirect_3xx", redirect_3xx)
     issues["redirect_302"] = _issue_block("redirect_302", redirect_302)
     issues["broken_redirect"] = _issue_block("broken_redirect", broken_redirect)
     issues["redirect_chain"] = _issue_block("redirect_chain", redirect_chain)
-    # Suppressed for Ahrefs parity: Ahrefs has a single "Redirect chain" issue (any chain >1 hop)
-    # and no separate "chain too long" tier. Noyaru's >2-hop subset double-reported chains already
-    # counted in redirect_chain. Emission zeroed; detection retained.
-    issues["redirect_chain_too_long"] = _issue_block("redirect_chain_too_long", [])
+    # Re-enabled (Ahrefs DOES have "Redirect chain too long" in its 173-issue catalog), now at the
+    # raised >4-hop threshold (see redirect_chain_too_long above).
+    issues["redirect_chain_too_long"] = _issue_block("redirect_chain_too_long", redirect_chain_too_long)
     issues["http_to_https_redirect"] = _issue_block("http_to_https_redirect", http_to_https_redirect)
     issues["https_to_http_redirect"] = _issue_block("https_to_http_redirect", https_to_http_redirect)
     issues["meta_refresh_redirect"] = _issue_block("meta_refresh_redirect", meta_refresh_redirect)

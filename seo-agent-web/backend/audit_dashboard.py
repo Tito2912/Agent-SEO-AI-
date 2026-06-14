@@ -157,6 +157,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     ),
     "blocked_by_robots": IssueMeta("blocked_by_robots", "Bloqué par robots.txt", "Other", "warning"),
     "slow_page": IssueMeta("slow_page", "Slow page", "Usability and performance", "warning"),
+    "viewport_not_set": IssueMeta("viewport_not_set", "Viewport non défini", "Usability and performance", "warning"),
     "pages_with_poor_lcp": IssueMeta(
         "pages_with_poor_lcp", "Pages with poor LCP", "Usability and performance", "warning"
     ),
@@ -193,6 +194,12 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "more_than_three_parameters_in_url": IssueMeta(
         "more_than_three_parameters_in_url",
         "Plus de 3 paramètres dans l'URL",
+        "Other",
+        "notice",
+    ),
+    "double_slash_in_url": IssueMeta(
+        "double_slash_in_url",
+        "Double slash dans l'URL",
         "Other",
         "notice",
     ),
