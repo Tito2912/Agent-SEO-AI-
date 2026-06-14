@@ -3924,7 +3924,11 @@ def _score_resource_issues(
                     if key not in seen_large_img_links:
                         seen_large_img_links.add(key)
                         image_file_size_too_large_links.append({"source_url": src, "target_url": img})
-    issues["image_file_size_too_large_links"] = issue("image_file_size_too_large_links", image_file_size_too_large_links)
+    # Suppressed for Ahrefs parity: Ahrefs surfaces only the image-level "Image file size too large"
+    # (the heavy image, which we match via image_file_size_too_large), not a per-source-page "- links"
+    # view. Detection retained; emission zeroed. (online-affiliate: was 8, Ahrefs 0.)
+    _ = image_file_size_too_large_links  # keep computed list referenced (ruff F841)
+    issues["image_file_size_too_large_links"] = issue("image_file_size_too_large_links", [])
 
     issues["javascript_broken"] = issue("javascript_broken", broken_js)
     # Ahrefs-like: per-link export for broken JS ("... - links").
@@ -4905,9 +4909,11 @@ def _score_issues(
     TITLE_TOO_SHORT = 15  # Ahrefs threshold: < 15 chars (verified on avis-invest: <15 = 15 exactly)
     DESC_TOO_LONG = 160
     DESC_TOO_SHORT = 100  # Ahrefs threshold: descriptions < 100 chars are flagged as too short
-    LOW_WORD_COUNT = 100  # Ahrefs "Low word count" threshold: flags indexable pages < 100 words
-    # (calibrated on oryvalo /contact=13 flagged vs /about=102 not; videocaptionstudio lowest
-    #  indexable page=113 stays unflagged → both match Ahrefs. 150 over-reported.)
+    LOW_WORD_COUNT = 50  # Ahrefs "Low word count" threshold: flags indexable pages < 50 words.
+    # Calibrated on 3 sites: oryvalo /contact=13 → flagged (Ahrefs 1); online-affiliate /contact=57
+    # & /mentions-legales=93 → NOT flagged (Ahrefs 0); oryvalo /about=102, videocaptionstudio lowest
+    # indexable=113 → not flagged. So the cutoff is in (13,57]; 50 matches all. (Was 100, over-reported
+    # online-affiliate's 57/93-word legal pages.)
     # Ahrefs "AI content detection" is proprietary; we approximate it with a deterministic heuristic.
     # Keep this conservative to avoid false positives.
     AI_HIGH_CONTENT_WORD_COUNT = 2000
