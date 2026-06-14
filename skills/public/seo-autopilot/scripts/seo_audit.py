@@ -4475,7 +4475,9 @@ def _score_issues(
         and ((isinstance(p.status_code, int) and p.status_code >= 400) or p.error)
     ]
     redirect_chain = [p.url for p in pages if len(p.redirect_statuses or []) > 1]
-    redirect_chain_too_long = [p.url for p in pages if len(p.redirect_statuses or []) > 2]
+    # redirect_chain_too_long detection removed: Ahrefs has no "chain too long" tier (the issue is
+    # emitted empty for parity). Re-derive `[p.url for p in pages if len(p.redirect_statuses or [])>2]`
+    # if ever re-enabled.
     http_to_https_redirect = [
         p.url
         for p in pages
