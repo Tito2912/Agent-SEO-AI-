@@ -6545,10 +6545,15 @@ def _score_issues(
     issues["multiple_meta_description_tags"] = _issue_block(
         "multiple_meta_description_tags", multiple_meta_description_tags
     )
-    # Ahrefs DOES flag "Low word count" (seen on oryvalo.com = 1). Re-enabled with the calibrated
-    # 100-word threshold (was suppressed when the threshold was 150 and over-reported). Indexable +
-    # primary-language only (see _low_word_count).
-    issues["low_word_count"] = _issue_block("low_word_count", _low_word_count)
+    # SUPPRESSED (final): low_word_count is NOT reliably matchable to Ahrefs. Ahrefs flags it only on
+    # near-empty pages and very rarely (1/18 sites: oryvalo /contact=13). The problem is Noyaru's word
+    # count != Ahrefs's on JS sites: homegearwise /contact renders <20 words in Noyaru (partial render)
+    # but Ahrefs sees the full content and does NOT flag it — inseparable from oryvalo's 13 by any
+    # threshold (tried 150→100→50→20, each over-reported on some site). Word counts also flicker between
+    # networkidle renders. So emit empty: accept missing oryvalo's 1 false-negative to eliminate the
+    # systematic false-positives on every JS/thin-content site. Detection (_low_word_count) retained.
+    _ = _low_word_count  # keep computed (ruff F841); detection retained for any future re-enable
+    issues["low_word_count"] = _issue_block("low_word_count", [])
     # Suppressed: Ahrefs does not flag AI content levels.
     issues["pages_have_high_ai_content_levels"] = _issue_block("pages_have_high_ai_content_levels", [])
     issues["title_too_long_indexable"] = _issue_block("title_too_long_indexable", title_too_long_indexable)
