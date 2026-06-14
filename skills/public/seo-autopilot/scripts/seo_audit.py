@@ -4918,11 +4918,13 @@ def _score_issues(
     TITLE_TOO_SHORT = 15  # Ahrefs threshold: < 15 chars (verified on avis-invest: <15 = 15 exactly)
     DESC_TOO_LONG = 160
     DESC_TOO_SHORT = 100  # Ahrefs threshold: descriptions < 100 chars are flagged as too short
-    LOW_WORD_COUNT = 50  # Ahrefs "Low word count" threshold: flags indexable pages < 50 words.
-    # Calibrated on 3 sites: oryvalo /contact=13 → flagged (Ahrefs 1); online-affiliate /contact=57
-    # & /mentions-legales=93 → NOT flagged (Ahrefs 0); oryvalo /about=102, videocaptionstudio lowest
-    # indexable=113 → not flagged. So the cutoff is in (13,57]; 50 matches all. (Was 100, over-reported
-    # online-affiliate's 57/93-word legal pages.)
+    LOW_WORD_COUNT = 20  # Ahrefs "Low word count" threshold: flags indexable pages < 20 words.
+    # Ahrefs flags this VERY rarely (only near-empty pages). Data: oryvalo /contact=13 → flagged
+    # (Ahrefs 1); online-affiliate /contact=57, homegearwise /contact & an avis-invest page (<50)
+    # → Ahrefs 0. So Ahrefs's cutoff is low (~13-19); 50 then 20. NOTE: low_word_count is the most
+    # calibration-fragile rule — JS sites render empty in offline repro so exact counts are
+    # unobtainable, and word counts flicker between renders. If 20 still over-reports on a re-crawl,
+    # SUPPRESS it (accept missing oryvalo's 1) rather than chase the threshold further.
     # Ahrefs "AI content detection" is proprietary; we approximate it with a deterministic heuristic.
     # Keep this conservative to avoid false positives.
     AI_HIGH_CONTENT_WORD_COUNT = 2000
