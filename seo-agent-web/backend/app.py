@@ -2680,10 +2680,12 @@ def _correction_ai_model(provider: str) -> str:
     if provider == "anthropic":
         return (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
     if provider == "openai":
+        # gpt-4o-mini is broadly available; override via OPENAI_CHAT_MODEL if your
+        # account has a newer model (e.g. gpt-5.1-mini).
         return (
             os.environ.get("OPENAI_CHAT_MODEL")
             or os.environ.get("OPENAI_MODEL")
-            or "gpt-5.1-mini"
+            or "gpt-4o-mini"
         ).strip()
     return ""
 
@@ -2722,12 +2724,14 @@ def _parse_ai_json(text: str) -> dict[str, Any]:
 
 
 def _anthropic_messages_text(
-    *, system: str, user_msg: str, model: str, max_tokens: int, temperature: float
+    *, system: str, user_msg: str, model: str, max_tokens: int
 ) -> str:
     api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY manquante")
     base = (os.environ.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com/v1").strip().rstrip("/")
+    # Note: newer models (Opus 4.8+) reject the `temperature` param ("deprecated for
+    # this model"); we omit it and rely on the model default.
     resp = requests.post(
         f"{base}/messages",
         headers={
@@ -2738,7 +2742,6 @@ def _anthropic_messages_text(
         json={
             "model": model,
             "max_tokens": max_tokens,
-            "temperature": temperature,
             "system": system,
             "messages": [{"role": "user", "content": user_msg}],
         },
@@ -2819,7 +2822,6 @@ def _correction_ai_json(
                     user_msg=user_msg,
                     model=model,
                     max_tokens=max_tokens,
-                    temperature=temperature,
                 )
             else:
                 text = _openai_chat_text(
