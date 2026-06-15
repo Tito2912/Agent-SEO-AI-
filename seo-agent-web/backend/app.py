@@ -2375,23 +2375,29 @@ def _assistant_gemini_configured() -> bool:
     return bool((os.environ.get("GOOGLE_GEMINI_API_KEY") or "").strip())
 
 
+def _assistant_claude_configured() -> bool:
+    return bool((os.environ.get("ANTHROPIC_API_KEY") or "").strip())
+
+
 def _assistant_effective_provider() -> str:
     raw = (os.environ.get("SEO_AUDIT_ASSISTANT_PROVIDER") or "auto").strip().lower()
-    if raw in {"openai", "gemini"}:
+    if raw in {"openai", "gemini", "claude"}:
         return raw
-    # auto: pick the first configured provider (Gemini tends to be cheaper).
-    if _assistant_gemini_configured():
-        return "gemini"
+    # auto: prefer claude > openai > gemini
+    if _assistant_claude_configured():
+        return "claude"
     if _assistant_openai_configured():
         return "openai"
+    if _assistant_gemini_configured():
+        return "gemini"
     return "none"
 
 
 def _assistant_model(provider: str) -> str:
     provider = (provider or "").strip().lower()
+    if provider == "claude":
+        return (os.environ.get("SEO_AUDIT_ASSISTANT_CLAUDE_MODEL") or "claude-haiku-4-5-20251001").strip()
     if provider == "gemini":
-        # Note: some API keys no longer expose Gemini 1.5 models (HTTP 404).
-        # Default to a currently available Flash model; override via env var.
         return (os.environ.get("SEO_AUDIT_ASSISTANT_GEMINI_MODEL") or "gemini-2.0-flash-001").strip()
     if provider == "openai":
         return (
@@ -2540,6 +2546,53 @@ def _assistant_gemini_chat(contents: list[dict[str, str]], *, system: str, model
     if not isinstance(text, str) or not text.strip():
         raise RuntimeError("Réponse Gemini vide")
     return text.strip()
+
+
+def _assistant_claude_chat(messages: list[dict[str, str]], *, system: str, model: str) -> str:
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY manquante")
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "max_tokens": 1024,
+        "temperature": 0.3,
+        "system": system,
+        "messages": messages,
+    }
+
+    resp = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json=payload,
+        timeout=90,
+    )
+    if resp.status_code != 200:
+        err_msg = None
+        try:
+            err_data = resp.json()
+            if isinstance(err_data, dict):
+                e = err_data.get("error")
+                if isinstance(e, dict):
+                    err_msg = str(e.get("message") or "").strip()
+        except Exception:
+            pass
+        raise RuntimeError(f"Claude HTTP {resp.status_code}" + (f": {err_msg}" if err_msg else ""))
+
+    data = resp.json()
+    if isinstance(data, dict):
+        content_blocks = data.get("content")
+        if isinstance(content_blocks, list) and content_blocks:
+            first = content_blocks[0]
+            if isinstance(first, dict) and first.get("type") == "text":
+                text = first.get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+    raise RuntimeError("Réponse Claude vide")
 
 
 def _ai_suggestions_path(runs_dir: Path, slug: str, ts: str) -> Path:
@@ -12524,20 +12577,9 @@ def assistant_meta(request: Request) -> JSONResponse:
     if not getattr(request.state, "user", None):
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
     effective = _assistant_effective_provider()
-    openai_ok = _assistant_openai_configured()
-    gemini_ok = _assistant_gemini_configured()
-    configured = (effective == "openai" and openai_ok) or (effective == "gemini" and gemini_ok)
-    return JSONResponse(
-        {
-            "ok": True,
-            "effective_provider": effective,
-            "configured": configured,
-            "providers": {
-                "openai": {"configured": openai_ok, "model": _assistant_model("openai")},
-                "gemini": {"configured": gemini_ok, "model": _assistant_model("gemini")},
-            },
-        }
-    )
+    configured = effective != "none"
+    # Return only what the frontend needs — do not expose provider names to users
+    return JSONResponse({"ok": True, "configured": configured})
 
 
 @app.post("/api/assistant/chat")
@@ -12601,6 +12643,11 @@ async def assistant_chat(request: Request) -> JSONResponse:
         if provider == "openai":
             messages = [{"role": "system", "content": system}, *history, {"role": "user", "content": message}]
             reply = _assistant_openai_chat(messages, model=model)
+        elif provider == "claude":
+            # Claude Messages API: system is a top-level param, history uses user/assistant roles
+            claude_messages = [{"role": h["role"], "content": h["content"]} for h in history]
+            claude_messages.append({"role": "user", "content": message})
+            reply = _assistant_claude_chat(claude_messages, system=system, model=model)
         else:
             # Gemini: role mapping user/model (assistant -> model)
             contents: list[dict[str, str]] = []

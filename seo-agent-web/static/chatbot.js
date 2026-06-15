@@ -200,6 +200,16 @@
     const el = document.createElement("div");
     el.className = "assistant-empty";
 
+    const iconBox = document.createElement("div");
+    iconBox.className = "assistant-empty-icon";
+    const iconImg = document.createElement("img");
+    iconImg.src = "/static/assistant-icon.svg";
+    iconImg.alt = "";
+    iconImg.width = 38;
+    iconImg.height = 38;
+    iconBox.appendChild(iconImg);
+    el.appendChild(iconBox);
+
     const title = document.createElement("div");
     title.className = "assistant-empty-title";
     title.textContent = projectName ? `Assistant — ${projectName}` : "Comment puis-je vous aider ?";
@@ -272,11 +282,9 @@
       return;
     }
 
-    const p = meta.effective_provider || "—";
-    const model = (meta.providers && meta.providers[p] && meta.providers[p].model) ? meta.providers[p].model : "";
     const configured = Boolean(meta.configured);
 
-    metaEl.textContent = configured ? `${p} · ${model || "model"}` : `${p} · à configurer`;
+    metaEl.textContent = configured ? "En ligne" : "Indisponible";
     setDot(configured ? "ok" : "err");
     if (isOpen) render();
   }
