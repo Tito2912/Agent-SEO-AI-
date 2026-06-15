@@ -2745,7 +2745,7 @@ def _anthropic_messages_text(
         timeout=90,
     )
     if resp.status_code != 200:
-        raise RuntimeError(f"Anthropic HTTP {resp.status_code}")
+        raise RuntimeError(f"Anthropic HTTP {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
     parts = data.get("content") if isinstance(data, dict) else None
     if not isinstance(parts, list):
@@ -2782,21 +2782,25 @@ def _openai_chat_text(
         timeout=90,
     )
     if resp.status_code != 200:
-        raise RuntimeError(f"OpenAI HTTP {resp.status_code}")
+        raise RuntimeError(f"OpenAI HTTP {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
     return str(data["choices"][0]["message"]["content"] or "")
 
 
 def _correction_ai_json(
-    *, system: str, user_msg: str, max_tokens: int = 4000, temperature: float = 0.05
+    *, system: str, user_msg: str, max_tokens: int = 4000, temperature: float = 0.05,
+    error_sink: list[str] | None = None,
 ) -> dict[str, Any]:
     """Generate a JSON object using the best available correction AI.
 
     Tries the preferred provider first (Claude by default), then falls back to the
     other configured provider if the primary call fails. Returns {} when none work.
+    Failures are logged and (optionally) appended to error_sink for surfacing.
     """
     primary = _correction_ai_provider()
     if primary == "none":
+        if error_sink is not None:
+            error_sink.append("Aucune clé IA configurée (ANTHROPIC_API_KEY ou OPENAI_API_KEY).")
         return {}
     order = [primary]
     if primary == "anthropic" and (os.environ.get("OPENAI_API_KEY") or "").strip():
@@ -2829,7 +2833,15 @@ def _correction_ai_json(
             parsed = _parse_ai_json(text)
             if parsed:
                 return parsed
-        except Exception:
+            msg = f"{prov} ({model}): réponse vide ou non-JSON"
+            logger.warning("[correction-ai] %s", msg)
+            if error_sink is not None:
+                error_sink.append(msg)
+        except Exception as e:
+            msg = f"{prov} ({model}): {e}"
+            logger.warning("[correction-ai] %s", msg)
+            if error_sink is not None:
+                error_sink.append(msg)
             continue
     return {}
 
@@ -2840,6 +2852,7 @@ def _openai_url_fix(
     issue_label: str,
     url: str,
     site_name: str,
+    error_sink: list[str] | None = None,
 ) -> dict[str, Any]:
     system = (
         "Tu es un expert SEO technique qui génère des corrections CODE-READY, immédiatement applicables.\n"
@@ -2868,7 +2881,9 @@ def _openai_url_fix(
         "anomalie": f"{issue_key} — {issue_label}",
         "url_affectee": url,
     }, ensure_ascii=False)
-    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=900, temperature=0.1)
+    parsed = _correction_ai_json(
+        system=system, user_msg=user_msg, max_tokens=900, temperature=0.1, error_sink=error_sink
+    )
     if isinstance(parsed, dict) and parsed.get("fix"):
         return parsed
     return {}
@@ -14908,14 +14923,17 @@ def api_issue_url_fix(
     if url_error:
         return JSONResponse({"ok": False, "error": url_error}, status_code=400)
     meta = dash.issue_meta(issue_key)
+    errors: list[str] = []
     result = _openai_url_fix(
         issue_key=issue_key,
         issue_label=meta.label if meta else issue_key,
         url=url,
         site_name=str(proj_row.site_name or slug),
+        error_sink=errors,
     )
     if not result:
-        return JSONResponse({"error": "Service IA indisponible. Configure OPENAI_API_KEY."}, status_code=503)
+        reason = " · ".join(errors[:2]) if errors else "Service IA indisponible."
+        return JSONResponse({"error": f"Correction IA indisponible : {reason}"}, status_code=503)
     return JSONResponse(result)
 
 
