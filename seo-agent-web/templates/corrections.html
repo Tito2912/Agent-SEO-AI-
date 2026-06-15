@@ -305,6 +305,75 @@
   });
   var sortEl = document.getElementById('corr-sort');
   if (sortEl) sortEl.addEventListener('change', function () { applySort(); applyFilters(); });
+
+  /* ── Inline GitHub connection (no detour through crawl settings) ── */
+  var _ghNext = '/projects/' + encodeURIComponent(_slug) + '/corrections';
+  var ghToggle = document.getElementById('gh-connect-toggle');
+  if (ghToggle) {
+    ghToggle.addEventListener('click', function () {
+      var panel = document.getElementById('gh-connect-panel');
+      if (!panel) return;
+      if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+      panel.style.display = 'block';
+      loadGhConnect();
+    });
+  }
+  function loadGhConnect() {
+    var body = document.getElementById('gh-connect-body');
+    if (!body) return;
+    body.innerHTML = 'Chargement des dépôts…';
+    fetch('/api/github/repos', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) {
+          body.innerHTML = '<p style="margin:0 0 10px;">Ton compte GitHub n\'est pas encore connecté.</p>'
+            + '<a class="btn primary" href="/oauth/github/connect?next=' + encodeURIComponent(_ghNext) + '">Connecter mon compte GitHub</a>';
+          return;
+        }
+        var opts = '<option value="">— Choisir un dépôt —</option>';
+        (d.repos || []).forEach(function (repo) {
+          opts += '<option value="' + esc(repo.full_name) + '|' + esc(repo.default_branch || 'main') + '">'
+            + esc(repo.full_name) + (repo.private ? ' [privé]' : '') + '</option>';
+        });
+        var fld = 'flex-shrink:0;font-size:12px;padding:6px 9px;background:var(--bg-2,#18181b);border:1px solid var(--border);border-radius:5px;color:inherit;';
+        body.innerHTML = [
+          '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">',
+          '<select id="gh-c-repo" style="flex:1;min-width:200px;' + fld + '">' + opts + '</select>',
+          '<input id="gh-c-branch" type="text" value="main" placeholder="branche" style="width:90px;' + fld + '">',
+          '<select id="gh-c-mode" style="' + fld + '"><option value="review">PR à vérifier</option><option value="auto">Auto-merge</option></select>',
+          '<button type="button" id="gh-c-connect" class="btn primary" style="font-size:12px;">Connecter</button>',
+          '</div>',
+          '<p id="gh-c-msg" style="margin:8px 0 0;font-size:11px;color:var(--muted);"></p>'
+        ].join('');
+        var sel = document.getElementById('gh-c-repo');
+        sel.addEventListener('change', function () {
+          var parts = (sel.value || '').split('|');
+          if (parts[1]) document.getElementById('gh-c-branch').value = parts[1];
+        });
+        document.getElementById('gh-c-connect').addEventListener('click', function () {
+          var parts = (sel.value || '').split('|');
+          var repo = parts[0];
+          var branch = (document.getElementById('gh-c-branch').value || '').trim() || 'main';
+          var mode = document.getElementById('gh-c-mode').value || 'review';
+          var msg = document.getElementById('gh-c-msg');
+          if (!repo || repo.indexOf('/') < 0) { msg.textContent = 'Sélectionne un dépôt.'; msg.style.color = 'var(--err,#f87171)'; return; }
+          var b = document.getElementById('gh-c-connect'); b.textContent = 'Connexion…'; b.disabled = true;
+          fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/connect', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repo: repo, branch: branch, mode: mode })
+          }).then(function (r) { return r.json(); }).then(function (d2) {
+            if (d2.ok) {
+              msg.textContent = '✓ Dépôt connecté !'; msg.style.color = 'var(--ok,#34d399)';
+              setTimeout(function () { window.location.reload(); }, 800);
+            } else {
+              msg.textContent = '✗ ' + (d2.error || 'Erreur'); msg.style.color = 'var(--err,#f87171)';
+              b.textContent = 'Connecter'; b.disabled = false;
+            }
+          }).catch(function (e) { msg.textContent = String(e); msg.style.color = 'var(--err,#f87171)'; b.textContent = 'Connecter'; b.disabled = false; });
+        });
+      })
+      .catch(function () { body.innerHTML = '<p style="color:var(--err,#f87171);margin:0;">Erreur de chargement.</p>'; });
+  }
 })();
 </script>
 {% endblock %}
@@ -360,10 +429,17 @@
       {% if github_cfg and github_cfg.repo and fix_candidates %}
         <button type="button" class="btn primary" data-correction-bulk-fix>Tout corriger en 1 PR</button>
       {% elif not (github_cfg and github_cfg.repo) %}
-        <a class="btn primary" href="/projects/{{ slug }}/settings/crawl#github-section">Connecter GitHub</a>
+        <button type="button" class="btn primary" id="gh-connect-toggle">Connecter GitHub</button>
       {% endif %}
     </div>
   </div>
+
+  {% if not (github_cfg and github_cfg.repo) %}
+  <div id="gh-connect-panel" style="display:none;margin-top:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Connecter un dépôt GitHub à ce projet</div>
+    <div id="gh-connect-body" style="font-size:12px;color:var(--muted);">Chargement…</div>
+  </div>
+  {% endif %}
 
   {% if github_cfg and github_cfg.repo %}
     <p class="muted small" style="margin:8px 0 0;">
