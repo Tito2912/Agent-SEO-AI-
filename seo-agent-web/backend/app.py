@@ -15646,6 +15646,43 @@ def _github_code_search_paths(owner: str, repo: str, token: str, terms: list[str
     return paths[:limit]
 
 
+def _github_grep_repo_for_terms(
+    owner: str, repo: str, branch: str, token: str, all_paths: list[str], terms: list[str],
+    *, max_scan: int = 30, limit: int = 8,
+) -> list[str]:
+    """Deterministically find files whose CONTENT contains any of the terms (e.g. image src
+    basenames like 'btc.svg'). Reads a bounded, source-prioritized subset of editable files.
+    More reliable than GitHub code search (which tokenizes and needs an index)."""
+    import base64 as _b64
+    bases: list[str] = []
+    for t in terms or []:
+        b = str(t).rsplit("/", 1)[-1].strip()
+        if b and len(b) >= 3 and b not in bases:
+            bases.append(b)
+    if not bases:
+        return []
+    cand = [
+        p for p in all_paths
+        if not any(n in p.lower() for n in _REPO_NOISE)
+        and ("." in p.rsplit("/", 1)[-1])
+        and p.rsplit(".", 1)[-1].lower() in _EDITABLE_EXTS
+    ]
+    _src_dirs = ("components/", "app/", "src/", "pages/", "lib/", "layouts/", "templates/", "partials/")
+    cand.sort(key=lambda p: 0 if any(d in p.lower() for d in _src_dirs) else 1)
+    hits: list[str] = []
+    for p in cand[:max_scan]:
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo, p), token=token, params={"ref": branch}, timeout_s=12)
+            raw = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+        except Exception:
+            continue
+        if any(b in raw for b in bases):
+            hits.append(p)
+            if len(hits) >= limit:
+                break
+    return hits
+
+
 def _issue_evidence_srcs(issue_block: Any) -> list[str]:
     """Concrete locator strings for precise patching (e.g. src of <img> tags lacking alt),
     read from the crawler's per-issue evidence (`alt_samples`). Empty for issues without it."""
@@ -15685,6 +15722,14 @@ def _deep_patch_issue_files(
                     targets.append(f)
         except Exception:
             pass
+        # Code search tokenizes/needs an index → grep file contents directly as the reliable path.
+        if not targets:
+            try:
+                for f in _github_grep_repo_for_terms(owner, repo_name, branch, token, all_paths, evidence, limit=max_files):
+                    if f not in targets:
+                        targets.append(f)
+            except Exception:
+                pass
     # 2) Hardcoded candidate filenames for this issue type.
     for candidate in _seo_file_candidates_for_issue(issue_key):
         for p in all_paths:
