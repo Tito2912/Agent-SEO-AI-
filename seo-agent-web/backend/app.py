@@ -2359,7 +2359,12 @@ def _issue_sample_urls_from_report(report: dict[str, Any] | None, issue_key: str
 def _ai_reports_enabled() -> bool:
     flag = (os.environ.get("SEO_AUDIT_AI_REPORTS") or "").strip().lower()
     enabled = flag in {"1", "true", "yes", "on"}
-    return enabled and bool((os.environ.get("OPENAI_API_KEY") or "").strip())
+    # Works with either correction provider (Claude preferred, OpenAI fallback).
+    has_ai = bool(
+        (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+        or (os.environ.get("OPENAI_API_KEY") or "").strip()
+    )
+    return enabled and has_ai
 
 
 def _assistant_openai_configured() -> bool:
@@ -2613,13 +2618,6 @@ def _openai_generate_issue_suggestions(
     timestamp: str,
     issues: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        return {}
-
-    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
-    model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
-
     # Keep payload compact; the report itself holds full details (issue-level exports).
     cleaned: list[dict[str, Any]] = []
     for it in issues:
@@ -2644,51 +2642,196 @@ def _openai_generate_issue_suggestions(
         "site": {"name": site_name, "base_url": base_url, "timestamp": timestamp},
         "issues": cleaned,
     }
-
-    payload: dict[str, Any] = {
-        "model": model,
-        "temperature": 0.2,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(user, ensure_ascii=False)},
-        ],
-        "response_format": {"type": "json_object"},
-    }
-
-    try:
-        resp = requests.post(
-            f"{base}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json=payload,
-            timeout=90,
-        )
-    except Exception:
-        return {}
-
-    if resp.status_code != 200:
-        return {}
-    try:
-        data = resp.json()
-    except Exception:
-        return {}
-
-    content = None
-    if isinstance(data, dict):
-        choices = data.get("choices")
-        if isinstance(choices, list) and choices:
-            msg = choices[0].get("message") if isinstance(choices[0], dict) else None
-            if isinstance(msg, dict):
-                content = msg.get("content")
-
-    if not isinstance(content, str) or not content.strip():
-        return {}
-
-    try:
-        parsed = json.loads(content)
-    except Exception:
-        return {}
+    parsed = _correction_ai_json(
+        system=system,
+        user_msg=json.dumps(user, ensure_ascii=False),
+        max_tokens=4000,
+        temperature=0.2,
+    )
     issues_out = parsed.get("issues") if isinstance(parsed, dict) else None
     return issues_out if isinstance(issues_out, dict) else {}
+
+
+# ---------------------------------------------------------------------------
+# Unified correction-AI layer (Claude preferred, OpenAI fallback)
+# ---------------------------------------------------------------------------
+def _correction_ai_provider() -> str:
+    """Provider used to GENERATE code corrections (distinct from the chat assistant).
+
+    Order: explicit env override > Claude (most capable) > OpenAI > none.
+    Override with SEO_CORRECTION_AI_PROVIDER = anthropic | openai | none.
+    """
+    raw = (os.environ.get("SEO_CORRECTION_AI_PROVIDER") or "auto").strip().lower()
+    if raw in {"anthropic", "claude"}:
+        return "anthropic"
+    if raw == "openai":
+        return "openai"
+    if raw == "none":
+        return "none"
+    if (os.environ.get("ANTHROPIC_API_KEY") or "").strip():
+        return "anthropic"
+    if (os.environ.get("OPENAI_API_KEY") or "").strip():
+        return "openai"
+    return "none"
+
+
+def _correction_ai_model(provider: str) -> str:
+    provider = (provider or "").strip().lower()
+    if provider == "anthropic":
+        return (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
+    if provider == "openai":
+        return (
+            os.environ.get("OPENAI_CHAT_MODEL")
+            or os.environ.get("OPENAI_MODEL")
+            or "gpt-5.1-mini"
+        ).strip()
+    return ""
+
+
+def _parse_ai_json(text: str) -> dict[str, Any]:
+    """Tolerant JSON-object extraction (handles ```json fences / surrounding prose)."""
+    if not isinstance(text, str):
+        return {}
+    s = text.strip()
+    if not s:
+        return {}
+    try:
+        parsed = json.loads(s)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        pass
+    # Strip markdown code fences then retry on the largest {...} span.
+    if s.startswith("```"):
+        s = s.split("```", 2)[1] if s.count("```") >= 2 else s
+        if s.lower().startswith("json"):
+            s = s[4:]
+        s = s.strip()
+        try:
+            parsed = json.loads(s)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            pass
+    start, end = s.find("{"), s.rfind("}")
+    if 0 <= start < end:
+        try:
+            parsed = json.loads(s[start : end + 1])
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            pass
+    return {}
+
+
+def _anthropic_messages_text(
+    *, system: str, user_msg: str, model: str, max_tokens: int, temperature: float
+) -> str:
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY manquante")
+    base = (os.environ.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com/v1").strip().rstrip("/")
+    resp = requests.post(
+        f"{base}/messages",
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": model,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "system": system,
+            "messages": [{"role": "user", "content": user_msg}],
+        },
+        timeout=90,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"Anthropic HTTP {resp.status_code}")
+    data = resp.json()
+    parts = data.get("content") if isinstance(data, dict) else None
+    if not isinstance(parts, list):
+        return ""
+    out: list[str] = []
+    for p in parts:
+        if isinstance(p, dict) and p.get("type") == "text":
+            out.append(str(p.get("text") or ""))
+    return "".join(out).strip()
+
+
+def _openai_chat_text(
+    *, system: str, user_msg: str, model: str, max_tokens: int, temperature: float, json_mode: bool
+) -> str:
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY manquante")
+    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
+    payload: dict[str, Any] = {
+        "model": model,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_msg},
+        ],
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+    resp = requests.post(
+        f"{base}/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json=payload,
+        timeout=90,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError(f"OpenAI HTTP {resp.status_code}")
+    data = resp.json()
+    return str(data["choices"][0]["message"]["content"] or "")
+
+
+def _correction_ai_json(
+    *, system: str, user_msg: str, max_tokens: int = 4000, temperature: float = 0.05
+) -> dict[str, Any]:
+    """Generate a JSON object using the best available correction AI.
+
+    Tries the preferred provider first (Claude by default), then falls back to the
+    other configured provider if the primary call fails. Returns {} when none work.
+    """
+    primary = _correction_ai_provider()
+    if primary == "none":
+        return {}
+    order = [primary]
+    if primary == "anthropic" and (os.environ.get("OPENAI_API_KEY") or "").strip():
+        order.append("openai")
+    elif primary == "openai" and (os.environ.get("ANTHROPIC_API_KEY") or "").strip():
+        order.append("anthropic")
+    json_hint = "\n\nRéponds UNIQUEMENT avec l'objet JSON valide, sans texte autour ni bloc markdown."
+    for prov in order:
+        model = _correction_ai_model(prov)
+        if not model:
+            continue
+        try:
+            if prov == "anthropic":
+                text = _anthropic_messages_text(
+                    system=system + json_hint,
+                    user_msg=user_msg,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+            else:
+                text = _openai_chat_text(
+                    system=system,
+                    user_msg=user_msg,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    json_mode=True,
+                )
+            parsed = _parse_ai_json(text)
+            if parsed:
+                return parsed
+        except Exception:
+            continue
+    return {}
 
 
 def _openai_url_fix(
@@ -2698,11 +2841,6 @@ def _openai_url_fix(
     url: str,
     site_name: str,
 ) -> dict[str, Any]:
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        return {}
-    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
-    model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
     system = (
         "Tu es un expert SEO technique qui génère des corrections CODE-READY, immédiatement applicables.\n"
         "Pour chaque anomalie et URL, produis une correction technique précise avec le code exact.\n\n"
@@ -2730,34 +2868,9 @@ def _openai_url_fix(
         "anomalie": f"{issue_key} — {issue_label}",
         "url_affectee": url,
     }, ensure_ascii=False)
-    try:
-        resp = requests.post(
-            f"{base}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "temperature": 0.1,
-                "max_tokens": 700,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user_msg},
-                ],
-                "response_format": {"type": "json_object"},
-            },
-            timeout=30,
-        )
-    except Exception:
-        return {}
-    if resp.status_code != 200:
-        return {}
-    try:
-        data = resp.json()
-        content = data["choices"][0]["message"]["content"]
-        parsed = json.loads(content)
-        if isinstance(parsed, dict) and parsed.get("fix"):
-            return parsed
-    except Exception:
-        pass
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=900, temperature=0.1)
+    if isinstance(parsed, dict) and parsed.get("fix"):
+        return parsed
     return {}
 
 
@@ -2778,7 +2891,6 @@ _SEO_FILE_CANDIDATES: dict[str, list[str]] = {
     "missing_h1": ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "layout.html", "base.html", "index.html"],
     "multiple_h1": ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "layout.html", "base.html", "index.html"],
     "image_missing_alt": ["app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "index.html", "layout.html"],
-    "duplicate_content": ["app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "index.html"],
     "slow_page": ["next.config.js", "next.config.ts", "vercel.json", "netlify.toml", "_headers", ".htaccess"],
 }
 _SEO_FILE_CANDIDATES_DEFAULT = [
@@ -2819,6 +2931,11 @@ def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
         return ["app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html", "i18n.ts"]
     if "structured" in key or "schema" in key:
         return ["app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "schema.ts", "seo.tsx"]
+    if "viewport" in key:
+        return [
+            "app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "pages/_app.tsx",
+            "layout.html", "base.html", "index.html", "head.tsx",
+        ]
     if "javascript" in key or "css" in key:
         return ["next.config.js", "next.config.ts", "vercel.json", "netlify.toml", "_headers", "package.json"]
     if "image" in key or "alt" in key:
@@ -2913,11 +3030,13 @@ def _openai_generate_file_patch(
     url: str,
     site_name: str,
 ) -> dict[str, Any]:
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        return {}
-    base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
-    model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+    # #4 safety: a file that hit the 80KB read cap is (likely) truncated. Regenerating a
+    # "full file" from a truncated copy would silently delete the tail — refuse it.
+    if len(file_content) >= 79_500:
+        return {"error": "file_too_large", "description": (
+            "Fichier trop volumineux pour une régénération complète sûre (risque de troncature). "
+            "Correction manuelle recommandée."
+        )}
     system = (
         "Tu es un expert SEO technique qui génère des patches de code précis et applicables.\n"
         "On te donne le contenu COMPLET d'un fichier de configuration/template, "
@@ -2927,13 +3046,15 @@ def _openai_generate_file_patch(
         "{\n"
         '  "pr_title": "fix: [description courte de la correction] (max 72 chars)",\n'
         '  "description": "Explication en 2-3 phrases de ce qui a été changé et pourquoi",\n'
-        '  "patched_content": "contenu complet du fichier après correction"\n'
+        '  "patched_content": "contenu complet du fichier après correction",\n'
+        '  "no_change": false\n'
         "}\n\n"
         "RÈGLES ABSOLUES :\n"
-        "- patched_content = fichier COMPLET, pas juste le bloc modifié\n"
+        "- patched_content = fichier COMPLET, pas juste le bloc modifié, sans rien tronquer\n"
         "- Ne modifie RIEN d'autre que ce qui est nécessaire pour corriger l'anomalie\n"
-        "- Si le fichier contient déjà la correction, indique-le dans description et renvoie le fichier tel quel\n"
-        "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)"
+        "- Si le fichier contient déjà la correction, mets no_change=true et renvoie le fichier tel quel\n"
+        "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
+        "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
     )
     user_msg = json.dumps({
         "site": site_name,
@@ -2942,35 +3063,121 @@ def _openai_generate_file_patch(
         "fichier": file_path,
         "contenu_actuel": file_content,
     }, ensure_ascii=False)
-    try:
-        resp = requests.post(
-            f"{base}/chat/completions",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "temperature": 0.05,
-                "max_tokens": 4000,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user_msg},
-                ],
-                "response_format": {"type": "json_object"},
-            },
-            timeout=60,
-        )
-    except Exception:
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=8000, temperature=0.05)
+    if not (isinstance(parsed, dict) and parsed.get("patched_content")):
         return {}
-    if resp.status_code != 200:
-        return {}
+    patched = str(parsed.get("patched_content") or "")
+    # #4 safety: reject suspicious regenerations that drop a large chunk of the file.
+    if file_content and len(patched) < int(len(file_content) * 0.5):
+        return {"error": "suspicious_patch", "description": (
+            "La correction générée supprime une grande partie du fichier — rejetée par sécurité."
+        )}
+    # #4 safety: keep structured-config files parseable.
+    integrity = _validate_patched_file(file_path, patched)
+    if integrity is not None:
+        return {"error": "invalid_syntax", "description": integrity}
+    return parsed
+
+
+def _validate_patched_file(file_path: str, patched: str) -> str | None:
+    """Return an error message if the patched content breaks the file's syntax, else None."""
+    suffix = (file_path or "").rsplit(".", 1)[-1].lower()
     try:
-        data = resp.json()
-        content = data["choices"][0]["message"]["content"]
-        parsed = json.loads(content)
-        if isinstance(parsed, dict) and parsed.get("patched_content"):
-            return parsed
+        if suffix == "json" or file_path.endswith((".json",)):
+            json.loads(patched)
+        elif suffix == "toml":
+            try:
+                import tomllib  # py3.11+
+                tomllib.loads(patched)
+            except ModuleNotFoundError:
+                pass
+    except Exception as e:  # noqa: BLE001 - surface a friendly message to the UI
+        return f"Le fichier corrigé n'est plus un {suffix.upper()} valide : {e}"
+    return None
+
+
+def _norm_url_for_match(u: str) -> str:
+    """Scheme/trailing-slash-insensitive URL key for matching tasks to report URLs."""
+    s = (u or "").strip().lower()
+    if not s:
+        return ""
+    s = s.split("://", 1)[-1]  # drop scheme so http/https compare equal
+    s = s.split("#", 1)[0]
+    s = s.rstrip("/")
+    return s
+
+
+def _verify_corrections_after_crawl(slug: str, report: dict[str, Any]) -> None:
+    """#5 — After a fresh crawl, confirm whether applied corrections actually worked.
+
+    For each IssueTask that was pushed/applied (status in_progress/done), check if the
+    fresh crawl still flags the same (issue_key, url). Records the outcome inside the
+    task's `note` JSON (`verify` block) without inventing new status strings (the UI
+    buckets unknown statuses as "todo"). A merged ("done") fix that no longer appears is
+    confirmed resolved; one that still appears is flagged as a regression in the note.
+    """
+    try:
+        issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
+        if not issues:
+            return
+        crawl_ts = ""
+        meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
+        if isinstance(meta, dict):
+            crawl_ts = str(meta.get("timestamp") or meta.get("crawl_ts") or "")
+        with DB.session() as db:
+            proj = db.scalar(select(Project).where(Project.slug == slug))
+            if proj is None:
+                return
+            tasks = list(db.scalars(select(IssueTask).where(
+                IssueTask.project_id == str(proj.id),
+                IssueTask.status.in_(["in_progress", "done"]),
+            )).all())
+            if not tasks:
+                return
+            impacted_cache: dict[str, set[str]] = {}
+
+            def _impacted_norm(key: str) -> set[str]:
+                if key not in impacted_cache:
+                    raw = dash.extract_impacted_pages(key, issues.get(key))
+                    impacted_cache[key] = {_norm_url_for_match(u) for u in raw}
+                return impacted_cache[key]
+
+            now_iso = datetime.now(timezone.utc).isoformat()
+            changed = False
+            for t in tasks:
+                key = str(t.issue_key or "")
+                block = issues.get(key)
+                count = int(block.get("count") or 0) if isinstance(block, dict) else 0
+                url_norm = _norm_url_for_match(str(t.url or ""))
+                if count <= 0:
+                    still_present = False
+                elif url_norm:
+                    still_present = url_norm in _impacted_norm(key)
+                else:
+                    still_present = True  # task without a specific URL: issue still exists
+                result = "still_present" if still_present else "resolved"
+                # PR opened but not merged + still present = expected, don't flag.
+                if t.status == "in_progress" and still_present:
+                    continue
+                try:
+                    note_obj = json.loads(t.note) if t.note else {}
+                    if not isinstance(note_obj, dict):
+                        note_obj = {"_note": str(t.note)}
+                except Exception:
+                    note_obj = {"_note": str(t.note)} if t.note else {}
+                prev = note_obj.get("verify") if isinstance(note_obj.get("verify"), dict) else {}
+                if prev.get("result") == result and prev.get("crawl_ts") == crawl_ts:
+                    continue
+                note_obj["verify"] = {"result": result, "verified_at": now_iso, "crawl_ts": crawl_ts}
+                t.note = json.dumps(note_obj, ensure_ascii=False)
+                # A confirmed-resolved fix is complete.
+                if result == "resolved" and t.status != "done":
+                    t.status = "done"
+                changed = True
+            if changed:
+                db.commit()
     except Exception:
-        pass
-    return {}
+        logger.exception("[verify] correction verification failed for slug=%s", slug)
 
 
 def _github_fixable_issue_candidates(
@@ -3071,7 +3278,8 @@ def _ensure_ai_suggestions_for_issues(
     if not missing or not _ai_reports_enabled():
         return existing
 
-    model = (os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-4o-mini").strip()
+    _prov = _correction_ai_provider()
+    model = _correction_ai_model(_prov) or "unknown"
     # Chunk to keep prompts small.
     for i in range(0, len(missing), 8):
         batch = missing[i : i + 8]
@@ -7146,6 +7354,8 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 if isinstance(pages_crawled, int) and pages_crawled >= 0:
                     actual_pages_crawled = int(pages_crawled)
                     job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
+                # #5 — verify previously applied corrections against this fresh crawl.
+                _verify_corrections_after_crawl(slug, report)
             job.result = {
                 "type": "crawl",
                 "slug": slug,
@@ -14643,7 +14853,12 @@ def project_issue_detail(
                 _note_data = json.loads(_t.note) if _t.note else {}
             except Exception:
                 _note_data = {}
-            gh_tasks[_t.url] = {"status": _t.status, "pr": _note_data}
+            _verify = _note_data.get("verify") if isinstance(_note_data, dict) else None
+            gh_tasks[_t.url] = {
+                "status": _t.status,
+                "pr": _note_data,
+                "verify": _verify if isinstance(_verify, dict) else None,
+            }
     except Exception:
         pass
 
@@ -14947,6 +15162,11 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     )
     if not patch:
         return JSONResponse({"ok": False, "error": "Service IA indisponible ou réponse invalide."}, status_code=503)
+    if patch.get("error"):
+        return JSONResponse(
+            {"ok": False, "error": str(patch.get("description") or patch.get("error"))},
+            status_code=422,
+        )
     content_error = _github_patched_content_error(str(patch.get("patched_content") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
@@ -15066,6 +15286,9 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         )
         if not patch:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False, "error": "IA indisponible"})
+            continue
+        if patch.get("error") or not patch.get("patched_content"):
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": False, "error": str(patch.get("description") or patch.get("error") or "Patch invalide")})
             continue
         # Get current SHA from file_state or fetch from GitHub on the new branch
         if file_path in file_state:
