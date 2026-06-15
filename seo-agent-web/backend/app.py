@@ -15733,17 +15733,18 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
 
+    evidence = _issue_evidence_srcs(issues.get(issue_key)) if issues else []
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-        site_name=site_name, file_state=file_state, max_files=8,
-        evidence=_issue_evidence_srcs(issues.get(issue_key)) if issues else None,
+        site_name=site_name, file_state=file_state, max_files=8, evidence=evidence,
     )
     if not targets:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
     if not patched_files:
-        return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).", "skipped": skipped}, status_code=422)
+        _ev = (" Images sans alt détectées (échantillon) : " + ", ".join(evidence[:5])) if evidence else " Aucun src d'image capté (relance un crawl récent)."
+        return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).{_ev}", "skipped": skipped, "evidence": evidence[:10]}, status_code=422)
 
     pr_title = f"fix(seo): {issue_label} — {len(patched_files)} fichier(s)"
     pr_body = (
