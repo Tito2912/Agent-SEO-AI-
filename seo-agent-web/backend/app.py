@@ -15618,11 +15618,13 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 _note_parsed = {}
             _is_pr_note = bool(_note_parsed.get("pr_url"))
             pr_data = _note_parsed if _is_pr_note else {}
-            user_note = "" if _is_pr_note else (t.note or "")
+            # User-written note: only when the note isn't our internal JSON payload.
+            user_note = "" if (_is_pr_note or isinstance(_note_parsed, dict) and _note_parsed.get("verify")) else (t.note or "")
+            _verify = _note_parsed.get("verify") if isinstance(_note_parsed.get("verify"), dict) else None
             task_ctx = {
                 "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
                 "url": t.url, "status": t.status,
-                "pr": pr_data, "user_note": user_note,
+                "pr": pr_data, "user_note": user_note, "verify": _verify,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             }
@@ -15632,6 +15634,27 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
     except Exception as exc:
         import traceback
         print(f"[corrections] DB error for slug={slug}: {exc}\n{traceback.format_exc()}", flush=True)
+
+    def _verify_result(ctx: dict[str, Any]) -> str:
+        v = ctx.get("verify")
+        return str(v.get("result")) if isinstance(v, dict) else ""
+
+    stats = {
+        "total": total,
+        "todo": len(groups["todo"]),
+        "in_progress": len(groups["in_progress"]),
+        "done": len(groups["done"]),
+        "ignored": len(groups["ignored"]),
+        "verified_resolved": sum(
+            1 for g in groups.values() for t in g if _verify_result(t) == "resolved"
+        ),
+        "still_present": sum(
+            1 for g in groups.values() for t in g if _verify_result(t) == "still_present"
+        ),
+        "with_pr": sum(
+            1 for g in groups.values() for t in g if (t.get("pr") or {}).get("pr_url")
+        ),
+    }
 
     runs_dir = _runs_dir_for_request(request)
     current_crawl_ts = ""
@@ -15646,6 +15669,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 linked = task_lookup.get((str(candidate.get("key") or ""), str(candidate.get("url") or "")))
                 candidate["task_status"] = str(linked.get("status") or "") if linked else ""
                 candidate["pr"] = linked.get("pr") if linked else {}
+                candidate["verify"] = linked.get("verify") if linked else None
     except Exception as exc:
         logger.warning("[corrections] failed to build correction candidates for %s: %s", slug, exc)
 
@@ -15660,6 +15684,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "github_cfg": github_cfg,
             "current_crawl_ts": current_crawl_ts,
             "fix_candidates": fix_candidates,
+            "stats": stats,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
