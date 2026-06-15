@@ -15569,6 +15569,36 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     })
 
 
+def _github_code_search_paths(owner: str, repo: str, token: str, terms: list[str], *, limit: int = 8) -> list[str]:
+    """Find files that literally reference the given terms (e.g. image src basenames) via
+    GitHub code search. Deterministic — far more reliable than guessing files from names."""
+    paths: list[str] = []
+    seen: set[str] = set()
+    done_terms: set[str] = set()
+    for term in (terms or []):
+        base = str(term).rsplit("/", 1)[-1].strip()
+        if not base or len(base) < 3 or base in done_terms:
+            continue
+        done_terms.add(base)
+        if len(done_terms) > 8:
+            break
+        try:
+            data = _github_api_get(
+                "/search/code", token=token,
+                params={"q": f'"{base}" repo:{owner}/{repo}', "per_page": 5}, timeout_s=15,
+            )
+        except Exception:
+            continue
+        for it in (data.get("items") or []) if isinstance(data, dict) else []:
+            p = it.get("path") if isinstance(it, dict) else None
+            if isinstance(p, str) and p and p not in seen and _github_file_path_allowed(p):
+                seen.add(p)
+                paths.append(p)
+        if len(paths) >= limit:
+            break
+    return paths[:limit]
+
+
 def _issue_evidence_srcs(issue_block: Any) -> list[str]:
     """Concrete locator strings for precise patching (e.g. src of <img> tags lacking alt),
     read from the crawler's per-issue evidence (`alt_samples`). Empty for issues without it."""
@@ -15600,15 +15630,26 @@ def _deep_patch_issue_files(
     (patched_files, skipped_files, targets)."""
     import base64 as _b64
     targets: list[str] = []
+    # 1) Deterministic: files that literally reference the evidence (e.g. image srcs).
+    if evidence:
+        try:
+            for f in _github_code_search_paths(owner, repo_name, token, evidence, limit=max_files):
+                if f not in targets:
+                    targets.append(f)
+        except Exception:
+            pass
+    # 2) Hardcoded candidate filenames for this issue type.
     for candidate in _seo_file_candidates_for_issue(issue_key):
         for p in all_paths:
             if (p == candidate or p.endswith(f"/{candidate}") or p.split("/")[-1] == candidate) and p not in targets:
                 targets.append(p)
                 break
+    # 3) AI mapping of impacted URLs → source files.
     if impacted_urls:
         for f in _ai_map_urls_to_files(issue_key=issue_key, issue_label=issue_label, urls=impacted_urls, all_paths=all_paths, limit=max_files, evidence=evidence):
             if f not in targets:
                 targets.append(f)
+    # 4) Last resort: let the AI pick from the tree.
     if not targets:
         for f in _ai_pick_repo_files(issue_key, issue_label, all_paths, limit=2):
             if f not in targets:
