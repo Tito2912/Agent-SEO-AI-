@@ -14932,8 +14932,12 @@ def api_issue_url_fix(
         error_sink=errors,
     )
     if not result:
-        reason = " · ".join(errors[:2]) if errors else "Service IA indisponible."
-        return JSONResponse({"error": f"Correction IA indisponible : {reason}"}, status_code=503)
+        # System/provider details are admin-only; regular users get a generic message.
+        if bool(getattr(user, "is_admin", False)) and errors:
+            msg = "Correction IA indisponible : " + " · ".join(errors[:2])
+        else:
+            msg = "Correction IA momentanément indisponible. Réessaie dans un instant."
+        return JSONResponse({"error": msg}, status_code=503)
     return JSONResponse(result)
 
 
