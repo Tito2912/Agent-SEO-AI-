@@ -3037,6 +3037,53 @@ def _project_github_cfg(proj) -> dict[str, str]:
     }
 
 
+_EDITABLE_EXTS = {
+    "html", "htm", "tsx", "jsx", "ts", "js", "mjs", "cjs", "vue", "svelte", "astro",
+    "php", "md", "mdx", "json", "toml", "yaml", "yml", "conf", "liquid", "ejs", "hbs", "twig", "erb", "xml",
+}
+_REPO_NOISE = ("node_modules/", "dist/", "build/", ".next/", "vendor/", ".git/", "coverage/", ".cache/", "out/")
+
+
+def _ai_pick_repo_files(issue_key: str, issue_label: str, all_paths: list[str], *, limit: int = 2) -> list[str]:
+    """Fallback when no hardcoded candidate matches: let the AI pick the most relevant
+    file(s) to edit from the repo's actual file tree. Returns validated repo-relative paths."""
+    if not all_paths:
+        return []
+    cand: list[str] = []
+    for p in all_paths:
+        low = p.lower()
+        if any(n in low for n in _REPO_NOISE):
+            continue
+        base = low.rsplit("/", 1)[-1]
+        ext = base.rsplit(".", 1)[-1] if "." in base else ""
+        if ext in _EDITABLE_EXTS or base in {".htaccess", "_headers", "robots.txt", "nginx.conf"}:
+            cand.append(p)
+    if not cand:
+        return []
+    system = (
+        "Tu es un expert SEO/dev. On te donne la liste des fichiers d'un dépôt et une anomalie SEO. "
+        "Choisis le(s) fichier(s) LE(S) PLUS PERTINENT(S) à éditer pour corriger cette anomalie "
+        "(template, layout, page d'accueil, config serveur selon le cas). "
+        "Réponds STRICTEMENT en JSON : {\"files\": [\"chemin/relatif\"]} — 1 à 3 chemins EXACTEMENT tels "
+        "qu'ils apparaissent dans la liste, par ordre de pertinence. Si rien ne convient: {\"files\": []}."
+    )
+    user_msg = json.dumps(
+        {"anomalie": f"{issue_key} — {issue_label}", "fichiers": cand[:400]}, ensure_ascii=False
+    )
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=400, temperature=0.0)
+    files = parsed.get("files") if isinstance(parsed, dict) else None
+    out: list[str] = []
+    if isinstance(files, list):
+        allow = set(all_paths)
+        for f in files:
+            fs = str(f).strip()
+            if fs in allow and fs not in out:
+                out.append(fs)
+            if len(out) >= limit:
+                break
+    return out
+
+
 def _github_find_seo_files(
     owner: str, repo: str, branch: str, token: str, issue_key: str
 ) -> list[dict[str, Any]]:
@@ -3069,9 +3116,14 @@ def _github_find_seo_files(
                 matches.append(p)
                 break
     if not matches:
+        # No hardcoded candidate exists in this repo — let the AI pick from the real tree.
+        meta = dash.issue_meta(issue_key)
+        issue_label = meta.label if meta else issue_key
+        matches = _ai_pick_repo_files(issue_key, issue_label, all_paths)
+    if not matches:
         raise RuntimeError(
-            f"Aucun fichier pertinent trouvé pour l'anomalie « {issue_key} » dans le repo. "
-            f"Fichiers recherchés : {', '.join(candidates[:5])}."
+            "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. "
+            "Vérifie que le dépôt connecté contient bien le code source du site."
         )
 
     results: list[dict[str, Any]] = []
