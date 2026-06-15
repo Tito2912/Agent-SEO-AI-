@@ -461,6 +461,7 @@ class PageData:
     text_word_count: int | None = None
     images_total: int = 0
     images_missing_alt: int = 0
+    image_srcs_missing_alt: list[str] = dataclasses.field(default_factory=list)
     image_urls: list[str] = dataclasses.field(default_factory=list)
     script_urls: list[str] = dataclasses.field(default_factory=list)
     css_urls: list[str] = dataclasses.field(default_factory=list)
@@ -669,6 +670,7 @@ class PageHTMLExtractor(HTMLParser):
         self.link_items: list[dict[str, str]] = []
         self.images_total: int = 0
         self.images_missing_alt: int = 0
+        self.image_srcs_missing_alt: list[str] = []
         self.image_srcs: list[str] = []
         self.script_srcs: list[str] = []
         self.css_hrefs: list[str] = []
@@ -793,6 +795,8 @@ class PageHTMLExtractor(HTMLParser):
                 self.image_srcs.append(src)
             if not alt:
                 self.images_missing_alt += 1
+                if src and len(self.image_srcs_missing_alt) < 20:
+                    self.image_srcs_missing_alt.append(src)
             # Semrush-like: treat image alt text as anchor text when <img> is nested inside <a>.
             if self._in_a and alt:
                 self._current_a_parts.append(alt)
@@ -3269,6 +3273,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.text_word_count = parser.get_text_word_count()
     page.images_total = parser.images_total
     page.images_missing_alt = parser.images_missing_alt
+    page.image_srcs_missing_alt = list(parser.image_srcs_missing_alt)
 
     page.og_title = (parser.meta_property.get("og:title") or "").strip() or None
     page.og_description = (parser.meta_property.get("og:description") or "").strip() or None
@@ -5946,9 +5951,17 @@ def _score_issues(
     issues["missing_meta_description"] = _issue_block("missing_meta_description", missing_description)
     issues["missing_h1_indexable"] = _issue_block("missing_h1_indexable", missing_h1_indexable)
     issues["missing_h1_not_indexable"] = _issue_block("missing_h1_not_indexable", missing_h1_not_indexable)
-    issues["missing_alt_text"] = _issue_block(
-        "missing_alt_text", [p.url for p in ok_html_pages if (p.images_missing_alt or 0) > 0]
-    )
+    _alt_pages = [p for p in ok_html_pages if (p.images_missing_alt or 0) > 0]
+    issues["missing_alt_text"] = _issue_block("missing_alt_text", [p.url for p in _alt_pages])
+    # Evidence for precise auto-fix targeting: the actual src of <img> tags lacking alt,
+    # per page (capped). Ignored by existing consumers (extract_impacted_pages / CSV export).
+    _alt_samples: dict[str, list[str]] = {}
+    for _p in _alt_pages[:30]:
+        _srcs = [s for s in (_p.image_srcs_missing_alt or []) if s][:10]
+        if _srcs:
+            _alt_samples[_p.url] = _srcs
+    if _alt_samples:
+        issues["missing_alt_text"]["alt_samples"] = _alt_samples
     issues["multiple_h1"] = _issue_block("multiple_h1", multiple_h1)
     issues["missing_canonical"] = _issue_block("missing_canonical", missing_canonical)
     # Ahrefs-like: count = number of affected URLs, not number of duplicated values.

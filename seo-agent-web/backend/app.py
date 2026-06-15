@@ -3085,7 +3085,8 @@ def _ai_pick_repo_files(issue_key: str, issue_label: str, all_paths: list[str], 
 
 
 def _ai_map_urls_to_files(
-    *, issue_key: str, issue_label: str, urls: list[str], all_paths: list[str], limit: int = 8
+    *, issue_key: str, issue_label: str, urls: list[str], all_paths: list[str], limit: int = 8,
+    evidence: list[str] | None = None,
 ) -> list[str]:
     """Map a set of impacted URLs to the source file(s) that must be edited to fix them all.
 
@@ -3112,14 +3113,19 @@ def _ai_map_urls_to_files(
         "- Si un template/composant/layout/config partagé couvre toutes les URLs, renvoie CE seul fichier.\n"
         "- Sinon, renvoie le fichier source de chaque page impactée (mappe chaque URL à son fichier : "
         "route Next.js, page statique, template, etc.).\n"
+        "Si des 'indices' précis sont fournis (ex. src d'images), trouve les fichiers qui RÉFÉRENCENT "
+        "ces indices.\n"
         "Réponds STRICTEMENT en JSON : {\"files\": [\"chemin/relatif\"]} — chemins EXACTEMENT tels qu'ils "
         "apparaissent dans la liste, par ordre de priorité. Si rien ne convient: {\"files\": []}."
     )
-    user_msg = json.dumps({
+    payload_map: dict[str, Any] = {
         "anomalie": f"{issue_key} — {issue_label}",
         "urls_impactees": urls[:40],
         "fichiers_du_depot": cand[:500],
-    }, ensure_ascii=False)
+    }
+    if evidence:
+        payload_map["indices_precis"] = evidence[:30]
+    user_msg = json.dumps(payload_map, ensure_ascii=False)
     parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=700, temperature=0.0)
     files = parsed.get("files") if isinstance(parsed, dict) else None
     out: list[str] = []
@@ -15474,6 +15480,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=6,
+            evidence=_issue_evidence_srcs(report_issues.get(issue_key)) if report_issues else None,
         )
         if patched:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": True, "files": patched})
@@ -15562,10 +15569,28 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     })
 
 
+def _issue_evidence_srcs(issue_block: Any) -> list[str]:
+    """Concrete locator strings for precise patching (e.g. src of <img> tags lacking alt),
+    read from the crawler's per-issue evidence (`alt_samples`). Empty for issues without it."""
+    if not isinstance(issue_block, dict):
+        return []
+    out: list[str] = []
+    samples = issue_block.get("alt_samples")
+    if isinstance(samples, dict):
+        for srcs in samples.values():
+            if isinstance(srcs, list):
+                for s in srcs:
+                    s = str(s).strip()
+                    if s and s not in out:
+                        out.append(s)
+    return out[:30]
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
+    evidence: list[str] | None = None,
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
@@ -15581,7 +15606,7 @@ def _deep_patch_issue_files(
                 targets.append(p)
                 break
     if impacted_urls:
-        for f in _ai_map_urls_to_files(issue_key=issue_key, issue_label=issue_label, urls=impacted_urls, all_paths=all_paths, limit=max_files):
+        for f in _ai_map_urls_to_files(issue_key=issue_key, issue_label=issue_label, urls=impacted_urls, all_paths=all_paths, limit=max_files, evidence=evidence):
             if f not in targets:
                 targets.append(f)
     if not targets:
@@ -15590,6 +15615,8 @@ def _deep_patch_issue_files(
                 targets.append(f)
     targets = targets[:max_files]
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
+    if evidence:
+        occ_hint += " Éléments précis à corriger dans ce fichier s'ils y figurent (ex. src d'images sans alt) : " + ", ".join(evidence[:15]) + "."
     primary_url = impacted_urls[0] if impacted_urls else ""
     patched: list[str] = []
     skipped: list[str] = []
@@ -15711,6 +15738,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
         site_name=site_name, file_state=file_state, max_files=8,
+        evidence=_issue_evidence_srcs(issues.get(issue_key)) if issues else None,
     )
     if not targets:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
