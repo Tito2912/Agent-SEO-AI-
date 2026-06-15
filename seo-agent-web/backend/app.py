@@ -2848,6 +2848,58 @@ def _correction_ai_json(
     return {}
 
 
+def _ai_configured() -> bool:
+    """True when at least one generation provider (Claude or OpenAI) is available."""
+    return _correction_ai_provider() != "none"
+
+
+def _ai_generate_text(
+    *, system: str, user_msg: str, max_tokens: int = 800, temperature: float = 0.7,
+    error_sink: list[str] | None = None,
+) -> str:
+    """Free-text generation via the best available AI (Claude preferred, OpenAI fallback).
+
+    Mirrors _correction_ai_json but returns raw text (no JSON). Returns "" on failure.
+    """
+    primary = _correction_ai_provider()
+    if primary == "none":
+        if error_sink is not None:
+            error_sink.append("Aucune clé IA configurée (ANTHROPIC_API_KEY ou OPENAI_API_KEY).")
+        return ""
+    order = [primary]
+    if primary == "anthropic" and (os.environ.get("OPENAI_API_KEY") or "").strip():
+        order.append("openai")
+    elif primary == "openai" and (os.environ.get("ANTHROPIC_API_KEY") or "").strip():
+        order.append("anthropic")
+    for prov in order:
+        model = _correction_ai_model(prov)
+        if not model:
+            continue
+        try:
+            if prov == "anthropic":
+                text = _anthropic_messages_text(
+                    system=system, user_msg=user_msg, model=model, max_tokens=max_tokens,
+                )
+            else:
+                text = _openai_chat_text(
+                    system=system, user_msg=user_msg, model=model,
+                    max_tokens=max_tokens, temperature=temperature, json_mode=False,
+                )
+            if text.strip():
+                return text.strip()
+            msg = f"{prov} ({model}): réponse vide"
+            logger.warning("[ai-text] %s", msg)
+            if error_sink is not None:
+                error_sink.append(msg)
+        except Exception as e:
+            msg = f"{prov} ({model}): {e}"
+            logger.warning("[ai-text] %s", msg)
+            if error_sink is not None:
+                error_sink.append(msg)
+            continue
+    return ""
+
+
 def _openai_url_fix(
     *,
     issue_key: str,
@@ -17573,9 +17625,8 @@ async def api_backlinks_generate_reply(request: Request, slug: str) -> JSONRespo
     if not opp_title or not target_url:
         return JSONResponse({"ok": False, "error": "Titre et URL cible requis"}, status_code=400)
 
-    openai_key = str(os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not openai_key:
-        return JSONResponse({"ok": False, "error": "OPENAI_API_KEY non configurée"}, status_code=500)
+    if not _ai_configured():
+        return JSONResponse({"ok": False, "error": "Génération IA momentanément indisponible."}, status_code=503)
 
     system_prompt = (
         "Tu es un expert en netlinking et en community management. "
@@ -17592,32 +17643,18 @@ async def api_backlinks_generate_reply(request: Request, slug: str) -> JSONRespo
         "et mentionne l'article de façon pertinente avec son URL."
     )
 
-    try:
-        api_resp = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "max_tokens": 600,
-                "temperature": 0.7,
-            },
-            timeout=30,
-        )
-        api_data = api_resp.json()
-    except Exception as exc:
-        return JSONResponse({"ok": False, "error": f"Erreur OpenAI: {exc}"}, status_code=502)
-
-    if not api_resp.ok:
-        err_msg = str(((api_data or {}).get("error") or {}).get("message") or f"OpenAI {api_resp.status_code}")
+    ai_errors: list[str] = []
+    reply_text = _ai_generate_text(
+        system=system_prompt, user_msg=user_prompt, max_tokens=700, temperature=0.7,
+        error_sink=ai_errors,
+    )
+    if not reply_text:
+        # Provider/model details are admin-only; users get a generic message.
+        if bool(getattr(user, "is_admin", False)) and ai_errors:
+            err_msg = "Génération IA indisponible : " + " · ".join(ai_errors[:2])
+        else:
+            err_msg = "Génération IA momentanément indisponible. Réessaie dans un instant."
         return JSONResponse({"ok": False, "error": err_msg}, status_code=502)
-
-    reply_text = str(
-        (((api_data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
-    ).strip()
 
     with DB.session() as db:
         billing.usage_add(db, user_id=str(user.id), metric="backlink_replies_month", amount=1)
@@ -17992,7 +18029,7 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
 
     serpapi_key = str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip()
-    openai_key = str(os.environ.get("OPENAI_API_KEY") or "").strip()
+    ai_ready = _ai_configured()
 
     with DB.session() as db:
         all_projects = list(db.scalars(select(Project)))
@@ -18077,7 +18114,7 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
                         opp_id = new_opp.id
                         found_this_proj += 1
 
-                    if auto_cfg["auto_draft"] and openai_key and proj.base_url:
+                    if auto_cfg["auto_draft"] and ai_ready and proj.base_url:
                         target_url = str(proj.base_url or "").rstrip("/")
                         system_prompt = (
                             "Tu es un expert en netlinking. Tu rédiges des réponses naturelles et utiles "
@@ -18090,24 +18127,10 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
                             "naturellement l'URL du site."
                         )
                         try:
-                            ai_resp = requests.post(
-                                "https://api.openai.com/v1/chat/completions",
-                                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
-                                json={
-                                    "model": "gpt-4o-mini",
-                                    "messages": [
-                                        {"role": "system", "content": system_prompt},
-                                        {"role": "user", "content": user_prompt},
-                                    ],
-                                    "max_tokens": 600,
-                                    "temperature": 0.7,
-                                },
-                                timeout=30,
+                            draft = _ai_generate_text(
+                                system=system_prompt, user_msg=user_prompt,
+                                max_tokens=700, temperature=0.7,
                             )
-                            ai_data = ai_resp.json()
-                            draft = str(
-                                (((ai_data.get("choices") or [{}])[0]).get("message") or {}).get("content") or ""
-                            ).strip()
                             if draft:
                                 with DB.session() as db3:
                                     opp3 = db3.scalar(select(BacklinkOpportunity).where(BacklinkOpportunity.id == opp_id))
