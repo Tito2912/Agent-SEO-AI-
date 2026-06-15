@@ -2983,17 +2983,6 @@ def _project_github_cfg(proj) -> dict[str, str]:
     }
 
 
-def _user_facing_error(
-    user: Any, *, detail: str, generic: str = "Une erreur technique est survenue. Réessaie dans un instant."
-) -> str:
-    """Return raw system/exception detail only to admins; everyone else gets generic text.
-
-    The full detail is always logged server-side regardless of who triggered it.
-    """
-    logger.warning("[user-facing-error] %s", detail)
-    return detail if bool(getattr(user, "is_admin", False)) else generic
-
-
 def _github_find_seo_files(
     owner: str, repo: str, branch: str, token: str, issue_key: str
 ) -> list[dict[str, Any]]:
@@ -15062,7 +15051,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
             base_sha = ref_data["object"]["sha"]
         except Exception as e:
-            return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Impossible de lire la branche {branch} : {e}", generic="Impossible d'accéder au dépôt GitHub. Réessaie dans un instant.")}, status_code=400)
+            return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
         from datetime import datetime as _dt
         fix_branch = f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
         try:
@@ -15071,7 +15060,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 "sha": base_sha,
             })
         except Exception as e:
-            return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Impossible de créer la branche {fix_branch} : {e}", generic="Impossible de créer la branche de correction. Réessaie dans un instant.")}, status_code=400)
+            return JSONResponse({"ok": False, "error": f"Impossible de créer la branche {fix_branch} : {e}"}, status_code=400)
         try:
             file_data = _github_api_get(_github_content_api_path(owner, repo_name, file_path), token=token, params={"ref": branch})
             current_sha = file_data.get("sha", "")
@@ -15093,7 +15082,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             commit_sha = str(put_resp.get("commit", {}).get("sha") or "")
             commit_url = str(put_resp.get("commit", {}).get("html_url") or "")
         except Exception as e:
-            return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Impossible de committer la correction : {e}", generic="Impossible d'appliquer la correction sur GitHub. Réessaie dans un instant.")}, status_code=400)
+            return JSONResponse({"ok": False, "error": f"Impossible de committer la correction : {e}"}, status_code=400)
         pr_title = f"fix(seo): {issue_label} — {url[:60]}"
         pr_body = (
             f"## Correction SEO automatique\n\n"
@@ -15113,7 +15102,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             pr_url = pr_data.get("html_url", "")
             pr_number = pr_data.get("number", "")
         except Exception as e:
-            return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Erreur lors de la création de la PR : {e}", generic="Impossible de créer la pull request. Réessaie dans un instant.")}, status_code=400)
+            return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
         # Auto-record the PR as an IssueTask so the issue detail page shows it
         try:
             _pr_note = json.dumps({
@@ -15183,7 +15172,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     try:
         seo_files = _github_find_seo_files(owner, repo_name, branch, token, issue_key)
     except RuntimeError as e:
-        return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=str(e), generic="Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt.")}, status_code=400)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
     best = seo_files[0]
     patch = _openai_generate_file_patch(
         file_path=best["path"],
@@ -15284,7 +15273,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
         base_sha = ref_data["object"]["sha"]
     except Exception as e:
-        return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Impossible de lire la branche {branch} : {e}", generic="Impossible d'accéder au dépôt GitHub. Réessaie dans un instant.")}, status_code=400)
+        return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
 
     from datetime import datetime as _dt
     import base64 as _b64
@@ -15294,7 +15283,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             "ref": f"refs/heads/{fix_branch}", "sha": base_sha,
         })
     except Exception as e:
-        return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Impossible de créer la branche : {e}", generic="Impossible de créer la branche de correction. Réessaie dans un instant.")}, status_code=400)
+        return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
 
     # Process each issue sequentially; track file state to handle overlapping files
     file_state: dict[str, dict[str, str]] = {}  # path → {sha, content}
@@ -15349,7 +15338,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             file_state[file_path] = {"sha": new_sha, "content": patch["patched_content"]}
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": True})
         except Exception as e:
-            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": False, "error": _user_facing_error(user, detail=str(e), generic="Échec de l'application sur GitHub.")})
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "file": file_path, "ok": False, "error": str(e)})
 
     fixed_results = [r for r in results if r.get("ok")]
     if not fixed_results:
@@ -15374,7 +15363,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
-        return JSONResponse({"ok": False, "error": _user_facing_error(user, detail=f"Erreur PR : {e}", generic="Impossible de créer la pull request. Réessaie dans un instant."), "results": results}, status_code=400)
+        return JSONResponse({"ok": False, "error": f"Erreur PR : {e}", "results": results}, status_code=400)
 
     # Auto-merge if Full Access mode
     _merged = False
