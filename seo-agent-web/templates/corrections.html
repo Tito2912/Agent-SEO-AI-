@@ -302,25 +302,34 @@
       cards.forEach(function (c) { col.appendChild(c); });
     });
   }
-  ['corr-search', 'corr-filter-sev', 'corr-filter-verify'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('input', applyFilters);
-  });
-  var sortEl = document.getElementById('corr-sort');
-  if (sortEl) sortEl.addEventListener('change', function () { applySort(); applyFilters(); });
+  /* This script lives in <head>, so wire up direct DOM elements once the body exists. */
+  function wireDomControls() {
+    ['corr-search', 'corr-filter-sev', 'corr-filter-verify'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', applyFilters);
+    });
+    var sortEl = document.getElementById('corr-sort');
+    if (sortEl) sortEl.addEventListener('change', function () { applySort(); applyFilters(); });
+
+    var ghToggle = document.getElementById('gh-connect-toggle');
+    if (ghToggle) {
+      ghToggle.addEventListener('click', function () {
+        var panel = document.getElementById('gh-connect-panel');
+        if (!panel) return;
+        if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        loadGhConnect();
+      });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireDomControls);
+  } else {
+    wireDomControls();
+  }
 
   /* ── Inline GitHub connection (no detour through crawl settings) ── */
   var _ghNext = '/projects/' + encodeURIComponent(_slug) + '/corrections';
-  var ghToggle = document.getElementById('gh-connect-toggle');
-  if (ghToggle) {
-    ghToggle.addEventListener('click', function () {
-      var panel = document.getElementById('gh-connect-panel');
-      if (!panel) return;
-      if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
-      panel.style.display = 'block';
-      loadGhConnect();
-    });
-  }
   function loadGhConnect() {
     var body = document.getElementById('gh-connect-body');
     if (!body) return;
