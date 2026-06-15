@@ -3084,6 +3084,56 @@ def _ai_pick_repo_files(issue_key: str, issue_label: str, all_paths: list[str], 
     return out
 
 
+def _ai_map_urls_to_files(
+    *, issue_key: str, issue_label: str, urls: list[str], all_paths: list[str], limit: int = 8
+) -> list[str]:
+    """Map a set of impacted URLs to the source file(s) that must be edited to fix them all.
+
+    Used for high-occurrence issues: prefer a single shared template/component/config when it
+    covers every URL; otherwise return the distinct page files behind the impacted URLs."""
+    if not all_paths or not urls:
+        return []
+    cand: list[str] = []
+    for p in all_paths:
+        low = p.lower()
+        if any(n in low for n in _REPO_NOISE):
+            continue
+        base = low.rsplit("/", 1)[-1]
+        ext = base.rsplit(".", 1)[-1] if "." in base else ""
+        if ext in _EDITABLE_EXTS or base in {".htaccess", "_headers", "robots.txt", "nginx.conf"}:
+            cand.append(p)
+    if not cand:
+        return []
+    system = (
+        "Tu es un expert SEO/dev. On te donne la liste des fichiers d'un dépôt, une anomalie SEO, "
+        "et la liste des URLs du site touchées par cette anomalie. "
+        "Détermine LE PLUS PETIT ensemble de fichiers source à éditer pour corriger l'anomalie sur "
+        "TOUTES ces URLs.\n"
+        "- Si un template/composant/layout/config partagé couvre toutes les URLs, renvoie CE seul fichier.\n"
+        "- Sinon, renvoie le fichier source de chaque page impactée (mappe chaque URL à son fichier : "
+        "route Next.js, page statique, template, etc.).\n"
+        "Réponds STRICTEMENT en JSON : {\"files\": [\"chemin/relatif\"]} — chemins EXACTEMENT tels qu'ils "
+        "apparaissent dans la liste, par ordre de priorité. Si rien ne convient: {\"files\": []}."
+    )
+    user_msg = json.dumps({
+        "anomalie": f"{issue_key} — {issue_label}",
+        "urls_impactees": urls[:40],
+        "fichiers_du_depot": cand[:500],
+    }, ensure_ascii=False)
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=700, temperature=0.0)
+    files = parsed.get("files") if isinstance(parsed, dict) else None
+    out: list[str] = []
+    if isinstance(files, list):
+        allow = set(all_paths)
+        for f in files:
+            fs = str(f).strip()
+            if fs in allow and fs not in out:
+                out.append(fs)
+            if len(out) >= limit:
+                break
+    return out
+
+
 def _github_find_seo_files(
     owner: str, repo: str, branch: str, token: str, issue_key: str
 ) -> list[dict[str, Any]]:
@@ -3150,6 +3200,7 @@ def _openai_generate_file_patch(
     issue_label: str,
     url: str,
     site_name: str,
+    occurrences_hint: str = "",
 ) -> dict[str, Any]:
     # #4 safety: a file that hit the 80KB read cap is (likely) truncated. Regenerating a
     # "full file" from a truncated copy would silently delete the tail — refuse it.
@@ -3172,18 +3223,22 @@ def _openai_generate_file_patch(
         "}\n\n"
         "RÈGLES ABSOLUES :\n"
         "- patched_content = fichier COMPLET, pas juste le bloc modifié, sans rien tronquer\n"
+        "- Corrige TOUTES les occurrences de l'anomalie présentes dans CE fichier, pas seulement la première\n"
         "- Ne modifie RIEN d'autre que ce qui est nécessaire pour corriger l'anomalie\n"
         "- Si le fichier contient déjà la correction, mets no_change=true et renvoie le fichier tel quel\n"
         "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
         "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
     )
-    user_msg = json.dumps({
+    payload_obj: dict[str, Any] = {
         "site": site_name,
         "anomalie": f"{issue_key} — {issue_label}",
         "url_affectee": url,
         "fichier": file_path,
         "contenu_actuel": file_content,
-    }, ensure_ascii=False)
+    }
+    if occurrences_hint:
+        payload_obj["contexte"] = occurrences_hint
+    user_msg = json.dumps(payload_obj, ensure_ascii=False)
     parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=8000, temperature=0.05)
     if not (isinstance(parsed, dict) and parsed.get("patched_content")):
         return {}
@@ -15520,6 +15575,182 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         "fixed_count": len(fixed_results),
         "total_count": len(results),
         "results": results,
+    })
+
+
+class _DeepFixBody(BaseModel):
+    url: str = ""
+    crawl_ts: str = ""
+
+
+@app.post("/api/projects/{slug}/issues/{issue_key}/deep-fix")
+def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepFixBody) -> JSONResponse:
+    """Fix ALL occurrences of a single issue across the repo in one PR.
+
+    Maps the issue's impacted URLs to the source file(s) (shared template/config when it
+    covers everything, otherwise the per-page files), patches each, and opens one PR.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    cfg = _project_github_cfg(proj)
+    if not cfg["repo"]:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    repo_parts = _github_repo_parts(cfg["repo"])
+    if repo_parts is None:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
+    owner, repo_name = repo_parts
+    branch, mode = cfg["branch"], cfg["mode"]
+    if not _github_branch_allowed(branch):
+        return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
+    meta = dash.issue_meta(issue_key)
+    issue_label = meta.label if meta else issue_key
+    site_name = str(proj.site_name or slug)
+
+    # ── Impacted URLs from the crawl report ──
+    runs_dir = _runs_dir_for_request(request)
+    ts = (body.crawl_ts or "").strip()
+    if not ts:
+        crawls = dash.list_project_crawls(runs_dir, slug)
+        ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), "")
+    report = dash.load_report_json(runs_dir, slug, ts) if ts else None
+    issues = report.get("issues") if isinstance(report, dict) and isinstance(report.get("issues"), dict) else {}
+    impacted = sorted(dash.extract_impacted_pages(issue_key, issues.get(issue_key))) if issues else []
+    primary_url = (body.url or "").strip() or (impacted[0] if impacted else "")
+
+    # ── Read the repo tree once, resolve target files ──
+    try:
+        tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Lecture du dépôt impossible : {e}"}, status_code=400)
+    all_paths = [
+        item["path"] for item in (tree_data.get("tree") or [])
+        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
+    ]
+    targets: list[str] = []
+    for candidate in _seo_file_candidates_for_issue(issue_key):
+        for p in all_paths:
+            if (p == candidate or p.endswith(f"/{candidate}") or p.split("/")[-1] == candidate) and p not in targets:
+                targets.append(p)
+                break
+    if impacted:
+        for f in _ai_map_urls_to_files(issue_key=issue_key, issue_label=issue_label, urls=impacted, all_paths=all_paths, limit=8):
+            if f not in targets:
+                targets.append(f)
+    if not targets:
+        for f in _ai_pick_repo_files(issue_key, issue_label, all_paths, limit=2):
+            if f not in targets:
+                targets.append(f)
+    targets = targets[:8]
+    if not targets:
+        return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
+
+    # ── Create one branch, patch every target file, open one PR ──
+    import base64 as _b64
+    from datetime import datetime as _dt
+    try:
+        ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
+        base_sha = ref_data["object"]["sha"]
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
+    fix_branch = f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+    try:
+        _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
+
+    occ_hint = f"{len(impacted)} page(s) du site sont touchées par cette anomalie." if impacted else ""
+    patched_files: list[str] = []
+    skipped: list[str] = []
+    for path in targets:
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token, params={"ref": branch})
+            raw = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+        except Exception:
+            skipped.append(path)
+            continue
+        if len(raw) > 80_000:
+            skipped.append(path)
+            continue
+        patch = _openai_generate_file_patch(
+            file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
+            url=primary_url, site_name=site_name, occurrences_hint=occ_hint,
+        )
+        if not patch or patch.get("error") or not patch.get("patched_content"):
+            skipped.append(path)
+            continue
+        if patch.get("no_change") or patch["patched_content"].strip() == raw.strip():
+            continue
+        if _github_patched_content_error(patch["patched_content"]):
+            skipped.append(path)
+            continue
+        try:
+            put_body: dict[str, Any] = {
+                "message": f"fix(seo): {issue_key} — {path}\n\nGenerated by SEO Agent",
+                "content": _b64.b64encode(patch["patched_content"].encode("utf-8")).decode("ascii"),
+                "branch": fix_branch,
+            }
+            if fd.get("sha"):
+                put_body["sha"] = fd.get("sha")
+            _github_api_put(_github_content_api_path(owner, repo_name, path), token=token, json_body=put_body)
+            patched_files.append(path)
+        except Exception:
+            skipped.append(path)
+
+    if not patched_files:
+        return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).", "skipped": skipped}, status_code=422)
+
+    pr_title = f"fix(seo): {issue_label} — {len(patched_files)} fichier(s)"
+    pr_body = (
+        f"## Correction SEO automatique (couverture étendue)\n\n"
+        f"**Anomalie :** {issue_label} (`{issue_key}`)\n"
+        f"**Pages impactées :** {len(impacted) or '—'}\n"
+        f"**Fichiers modifiés :** {len(patched_files)}\n\n"
+        + "\n".join(f"- `{p}`" for p in patched_files)
+        + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**.\n\n> Vérifie les changements avant de merger."
+    )
+    try:
+        pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={"title": pr_title, "body": pr_body, "head": fix_branch, "base": branch})
+        pr_url = pr_data.get("html_url", "")
+        pr_number = pr_data.get("number", 0)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
+
+    _merged = False
+    if mode == "auto" and pr_number:
+        try:
+            _github_api_put(_github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"), token=token, json_body={"merge_method": "squash", "commit_title": pr_title})
+            _merged = True
+        except Exception:
+            pass
+
+    try:
+        _note = json.dumps({"pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": patched_files, "deep": True, "pages": len(impacted)}, ensure_ascii=False)
+        with DB.session() as _db:
+            _ex = _db.scalar(select(IssueTask).where(IssueTask.project_id == proj.id, IssueTask.issue_key == issue_key, IssueTask.url == primary_url))
+            if _ex:
+                _ex.status = "done" if _merged else "in_progress"
+                _ex.note = _note
+            else:
+                _db.add(IssueTask(
+                    project_id=str(proj.id), user_id=str(getattr(user, "id", "") or ""),
+                    issue_key=issue_key, issue_label=issue_label, crawl_ts=ts, url=primary_url,
+                    status="done" if _merged else "in_progress",
+                    severity=str((meta.severity if meta else None) or "notice"), note=_note,
+                ))
+            _db.commit()
+    except Exception:
+        pass
+
+    return JSONResponse({
+        "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
+        "merged": _merged, "files": patched_files, "files_count": len(patched_files),
+        "pages_count": len(impacted), "skipped": skipped,
     })
 
 

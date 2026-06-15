@@ -234,6 +234,36 @@
       });
   });
 
+  /* Deep fix: patch every impacted file for one issue in a single PR. */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-correction-deep-fix]');
+    if (!btn) return;
+    var issue = btn.dataset.issue || '', url = btn.dataset.url || '', crawl = btn.dataset.crawl || _crawl || '';
+    var original = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Correction…';
+    showFlowStatus('Analyse des pages impactées et génération des corrections (cela peut prendre jusqu\'à une minute)…', '');
+    fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/deep-fix', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, crawl_ts: crawl })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) {
+          btn.disabled = false; btn.textContent = original; btn.title = d.error || '';
+          showFlowStatus(esc(d.error || 'Erreur pendant la correction.'), 'error');
+          return;
+        }
+        btn.textContent = d.merged ? 'Mergé' : 'PR créée';
+        var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
+        showFlowStatus((d.merged ? 'Correction mergée' : 'PR créée') + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link, 'ok');
+        setTimeout(function () { window.location.reload(); }, 2400);
+      })
+      .catch(function () {
+        btn.disabled = false; btn.textContent = original;
+        showFlowStatus('Erreur réseau pendant la correction.', 'error');
+      });
+  });
+
   function setStatus(issueKey, url, newStatus) {
     fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issueKey) + '/task', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -489,7 +519,8 @@
               {% endif %}
               {% if github_cfg and github_cfg.repo and candidate.url %}
                 <button type="button" class="btn primary" style="font-size:11px;padding:3px 10px;"
-                  data-correction-single-fix data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}">Créer PR</button>
+                  data-correction-deep-fix data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}"
+                  title="Corrige toutes les occurrences de cette anomalie dans le dépôt, en une seule PR">Créer PR</button>
               {% elif not (github_cfg and github_cfg.repo) %}
                 <span class="muted small">GitHub requis</span>
               {% endif %}
