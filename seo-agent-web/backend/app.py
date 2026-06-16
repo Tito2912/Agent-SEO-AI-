@@ -15704,6 +15704,85 @@ def _github_grep_repo_for_terms(
     return out
 
 
+def _github_tarball_grep(
+    owner: str, repo: str, branch: str, token: str, terms: list[str],
+    *, limit: int = 8, max_bytes: int = 60_000_000, max_file: int = 600_000,
+) -> list[str]:
+    """Download the repo tarball ONCE and grep every editable file locally — complete and
+    fast (1 request vs N). Returns paths whose content references the terms (exact basename),
+    or that render an image referencing the evidence directory (dynamic src)."""
+    import io
+    import tarfile
+    bases: list[str] = []
+    dirs: set[str] = set()
+    for t in terms or []:
+        ts = str(t).strip()
+        b = ts.rsplit("/", 1)[-1].strip()
+        if b and len(b) >= 3 and b not in bases:
+            bases.append(b)
+        if "/" in ts:
+            d = ts.rsplit("/", 1)[0] + "/"
+            if len(d) >= 3:
+                dirs.add(d.lower())
+    if not bases:
+        return []
+    try:
+        url = _github_api_url(_github_api_path("repos", owner, repo, "tarball", *branch.split("/")))
+        resp = requests.get(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "seo-agent-web"},
+            stream=True, timeout=30,
+        )
+        if resp.status_code != 200:
+            return []
+        raw = b""
+        for chunk in resp.iter_content(65536):
+            raw += chunk
+            if len(raw) > max_bytes:
+                return []
+    except Exception:
+        return []
+    _img_tokens = ("<img", "<image", "next/image")
+    exact: list[str] = []
+    imgish: list[str] = []
+    try:
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tf:
+            for m in tf.getmembers():
+                if not m.isfile() or m.size > max_file:
+                    continue
+                parts = m.name.split("/", 1)  # strip leading "<repo>-<sha>/" prefix
+                rel = parts[1] if len(parts) == 2 else m.name
+                low = rel.lower()
+                if any(n in low for n in _REPO_NOISE):
+                    continue
+                base = rel.rsplit("/", 1)[-1]
+                if "." not in base or base.rsplit(".", 1)[-1].lower() not in _EDITABLE_EXTS:
+                    continue
+                if not _github_file_path_allowed(rel):
+                    continue
+                fobj = tf.extractfile(m)
+                if fobj is None:
+                    continue
+                try:
+                    content = fobj.read().decode("utf-8", errors="replace")
+                except Exception:
+                    continue
+                cl = content.lower()
+                if any(b in content for b in bases):
+                    exact.append(rel)
+                elif any(tok in cl for tok in _img_tokens) and (not dirs or any(d in cl for d in dirs)):
+                    imgish.append(rel)
+    except Exception:
+        return []
+    out: list[str] = []
+    for p in exact + imgish:
+        if p not in out:
+            out.append(p)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _issue_evidence_srcs(issue_block: Any) -> list[str]:
     """Concrete locator strings for precise patching (e.g. src of <img> tags lacking alt),
     read from the crawler's per-issue evidence (`alt_samples`). Empty for issues without it."""
@@ -15735,22 +15814,27 @@ def _deep_patch_issue_files(
     (patched_files, skipped_files, targets)."""
     import base64 as _b64
     targets: list[str] = []
-    # 1) Deterministic: files that literally reference the evidence (e.g. image srcs).
+    # 1) Deterministic: files that reference the evidence (e.g. image srcs). Tarball grep is
+    #    complete (scans every file in 1 download); code search / per-file grep are fallbacks.
     if evidence:
+        located: list[str] = []
         try:
-            for f in _github_code_search_paths(owner, repo_name, token, evidence, limit=max_files):
-                if f not in targets:
-                    targets.append(f)
+            located = _github_tarball_grep(owner, repo_name, branch, token, evidence, limit=max_files)
         except Exception:
-            pass
-        # Code search tokenizes/needs an index → grep file contents directly as the reliable path.
-        if not targets:
+            located = []
+        if not located:
             try:
-                for f in _github_grep_repo_for_terms(owner, repo_name, branch, token, all_paths, evidence, limit=max_files):
-                    if f not in targets:
-                        targets.append(f)
+                located = _github_code_search_paths(owner, repo_name, token, evidence, limit=max_files)
             except Exception:
-                pass
+                located = []
+        if not located:
+            try:
+                located = _github_grep_repo_for_terms(owner, repo_name, branch, token, all_paths, evidence, limit=max_files)
+            except Exception:
+                located = []
+        for f in located:
+            if f not in targets:
+                targets.append(f)
     # 2) Hardcoded candidate filenames for this issue type.
     for candidate in _seo_file_candidates_for_issue(issue_key):
         for p in all_paths:
