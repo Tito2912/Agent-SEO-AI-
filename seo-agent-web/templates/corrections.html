@@ -181,31 +181,76 @@
     });
   }
 
+  /* PR creation can take 30-60s (tarball + several AI patches); a slow request may drop
+     client-side even though the server created the PR. Poll the server and reload when the
+     PR shows up, so the user never has to refresh manually. */
+  function noteHasPr(note) {
+    if (!note) return false;
+    try { return !!JSON.parse(note).pr_url; } catch (e) { return false; }
+  }
+  function startPrPoll(opts) {
+    // opts: {issue, url} for single, or {baseline:<count>} for bulk. Returns a stop() fn.
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (tries > 30) { clearInterval(iv); return; }  // ~2.5 min max
+      fetch('/api/projects/' + encodeURIComponent(_slug) + '/tasks', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (list) {
+          if (!Array.isArray(list)) return;
+          if (opts && opts.issue) {
+            var hit = list.some(function (t) {
+              if (t.issue_key !== opts.issue) return false;
+              if (opts.url && t.url && t.url !== opts.url) return false;
+              return noteHasPr(t.note);
+            });
+            if (hit) { clearInterval(iv); window.location.reload(); }
+          } else if (opts && typeof opts.baseline === 'number') {
+            var n = list.filter(function (t) { return noteHasPr(t.note); }).length;
+            if (n > opts.baseline) { clearInterval(iv); window.location.reload(); }
+          }
+        }).catch(function () {});
+    }, 5000);
+    return function () { clearInterval(iv); };
+  }
+  function prCount() {
+    return fetch('/api/projects/' + encodeURIComponent(_slug) + '/tasks', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) { return Array.isArray(list) ? list.filter(function (t) { return noteHasPr(t.note); }).length : 0; })
+      .catch(function () { return 0; });
+  }
+
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-correction-bulk-fix]');
     if (!btn) return;
     var original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Création de la PR...';
     showFlowStatus('Analyse du dernier crawl et génération des corrections...', '');
-    fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/bulk-fix', {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        if (!d.ok) {
-          btn.disabled = false; btn.textContent = original;
-          showFlowStatus(esc(d.error || 'Erreur pendant la correction globale.'), 'error');
-          return;
-        }
-        var label = d.merged ? 'Corrections mergées' : 'PR créée';
-        var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-        showFlowStatus(label + ' (' + esc(d.fixed_count || 0) + '/' + esc(d.total_count || 0) + ')' + link, 'ok');
-        setTimeout(function() { window.location.reload(); }, 2200);
+    prCount().then(function (baseline) {
+      var stopPoll = startPrPoll({ baseline: baseline });
+      fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/bulk-fix', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
       })
-      .catch(function() {
-        btn.disabled = false; btn.textContent = original;
-        showFlowStatus('Erreur réseau pendant la correction globale.', 'error');
-      });
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d.ok) {
+            stopPoll();
+            btn.disabled = false; btn.textContent = original;
+            showFlowStatus(esc(d.error || 'Erreur pendant la correction globale.'), 'error');
+            return;
+          }
+          stopPoll();
+          var label = d.merged ? 'Corrections mergées' : 'PR créée';
+          var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
+          showFlowStatus(label + ' (' + esc(d.fixed_count || 0) + '/' + esc(d.total_count || 0) + ')' + link, 'ok');
+          setTimeout(function() { window.location.reload(); }, 2200);
+        })
+        .catch(function() {
+          // Slow request dropped client-side — server may still finish; poller will reload.
+          btn.textContent = 'Création en cours…';
+          showFlowStatus('Correction en cours côté serveur… la page se rafraîchira automatiquement dès que la PR est prête.', '');
+        });
+    });
   });
 
   document.addEventListener('click', function (e) {
@@ -242,6 +287,7 @@
     var original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Correction…';
     showFlowStatus('Analyse des pages impactées et génération des corrections (cela peut prendre jusqu\'à une minute)…', '');
+    var stopPoll = startPrPoll({ issue: issue, url: url });
     fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/deep-fix', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: url, crawl_ts: crawl })
@@ -249,18 +295,22 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (!d.ok) {
+          stopPoll();
           btn.disabled = false; btn.textContent = original; btn.title = d.error || '';
           showFlowStatus(esc(d.error || 'Erreur pendant la correction.'), 'error');
           return;
         }
+        stopPoll();
         btn.textContent = d.merged ? 'Mergé' : 'PR créée';
         var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
         showFlowStatus((d.merged ? 'Correction mergée' : 'PR créée') + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link, 'ok');
         setTimeout(function () { window.location.reload(); }, 2400);
       })
       .catch(function () {
-        btn.disabled = false; btn.textContent = original;
-        showFlowStatus('Erreur réseau pendant la correction.', 'error');
+        // Request dropped client-side (slow) — the server may still finish. Keep the poller
+        // running; it will reload when the PR appears. No hard error.
+        btn.textContent = 'Création en cours…';
+        showFlowStatus('Correction en cours côté serveur… la page se rafraîchira automatiquement dès que la PR est prête.', '');
       });
   });
 
