@@ -3282,10 +3282,11 @@ def _openai_generate_file_patch(
         "}\n\n"
         "RÈGLES ABSOLUES :\n"
         "- patched_content = fichier COMPLET, pas juste le bloc modifié, sans rien tronquer\n"
-        "- Modifie UNIQUEMENT les éléments qui présentent RÉELLEMENT l'anomalie. "
+        "- Modifie UNIQUEMENT les éléments réellement non conformes. "
         "N'améliore JAMAIS, ne réécris JAMAIS un élément déjà conforme. "
-        "Exemple (alt manquant) : ajoute alt SEULEMENT sur les <img> SANS attribut alt ; "
-        "ne touche PAS aux <img> qui ont déjà un alt, même si tu le trouves perfectible.\n"
+        "Cas 'alt manquant' : un <img> SANS attribut alt OU avec un alt VIDE (alt=\"\") est NON "
+        "conforme → ajoute/renseigne un alt court et descriptif (ex. <img src=\"/images/btc.svg\"> "
+        "→ alt=\"Bitcoin\"). Un <img> qui a déjà un alt NON VIDE est conforme → n'y touche pas.\n"
         "- Corrige TOUTES les occurrences réellement non conformes présentes dans CE fichier (pas seulement la première)\n"
         "- Si AUCUN élément de ce fichier ne présente l'anomalie, mets no_change=true et renvoie le fichier INCHANGÉ. "
         "Ne fabrique pas de correction artificielle.\n"
@@ -15648,7 +15649,7 @@ def _github_code_search_paths(owner: str, repo: str, token: str, terms: list[str
 
 def _github_grep_repo_for_terms(
     owner: str, repo: str, branch: str, token: str, all_paths: list[str], terms: list[str],
-    *, max_scan: int = 45, limit: int = 8,
+    *, max_scan: int = 70, limit: int = 8,
 ) -> list[str]:
     """Deterministically find files whose CONTENT contains any of the terms (e.g. image src
     basenames like 'btc.svg'). Reads a bounded, source-prioritized subset of editable files.
@@ -15674,7 +15675,11 @@ def _github_grep_repo_for_terms(
         and ("." in p.rsplit("/", 1)[-1])
         and p.rsplit(".", 1)[-1].lower() in _EDITABLE_EXTS
     ]
-    _src_dirs = ("components/", "app/", "src/", "pages/", "lib/", "layouts/", "templates/", "partials/")
+    # Image refs live both in UI components and in content (markdown/MDX) — prioritize both.
+    _src_dirs = (
+        "components/", "app/", "src/", "pages/", "lib/", "layouts/", "templates/", "partials/",
+        "content/", "posts/", "data/", "blog/", "_posts/", "articles/",
+    )
     cand.sort(key=lambda p: 0 if any(d in p.lower() for d in _src_dirs) else 1)
     exact_hits: list[str] = []
     img_hits: list[str] = []
