@@ -15648,19 +15648,26 @@ def _github_code_search_paths(owner: str, repo: str, token: str, terms: list[str
 
 def _github_grep_repo_for_terms(
     owner: str, repo: str, branch: str, token: str, all_paths: list[str], terms: list[str],
-    *, max_scan: int = 30, limit: int = 8,
+    *, max_scan: int = 45, limit: int = 8,
 ) -> list[str]:
     """Deterministically find files whose CONTENT contains any of the terms (e.g. image src
     basenames like 'btc.svg'). Reads a bounded, source-prioritized subset of editable files.
     More reliable than GitHub code search (which tokenizes and needs an index)."""
     import base64 as _b64
     bases: list[str] = []
+    dirs: set[str] = set()
     for t in terms or []:
-        b = str(t).rsplit("/", 1)[-1].strip()
+        ts = str(t).strip()
+        b = ts.rsplit("/", 1)[-1].strip()
         if b and len(b) >= 3 and b not in bases:
             bases.append(b)
+        if "/" in ts:
+            d = ts.rsplit("/", 1)[0] + "/"  # e.g. "/images/"
+            if len(d) >= 3:
+                dirs.add(d.lower())
     if not bases:
         return []
+    _img_tokens = ("<img", "<image", "next/image")
     cand = [
         p for p in all_paths
         if not any(n in p.lower() for n in _REPO_NOISE)
@@ -15669,18 +15676,27 @@ def _github_grep_repo_for_terms(
     ]
     _src_dirs = ("components/", "app/", "src/", "pages/", "lib/", "layouts/", "templates/", "partials/")
     cand.sort(key=lambda p: 0 if any(d in p.lower() for d in _src_dirs) else 1)
-    hits: list[str] = []
+    exact_hits: list[str] = []
+    img_hits: list[str] = []
     for p in cand[:max_scan]:
         try:
             fd = _github_api_get(_github_content_api_path(owner, repo, p), token=token, params={"ref": branch}, timeout_s=12)
             raw = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
         except Exception:
             continue
+        low = raw.lower()
         if any(b in raw for b in bases):
-            hits.append(p)
-            if len(hits) >= limit:
-                break
-    return hits
+            exact_hits.append(p)  # literal src present
+        elif any(tok in low for tok in _img_tokens) and (not dirs or any(d in low for d in dirs)):
+            img_hits.append(p)  # renders an image referencing the evidence directory (dynamic src)
+    # Exact literal matches first, then dynamic image renderers.
+    out: list[str] = []
+    for p in exact_hits + img_hits:
+        if p not in out:
+            out.append(p)
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _issue_evidence_srcs(issue_block: Any) -> list[str]:
