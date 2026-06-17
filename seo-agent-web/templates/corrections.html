@@ -188,8 +188,29 @@
     if (!note) return false;
     try { return !!JSON.parse(note).pr_url; } catch (e) { return false; }
   }
+  // Signature of a task's PR (number/url) — '' if none. Used to detect a NEW PR vs a stale one.
+  function prSig(t) {
+    try { var n = JSON.parse(t.note || '{}'); return n.pr_url ? String(n.pr_number || n.pr_url) : ''; }
+    catch (e) { return ''; }
+  }
+  function matchTask(list, issue, url) {
+    for (var i = 0; i < list.length; i++) {
+      var t = list[i];
+      if (t.issue_key !== issue) continue;
+      if (url && t.url && t.url !== url) continue;
+      return t;
+    }
+    return null;
+  }
+  function fetchPrSig(issue, url) {
+    return fetch('/api/projects/' + encodeURIComponent(_slug) + '/tasks', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (list) { if (!Array.isArray(list)) return ''; var t = matchTask(list, issue, url); return t ? prSig(t) : ''; })
+      .catch(function () { return ''; });
+  }
   function startPrPoll(opts) {
-    // opts: {issue, url} for single, or {baseline:<count>} for bulk. Returns a stop() fn.
+    // opts: {issue, url, baseSig} for single (reload on a NEW PR signature), or
+    // {baseline:<count>} for bulk (reload when PR count grows). Returns a stop() fn.
     var tries = 0;
     var iv = setInterval(function () {
       tries++;
@@ -199,12 +220,9 @@
         .then(function (list) {
           if (!Array.isArray(list)) return;
           if (opts && opts.issue) {
-            var hit = list.some(function (t) {
-              if (t.issue_key !== opts.issue) return false;
-              if (opts.url && t.url && t.url !== opts.url) return false;
-              return noteHasPr(t.note);
-            });
-            if (hit) { clearInterval(iv); window.location.reload(); }
+            var t = matchTask(list, opts.issue, opts.url);
+            var sig = t ? prSig(t) : '';
+            if (sig && sig !== (opts.baseSig || '')) { clearInterval(iv); window.location.reload(); }
           } else if (opts && typeof opts.baseline === 'number') {
             var n = list.filter(function (t) { return noteHasPr(t.note); }).length;
             if (n > opts.baseline) { clearInterval(iv); window.location.reload(); }
@@ -287,7 +305,8 @@
     var original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Correction…';
     showFlowStatus('Analyse des pages impactées et génération des corrections (cela peut prendre jusqu\'à une minute)…', '');
-    var stopPoll = startPrPoll({ issue: issue, url: url });
+    fetchPrSig(issue, url).then(function (baseSig) {
+    var stopPoll = startPrPoll({ issue: issue, url: url, baseSig: baseSig });
     fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/deep-fix', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: url, crawl_ts: crawl })
@@ -312,6 +331,7 @@
         btn.textContent = 'Création en cours…';
         showFlowStatus('Correction en cours côté serveur… la page se rafraîchira automatiquement dès que la PR est prête.', '');
       });
+    });
   });
 
   function setStatus(issueKey, url, newStatus) {
