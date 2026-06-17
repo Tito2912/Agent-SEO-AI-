@@ -15865,7 +15865,9 @@ def _deep_patch_issue_files(
     primary_url = impacted_urls[0] if impacted_urls else ""
     patched: list[str] = []
     skipped: list[str] = []
-    for path in targets:
+
+    def _prepare(path: str) -> tuple[str, str | None, str, dict[str, Any] | None]:
+        """Read a file + generate its patch. Parallel-safe (no shared mutable state)."""
         if path in file_state:
             raw = file_state[path]["content"]
             cur_sha = file_state[path]["sha"]
@@ -15875,16 +15877,29 @@ def _deep_patch_issue_files(
                 raw = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
                 cur_sha = fd.get("sha", "")
             except Exception:
-                skipped.append(path)
-                continue
+                return (path, None, "", None)
         if len(raw) > 80_000:
-            skipped.append(path)
-            continue
-        patch = _openai_generate_file_patch(
-            file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
-            url=primary_url, site_name=site_name, occurrences_hint=occ_hint,
-        )
-        if not patch or patch.get("error") or not patch.get("patched_content"):
+            return (path, None, "", None)
+        try:
+            patch = _openai_generate_file_patch(
+                file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
+                url=primary_url, site_name=site_name, occurrences_hint=occ_hint,
+            )
+        except Exception:
+            patch = None
+        return (path, raw, cur_sha, patch)
+
+    # Generate patches concurrently (the slow AI calls dominate); preserve target order.
+    if targets:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(5, len(targets))) as _ex:
+            prepared = list(_ex.map(_prepare, targets))
+    else:
+        prepared = []
+
+    # Commit sequentially — the GitHub contents API needs the current blob sha per file.
+    for path, raw, cur_sha, patch in prepared:
+        if raw is None or not patch or patch.get("error") or not patch.get("patched_content"):
             skipped.append(path)
             continue
         new_content = str(patch["patched_content"])
