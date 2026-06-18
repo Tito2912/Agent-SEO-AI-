@@ -19,14 +19,31 @@
 
 /* ── Filter bar ── */
 .corr-filterbar {
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px;
+  display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
 }
-.corr-filterbar input, .corr-filterbar select {
-  font-size: 12px; padding: 6px 10px; background: var(--bg); color: var(--text);
-  border: 1px solid var(--border); border-radius: 6px;
+.corr-search-wrap {
+  position: relative; flex: 1; min-width: 180px;
 }
-.corr-filterbar input { flex: 1; min-width: 180px; }
-.corr-filterbar input:focus, .corr-filterbar select:focus { outline: none; border-color: var(--accent); }
+.corr-search-wrap svg {
+  position: absolute; left: 9px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; opacity: .45; pointer-events: none;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+}
+.corr-filterbar input[type=search] {
+  width: 100%; font-size: 12.5px; padding: 7px 10px 7px 30px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; outline: none;
+}
+.corr-filterbar input[type=search]:focus { border-color: rgba(var(--accent-rgb),.5); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.10); }
+.corr-filter-selects { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.corr-filterbar select {
+  font-size: 12px; padding: 7px 28px 7px 10px; height: 34px;
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 9px center;
+  appearance: none; color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; outline: none; white-space: nowrap;
+}
+.corr-filterbar select:focus { border-color: rgba(var(--accent-rgb),.5); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.10); }
+.corr-filter-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
 
 /* ── List layout ── */
 .corr-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -684,23 +701,29 @@
 } %}
 
 <div class="corr-filterbar">
-  <input type="search" id="corr-search" placeholder="Rechercher une anomalie ou une URL…" autocomplete="off">
-  <select id="corr-filter-sev" title="Filtrer par sévérité">
-    <option value="all">Toutes sévérités</option>
-    <option value="error">Erreur</option>
-    <option value="warning">Avertissement</option>
-    <option value="notice">Info</option>
-  </select>
-  <select id="corr-filter-verify" title="Filtrer par vérification">
-    <option value="all">Toutes vérifications</option>
-    <option value="resolved">✓ Vérifiées résolues</option>
-    <option value="still_present">⚠ Encore présentes</option>
-    <option value="none">Non vérifiées</option>
-  </select>
-  <select id="corr-sort" title="Trier">
-    <option value="recent">Plus récentes</option>
-    <option value="severity">Sévérité</option>
-  </select>
+  <div class="corr-search-wrap">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="search" id="corr-search" placeholder="Rechercher une anomalie ou une URL…" autocomplete="off">
+  </div>
+  <div class="corr-filter-sep"></div>
+  <div class="corr-filter-selects">
+    <select id="corr-filter-sev" title="Filtrer par sévérité">
+      <option value="all">Sévérité</option>
+      <option value="error">Erreur</option>
+      <option value="warning">Avertissement</option>
+      <option value="notice">Info</option>
+    </select>
+    <select id="corr-filter-verify" title="Filtrer par vérification">
+      <option value="all">Vérification</option>
+      <option value="resolved">✓ Résolues</option>
+      <option value="still_present">⚠ Encore présentes</option>
+      <option value="none">Non vérifiées</option>
+    </select>
+    <select id="corr-sort" title="Trier">
+      <option value="recent">Plus récentes</option>
+      <option value="severity">Par sévérité</option>
+    </select>
+  </div>
 </div>
 
 <div class="card" style="padding:0;overflow:hidden;">
