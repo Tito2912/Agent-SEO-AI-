@@ -15547,11 +15547,14 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         issue_label = issue["label"]
         url = issue["url"]
         impacted = sorted(dash.extract_impacted_pages(issue_key, report_issues.get(issue_key))) if report_issues else []
+        _fam = _length_family_name(issue_key)
+        _lh = _build_length_hint(report_issues, _length_family_keys(issue_key), _fam) if (_fam and report_issues) else ""
         patched, skipped, targets = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=6,
             evidence=_issue_evidence_srcs(report_issues.get(issue_key)) if report_issues else None,
+            length_hint=_lh,
         )
         if patched:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": True, "files": patched})
@@ -15849,11 +15852,40 @@ def _issue_evidence_srcs(issue_block: Any) -> list[str]:
     return out[:30]
 
 
+def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str) -> str:
+    """Build a corrector hint from the crawler's `length_samples` (rendered value + length per
+    page), so the AI targets the optimal window on the RENDERED string (template suffix incl.)."""
+    samples: dict[str, dict[str, Any]] = {}
+    for k in family_keys:
+        blk = issues.get(k)
+        ls = blk.get("length_samples") if isinstance(blk, dict) else None
+        if isinstance(ls, dict):
+            for u, info in ls.items():
+                if u not in samples and isinstance(info, dict):
+                    samples[u] = info
+    if not samples:
+        return ""
+    window = "50-60 caractères" if kind == "title" else "120-160 caractères"
+    label = "titre" if kind == "title" else "meta description"
+    lines = []
+    for u, info in list(samples.items())[:25]:
+        rendered = str(info.get("rendered") or "")
+        ln = info.get("len")
+        lines.append(f"  - {u} → {label} RENDU actuel ({ln} car.) : \"{rendered}\"")
+    return (
+        f"IMPORTANT — longueur sur le RENDU : ci-dessous le {label} TEL QU'IL EST RENDU (suffixe de "
+        f"template inclus) et sa longueur réelle pour chaque page. Vise un RENDU de {window}. "
+        f"Le rendu = ta valeur source + un éventuel suffixe de template (ex. ' | Marque') : ajuste la "
+        f"source pour que le RENDU entre dans la fenêtre (ne te fie pas à la seule longueur de la source).\n"
+        + "\n".join(lines)
+    )
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
-    evidence: list[str] | None = None,
+    evidence: list[str] | None = None, length_hint: str = "",
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
@@ -15909,6 +15941,8 @@ def _deep_patch_issue_files(
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     if evidence:
         occ_hint += " Éléments précis à corriger dans ce fichier s'ils y figurent (ex. src d'images sans alt) : " + ", ".join(evidence[:15]) + "."
+    if length_hint:
+        occ_hint += " " + length_hint
     primary_url = impacted_urls[0] if impacted_urls else ""
     patched: list[str] = []
     skipped: list[str] = []
@@ -16053,11 +16087,13 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
 
     evidence = _issue_evidence_srcs(issues.get(issue_key)) if issues else []
+    _fam_name = _length_family_name(issue_key)
+    length_hint = _build_length_hint(issues, family_keys, _fam_name) if (_fam_name and issues) else ""
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-        site_name=site_name, file_state=file_state, max_files=8, evidence=evidence,
+        site_name=site_name, file_state=file_state, max_files=8, evidence=evidence, length_hint=length_hint,
     )
     if not targets:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)

@@ -5096,6 +5096,25 @@ def _score_issues(
         if _non_empty(p.meta_description) and len(p.meta_description.strip()) < DESC_TOO_SHORT
     ]
 
+    # Evidence for length auto-fix: the RENDERED title/description + its length per affected
+    # page, so the corrector targets the optimal window on what's actually rendered (incl. any
+    # title-template suffix like " | Brand"), not just the source string — kills short/long
+    # oscillation. Attached to the title/meta issue blocks below as `length_samples`.
+    _title_affected = set(title_too_long_indexable) | set(title_too_long_not_indexable) | set(title_too_short)
+    _meta_affected = (
+        set(meta_description_too_long_indexable) | set(meta_description_too_long_not_indexable)
+        | set(meta_description_too_short_indexable) | set(meta_description_too_short_not_indexable)
+    )
+    _title_len_samples: dict[str, dict[str, Any]] = {}
+    _meta_len_samples: dict[str, dict[str, Any]] = {}
+    for p in ok_html_pages:
+        if p.url in _title_affected and p.url not in _title_len_samples and len(_title_len_samples) < 50:
+            _t = (p.title or "").strip()
+            _title_len_samples[p.url] = {"rendered": _t[:160], "len": len(_t)}
+        if p.url in _meta_affected and p.url not in _meta_len_samples and len(_meta_len_samples) < 50:
+            _d = (p.meta_description or "").strip()
+            _meta_len_samples[p.url] = {"rendered": _d[:200], "len": len(_d)}
+
     pages_have_high_ai_content_levels_set: set[str] = set()
     privacy_path_re = re.compile(r"(privacy|confidentialit|rgpd|gdpr)", re.IGNORECASE)
     privacy_rgpd_re = re.compile(r"(rgpd|gdpr)", re.IGNORECASE)
@@ -6638,6 +6657,20 @@ def _score_issues(
         "meta_description_too_short",
         sorted(set(meta_description_too_short_indexable + meta_description_too_short_not_indexable)),
     )
+    # Attach rendered-value evidence (length_samples) to every title/meta length block so the
+    # auto-fixer targets the window on the RENDERED value (template suffix included).
+    if _title_len_samples:
+        for _k in ("title_too_long_indexable", "title_too_long_not_indexable", "title_too_long", "title_too_short"):
+            if isinstance(issues.get(_k), dict):
+                issues[_k]["length_samples"] = _title_len_samples
+    if _meta_len_samples:
+        for _k in (
+            "meta_description_too_long_indexable", "meta_description_too_long_not_indexable",
+            "meta_description_too_long", "meta_description_too_short_indexable",
+            "meta_description_too_short_not_indexable", "meta_description_too_short",
+        ):
+            if isinstance(issues.get(_k), dict):
+                issues[_k]["length_samples"] = _meta_len_samples
     # Suppressed: Ahrefs does not surface individual CWV metrics as standalone Site Audit issues.
     issues["pages_with_poor_lcp"] = _issue_block("pages_with_poor_lcp", [])
     issues["pages_with_poor_cls"] = _issue_block("pages_with_poor_cls", [])
