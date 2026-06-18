@@ -15796,6 +15796,32 @@ def _github_tarball_grep(
     return out
 
 
+_LENGTH_FAMILIES: dict[str, tuple[str, ...]] = {
+    "title": (
+        "title_too_short", "title_too_short_indexable", "title_too_short_not_indexable",
+        "title_too_long", "title_too_long_indexable", "title_too_long_not_indexable",
+    ),
+    "meta": (
+        "meta_description_too_short", "meta_description_too_short_indexable", "meta_description_too_short_not_indexable",
+        "meta_description_too_long", "meta_description_too_long_indexable", "meta_description_too_long_not_indexable",
+    ),
+}
+
+
+def _length_family_name(issue_key: str) -> str | None:
+    for name, keys in _LENGTH_FAMILIES.items():
+        if issue_key in keys:
+            return name
+    return None
+
+
+def _length_family_keys(issue_key: str) -> set[str]:
+    """For a title/meta length issue, return ALL sibling keys (too-short + too-long) so one
+    fix pass brings every value into the optimal window. Non-length issues return just themselves."""
+    name = _length_family_name(issue_key)
+    return set(_LENGTH_FAMILIES[name]) if name else {issue_key}
+
+
 def _issue_evidence_srcs(issue_block: Any) -> list[str]:
     """Concrete locator strings for precise patching (e.g. src of <img> tags lacking alt),
     read from the crawler's per-issue evidence (`alt_samples`). Empty for issues without it."""
@@ -15973,7 +15999,19 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), "")
     report = dash.load_report_json(runs_dir, slug, ts) if ts else None
     issues = report.get("issues") if isinstance(report, dict) and isinstance(report.get("issues"), dict) else {}
-    impacted = sorted(dash.extract_impacted_pages(issue_key, issues.get(issue_key))) if issues else []
+    # Length issues (title/meta) are two faces of one problem: fix too-short AND too-long
+    # together so a single pass brings every value into the optimal window (no whack-a-mole).
+    family_keys = _length_family_keys(issue_key)
+    _impacted_set: set[str] = set()
+    if issues:
+        for _k in family_keys:
+            if _k in issues:
+                _impacted_set |= dash.extract_impacted_pages(_k, issues.get(_k))
+    impacted = sorted(_impacted_set)
+    if len(family_keys) > 1:
+        issue_label = {"title": "Longueur des balises title", "meta": "Longueur des meta descriptions"}.get(
+            _length_family_name(issue_key), issue_label
+        )
     primary_url = (body.url or "").strip() or (impacted[0] if impacted else "")
 
     # ── Read the repo tree once, resolve target files ──
