@@ -28,65 +28,106 @@
 .corr-filterbar input { flex: 1; min-width: 180px; }
 .corr-filterbar input:focus, .corr-filterbar select:focus { outline: none; border-color: var(--accent); }
 
-/* ── Kanban ── */
-.corr-col-header {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 10px;
-  border-bottom: 2px solid var(--border);
-}
-.corr-col-header h2 { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
-.corr-card {
-  background: var(--bg-2, #18181b); border: 1px solid var(--border); border-radius: 8px;
-  margin-bottom: 10px; overflow: hidden; transition: border-color .15s;
-}
-.corr-card:hover { border-color: var(--border-2); }
-.corr-card-body { padding: 13px 14px; }
-.corr-label { font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--text); flex: 1; word-break: break-word; }
-.corr-url {
-  font-size: 11px; font-family: monospace; color: var(--muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; margin-bottom: 8px;
-}
-.corr-pr-badge {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: monospace;
-  padding: 3px 9px; border-radius: 4px; margin-bottom: 10px;
-  background: rgba(10,148,104,.10); border: 1px solid rgba(10,148,104,.22); color: #34d399; text-decoration: none;
-}
-.corr-pr-badge:hover { background: rgba(10,148,104,.18); }
-.corr-verify-badge {
-  display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; margin: 0 0 10px 6px;
-}
-.corr-verify-badge.ok { background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.3); color: #34d399; }
-.corr-verify-badge.err { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #f87171; }
-/* Minimal severity dot + single muted meta line */
-.corr-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; vertical-align: baseline; }
-.corr-meta-line { font-size: 11px; color: var(--muted); margin: 3px 0 9px; line-height: 1.5; }
+/* ── List layout ── */
+.corr-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .corr-verify-text { font-size: 11px; font-weight: 600; }
 .corr-verify-text.ok { color: #34d399; }
 .corr-verify-text.err { color: #f87171; }
+
+/* Group */
+.corr-group { margin-bottom: 6px; }
+.corr-group-hd {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 6px 8px;
+  cursor: pointer; user-select: none;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 0;
+}
+.corr-group-hd:hover { background: rgba(255,255,255,.02); border-radius: 6px 6px 0 0; }
+.corr-group-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.corr-group-chevron {
+  margin-left: auto; width: 14px; height: 14px; opacity: .5; flex-shrink: 0;
+  transition: transform .15s ease;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.corr-group.collapsed .corr-group-chevron { transform: rotate(-90deg); }
+.corr-group.collapsed .corr-col-cards,
+.corr-group.collapsed .corr-col-empty { display: none !important; }
+
+/* Item (the "card") */
+.corr-card {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+  overflow: hidden;
+}
+.corr-card:hover { background: rgba(255,255,255,.018); }
+
+.corr-item-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 6px;
+  min-width: 0;
+}
+.corr-item-info { flex: 1; min-width: 0; }
+.corr-item-label {
+  font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--text);
+  display: flex; align-items: center; gap: 7px;
+  text-decoration: none;
+}
+.corr-item-label:hover { color: var(--accent-2); text-decoration: none; }
+.corr-item-url {
+  font-size: 11px; font-family: monospace; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: block; margin-top: 2px;
+}
+.corr-item-meta {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap;
+}
+.corr-pr-badge {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px;
+  padding: 2px 7px; border-radius: 4px;
+  background: rgba(10,148,104,.10); border: 1px solid rgba(10,148,104,.22);
+  color: #34d399; text-decoration: none; font-family: monospace; white-space: nowrap;
+}
+.corr-pr-badge:hover { background: rgba(10,148,104,.18); }
+.corr-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.corr-expand-btn {
+  appearance: none; border: 1px solid var(--border); background: transparent; color: var(--muted);
+  border-radius: 5px; width: 24px; height: 24px; cursor: pointer; flex-shrink: 0;
+  display: grid; place-items: center; padding: 0;
+  transition: background .1s, color .1s;
+}
+.corr-expand-btn:hover { background: rgba(255,255,255,.06); color: var(--text); }
+.corr-expand-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.corr-card.expanded .corr-expand-btn svg { transform: rotate(180deg); }
+
+/* Expandable detail */
+.corr-item-detail {
+  padding: 0 6px 12px; border-top: 1px dashed var(--border);
+}
 .corr-note {
-  width: 100%; font-size: 11px; padding: 5px 8px; resize: vertical;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--text); margin-bottom: 10px; font-family: inherit; min-height: 44px;
+  width: 100%; font-size: 11px; padding: 6px 8px; resize: vertical;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); margin: 10px 0 10px; font-family: inherit; min-height: 44px;
 }
 .corr-note:focus { outline: none; border-color: var(--accent); }
 .corr-segmented {
   display: flex; gap: 2px; background: var(--bg); border: 1px solid var(--border);
-  border-radius: 5px; padding: 2px; margin-bottom: 10px;
+  border-radius: 5px; padding: 2px; margin-bottom: 8px;
 }
 .corr-seg-btn {
-  flex: 1; font-size: 10px; font-weight: 500; padding: 3px 4px; border: none; border-radius: 3px;
+  flex: 1; font-size: 10px; font-weight: 500; padding: 4px 4px; border: none; border-radius: 3px;
   background: transparent; color: var(--muted); cursor: pointer; transition: background .12s, color .12s; white-space: nowrap;
 }
 .corr-seg-btn:hover { background: rgba(255,255,255,.06); color: var(--text); }
 .corr-seg-btn.active { background: var(--accent); color: #fff; }
-.corr-footer { display: flex; align-items: center; justify-content: space-between; }
-.corr-date { font-size: 10px; color: var(--muted); }
+.corr-footer { display: flex; align-items: center; justify-content: flex-end; }
 .corr-save-btn {
-  font-size: 10px; padding: 2px 9px; background: transparent;
-  border: 1px solid var(--border-2); border-radius: 3px; color: var(--muted);
+  font-size: 10px; padding: 3px 10px; background: transparent;
+  border: 1px solid var(--border-2); border-radius: 4px; color: var(--muted);
   cursor: pointer; transition: color .12s, border-color .12s;
 }
 .corr-save-btn:hover { border-color: var(--accent); color: var(--accent-2); }
-.corr-col-empty { font-size: 11px; color: var(--muted); padding: 6px 2px; }
+.corr-col-empty { font-size: 11px; color: var(--muted); padding: 8px 6px; }
 
 /* ── Accelerator (full-width list rows) ── */
 .corr-flow-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
@@ -367,6 +408,25 @@
       .catch(function() {});
   });
 
+  /* ── Item expand / collapse ── */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.corr-expand-btn');
+    if (!btn) return;
+    var card = btn.closest('.corr-card');
+    if (!card) return;
+    var detail = card.querySelector('.corr-item-detail');
+    if (!detail) return;
+    var open = card.classList.toggle('expanded');
+    detail.style.display = open ? 'block' : 'none';
+  });
+
+  /* ── Group collapse ── */
+  document.addEventListener('click', function (e) {
+    var hd = e.target.closest('.corr-group-hd');
+    if (!hd) return;
+    hd.closest('.corr-group').classList.toggle('collapsed');
+  });
+
   /* ── Filters / search / sort over tracked corrections ── */
   function val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
   function applyFilters() {
@@ -617,10 +677,10 @@
 {% else %}
 
 {% set col_meta = {
-  'todo':        {'label': 'À traiter',  'badge': 'notice',  'border': '#818cf8'},
-  'in_progress': {'label': 'En cours',   'badge': 'warning', 'border': '#f59e0b'},
-  'done':        {'label': 'Corrigé',    'badge': 'ok',      'border': '#34d399'},
-  'ignored':     {'label': 'Ignoré',     'badge': '',        'border': 'var(--border)'}
+  'todo':        {'label': 'À traiter',  'badge': 'notice',  'color': '#818cf8'},
+  'in_progress': {'label': 'En cours',   'badge': 'warning', 'color': '#f59e0b'},
+  'done':        {'label': 'Corrigé',    'badge': 'ok',      'color': '#34d399'},
+  'ignored':     {'label': 'Ignoré',     'badge': '',        'color': 'var(--border-2)'}
 } %}
 
 <div class="corr-filterbar">
@@ -643,84 +703,82 @@
   </select>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;align-items:start;">
-  {% for col in ['todo','in_progress','done','ignored'] %}
-  {% set meta = col_meta[col] %}
-  <div>
-    <div class="corr-col-header" style="border-bottom-color:{{ meta.border }};">
-      <h2>{{ meta.label }}</h2>
-      {% if groups[col] %}
-        <span class="badge {{ meta.badge }}" style="font-size:10px;">{{ groups[col]|length }}</span>
-      {% endif %}
-    </div>
-
-    {% if not groups[col] %}
-      <p class="muted small" style="padding:6px 2px;">Aucune tâche</p>
+<div class="card" style="padding:0;overflow:hidden;">
+{% for col in ['todo','in_progress','done','ignored'] %}
+{% set meta = col_meta[col] %}
+<div class="corr-group{% if not groups[col] %} collapsed{% endif %}" data-col="{{ col }}">
+  <div class="corr-group-hd">
+    <span class="corr-dot" style="background:{{ meta.color }};"></span>
+    <span class="corr-group-name">{{ meta.label }}</span>
+    {% if groups[col] %}
+      <span class="badge {{ meta.badge }}" style="font-size:10px;">{{ groups[col]|length }}</span>
     {% else %}
-      <p class="corr-col-empty" style="display:none;">Aucun résultat pour ce filtre.</p>
-      <div class="corr-col-cards">
-      {% for task in groups[col] %}
-      <div class="corr-card"
-           data-issue-key="{{ task.issue_key }}"
-           data-url="{{ task.url or '' }}"
-           data-status="{{ task.status }}"
-           data-label="{{ task.issue_label|lower }}"
-           data-severity="{{ task.severity }}"
-           data-date="{{ task.updated_at }}"
-           data-verify="{{ task.verify.result if task.verify else '' }}">
-        <div class="corr-card-body">
+      <span class="muted small">Aucune tâche</span>
+    {% endif %}
+    <svg class="corr-group-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
 
-          <div style="margin-bottom:8px;">
-            <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
-               class="corr-label" style="display:block;"><span class="corr-dot" style="background:{{ sev_color.get(task.severity, 'var(--border)') }};" title="{{ task.severity }}"></span>{{ task.issue_label }}</a>
-          </div>
+  {% if groups[col] %}
+    <p class="corr-col-empty" style="display:none;padding:6px 6px 8px;">Aucun résultat pour ce filtre.</p>
+    <div class="corr-col-cards">
+    {% for task in groups[col] %}
+    <div class="corr-card"
+         data-issue-key="{{ task.issue_key }}"
+         data-url="{{ task.url or '' }}"
+         data-status="{{ task.status }}"
+         data-label="{{ task.issue_label|lower }}"
+         data-severity="{{ task.severity }}"
+         data-date="{{ task.updated_at }}"
+         data-verify="{{ task.verify.result if task.verify else '' }}">
 
+      <div class="corr-item-head">
+        <span class="corr-dot" style="background:{{ sev_color.get(task.severity, 'var(--border)') }};margin-top:1px;flex-shrink:0;"></span>
+        <div class="corr-item-info">
+          <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
+             class="corr-item-label">{{ task.issue_label }}</a>
           {% if task.url %}
-          <a href="{{ task.url }}" target="_blank" rel="noreferrer" class="corr-url" title="{{ task.url }}">
-            {{ task.url }}
-          </a>
+            <span class="corr-item-url" title="{{ task.url }}">{{ task.url }}</span>
           {% endif %}
-
+        </div>
+        <div class="corr-item-meta">
           {% if task.pr and task.pr.pr_url %}
-          <a href="{{ task.pr.pr_url }}" target="_blank" rel="noreferrer" class="corr-pr-badge">
-            <span>⎇</span>
-            {% if task.pr.branch %}<span>{{ task.pr.branch }}</span>{% endif %}
-            {% if task.pr.pr_number %}<span>· PR #{{ task.pr.pr_number }}</span>{% endif %}
-            {% if task.pr.commit_sha %}<span>· {{ task.pr.commit_sha }}</span>{% endif %}
-            {% if task.pr.get('merged') %}<span>· mergé ✓</span>{% endif %}
-            <span>↗</span>
-          </a>
+            <a href="{{ task.pr.pr_url }}" target="_blank" rel="noreferrer" class="corr-pr-badge" title="{{ task.pr.branch or '' }}">
+              ⎇ PR #{{ task.pr.pr_number or '?' }}{% if task.pr.get('merged') %} ✓{% endif %}
+            </a>
           {% endif %}
-
           {% if task.verify and task.verify.result == 'resolved' %}
-            <div class="corr-verify-text ok" style="margin-bottom:9px;" title="Confirmé résolu au dernier crawl">✓ Vérifié résolu</div>
+            <span class="corr-verify-text ok" title="Confirmé résolu">✓</span>
           {% elif task.verify and task.verify.result == 'still_present' %}
-            <div class="corr-verify-text err" style="margin-bottom:9px;" title="Toujours détecté après correction">⚠ Toujours présent</div>
+            <span class="corr-verify-text err" title="Toujours présent">⚠</span>
           {% endif %}
-
-          <textarea class="corr-note" rows="2" placeholder="Note (optionnel)…">{{ task.user_note or '' }}</textarea>
-
-          <div class="corr-segmented">
-            {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Corrigé'),('ignored','Ignoré')] %}
-            <button type="button"
-              class="corr-seg-btn{% if task.status == st %} active{% endif %}"
-              data-set-status="{{ st }}"
-              {% if task.status == st %}disabled{% endif %}>{{ lbl }}</button>
-            {% endfor %}
-          </div>
-
-          <div class="corr-footer">
-            <span class="corr-date">{% if task.updated_at %}{{ task.updated_at[:10] }}{% endif %}</span>
-            <button type="button" class="corr-save-btn" data-note-save>Sauvegarder</button>
-          </div>
-
+          <span class="corr-date">{% if task.updated_at %}{{ task.updated_at[:10] }}{% endif %}</span>
+          <button type="button" class="corr-expand-btn" title="Modifier">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
         </div>
       </div>
-      {% endfor %}
+
+      <div class="corr-item-detail" style="display:none;">
+        <textarea class="corr-note" rows="2" placeholder="Note (optionnel)…">{{ task.user_note or '' }}</textarea>
+        <div class="corr-segmented">
+          {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Corrigé'),('ignored','Ignoré')] %}
+          <button type="button"
+            class="corr-seg-btn{% if task.status == st %} active{% endif %}"
+            data-set-status="{{ st }}"
+            {% if task.status == st %}disabled{% endif %}>{{ lbl }}</button>
+          {% endfor %}
+        </div>
+        <div class="corr-footer">
+          <button type="button" class="corr-save-btn" data-note-save>Sauvegarder</button>
+        </div>
       </div>
-    {% endif %}
-  </div>
-  {% endfor %}
+
+    </div>
+    {% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endfor %}
 </div>
 {% endif %}
 {% endblock %}
