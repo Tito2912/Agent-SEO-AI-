@@ -3304,6 +3304,12 @@ def _openai_generate_file_patch(
         "la fenêtre. ÉVITE ABSOLUMENT les changements GLOBAUX qui affectent d'autres pages (ex. un template "
         "de titre `%s | Marque` rallonge TOUTES les pages et en casse certaines) — corrige page par page, "
         "uniquement les titres réellement hors-fenêtre.\n"
+        "- DANGER — expression dynamique : si le titre (ou la meta) est une EXPRESSION dérivée des données "
+        "de la page (ex. `post.title`, `{frontmatter.title}`, une variable, `data.xxx`, `generateMetadata`), "
+        "NE la remplace JAMAIS par une chaîne statique et n'y concatène JAMAIS de suffixe — tu donnerais le "
+        "MÊME titre à TOUTES les pages de cette route (catastrophe SEO). Dans un fichier de route partagé "
+        "(`[slug]`, `[...slug]`, layout, _app, _document), laisse l'expression dynamique INTACTE → no_change, "
+        "et corrige plutôt la SOURCE de chaque page (son frontmatter / contenu).\n"
         "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
         "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
     )
@@ -15890,6 +15896,11 @@ def _deep_patch_issue_files(
         for f in _ai_pick_repo_files(issue_key, issue_label, all_paths, limit=2):
             if f not in targets:
                 targets.append(f)
+    # Safety: title/meta length fixes belong in per-page content (frontmatter), NOT in a
+    # shared dynamic-route template (app/[slug]/page.tsx renders `post.title`). Editing those
+    # would hardcode/suffix one title onto ALL pages of the route — drop them deterministically.
+    if _length_family_name(issue_key):
+        targets = [p for p in targets if "[" not in p]
     targets = targets[:max_files]
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     if evidence:
