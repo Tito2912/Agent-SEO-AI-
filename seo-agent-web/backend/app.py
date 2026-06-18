@@ -3298,6 +3298,12 @@ def _openai_generate_file_patch(
         "- Si AUCUN élément de ce fichier ne présente l'anomalie, mets no_change=true et renvoie le fichier INCHANGÉ. "
         "Ne fabrique pas de correction artificielle.\n"
         "- Ne modifie RIEN d'autre que ce qui est strictement nécessaire\n"
+        "- Cas longueur (title / meta description) : vise la fenêtre OPTIMALE et NE LA DÉPASSE PAS — "
+        "title ≈ 50-60 caractères, meta description ≈ 120-160 caractères. Pour un 'trop court', allonge "
+        "juste assez pour entrer dans la fenêtre (ne survends pas) ; pour un 'trop long', raccourcis dans "
+        "la fenêtre. ÉVITE ABSOLUMENT les changements GLOBAUX qui affectent d'autres pages (ex. un template "
+        "de titre `%s | Marque` rallonge TOUTES les pages et en casse certaines) — corrige page par page, "
+        "uniquement les titres réellement hors-fenêtre.\n"
         "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
         "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
     )
