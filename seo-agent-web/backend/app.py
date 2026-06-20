@@ -3306,6 +3306,133 @@ def _github_find_seo_files(
     return results
 
 
+# Shared "what to change" rules — used by BOTH the targeted-edit and full-file patch prompts
+# so they stay consistent (every hardening rule applies regardless of output format).
+_PATCH_RULES = (
+    "- Modifie UNIQUEMENT les éléments réellement non conformes DANS CE FICHIER. "
+    "Juge la conformité élément par élément d'après le contenu de CE fichier, pas d'après le "
+    "contexte global.\n"
+    "- Cas 'alt manquant' : un <img> est NON conforme SEULEMENT si, dans ce fichier, son attribut "
+    "alt est ABSENT ou VIDE (alt=\"\") → tu DOIS alors renseigner un alt court et descriptif "
+    "(ex. <img src=\"/images/btc.svg\"> → alt=\"Bitcoin\"). IMPORTANT : remplis l'alt vide MÊME si "
+    "l'image paraît décorative ou porte aria-hidden=\"true\" — l'outil d'audit compte tout alt vide "
+    "comme manquant. Ne laisse JAMAIS alt=\"\" (garde aria-hidden s'il est présent, change juste l'alt). "
+    "En revanche, un <img> qui a DÉJÀ un alt NON VIDE est CONFORME → n'y touche pas : ne le reformule "
+    "pas, ne le traduis pas, ne l'enrichis pas. Les 'src d'images' donnés en contexte manquent d'alt "
+    "AILLEURS sur le site — cela NE veut PAS dire qu'ils manquent d'alt dans ce fichier-ci.\n"
+    "- Si AUCUN <img> de ce fichier n'a un alt absent/vide, mets no_change=true sans rien modifier.\n"
+    "- Corrige TOUTES les occurrences réellement non conformes présentes dans CE fichier (pas seulement la première)\n"
+    "- Si AUCUN élément de ce fichier ne présente l'anomalie, mets no_change=true. Ne fabrique pas de correction artificielle.\n"
+    "- Ne modifie RIEN d'autre que ce qui est strictement nécessaire\n"
+    "- Cas longueur (title / meta description) : vise la fenêtre OPTIMALE et NE LA DÉPASSE PAS — "
+    "title ≈ 50-60 caractères, meta description ≈ 120-160 caractères. Pour un 'trop court', allonge "
+    "juste assez pour entrer dans la fenêtre (ne survends pas) ; pour un 'trop long', raccourcis dans "
+    "la fenêtre. ÉVITE ABSOLUMENT les changements GLOBAUX qui affectent d'autres pages (ex. un template "
+    "de titre `%s | Marque` rallonge TOUTES les pages et en casse certaines) — corrige page par page, "
+    "uniquement les titres réellement hors-fenêtre.\n"
+    "- Champ ciblé UNIQUEMENT : pour une anomalie de TITRE, modifie EXCLUSIVEMENT le titre "
+    "(frontmatter `title:` / balise <title> / champ title) ; pour une anomalie de META DESCRIPTION, "
+    "modifie EXCLUSIVEMENT la description. Ne touche JAMAIS à l'autre champ, ni au reste du frontmatter, "
+    "ni au corps du contenu, ni aux caractères invisibles (BOM) — laisse le fichier identique ailleurs.\n"
+    "- DANGER — expression dynamique : si le titre (ou la meta) est une EXPRESSION dérivée des données "
+    "de la page (ex. `post.title`, `{frontmatter.title}`, une variable, `data.xxx`, `generateMetadata`), "
+    "NE la remplace JAMAIS par une chaîne statique et n'y concatène JAMAIS de suffixe — tu donnerais le "
+    "MÊME titre à TOUTES les pages de cette route (catastrophe SEO). Dans un fichier de route partagé "
+    "(`[slug]`, `[...slug]`, layout, _app, _document), laisse l'expression dynamique INTACTE → no_change, "
+    "et corrige plutôt la SOURCE de chaque page (son frontmatter / contenu).\n"
+    "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
+    "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
+)
+
+
+def _patch_user_msg(file_path: str, file_content: str, issue_key: str, issue_label: str, url: str, site_name: str, occurrences_hint: str) -> str:
+    payload_obj: dict[str, Any] = {
+        "site": site_name,
+        "anomalie": f"{issue_key} — {issue_label}",
+        "url_affectee": url,
+        "fichier": file_path,
+        "contenu_actuel": file_content,
+    }
+    if occurrences_hint:
+        payload_obj["contexte"] = occurrences_hint
+    return json.dumps(payload_obj, ensure_ascii=False)
+
+
+def _apply_edits(content: str, edits: Any) -> tuple[str, int]:
+    """Apply [{old,new}] find/replace edits. Replaces ALL occurrences of each exact `old`
+    (so identical occurrences are all fixed at once). Returns (new_content, edits_applied)."""
+    out = content
+    applied = 0
+    if not isinstance(edits, list):
+        return out, 0
+    for e in edits:
+        if not isinstance(e, dict):
+            continue
+        old, new = e.get("old"), e.get("new")
+        if not isinstance(old, str) or not isinstance(new, str) or not old or old == new:
+            continue
+        if old in out:
+            out = out.replace(old, new)
+            applied += 1
+    return out, applied
+
+
+def _patch_via_edits(*, file_path, file_content, issue_key, issue_label, url, site_name, occurrences_hint, model_override) -> dict[str, Any]:
+    """Cheap path: ask for targeted find/replace edits (small output) and apply them locally."""
+    system = (
+        "Tu es un expert SEO technique. On te donne le contenu COMPLET d'un fichier, une anomalie SEO "
+        "et l'URL affectée. Tu renvoies des ÉDITIONS CIBLÉES (find/replace), PAS le fichier entier.\n\n"
+        "Réponds STRICTEMENT en JSON :\n"
+        "{\n"
+        '  "pr_title": "fix: [description courte] (max 72 chars)",\n'
+        '  "description": "Explication en 2-3 phrases",\n'
+        '  "no_change": false,\n'
+        '  "edits": [ {"old": "<texte EXACT à remplacer, copié tel quel du fichier avec assez de contexte pour être unique>", "new": "<remplacement>"} ]\n'
+        "}\n"
+        "- 'old' DOIT être une sous-chaîne EXACTE du fichier (mêmes espaces, guillemets, casse), assez longue pour être trouvée sans ambiguïté.\n"
+        "- Une édition par modification distincte. Pour plusieurs occurrences IDENTIQUES, une seule édition suffit (toutes les occurrences de 'old' sont remplacées).\n"
+        "- Ne renvoie pas le fichier entier ; uniquement les morceaux qui changent.\n"
+        "- no_change=true et edits=[] s'il n'y a rien à corriger dans CE fichier.\n\n"
+        "RÈGLES ABSOLUES (sur QUOI changer) :\n" + _PATCH_RULES
+    )
+    user_msg = _patch_user_msg(file_path, file_content, issue_key, issue_label, url, site_name, occurrences_hint)
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=2000, temperature=0.05, model_override=model_override)
+    if not isinstance(parsed, dict):
+        return {}
+    if parsed.get("no_change"):
+        return {"no_change": True, "pr_title": parsed.get("pr_title", ""), "description": parsed.get("description", "")}
+    new_content, applied = _apply_edits(file_content, parsed.get("edits"))
+    if applied == 0 or new_content == file_content:
+        return {}  # nothing matched/applied → caller falls back to full-file
+    return {"patched_content": new_content, "pr_title": parsed.get("pr_title", ""), "description": parsed.get("description", "")}
+
+
+def _patch_via_full_file(*, file_path, file_content, issue_key, issue_label, url, site_name, occurrences_hint, model_override) -> dict[str, Any]:
+    """Reliable fallback: regenerate the COMPLETE file (more output tokens)."""
+    system = (
+        "Tu es un expert SEO technique qui génère des patches de code précis et applicables.\n"
+        "On te donne le contenu COMPLET d'un fichier, une anomalie SEO précise et l'URL affectée.\n"
+        "Tu dois retourner le fichier COMPLET modifié (pas un diff, le fichier entier).\n\n"
+        "Réponds STRICTEMENT en JSON :\n"
+        "{\n"
+        '  "pr_title": "fix: [description courte] (max 72 chars)",\n'
+        '  "description": "Explication en 2-3 phrases",\n'
+        '  "patched_content": "contenu complet du fichier après correction",\n'
+        '  "no_change": false\n'
+        "}\n\n"
+        "RÈGLES ABSOLUES :\n"
+        "- patched_content = fichier COMPLET, pas juste le bloc modifié, sans rien tronquer\n"
+        + _PATCH_RULES
+    )
+    user_msg = _patch_user_msg(file_path, file_content, issue_key, issue_label, url, site_name, occurrences_hint)
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=8000, temperature=0.05, model_override=model_override)
+    if not isinstance(parsed, dict):
+        return {}
+    if parsed.get("no_change"):
+        return {"no_change": True, "pr_title": parsed.get("pr_title", ""), "description": parsed.get("description", "")}
+    return parsed if parsed.get("patched_content") else {}
+
+
 def _openai_generate_file_patch(
     *,
     file_path: str,
@@ -3317,77 +3444,28 @@ def _openai_generate_file_patch(
     occurrences_hint: str = "",
     model_override: str = "",
 ) -> dict[str, Any]:
-    # #4 safety: a file that hit the 80KB read cap is (likely) truncated. Regenerating a
-    # "full file" from a truncated copy would silently delete the tail — refuse it.
+    # #4 safety: a file that hit the 80KB read cap is (likely) truncated.
     if len(file_content) >= 79_500:
         return {"error": "file_too_large", "description": (
-            "Fichier trop volumineux pour une régénération complète sûre (risque de troncature). "
+            "Fichier trop volumineux pour une correction sûre (risque de troncature). "
             "Correction manuelle recommandée."
         )}
-    system = (
-        "Tu es un expert SEO technique qui génère des patches de code précis et applicables.\n"
-        "On te donne le contenu COMPLET d'un fichier de configuration/template, "
-        "une anomalie SEO précise, et l'URL affectée.\n"
-        "Tu dois retourner le fichier COMPLET modifié (pas un diff, le fichier entier) avec la correction appliquée.\n\n"
-        "Réponds STRICTEMENT en JSON :\n"
-        "{\n"
-        '  "pr_title": "fix: [description courte de la correction] (max 72 chars)",\n'
-        '  "description": "Explication en 2-3 phrases de ce qui a été changé et pourquoi",\n'
-        '  "patched_content": "contenu complet du fichier après correction",\n'
-        '  "no_change": false\n'
-        "}\n\n"
-        "RÈGLES ABSOLUES :\n"
-        "- patched_content = fichier COMPLET, pas juste le bloc modifié, sans rien tronquer\n"
-        "- Modifie UNIQUEMENT les éléments réellement non conformes DANS CE FICHIER. "
-        "Juge la conformité élément par élément d'après le contenu de CE fichier, pas d'après le "
-        "contexte global.\n"
-        "- Cas 'alt manquant' : un <img> est NON conforme SEULEMENT si, dans ce fichier, son attribut "
-        "alt est ABSENT ou VIDE (alt=\"\") → tu DOIS alors renseigner un alt court et descriptif "
-        "(ex. <img src=\"/images/btc.svg\"> → alt=\"Bitcoin\"). IMPORTANT : remplis l'alt vide MÊME si "
-        "l'image paraît décorative ou porte aria-hidden=\"true\" — l'outil d'audit compte tout alt vide "
-        "comme manquant. Ne laisse JAMAIS alt=\"\" (garde aria-hidden s'il est présent, change juste l'alt). "
-        "En revanche, un <img> qui a DÉJÀ un alt NON VIDE est CONFORME → n'y touche pas : ne le reformule "
-        "pas, ne le traduis pas, ne l'enrichis pas. Les 'src d'images' donnés en contexte manquent d'alt "
-        "AILLEURS sur le site — cela NE veut PAS dire qu'ils manquent d'alt dans ce fichier-ci.\n"
-        "- Si AUCUN <img> de ce fichier n'a un alt absent/vide, mets no_change=true sans rien modifier.\n"
-        "- Corrige TOUTES les occurrences réellement non conformes présentes dans CE fichier (pas seulement la première)\n"
-        "- Si AUCUN élément de ce fichier ne présente l'anomalie, mets no_change=true et renvoie le fichier INCHANGÉ. "
-        "Ne fabrique pas de correction artificielle.\n"
-        "- Ne modifie RIEN d'autre que ce qui est strictement nécessaire\n"
-        "- Cas longueur (title / meta description) : vise la fenêtre OPTIMALE et NE LA DÉPASSE PAS — "
-        "title ≈ 50-60 caractères, meta description ≈ 120-160 caractères. Pour un 'trop court', allonge "
-        "juste assez pour entrer dans la fenêtre (ne survends pas) ; pour un 'trop long', raccourcis dans "
-        "la fenêtre. ÉVITE ABSOLUMENT les changements GLOBAUX qui affectent d'autres pages (ex. un template "
-        "de titre `%s | Marque` rallonge TOUTES les pages et en casse certaines) — corrige page par page, "
-        "uniquement les titres réellement hors-fenêtre.\n"
-        "- Champ ciblé UNIQUEMENT : pour une anomalie de TITRE, modifie EXCLUSIVEMENT le titre "
-        "(frontmatter `title:` / balise <title> / champ title) ; pour une anomalie de META DESCRIPTION, "
-        "modifie EXCLUSIVEMENT la description. Ne touche JAMAIS à l'autre champ, ni au reste du frontmatter, "
-        "ni au corps du contenu, ni aux caractères invisibles (BOM) — laisse le fichier identique ailleurs.\n"
-        "- DANGER — expression dynamique : si le titre (ou la meta) est une EXPRESSION dérivée des données "
-        "de la page (ex. `post.title`, `{frontmatter.title}`, une variable, `data.xxx`, `generateMetadata`), "
-        "NE la remplace JAMAIS par une chaîne statique et n'y concatène JAMAIS de suffixe — tu donnerais le "
-        "MÊME titre à TOUTES les pages de cette route (catastrophe SEO). Dans un fichier de route partagé "
-        "(`[slug]`, `[...slug]`, layout, _app, _document), laisse l'expression dynamique INTACTE → no_change, "
-        "et corrige plutôt la SOURCE de chaque page (son frontmatter / contenu).\n"
-        "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
-        "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
+    kw = dict(
+        file_path=file_path, file_content=file_content, issue_key=issue_key, issue_label=issue_label,
+        url=url, site_name=site_name, occurrences_hint=occurrences_hint, model_override=model_override,
     )
-    payload_obj: dict[str, Any] = {
-        "site": site_name,
-        "anomalie": f"{issue_key} — {issue_label}",
-        "url_affectee": url,
-        "fichier": file_path,
-        "contenu_actuel": file_content,
-    }
-    if occurrences_hint:
-        payload_obj["contexte"] = occurrences_hint
-    user_msg = json.dumps(payload_obj, ensure_ascii=False)
-    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=8000, temperature=0.05, model_override=model_override)
-    if not (isinstance(parsed, dict) and parsed.get("patched_content")):
+    # 1) Targeted edits (cheap: small output). 2) Full-file fallback (reliable) if no edit applied.
+    res = _patch_via_edits(**kw)
+    if res.get("no_change"):
+        return res
+    if not res.get("patched_content"):
+        res = _patch_via_full_file(**kw)
+    if res.get("no_change"):
+        return res
+    if not (isinstance(res, dict) and res.get("patched_content")):
         return {}
-    patched = str(parsed.get("patched_content") or "")
-    # #4 safety: reject suspicious regenerations that drop a large chunk of the file.
+    patched = str(res.get("patched_content") or "")
+    # #4 safety: reject patches that drop a large chunk of the file.
     if file_content and len(patched) < int(len(file_content) * 0.5):
         return {"error": "suspicious_patch", "description": (
             "La correction générée supprime une grande partie du fichier — rejetée par sécurité."
@@ -3396,7 +3474,7 @@ def _openai_generate_file_patch(
     integrity = _validate_patched_file(file_path, patched)
     if integrity is not None:
         return {"error": "invalid_syntax", "description": integrity}
-    return parsed
+    return res
 
 
 def _validate_patched_file(file_path: str, patched: str) -> str | None:
