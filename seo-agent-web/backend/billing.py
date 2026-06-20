@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import UTC, datetime
 from typing import Any
@@ -60,13 +61,19 @@ def public_base_url() -> str:
 
 
 def plan_catalog() -> dict[str, dict[str, Any]]:
-    # Defaults (modifiable later). For owners-first V1:
-    # - "free" is intentionally small (beta/trial + invite)
-    return {
+    """Central plan config (limits per metric + per-feature engine config).
+
+    Code defaults below are the source of truth; an admin can override numbers at runtime via
+    the `PLAN_CONFIG_JSON` env setting (editable in /settings/system) without a deploy. The
+    `limits` map is generic — add a metric for any future paid feature and it's quota-enforced
+    automatically by usage_add/ensure_within_quota. `correction` holds the AI-fix engine config
+    (model + max files per PR) per plan."""
+    defaults: dict[str, dict[str, Any]] = {
         "free": {
             "label": "Free",
             "price_label": "0€",
             "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
+            "correction": {"model": "", "max_files": 0},
             "features": ["Audit", "Suggestions IA (limitées)", "Exports"],
         },
         "solo": {
@@ -80,6 +87,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "backlink_replies_month": 30,
                 "ai_corrections_month": 100,
             },
+            "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
             "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
@@ -93,6 +101,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "backlink_replies_month": 200,
                 "ai_corrections_month": 300,
             },
+            "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
@@ -106,9 +115,52 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "backlink_replies_month": 1_000,
                 "ai_corrections_month": 150,
             },
+            "correction": {"model": "claude-opus-4-8", "max_files": 40},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
+    _apply_plan_config_override(defaults)
+    return defaults
+
+
+def _apply_plan_config_override(defaults: dict[str, dict[str, Any]]) -> None:
+    """Admin-tunable override: PLAN_CONFIG_JSON (env) deep-merges onto code defaults.
+
+    Shape: {"<plan>": {"limits": {"<metric>": <int>}, "correction": {"model": "...", "max_files": <int>}}}.
+    Only numbers/known fields are merged; invalid JSON is ignored (defaults stand)."""
+    raw = (os.environ.get("PLAN_CONFIG_JSON") or "").strip()
+    if not raw:
+        return
+    try:
+        ov = json.loads(raw)
+    except Exception:
+        return
+    if not isinstance(ov, dict):
+        return
+    for plan_key, pv in ov.items():
+        if plan_key not in defaults or not isinstance(pv, dict):
+            continue
+        lim = pv.get("limits")
+        if isinstance(lim, dict):
+            for m, v in lim.items():
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    defaults[plan_key]["limits"][str(m)] = int(v)
+        corr = pv.get("correction")
+        if isinstance(corr, dict):
+            if "model" in corr:
+                defaults[plan_key].setdefault("correction", {})["model"] = str(corr["model"])
+            if isinstance(corr.get("max_files"), (int, float)) and not isinstance(corr.get("max_files"), bool):
+                defaults[plan_key].setdefault("correction", {})["max_files"] = int(corr["max_files"])
+
+
+def correction_config_for_plan(plan_key: str) -> dict[str, Any]:
+    """Per-plan AI-fix engine config (model + max_files/PR), with override applied."""
+    cat = plan_catalog()
+    plan = cat.get(str(plan_key or "").strip().lower()) or cat.get("free", {})
+    corr = plan.get("correction") if isinstance(plan, dict) else None
+    if isinstance(corr, dict):
+        return {"model": str(corr.get("model") or ""), "max_files": int(corr.get("max_files") or 0)}
+    return {"model": "", "max_files": 0}
 
 
 def price_id_for_plan(plan_key: str) -> str:

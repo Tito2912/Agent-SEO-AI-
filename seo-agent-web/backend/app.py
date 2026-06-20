@@ -2743,19 +2743,11 @@ def _correction_ai_model(provider: str) -> str:
     return ""
 
 
-# Per-plan correction engine: which Claude model + how many files per PR. Quota counts
-# (ai_corrections_month) live in billing.plan_catalog. Sonnet on lower tiers (cost), Opus
-# on Business (premium). Free = corrections not included (max_files 0 / quota 0).
-_CORRECTION_PLAN: dict[str, dict[str, Any]] = {
-    "free": {"model": "", "max_files": 0},
-    "solo": {"model": "claude-sonnet-4-6", "max_files": 12},
-    "pro": {"model": "claude-sonnet-4-6", "max_files": 20},
-    "business": {"model": "claude-opus-4-8", "max_files": 40},
-}
-
-
 def _plan_correction_cfg(user: Any) -> dict[str, Any]:
-    """Resolve the correction engine config for a user from their plan. Admins are unlimited."""
+    """Resolve the correction engine config (model + max_files/PR) from the user's plan.
+
+    Numbers come from billing.plan_catalog (admin-overridable via PLAN_CONFIG_JSON). Admins
+    are unlimited. Free plans have max_files 0 / quota 0 (corrections not included)."""
     if bool(getattr(user, "is_admin", False)):
         model = (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
         return {"plan": "admin", "model": model, "max_files": 40, "unlimited": True}
@@ -2765,7 +2757,7 @@ def _plan_correction_cfg(user: Any) -> dict[str, Any]:
             plan = billing.effective_plan_key(_db, user_id=str(getattr(user, "id", "") or ""))
     except Exception:
         plan = "free"
-    base = _CORRECTION_PLAN.get(plan, _CORRECTION_PLAN["free"])
+    base = billing.correction_config_for_plan(plan)
     return {"plan": plan, "model": str(base["model"]), "max_files": int(base["max_files"]), "unlimited": False}
 
 
@@ -7771,6 +7763,12 @@ def _startup() -> None:
     elif _env_bool("SEO_AGENT_DB_AUTO_CREATE"):
         DB.create_tables()
     _init_sentry()
+    # Re-apply admin-editable plan overrides from persistent storage into os.environ so they
+    # survive restarts (plan_catalog reads PLAN_CONFIG_JSON from the environment).
+    try:
+        _apply_effective_env("PLAN_CONFIG_JSON")
+    except Exception:
+        pass
     _start_job_worker()
     _start_retention()
 
@@ -9394,6 +9392,24 @@ _SETTINGS_ENV_KEYS: dict[str, dict[str, Any]] = {
         "order": 19,
         "editable": True,
     },
+    "PLAN_CONFIG_JSON": {
+        "label": "Forfaits — quotas & modèles",
+        "hint": "Surcharge des limites/modèles par forfait (JSON minifié, 1 ligne)",
+        "group": "Facturation",
+        "order": 10,
+        "editable": True,
+        "help": {
+            "title": "Config forfaits — surcharge des quotas & moteurs IA",
+            "steps": [
+                "Surcharge les chiffres par défaut sans redéploiement (limites par métrique + modèle/max fichiers des corrections).",
+                "Colle un JSON minifié (sur UNE ligne). Seuls les nombres et champs connus sont pris en compte ; un JSON invalide est ignoré.",
+                "Métriques: ai_corrections_month, pages_crawled_month, assistant_messages_month, backlink_searches_month, backlink_replies_month, projects.",
+                "Ex: {\"solo\":{\"limits\":{\"ai_corrections_month\":120},\"correction\":{\"model\":\"claude-sonnet-4-6\",\"max_files\":15}},\"business\":{\"correction\":{\"model\":\"claude-opus-4-8\",\"max_files\":40}}}",
+                "Laisse vide / supprime pour revenir aux valeurs par défaut du code.",
+            ],
+            "links": [],
+        },
+    },
 }
 
 _INTERNAL_SETTINGS_KEYS: set[str] = {
@@ -9461,6 +9477,14 @@ def _validate_settings_env_value(key: str, value: str) -> str | None:
         err = _validate_settings_url(v)
         if err:
             return err
+
+    if k == "PLAN_CONFIG_JSON":
+        try:
+            parsed = json.loads(v)
+        except Exception as e:
+            return f"JSON invalide : {e}"
+        if not isinstance(parsed, dict):
+            return "Un objet JSON est attendu, ex. {\"solo\":{\"limits\":{\"ai_corrections_month\":120},\"correction\":{\"max_files\":15}}}"
 
     if k == "GOOGLE_APPLICATION_CREDENTIALS":
         p = Path(v).expanduser()
