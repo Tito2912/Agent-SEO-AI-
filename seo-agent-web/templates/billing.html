@@ -120,6 +120,27 @@
             <div class="muted small" style="margin-top:5px;">{{ usage_pct.assistant_messages_month }}% utilisé</div>
           {% endif %}
         </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:600;">Corrections IA</span>
+            {% if is_admin %}
+              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
+            {% else %}
+              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.ai_corrections_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
+            {% endif %}
+          </div>
+          {% if is_admin %}
+            <div class="muted small" style="margin-top:5px;">Compte admin – quotas non limités</div>
+          {% elif limits_labels.ai_corrections_month == '—' %}
+            <div class="muted small" style="margin-top:5px;">Non inclus dans ce forfait</div>
+          {% else %}
+            <div class="progress slim" style="--p: {{ usage_pct.ai_corrections_month }};background:rgba(255,255,255,.06);">
+              <div class="progress-fill" style="background:{{ 'var(--err)' if usage_pct.ai_corrections_month >= 90 else ('var(--warn)' if usage_pct.ai_corrections_month >= 70 else 'var(--accent)') }};"></div>
+            </div>
+            <div class="muted small" style="margin-top:5px;">{{ usage_pct.ai_corrections_month }}% utilisé</div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>

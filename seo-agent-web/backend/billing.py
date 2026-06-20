@@ -66,7 +66,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
         "free": {
             "label": "Free",
             "price_label": "0€",
-            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30},
+            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
             "features": ["Audit", "Suggestions IA (limitées)", "Exports"],
         },
         "solo": {
@@ -78,6 +78,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "assistant_messages_month": 400,
                 "backlink_searches_month": 30,
                 "backlink_replies_month": 30,
+                "ai_corrections_month": 100,
             },
             "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
@@ -90,6 +91,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "assistant_messages_month": 2_000,
                 "backlink_searches_month": 200,
                 "backlink_replies_month": 200,
+                "ai_corrections_month": 300,
             },
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
@@ -102,6 +104,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "assistant_messages_month": 6_000,
                 "backlink_searches_month": 1_000,
                 "backlink_replies_month": 1_000,
+                "ai_corrections_month": 150,
             },
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },

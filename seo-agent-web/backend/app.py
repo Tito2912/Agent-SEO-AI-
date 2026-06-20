@@ -2743,6 +2743,66 @@ def _correction_ai_model(provider: str) -> str:
     return ""
 
 
+# Per-plan correction engine: which Claude model + how many files per PR. Quota counts
+# (ai_corrections_month) live in billing.plan_catalog. Sonnet on lower tiers (cost), Opus
+# on Business (premium). Free = corrections not included (max_files 0 / quota 0).
+_CORRECTION_PLAN: dict[str, dict[str, Any]] = {
+    "free": {"model": "", "max_files": 0},
+    "solo": {"model": "claude-sonnet-4-6", "max_files": 12},
+    "pro": {"model": "claude-sonnet-4-6", "max_files": 20},
+    "business": {"model": "claude-opus-4-8", "max_files": 40},
+}
+
+
+def _plan_correction_cfg(user: Any) -> dict[str, Any]:
+    """Resolve the correction engine config for a user from their plan. Admins are unlimited."""
+    if bool(getattr(user, "is_admin", False)):
+        model = (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
+        return {"plan": "admin", "model": model, "max_files": 40, "unlimited": True}
+    plan = "free"
+    try:
+        with DB.session() as _db:
+            plan = billing.effective_plan_key(_db, user_id=str(getattr(user, "id", "") or ""))
+    except Exception:
+        plan = "free"
+    base = _CORRECTION_PLAN.get(plan, _CORRECTION_PLAN["free"])
+    return {"plan": plan, "model": str(base["model"]), "max_files": int(base["max_files"]), "unlimited": False}
+
+
+def _correction_gate(user: Any) -> tuple[bool, str, int, str]:
+    """Check whether the user may run an AI correction now.
+
+    Returns (allowed, error_message, effective_max_files, model_override).
+    Admins bypass quota. Caps effective_max_files to the remaining monthly quota."""
+    cfg = _plan_correction_cfg(user)
+    if cfg["unlimited"]:
+        return True, "", int(cfg["max_files"]), str(cfg["model"])
+    if int(cfg["max_files"]) <= 0:
+        return False, "Les corrections IA ne sont pas incluses dans ton forfait. Passe à un plan supérieur.", 0, ""
+    try:
+        with DB.session() as _db:
+            remaining = billing.remaining_quota(_db, user_id=str(getattr(user, "id", "") or ""), metric="ai_corrections_month")
+    except Exception:
+        remaining = None
+    if isinstance(remaining, int) and remaining <= 0:
+        return False, "Quota de corrections IA atteint ce mois-ci. Va sur Abonnement pour upgrade.", 0, ""
+    cap = int(cfg["max_files"])
+    if isinstance(remaining, int):
+        cap = max(1, min(cap, remaining))
+    return True, "", cap, str(cfg["model"])
+
+
+def _correction_charge(user: Any, count: int) -> None:
+    """Bill `count` AI corrections (files patched / previews) against the monthly quota. No-op for admins."""
+    if count <= 0 or bool(getattr(user, "is_admin", False)):
+        return
+    try:
+        with DB.session() as _db:
+            billing.usage_add(_db, user_id=str(getattr(user, "id", "") or ""), metric="ai_corrections_month", amount=int(count))
+    except Exception:
+        pass
+
+
 def _parse_ai_json(text: str) -> dict[str, Any]:
     """Tolerant JSON-object extraction (handles ```json fences / surrounding prose)."""
     if not isinstance(text, str):
@@ -2845,12 +2905,13 @@ def _openai_chat_text(
 
 def _correction_ai_json(
     *, system: str, user_msg: str, max_tokens: int = 4000, temperature: float = 0.05,
-    error_sink: list[str] | None = None,
+    error_sink: list[str] | None = None, model_override: str = "",
 ) -> dict[str, Any]:
     """Generate a JSON object using the best available correction AI.
 
     Tries the preferred provider first (Claude by default), then falls back to the
     other configured provider if the primary call fails. Returns {} when none work.
+    `model_override` forces the Anthropic model (per-plan: Sonnet vs Opus).
     Failures are logged and (optionally) appended to error_sink for surfacing.
     """
     primary = _correction_ai_provider()
@@ -2865,7 +2926,7 @@ def _correction_ai_json(
         order.append("anthropic")
     json_hint = "\n\nRéponds UNIQUEMENT avec l'objet JSON valide, sans texte autour ni bloc markdown."
     for prov in order:
-        model = _correction_ai_model(prov)
+        model = (model_override if (prov == "anthropic" and model_override) else _correction_ai_model(prov))
         if not model:
             continue
         try:
@@ -2960,6 +3021,7 @@ def _openai_url_fix(
     url: str,
     site_name: str,
     error_sink: list[str] | None = None,
+    model_override: str = "",
 ) -> dict[str, Any]:
     system = (
         "Tu es un expert SEO technique qui génère des corrections CODE-READY, immédiatement applicables.\n"
@@ -2989,7 +3051,8 @@ def _openai_url_fix(
         "url_affectee": url,
     }, ensure_ascii=False)
     parsed = _correction_ai_json(
-        system=system, user_msg=user_msg, max_tokens=900, temperature=0.1, error_sink=error_sink
+        system=system, user_msg=user_msg, max_tokens=900, temperature=0.1, error_sink=error_sink,
+        model_override=model_override,
     )
     if isinstance(parsed, dict) and parsed.get("fix"):
         return parsed
@@ -3260,6 +3323,7 @@ def _openai_generate_file_patch(
     url: str,
     site_name: str,
     occurrences_hint: str = "",
+    model_override: str = "",
 ) -> dict[str, Any]:
     # #4 safety: a file that hit the 80KB read cap is (likely) truncated. Regenerating a
     # "full file" from a truncated copy would silently delete the tail — refuse it.
@@ -3327,7 +3391,7 @@ def _openai_generate_file_patch(
     if occurrences_hint:
         payload_obj["contexte"] = occurrences_hint
     user_msg = json.dumps(payload_obj, ensure_ascii=False)
-    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=8000, temperature=0.05)
+    parsed = _correction_ai_json(system=system, user_msg=user_msg, max_tokens=8000, temperature=0.05, model_override=model_override)
     if not (isinstance(parsed, dict) and parsed.get("patched_content")):
         return {}
     patched = str(parsed.get("patched_content") or "")
@@ -10942,6 +11006,7 @@ def billing_page(
 
         used_pages = billing.usage_sum(db, user_id=str(user.id), metric="pages_crawled_month")
         used_ai = billing.usage_sum(db, user_id=str(user.id), metric="assistant_messages_month")
+        used_corrections = billing.usage_sum(db, user_id=str(user.id), metric="ai_corrections_month")
         projects_count = int(
             db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
         )
@@ -10980,16 +11045,19 @@ def billing_page(
                 "projects": _limit_label("projects"),
                 "pages_crawled_month": _limit_label("pages_crawled_month"),
                 "assistant_messages_month": _limit_label("assistant_messages_month"),
+                "ai_corrections_month": _limit_label("ai_corrections_month"),
             },
             "is_admin": bool(getattr(user, "is_admin", False)),
             "usage": {
                 "projects": projects_count,
                 "pages_crawled_month": used_pages,
                 "assistant_messages_month": used_ai,
+                "ai_corrections_month": used_corrections,
             },
             "usage_pct": {
                 "pages_crawled_month": _pct(used_pages, "pages_crawled_month"),
                 "assistant_messages_month": _pct(used_ai, "assistant_messages_month"),
+                "ai_corrections_month": _pct(used_corrections, "ai_corrections_month"),
             },
             "catalog": catalog,
             "prices": {
@@ -15165,6 +15233,9 @@ def api_issue_url_fix(
     url_error = _validate_settings_url(url)
     if url_error:
         return JSONResponse({"ok": False, "error": url_error}, status_code=400)
+    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user)
+    if not gate_ok:
+        return JSONResponse({"error": gate_msg, "billing_url": "/billing"}, status_code=402)
     meta = dash.issue_meta(issue_key)
     errors: list[str] = []
     result = _openai_url_fix(
@@ -15173,6 +15244,7 @@ def api_issue_url_fix(
         url=url,
         site_name=str(proj_row.site_name or slug),
         error_sink=errors,
+        model_override=gate_model,
     )
     if not result:
         # System/provider details are admin-only; regular users get a generic message.
@@ -15181,6 +15253,7 @@ def api_issue_url_fix(
         else:
             msg = "Correction IA momentanément indisponible. Réessaie dans un instant."
         return JSONResponse({"error": msg}, status_code=503)
+    _correction_charge(user, 1)
     return JSONResponse(result)
 
 
@@ -15271,6 +15344,9 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Branche GitHub invalide."}, status_code=400)
     mode = cfg["mode"]
+    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     url = (body.url or "").strip()
     if not url:
         return JSONResponse({"ok": False, "error": "URL manquante."}, status_code=400)
@@ -15424,6 +15500,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         issue_label=issue_label,
         url=url,
         site_name=site_name,
+        model_override=gate_model,
     )
     if not patch:
         return JSONResponse({"ok": False, "error": "Service IA indisponible ou réponse invalide."}, status_code=503)
@@ -15435,6 +15512,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     content_error = _github_patched_content_error(str(patch.get("patched_content") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
+    _correction_charge(user, 1)
 
     # In auto mode: apply immediately without confirm step
     if mode == "auto":
@@ -15484,6 +15562,9 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             status_code=429,
             headers={"Retry-After": str(retry_after)},
         )
+    gate_ok, gate_msg, gate_budget, gate_model = _correction_gate(user)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     repo_parts = _github_repo_parts(cfg["repo"])
     if repo_parts is None:
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
@@ -15542,7 +15623,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # file touched by several issues stacks correctly.
     file_state: dict[str, dict[str, str]] = {}  # path → {sha, content}
     results: list[dict[str, Any]] = []
+    budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
     for issue in fixable:
+        if budget <= 0:
+            break
         issue_key = issue["key"]
         issue_label = issue["label"]
         url = issue["url"]
@@ -15552,11 +15636,12 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         patched, skipped, targets = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-            site_name=site_name, file_state=file_state, max_files=6,
+            site_name=site_name, file_state=file_state, max_files=min(6, budget),
             evidence=_issue_evidence_srcs(report_issues.get(issue_key)) if report_issues else None,
-            length_hint=_lh,
+            length_hint=_lh, model_override=gate_model,
         )
         if patched:
+            budget -= len(patched)
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": True, "files": patched})
         else:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False,
@@ -15632,6 +15717,9 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
                 _db.commit()
         except Exception:
             pass
+
+    # Bill all files patched across the bulk run (1 per file = 1 AI call).
+    _correction_charge(user, sum(len(r.get("files") or []) for r in fixed_results))
 
     return JSONResponse({
         "ok": True,
@@ -15885,7 +15973,7 @@ def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
-    evidence: list[str] | None = None, length_hint: str = "",
+    evidence: list[str] | None = None, length_hint: str = "", model_override: str = "",
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
@@ -15964,7 +16052,7 @@ def _deep_patch_issue_files(
         try:
             patch = _openai_generate_file_patch(
                 file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
-                url=primary_url, site_name=site_name, occurrences_hint=occ_hint,
+                url=primary_url, site_name=site_name, occurrences_hint=occ_hint, model_override=model_override,
             )
         except Exception:
             patch = None
@@ -16029,6 +16117,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     repo_parts = _github_repo_parts(cfg["repo"])
     if repo_parts is None:
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
@@ -16093,7 +16184,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-        site_name=site_name, file_state=file_state, max_files=8, evidence=evidence, length_hint=length_hint,
+        site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
+        length_hint=length_hint, model_override=gate_model,
     )
     if not targets:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
@@ -16142,6 +16234,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             _db.commit()
     except Exception:
         pass
+
+    # Bill the corrections (1 per file patched = 1 AI call) against the monthly quota.
+    _correction_charge(user, len(patched_files))
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
