@@ -3340,6 +3340,10 @@ _PATCH_RULES = (
     "MÊME titre à TOUTES les pages de cette route (catastrophe SEO). Dans un fichier de route partagé "
     "(`[slug]`, `[...slug]`, layout, _app, _document), laisse l'expression dynamique INTACTE → no_change, "
     "et corrige plutôt la SOURCE de chaque page (son frontmatter / contenu).\n"
+    "- Cas 'lien vers redirection' : on te fournit des paires lien→destination finale. Remplace "
+    "EXACTEMENT chaque URL de lien indiquée par sa destination finale fournie (ex. href=\"/x/\" → "
+    "href=\"/x\"). NE modifie QUE ces liens-là, à l'identique ailleurs ; ne crée JAMAIS de nouvelle "
+    "redirection (n'inverse pas le sens) ; n'invente aucune URL hors des paires fournies.\n"
     "- Adapte la syntaxe au format du fichier (JSON, TOML, .htaccess, JS, HTML, etc.)\n"
     "- Ne casse JAMAIS la syntaxe : un JSON doit rester un JSON valide, un TOML un TOML valide, etc."
 )
@@ -15734,13 +15738,18 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         url = issue["url"]
         impacted = sorted(dash.extract_impacted_pages(issue_key, report_issues.get(issue_key))) if report_issues else []
         _fam = _length_family_name(issue_key)
-        _lh = _build_length_hint(report_issues, _length_family_keys(issue_key), _fam) if (_fam and report_issues) else ""
+        _hint = _build_length_hint(report_issues, _length_family_keys(issue_key), _fam) if (_fam and report_issues) else ""
+        _ev = _issue_evidence_srcs(report_issues.get(issue_key)) if report_issues else None
+        if issue_key in _REDIRECT_LINK_KEYS and report_issues:
+            _pairs = _issue_redirect_pairs(report_issues.get(issue_key))
+            if _pairs:
+                _ev = [p["from"] for p in _pairs]
+                _hint = _build_redirect_hint(_pairs)
         patched, skipped, targets = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=min(6, budget),
-            evidence=_issue_evidence_srcs(report_issues.get(issue_key)) if report_issues else None,
-            length_hint=_lh, model_override=gate_model,
+            evidence=_ev, extra_hint=_hint, model_override=gate_model,
         )
         if patched:
             budget -= len(patched)
@@ -16071,11 +16080,43 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
     )
 
 
+_REDIRECT_LINK_KEYS = {
+    "page_has_links_to_redirect_indexable",
+    "page_has_links_to_redirect_not_indexable",
+    "page_has_links_to_redirect",
+}
+
+
+def _issue_redirect_pairs(issue_block: Any) -> list[dict[str, str]]:
+    """Read the crawler's `redirect_link_samples` (link URL → final destination) for a
+    links-to-redirect issue. Empty for other issues."""
+    if not isinstance(issue_block, dict):
+        return []
+    samples = issue_block.get("redirect_link_samples")
+    out: list[dict[str, str]] = []
+    if isinstance(samples, list):
+        for s in samples:
+            if isinstance(s, dict) and s.get("from") and s.get("to"):
+                out.append({"from": str(s["from"]), "to": str(s["to"])})
+    return out[:40]
+
+
+def _build_redirect_hint(pairs: list[dict[str, str]]) -> str:
+    """Hint listing each link→final-destination pair to rewrite (exact replacement)."""
+    if not pairs:
+        return ""
+    lines = [f"  - {p['from']}  →  {p['to']}" for p in pairs[:30]]
+    return (
+        "Liens à RÉÉCRIRE (remplace l'URL de gauche par celle de droite, EXACTEMENT, partout où "
+        "elle apparaît comme lien dans ce fichier ; ne touche aucun autre lien) :\n" + "\n".join(lines)
+    )
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
-    evidence: list[str] | None = None, length_hint: str = "", model_override: str = "",
+    evidence: list[str] | None = None, extra_hint: str = "", model_override: str = "",
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
@@ -16131,8 +16172,8 @@ def _deep_patch_issue_files(
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     if evidence:
         occ_hint += " Éléments précis à corriger dans ce fichier s'ils y figurent (ex. src d'images sans alt) : " + ", ".join(evidence[:15]) + "."
-    if length_hint:
-        occ_hint += " " + length_hint
+    if extra_hint:
+        occ_hint += " " + extra_hint
     primary_url = impacted_urls[0] if impacted_urls else ""
     patched: list[str] = []
     skipped: list[str] = []
@@ -16281,13 +16322,19 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
 
     evidence = _issue_evidence_srcs(issues.get(issue_key)) if issues else []
     _fam_name = _length_family_name(issue_key)
-    length_hint = _build_length_hint(issues, family_keys, _fam_name) if (_fam_name and issues) else ""
+    extra_hint = _build_length_hint(issues, family_keys, _fam_name) if (_fam_name and issues) else ""
+    # Links-to-redirect: evidence = the redirecting link URLs (to locate files), hint = from→to pairs.
+    if issue_key in _REDIRECT_LINK_KEYS and issues:
+        _pairs = _issue_redirect_pairs(issues.get(issue_key))
+        if _pairs:
+            evidence = [p["from"] for p in _pairs]
+            extra_hint = _build_redirect_hint(_pairs)
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
         site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
-        length_hint=length_hint, model_override=gate_model,
+        extra_hint=extra_hint, model_override=gate_model,
     )
     if not targets:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)

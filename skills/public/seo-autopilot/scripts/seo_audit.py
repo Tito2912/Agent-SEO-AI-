@@ -6226,6 +6226,7 @@ def _score_issues(
             row = {
                 "source_url": source,
                 "target_url": target_norm,
+                "final_url": _final_url(tgt_req),
                 "nofollow": nofollow,
                 "anchor_text": str(it.get("anchor_text") or "").strip(),
             }
@@ -6250,6 +6251,19 @@ def _score_issues(
     issues["page_has_links_to_redirect_not_indexable"] = _issue_block(
         "page_has_links_to_redirect_not_indexable", redirect_src_not_indexable
     )
+    # Evidence for auto-fix: the exact link URL to replace → its FINAL destination (from → to),
+    # so the corrector rewrites the link to where it ends up (no guessing the direction).
+    _redirect_pairs: dict[str, str] = {}
+    for _r in redirect_link_rows_indexable + redirect_link_rows_not_indexable:
+        _from = str(_r.get("target_url") or "").strip()
+        _to = str(_r.get("final_url") or "").strip()
+        if _from and _to and _from != _to and _from not in _redirect_pairs and len(_redirect_pairs) < 40:
+            _redirect_pairs[_from] = _to
+    if _redirect_pairs:
+        _samples = [{"from": k, "to": v} for k, v in _redirect_pairs.items()]
+        for _k in ("page_has_links_to_redirect_indexable", "page_has_links_to_redirect_not_indexable"):
+            if isinstance(issues.get(_k), dict):
+                issues[_k]["redirect_link_samples"] = _samples
     # Per-link redirect view — suppressed to avoid triple-counting with redirect_3xx_links.
     issues["page_has_links_to_redirect_links_indexable"] = _issue_block(
         "page_has_links_to_redirect_links_indexable", []
