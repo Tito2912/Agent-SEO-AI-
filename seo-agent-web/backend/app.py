@@ -15880,18 +15880,15 @@ def _github_grep_repo_for_terms(
     basenames like 'btc.svg'). Reads a bounded, source-prioritized subset of editable files.
     More reliable than GitHub code search (which tokenizes and needs an index)."""
     import base64 as _b64
-    bases: list[str] = []
+    needles = _evidence_needles(terms)
     dirs: set[str] = set()
     for t in terms or []:
         ts = str(t).strip()
-        b = ts.rsplit("/", 1)[-1].strip()
-        if b and len(b) >= 3 and b not in bases:
-            bases.append(b)
         if "/" in ts:
             d = ts.rsplit("/", 1)[0] + "/"  # e.g. "/images/"
             if len(d) >= 3:
                 dirs.add(d.lower())
-    if not bases:
+    if not needles:
         return []
     _img_tokens = ("<img", "<image", "next/image")
     cand = [
@@ -15915,8 +15912,8 @@ def _github_grep_repo_for_terms(
         except Exception:
             continue
         low = raw.lower()
-        if any(b in raw for b in bases):
-            exact_hits.append(p)  # literal src present
+        if any(n in raw for n in needles):
+            exact_hits.append(p)  # literal src/link present
         elif any(tok in low for tok in _img_tokens) and (not dirs or any(d in low for d in dirs)):
             img_hits.append(p)  # renders an image referencing the evidence directory (dynamic src)
     # Exact literal matches first, then dynamic image renderers.
@@ -15929,27 +15926,45 @@ def _github_grep_repo_for_terms(
     return out
 
 
+def _evidence_needles(terms: list[str]) -> list[str]:
+    """Searchable substrings for locating files that reference each term. Handles both image
+    srcs (basename like 'btc.svg') and link URLs incl. trailing slash (path like
+    '/mentions-legales/') — strips scheme+host so a full URL still matches a relative href."""
+    out: list[str] = []
+    for t in terms or []:
+        ts = str(t).strip()
+        if not ts:
+            continue
+        path = ts
+        if "://" in path:
+            rest = path.split("://", 1)[1]
+            slash = rest.find("/")
+            path = rest[slash:] if slash >= 0 else ""
+        for cand in (path, ts.rsplit("/", 1)[-1]):
+            cand = cand.strip()
+            if len(cand) >= 3 and cand not in out:
+                out.append(cand)
+    return out
+
+
 def _github_tarball_grep(
     owner: str, repo: str, branch: str, token: str, terms: list[str],
     *, limit: int = 8, max_bytes: int = 60_000_000, max_file: int = 600_000,
 ) -> list[str]:
     """Download the repo tarball ONCE and grep every editable file locally — complete and
-    fast (1 request vs N). Returns paths whose content references the terms (exact basename),
-    or that render an image referencing the evidence directory (dynamic src)."""
+    fast (1 request vs N). Returns paths whose content references the terms (exact substring:
+    image basename or link path), or that render an image referencing the evidence dir."""
     import io
     import tarfile
-    bases: list[str] = []
+    needles = _evidence_needles(terms)
     dirs: set[str] = set()
     for t in terms or []:
         ts = str(t).strip()
-        b = ts.rsplit("/", 1)[-1].strip()
-        if b and len(b) >= 3 and b not in bases:
-            bases.append(b)
         if "/" in ts:
             d = ts.rsplit("/", 1)[0] + "/"
             if len(d) >= 3:
                 dirs.add(d.lower())
-    if not bases:
+    if not needles:
         return []
     try:
         url = _github_api_url(_github_api_path("repos", owner, repo, "tarball", *branch.split("/")))
@@ -15993,7 +16008,7 @@ def _github_tarball_grep(
                 except Exception:
                     continue
                 cl = content.lower()
-                if any(b in content for b in bases):
+                if any(n in content for n in needles):
                     exact.append(rel)
                 elif any(tok in cl for tok in _img_tokens) and (not dirs or any(d in cl for d in dirs)):
                     imgish.append(rel)
@@ -16339,7 +16354,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     if not targets:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
     if not patched_files:
-        _ev = (" Images sans alt détectées (échantillon) : " + ", ".join(evidence[:5])) if evidence else " Aucun src d'image capté (relance un crawl récent)."
+        _ev = (" Éléments détectés (échantillon) : " + ", ".join(evidence[:5])) if evidence else " Aucune evidence captée (relance un crawl récent)."
         return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).{_ev}", "skipped": skipped, "evidence": evidence[:10]}, status_code=422)
 
     pr_title = f"fix(seo): {issue_label} — {len(patched_files)} fichier(s)"
