@@ -1610,6 +1610,23 @@ def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
 
 
+def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool:
+    """Return True if the given pull request has been merged. Best-effort: any
+    error (network, missing token, rate limit) is treated as 'not merged' so the
+    UI degrades gracefully."""
+    if not token or not owner or not repo or pr_number <= 0:
+        return False
+    try:
+        data = _github_api_get(
+            _github_api_path("repos", owner, repo, "pulls", str(int(pr_number))),
+            token=token,
+            timeout_s=8,
+        )
+    except Exception:
+        return False
+    return bool(isinstance(data, dict) and (data.get("merged") or data.get("merged_at")))
+
+
 def _netlify_api_url(path: str) -> str:
     if not path.startswith("/") or path.startswith("//") or _has_control_chars(path):
         raise RuntimeError("Invalid Netlify API path")
@@ -16602,23 +16619,32 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         current_crawl_ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), "")
         report = dash.load_report_json(runs_dir, slug, current_crawl_ts) if current_crawl_ts else None
         if isinstance(report, dict):
-            raw_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
-            fix_candidates = []
-            for candidate in raw_candidates:
+            fix_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
+            user = getattr(request.state, "user", None)
+            gh_token = ""
+            if user is not None and github_cfg.get("repo"):
+                gh_token, _src = _effective_user_connection_value(
+                    user_id=str(getattr(user, "id", "") or ""), key="GITHUB_TOKEN"
+                )
+            repo_parts = _github_repo_parts(github_cfg.get("repo") or "")
+            merged_cache: dict[int, bool] = {}
+            for candidate in fix_candidates:
                 linked = task_lookup.get((str(candidate.get("key") or ""), str(candidate.get("url") or "")))
-                status = str(linked.get("status") or "") if linked else ""
+                candidate["task_status"] = str(linked.get("status") or "") if linked else ""
+                candidate["verify"] = linked.get("verify") if linked else None
                 pr = linked.get("pr") if linked else {}
-                verify = linked.get("verify") if linked else None
-                verify_result = str(verify.get("result")) if isinstance(verify, dict) else ""
-                # Une anomalie dont la correction est déjà prise en charge (PR déjà
-                # créée/mergée ou correction vérifiée résolue) n'a plus sa place dans
-                # l'accélérateur, qui sert à créer de nouvelles PR.
-                if (pr or {}).get("pr_url") or status == "done" or verify_result == "resolved":
-                    continue
-                candidate["task_status"] = status
+                pr_number = int(pr.get("pr_number") or 0) if isinstance(pr, dict) else 0
+                # Une fois la PR mergée, on ne montre plus le lien « PR existante » :
+                # l'anomalie reste candidate (le crawl la voit encore), mais le suivi
+                # passe désormais par le workflow, pas par une nouvelle PR.
+                if pr and pr.get("pr_url") and repo_parts and gh_token and pr_number > 0:
+                    if pr_number not in merged_cache:
+                        merged_cache[pr_number] = _github_pr_merged(
+                            repo_parts[0], repo_parts[1], pr_number, gh_token
+                        )
+                    if merged_cache[pr_number]:
+                        pr = {}
                 candidate["pr"] = pr
-                candidate["verify"] = verify
-                fix_candidates.append(candidate)
     except Exception as exc:
         logger.warning("[corrections] failed to build correction candidates for %s: %s", slug, exc)
 
