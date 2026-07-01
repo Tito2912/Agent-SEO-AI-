@@ -17,6 +17,7 @@
 
 {% block actions %}
   {% if project %}
+    <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
       <button type="submit" class="btn primary">Nouveau crawl</button>
     </form>
