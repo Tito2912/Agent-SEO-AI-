@@ -577,6 +577,9 @@
 
 {% block actions %}
   <a class="btn" href="/projects/{{ slug }}/issues">Voir les anomalies</a>
+  <form method="post" action="/projects/{{ slug }}/crawl" class="inline">
+    <button type="submit" class="btn primary">Nouveau crawl</button>
+  </form>
 {% endblock %}
 
 {% block content %}
