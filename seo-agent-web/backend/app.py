@@ -16602,12 +16602,23 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         current_crawl_ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), "")
         report = dash.load_report_json(runs_dir, slug, current_crawl_ts) if current_crawl_ts else None
         if isinstance(report, dict):
-            fix_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
-            for candidate in fix_candidates:
+            raw_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
+            fix_candidates = []
+            for candidate in raw_candidates:
                 linked = task_lookup.get((str(candidate.get("key") or ""), str(candidate.get("url") or "")))
-                candidate["task_status"] = str(linked.get("status") or "") if linked else ""
-                candidate["pr"] = linked.get("pr") if linked else {}
-                candidate["verify"] = linked.get("verify") if linked else None
+                status = str(linked.get("status") or "") if linked else ""
+                pr = linked.get("pr") if linked else {}
+                verify = linked.get("verify") if linked else None
+                verify_result = str(verify.get("result")) if isinstance(verify, dict) else ""
+                # Une anomalie dont la correction est déjà prise en charge (PR déjà
+                # créée/mergée ou correction vérifiée résolue) n'a plus sa place dans
+                # l'accélérateur, qui sert à créer de nouvelles PR.
+                if (pr or {}).get("pr_url") or status == "done" or verify_result == "resolved":
+                    continue
+                candidate["task_status"] = status
+                candidate["pr"] = pr
+                candidate["verify"] = verify
+                fix_candidates.append(candidate)
     except Exception as exc:
         logger.warning("[corrections] failed to build correction candidates for %s: %s", slug, exc)
 
