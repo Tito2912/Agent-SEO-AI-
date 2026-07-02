@@ -6253,11 +6253,14 @@ def _score_issues(
     )
     # Evidence for auto-fix: the exact link URL to replace → its FINAL destination (from → to),
     # so the corrector rewrites the link to where it ends up (no guessing the direction).
+    # SELF-LOOP links (from == to, e.g. /sources/etoro-en → itself, a config redirect loop)
+    # are INCLUDED here: they can't be fixed by rewriting the link, but the corrector needs
+    # them to locate & fix the redirect CONFIG. The link-rewrite path ignores from==to pairs.
     _redirect_pairs: dict[str, str] = {}
     for _r in redirect_link_rows_indexable + redirect_link_rows_not_indexable:
         _from = str(_r.get("target_url") or "").strip()
         _to = str(_r.get("final_url") or "").strip()
-        if _from and _to and _from != _to and _from not in _redirect_pairs and len(_redirect_pairs) < 40:
+        if _from and _to and _from not in _redirect_pairs and len(_redirect_pairs) < 40:
             _redirect_pairs[_from] = _to
     if _redirect_pairs:
         _samples = [{"from": k, "to": v} for k, v in _redirect_pairs.items()]
