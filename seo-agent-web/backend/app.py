@@ -1610,6 +1610,26 @@ def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
 
 
+def _github_api_delete(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    resp = requests.delete(
+        _github_api_url(path),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "seo-agent-web",
+        },
+        json=json_body,
+        timeout=timeout_s,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"GitHub {resp.status_code}: {(resp.text or '').strip()[:400]}")
+    try:
+        return resp.json()
+    except Exception as e:
+        raise RuntimeError(f"GitHub JSON decode error: {e}") from e
+
+
 def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool:
     """Return True if the given pull request has been merged. Best-effort: any
     error (network, missing token, rate limit) is treated as 'not merged' so the
@@ -16144,6 +16164,178 @@ def _build_redirect_hint(pairs: list[dict[str, str]]) -> str:
     )
 
 
+def _link_path(url: str, *, keep_slash: bool = True) -> str:
+    """Reduce a URL/link to its path only (drop scheme/host/query/fragment).
+    By default keeps a trailing slash so `/x/` and `/x` stay distinguishable."""
+    s = str(url or "").strip()
+    if not s:
+        return ""
+    for sep in ("#", "?"):
+        if sep in s:
+            s = s.split(sep, 1)[0]
+    if "://" in s:
+        rest = s.split("://", 1)[1]
+        slash = rest.find("/")
+        s = rest[slash:] if slash >= 0 else "/"
+    if not s.startswith("/"):
+        s = "/" + s
+    if not keep_slash and len(s) > 1:
+        s = s.rstrip("/")
+    return s or "/"
+
+
+def _classify_redirect_pairs(pairs: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[str]]:
+    """Split link→final-destination pairs into content-fixable vs config-loop.
+
+    - content_pairs: the link target differs from the link (incl. trailing-slash
+      like `/x/` → `/x`) → rewrite the link in the page (existing behaviour).
+    - loop_paths: the link points to a URL that redirects to *itself* (identical
+      path, e.g. `/sources/etoro-en` → `/sources/etoro-en`) → NOT content-fixable;
+      the redirect CONFIG is broken. Returns the deduped self-loop target paths
+      (root `/` excluded — that's domain-level canonicalisation, out of scope)."""
+    content: list[dict[str, str]] = []
+    loops: list[str] = []
+    for p in pairs or []:
+        frm = _link_path(p.get("from", ""))
+        to = _link_path(p.get("to", ""))
+        if frm and to and frm == to and frm != "/":
+            if frm not in loops:
+                loops.append(frm)
+        else:
+            content.append(p)
+    return content, loops
+
+
+def _locate_redirects_config(all_paths: list[str]) -> str:
+    """Find the Netlify `_redirects` file in the repo tree (publish-dir first)."""
+    for cand in ("public/_redirects", "_redirects", "static/_redirects", "dist/_redirects"):
+        if cand in all_paths:
+            return cand
+    for p in all_paths:
+        if p.split("/")[-1] == "_redirects":
+            return p
+    return ""
+
+
+def _locate_flat_html_for_path(path: str, all_paths: list[str]) -> str:
+    """Given a clean URL path like `/sources/etoro-en`, return the FLAT physical
+    html file that serves it (e.g. `public/sources/etoro-en.html`), or '' if it is
+    already a directory index / served some other way (then we don't guess)."""
+    rel = path.strip("/")
+    if not rel:
+        return ""
+    targets = {f"public/{rel}.html", f"{rel}.html", f"static/{rel}.html", f"dist/{rel}.html"}
+    for p in all_paths:
+        if p in targets:
+            return p
+    return ""
+
+
+def _strip_clean_to_html_rewrite(content: str, path: str) -> tuple[str, list[str]]:
+    """Remove `_redirects` rewrite lines that send the clean URL to its flat .html
+    (`/x /x.html 200` and `/x/ /x.html 200`). After a dir-index conversion these
+    rules would rewrite to a now-deleted file (404) — and they are what pairs with
+    the forced `/x.html /x 301!` to create the self-redirect loop."""
+    p = "/" + path.strip("/")
+    html_target = p + ".html"
+    removed: list[str] = []
+    out: list[str] = []
+    for line in content.splitlines():
+        toks = line.split()
+        if len(toks) >= 3 and toks[0] in (p, p + "/") and toks[1] == html_target and toks[2].startswith("200"):
+            removed.append(line.strip())
+            continue
+        out.append(line)
+    new = "\n".join(out)
+    if content.endswith("\n") and not new.endswith("\n"):
+        new += "\n"
+    return new, removed
+
+
+def _deep_fix_redirect_config_loops(
+    *, owner: str, repo_name: str, token: str, fix_branch: str,
+    all_paths: list[str], loop_paths: list[str], file_state: dict[str, dict[str, str]],
+) -> tuple[list[str], list[str]]:
+    """Fix clean URLs that self-redirect because they are served by a FLAT `.html`
+    file in the publish dir (the Netlify static-export antipattern: Netlify resolves
+    `/x` to `x.html`, then the forced `/x.html /x 301!` bounces it back → infinite
+    loop). Fix = convert the flat file to a directory index (`x/index.html`) and drop
+    the `/x /x.html 200` rewrite — exactly how the site's WORKING clean URLs are
+    served. Commits into fix_branch. Returns (changed_paths, human notes). Only acts
+    on paths it can fully resolve (idempotent: skips already-converted ones)."""
+    import base64 as _b64
+    changed: list[str] = []
+    notes: list[str] = []
+
+    def _read(path: str) -> tuple[str, str] | None:
+        if path in file_state:
+            return file_state[path]["content"], file_state[path]["sha"]
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token, params={"ref": fix_branch})
+            raw = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+            return raw, fd.get("sha", "")
+        except Exception:
+            return None
+
+    def _put(path: str, content: str, sha: str, message: str) -> bool:
+        body: dict[str, Any] = {
+            "message": f"{message}\n\nGenerated by SEO Agent",
+            "content": _b64.b64encode(content.encode("utf-8")).decode("ascii"),
+            "branch": fix_branch,
+        }
+        if sha:
+            body["sha"] = sha
+        try:
+            resp = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token, json_body=body)
+            file_state[path] = {"sha": str((resp.get("content") or {}).get("sha") or ""), "content": content}
+            return True
+        except Exception:
+            return False
+
+    converted: list[str] = []
+    for lp in loop_paths:
+        flat = _locate_flat_html_for_path(lp, all_paths)
+        if not flat or not flat.endswith(".html"):
+            continue  # already dir-index / served differently — don't guess
+        new_path = f"{flat[:-5]}/index.html"  # foo.html → foo/index.html
+        if new_path in all_paths or not _github_file_path_allowed(new_path):
+            continue
+        fr = _read(flat)
+        if fr is None:
+            continue
+        flat_content, flat_sha = fr
+        if not _put(new_path, flat_content, "", f"fix(seo): dir-index to break redirect loop — {new_path}"):
+            continue
+        try:
+            _github_api_delete(
+                _github_content_api_path(owner, repo_name, flat), token=token,
+                json_body={"message": f"fix(seo): remove flat html (dir-index) — {flat}\n\nGenerated by SEO Agent", "sha": flat_sha, "branch": fix_branch},
+            )
+            file_state.pop(flat, None)
+        except Exception:
+            pass  # branch reviewed atomically; a stale flat file is harmless next to the dir-index
+        changed.extend([new_path, flat])
+        converted.append(lp)
+        notes.append(f"{flat} → {new_path}")
+
+    # Drop the now-obsolete `clean → .html 200` rewrites for every converted path.
+    if converted:
+        cfg_path = _locate_redirects_config(all_paths)
+        if cfg_path:
+            cr = _read(cfg_path)
+            if cr is not None:
+                cfg_content, cfg_sha = cr
+                new_cfg = cfg_content
+                total_removed: list[str] = []
+                for lp in converted:
+                    new_cfg, removed = _strip_clean_to_html_rewrite(new_cfg, lp)
+                    total_removed.extend(removed)
+                if total_removed and new_cfg != cfg_content and _put(cfg_path, new_cfg, cfg_sha, f"fix(seo): drop clean→.html rewrite (redirect loop) — {cfg_path}"):
+                    changed.append(cfg_path)
+                    notes.append(f"{cfg_path} : {len(total_removed)} règle(s) clean→.html retirée(s)")
+    return changed, notes
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
@@ -16356,11 +16548,15 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _fam_name = _length_family_name(issue_key)
     extra_hint = _build_length_hint(issues, family_keys, _fam_name) if (_fam_name and issues) else ""
     # Links-to-redirect: evidence = the redirecting link URLs (to locate files), hint = from→to pairs.
+    # Self-redirect LOOP targets (e.g. /sources/etoro-en → itself) can't be fixed by rewriting
+    # the link — they're a redirect-CONFIG bug — so they're split out and fixed separately.
+    _loop_paths: list[str] = []
     if issue_key in _REDIRECT_LINK_KEYS and issues:
         _pairs = _issue_redirect_pairs(issues.get(issue_key))
         if _pairs:
-            evidence = [p["from"] for p in _pairs]
-            extra_hint = _build_redirect_hint(_pairs)
+            _content_pairs, _loop_paths = _classify_redirect_pairs(_pairs)
+            evidence = [p["from"] for p in _content_pairs]
+            extra_hint = _build_redirect_hint(_content_pairs) if _content_pairs else ""
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
@@ -16368,19 +16564,34 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
         extra_hint=extra_hint, model_override=gate_model,
     )
-    if not targets:
+    # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
+    config_changes: list[str] = []
+    config_notes: list[str] = []
+    if _loop_paths:
+        try:
+            config_changes, config_notes = _deep_fix_redirect_config_loops(
+                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, loop_paths=_loop_paths[:gate_max_files], file_state=file_state,
+            )
+        except Exception:
+            config_changes, config_notes = [], []
+    all_changed = patched_files + config_changes
+    if not targets and not config_changes:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
-    if not patched_files:
+    if not all_changed:
         _ev = (" Éléments détectés (échantillon) : " + ", ".join(evidence[:5])) if evidence else " Aucune evidence captée (relance un crawl récent)."
         return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).{_ev}", "skipped": skipped, "evidence": evidence[:10]}, status_code=422)
 
-    pr_title = f"fix(seo): {issue_label} — {len(patched_files)} fichier(s)"
+    # Config changes touch routing → always open a PR for human review (never auto-merge).
+    _config_note_block = ("\n\n**Correction config (boucle de redirection) :**\n" + "\n".join(f"- {n}" for n in config_notes)) if config_notes else ""
+    pr_title = f"fix(seo): {issue_label} — {len(all_changed)} fichier(s)"
     pr_body = (
         f"## Correction SEO automatique (couverture étendue)\n\n"
         f"**Anomalie :** {issue_label} (`{issue_key}`)\n"
         f"**Pages impactées :** {len(impacted) or '—'}\n"
-        f"**Fichiers modifiés :** {len(patched_files)}\n\n"
-        + "\n".join(f"- `{p}`" for p in patched_files)
+        f"**Fichiers modifiés :** {len(all_changed)}\n\n"
+        + "\n".join(f"- `{p}`" for p in all_changed)
+        + _config_note_block
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**.\n\n> Vérifie les changements avant de merger."
     )
     try:
@@ -16391,7 +16602,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
 
     _merged = False
-    if mode == "auto" and pr_number:
+    # Routing/config changes are risky → require human review even in auto mode.
+    if mode == "auto" and pr_number and not config_changes:
         try:
             _github_api_put(_github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"), token=token, json_body={"merge_method": "squash", "commit_title": pr_title})
             _merged = True
@@ -16399,7 +16611,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             pass
 
     try:
-        _note = json.dumps({"pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": patched_files, "deep": True, "pages": len(impacted)}, ensure_ascii=False)
+        _note = json.dumps({"pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "config": bool(config_changes)}, ensure_ascii=False)
         with DB.session() as _db:
             _ex = _db.scalar(select(IssueTask).where(IssueTask.project_id == proj.id, IssueTask.issue_key == issue_key, IssueTask.url == primary_url))
             if _ex:
@@ -16417,12 +16629,13 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         pass
 
     # Bill the corrections (1 per file patched = 1 AI call) against the monthly quota.
+    # Config-loop file ops (rename + _redirects prune) are deterministic (no AI call) → not billed.
     _correction_charge(user, len(patched_files))
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
-        "merged": _merged, "files": patched_files, "files_count": len(patched_files),
-        "pages_count": len(impacted), "skipped": skipped,
+        "merged": _merged, "files": all_changed, "files_count": len(all_changed),
+        "config_fixed": config_notes, "pages_count": len(impacted), "skipped": skipped,
     })
 
 
