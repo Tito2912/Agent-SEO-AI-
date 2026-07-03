@@ -5910,17 +5910,20 @@ def _score_issues(
         if sitemap_set_norm and eff not in sitemap_set_norm:
             indexable_not_in_sitemap.append(eff)
 
-    # Ahrefs "Missing reciprocal hreflang (no return-tag)" is PURELY about return tags: page P
-    # references alternate T, but T does not reference P back. It is INDEPENDENT of XML-sitemap
-    # membership (that is the separate "Indexable page not in sitemap" issue). A prior heuristic
-    # also flagged every member of a hreflang group whose alternate was absent from the sitemap —
-    # that over-reported: avis-invest's /sources/etoro-en ↔ /sources/etoro-fr reference each other
-    # correctly (proper return tags) yet are out of the sitemap, and Ahrefs does NOT flag them as
-    # missing-reciprocal (it only lists them under indexable_page_not_in_sitemap). So the sitemap-
-    # based flagging is removed; only true return-tag reciprocity remains. Validated against ground
-    # truth: tradingview 2, elevenlabs 8, avis-invest 0, others 0.
+    # Ahrefs "Missing reciprocal hreflang (no return-tag)" has TWO patterns:
+    #  (A) no sitemap-level return tag: an IN-sitemap page whose hreflang points to an
+    #      OUT-of-sitemap alternate → flag that in-sitemap page AND the out-of-sitemap targets
+    #      it references. The source-page-in-sitemap guard is the key discriminator, verified on
+    #      two out-of-sitemap groups: elevenlabs legal (in-sitemap /mentions-legales + /en/legal-
+    #      notice reference out-of-sitemap /de|/es legal → flagged 8) vs avis-invest /sources
+    #      (/sources/etoro-en ↔ /sources/etoro-fr are BOTH out of sitemap, reciprocate each other,
+    #      and NO in-sitemap page references them → Ahrefs flags 0, only indexable_page_not_in_sitemap).
+    #  (B) source reciprocity: P references crawled indexable alternate T, but T does not list P back.
+    # Targets come from BOTH page source hreflang and sitemap hreflang. Validated vs ground truth:
+    # elevenlabs 8, tradingview 2, avis-invest 0, others 0.
     _missing_recip_set: set[str] = set()
     if sitemap_set_norm:
+        _out_of_sitemap_targets: set[str] = set()
         _recip_candidates: list[tuple[PageData, str, set[str]]] = []
         _recip_hf_by_norm: dict[str, set[str]] = {}
         for p in ok_html_pages:
@@ -5940,7 +5943,19 @@ def _score_issues(
                 continue
             _recip_candidates.append((p, _self_norm, _targets))
             _recip_hf_by_norm[_self_norm] = _targets
-        # Source-reciprocity: P references alternate T but T does not reference P back. Only
+            # (A) Only an IN-sitemap source page referencing an out-of-sitemap alternate is a
+            # broken sitemap-level return tag. A whole out-of-sitemap group that merely
+            # reciprocates (avis /sources) is NOT flagged by Ahrefs → the guard excludes it.
+            if _self_norm in sitemap_set_norm:
+                _out = {t for t in _targets if t not in sitemap_set_norm}
+                if _out:
+                    _missing_recip_set.add(p.url or _final_url(p))
+                    _out_of_sitemap_targets |= _out
+        # (A cont.) Flag the out-of-sitemap alternate pages that in-sitemap pages point to.
+        for p, _self_norm, _targets in _recip_candidates:
+            if _self_norm in _out_of_sitemap_targets:
+                _missing_recip_set.add(p.url or _final_url(p))
+        # (B) Source-reciprocity: P references alternate T but T does not reference P back. Only
         # consider T that is itself a crawled, indexable, non-redirect page WITH hreflang
         # (it appears in _recip_hf_by_norm). A hreflang to a redirect/non-indexable/uncrawled
         # target is a different issue (hreflang_to_redirect / out-of-sitemap), so it is skipped
