@@ -3149,7 +3149,11 @@ def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
     if "open_graph" in key or "twitter_card" in key:
         return ["app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html", "seo.tsx"]
     if "hreflang" in key or "html_lang" in key or key.endswith("_lang_missing"):
-        return ["app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html", "i18n.ts"]
+        return [
+            "app/layout.tsx", "src/app/layout.tsx", "app/[lang]/layout.tsx", "app/[locale]/layout.tsx",
+            "pages/_document.tsx", "lib/seo.ts", "lib/metadata.ts", "lib/hreflang.ts", "i18n.ts",
+            "layout.html", "base.html",
+        ]
     if "structured" in key or "schema" in key:
         return ["app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "schema.ts", "seo.tsx"]
     if "viewport" in key:
@@ -16171,6 +16175,48 @@ def _build_redirect_hint(pairs: list[dict[str, str]]) -> str:
     )
 
 
+# Per-issue instructions for the hreflang / html-lang family. Each tells the AI the EXACT
+# structural fix to apply in the file that generates the page's <head> hreflang/lang tags
+# (Next.js `alternates.languages` / generateMetadata, an i18n helper, or a raw <link>/<html>).
+_HREFLANG_HINTS: dict[str, str] = {
+    "x_default_hreflang_missing": (
+        "Ces pages déclarent des alternates hreflang mais PAS de x-default. Ajoute une entrée "
+        "hreflang=\"x-default\" pointant vers la version par défaut (généralement la langue "
+        "principale du site / la racine, souvent la même URL que l'alternate par défaut). "
+        "Ne modifie AUCUN autre alternate existant."
+    ),
+    "html_lang_attribute_missing": (
+        "La balise <html> de ces pages n'a pas d'attribut lang. Ajoute lang=\"xx\" avec le code "
+        "de langue correct de la page (déduis-le de l'URL/locale ou des hreflang de la page). "
+        "Ne touche à rien d'autre."
+    ),
+    "html_lang_attribute_invalid": (
+        "L'attribut lang de <html> a une valeur invalide. Corrige-le en un code BCP-47 valide "
+        "(ex. \"fr\", \"en\", \"es\", \"de\", ou \"fr-FR\"), cohérent avec la langue réelle de la page."
+    ),
+    "hreflang_defined_but_html_lang_missing": (
+        "Ces pages ont des annotations hreflang mais <html> n'a pas d'attribut lang. Ajoute "
+        "lang=\"xx\" à <html> avec le code correspondant à la langue de la page (celui de son "
+        "propre hreflang auto-référencé). N'altère pas les hreflang."
+    ),
+    "hreflang_annotation_invalid": (
+        "Certaines annotations hreflang ont un code de langue/région invalide. Corrige uniquement "
+        "les codes fautifs en BCP-47 valide (langue ou langue-région, ou x-default). Ne change pas "
+        "les URLs des alternates ni les codes déjà valides."
+    ),
+    "hreflang_to_non_canonical": (
+        "Des href hreflang pointent vers une URL NON canonique (variante avec slash, .html, "
+        "paramètres, ou http). Remplace chaque href hreflang par l'URL CANONIQUE correspondante "
+        "(celle du <link rel=canonical> de la page cible). Ne touche qu'aux href hreflang."
+    ),
+    "hreflang_to_redirect_or_broken_page": (
+        "Des href hreflang pointent vers une URL qui redirige (3xx) ou est cassée. Remplace chaque "
+        "href hreflang par sa destination finale en 200 (jamais l'inverse). Ne touche qu'aux href "
+        "hreflang, garde les codes de langue intacts."
+    ),
+}
+
+
 # Issues whose fix = make sure specific URLs ARE present in the sitemap output.
 _SITEMAP_ADD_KEYS = {"indexable_page_not_in_sitemap"}
 
@@ -16610,6 +16656,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Indexable-page-not-in-sitemap: the impacted URLs are exactly the pages to ADD to the sitemap.
     if issue_key in _SITEMAP_ADD_KEYS and impacted:
         extra_hint = _build_sitemap_hint(impacted)
+    # Hreflang / html-lang family: per-issue structural instruction for the head-tag generator.
+    if issue_key in _HREFLANG_HINTS:
+        extra_hint = _HREFLANG_HINTS[issue_key]
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
