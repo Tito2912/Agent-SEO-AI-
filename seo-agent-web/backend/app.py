@@ -3136,9 +3136,16 @@ def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
     if "redirect" in key or key in {"http_404", "http_4xx", "links_to_404_page", "links_to_4xx_page"}:
         return _SEO_FILE_CANDIDATES["redirect_3xx"]
     if "sitemap" in key:
-        return ["next-sitemap.config.js", "next-sitemap.config.cjs", "sitemap.xml", "robots.txt", "nuxt.config.ts"]
+        return [
+            "app/sitemap.ts", "app/sitemap.js", "src/app/sitemap.ts", "src/app/sitemap.js",
+            "app/sitemap.xml/route.ts", "next-sitemap.config.js", "next-sitemap.config.cjs",
+            "public/sitemap.xml", "sitemap.xml", "nuxt.config.ts",
+        ]
     if "robots" in key or "noindex" in key or "nofollow" in key:
-        return ["robots.txt", "app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "_headers"]
+        return [
+            "app/robots.ts", "app/robots.js", "src/app/robots.ts", "public/robots.txt",
+            "robots.txt", "app/layout.tsx", "src/app/layout.tsx", "layout.html", "base.html", "_headers",
+        ]
     if "open_graph" in key or "twitter_card" in key:
         return ["app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html", "seo.tsx"]
     if "hreflang" in key or "html_lang" in key or key.endswith("_lang_missing"):
@@ -16164,6 +16171,27 @@ def _build_redirect_hint(pairs: list[dict[str, str]]) -> str:
     )
 
 
+# Issues whose fix = make sure specific URLs ARE present in the sitemap output.
+_SITEMAP_ADD_KEYS = {"indexable_page_not_in_sitemap"}
+
+
+def _build_sitemap_hint(urls: list[str]) -> str:
+    """Hint telling the AI to ADD the given indexable URLs to the sitemap this file
+    produces (append entries to the existing array/return — never drop existing ones,
+    never change the generation logic for other pages)."""
+    clean = [str(u).strip() for u in (urls or []) if str(u).strip()][:40]
+    if not clean:
+        return ""
+    lines = "\n".join(f"  - {u}" for u in clean)
+    return (
+        "Cette anomalie = des pages indexables ABSENTES du sitemap. Ajoute EXACTEMENT ces URLs "
+        "au sitemap produit par ce fichier (append au tableau/à la sortie existante, en respectant "
+        "le format déjà utilisé pour les autres entrées — mêmes champs lastModified/changeFrequency/"
+        "priority s'ils existent). N'enlève AUCUNE entrée existante et ne modifie pas la logique de "
+        "génération des autres pages :\n" + lines
+    )
+
+
 def _link_path(url: str, *, keep_slash: bool = True) -> str:
     """Reduce a URL/link to its path only (drop scheme/host/query/fragment).
     By default keeps a trailing slash so `/x/` and `/x` stay distinguishable."""
@@ -16579,6 +16607,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             _content_pairs, _loop_paths = _classify_redirect_pairs(_pairs)
             evidence = [p["from"] for p in _content_pairs]
             extra_hint = _build_redirect_hint(_content_pairs) if _content_pairs else ""
+    # Indexable-page-not-in-sitemap: the impacted URLs are exactly the pages to ADD to the sitemap.
+    if issue_key in _SITEMAP_ADD_KEYS and impacted:
+        extra_hint = _build_sitemap_hint(impacted)
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
