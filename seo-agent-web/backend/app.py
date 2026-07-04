@@ -16217,6 +16217,64 @@ _HREFLANG_HINTS: dict[str, str] = {
 }
 
 
+# Per-issue instructions for the <head> family (canonical / Open Graph / Twitter / viewport /
+# structured data). Applied in the file that generates the page head (layout/metadata/seo helper).
+_HEAD_HINTS: dict[str, str] = {
+    "viewport_not_set": (
+        "Ces pages n'ont pas de <meta name=\"viewport\">. Ajoute exactement "
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> dans le <head> "
+        "(ou l'équivalent metadata/viewport du framework). N'ajoute rien d'autre."
+    ),
+    "canonical_points_to_redirect": (
+        "Le <link rel=canonical> de ces pages pointe vers une URL qui REDIRIGE. Remplace la valeur "
+        "du canonical par la destination FINALE en 200 (l'URL propre, sans slash/.html/paramètre "
+        "superflu). Ne touche qu'au canonical."
+    ),
+    "non_canonical_page_specified_as_canonical_one": (
+        "Le canonical de ces pages pointe vers une URL non-canonique. Fais pointer le canonical "
+        "vers l'URL canonique réelle de la page (sa version indexable définitive). Ne touche qu'au canonical."
+    ),
+    "canonical_from_http_to_https": (
+        "Le canonical utilise http:// alors que le site est en https://. Remplace le schéma du "
+        "canonical par https:// (même host/chemin). Ne touche qu'au canonical."
+    ),
+    "canonical_from_https_to_http": (
+        "Le canonical passe de https vers http. Corrige-le en https:// (même host/chemin). Ne touche qu'au canonical."
+    ),
+    "open_graph_tags_missing": (
+        "Ces pages n'ont pas de balises Open Graph. Ajoute les balises OG essentielles dans le "
+        "<head> : og:title, og:description, og:type (website/article), og:url (= URL canonique de "
+        "la page) et og:image (réutilise l'image sociale/hero existante si disponible). Reprends le "
+        "titre/description déjà présents de la page."
+    ),
+    "open_graph_tags_incomplete": (
+        "Le bloc Open Graph est incomplet. Ajoute UNIQUEMENT les balises OG manquantes parmi "
+        "og:title, og:description, og:type, og:url, og:image — sans dupliquer celles déjà présentes."
+    ),
+    "open_graph_url_not_matching_canonical": (
+        "og:url ne correspond pas au <link rel=canonical>. Aligne og:url sur l'URL canonique exacte "
+        "de la page. Ne touche qu'à og:url."
+    ),
+    "twitter_card_missing": (
+        "Ces pages n'ont pas de Twitter Card. Ajoute twitter:card (summary_large_image), "
+        "twitter:title, twitter:description et twitter:image (réutilise l'image OG/sociale existante)."
+    ),
+    "twitter_card_incomplete": (
+        "La Twitter Card est incomplète. Ajoute uniquement les balises twitter:* manquantes "
+        "(twitter:card, twitter:title, twitter:description, twitter:image) sans dupliquer l'existant."
+    ),
+    "structured_data_schema_org_validation_error": (
+        "Le JSON-LD schema.org de ces pages a une erreur de validation. Corrige UNIQUEMENT les "
+        "champs invalides/manquants requis par le type de schéma déclaré (garde le type et les "
+        "données existantes). Ne casse pas le JSON."
+    ),
+    "structured_data_google_rich_results_validation_error": (
+        "Le balisage structuré a une erreur de validation Google Rich Results. Corrige les champs "
+        "requis manquants/invalides du type déclaré, sans changer le type ni inventer de données."
+    ),
+}
+
+
 # Issues whose fix = make sure specific URLs ARE present in the sitemap output.
 _SITEMAP_ADD_KEYS = {"indexable_page_not_in_sitemap"}
 
@@ -16659,6 +16717,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Hreflang / html-lang family: per-issue structural instruction for the head-tag generator.
     if issue_key in _HREFLANG_HINTS:
         extra_hint = _HREFLANG_HINTS[issue_key]
+    # Head family: canonical / Open Graph / Twitter / viewport / structured data.
+    if issue_key in _HEAD_HINTS:
+        extra_hint = _HEAD_HINTS[issue_key]
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
