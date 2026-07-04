@@ -3174,13 +3174,31 @@ def _github_issue_auto_fixable(issue_key: str) -> bool:
     key = (issue_key or "").strip().lower()
     if not key:
         return False
-    excluded_prefixes = ("gsc_", "bing_", "pages_to_submit_to_indexnow")
+    excluded_prefixes = ("gsc_", "bing_", "pages_to_submit_to_indexnow", "external_")
     if key.startswith(excluded_prefixes):
         return False
     excluded_tokens = ("backlink", "certificate", "dns_", "tls", "ai_content")
     if any(tok in key for tok in excluded_tokens):
         return False
+    # Advisory-only issues: content quality, Core Web Vitals / perf, external targets,
+    # crawl timeouts, and proprietary rank/traffic metrics can't be fixed by a mechanical
+    # code patch → the agent should give guidance, not open a (useless) PR.
+    if key in _ADVISORY_ISSUE_KEYS or any(tok in key for tok in _ADVISORY_ISSUE_TOKENS):
+        return False
     return _seo_file_candidates_for_issue(key) != _SEO_FILE_CANDIDATES_DEFAULT or key in _SEO_FILE_CANDIDATES
+
+
+# Issues that are real but NOT mechanically code-fixable — the agent advises instead of patching.
+_ADVISORY_ISSUE_KEYS = {
+    "low_word_count", "slow_page", "page_size_exceeds_2mb", "content_is_not_sized_correctly",
+    "font_size_too_small", "tap_targets_too_small_or_close", "not_compressed", "timed_out",
+    "page_from_sitemap_timed_out", "orphan_page_indexable", "orphan_page_not_indexable",
+}
+_ADVISORY_ISSUE_TOKENS = (
+    "word_count", "poor_cls", "poor_fid", "poor_inp", "poor_lcp", "cwv", "core_web_vital",
+    "high_ai_content", "organic_traffic", "referring_domain", "serp_title", "and_serp_titles",
+    "dropped_from_top", "receives_organic",
+)
 
 
 def _project_github_cfg(proj) -> dict[str, str]:
