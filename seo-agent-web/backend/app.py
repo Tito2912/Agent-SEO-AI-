@@ -3200,11 +3200,6 @@ _ADVISORY_ISSUE_KEYS = {
     "low_word_count", "slow_page", "page_size_exceeds_2mb", "content_is_not_sized_correctly",
     "font_size_too_small", "tap_targets_too_small_or_close", "not_compressed", "timed_out",
     "page_from_sitemap_timed_out", "orphan_page_indexable", "orphan_page_not_indexable",
-    # og:url≠canonical in a framework metadata setup (Next.js App Router): a per-page
-    # `openGraph:{url}` REPLACES the layout-inherited Open Graph and drops og:image/title →
-    # creates open_graph_tags_incomplete (validated regression on oryvalo). Fixing it safely
-    # needs metadata-architecture awareness (shared og helper) — advise, don't auto-patch.
-    "open_graph_url_not_matching_canonical",
 }
 _ADVISORY_ISSUE_TOKENS = (
     "word_count", "poor_cls", "poor_fid", "poor_inp", "poor_lcp", "cwv", "core_web_vital",
@@ -16283,12 +16278,14 @@ _HEAD_HINTS: dict[str, str] = {
     ),
     "open_graph_url_not_matching_canonical": (
         "og:url ne correspond pas au <link rel=canonical>. Aligne og:url sur l'URL canonique de "
-        "CHAQUE page affectée. RÈGLE CRITIQUE : ne MODIFIE ni ne SUPPRIME le og:url partagé/global "
-        "défini dans un layout — y toucher change TOUTES les pages (dont la home déjà correcte) et "
-        "crée des mismatches/'OG incomplet'. À la place, définis og:url PAR PAGE (dans le metadata/"
-        "generateMetadata de CHAQUE page affectée) avec le chemin de la page ; si un metadataBase "
-        "existe, une URL relative (ex. '/about') suffit et sera résolue en absolue = canonical. "
-        "Corrige TOUTES les pages listées, pas un sous-ensemble, et laisse le layout intact."
+        "CHAQUE page affectée. RÈGLE CRITIQUE (Next.js App Router) : un openGraph défini dans une "
+        "page REMPLACE entièrement le openGraph hérité du layout (il n'est PAS fusionné) — donc un "
+        "bare `openGraph: { url }` FAIT PERDRE og:image et casse l'OG (open_graph_tags_incomplete). "
+        "Donc pour CHAQUE page affectée : si elle a déjà un openGraph, ajoute-lui juste `url`; sinon "
+        "crée `openGraph: { url: '<chemin de la page>', images: <images héritées du layout> }` en "
+        "REPRENANT les images OG du layout (fournies ci-dessous) pour ne pas les perdre. Une URL "
+        "relative (ex. '/about') suffit si metadataBase existe. Ne MODIFIE ni ne SUPPRIME le layout ; "
+        "corrige TOUTES les pages listées, pas un sous-ensemble."
     ),
     "twitter_card_missing": (
         "Ces pages n'ont pas de Twitter Card. Ajoute twitter:card (summary_large_image), "
@@ -16319,6 +16316,19 @@ _PER_PAGE_ONLY_KEYS = {"open_graph_url_not_matching_canonical"}
 def _is_shared_template_path(path: str) -> bool:
     base = (path or "").rsplit("/", 1)[-1].lower()
     return base.startswith(("layout.", "_document", "_app")) or base in {"base.html", "_layout.html"}
+
+
+def _extract_layout_og_images(content: str) -> str:
+    """Extract the `images: [...]` literal from a layout's `openGraph` block so a per-page
+    Open Graph override can REUSE it (Next.js replaces openGraph per-segment instead of
+    merging, so a bare per-page `openGraph:{url}` would drop the inherited og:image).
+    Best-effort: matches a non-nested array literal. Returns '' if not found."""
+    m = re.search(r"openGraph\s*:\s*\{", content or "")
+    if not m:
+        return ""
+    window = content[m.end(): m.end() + 1200]
+    m2 = re.search(r"images\s*:\s*(\[[^\]]*\])", window)
+    return m2.group(1).strip() if m2 else ""
 
 
 # Issues whose fix = make sure specific URLs ARE present in the sitemap output.
@@ -16875,6 +16885,22 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Head family: canonical / Open Graph / Twitter / viewport / structured data.
     if issue_key in _HEAD_HINTS:
         extra_hint = _HEAD_HINTS[issue_key]
+    # OG url≠canonical: read the shared layout's inherited og:image so the per-page override can
+    # reuse it (Next.js replaces openGraph per-segment → a bare per-page {url} drops og:image).
+    if issue_key == "open_graph_url_not_matching_canonical":
+        import base64 as _b64og
+        for _lp in ("app/layout.tsx", "src/app/layout.tsx", "app/layout.jsx", "src/app/layout.jsx"):
+            if _lp not in all_paths:
+                continue
+            try:
+                _fd = _github_api_get(_github_content_api_path(owner, repo_name, _lp), token=token, params={"ref": branch})
+                _raw = _b64og.b64decode(_fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+                _og_imgs = _extract_layout_og_images(_raw)
+            except Exception:
+                _og_imgs = ""
+            if _og_imgs:
+                extra_hint += "\nImages OG héritées du layout à RÉUTILISER dans le openGraph de chaque page (copie ce `images:` tel quel) : images: " + _og_imgs
+                break
     # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
     _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
     if _content_pairs:
