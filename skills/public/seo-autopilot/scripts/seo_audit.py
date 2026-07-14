@@ -6901,10 +6901,15 @@ def _score_issues(
         issues["noindex_page_became_indexable"] = _issue_block(
             "noindex_page_became_indexable", sorted(set(noindex_page_became_indexable))
         )
-        issues["title_tag_changed"] = _issue_block("title_tag_changed", sorted(set(title_tag_changed)))
+        # Suppressed for Ahrefs parity: title_tag_changed / h1_tag_changed are Noyaru-only
+        # between-crawl [Δ] deltas Ahrefs does not track as distinct Site Audit issues. They
+        # fire spurious +N on every re-crawl whenever a fix (or render jitter) changes a title/H1
+        # (e.g. after a title-length correction PR). Detection kept above; emission zeroed —
+        # same treatment as meta_description_changed / word_count_changed.
+        issues["title_tag_changed"] = _issue_block("title_tag_changed", [])
         # Suppressed: Ahrefs does not report meta description changes as a distinct Site Audit issue.
         issues["meta_description_changed"] = _issue_block("meta_description_changed", [])
-        issues["h1_tag_changed"] = _issue_block("h1_tag_changed", sorted(set(h1_tag_changed)))
+        issues["h1_tag_changed"] = _issue_block("h1_tag_changed", [])
         # Suppressed for Ahrefs parity: word_count_changed is a Noyaru-only between-crawl
         # delta Ahrefs does not track, and networkidle word-count jitter makes it fire
         # spurious +N on every re-crawl. Detection kept above; emission zeroed.

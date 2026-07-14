@@ -3200,6 +3200,11 @@ _ADVISORY_ISSUE_KEYS = {
     "low_word_count", "slow_page", "page_size_exceeds_2mb", "content_is_not_sized_correctly",
     "font_size_too_small", "tap_targets_too_small_or_close", "not_compressed", "timed_out",
     "page_from_sitemap_timed_out", "orphan_page_indexable", "orphan_page_not_indexable",
+    # og:url≠canonical in a framework metadata setup (Next.js App Router): a per-page
+    # `openGraph:{url}` REPLACES the layout-inherited Open Graph and drops og:image/title →
+    # creates open_graph_tags_incomplete (validated regression on oryvalo). Fixing it safely
+    # needs metadata-architecture awareness (shared og helper) — advise, don't auto-patch.
+    "open_graph_url_not_matching_canonical",
 }
 _ADVISORY_ISSUE_TOKENS = (
     "word_count", "poor_cls", "poor_fid", "poor_inp", "poor_lcp", "cwv", "core_web_vital",
