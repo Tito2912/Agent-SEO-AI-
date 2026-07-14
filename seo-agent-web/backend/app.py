@@ -1632,9 +1632,9 @@ def _github_api_delete(path: str, *, token: str, json_body: dict[str, Any], time
 
 
 def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool:
-    """Return True if the given pull request has been merged. Best-effort: any
-    error (network, missing token, rate limit) is treated as 'not merged' so the
-    UI degrades gracefully."""
+    """Return True if the given pull request is closed or merged (i.e. no longer open).
+    Best-effort: any error (network, missing token, rate limit) is treated as 'not done'
+    so the UI degrades gracefully."""
     if not token or not owner or not repo or pr_number <= 0:
         return False
     try:
@@ -1645,7 +1645,10 @@ def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool
         )
     except Exception:
         return False
-    return bool(isinstance(data, dict) and (data.get("merged") or data.get("merged_at")))
+    if not isinstance(data, dict):
+        return False
+    # Hide "PR existante" when the PR is no longer open (merged OR closed/rejected)
+    return data.get("merged") or bool(data.get("merged_at")) or data.get("state") == "closed"
 
 
 def _netlify_api_url(path: str) -> str:
