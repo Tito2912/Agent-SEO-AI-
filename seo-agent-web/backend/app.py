@@ -16327,10 +16327,13 @@ def _rewrite_redirect_links(content: str, pairs: list[dict[str, str]]) -> tuple[
         to = _link_path(p.get("to", ""), keep_slash=True)
         if not frm or not to or frm == to:
             continue
-        # from must be preceded by a value delimiter (" ' ( ) and followed by a value
-        # boundary (" ' # ? ) > or whitespace) — i.e. it is the entire link, not a prefix.
-        pattern = re.compile(r'(?<=["\'(])' + re.escape(frm) + r'(?=["\'#?)>\s])')
-        new, n = pattern.subn(to, new)
+        # Match ONLY in real link contexts — an href attribute/prop (HTML/JSX/MDX) or a
+        # markdown link `](…)` — never an arbitrary quoted string (e.g. a code literal like
+        # startsWith('/en/')). `from` must also be the COMPLETE value (delimiter after), so a
+        # redirecting `/en/` never rewrites the valid `/en/guide-etoro`. Fragments preserved.
+        prefix = r'(href\s*[=:]\s*\{?\s*["\']|\]\()'
+        pattern = re.compile(prefix + re.escape(frm) + r'(?=["\'#?)>\s])')
+        new, n = pattern.subn(lambda m: m.group(1) + to, new)
         total += n
     return new, total
 
@@ -16567,6 +16570,24 @@ def _deep_patch_issue_files(
         for f in located:
             if f not in targets:
                 targets.append(f)
+    # 1b) Links-to-redirect: the flagged (impacted) pages themselves contain the redirecting
+    #     links, so target their source files deterministically and PRIORITISE them (so the
+    #     max_files cap never drops the actual pages in favour of grep-noise files).
+    if redirect_pairs is not None and impacted_urls:
+        priority: list[str] = []
+        for u in impacted_urls:
+            rel = _link_path(u, keep_slash=False).strip("/")
+            if not rel:
+                continue
+            for cand in (
+                f"public/{rel}.html", f"{rel}.html", f"public/{rel}/index.html",
+                f"content/{rel}.mdx", f"content/{rel}/index.mdx",
+                f"src/pages/{rel}.tsx", f"pages/{rel}.tsx",
+            ):
+                if cand in all_paths and cand not in priority:
+                    priority.append(cand)
+        if priority:
+            targets = priority + [t for t in targets if t not in priority]
     # 2) Hardcoded candidate filenames for this issue type.
     for candidate in _seo_file_candidates_for_issue(issue_key):
         for p in all_paths:
