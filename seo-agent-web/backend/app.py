@@ -35,6 +35,7 @@ from email.message import EmailMessage
 from email.utils import formataddr
 from functools import lru_cache
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
@@ -3185,6 +3186,9 @@ def _github_issue_auto_fixable(issue_key: str) -> bool:
     # code patch → the agent should give guidance, not open a (useless) PR.
     if key in _ADVISORY_ISSUE_KEYS or any(tok in key for tok in _ADVISORY_ISSUE_TOKENS):
         return False
+    # Mechanical link families fixed deterministically (mixed-content http→https, double-slash).
+    if key in _MIXED_CONTENT_KEYS or key in _DOUBLE_SLASH_KEYS:
+        return True
     return _seo_file_candidates_for_issue(key) != _SEO_FILE_CANDIDATES_DEFAULT or key in _SEO_FILE_CANDIDATES
 
 
@@ -16338,6 +16342,52 @@ def _rewrite_redirect_links(content: str, pairs: list[dict[str, str]]) -> tuple[
     return new, total
 
 
+def _rewrite_http_to_https(content: str, hosts: list[str]) -> tuple[str, int]:
+    """DETERMINISTIC mixed-content fix: rewrite `http://<host>` → `https://<host>` for the
+    SITE'S OWN host(s) only (same host is guaranteed to serve https, so it's safe; external
+    http hosts are left alone since they may not support https). Returns (new, count)."""
+    new = content
+    total = 0
+    for h in hosts or []:
+        h = str(h or "").strip().lower()
+        if not h:
+            continue
+        pat = re.compile(r'http://' + re.escape(h) + r'(?=[/"\'\s>?#)\]])')
+        new, n = pat.subn("https://" + h, new)
+        total += n
+    return new, total
+
+
+def _rewrite_double_slash(content: str) -> tuple[str, int]:
+    """DETERMINISTIC double-slash fix: collapse `//` → `/` inside href/src VALUES only,
+    preserving the `scheme://` separator. Never touches anything outside a link value."""
+    counter = {"n": 0}
+
+    def _fix(m: "re.Match[str]") -> str:
+        pre, quote, val = m.group(1), m.group(2), m.group(3)
+        if "://" in val:
+            scheme, rest = val.split("://", 1)
+            newval = scheme + "://" + re.sub(r"/{2,}", "/", rest)
+        else:
+            newval = re.sub(r"/{2,}", "/", val)
+        if newval != val:
+            counter["n"] += 1
+        return pre + quote + newval + quote
+
+    pattern = re.compile(r'((?:href|src)\s*[=:]\s*\{?\s*)(["\'])([^"\']*)\2')
+    new = pattern.sub(_fix, content)
+    return new, counter["n"]
+
+
+# Issue families fixed by a deterministic same-host http→https rewrite (no AI).
+_MIXED_CONTENT_KEYS = {
+    "https_page_has_internal_links_to_http", "https_page_links_to_http_image",
+    "https_page_links_to_http_javascript", "https_page_links_to_http_css",
+    "https_http_mixed_content",
+}
+_DOUBLE_SLASH_KEYS = {"double_slash_in_url"}
+
+
 def _link_path(url: str, *, keep_slash: bool = True) -> str:
     """Reduce a URL/link to its path only (drop scheme/host/query/fragment).
     By default keeps a trailing slash so `/x/` and `/x` stay distinguishable."""
@@ -16537,15 +16587,15 @@ def _deep_patch_issue_files(
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
     evidence: list[str] | None = None, extra_hint: str = "", model_override: str = "",
-    redirect_pairs: list[dict[str, str]] | None = None,
+    link_rewriter: "Callable[[str], tuple[str, int]] | None" = None,
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
     Targets = hardcoded candidates ∪ AI URL→file mapping (∪ AI tree pick as last resort).
     Each file is patched to fix ALL its in-file occurrences. file_state caches sha/content
-    so a file edited for several issues stacks correctly across calls. When redirect_pairs
-    is given (links-to-redirect family), the per-file fix is a DETERMINISTIC exact-href
-    rewrite (no AI) — precise and safe against prefix links like /en/ vs /en/guide. Returns
+    so a file edited for several issues stacks correctly across calls. When link_rewriter is
+    given (mechanical link families: links-to-redirect, mixed-content http→https, double-slash),
+    the per-file fix is that DETERMINISTIC function (no AI) — precise and safe. Returns
     (patched_files, skipped_files, targets)."""
     import base64 as _b64
     targets: list[str] = []
@@ -16570,10 +16620,10 @@ def _deep_patch_issue_files(
         for f in located:
             if f not in targets:
                 targets.append(f)
-    # 1b) Links-to-redirect: the flagged (impacted) pages themselves contain the redirecting
+    # 1b) Mechanical link fixes: the flagged (impacted) pages themselves contain the offending
     #     links, so target their source files deterministically and PRIORITISE them (so the
     #     max_files cap never drops the actual pages in favour of grep-noise files).
-    if redirect_pairs is not None and impacted_urls:
+    if link_rewriter is not None and impacted_urls:
         priority: list[str] = []
         for u in impacted_urls:
             rel = _link_path(u, keep_slash=False).strip("/")
@@ -16633,10 +16683,10 @@ def _deep_patch_issue_files(
                 return (path, None, "", None)
         if len(raw) > 80_000:
             return (path, None, "", None)
-        # Links-to-redirect: deterministic exact-href rewrite, no AI (avoids the prefix-link
-        # and relative→absolute mistakes an LLM makes on paths like /en/).
-        if redirect_pairs is not None:
-            new_content, n = _rewrite_redirect_links(raw, redirect_pairs)
+        # Mechanical link families: deterministic rewrite, no AI (avoids the prefix-link and
+        # relative→absolute mistakes an LLM makes; e.g. /en/ vs /en/guide, code literals).
+        if link_rewriter is not None:
+            new_content, n = link_rewriter(raw)
             patch = {"patched_content": new_content} if n > 0 else {"no_change": True, "patched_content": raw}
             return (path, raw, cur_sha, patch)
         try:
@@ -16790,13 +16840,26 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Head family: canonical / Open Graph / Twitter / viewport / structured data.
     if issue_key in _HEAD_HINTS:
         extra_hint = _HEAD_HINTS[issue_key]
+    # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
+    _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
+    if _content_pairs:
+        _link_rewriter = lambda raw, _p=_content_pairs: _rewrite_redirect_links(raw, _p)  # noqa: E731
+    elif issue_key in _MIXED_CONTENT_KEYS:
+        _host = re.sub(r"^https?://", "", str(proj.site_name or "")).strip("/").split("/")[0].lower()
+        _hosts = [h for h in {_host, "www." + _host, _host[4:] if _host.startswith("www.") else _host} if h]
+        _link_rewriter = lambda raw, _h=_hosts: _rewrite_http_to_https(raw, _h)  # noqa: E731
+        # Locate every file referencing the site over http (incl. shared layout/components).
+        if _host:
+            evidence = [f"http://{h}" for h in _hosts]
+    elif issue_key in _DOUBLE_SLASH_KEYS:
+        _link_rewriter = _rewrite_double_slash
     file_state: dict[str, dict[str, str]] = {}
     patched_files, skipped, targets = _deep_patch_issue_files(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
         site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
         extra_hint=extra_hint, model_override=gate_model,
-        redirect_pairs=(_content_pairs or None),
+        link_rewriter=_link_rewriter,
     )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     config_changes: list[str] = []
