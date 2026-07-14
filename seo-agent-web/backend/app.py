@@ -16275,11 +16275,12 @@ _HEAD_HINTS: dict[str, str] = {
     ),
     "open_graph_url_not_matching_canonical": (
         "og:url ne correspond pas au <link rel=canonical>. Aligne og:url sur l'URL canonique de "
-        "CHAQUE page affectée. RÈGLE CRITIQUE : ne SUPPRIME PAS un og:url partagé/global défini dans "
-        "un layout — retirer un tag global le supprime de TOUTES les pages (dont celles déjà correctes) "
-        "et crée des 'OG incomplet'. À la place, définis og:url PAR PAGE (dans le metadata/generateMetadata "
-        "de la page) avec le chemin de la page ; si un metadataBase existe, une URL relative (ex. '/about') "
-        "suffit et sera résolue en absolue = canonical. Corrige TOUTES les pages listées, pas un sous-ensemble."
+        "CHAQUE page affectée. RÈGLE CRITIQUE : ne MODIFIE ni ne SUPPRIME le og:url partagé/global "
+        "défini dans un layout — y toucher change TOUTES les pages (dont la home déjà correcte) et "
+        "crée des mismatches/'OG incomplet'. À la place, définis og:url PAR PAGE (dans le metadata/"
+        "generateMetadata de CHAQUE page affectée) avec le chemin de la page ; si un metadataBase "
+        "existe, une URL relative (ex. '/about') suffit et sera résolue en absolue = canonical. "
+        "Corrige TOUTES les pages listées, pas un sous-ensemble, et laisse le layout intact."
     ),
     "twitter_card_missing": (
         "Ces pages n'ont pas de Twitter Card. Ajoute twitter:card (summary_large_image), "
@@ -16299,6 +16300,17 @@ _HEAD_HINTS: dict[str, str] = {
         "requis manquants/invalides du type déclaré, sans changer le type ni inventer de données."
     ),
 }
+
+
+# Issues whose fix must be PER-PAGE only (never touch a shared layout/template): editing a
+# shared og:url/canonical there changes EVERY page (incl. already-correct ones). Deterministic
+# guard — shared templates are dropped from the target set for these keys.
+_PER_PAGE_ONLY_KEYS = {"open_graph_url_not_matching_canonical"}
+
+
+def _is_shared_template_path(path: str) -> bool:
+    base = (path or "").rsplit("/", 1)[-1].lower()
+    return base.startswith(("layout.", "_document", "_app")) or base in {"base.html", "_layout.html"}
 
 
 # Issues whose fix = make sure specific URLs ARE present in the sitemap output.
@@ -16670,6 +16682,10 @@ def _deep_patch_issue_files(
     # would hardcode/suffix one title onto ALL pages of the route — drop them deterministically.
     if _length_family_name(issue_key):
         targets = [p for p in targets if "[" not in p]
+    # Per-page-only issues (e.g. OG url≠canonical): never edit a shared layout/template —
+    # doing so changes og:url/canonical for ALL pages incl. correct ones (would break the home).
+    if issue_key in _PER_PAGE_ONLY_KEYS:
+        targets = [p for p in targets if not _is_shared_template_path(p)]
     targets = targets[:max_files]
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     if evidence:
