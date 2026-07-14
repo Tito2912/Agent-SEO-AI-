@@ -16274,8 +16274,12 @@ _HEAD_HINTS: dict[str, str] = {
         "og:title, og:description, og:type, og:url, og:image — sans dupliquer celles déjà présentes."
     ),
     "open_graph_url_not_matching_canonical": (
-        "og:url ne correspond pas au <link rel=canonical>. Aligne og:url sur l'URL canonique exacte "
-        "de la page. Ne touche qu'à og:url."
+        "og:url ne correspond pas au <link rel=canonical>. Aligne og:url sur l'URL canonique de "
+        "CHAQUE page affectée. RÈGLE CRITIQUE : ne SUPPRIME PAS un og:url partagé/global défini dans "
+        "un layout — retirer un tag global le supprime de TOUTES les pages (dont celles déjà correctes) "
+        "et crée des 'OG incomplet'. À la place, définis og:url PAR PAGE (dans le metadata/generateMetadata "
+        "de la page) avec le chemin de la page ; si un metadataBase existe, une URL relative (ex. '/about') "
+        "suffit et sera résolue en absolue = canonical. Corrige TOUTES les pages listées, pas un sous-ensemble."
     ),
     "twitter_card_missing": (
         "Ces pages n'ont pas de Twitter Card. Ajoute twitter:card (summary_large_image), "
@@ -16620,10 +16624,16 @@ def _deep_patch_issue_files(
         for f in located:
             if f not in targets:
                 targets.append(f)
-    # 1b) Mechanical link fixes: the flagged (impacted) pages themselves contain the offending
-    #     links, so target their source files deterministically and PRIORITISE them (so the
-    #     max_files cap never drops the actual pages in favour of grep-noise files).
-    if link_rewriter is not None and impacted_urls:
+    # 1b) Per-page fixes (mechanical link families + head/hreflang/sitemap): the flagged
+    #     (impacted) pages ARE the files to fix, so map each impacted URL to its source file
+    #     and PRIORITISE them so the max_files cap patches EVERY affected page (not a subset)
+    #     and never drops them for grep-noise files. Length families are excluded (they use the
+    #     dynamic-route guard elsewhere).
+    _want_page_targeting = (
+        link_rewriter is not None
+        or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _SITEMAP_ADD_KEYS
+    ) and not _length_family_name(issue_key)
+    if _want_page_targeting and impacted_urls:
         priority: list[str] = []
         for u in impacted_urls:
             rel = _link_path(u, keep_slash=False).strip("/")
@@ -16632,6 +16642,7 @@ def _deep_patch_issue_files(
             for cand in (
                 f"public/{rel}.html", f"{rel}.html", f"public/{rel}/index.html",
                 f"content/{rel}.mdx", f"content/{rel}/index.mdx",
+                f"app/{rel}/page.tsx", f"src/app/{rel}/page.tsx",
                 f"src/pages/{rel}.tsx", f"pages/{rel}.tsx",
             ):
                 if cand in all_paths and cand not in priority:
