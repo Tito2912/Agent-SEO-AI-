@@ -16314,6 +16314,27 @@ def _build_sitemap_hint(urls: list[str]) -> str:
     )
 
 
+def _rewrite_redirect_links(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTIC redirect-link rewrite (no AI): replace each `from` link with its
+    `to`, but ONLY where `from` appears as a COMPLETE href/link value — bounded by a
+    delimiter on both sides — so a redirecting `/en/` never rewrites the valid link
+    `/en/guide-etoro`. Preserves fragments (`/en/#a` → `/en#a`). Never turns a relative
+    link absolute. Returns (new_content, replacements)."""
+    new = content
+    total = 0
+    for p in pairs or []:
+        frm = _link_path(p.get("from", ""), keep_slash=True)
+        to = _link_path(p.get("to", ""), keep_slash=True)
+        if not frm or not to or frm == to:
+            continue
+        # from must be preceded by a value delimiter (" ' ( ) and followed by a value
+        # boundary (" ' # ? ) > or whitespace) — i.e. it is the entire link, not a prefix.
+        pattern = re.compile(r'(?<=["\'(])' + re.escape(frm) + r'(?=["\'#?)>\s])')
+        new, n = pattern.subn(to, new)
+        total += n
+    return new, total
+
+
 def _link_path(url: str, *, keep_slash: bool = True) -> str:
     """Reduce a URL/link to its path only (drop scheme/host/query/fragment).
     By default keeps a trailing slash so `/x/` and `/x` stay distinguishable."""
@@ -16513,12 +16534,15 @@ def _deep_patch_issue_files(
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
     evidence: list[str] | None = None, extra_hint: str = "", model_override: str = "",
+    redirect_pairs: list[dict[str, str]] | None = None,
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
     Targets = hardcoded candidates ∪ AI URL→file mapping (∪ AI tree pick as last resort).
     Each file is patched to fix ALL its in-file occurrences. file_state caches sha/content
-    so a file edited for several issues stacks correctly across calls. Returns
+    so a file edited for several issues stacks correctly across calls. When redirect_pairs
+    is given (links-to-redirect family), the per-file fix is a DETERMINISTIC exact-href
+    rewrite (no AI) — precise and safe against prefix links like /en/ vs /en/guide. Returns
     (patched_files, skipped_files, targets)."""
     import base64 as _b64
     targets: list[str] = []
@@ -16588,6 +16612,12 @@ def _deep_patch_issue_files(
                 return (path, None, "", None)
         if len(raw) > 80_000:
             return (path, None, "", None)
+        # Links-to-redirect: deterministic exact-href rewrite, no AI (avoids the prefix-link
+        # and relative→absolute mistakes an LLM makes on paths like /en/).
+        if redirect_pairs is not None:
+            new_content, n = _rewrite_redirect_links(raw, redirect_pairs)
+            patch = {"patched_content": new_content} if n > 0 else {"no_change": True, "patched_content": raw}
+            return (path, raw, cur_sha, patch)
         try:
             patch = _openai_generate_file_patch(
                 file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
@@ -16723,6 +16753,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Self-redirect LOOP targets (e.g. /sources/etoro-en → itself) can't be fixed by rewriting
     # the link — they're a redirect-CONFIG bug — so they're split out and fixed separately.
     _loop_paths: list[str] = []
+    _content_pairs: list[dict[str, str]] = []
     if issue_key in _REDIRECT_LINK_KEYS and issues:
         _pairs = _issue_redirect_pairs(issues.get(issue_key))
         if _pairs:
@@ -16744,6 +16775,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
         site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
         extra_hint=extra_hint, model_override=gate_model,
+        redirect_pairs=(_content_pairs or None),
     )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     config_changes: list[str] = []
