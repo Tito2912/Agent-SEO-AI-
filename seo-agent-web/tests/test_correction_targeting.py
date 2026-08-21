@@ -136,6 +136,25 @@ def test_evidence_hits_stay_ahead_of_every_heuristic() -> None:
     assert targets[0] == "components/Header.tsx"
 
 
+def test_asset_issues_keep_the_component_holding_the_src_ahead_of_the_pages() -> None:
+    # A redirected logo lives in ONE shared component but flags every page that renders it.
+    pages = ["/", "/about", "/en", "/en/avis-bitpanda", "/en/guide-etoro", "/sources/etoro-en"]
+    targets, _ = _resolve(
+        "page_has_redirected_image", pages,
+        located=["components/Header.tsx"], max_files=3, wants_page_targeting=True,
+    )
+
+    assert targets[0] == "components/Header.tsx"
+
+    # Contrast: a link family DOES want its flagged pages first, and there the located file
+    # legitimately gives way to them.
+    link_targets, _ = _resolve(
+        "page_has_links_to_redirect_indexable", pages,
+        located=["components/Header.tsx"], max_files=3, wants_page_targeting=True,
+    )
+    assert link_targets[0] != "components/Header.tsx"
+
+
 def test_targeting_works_without_an_index_so_a_missing_map_is_never_fatal() -> None:
     targets, calls = _resolve(
         "open_graph_url_not_matching_canonical", ["/about"], index=None,

@@ -3772,6 +3772,52 @@ def _score_external_resource_issues(
     }
 
 
+# ── Per-issue evidence (unified contract) ────────────────────────────────────────────
+# A corrector can only be deterministic when it knows the exact value to write, and the crawl
+# is the ONLY place that value exists: a redirect's final destination, a target's real
+# canonical. None of it is derivable from the source code, so without evidence a fixer can
+# only prompt an LLM to guess — which is how link rewrites once went backwards.
+#
+# Attached under one uniform key so every family is read the same way, and capped: the worker
+# runs in a 2 GB container and the report is re-read on every page load.
+EVIDENCE_CAP = 40
+
+
+def _attach_issue_evidence(
+    issues: dict[str, Any],
+    issue_keys: "list[str] | tuple[str, ...]",
+    kind: str,
+    items: list[dict[str, str]],
+    *,
+    cap: int = EVIDENCE_CAP,
+) -> None:
+    """Attach capped, de-duplicated evidence to each listed issue block.
+
+    `kind` tells the corrector how to consume `items`:
+      - "url_pairs": {page, from, to} — replace the value `from` with `to`.
+    Absent evidence is never an error: the fixer falls back to prompt-only guidance."""
+    seen: set[tuple[str, str, str]] = set()
+    clean: list[dict[str, str]] = []
+    for it in items or []:
+        row = {k: str(it.get(k) or "").strip() for k in ("page", "from", "to")}
+        # A pair with no destination (or pointing at itself) can't drive a rewrite.
+        if not row["from"] or not row["to"] or row["from"] == row["to"]:
+            continue
+        key = (row["page"], row["from"], row["to"])
+        if key in seen:
+            continue
+        seen.add(key)
+        clean.append(row)
+        if len(clean) >= cap:
+            break
+    if not clean:
+        return
+    for k in issue_keys:
+        blk = issues.get(k)
+        if isinstance(blk, dict):
+            blk["evidence"] = {"kind": kind, "items": clean}
+
+
 def _score_resource_issues(
     pages: list[PageData],
     resources: list[dict[str, Any]],
@@ -4017,6 +4063,30 @@ def _score_resource_issues(
     issues["css_file_size_too_large"] = issue("css_file_size_too_large", large_css)
     issues["css_not_minified"] = issue("css_not_minified", sorted(set(pages_with_not_minified_css)))
 
+    # Evidence for auto-fix: the asset URL as written in the page → the URL it actually ends up
+    # on, so the corrector rewrites each src to its real destination instead of guessing.
+    # Only assets whose redirect chain ends on a healthy file qualify — repointing a src at a
+    # 404 would trade one issue for a worse one. BROKEN assets get no pair on purpose: there is
+    # no destination to point at, so they stay advisory.
+    def _asset_redirect_pairs(resource_type: str) -> list[dict[str, str]]:
+        pairs: list[dict[str, str]] = []
+        for r in by_type.get(resource_type, []):
+            if not is_redirect(r):
+                continue
+            src = str(r.get("url") or "").strip()
+            dest = str(r.get("final_url") or "").strip()
+            status = r.get("status_code")
+            if src and dest and isinstance(status, int) and 200 <= status < 300:
+                pairs.append({"page": "", "from": src, "to": dest})
+        return pairs
+
+    for _rtype, _keys in (
+        ("image", ("page_has_redirected_image", "image_redirects")),
+        ("javascript", ("page_has_redirected_javascript", "javascript_redirects")),
+        ("css", ("page_has_redirected_css", "css_redirects")),
+    ):
+        _attach_issue_evidence(issues, _keys, "url_pairs", _asset_redirect_pairs(_rtype))
+
     issues["javascript_not_minified"] = issue("javascript_not_minified", sorted(set(pages_with_not_minified_js)))
     # Semrush mega export uses a combined check for unminified JS+CSS.
     unminified_pages = sorted(
@@ -4155,45 +4225,10 @@ def _score_issues(
         _write_issue_rows(issues_dir, issue_key, rows)
         return {"count": len(rows), "examples": rows[:limit]}
 
-    # ── Per-issue evidence (unified contract) ─────────────────────────────────────────
-    # A corrector can only be deterministic when it knows the exact value to write, and the
-    # crawl is the ONLY place that value exists: a redirect's final destination, a target's
-    # real canonical — none of it is derivable from the source code. Without evidence a fixer
-    # can only prompt an LLM to guess, which is how link rewrites once went backwards.
-    #
-    # Attached under one uniform key so every family is read the same way, and capped: the
-    # worker runs in a 2 GB container and the report is re-read on every page load.
-    EVIDENCE_CAP = 40
-
     def _attach_evidence(
         issue_keys: "list[str] | tuple[str, ...]", kind: str, items: list[dict[str, str]],
-        *, cap: int = EVIDENCE_CAP,
     ) -> None:
-        """Attach capped, de-duplicated evidence to each listed issue block.
-
-        `kind` tells the corrector how to consume `items`:
-          - "url_pairs": {page, from, to} — replace the value `from` with `to` on that page.
-        Absent evidence is never an error: the fixer falls back to prompt-only guidance."""
-        seen: set[tuple[str, str, str]] = set()
-        clean: list[dict[str, str]] = []
-        for it in items or []:
-            row = {k: str(it.get(k) or "").strip() for k in ("page", "from", "to")}
-            # A pair with no destination (or pointing at itself) can't drive a rewrite.
-            if not row["from"] or not row["to"] or row["from"] == row["to"]:
-                continue
-            key = (row["page"], row["from"], row["to"])
-            if key in seen:
-                continue
-            seen.add(key)
-            clean.append(row)
-            if len(clean) >= cap:
-                break
-        if not clean:
-            return
-        for k in issue_keys:
-            blk = issues.get(k)
-            if isinstance(blk, dict):
-                blk["evidence"] = {"kind": kind, "items": clean}
+        _attach_issue_evidence(issues, issue_keys, kind, items)
 
     def _redirect_destination(p: PageData) -> str:
         """The final 200 URL a redirecting page lands on, or '' when the chain does NOT end

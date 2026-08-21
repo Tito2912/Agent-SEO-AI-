@@ -16491,6 +16491,35 @@ def _url_value_variants(pair: dict[str, str]) -> list[tuple[str, str]]:
     return [(a, b) for a, b in variants if a and b and a != b]
 
 
+# Issues whose fix = repoint an asset reference at the URL it already resolves to.
+_ASSET_REWRITE_KEYS = {
+    "page_has_redirected_image", "image_redirects",
+    "page_has_redirected_javascript", "javascript_redirects",
+    "page_has_redirected_css", "css_redirects",
+}
+
+
+def _rewrite_asset_srcs(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTIC asset-reference rewrite (no AI): replace a redirecting asset URL with its
+    final destination wherever it appears as a COMPLETE value — bounded by a delimiter on both
+    sides. No attribute prefix is required, so `srcset` entries past the first, CSS `url(...)`
+    and JSX props are all covered; exact-value matching is what keeps it safe (unlike the link
+    rewriter, an asset path can't be a prefix of a different asset path).
+    Returns (new_content, replacements)."""
+    new = content
+    total = 0
+    seen: set[str] = set()
+    for pair in pairs or []:
+        for frm, to in _url_value_variants(pair):
+            if frm in seen:
+                continue
+            seen.add(frm)
+            pattern = re.compile(r'(?<=[\s"\'=(,])' + re.escape(frm) + r'(?=["\'\s,)>?#])')
+            new, n = pattern.subn(to, new)
+            total += n
+    return new, total
+
+
 _LINK_TAG_RE = re.compile(r"<link\b[^>]*>", re.I)
 _HREF_ATTR_RE = re.compile(r'(href\s*=\s*)(["\'])(.*?)\2', re.I | re.S)
 _REL_CANONICAL_RE = re.compile(r'rel\s*=\s*["\']?(canonical|alternate)\b', re.I)
@@ -16786,14 +16815,18 @@ def _resolve_issue_targets(
     # Per-page fixes (mechanical link families + head/hreflang, and the title/meta length
     # families whose value belongs in the per-page source): the flagged pages ARE the files to
     # fix, so they are PRIORITISED — the max_files cap must never patch a subset of them.
-    # Sitemap membership is deliberately NOT here: its impacted URLs are the DATA to append,
-    # while the only file to edit is the sitemap generator — prioritising the pages would let
-    # the cap evict `app/sitemap.ts`, the one target that matters.
+    # Two families are deliberately excluded, both for the same reason — their impacted pages
+    # are not where the fix goes, so prioritising them lets the max_files cap evict the one
+    # target that matters:
+    #  - sitemap membership: the impacted URLs are the DATA to append; the file to edit is the
+    #    sitemap generator.
+    #  - asset references: a redirecting logo flags every page but its src is written once, in
+    #    a shared component that the evidence locator has already found.
     want_page_targeting = (
         wants_page_targeting
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS
         or _length_family_name(issue_key) is not None
-    )
+    ) and issue_key not in _ASSET_REWRITE_KEYS
     index_resolved_all = False
     if want_page_targeting and impacted_urls:
         priority: list[str] = []
@@ -17119,7 +17152,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # value each tag must carry, so the fix stops being a guess. Appended to the family hint
     # (which stays useful for the AI fallback on dynamically built URLs).
     _url_pairs: list[dict[str, str]] = []
-    if issue_key in _URL_PAIR_KEYS and issues:
+    if issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS):
         _url_pairs = _issue_url_pairs(issues.get(issue_key))
         if _url_pairs:
             _pair_hint = _build_url_pair_hint(_url_pairs)
@@ -17129,7 +17162,11 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
     _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
     _rewriter_ai_fallback = False
-    if _url_pairs:
+    if _url_pairs and issue_key in _ASSET_REWRITE_KEYS:
+        # An asset src that can't be matched literally is an imported/bundled asset: the
+        # redirect then lives in the CDN or server config, not in the page — no AI fallback.
+        _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_asset_srcs(raw, _p)  # noqa: E731
+    elif _url_pairs:
         _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_head_url_values(raw, _p)  # noqa: E731
         _rewriter_ai_fallback = True
     elif _content_pairs:

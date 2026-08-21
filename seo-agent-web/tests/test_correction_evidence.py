@@ -149,6 +149,45 @@ def test_a_dynamically_built_canonical_yields_no_change_so_the_ai_fallback_runs(
     assert (new, n) == (src, 0)
 
 
+# ── Asset references ─────────────────────────────────────────────────────────────────
+
+def test_redirected_asset_is_repointed_in_every_reference_form() -> None:
+    src = """
+<img src="/img/logo.png" srcset="/img/logo.png 1x, /img/logo@2x.png 2x">
+<div style="background: url('/img/logo.png')"></div>
+<script src="/js/app.js"></script>
+"""
+    new, n = app_module._rewrite_asset_srcs(
+        src, _pairs(("https://site.com/img/logo.png", "https://site.com/img/logo.v2.png")),
+    )
+
+    assert n == 3  # src attribute, srcset first entry, and the CSS url()
+    assert "/img/logo.v2.png" in new
+    assert "/img/logo.png" not in new
+    # A different asset that merely shares the prefix is untouched.
+    assert "/img/logo@2x.png 2x" in new
+    assert '<script src="/js/app.js">' in new
+
+
+def test_asset_rewrite_keeps_the_absolute_form_when_the_page_uses_it() -> None:
+    src = '<img src="https://site.com/img/a.png">'
+    new, n = app_module._rewrite_asset_srcs(
+        src, _pairs(("https://site.com/img/a.png", "https://cdn.site.com/img/a.png")),
+    )
+
+    assert n == 1
+    assert 'src="https://cdn.site.com/img/a.png"' in new
+
+
+def test_a_bundled_asset_yields_no_change_so_the_file_is_skipped() -> None:
+    src = "import logo from '../assets/logo.png';\n<img src={logo} />"
+    new, n = app_module._rewrite_asset_srcs(
+        src, _pairs(("https://site.com/_next/static/logo.png", "https://site.com/static/logo.png")),
+    )
+
+    assert (new, n) == (src, 0)
+
+
 def test_an_unbalanced_languages_block_is_skipped_not_guessed() -> None:
     src = "alternates: { languages: { 'en': '/en/guide/'"  # truncated file
     new, n = app_module._rewrite_head_url_values(
