@@ -16466,6 +16466,49 @@ def _issue_url_pairs(issue_block: Any) -> list[dict[str, str]]:
     return out[:40]
 
 
+# Issues whose fix needs the page's CURRENT state (which tag is absent, what an invalid or
+# duplicated value contains). Unlike url_pairs there is no mechanical rewrite here — the AI
+# still writes the tag — but it works from the real page instead of a generic instruction.
+_PAGE_VALUE_KEYS = {
+    "open_graph_tags_incomplete",
+    "twitter_card_incomplete",
+    "html_lang_attribute_invalid",
+    "hreflang_annotation_invalid",
+    "multiple_title_tags",
+    "multiple_h1",
+}
+
+
+def _issue_page_values(issue_block: Any) -> list[dict[str, str]]:
+    """Read `evidence.items` of kind `page_values` from an issue block."""
+    if not isinstance(issue_block, dict):
+        return []
+    ev = issue_block.get("evidence")
+    if not isinstance(ev, dict) or ev.get("kind") != "page_values":
+        return []
+    out: list[dict[str, str]] = []
+    for it in ev.get("items") or []:
+        if isinstance(it, dict) and it.get("page") and it.get("field"):
+            out.append({
+                "page": str(it["page"]),
+                "field": str(it["field"]),
+                "value": str(it.get("value") or ""),
+            })
+    return out[:40]
+
+
+def _build_page_values_hint(items: list[dict[str, str]]) -> str:
+    """Hint describing, page by page, what is actually wrong right now."""
+    if not items:
+        return ""
+    lines = [f"  - {it['page']} → {it['field']} : {it['value']}" for it in items[:30]]
+    return (
+        "État RÉEL de chaque page concernée (relevé au crawl). Corrige EXACTEMENT ce qui est "
+        "listé pour chaque page et ne touche à rien d'autre — surtout, n'écrase pas les valeurs "
+        "déjà présentes et correctes :\n" + "\n".join(lines)
+    )
+
+
 def _build_url_pair_hint(pairs: list[dict[str, str]]) -> str:
     """Hint listing each current value → the value to write, for the AI fallback used when a
     file builds the URL dynamically and no literal can be rewritten."""
@@ -16824,7 +16867,7 @@ def _resolve_issue_targets(
     #    a shared component that the evidence locator has already found.
     want_page_targeting = (
         wants_page_targeting
-        or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS
+        or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
         or _length_family_name(issue_key) is not None
     ) and issue_key not in _ASSET_REWRITE_KEYS
     index_resolved_all = False
@@ -17159,6 +17202,13 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             extra_hint = (extra_hint + "\n" + _pair_hint) if extra_hint else _pair_hint
             # Locate the files that literally contain the wrong values.
             evidence = [p["from"] for p in _url_pairs]
+    # Current-state families: no mechanical rewrite, but the patch is told exactly which tag
+    # is absent / which value is malformed on each page instead of guessing from the label.
+    if issues and issue_key in _PAGE_VALUE_KEYS:
+        _page_values = _issue_page_values(issues.get(issue_key))
+        if _page_values:
+            _values_hint = _build_page_values_hint(_page_values)
+            extra_hint = (extra_hint + "\n" + _values_hint) if extra_hint else _values_hint
     # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
     _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
     _rewriter_ai_fallback = False

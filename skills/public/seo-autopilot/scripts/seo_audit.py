@@ -3782,6 +3782,16 @@ def _score_external_resource_issues(
 # runs in a 2 GB container and the report is re-read on every page load.
 EVIDENCE_CAP = 40
 
+# Shape of each evidence kind, and which of its fields must be present to be usable.
+_EVIDENCE_FIELDS: dict[str, tuple[str, ...]] = {
+    "url_pairs": ("page", "from", "to"),
+    "page_values": ("page", "field", "value"),
+}
+_EVIDENCE_REQUIRED: dict[str, tuple[str, ...]] = {
+    "url_pairs": ("from", "to"),
+    "page_values": ("page", "field", "value"),
+}
+
 
 def _attach_issue_evidence(
     issues: dict[str, Any],
@@ -3794,16 +3804,25 @@ def _attach_issue_evidence(
     """Attach capped, de-duplicated evidence to each listed issue block.
 
     `kind` tells the corrector how to consume `items`:
-      - "url_pairs": {page, from, to} — replace the value `from` with `to`.
+      - "url_pairs":   {page, from, to} — replace the value `from` with `to`.
+      - "page_values": {page, field, value} — the state the page is actually in (which tag is
+        missing, what an invalid or duplicated value contains), so the patch works from the
+        real page instead of a generic instruction.
     Absent evidence is never an error: the fixer falls back to prompt-only guidance."""
-    seen: set[tuple[str, str, str]] = set()
+    fields = _EVIDENCE_FIELDS.get(kind)
+    if not fields:
+        return
+    required = _EVIDENCE_REQUIRED[kind]
+    seen: set[tuple[str, ...]] = set()
     clean: list[dict[str, str]] = []
     for it in items or []:
-        row = {k: str(it.get(k) or "").strip() for k in ("page", "from", "to")}
-        # A pair with no destination (or pointing at itself) can't drive a rewrite.
-        if not row["from"] or not row["to"] or row["from"] == row["to"]:
+        row = {k: str(it.get(k) or "").strip() for k in fields}
+        if any(not row[k] for k in required):
             continue
-        key = (row["page"], row["from"], row["to"])
+        # A pair pointing at itself can't drive a rewrite.
+        if kind == "url_pairs" and row["from"] == row["to"]:
+            continue
+        key = tuple(row[k] for k in fields)
         if key in seen:
             continue
         seen.add(key)
@@ -4342,6 +4361,15 @@ def _score_issues(
     missing_h1_not_indexable = [p.url for p in ok_html_pages if (not _is_indexable(p)) and _is_missing_h1(p)]
     _missing_h1 = list(dict.fromkeys([*missing_h1_indexable, *missing_h1_not_indexable]))
     multiple_h1 = [p.url for p in ok_html_pages if (p.h1_tag_count or 0) > 1]
+    # Evidence: how many tags and what the first one says — the patch must keep ONE and know
+    # which, instead of deleting whichever it happens to see first.
+    multiple_h1_values = [
+        {
+            "page": _final_url(p), "field": f"{p.h1_tag_count} balises <h1>",
+            "value": f"1er h1 : «{(p.h1 or '').strip()[:120]}»" if _non_empty(p.h1) else "1er h1 vide",
+        }
+        for p in ok_html_pages if (p.h1_tag_count or 0) > 1
+    ]
     missing_canonical = [p.url for p in ok_html_pages if not _non_empty(p.canonical)]
 
     bad_status = [p.url for p in pages if isinstance(p.status_code, int) and p.status_code >= 400]
@@ -5132,6 +5160,13 @@ def _score_issues(
     not_indexable_html_pages = [p for p in ok_html_pages if not _is_indexable(p)]
 
     multiple_title_tags = [p.url for p in ok_html_pages if (p.title_tag_count or 0) > 1]
+    multiple_title_values = [
+        {
+            "page": _final_url(p), "field": f"{p.title_tag_count} balises <title>",
+            "value": f"1er title : «{(p.title or '').strip()[:120]}»" if _non_empty(p.title) else "1er title vide",
+        }
+        for p in ok_html_pages if (p.title_tag_count or 0) > 1
+    ]
     multiple_meta_description_tags = [p.url for p in ok_html_pages if (p.meta_description_tag_count or 0) > 1]
     def _is_semrush_indexable(p: PageData) -> bool:
         # Semrush often reports content issues on canonicalized duplicates (e.g. query pages),
@@ -5567,6 +5602,10 @@ def _score_issues(
     open_graph_url_mismatch: list[str] = []
     twitter_missing: list[str] = []
     twitter_incomplete: list[str] = []
+    # Evidence: exactly WHICH social tags are absent on each page, so the patch adds those and
+    # leaves the existing ones alone instead of rewriting a whole social block from a template.
+    og_missing_values: list[dict[str, str]] = []
+    twitter_missing_values: list[dict[str, str]] = []
 
     # Use final URL de-duplication to avoid counting redirect probes (http↔https, www↔non-www) as separate pages.
     for p in ok_html_by_eff.values():
@@ -5582,6 +5621,13 @@ def _score_issues(
             og_required = [p.og_title, p.og_description, p.og_image, p.og_url, p.og_type]
             if any(not _non_empty(v) for v in og_required):
                 open_graph_incomplete.append(eff)
+                _absent = [
+                    tag for tag, val in (
+                        ("og:title", p.og_title), ("og:description", p.og_description),
+                        ("og:image", p.og_image), ("og:url", p.og_url), ("og:type", p.og_type),
+                    ) if not _non_empty(val)
+                ]
+                og_missing_values.append({"page": eff, "field": "og_manquants", "value": ", ".join(_absent)})
 
         if p.og_url and p.canonical and _norm_self(p.og_url) and _norm_self(p.canonical):
             if _norm_self(p.og_url) != _norm_self(p.canonical):
@@ -5599,6 +5645,15 @@ def _score_issues(
             tw_img = p.twitter_image or p.og_image
             if not (_non_empty(tw_title) and _non_empty(tw_desc) and _non_empty(tw_img)):
                 twitter_incomplete.append(eff)
+                _absent = [
+                    tag for tag, val in (
+                        ("twitter:title", tw_title), ("twitter:description", tw_desc),
+                        ("twitter:image", tw_img),
+                    ) if not _non_empty(val)
+                ]
+                twitter_missing_values.append(
+                    {"page": eff, "field": "twitter_manquants", "value": ", ".join(_absent)}
+                )
 
     # --- Localization (hreflang + lang) ---
     LANG_RE = re.compile(r"^[a-z]{2}(-[a-z0-9]{2,8})*$", re.IGNORECASE)
@@ -5606,6 +5661,13 @@ def _score_issues(
 
     html_lang_missing = [p.url for p in ok_html_pages if not _non_empty(p.lang)]
     html_lang_invalid = [p.url for p in ok_html_pages if _non_empty(p.lang) and not LANG_RE.match(p.lang.strip())]
+    # Evidence: the offending value itself — the patch must correct THAT code (e.g. "en_US"
+    # → "en-US"), not re-derive a language from scratch.
+    html_lang_invalid_values = [
+        {"page": _final_url(p), "field": "lang invalide", "value": (p.lang or "").strip()}
+        for p in ok_html_pages
+        if _non_empty(p.lang) and not LANG_RE.match(p.lang.strip())
+    ]
 
     def _hreflang_map_for(p: PageData) -> dict[str, str]:
         if p.hreflang:
@@ -5648,6 +5710,8 @@ def _score_issues(
     # Evidence: hreflang href → the URL it should point to (see _attach_evidence).
     hreflang_redirect_pairs: list[dict[str, str]] = []
     hreflang_noncanon_pairs: list[dict[str, str]] = []
+    # Evidence: which annotations are malformed, so the patch fixes those and not the valid ones.
+    hreflang_invalid_values: list[dict[str, str]] = []
 
     for p in hreflang_source_pages:
         hreflang = _hreflang_map_for(p)
@@ -5717,6 +5781,7 @@ def _score_issues(
             hreflang_referenced_multi_lang.append(p.url)
 
         invalid = False
+        invalid_codes: list[str] = []
         any_redirect_or_broken = False
         any_non_canonical = False
         # Collected per page, then filed under whichever issue actually fires below (the two
@@ -5726,9 +5791,11 @@ def _score_issues(
         for code, href in hreflang.items():
             if not HREFLANG_RE.match(code):
                 invalid = True
+                invalid_codes.append(f"code «{str(code).strip()}»")
                 continue
             if not _non_empty(href):
                 invalid = True
+                invalid_codes.append(f"href vide pour «{str(code).strip()}»")
                 continue
             _href_norm = _norm_self(href) or href
             t = page_by_any.get(_href_norm)
@@ -5760,6 +5827,10 @@ def _score_issues(
             hreflang_noncanon_pairs.extend(_page_noncanon_pairs)
         if invalid:
             hreflang_annotation_invalid.append(p.url)
+            hreflang_invalid_values.append({
+                "page": _final_url(p), "field": "annotations hreflang invalides",
+                "value": ", ".join(invalid_codes[:8]),
+            })
 
         # Reciprocal check (heuristic): target should reference this page back in its hreflang set.
         #
@@ -6112,6 +6183,7 @@ def _score_issues(
     if _alt_samples:
         issues["missing_alt_text"]["alt_samples"] = _alt_samples
     issues["multiple_h1"] = _issue_block("multiple_h1", multiple_h1)
+    _attach_evidence(("multiple_h1",), "page_values", multiple_h1_values)
     issues["missing_canonical"] = _issue_block("missing_canonical", missing_canonical)
     # Ahrefs-like: count = number of affected URLs, not number of duplicated values.
     issues["duplicate_titles"] = {
@@ -6770,6 +6842,7 @@ def _score_issues(
     issues["nofollow_external_links"] = {"count": 0, "examples": []}
 
     issues["multiple_title_tags"] = _issue_block("multiple_title_tags", multiple_title_tags)
+    _attach_evidence(("multiple_title_tags",), "page_values", multiple_title_values)
     issues["multiple_meta_description_tags"] = _issue_block(
         "multiple_meta_description_tags", multiple_meta_description_tags
     )
@@ -6847,9 +6920,13 @@ def _score_issues(
     )
     issues["twitter_card_missing"] = _issue_block("twitter_card_missing", twitter_missing)
     issues["twitter_card_incomplete"] = _issue_block("twitter_card_incomplete", twitter_incomplete)
+    # Which social tags are absent, per page — the patch adds those, not a whole new block.
+    _attach_evidence(("open_graph_tags_incomplete",), "page_values", og_missing_values)
+    _attach_evidence(("twitter_card_incomplete",), "page_values", twitter_missing_values)
 
     issues["html_lang_attribute_missing"] = _issue_block("html_lang_attribute_missing", html_lang_missing)
     issues["html_lang_attribute_invalid"] = _issue_block("html_lang_attribute_invalid", html_lang_invalid)
+    _attach_evidence(("html_lang_attribute_invalid",), "page_values", html_lang_invalid_values)
     # DISABLED for Ahrefs parity: this counter is non-deterministic on Ahrefs's side
     # (it depends on the exact moment Ahrefs snapshots the post-hydration DOM, so its
     # value varies run-to-run, e.g. 1 on prosperfactory while the honest post-hydration
@@ -6864,6 +6941,7 @@ def _score_issues(
         "hreflang_defined_but_html_lang_missing", hreflang_defined_but_html_lang_missing
     )
     issues["hreflang_annotation_invalid"] = _issue_block("hreflang_annotation_invalid", hreflang_annotation_invalid)
+    _attach_evidence(("hreflang_annotation_invalid",), "page_values", hreflang_invalid_values)
     _write_issue_rows(issues_dir, "hreflang_conflicts_within_page_source_code", hreflang_conflicts_within_page_source_code)
     # SUPPRESSED for Ahrefs parity: "Hreflang conflicts within page source code" is a Semrush
     # issue name (note the untranslated English label), not an Ahrefs issue type. Ahrefs's

@@ -136,6 +136,14 @@ def test_evidence_hits_stay_ahead_of_every_heuristic() -> None:
     assert targets[0] == "components/Header.tsx"
 
 
+def test_current_state_issues_target_the_flagged_pages() -> None:
+    # A duplicated <h1> lives in the page's own source, so the page files come first.
+    targets, calls = _resolve("multiple_h1", ["/about", "/en/avis-bitpanda"])
+
+    assert targets[:2] == ["app/about/page.tsx", "content/en/avis-bitpanda.mdx"]
+    assert calls == []
+
+
 def test_asset_issues_keep_the_component_holding_the_src_ahead_of_the_pages() -> None:
     # A redirected logo lives in ONE shared component but flags every page that renders it.
     pages = ["/", "/about", "/en", "/en/avis-bitpanda", "/en/guide-etoro", "/sources/etoro-en"]

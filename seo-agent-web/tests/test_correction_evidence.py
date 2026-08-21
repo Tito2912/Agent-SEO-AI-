@@ -149,6 +149,41 @@ def test_a_dynamically_built_canonical_yields_no_change_so_the_ai_fallback_runs(
     assert (new, n) == (src, 0)
 
 
+# ── Current-state evidence (page_values) ─────────────────────────────────────────────
+
+def test_page_values_are_read_and_kept_separate_from_url_pairs() -> None:
+    block = {
+        "evidence": {
+            "kind": "page_values",
+            "items": [
+                {"page": "https://site.com/a", "field": "og_manquants", "value": "og:image, og:type"},
+                {"page": "", "field": "og_manquants", "value": "og:url"},
+            ],
+        }
+    }
+
+    assert app_module._issue_page_values(block) == [
+        {"page": "https://site.com/a", "field": "og_manquants", "value": "og:image, og:type"}
+    ]
+    # The two kinds never bleed into each other.
+    assert app_module._issue_url_pairs(block) == []
+    assert app_module._issue_page_values({"evidence": {"kind": "url_pairs", "items": [
+        {"page": "p", "from": "a", "to": "b"}]}}) == []
+
+
+def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
+    hint = app_module._build_page_values_hint([
+        {"page": "https://site.com/a", "field": "og_manquants", "value": "og:image, og:type"},
+        {"page": "https://site.com/b", "field": "lang invalide", "value": "en_US"},
+    ])
+
+    assert "https://site.com/a → og_manquants : og:image, og:type" in hint
+    assert "https://site.com/b → lang invalide : en_US" in hint
+    # The instruction that stops the patch from clobbering correct values.
+    assert "n'écrase pas les valeurs" in hint
+    assert app_module._build_page_values_hint([]) == ""
+
+
 # ── Asset references ─────────────────────────────────────────────────────────────────
 
 def test_redirected_asset_is_repointed_in_every_reference_form() -> None:
