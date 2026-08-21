@@ -4155,6 +4155,59 @@ def _score_issues(
         _write_issue_rows(issues_dir, issue_key, rows)
         return {"count": len(rows), "examples": rows[:limit]}
 
+    # ── Per-issue evidence (unified contract) ─────────────────────────────────────────
+    # A corrector can only be deterministic when it knows the exact value to write, and the
+    # crawl is the ONLY place that value exists: a redirect's final destination, a target's
+    # real canonical — none of it is derivable from the source code. Without evidence a fixer
+    # can only prompt an LLM to guess, which is how link rewrites once went backwards.
+    #
+    # Attached under one uniform key so every family is read the same way, and capped: the
+    # worker runs in a 2 GB container and the report is re-read on every page load.
+    EVIDENCE_CAP = 40
+
+    def _attach_evidence(
+        issue_keys: "list[str] | tuple[str, ...]", kind: str, items: list[dict[str, str]],
+        *, cap: int = EVIDENCE_CAP,
+    ) -> None:
+        """Attach capped, de-duplicated evidence to each listed issue block.
+
+        `kind` tells the corrector how to consume `items`:
+          - "url_pairs": {page, from, to} — replace the value `from` with `to` on that page.
+        Absent evidence is never an error: the fixer falls back to prompt-only guidance."""
+        seen: set[tuple[str, str, str]] = set()
+        clean: list[dict[str, str]] = []
+        for it in items or []:
+            row = {k: str(it.get(k) or "").strip() for k in ("page", "from", "to")}
+            # A pair with no destination (or pointing at itself) can't drive a rewrite.
+            if not row["from"] or not row["to"] or row["from"] == row["to"]:
+                continue
+            key = (row["page"], row["from"], row["to"])
+            if key in seen:
+                continue
+            seen.add(key)
+            clean.append(row)
+            if len(clean) >= cap:
+                break
+        if not clean:
+            return
+        for k in issue_keys:
+            blk = issues.get(k)
+            if isinstance(blk, dict):
+                blk["evidence"] = {"kind": kind, "items": clean}
+
+    def _redirect_destination(p: PageData) -> str:
+        """The final 200 URL a redirecting page lands on, or '' when the chain does NOT end
+        on a healthy page — repointing a canonical/hreflang onto a 404 would trade one issue
+        for a worse one, so no evidence is better than bad evidence."""
+        if not _is_redirect(p):
+            return ""
+        dest = _final_url(p)
+        if not dest:
+            return ""
+        target = page_by_any.get(dest)
+        status = target.status_code if (target and isinstance(target.status_code, int)) else p.status_code
+        return dest if isinstance(status, int) and 200 <= status < 300 else ""
+
     def _pick_better(existing: PageData, candidate: PageData, *, url_key: str | None) -> PageData:
         """
         Choose the "best" representative when multiple PageData objects map to the same normalized URL.
@@ -4580,6 +4633,10 @@ def _score_issues(
     non_canonical_specified_as_canonical: list[str] = []
     canonical_from_http_to_https: list[str] = []
     canonical_from_https_to_http: list[str] = []
+    # Evidence: current canonical value → the value it should carry (see _attach_evidence).
+    canonical_redirect_pairs: list[dict[str, str]] = []
+    canonical_noncanon_pairs: list[dict[str, str]] = []
+    canonical_scheme_pairs: list[dict[str, str]] = []
 
     for p in ok_html_pages:
         if not p.canonical:
@@ -4595,6 +4652,9 @@ def _score_issues(
             canonical_from_http_to_https.append(p.url)
         if page_scheme == "https" and canon_scheme == "http":
             canonical_from_https_to_http.append(p.url)
+            canonical_scheme_pairs.append(
+                {"page": _final_url(p), "from": canon, "to": re.sub(r"^http://", "https://", canon)}
+            )
 
         target = page_by_any.get(canon)
         if target and isinstance(target.status_code, int):
@@ -4612,6 +4672,11 @@ def _score_issues(
                     "canonical_url": canon,
                 }
             )
+            # The 200 URL the canonical ends up on — the value the tag should carry. Only the
+            # crawl knows it, so without this the fixer could only guess the direction.
+            _dest = _redirect_destination(target_req) if target_req else ""
+            if _dest:
+                canonical_redirect_pairs.append({"page": _final_url(p), "from": canon, "to": _dest})
 
         # Avoid double-reporting: if the canonical target is a redirect (or a hard error),
         # report it as such rather than also "non-canonical specified as canonical".
@@ -4622,6 +4687,10 @@ def _score_issues(
             and not (isinstance(target.status_code, int) and target.status_code >= 400)
         ):
             non_canonical_specified_as_canonical.append(f"{p.url} -> {canon}")
+            # The target declares its OWN canonical: that is the URL this page should point to.
+            _real = _norm_self(target.canonical)
+            if _real:
+                canonical_noncanon_pairs.append({"page": _final_url(p), "from": canon, "to": _real})
 
     orphaned_sitemap_pages: list[str] = []
     incorrect_pages_found_in_sitemap_xml: list[str] = []
@@ -5541,6 +5610,9 @@ def _score_issues(
     hreflang_referenced_multi_lang: list[str] = []
     hreflang_html_lang_mismatch: list[str] = []
     missing_reciprocal_hreflang_set: set[str] = set()
+    # Evidence: hreflang href → the URL it should point to (see _attach_evidence).
+    hreflang_redirect_pairs: list[dict[str, str]] = []
+    hreflang_noncanon_pairs: list[dict[str, str]] = []
 
     for p in hreflang_source_pages:
         hreflang = _hreflang_map_for(p)
@@ -5612,6 +5684,10 @@ def _score_issues(
         invalid = False
         any_redirect_or_broken = False
         any_non_canonical = False
+        # Collected per page, then filed under whichever issue actually fires below (the two
+        # are mutually exclusive) so evidence never describes an issue the page isn't flagged for.
+        _page_redirect_pairs: list[dict[str, str]] = []
+        _page_noncanon_pairs: list[dict[str, str]] = []
         for code, href in hreflang.items():
             if not HREFLANG_RE.match(code):
                 invalid = True
@@ -5619,7 +5695,8 @@ def _score_issues(
             if not _non_empty(href):
                 invalid = True
                 continue
-            t = page_by_any.get(_norm_self(href) or href)
+            _href_norm = _norm_self(href) or href
+            t = page_by_any.get(_href_norm)
             if t:
                 # TooManyRedirects targets count as broken (Ahrefs flags hreflang→redirect-loop).
                 _t_toomany = bool(t.error and "toomanyredirects" in (t.error or "").lower())
@@ -5629,13 +5706,23 @@ def _score_issues(
                 _t_redirect = _is_redirect(t) and not _is_canonical_normalization_redirect(t)
                 if _t_redirect or _t_toomany or _is_timeout(t) or (isinstance(t.status_code, int) and t.status_code >= 400):
                     any_redirect_or_broken = True
+                    # Only a redirect has a known destination; a 4xx/timeout target has none,
+                    # so those stay advisory rather than driving a rewrite to nowhere.
+                    _dest = _redirect_destination(t)
+                    if _dest:
+                        _page_redirect_pairs.append({"page": _final_url(p), "from": _href_norm, "to": _dest})
                 if _is_non_canonical(t):
                     any_non_canonical = True
+                    _real = _norm_self(t.canonical)
+                    if _real:
+                        _page_noncanon_pairs.append({"page": _final_url(p), "from": _href_norm, "to": _real})
         # Avoid double-counting: redirect/broken is a more specific condition than non-canonical.
         if any_redirect_or_broken:
             hreflang_url_to_redirect_or_broken.append(p.url)
+            hreflang_redirect_pairs.extend(_page_redirect_pairs)
         elif any_non_canonical:
             hreflang_to_non_canonical.append(p.url)
+            hreflang_noncanon_pairs.extend(_page_noncanon_pairs)
         if invalid:
             hreflang_annotation_invalid.append(p.url)
 
@@ -6059,6 +6146,12 @@ def _score_issues(
     )
     issues["canonical_from_http_to_https"] = _issue_block("canonical_from_http_to_https", canonical_from_http_to_https)
     issues["canonical_from_https_to_http"] = _issue_block("canonical_from_https_to_http", canonical_from_https_to_http)
+    # Canonical rewrite evidence: current tag value → the value it must carry.
+    # (canonical_from_http_to_https gets none on purpose: there the canonical is already the
+    # https one and is CORRECT — what's wrong is the page being reachable over http.)
+    _attach_evidence(("canonical_points_to_redirect",), "url_pairs", canonical_redirect_pairs)
+    _attach_evidence(("non_canonical_page_specified_as_canonical_one",), "url_pairs", canonical_noncanon_pairs)
+    _attach_evidence(("canonical_from_https_to_http",), "url_pairs", canonical_scheme_pairs)
 
     def _is_indexable_url(u: str) -> bool:
         u_norm = _norm_self(u) or u
@@ -6798,6 +6891,9 @@ def _score_issues(
         "hreflang_to_redirect_or_broken_page_links", []
     )
     issues["hreflang_to_non_canonical"] = _issue_block("hreflang_to_non_canonical", hreflang_to_non_canonical)
+    # Hreflang rewrite evidence: the href as written → the URL it must point to.
+    _attach_evidence(("hreflang_to_redirect_or_broken_page",), "url_pairs", hreflang_redirect_pairs)
+    _attach_evidence(("hreflang_to_non_canonical",), "url_pairs", hreflang_noncanon_pairs)
     issues["x_default_hreflang_missing"] = _issue_block(
         "x_default_hreflang_missing", sorted(hreflang_x_default_missing_set)
     )

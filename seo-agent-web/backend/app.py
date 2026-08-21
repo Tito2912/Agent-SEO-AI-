@@ -85,6 +85,13 @@ except ImportError:
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
+    from . import repo_index as repo_index  # type: ignore
+except ImportError:
+    # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
+    import repo_index  # type: ignore
+
+try:
+    # When running as `uvicorn backend.app:app` (recommended).
     from . import billing as billing  # type: ignore
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -3222,7 +3229,7 @@ _EDITABLE_EXTS = {
     "html", "htm", "tsx", "jsx", "ts", "js", "mjs", "cjs", "vue", "svelte", "astro",
     "php", "md", "mdx", "json", "toml", "yaml", "yml", "conf", "liquid", "ejs", "hbs", "twig", "erb", "xml",
 }
-_REPO_NOISE = ("node_modules/", "dist/", "build/", ".next/", "vendor/", ".git/", "coverage/", ".cache/", "out/")
+_is_repo_noise = repo_index.is_noise_path
 
 
 def _ai_pick_repo_files(issue_key: str, issue_label: str, all_paths: list[str], *, limit: int = 2) -> list[str]:
@@ -3233,7 +3240,7 @@ def _ai_pick_repo_files(issue_key: str, issue_label: str, all_paths: list[str], 
     cand: list[str] = []
     for p in all_paths:
         low = p.lower()
-        if any(n in low for n in _REPO_NOISE):
+        if _is_repo_noise(p):
             continue
         base = low.rsplit("/", 1)[-1]
         ext = base.rsplit(".", 1)[-1] if "." in base else ""
@@ -3278,7 +3285,7 @@ def _ai_map_urls_to_files(
     cand: list[str] = []
     for p in all_paths:
         low = p.lower()
-        if any(n in low for n in _REPO_NOISE):
+        if _is_repo_noise(p):
             continue
         base = low.rsplit("/", 1)[-1]
         ext = base.rsplit(".", 1)[-1] if "." in base else ""
@@ -15797,6 +15804,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
     report_issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
+    idx = repo_index.build_repo_index(all_paths)
+    logger.info("[corrections] bulk-fix %s", repo_index.index_summary(idx))
 
     # Process each issue with deep coverage (multiple files/issue); share file_state so a
     # file touched by several issues stacks correctly.
@@ -15822,7 +15831,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=min(6, budget),
-            evidence=_ev, extra_hint=_hint, model_override=gate_model,
+            evidence=_ev, extra_hint=_hint, model_override=gate_model, index=idx,
         )
         if patched:
             budget -= len(patched)
@@ -15966,7 +15975,7 @@ def _github_grep_repo_for_terms(
     _img_tokens = ("<img", "<image", "next/image")
     cand = [
         p for p in all_paths
-        if not any(n in p.lower() for n in _REPO_NOISE)
+        if not _is_repo_noise(p)
         and ("." in p.rsplit("/", 1)[-1])
         and p.rsplit(".", 1)[-1].lower() in _EDITABLE_EXTS
     ]
@@ -16065,8 +16074,7 @@ def _github_tarball_grep(
                     continue
                 parts = m.name.split("/", 1)  # strip leading "<repo>-<sha>/" prefix
                 rel = parts[1] if len(parts) == 2 else m.name
-                low = rel.lower()
-                if any(n in low for n in _REPO_NOISE):
+                if _is_repo_noise(rel):
                     continue
                 base = rel.rsplit("/", 1)[-1]
                 if "." not in base or base.rsplit(".", 1)[-1].lower() not in _EDITABLE_EXTS:
@@ -16260,8 +16268,10 @@ _HEAD_HINTS: dict[str, str] = {
         "vers l'URL canonique réelle de la page (sa version indexable définitive). Ne touche qu'au canonical."
     ),
     "canonical_from_http_to_https": (
-        "Le canonical utilise http:// alors que le site est en https://. Remplace le schéma du "
-        "canonical par https:// (même host/chemin). Ne touche qu'au canonical."
+        "Ces pages sont servies en http:// alors que leur canonical pointe (correctement) vers "
+        "la version https://. Le canonical est BON : ne le modifie pas. Corrige ce qui expose "
+        "la page en http — un lien interne, une URL de sitemap ou une règle de redirection "
+        "manquante http→https. Si rien de tel n'est dans ce fichier, ne change rien."
     ),
     "canonical_from_https_to_http": (
         "Le canonical passe de https vers http. Corrige-le en https:// (même host/chemin). Ne touche qu'au canonical."
@@ -16313,9 +16323,9 @@ _HEAD_HINTS: dict[str, str] = {
 _PER_PAGE_ONLY_KEYS = {"open_graph_url_not_matching_canonical"}
 
 
-def _is_shared_template_path(path: str) -> bool:
-    base = (path or "").rsplit("/", 1)[-1].lower()
-    return base.startswith(("layout.", "_document", "_app")) or base in {"base.html", "_layout.html"}
+# "Is this file shared across many pages?" now lives in backend/repo_index.py
+# (`is_shared_path`), where it also covers dynamic route templates like `app/[slug]/page.tsx`
+# instead of only matching layout/_document by filename.
 
 
 def _extract_layout_og_images(content: str) -> str:
@@ -16420,6 +16430,148 @@ _MIXED_CONTENT_KEYS = {
     "https_http_mixed_content",
 }
 _DOUBLE_SLASH_KEYS = {"double_slash_in_url"}
+
+# ── Unified evidence contract ────────────────────────────────────────────────────────
+# The crawler attaches per-issue evidence under a single key: {"kind": ..., "items": [...]}.
+# `url_pairs` items are {page, from, to}: the value a tag currently carries and the value it
+# must carry. Only the crawl knows `to` (a redirect's final destination, a target's declared
+# canonical), which is exactly what lets these fixers be deterministic instead of prompted.
+# Older reports predate the contract and simply have no evidence — every reader degrades to
+# the previous prompt-only behaviour, so a stale report is never an error.
+_URL_PAIR_KEYS = {
+    "canonical_points_to_redirect",
+    "non_canonical_page_specified_as_canonical_one",
+    "canonical_from_https_to_http",
+    "hreflang_to_redirect_or_broken_page",
+    "hreflang_to_non_canonical",
+}
+
+
+def _issue_url_pairs(issue_block: Any) -> list[dict[str, str]]:
+    """Read `evidence.items` of kind `url_pairs` from an issue block. Empty when the issue
+    carries no evidence (report from before the contract, or nothing worth rewriting)."""
+    if not isinstance(issue_block, dict):
+        return []
+    ev = issue_block.get("evidence")
+    if not isinstance(ev, dict) or ev.get("kind") != "url_pairs":
+        return []
+    out: list[dict[str, str]] = []
+    for it in ev.get("items") or []:
+        if isinstance(it, dict) and it.get("from") and it.get("to"):
+            out.append({
+                "page": str(it.get("page") or ""),
+                "from": str(it["from"]),
+                "to": str(it["to"]),
+            })
+    return out[:40]
+
+
+def _build_url_pair_hint(pairs: list[dict[str, str]]) -> str:
+    """Hint listing each current value → the value to write, for the AI fallback used when a
+    file builds the URL dynamically and no literal can be rewritten."""
+    if not pairs:
+        return ""
+    lines = [f"  - {p['from']}  →  {p['to']}" for p in pairs[:30]]
+    return (
+        "Valeurs EXACTES à corriger (remplace celle de gauche par celle de droite, uniquement "
+        "dans la balise concernée — canonical ou hreflang — jamais dans un lien de navigation). "
+        "Si l'URL est construite dynamiquement, corrige la logique qui la génère pour qu'elle "
+        "produise la valeur de droite :\n" + "\n".join(lines)
+    )
+
+
+def _url_value_variants(pair: dict[str, str]) -> list[tuple[str, str]]:
+    """Both the absolute and the path-only writing of one pair, so a file that stores the URL
+    relatively keeps it relative (turning it absolute is a change nobody asked for)."""
+    frm, to = str(pair.get("from") or ""), str(pair.get("to") or "")
+    variants = [(frm, to)]
+    frm_path, to_path = _link_path(frm), _link_path(to)
+    if frm_path != frm:
+        variants.append((frm_path, to_path))
+    return [(a, b) for a, b in variants if a and b and a != b]
+
+
+_LINK_TAG_RE = re.compile(r"<link\b[^>]*>", re.I)
+_HREF_ATTR_RE = re.compile(r'(href\s*=\s*)(["\'])(.*?)\2', re.I | re.S)
+_REL_CANONICAL_RE = re.compile(r'rel\s*=\s*["\']?(canonical|alternate)\b', re.I)
+_JS_CANONICAL_RE = re.compile(r'(canonical\s*:\s*)(["\'])(.*?)\2')
+_JS_LANGUAGES_RE = re.compile(r"languages\s*:\s*\{")
+_QUOTED_VALUE_RE = re.compile(r'(:\s*)(["\'])(.*?)\2')
+
+
+def _braced_block(content: str, open_brace_idx: int) -> tuple[int, int]:
+    """Span of the `{...}` block starting at open_brace_idx, brace-matched. Returns (-1, -1)
+    when unbalanced (truncated/odd file) so the caller can skip it rather than guess."""
+    depth = 0
+    for i in range(open_brace_idx, len(content)):
+        if content[i] == "{":
+            depth += 1
+        elif content[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return (open_brace_idx, i + 1)
+    return (-1, -1)
+
+
+def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTIC canonical/hreflang value rewrite (no AI).
+
+    Only rewrites a URL that sits where a canonical or hreflang value belongs — a
+    `<link rel="canonical"|"alternate">` href, a `canonical:` metadata property, or an entry
+    of a Next.js `languages: {...}` map — and only when the value matches a flagged one
+    EXACTLY. A navigation link pointing at the same URL is deliberately left alone: the fix is
+    about which URL the page declares as canonical, not about where its menu points.
+    Returns (new_content, replacements)."""
+    mapping: dict[str, str] = {}
+    for pair in pairs or []:
+        for old, new in _url_value_variants(pair):
+            mapping.setdefault(old, new)
+    if not mapping:
+        return content, 0
+    count = 0
+
+    def _swap_href(tag: str) -> str:
+        nonlocal count
+        if not _REL_CANONICAL_RE.search(tag):
+            return tag
+
+        def _one(m: "re.Match[str]") -> str:
+            nonlocal count
+            val = m.group(3).strip()
+            if val in mapping:
+                count += 1
+                return m.group(1) + m.group(2) + mapping[val] + m.group(2)
+            return m.group(0)
+
+        return _HREF_ATTR_RE.sub(_one, tag)
+
+    new = _LINK_TAG_RE.sub(lambda m: _swap_href(m.group(0)), content)
+
+    def _one_prop(m: "re.Match[str]") -> str:
+        nonlocal count
+        val = m.group(3).strip()
+        if val in mapping:
+            count += 1
+            return m.group(1) + m.group(2) + mapping[val] + m.group(2)
+        return m.group(0)
+
+    new = _JS_CANONICAL_RE.sub(_one_prop, new)
+
+    # `languages: { 'en': '/en', ... }` — scoped to the block so a short key elsewhere
+    # (`to:`, `id:`) whose value happens to match can never be rewritten.
+    pos = 0
+    while True:
+        m = _JS_LANGUAGES_RE.search(new, pos)
+        if not m:
+            break
+        start, end = _braced_block(new, new.index("{", m.start()))
+        if start < 0:
+            pos = m.end()
+            continue
+        patched_block = _QUOTED_VALUE_RE.sub(_one_prop, new[start:end])
+        new = new[:start] + patched_block + new[end:]
+        pos = start + len(patched_block)
+    return new, count
 
 
 def _link_path(url: str, *, keep_slash: bool = True) -> str:
@@ -16616,16 +16768,111 @@ def _deep_fix_redirect_config_loops(
     return changed, notes
 
 
+def _resolve_issue_targets(
+    *, all_paths: list[str], index: dict[str, Any] | None, issue_key: str, issue_label: str,
+    impacted_urls: list[str], located: list[str], max_files: int,
+    evidence: list[str] | None = None, wants_page_targeting: bool = False,
+    ai_map: "Callable[[], list[str]] | None" = None,
+    ai_pick: "Callable[[], list[str]] | None" = None,
+) -> list[str]:
+    """Decide WHICH repo files to patch for one issue. Pure and deterministic apart from the
+    two optional AI fallbacks, so the whole ordering can be tested without network.
+
+    Priority: evidence hits (`located`, already resolved by the caller) → per-page sources from
+    the repo route map → conventional-path guesses for URLs the map missed → hardcoded candidates
+    for the issue type → AI URL mapping → AI tree pick. Shared templates are then dropped for
+    issues whose fix must stay per-page."""
+    targets = list(located)
+    # Per-page fixes (mechanical link families + head/hreflang, and the title/meta length
+    # families whose value belongs in the per-page source): the flagged pages ARE the files to
+    # fix, so they are PRIORITISED — the max_files cap must never patch a subset of them.
+    # Sitemap membership is deliberately NOT here: its impacted URLs are the DATA to append,
+    # while the only file to edit is the sitemap generator — prioritising the pages would let
+    # the cap evict `app/sitemap.ts`, the one target that matters.
+    want_page_targeting = (
+        wants_page_targeting
+        or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS
+        or _length_family_name(issue_key) is not None
+    )
+    index_resolved_all = False
+    if want_page_targeting and impacted_urls:
+        priority: list[str] = []
+        # The repo route map answers URL→file deterministically (framework-aware, incl. content
+        # collections behind a dynamic route). Only URLs it cannot resolve fall back to guessing
+        # conventional paths, which is why the guess list below stays.
+        unresolved: list[str] = []
+        for u in impacted_urls:
+            hits = [h for h in repo_index.route_files(index or {}, u) if h in all_paths]
+            if hits:
+                for h in hits:
+                    if h not in priority:
+                        priority.append(h)
+            else:
+                unresolved.append(u)
+        index_resolved_all = bool(index) and not unresolved and bool(priority)
+        for u in unresolved:
+            rel = _link_path(u, keep_slash=False).strip("/")
+            if not rel:
+                continue
+            for cand in (
+                f"public/{rel}.html", f"{rel}.html", f"public/{rel}/index.html",
+                f"content/{rel}.mdx", f"content/{rel}/index.mdx",
+                f"app/{rel}/page.tsx", f"src/app/{rel}/page.tsx",
+                f"src/pages/{rel}.tsx", f"pages/{rel}.tsx",
+            ):
+                if cand in all_paths and cand not in priority:
+                    priority.append(cand)
+        if priority:
+            targets = priority + [t for t in targets if t not in priority]
+    # Hardcoded candidate filenames for this issue type (this is what puts app/sitemap.ts in
+    # range for a sitemap issue, where the impacted pages are the DATA, not the file to edit).
+    for candidate in _seo_file_candidates_for_issue(issue_key):
+        for p in all_paths:
+            if (p == candidate or p.endswith(f"/{candidate}") or p.split("/")[-1] == candidate) and p not in targets:
+                targets.append(p)
+                break
+    # AI mapping of impacted URLs → source files. Skipped when the repo map already resolved
+    # EVERY impacted URL: the AI could only add noise there (and costs a call).
+    if impacted_urls and not index_resolved_all:
+        _mapper = ai_map or (lambda: _ai_map_urls_to_files(
+            issue_key=issue_key, issue_label=issue_label, urls=impacted_urls,
+            all_paths=all_paths, limit=max_files, evidence=evidence,
+        ))
+        for f in _mapper():
+            if f not in targets:
+                targets.append(f)
+    # Last resort: let the AI pick from the tree.
+    if not targets:
+        _picker = ai_pick or (lambda: _ai_pick_repo_files(issue_key, issue_label, all_paths, limit=2))
+        for f in _picker():
+            if f not in targets:
+                targets.append(f)
+    # Safety: per-page issues must NEVER be fixed in a file that renders many pages.
+    #  - title/meta length: a shared template (`app/[slug]/page.tsx` rendering `post.title`, or a
+    #    layout with a `%s | Marque` title template) would hardcode/lengthen EVERY page of the
+    #    route — that is how title_too_short 15→7 once created title_too_long 0→9.
+    #  - OG url≠canonical & co: editing the shared layout changes og:url/canonical for all pages
+    #    incl. the already-correct ones (it broke the home page twice before this guard existed).
+    # Prompt rules were disobeyed repeatedly here, so the guard stays deterministic.
+    if issue_key in _PER_PAGE_ONLY_KEYS or _length_family_name(issue_key):
+        targets = [p for p in targets if not repo_index.is_shared_path(index or {}, p)]
+    return targets[:max_files]
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
     evidence: list[str] | None = None, extra_hint: str = "", model_override: str = "",
     link_rewriter: "Callable[[str], tuple[str, int]] | None" = None,
+    rewriter_ai_fallback: bool = False,
+    index: dict[str, Any] | None = None,
 ) -> tuple[list[str], list[str], list[str]]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
-    Targets = hardcoded candidates ∪ AI URL→file mapping (∪ AI tree pick as last resort).
+    Targets = repo route map ∪ hardcoded candidates ∪ AI URL→file mapping (∪ AI tree pick as
+    last resort). `index` is the deterministic repo map (see backend/repo_index.py): when it
+    resolves an impacted URL, that beats every heuristic below and no AI guess is needed.
     Each file is patched to fix ALL its in-file occurrences. file_state caches sha/content
     so a file edited for several issues stacks correctly across calls. When link_rewriter is
     given (mechanical link families: links-to-redirect, mixed-content http→https, double-slash),
@@ -16654,58 +16901,15 @@ def _deep_patch_issue_files(
         for f in located:
             if f not in targets:
                 targets.append(f)
-    # 1b) Per-page fixes (mechanical link families + head/hreflang/sitemap): the flagged
-    #     (impacted) pages ARE the files to fix, so map each impacted URL to its source file
-    #     and PRIORITISE them so the max_files cap patches EVERY affected page (not a subset)
-    #     and never drops them for grep-noise files. Length families are excluded (they use the
-    #     dynamic-route guard elsewhere).
-    _want_page_targeting = (
-        link_rewriter is not None
-        or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _SITEMAP_ADD_KEYS
-    ) and not _length_family_name(issue_key)
-    if _want_page_targeting and impacted_urls:
-        priority: list[str] = []
-        for u in impacted_urls:
-            rel = _link_path(u, keep_slash=False).strip("/")
-            if not rel:
-                continue
-            for cand in (
-                f"public/{rel}.html", f"{rel}.html", f"public/{rel}/index.html",
-                f"content/{rel}.mdx", f"content/{rel}/index.mdx",
-                f"app/{rel}/page.tsx", f"src/app/{rel}/page.tsx",
-                f"src/pages/{rel}.tsx", f"pages/{rel}.tsx",
-            ):
-                if cand in all_paths and cand not in priority:
-                    priority.append(cand)
-        if priority:
-            targets = priority + [t for t in targets if t not in priority]
-    # 2) Hardcoded candidate filenames for this issue type.
-    for candidate in _seo_file_candidates_for_issue(issue_key):
-        for p in all_paths:
-            if (p == candidate or p.endswith(f"/{candidate}") or p.split("/")[-1] == candidate) and p not in targets:
-                targets.append(p)
-                break
-    # 3) AI mapping of impacted URLs → source files.
-    if impacted_urls:
-        for f in _ai_map_urls_to_files(issue_key=issue_key, issue_label=issue_label, urls=impacted_urls, all_paths=all_paths, limit=max_files, evidence=evidence):
-            if f not in targets:
-                targets.append(f)
-    # 4) Last resort: let the AI pick from the tree.
-    if not targets:
-        for f in _ai_pick_repo_files(issue_key, issue_label, all_paths, limit=2):
-            if f not in targets:
-                targets.append(f)
-    # Safety: title/meta length fixes belong in per-page content (frontmatter), NOT in a
-    # shared dynamic-route template (app/[slug]/page.tsx renders `post.title`). Editing those
-    # would hardcode/suffix one title onto ALL pages of the route — drop them deterministically.
-    if _length_family_name(issue_key):
-        targets = [p for p in targets if "[" not in p]
-    # Per-page-only issues (e.g. OG url≠canonical): never edit a shared layout/template —
-    # doing so changes og:url/canonical for ALL pages incl. correct ones (would break the home).
-    if issue_key in _PER_PAGE_ONLY_KEYS:
-        targets = [p for p in targets if not _is_shared_template_path(p)]
-    targets = targets[:max_files]
+    targets = _resolve_issue_targets(
+        all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
+        impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
+        wants_page_targeting=link_rewriter is not None,
+    )
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
+    _idiom = repo_index.stack_idiom_hint(index) if index else ""
+    if _idiom:
+        occ_hint += " " + _idiom
     if evidence:
         occ_hint += " Éléments précis à corriger dans ce fichier s'ils y figurent (ex. src d'images sans alt) : " + ", ".join(evidence[:15]) + "."
     if extra_hint:
@@ -16732,8 +16936,14 @@ def _deep_patch_issue_files(
         # relative→absolute mistakes an LLM makes; e.g. /en/ vs /en/guide, code literals).
         if link_rewriter is not None:
             new_content, n = link_rewriter(raw)
-            patch = {"patched_content": new_content} if n > 0 else {"no_change": True, "patched_content": raw}
-            return (path, raw, cur_sha, patch)
+            if n > 0:
+                return (path, raw, cur_sha, {"patched_content": new_content})
+            # Nothing literal to swap. For link families that means the file simply doesn't
+            # contain the link. For canonical/hreflang the URL may be BUILT (getSiteUrl(path),
+            # a template literal), and only the AI can fix the logic that produces it — the
+            # exact values to reach are in the hint.
+            if not rewriter_ai_fallback:
+                return (path, raw, cur_sha, {"no_change": True, "patched_content": raw})
         try:
             patch = _openai_generate_file_patch(
                 file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
@@ -16848,6 +17058,10 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         item["path"] for item in (tree_data.get("tree") or [])
         if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
+    # Deterministic URL→file map + stack detection, built from the tree we just read (no extra
+    # API call). It is an accelerator: an unresolved URL simply falls back to the old guessing.
+    idx = repo_index.build_repo_index(all_paths)
+    logger.info("[corrections] deep-fix %s %s", issue_key, repo_index.index_summary(idx))
 
     # ── Create one branch, patch every impacted file, open one PR ──
     from datetime import datetime as _dt
@@ -16901,9 +17115,24 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             if _og_imgs:
                 extra_hint += "\nImages OG héritées du layout à RÉUTILISER dans le openGraph de chaque page (copie ce `images:` tel quel) : images: " + _og_imgs
                 break
+    # Canonical / hreflang rewrite families: the crawler's url_pairs evidence gives the exact
+    # value each tag must carry, so the fix stops being a guess. Appended to the family hint
+    # (which stays useful for the AI fallback on dynamically built URLs).
+    _url_pairs: list[dict[str, str]] = []
+    if issue_key in _URL_PAIR_KEYS and issues:
+        _url_pairs = _issue_url_pairs(issues.get(issue_key))
+        if _url_pairs:
+            _pair_hint = _build_url_pair_hint(_url_pairs)
+            extra_hint = (extra_hint + "\n" + _pair_hint) if extra_hint else _pair_hint
+            # Locate the files that literally contain the wrong values.
+            evidence = [p["from"] for p in _url_pairs]
     # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
     _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
-    if _content_pairs:
+    _rewriter_ai_fallback = False
+    if _url_pairs:
+        _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_head_url_values(raw, _p)  # noqa: E731
+        _rewriter_ai_fallback = True
+    elif _content_pairs:
         _link_rewriter = lambda raw, _p=_content_pairs: _rewrite_redirect_links(raw, _p)  # noqa: E731
     elif issue_key in _MIXED_CONTENT_KEYS:
         _host = re.sub(r"^https?://", "", str(proj.site_name or "")).strip("/").split("/")[0].lower()
@@ -16920,7 +17149,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
         site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
         extra_hint=extra_hint, model_override=gate_model,
-        link_rewriter=_link_rewriter,
+        link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback, index=idx,
     )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     config_changes: list[str] = []
