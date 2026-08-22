@@ -16902,11 +16902,18 @@ def _resolve_issue_targets(
             targets = priority + [t for t in targets if t not in priority]
     # Hardcoded candidate filenames for this issue type (this is what puts app/sitemap.ts in
     # range for a sitemap issue, where the impacted pages are the DATA, not the file to edit).
-    for candidate in _seo_file_candidates_for_issue(issue_key):
-        for p in all_paths:
-            if (p == candidate or p.endswith(f"/{candidate}") or p.split("/")[-1] == candidate) and p not in targets:
-                targets.append(p)
-                break
+    #
+    # Skipped for a per-page family once the route map has resolved EVERY impacted URL: the
+    # candidates are matched by BASENAME, so on a static site `index.html` matches an arbitrary
+    # `de/index.html` that was never flagged. That is how PR#2 shortened a valid 160-char meta
+    # description on /de (and its og:/twitter: copies) while fixing /de/blog. When the map has
+    # already named the files, anything else this step adds is by definition not flagged.
+    if not (want_page_targeting and index_resolved_all):
+        for candidate in _seo_file_candidates_for_issue(issue_key):
+            for p in all_paths:
+                if (p == candidate or p.endswith(f"/{candidate}") or p.split("/")[-1] == candidate) and p not in targets:
+                    targets.append(p)
+                    break
     # AI mapping of impacted URLs → source files. Skipped when the repo map already resolved
     # EVERY impacted URL: the AI could only add noise there (and costs a call).
     if impacted_urls and not index_resolved_all:

@@ -30,6 +30,14 @@ from backend import app as app_module  # noqa: E402
 from backend import repo_index as ri  # noqa: E402
 
 
+STATIC_TREE = [
+    "index.html",
+    "de/index.html",
+    "de/blog.html",
+    "fr/index.html",
+    "sitemap.xml",
+]
+
 TREE = [
     "package.json",
     "next.config.js",
@@ -51,6 +59,7 @@ def _resolve(issue_key: str, urls: list[str], **kw):
     """Resolve targets with both AI fallbacks stubbed, recording whether they were called."""
     calls: list[str] = []
     ai_map_result = kw.pop("ai_map_result", [])
+    tree = kw.pop("tree", TREE)
 
     def _ai_map() -> list[str]:
         calls.append("map")
@@ -61,8 +70,8 @@ def _resolve(issue_key: str, urls: list[str], **kw):
         return []
 
     targets = app_module._resolve_issue_targets(
-        all_paths=TREE,
-        index=kw.pop("index", ri.build_repo_index(TREE)),
+        all_paths=tree,
+        index=kw.pop("index", ri.build_repo_index(tree)),
         issue_key=issue_key,
         issue_label=issue_key,
         impacted_urls=[f"{SITE}{u}" for u in urls],
@@ -134,6 +143,37 @@ def test_evidence_hits_stay_ahead_of_every_heuristic() -> None:
     )
 
     assert targets[0] == "components/Header.tsx"
+
+
+def test_a_resolved_page_family_never_pulls_in_an_unflagged_basename_match() -> None:
+    # Regression from PR#2 on elevenlabs-avis.com: fixing the meta description of /de/blog also
+    # rewrote de/index.html, matched only because the candidate list contains "index.html".
+    # That page was never flagged and its 160-char description was valid.
+    targets, calls = _resolve(
+        "meta_description_too_long_indexable", ["/de/blog"], tree=STATIC_TREE,
+    )
+
+    assert targets == ["de/blog.html"]
+    assert calls == []
+
+
+def test_the_candidate_list_still_applies_when_the_map_cannot_resolve_a_page() -> None:
+    # Without a resolved route the heuristics are all we have, so they must stay in play.
+    targets, calls = _resolve(
+        "meta_description_too_long_indexable", ["/de/nowhere"], tree=STATIC_TREE,
+    )
+
+    assert "index.html" in targets or "de/index.html" in targets
+    assert "map" in calls
+
+
+def test_sitemap_issues_still_reach_the_generator_through_the_candidate_list() -> None:
+    # The candidate skip must not touch families whose fix is NOT in the flagged pages.
+    targets, _ = _resolve(
+        "indexable_page_not_in_sitemap", ["/de/blog"], tree=STATIC_TREE,
+    )
+
+    assert "sitemap.xml" in targets
 
 
 def test_current_state_issues_target_the_flagged_pages() -> None:
