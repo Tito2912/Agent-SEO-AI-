@@ -4363,10 +4363,12 @@ def _score_issues(
     multiple_h1 = [p.url for p in ok_html_pages if (p.h1_tag_count or 0) > 1]
     # Evidence: how many tags and what the first one says — the patch must keep ONE and know
     # which, instead of deleting whichever it happens to see first.
+    # NB: PageData.h1 is a LIST of every h1 on the page (h2 too) — listing them all is exactly
+    # what the patch needs to decide which one to keep.
     multiple_h1_values = [
         {
             "page": _final_url(p), "field": f"{p.h1_tag_count} balises <h1>",
-            "value": f"1er h1 : «{(p.h1 or '').strip()[:120]}»" if _non_empty(p.h1) else "1er h1 vide",
+            "value": " | ".join(str(h).strip()[:80] for h in (p.h1 or []) if str(h).strip())[:300] or "h1 vides",
         }
         for p in ok_html_pages if (p.h1_tag_count or 0) > 1
     ]
