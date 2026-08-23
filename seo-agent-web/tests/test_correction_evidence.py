@@ -184,6 +184,39 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Duplicate-PR guard ───────────────────────────────────────────────────────────────
+
+def test_an_open_pr_blocks_a_second_one_but_a_closed_one_does_not(monkeypatch) -> None:
+    calls: list[int] = []
+
+    def fake_get(path, **kw):
+        number = int(path.rstrip("/").rsplit("/", 1)[-1])
+        calls.append(number)
+        return {11: {"state": "open"},
+                12: {"state": "closed"},
+                13: {"state": "closed", "merged": True, "merged_at": "2026-08-23T10:00:00Z"}}[number]
+
+    monkeypatch.setattr(app_module, "_github_api_get", fake_get)
+
+    assert app_module._github_pr_is_open("o", "r", 11, "tok") is True
+    # A closed or merged PR must NOT block: the anomaly can legitimately come back.
+    assert app_module._github_pr_is_open("o", "r", 12, "tok") is False
+    assert app_module._github_pr_is_open("o", "r", 13, "tok") is False
+    assert calls == [11, 12, 13]
+
+
+def test_an_unreachable_github_lets_the_user_through(monkeypatch) -> None:
+    def boom(*a, **kw):
+        raise RuntimeError("rate limited")
+
+    monkeypatch.setattr(app_module, "_github_api_get", boom)
+
+    # This check gates an action, so anything unknown must not block on a guess.
+    assert app_module._github_pr_is_open("o", "r", 11, "tok") is False
+    assert app_module._github_pr_is_open("o", "r", 0, "tok") is False
+    assert app_module._github_pr_is_open("o", "r", 11, "") is False
+
+
 # ── Redirect config family ───────────────────────────────────────────────────────────
 
 def _redirect_block(*items: tuple[str, str]) -> dict[str, object]:

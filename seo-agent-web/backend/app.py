@@ -1658,6 +1658,27 @@ def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool
     return data.get("merged") or bool(data.get("merged_at")) or data.get("state") == "closed"
 
 
+def _github_pr_is_open(owner: str, repo: str, pr_number: int, token: str) -> bool:
+    """True only when GitHub CONFIRMS the pull request is still open.
+
+    Deliberately the inverse of `_github_pr_merged`'s error handling: this one gates an action,
+    so anything unknown (network, rate limit, missing token, deleted PR) must return False and
+    let the user through rather than block them on a guess."""
+    if not token or not owner or not repo or pr_number <= 0:
+        return False
+    try:
+        data = _github_api_get(
+            _github_api_path("repos", owner, repo, "pulls", str(int(pr_number))),
+            token=token,
+            timeout_s=8,
+        )
+    except Exception:
+        return False
+    if not isinstance(data, dict):
+        return False
+    return data.get("state") == "open" and not data.get("merged") and not data.get("merged_at")
+
+
 def _netlify_api_url(path: str) -> str:
     if not path.startswith("/") or path.startswith("//") or _has_control_chars(path):
         raise RuntimeError("Invalid Netlify API path")
@@ -16479,6 +16500,38 @@ _PAGE_VALUE_KEYS = {
 }
 
 
+def _open_pr_for_issue(
+    *, project_id: str, issue_key: str, url: str, owner: str, repo_name: str, token: str
+) -> str:
+    """URL of the still-open PR already covering this issue, or '' when there is none.
+
+    One open PR per issue is enough: a second "Créer PR" click builds a duplicate touching the
+    same lines, which then conflicts with the first (that is how #8 and #9 were both opened for
+    one lang fix). A merged or closed PR does NOT block — the anomaly can legitimately come back
+    and deserve a fresh fix."""
+    try:
+        with DB.session() as db:
+            task = db.scalar(select(IssueTask).where(
+                IssueTask.project_id == project_id,
+                IssueTask.issue_key == issue_key,
+                IssueTask.url == url,
+            ))
+            raw_note = str(task.note or "") if task else ""
+        note = json.loads(raw_note) if raw_note else {}
+    except Exception:
+        return ""
+    if not isinstance(note, dict):
+        return ""
+    pr_url = str(note.get("pr_url") or "")
+    try:
+        pr_number = int(note.get("pr_number") or 0)
+    except Exception:
+        pr_number = 0
+    if not pr_url or pr_number <= 0:
+        return ""
+    return pr_url if _github_pr_is_open(owner, repo_name, pr_number, token) else ""
+
+
 # `redirect_3xx` lists every redirecting URL, and on a healthy site they are the site's OWN
 # http→https / www canonicalisation — deliberate, not defects. The file that produces them
 # (netlify.toml, _redirects, next.config) also carries HSTS, CSP and cache rules, so handing it
@@ -17162,6 +17215,19 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             _length_family_name(issue_key), issue_label
         )
     primary_url = (body.url or "").strip() or (impacted[0] if impacted else "")
+
+    # Refuse to open a second PR while one is still awaiting review for this exact issue.
+    # Checked before any branch/tree work, so a duplicate click costs nothing.
+    _open_pr = _open_pr_for_issue(
+        project_id=str(proj.id), issue_key=issue_key, url=primary_url,
+        owner=owner, repo_name=repo_name, token=token,
+    )
+    if _open_pr:
+        return JSONResponse({"ok": False, "duplicate": True, "pr_url": _open_pr, "error": (
+            "Une PR est déjà ouverte pour cette anomalie et attend ta revue. En créer une seconde "
+            "produirait le même correctif sur les mêmes lignes, donc un conflit. Merge ou ferme "
+            "celle-ci d'abord."
+        )}, status_code=409)
 
     # Redirect-config family: refuse the whole run unless there is a self-redirect to repair.
     # Bailing out BEFORE the branch/tree work means no empty branch is left behind, and no

@@ -374,7 +374,9 @@
         if (!d.ok) {
           stopPoll();
           btn.disabled = false; btn.textContent = original; btn.title = d.error || '';
-          showFlowStatus(esc(d.error || 'Erreur pendant la correction.'), 'error');
+          // A refusal can still point somewhere useful (e.g. the PR already awaiting review).
+          var errLink = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
+          showFlowStatus(esc(d.error || 'Erreur pendant la correction.') + errLink, 'error');
           return;
         }
         stopPoll();
