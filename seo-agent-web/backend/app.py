@@ -16899,7 +16899,18 @@ def _resolve_issue_targets(
                 if cand in all_paths and cand not in priority:
                     priority.append(cand)
         if priority:
-            targets = priority + [t for t in targets if t not in priority]
+            # A canonical/hreflang tag lives in the head of the flagged page and NOWHERE else, so
+            # once the map has named those pages they are the complete answer. The grep-located
+            # files must be dropped: the evidence is a URL, and grepping for it also finds every
+            # file that merely MENTIONS the page — the sitemap, the target page itself, any page
+            # linking to it. That is how PR#4 rewrote sitemap.xml (including a <loc>, which would
+            # have made the sitemap point at a redirecting URL) while fixing 3 hreflang tags.
+            # Other page-targeting families keep their located files: for mixed-content the
+            # http:// references ARE the fix and legitimately live outside the flagged pages.
+            if issue_key in _URL_PAIR_KEYS and index_resolved_all:
+                targets = priority
+            else:
+                targets = priority + [t for t in targets if t not in priority]
     # Hardcoded candidate filenames for this issue type (this is what puts app/sitemap.ts in
     # range for a sitemap issue, where the impacted pages are the DATA, not the file to edit).
     #

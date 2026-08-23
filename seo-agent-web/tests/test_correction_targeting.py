@@ -34,6 +34,10 @@ STATIC_TREE = [
     "index.html",
     "de/index.html",
     "de/blog.html",
+    "de/legal-notice.html",
+    "en/legal-notice.html",
+    "es/legal-notice.html",
+    "mentions-legales.html",
     "fr/index.html",
     "sitemap.xml",
 ]
@@ -143,6 +147,32 @@ def test_evidence_hits_stay_ahead_of_every_heuristic() -> None:
     )
 
     assert targets[0] == "components/Header.tsx"
+
+
+def test_head_tag_families_drop_files_that_merely_mention_the_url() -> None:
+    # Regression from PR#4 on elevenlabs-avis.com: fixing the hreflang of 3 legal pages also
+    # rewrote sitemap.xml -- including a <loc>, which would have made the sitemap point at a
+    # redirecting URL -- plus the target page itself. Both were found by grepping the evidence
+    # URL, which matches any file that merely MENTIONS the page.
+    targets, _ = _resolve(
+        "hreflang_to_non_canonical",
+        ["/en/legal-notice", "/es/legal-notice", "/mentions-legales"],
+        located=["sitemap.xml", "de/legal-notice.html"],
+        tree=STATIC_TREE,
+    )
+
+    assert set(targets) == {"en/legal-notice.html", "es/legal-notice.html", "mentions-legales.html"}
+
+
+def test_mixed_content_keeps_located_files_outside_the_flagged_pages() -> None:
+    # The counterpart: there the http:// references ARE the fix and legitimately live in files
+    # the route map never names, so dropping them would break that family.
+    targets, _ = _resolve(
+        "https_page_has_internal_links_to_http", ["/de/blog"],
+        located=["CSS/main.css"], tree=STATIC_TREE, wants_page_targeting=True,
+    )
+
+    assert "CSS/main.css" in targets
 
 
 def test_a_resolved_page_family_never_pulls_in_an_unflagged_basename_match() -> None:
