@@ -50,6 +50,7 @@
 .corr-verify-text { font-size: 11px; font-weight: 600; }
 .corr-verify-text.ok { color: #34d399; }
 .corr-verify-text.err { color: #f87171; }
+.corr-verify-text.warn { color: #fbbf24; }
 
 /* Group */
 .corr-group { margin-bottom: 6px; }
@@ -657,6 +658,16 @@
                 <span class="badge {{ 'error' if candidate.priority == 'high' else ('warning' if candidate.priority == 'medium' else 'notice') }}" style="font-size:10px;">priorité {{ p_label }}</span>
                 {% if candidate.verify and candidate.verify.result == 'resolved' %}<span class="corr-verify-text ok">✓ résolu</span>
                 {% elif candidate.verify and candidate.verify.result == 'still_present' %}<span class="corr-verify-text err">⚠ présent</span>{% endif %}
+                {% set _intro = (candidate.verify or {}).get('introduced') or [] %}
+                {% if _intro %}
+                  {# A fix that resolves its own issue but creates others is only half a success. #}
+                  <span class="corr-verify-text warn"
+                        title="Anomalies en hausse depuis le crawl de référence{% if (candidate.verify or {}).get('fixes_in_window', 1) > 1 %} — {{ candidate.verify.fixes_in_window }} corrections partagent cette fenêtre, la hausse ne peut pas être attribuée à une seule{% endif %} : {% for i in _intro %}{{ i.key }} +{{ i.delta }}{% if not loop.last %}, {% endif %}{% endfor %}">
+                    ↑ {{ _intro | sum(attribute='delta') }} introduite{{ 's' if (_intro | sum(attribute='delta')) > 1 else '' }}
+                  </span>
+                {% elif candidate.verify and candidate.verify.get('baseline_ts') %}
+                  <span class="corr-verify-text ok" title="Aucune anomalie en hausse depuis le crawl de référence">± 0</span>
+                {% endif %}
               </div>
               <div class="corr-row-sub">
                 {{ candidate.count }}×

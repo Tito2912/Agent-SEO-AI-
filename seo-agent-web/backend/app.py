@@ -27,7 +27,7 @@ import uuid
 import csv
 
 logger = logging.getLogger("seo_agent")
-from collections import deque
+from collections import Counter, deque
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
@@ -3655,7 +3655,53 @@ def _norm_url_for_match(u: str) -> str:
     return s
 
 
-def _verify_corrections_after_crawl(slug: str, report: dict[str, Any]) -> None:
+def _report_issue_counts(report: dict[str, Any]) -> dict[str, int]:
+    """Issue key → occurrence count for one crawl report."""
+    issues = report.get("issues") if isinstance(report, dict) else None
+    if not isinstance(issues, dict):
+        return {}
+    out: dict[str, int] = {}
+    for key, block in issues.items():
+        if isinstance(block, dict):
+            try:
+                out[str(key)] = int(block.get("count") or 0)
+            except Exception:
+                out[str(key)] = 0
+    return out
+
+
+def _is_delta_metric_key(key: str) -> bool:
+    """Between-crawl change metrics ('title tag changed', 'became non-indexable', 'pages added to
+    sitemaps'…). They move by construction as soon as anything is fixed, so counting them as
+    damage would drown the signal they are meant to support."""
+    k = (key or "").lower()
+    return (
+        "_changed" in k
+        or "became_" in k
+        or k.startswith(("pages_added", "pages_removed", "no_of_urls"))
+    )
+
+
+def _collateral_introduced(
+    before: dict[str, int], after: dict[str, int], *, limit: int = 10
+) -> list[dict[str, Any]]:
+    """Issues that GREW between the crawl a fix was decided on and the crawl that verified it.
+
+    A corrector that edits code has to answer "what did it break?", not only "did it go away?".
+    Two real precedents: fixing title_too_short created title_too_long on 9 pages, and a sitemap
+    change cascaded into +4 missing_reciprocal_hreflang."""
+    grown: list[dict[str, Any]] = []
+    for key, now in after.items():
+        if _is_delta_metric_key(key):
+            continue
+        was = int(before.get(key, 0))
+        if now > was:
+            grown.append({"key": key, "before": was, "after": int(now), "delta": int(now) - was})
+    grown.sort(key=lambda g: (-g["delta"], g["key"]))
+    return grown[: max(0, limit)]
+
+
+def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir: Path | None = None) -> None:
     """#5 — After a fresh crawl, confirm whether applied corrections actually worked.
 
     For each IssueTask that was pushed/applied (status in_progress/done), check if the
@@ -3690,6 +3736,25 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any]) -> None:
                     impacted_cache[key] = {_norm_url_for_match(u) for u in raw}
                 return impacted_cache[key]
 
+            # Collateral damage, measured against the crawl each fix was decided on. When several
+            # fixes share the same window the delta belongs to the set, not to one PR — recorded
+            # as `fixes_in_window` so the UI never blames a single correction for the whole shift.
+            after_counts = _report_issue_counts(report)
+            window_sizes = Counter(str(t.crawl_ts or "") for t in tasks)
+            baseline_cache: dict[str, dict[str, int]] = {}
+
+            def _baseline_counts(ts: str) -> dict[str, int]:
+                if ts not in baseline_cache:
+                    base: dict[str, int] = {}
+                    if ts and runs_dir is not None and ts != crawl_ts:
+                        try:
+                            old = dash.load_report_json(runs_dir, slug, ts)
+                            base = _report_issue_counts(old) if isinstance(old, dict) else {}
+                        except Exception:
+                            base = {}
+                    baseline_cache[ts] = base
+                return baseline_cache[ts]
+
             now_iso = datetime.now(timezone.utc).isoformat()
             changed = False
             for t in tasks:
@@ -3716,7 +3781,16 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any]) -> None:
                 prev = note_obj.get("verify") if isinstance(note_obj.get("verify"), dict) else {}
                 if prev.get("result") == result and prev.get("crawl_ts") == crawl_ts:
                     continue
-                note_obj["verify"] = {"result": result, "verified_at": now_iso, "crawl_ts": crawl_ts}
+                _base_ts = str(t.crawl_ts or "")
+                _introduced = _collateral_introduced(_baseline_counts(_base_ts), after_counts)
+                note_obj["verify"] = {
+                    "result": result,
+                    "verified_at": now_iso,
+                    "crawl_ts": crawl_ts,
+                    "baseline_ts": _base_ts,
+                    "introduced": _introduced,
+                    "fixes_in_window": int(window_sizes.get(_base_ts, 1)),
+                }
                 t.note = json.dumps(note_obj, ensure_ascii=False)
                 # A confirmed-resolved fix is complete.
                 if result == "resolved" and t.status != "done":
@@ -7910,7 +7984,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                     actual_pages_crawled = int(pages_crawled)
                     job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
                 # #5 — verify previously applied corrections against this fresh crawl.
-                _verify_corrections_after_crawl(slug, report)
+                _verify_corrections_after_crawl(slug, report, runs_dir=_runs_dir_for_user(str(user_id)))
             job.result = {
                 "type": "crawl",
                 "slug": slug,

@@ -184,6 +184,49 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Collateral damage of a fix ───────────────────────────────────────────────────────
+
+def test_a_fix_that_creates_another_issue_is_reported() -> None:
+    # The real July regression: shortening titles pushed 9 pages over the long threshold.
+    before = {"title_too_short": 15, "title_too_long": 0, "missing_alt_text": 4}
+    after = {"title_too_short": 7, "title_too_long": 9, "missing_alt_text": 4}
+
+    grown = app_module._collateral_introduced(before, after)
+
+    assert grown == [{"key": "title_too_long", "before": 0, "after": 9, "delta": 9}]
+
+
+def test_a_brand_new_issue_key_counts_as_introduced() -> None:
+    grown = app_module._collateral_introduced({}, {"missing_reciprocal_hreflang": 4})
+
+    assert grown[0]["key"] == "missing_reciprocal_hreflang"
+    assert grown[0]["delta"] == 4
+
+
+def test_between_crawl_change_metrics_are_not_damage() -> None:
+    # These move by construction as soon as anything is fixed; counting them would drown
+    # the signal they exist to support.
+    after = {
+        "title_tag_changed": 9, "canonical_url_changed": 3,
+        "indexable_page_became_non_indexable": 1, "pages_added_to_sitemaps": 4,
+        "no_of_urls_in_sitemap_decreased": 1,
+    }
+
+    assert app_module._collateral_introduced({}, after) == []
+
+
+def test_a_clean_fix_reports_nothing() -> None:
+    counts = {"title_too_short": 3, "missing_alt_text": 2}
+
+    assert app_module._collateral_introduced(counts, {"title_too_short": 0, "missing_alt_text": 2}) == []
+
+
+def test_issue_counts_survive_a_malformed_report() -> None:
+    assert app_module._report_issue_counts({}) == {}
+    assert app_module._report_issue_counts({"issues": "nope"}) == {}
+    assert app_module._report_issue_counts({"issues": {"a": {"count": "3"}, "b": {"count": None}, "c": 7}}) == {"a": 3, "b": 0}
+
+
 # ── Mechanical vs model-written ──────────────────────────────────────────────────────
 
 def test_a_pr_says_whether_a_human_must_read_the_diff() -> None:
