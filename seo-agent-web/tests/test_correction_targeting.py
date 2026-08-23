@@ -217,6 +217,58 @@ def test_sitemap_issues_still_reach_the_generator_through_the_candidate_list() -
     assert "sitemap.xml" in targets
 
 
+# The real shape of avis-invest.com: a route GROUP for the default locale, one layout per
+# locale, nested dynamic routes, and MDX both as flat files and as directory bundles.
+NEXT_MULTILOCALE_TREE = [
+    "package.json", "next.config.mjs", "netlify.toml",
+    "app/(fr)/layout.tsx", "app/(fr)/page.tsx", "app/(fr)/[slug]/page.tsx", "app/(fr)/blog/page.tsx",
+    "app/de/layout.tsx", "app/de/page.tsx", "app/de/[slug]/page.tsx",
+    "app/de/blog/page.tsx", "app/de/blog/[slug]/page.tsx",
+    "app/sitemap.ts", "app/robots.ts",
+    "content/guide-etoro.mdx", "content/de/bitpanda.mdx",
+    "content/de/blog/etoro-copytrading-2026/index.mdx",
+]
+
+
+def test_route_map_handles_a_real_multilocale_next_app() -> None:
+    index = ri.build_repo_index(NEXT_MULTILOCALE_TREE)
+
+    # The route group is transparent, so the French pages live at the root.
+    assert ri.route_files(index, "/") == ["app/(fr)/page.tsx"]
+    assert ri.route_files(index, "/de") == ["app/de/page.tsx"]
+    assert ri.route_files(index, "/de/blog") == ["app/de/blog/page.tsx"]
+    # Content reaches its URL through the dynamic template that renders it...
+    assert ri.route_files(index, "/guide-etoro") == ["content/guide-etoro.mdx"]
+    assert ri.route_files(index, "/de/bitpanda") == ["content/de/bitpanda.mdx"]
+    # ...including a directory bundle, whose URL drops the /index.
+    assert ri.route_files(index, "/de/blog/etoro-copytrading-2026") == [
+        "content/de/blog/etoro-copytrading-2026/index.mdx"
+    ]
+    # Every layout and every [slug] template counts as shared.
+    for path in ("app/(fr)/layout.tsx", "app/de/layout.tsx",
+                 "app/(fr)/[slug]/page.tsx", "app/de/blog/[slug]/page.tsx"):
+        assert ri.is_shared_path(index, path), path
+
+
+def test_the_shared_template_guard_catches_what_the_route_map_cannot() -> None:
+    # While the map resolves, per-page families target page sources and a layout never enters.
+    resolved, _ = _resolve(
+        "missing_h1_indexable", ["/de/bitpanda", "/de/blog", "/guide-etoro"],
+        tree=NEXT_MULTILOCALE_TREE,
+    )
+    assert resolved == ["content/de/bitpanda.mdx", "app/de/blog/page.tsx", "content/guide-etoro.mdx"]
+
+    # When it CANNOT resolve, the heuristics fall back to the AI mapping, which happily
+    # proposes the layouts -- writing an h1 there would hit every page of two locales. The
+    # guard is the only thing standing between that suggestion and a commit.
+    unresolved, calls = _resolve(
+        "missing_h1_indexable", ["/page-built-elsewhere"], tree=NEXT_MULTILOCALE_TREE,
+        ai_map_result=["app/de/layout.tsx", "app/(fr)/layout.tsx"],
+    )
+    assert "map" in calls
+    assert unresolved == []
+
+
 def test_indexability_variants_inherit_their_family() -> None:
     # Ahrefs splits many issues into Indexable / Not indexable and the crawler emits the
     # SUFFIXED key. A freshly injected missing-h1 defect showed up in Anomalies but never
