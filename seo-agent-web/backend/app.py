@@ -15884,6 +15884,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # file touched by several issues stacks correctly.
     file_state: dict[str, dict[str, str]] = {}  # path → {sha, content}
     results: list[dict[str, Any]] = []
+    config_changed: list[str] = []   # deterministic redirect-config repairs, never AI-generated
+    config_notes: list[str] = []
     budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
     for issue in fixable:
         if budget <= 0:
@@ -15892,20 +15894,44 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         issue_label = issue["label"]
         url = issue["url"]
         impacted = sorted(dash.extract_impacted_pages(issue_key, report_issues.get(issue_key))) if report_issues else []
-        _fam = _length_family_name(issue_key)
-        _hint = _build_length_hint(report_issues, _length_family_keys(issue_key), _fam) if (_fam and report_issues) else ""
-        _ev = _issue_evidence_srcs(report_issues.get(issue_key)) if report_issues else None
-        if issue_key in _REDIRECT_LINK_KEYS and report_issues:
-            _pairs = _issue_redirect_pairs(report_issues.get(issue_key))
-            if _pairs:
-                _ev = [p["from"] for p in _pairs]
-                _hint = _build_redirect_hint(_pairs)
+        # Same preparation as the per-issue button: evidence, family hint, and the
+        # deterministic rewriter. Without it this path silently ran a free-form AI patch for
+        # every family, including on the routing config.
+        _prep = _prepare_issue_fix(
+            issue_key=issue_key, issues=report_issues, impacted=impacted, all_paths=all_paths,
+            site_name=site_name, owner=owner, repo_name=repo_name, branch=branch, token=token,
+        )
+        if _prep["refusal"]:
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
+                            "ok": False, "error": _prep["refusal"]})
+            continue
+        _cfg_changed: list[str] = []
+        _cfg_notes: list[str] = []
+        if _prep["loop_paths"]:
+            try:
+                _cfg_changed, _cfg_notes = _deep_fix_redirect_config_loops(
+                    owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                    all_paths=all_paths, loop_paths=_prep["loop_paths"][:6], file_state=file_state,
+                )
+            except Exception:
+                _cfg_changed, _cfg_notes = [], []
+            config_changed.extend(_cfg_changed)
+            config_notes.extend(_cfg_notes)
+        if issue_key in _REDIRECT_CONFIG_KEYS:
+            # Config-only family: the rule prune above IS the repair; never let the content
+            # patcher near netlify.toml / next.config from a prompt.
+            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
+                            "ok": bool(_cfg_changed), "files": _cfg_changed})
+            continue
         patched, skipped, targets = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=min(6, budget),
-            evidence=_ev, extra_hint=_hint, model_override=gate_model, index=idx,
+            evidence=_prep["evidence"], extra_hint=_prep["extra_hint"], model_override=gate_model,
+            index=idx, link_rewriter=_prep["link_rewriter"],
+            rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
         )
+        patched = patched + [f for f in _cfg_changed if f not in patched]
         if patched:
             budget -= len(patched)
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": True, "files": patched})
@@ -15942,9 +15968,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Erreur PR : {e}", "results": results}, status_code=400)
 
-    # Auto-merge if Full Access mode
+    # Auto-merge if Full Access mode — except when the run touched redirect rules. Routing
+    # changes always go through a human, exactly as the per-issue path already required.
     _merged = False
-    if mode == "auto" and pr_number:
+    if mode == "auto" and pr_number and not config_changed:
         try:
             _github_api_put(
                 _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
@@ -17166,6 +17193,117 @@ def _resolve_issue_targets(
     return targets[:max_files]
 
 
+def _prepare_issue_fix(
+    *, issue_key: str, issues: dict[str, Any] | None, impacted: list[str], all_paths: list[str],
+    site_name: str, owner: str, repo_name: str, branch: str, token: str,
+) -> dict[str, Any]:
+    """Everything needed to fix ONE issue: locator evidence, the patch hint, the deterministic
+    rewriter when the family has one, self-redirect paths for the config fixer, and a refusal
+    message when the issue must not be touched at all.
+
+    Shared by both entry points on purpose. The per-issue "Créer PR" button used to carry all of
+    this inline while "Tout corriger en 1 PR" carried none of it: the bulk path had no
+    deterministic rewriter, no head/hreflang/sitemap hint, no evidence, and — worst — no
+    redirect-config refusal, so it would hand netlify.toml (HSTS, CSP) to a free-form patch."""
+    issues = issues if isinstance(issues, dict) else {}
+    block = issues.get(issue_key)
+    out: dict[str, Any] = {
+        "evidence": _issue_evidence_srcs(block) if issues else [],
+        "extra_hint": "",
+        "link_rewriter": None,
+        "rewriter_ai_fallback": False,
+        "loop_paths": [],
+        "refusal": None,
+    }
+
+    # Redirect config: only a URL redirecting to ITSELF is repairable. Everything else is the
+    # site's deliberate canonicalisation and must not reach a patcher.
+    if issue_key in _REDIRECT_CONFIG_KEYS:
+        loops = _redirect_3xx_self_loops(block)
+        if not loops:
+            out["refusal"] = (
+                "Ces redirections sont la canonicalisation volontaire du site (http→https, www→apex, "
+                "suppression du .html) : ce ne sont pas des défauts et il n'y a rien à corriger dans le "
+                "code. Une correction automatique toucherait le fichier qui porte aussi tes en-têtes de "
+                "sécurité et de cache. Seule une URL qui se redirige vers elle-même serait réparable ici."
+            )
+            return out
+        out["loop_paths"] = loops
+        return out
+
+    fam = _length_family_name(issue_key)
+    if fam and issues:
+        out["extra_hint"] = _build_length_hint(issues, _length_family_keys(issue_key), fam)
+
+    content_pairs: list[dict[str, str]] = []
+    if issue_key in _REDIRECT_LINK_KEYS and issues:
+        pairs = _issue_redirect_pairs(block)
+        if pairs:
+            content_pairs, out["loop_paths"] = _classify_redirect_pairs(pairs)
+            out["evidence"] = [p["from"] for p in content_pairs]
+            out["extra_hint"] = _build_redirect_hint(content_pairs) if content_pairs else ""
+    if issue_key in _SITEMAP_ADD_KEYS and impacted:
+        out["extra_hint"] = _build_sitemap_hint(impacted)
+    if issue_key in _HREFLANG_HINTS:
+        out["extra_hint"] = _HREFLANG_HINTS[issue_key]
+    if issue_key in _HEAD_HINTS:
+        out["extra_hint"] = _HEAD_HINTS[issue_key]
+    # OG url≠canonical: reuse the layout's inherited og:image, since Next replaces openGraph
+    # per-segment and a bare per-page {url} would drop it.
+    if issue_key == "open_graph_url_not_matching_canonical":
+        import base64 as _b64og
+        for layout in ("app/layout.tsx", "src/app/layout.tsx", "app/layout.jsx", "src/app/layout.jsx"):
+            if layout not in all_paths:
+                continue
+            try:
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, layout), token=token, params={"ref": branch})
+                raw = _b64og.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+                og_imgs = _extract_layout_og_images(raw)
+            except Exception:
+                og_imgs = ""
+            if og_imgs:
+                out["extra_hint"] += "\nImages OG héritées du layout à RÉUTILISER dans le openGraph de chaque page (copie ce `images:` tel quel) : images: " + og_imgs
+                break
+
+    url_pairs: list[dict[str, str]] = []
+    if issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS
+                   or issue_key in _SITEMAP_REWRITE_KEYS):
+        url_pairs = _issue_url_pairs(block)
+        if url_pairs:
+            hint = _build_url_pair_hint(url_pairs)
+            out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
+            out["evidence"] = [p["from"] for p in url_pairs]
+    if issues and issue_key in _PAGE_VALUE_KEYS:
+        values = _issue_page_values(block)
+        if values:
+            hint = _build_page_values_hint(values)
+            out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
+
+    # ── Deterministic rewriter for the mechanical families (no AI) ──
+    if url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
+        # Targets are restricted to the sitemap file, so an AI fallback can only ever see the
+        # right file — useful when the sitemap is GENERATED and holds no literal <loc>.
+        out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_locs(raw, _p)  # noqa: E731
+        out["rewriter_ai_fallback"] = True
+    elif url_pairs and issue_key in _ASSET_REWRITE_KEYS:
+        # An unmatched src is a bundled asset: the redirect lives in the CDN, not the page.
+        out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_asset_srcs(raw, _p)  # noqa: E731
+    elif url_pairs:
+        out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_head_url_values(raw, _p)  # noqa: E731
+        out["rewriter_ai_fallback"] = True
+    elif content_pairs:
+        out["link_rewriter"] = lambda raw, _p=content_pairs: _rewrite_redirect_links(raw, _p)  # noqa: E731
+    elif issue_key in _MIXED_CONTENT_KEYS:
+        host = re.sub(r"^https?://", "", str(site_name or "")).strip("/").split("/")[0].lower()
+        hosts = [h for h in {host, "www." + host, host[4:] if host.startswith("www.") else host} if h]
+        out["link_rewriter"] = lambda raw, _h=hosts: _rewrite_http_to_https(raw, _h)  # noqa: E731
+        if host:
+            out["evidence"] = [f"http://{h}" for h in hosts]
+    elif issue_key in _DOUBLE_SLASH_KEYS:
+        out["link_rewriter"] = _rewrite_double_slash
+    return out
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
@@ -17369,20 +17507,6 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             "celle-ci d'abord."
         )}, status_code=409)
 
-    # Redirect-config family: refuse the whole run unless there is a self-redirect to repair.
-    # Bailing out BEFORE the branch/tree work means no empty branch is left behind, and no
-    # patcher is ever pointed at a config file whose redirects are deliberate.
-    _redirect_loops_only: list[str] = []
-    if issue_key in _REDIRECT_CONFIG_KEYS:
-        _redirect_loops_only = _redirect_3xx_self_loops(issues.get(issue_key)) if issues else []
-        if not _redirect_loops_only:
-            return JSONResponse({"ok": False, "error": (
-                "Ces redirections sont la canonicalisation volontaire du site (http→https, www→apex, "
-                "suppression du .html) : ce ne sont pas des défauts et il n'y a rien à corriger dans le "
-                "code. Une correction automatique toucherait le fichier qui porte aussi tes en-têtes de "
-                "sécurité et de cache. Seule une URL qui se redirige vers elle-même serait réparable ici."
-            )}, status_code=422)
-
     # ── Read the repo tree once, resolve target files ──
     try:
         tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
@@ -17397,6 +17521,15 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     idx = repo_index.build_repo_index(all_paths)
     logger.info("[corrections] deep-fix %s %s", issue_key, repo_index.index_summary(idx))
 
+    _prep = _prepare_issue_fix(
+        issue_key=issue_key, issues=issues, impacted=impacted, all_paths=all_paths,
+        site_name=str(proj.site_name or ""), owner=owner, repo_name=repo_name,
+        branch=branch, token=token,
+    )
+    if _prep["refusal"]:
+        # Refused before the branch is created, so a dead-end click leaves nothing behind.
+        return JSONResponse({"ok": False, "error": _prep["refusal"]}, status_code=422)
+
     # ── Create one branch, patch every impacted file, open one PR ──
     from datetime import datetime as _dt
     try:
@@ -17410,90 +17543,11 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
 
-    evidence = _issue_evidence_srcs(issues.get(issue_key)) if issues else []
-    _fam_name = _length_family_name(issue_key)
-    extra_hint = _build_length_hint(issues, family_keys, _fam_name) if (_fam_name and issues) else ""
-    # Links-to-redirect: evidence = the redirecting link URLs (to locate files), hint = from→to pairs.
-    # Self-redirect LOOP targets (e.g. /sources/etoro-en → itself) can't be fixed by rewriting
-    # the link — they're a redirect-CONFIG bug — so they're split out and fixed separately.
-    _loop_paths: list[str] = list(_redirect_loops_only)
-    _content_pairs: list[dict[str, str]] = []
-    if issue_key in _REDIRECT_LINK_KEYS and issues:
-        _pairs = _issue_redirect_pairs(issues.get(issue_key))
-        if _pairs:
-            _content_pairs, _loop_paths = _classify_redirect_pairs(_pairs)
-            evidence = [p["from"] for p in _content_pairs]
-            extra_hint = _build_redirect_hint(_content_pairs) if _content_pairs else ""
-    # Indexable-page-not-in-sitemap: the impacted URLs are exactly the pages to ADD to the sitemap.
-    if issue_key in _SITEMAP_ADD_KEYS and impacted:
-        extra_hint = _build_sitemap_hint(impacted)
-    # Hreflang / html-lang family: per-issue structural instruction for the head-tag generator.
-    if issue_key in _HREFLANG_HINTS:
-        extra_hint = _HREFLANG_HINTS[issue_key]
-    # Head family: canonical / Open Graph / Twitter / viewport / structured data.
-    if issue_key in _HEAD_HINTS:
-        extra_hint = _HEAD_HINTS[issue_key]
-    # OG url≠canonical: read the shared layout's inherited og:image so the per-page override can
-    # reuse it (Next.js replaces openGraph per-segment → a bare per-page {url} drops og:image).
-    if issue_key == "open_graph_url_not_matching_canonical":
-        import base64 as _b64og
-        for _lp in ("app/layout.tsx", "src/app/layout.tsx", "app/layout.jsx", "src/app/layout.jsx"):
-            if _lp not in all_paths:
-                continue
-            try:
-                _fd = _github_api_get(_github_content_api_path(owner, repo_name, _lp), token=token, params={"ref": branch})
-                _raw = _b64og.b64decode(_fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
-                _og_imgs = _extract_layout_og_images(_raw)
-            except Exception:
-                _og_imgs = ""
-            if _og_imgs:
-                extra_hint += "\nImages OG héritées du layout à RÉUTILISER dans le openGraph de chaque page (copie ce `images:` tel quel) : images: " + _og_imgs
-                break
-    # Canonical / hreflang rewrite families: the crawler's url_pairs evidence gives the exact
-    # value each tag must carry, so the fix stops being a guess. Appended to the family hint
-    # (which stays useful for the AI fallback on dynamically built URLs).
-    _url_pairs: list[dict[str, str]] = []
-    if issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS
-                   or issue_key in _SITEMAP_REWRITE_KEYS):
-        _url_pairs = _issue_url_pairs(issues.get(issue_key))
-        if _url_pairs:
-            _pair_hint = _build_url_pair_hint(_url_pairs)
-            extra_hint = (extra_hint + "\n" + _pair_hint) if extra_hint else _pair_hint
-            # Locate the files that literally contain the wrong values.
-            evidence = [p["from"] for p in _url_pairs]
-    # Current-state families: no mechanical rewrite, but the patch is told exactly which tag
-    # is absent / which value is malformed on each page instead of guessing from the label.
-    if issues and issue_key in _PAGE_VALUE_KEYS:
-        _page_values = _issue_page_values(issues.get(issue_key))
-        if _page_values:
-            _values_hint = _build_page_values_hint(_page_values)
-            extra_hint = (extra_hint + "\n" + _values_hint) if extra_hint else _values_hint
-    # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
-    _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
-    _rewriter_ai_fallback = False
-    if _url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
-        # Targets are restricted to the sitemap file, so an AI fallback here can only ever see
-        # the right file — useful when the sitemap is GENERATED and holds no literal <loc>.
-        _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_sitemap_locs(raw, _p)  # noqa: E731
-        _rewriter_ai_fallback = True
-    elif _url_pairs and issue_key in _ASSET_REWRITE_KEYS:
-        # An asset src that can't be matched literally is an imported/bundled asset: the
-        # redirect then lives in the CDN or server config, not in the page — no AI fallback.
-        _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_asset_srcs(raw, _p)  # noqa: E731
-    elif _url_pairs:
-        _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_head_url_values(raw, _p)  # noqa: E731
-        _rewriter_ai_fallback = True
-    elif _content_pairs:
-        _link_rewriter = lambda raw, _p=_content_pairs: _rewrite_redirect_links(raw, _p)  # noqa: E731
-    elif issue_key in _MIXED_CONTENT_KEYS:
-        _host = re.sub(r"^https?://", "", str(proj.site_name or "")).strip("/").split("/")[0].lower()
-        _hosts = [h for h in {_host, "www." + _host, _host[4:] if _host.startswith("www.") else _host} if h]
-        _link_rewriter = lambda raw, _h=_hosts: _rewrite_http_to_https(raw, _h)  # noqa: E731
-        # Locate every file referencing the site over http (incl. shared layout/components).
-        if _host:
-            evidence = [f"http://{h}" for h in _hosts]
-    elif issue_key in _DOUBLE_SLASH_KEYS:
-        _link_rewriter = _rewrite_double_slash
+    evidence = _prep["evidence"]
+    extra_hint = _prep["extra_hint"]
+    _link_rewriter = _prep["link_rewriter"]
+    _rewriter_ai_fallback = _prep["rewriter_ai_fallback"]
+    _loop_paths = _prep["loop_paths"]
     file_state: dict[str, dict[str, str]] = {}
     if issue_key in _REDIRECT_CONFIG_KEYS:
         # Config-only family: the repair is the deterministic rule prune below. Never run the
