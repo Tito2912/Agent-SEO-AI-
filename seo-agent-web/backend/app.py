@@ -15713,27 +15713,11 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 _db2.commit()
         except Exception:
             pass
-        # ── Auto-merge for Full Access mode ──────────────────────────────────
+        # No auto-merge here, even in Full Access mode: this endpoint commits a `patched_content`
+        # produced by the model, so the diff is always an editorial proposal and a human has to
+        # read it. Only the deterministic families (deep-fix with a bounded rewriter) still merge
+        # on their own — the PR is created either way, the task simply stays in_progress.
         _merged = False
-        if mode == "auto" and pr_number:
-            try:
-                _github_api_put(
-                    _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
-                    token=token,
-                    json_body={"merge_method": "squash", "commit_title": pr_title},
-                )
-                _merged = True
-                with DB.session() as _db3:
-                    _done = _db3.scalar(select(IssueTask).where(
-                        IssueTask.project_id == proj.id,
-                        IssueTask.issue_key == issue_key,
-                        IssueTask.url == url,
-                    ))
-                    if _done:
-                        _done.status = "done"
-                        _db3.commit()
-            except Exception:
-                pass  # PR created, merge failed — stays in_progress
         return JSONResponse({
             "ok": True,
             "pr_url": pr_url,
@@ -15886,6 +15870,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     results: list[dict[str, Any]] = []
     config_changed: list[str] = []   # deterministic redirect-config repairs, never AI-generated
     config_notes: list[str] = []
+    any_ai_written = False           # one model-written file is enough to require a human read
     budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
     for issue in fixable:
         if budget <= 0:
@@ -15923,7 +15908,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
                             "ok": bool(_cfg_changed), "files": _cfg_changed})
             continue
-        patched, skipped, targets = _deep_patch_issue_files(
+        patched, skipped, targets, _ai_written = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=min(6, budget),
@@ -15931,6 +15916,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             index=idx, link_rewriter=_prep["link_rewriter"],
             rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
         )
+        any_ai_written = any_ai_written or _ai_written
         patched = patched + [f for f in _cfg_changed if f not in patched]
         if patched:
             budget -= len(patched)
@@ -15956,6 +15942,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         files = r.get("files") or []
         detail = ", ".join(f"`{f}`" for f in files) if files else (r.get("error") or "")
         pr_lines.append(f"{icon} **{r['issue_label']}** — {detail}")
+    pr_lines.append(_fix_nature_note(any_ai_written).strip())
     pr_lines.append("\nCorrection générée par [SEO Agent](https://noyaru.com).")
     pr_body = "\n".join(pr_lines)
 
@@ -15971,7 +15958,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # Auto-merge if Full Access mode — except when the run touched redirect rules. Routing
     # changes always go through a human, exactly as the per-issue path already required.
     _merged = False
-    if mode == "auto" and pr_number and not config_changed:
+    if mode == "auto" and pr_number and not config_changed and not any_ai_written:
         try:
             _github_api_put(
                 _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
@@ -17193,6 +17180,23 @@ def _resolve_issue_targets(
     return targets[:max_files]
 
 
+def _fix_nature_note(ai_written: bool) -> str:
+    """One line in the PR body saying whether a human needs to read the diff.
+
+    A bounded rewrite fed by crawl values is predictable and mechanically verifiable; a value
+    the model WROTE is an editorial proposal. Both used to produce identical-looking PRs."""
+    if ai_written:
+        return (
+            "\n\n> ⚠️ **À relire avant de merger.** Le contenu de ce correctif a été **rédigé par le "
+            "modèle** (texte de balise, formulation). Le périmètre des fichiers est borné par le crawl, "
+            "mais la valeur écrite reste une proposition éditoriale."
+        )
+    return (
+        "\n\n> ✅ **Correctif mécanique.** Les valeurs viennent du crawl et sont appliquées par une "
+        "réécriture bornée, sans modèle : le diff est prévisible."
+    )
+
+
 def _prepare_issue_fix(
     *, issue_key: str, issues: dict[str, Any] | None, impacted: list[str], all_paths: list[str],
     site_name: str, owner: str, repo_name: str, branch: str, token: str,
@@ -17312,7 +17316,7 @@ def _deep_patch_issue_files(
     link_rewriter: "Callable[[str], tuple[str, int]] | None" = None,
     rewriter_ai_fallback: bool = False,
     index: dict[str, Any] | None = None,
-) -> tuple[list[str], list[str], list[str]]:
+) -> tuple[list[str], list[str], list[str], bool]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
     Targets = repo route map ∪ hardcoded candidates ∪ AI URL→file mapping (∪ AI tree pick as
@@ -17322,7 +17326,8 @@ def _deep_patch_issue_files(
     so a file edited for several issues stacks correctly across calls. When link_rewriter is
     given (mechanical link families: links-to-redirect, mixed-content http→https, double-slash),
     the per-file fix is that DETERMINISTIC function (no AI) — precise and safe. Returns
-    (patched_files, skipped_files, targets)."""
+    (patched_files, skipped_files, targets, ai_written) — `ai_written` is True as soon as ONE
+    committed file was produced by the model rather than by a deterministic rewrite."""
     import base64 as _b64
     targets: list[str] = []
     # 1) Deterministic: files that reference the evidence (e.g. image srcs). Tarball grep is
@@ -17362,6 +17367,7 @@ def _deep_patch_issue_files(
     primary_url = impacted_urls[0] if impacted_urls else ""
     patched: list[str] = []
     skipped: list[str] = []
+    ai_written = False
 
     def _prepare(path: str) -> tuple[str, str | None, str, dict[str, Any] | None]:
         """Read a file + generate its patch. Parallel-safe (no shared mutable state)."""
@@ -17382,7 +17388,9 @@ def _deep_patch_issue_files(
         if link_rewriter is not None:
             new_content, n = link_rewriter(raw)
             if n > 0:
-                return (path, raw, cur_sha, {"patched_content": new_content})
+                # Marked so the caller can tell a bounded rewrite from a model writing prose:
+                # only the former is safe to merge without a human reading it.
+                return (path, raw, cur_sha, {"patched_content": new_content, "deterministic": True})
             # Nothing literal to swap. For link families that means the file simply doesn't
             # contain the link. For canonical/hreflang the URL may be BUILT (getSiteUrl(path),
             # a template literal), and only the AI can fix the logic that produces it — the
@@ -17429,9 +17437,11 @@ def _deep_patch_issue_files(
             new_sha = str((put_resp.get("content") or {}).get("sha") or "")
             file_state[path] = {"sha": new_sha, "content": new_content}
             patched.append(path)
+            if not patch.get("deterministic"):
+                ai_written = True
         except Exception:
             skipped.append(path)
-    return patched, skipped, targets
+    return patched, skipped, targets, ai_written
 
 
 class _DeepFixBody(BaseModel):
@@ -17553,9 +17563,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         # Config-only family: the repair is the deterministic rule prune below. Never run the
         # content patcher here — its candidate list for this key is netlify.toml / next.config,
         # i.e. exactly the files that must not be rewritten from a prompt.
-        patched_files, skipped, targets = [], [], []
+        patched_files, skipped, targets, _ai_written = [], [], [], False
     else:
-        patched_files, skipped, targets = _deep_patch_issue_files(
+        patched_files, skipped, targets, _ai_written = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
@@ -17590,7 +17600,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         f"**Fichiers modifiés :** {len(all_changed)}\n\n"
         + "\n".join(f"- `{p}`" for p in all_changed)
         + _config_note_block
-        + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**.\n\n> Vérifie les changements avant de merger."
+        + _fix_nature_note(_ai_written)
+        + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
         pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={"title": pr_title, "body": pr_body, "head": fix_branch, "base": branch})
@@ -17600,8 +17611,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
 
     _merged = False
-    # Routing/config changes are risky → require human review even in auto mode.
-    if mode == "auto" and pr_number and not config_changes:
+    # Auto-merge only what a human doesn't need to read: routing changes are risky, and a value
+    # WRITTEN by the model is an editorial proposal, not a mechanical repair.
+    if mode == "auto" and pr_number and not config_changes and not _ai_written:
         try:
             _github_api_put(_github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"), token=token, json_body={"merge_method": "squash", "commit_title": pr_title})
             _merged = True

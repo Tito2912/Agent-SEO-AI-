@@ -184,6 +184,18 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Mechanical vs model-written ──────────────────────────────────────────────────────
+
+def test_a_pr_says_whether_a_human_must_read_the_diff() -> None:
+    mechanical = app_module._fix_nature_note(False)
+    editorial = app_module._fix_nature_note(True)
+
+    assert "mécanique" in mechanical and "prévisible" in mechanical
+    assert "À relire avant de merger" in editorial and "rédigé par le" in editorial
+    # The two must not be confusable: identical-looking PRs are what made auto-merge unsafe.
+    assert mechanical != editorial
+
+
 # ── Advice for the issues we refuse to fix ───────────────────────────────────────────
 
 def _redirect_report(*fields: str) -> dict[str, object]:
