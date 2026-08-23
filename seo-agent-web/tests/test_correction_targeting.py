@@ -214,6 +214,21 @@ def test_current_state_issues_target_the_flagged_pages() -> None:
     assert calls == []
 
 
+def test_asset_issues_never_target_the_routing_config() -> None:
+    # A redirect config MENTIONS the redirecting asset URL (it is the rule's source), so the
+    # evidence grep finds it. The asset rewriter requires no attribute prefix by design, so it
+    # would rewrite the rule's left-hand side and turn `/old.png -> /new.png` into a self-
+    # redirect. Only the extensionless `_redirects` name kept it out of range in PR#10.
+    for config in ("netlify.toml", "vercel.json", "_redirects", "next.config.js", "nginx.conf"):
+        targets, _ = _resolve(
+            "image_redirects", ["/de/legal-notice"],
+            located=[config, "de/legal-notice.html"],
+            tree=STATIC_TREE + [config, "de/legal-notice.html"],
+        )
+        assert config not in targets, config
+        assert "de/legal-notice.html" in targets
+
+
 def test_asset_issues_keep_the_component_holding_the_src_ahead_of_the_pages() -> None:
     # A redirected logo lives in ONE shared component but flags every page that renders it.
     pages = ["/", "/about", "/en", "/en/avis-bitpanda", "/en/guide-etoro", "/sources/etoro-en"]

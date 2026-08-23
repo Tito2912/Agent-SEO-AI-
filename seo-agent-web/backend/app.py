@@ -16607,6 +16607,19 @@ def _url_value_variants(pair: dict[str, str]) -> list[tuple[str, str]]:
     return [(a, b) for a, b in variants if a and b and a != b]
 
 
+# Files that DECLARE routing rather than reference it. A URL appearing here is a rule operand,
+# not a link to a page, so a value rewrite corrupts the rule instead of fixing anything.
+_ROUTING_CONFIG_BASENAMES = {
+    "_redirects", "_headers", "netlify.toml", "vercel.json", "wrangler.toml",
+    ".htaccess", "nginx.conf", "next.config.js", "next.config.ts", "next.config.mjs",
+    "middleware.ts", "middleware.js", "staticwebapp.config.json",
+}
+
+
+def _is_routing_config_path(path: str) -> bool:
+    return (path or "").rsplit("/", 1)[-1].lower() in _ROUTING_CONFIG_BASENAMES
+
+
 # Issues whose fix = repoint an asset reference at the URL it already resolves to.
 _ASSET_REWRITE_KEYS = {
     "page_has_redirected_image", "image_redirects",
@@ -17023,6 +17036,14 @@ def _resolve_issue_targets(
     # Prompt rules were disobeyed repeatedly here, so the guard stays deterministic.
     if issue_key in _PER_PAGE_ONLY_KEYS or _length_family_name(issue_key):
         targets = [p for p in targets if not repo_index.is_shared_path(index or {}, p)]
+    # An asset src is fixed where the page REFERENCES it, never in the routing config. Those
+    # files mention the redirecting URL (it is the rule's source), so the evidence grep finds
+    # them — and the asset rewriter requires no attribute prefix, by design, so it would rewrite
+    # the rule's left-hand side and turn `/old.png -> /new.png` into a self-redirect. Only the
+    # extensionless name of `_redirects` kept it out of range on elevenlabs-avis.com; netlify.toml
+    # and vercel.json are editable extensions and would not have been so lucky.
+    if issue_key in _ASSET_REWRITE_KEYS:
+        targets = [p for p in targets if not _is_routing_config_path(p)]
     return targets[:max_files]
 
 
