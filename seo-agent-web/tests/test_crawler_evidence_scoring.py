@@ -159,6 +159,25 @@ def test_invalid_hreflang_annotations_are_named_one_by_one() -> None:
     assert "«es»" not in value
 
 
+def test_redirect_3xx_separates_deliberate_canonicalisation_from_a_self_loop() -> None:
+    pages = [
+        _page(f"{BASE}/"),
+        # The site's own http->https canonicalisation: deliberate, must never be "fixed".
+        _page("http://site.test/", final_url=f"{BASE}/", redirect_statuses=[301]),
+        # A URL that redirects to ITSELF: a genuine config bug the corrector can repair.
+        _page(f"{BASE}/loops", final_url=f"{BASE}/loops", redirect_statuses=[301, 301],
+              redirect_chain=[f"{BASE}/loops"], error="TooManyRedirects: exceeded 30 redirects"),
+    ]
+
+    issues = seo_audit._score_issues(pages, base_url=BASE)
+
+    ev = _evidence(issues, "redirect_3xx")
+    assert ev is not None and ev["kind"] == "page_values"
+    by_page = {i["page"]: i["field"] for i in ev["items"]}
+    assert by_page["http://site.test/"] == "canonicalisation attendue"
+    assert by_page[f"{BASE}/loops"] == "boucle: redirige vers elle-meme"
+
+
 def test_a_clean_site_produces_no_evidence_at_all() -> None:
     pages = [_page(f"{BASE}/"), _page(f"{BASE}/a"), _page(f"{BASE}/b")]
 

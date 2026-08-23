@@ -16479,6 +16479,26 @@ _PAGE_VALUE_KEYS = {
 }
 
 
+# `redirect_3xx` lists every redirecting URL, and on a healthy site they are the site's OWN
+# http→https / www canonicalisation — deliberate, not defects. The file that produces them
+# (netlify.toml, _redirects, next.config) also carries HSTS, CSP and cache rules, so handing it
+# to a patcher told to "fix 3XX redirects" is destructive. Only a URL that redirects to ITSELF
+# is a config bug we can repair; everything else stays advisory.
+_REDIRECT_CONFIG_KEYS = {"redirect_3xx"}
+_SELF_LOOP_FIELD = "boucle: redirige vers elle-meme"
+
+
+def _redirect_3xx_self_loops(issue_block: Any) -> list[str]:
+    """Paths of the URLs that redirect to themselves, from the crawler's page_values evidence."""
+    out: list[str] = []
+    for item in _issue_page_values(issue_block):
+        if item.get("field") == _SELF_LOOP_FIELD:
+            path = _link_path(item.get("page", ""), keep_slash=False)
+            if path and path != "/" and path not in out:
+                out.append(path)
+    return out
+
+
 def _issue_page_values(issue_block: Any) -> list[dict[str, str]]:
     """Read `evidence.items` of kind `page_values` from an issue block."""
     if not isinstance(issue_block, dict):
@@ -17143,6 +17163,20 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         )
     primary_url = (body.url or "").strip() or (impacted[0] if impacted else "")
 
+    # Redirect-config family: refuse the whole run unless there is a self-redirect to repair.
+    # Bailing out BEFORE the branch/tree work means no empty branch is left behind, and no
+    # patcher is ever pointed at a config file whose redirects are deliberate.
+    _redirect_loops_only: list[str] = []
+    if issue_key in _REDIRECT_CONFIG_KEYS:
+        _redirect_loops_only = _redirect_3xx_self_loops(issues.get(issue_key)) if issues else []
+        if not _redirect_loops_only:
+            return JSONResponse({"ok": False, "error": (
+                "Ces redirections sont la canonicalisation volontaire du site (http→https, www→apex, "
+                "suppression du .html) : ce ne sont pas des défauts et il n'y a rien à corriger dans le "
+                "code. Une correction automatique toucherait le fichier qui porte aussi tes en-têtes de "
+                "sécurité et de cache. Seule une URL qui se redirige vers elle-même serait réparable ici."
+            )}, status_code=422)
+
     # ── Read the repo tree once, resolve target files ──
     try:
         tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
@@ -17176,7 +17210,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Links-to-redirect: evidence = the redirecting link URLs (to locate files), hint = from→to pairs.
     # Self-redirect LOOP targets (e.g. /sources/etoro-en → itself) can't be fixed by rewriting
     # the link — they're a redirect-CONFIG bug — so they're split out and fixed separately.
-    _loop_paths: list[str] = []
+    _loop_paths: list[str] = list(_redirect_loops_only)
     _content_pairs: list[dict[str, str]] = []
     if issue_key in _REDIRECT_LINK_KEYS and issues:
         _pairs = _issue_redirect_pairs(issues.get(issue_key))
@@ -17249,13 +17283,19 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     elif issue_key in _DOUBLE_SLASH_KEYS:
         _link_rewriter = _rewrite_double_slash
     file_state: dict[str, dict[str, str]] = {}
-    patched_files, skipped, targets = _deep_patch_issue_files(
-        owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
-        all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-        site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
-        extra_hint=extra_hint, model_override=gate_model,
-        link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback, index=idx,
-    )
+    if issue_key in _REDIRECT_CONFIG_KEYS:
+        # Config-only family: the repair is the deterministic rule prune below. Never run the
+        # content patcher here — its candidate list for this key is netlify.toml / next.config,
+        # i.e. exactly the files that must not be rewritten from a prompt.
+        patched_files, skipped, targets = [], [], []
+    else:
+        patched_files, skipped, targets = _deep_patch_issue_files(
+            owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
+            all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
+            site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
+            extra_hint=extra_hint, model_override=gate_model,
+            link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback, index=idx,
+        )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     config_changes: list[str] = []
     config_notes: list[str] = []

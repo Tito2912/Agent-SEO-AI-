@@ -184,6 +184,45 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Redirect config family ───────────────────────────────────────────────────────────
+
+def _redirect_block(*items: tuple[str, str]) -> dict[str, object]:
+    return {"evidence": {"kind": "page_values", "items": [
+        {"page": p, "field": f, "value": p} for p, f in items
+    ]}}
+
+
+def test_only_self_redirecting_urls_are_offered_to_the_config_fixer() -> None:
+    block = _redirect_block(
+        ("http://site.test/", "canonicalisation attendue"),
+        ("https://www.site.test/", "canonicalisation attendue"),
+        ("https://site.test/sources/etoro-en", app_module._SELF_LOOP_FIELD),
+        ("https://site.test/old", "redirection"),
+    )
+
+    # The deliberate canonicalisation redirects are NOT touchable: the config file that
+    # produces them also carries the site's HSTS, CSP and cache rules.
+    assert app_module._redirect_3xx_self_loops(block) == ["/sources/etoro-en"]
+
+
+def test_a_site_whose_redirects_are_all_deliberate_offers_nothing_to_fix() -> None:
+    block = _redirect_block(
+        ("http://site.test/", "canonicalisation attendue"),
+        ("https://www.site.test/", "canonicalisation attendue"),
+    )
+
+    assert app_module._redirect_3xx_self_loops(block) == []
+    # And a report with no evidence at all must not invent work either.
+    assert app_module._redirect_3xx_self_loops({"count": 4, "examples": []}) == []
+
+
+def test_the_domain_root_is_never_treated_as_a_self_loop() -> None:
+    # A root that redirects is domain canonicalisation, out of scope by design.
+    block = _redirect_block(("https://site.test/", app_module._SELF_LOOP_FIELD))
+
+    assert app_module._redirect_3xx_self_loops(block) == []
+
+
 # ── Asset references ─────────────────────────────────────────────────────────────────
 
 def test_redirected_asset_is_repointed_in_every_reference_form() -> None:

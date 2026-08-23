@@ -6231,6 +6231,26 @@ def _score_issues(
     issues["document_uses_plugins"] = _issue_block("document_uses_plugins", document_uses_plugins)
     issues["redirect_loop"] = _issue_block("redirect_loop", redirect_loop)
     issues["redirect_3xx"] = _issue_block("redirect_3xx", redirect_3xx)
+    # Evidence telling the corrector WHICH of these redirects is a defect. Most of them are the
+    # site's own http→https / www canonicalisation: deliberate, and the config that produces them
+    # also carries HSTS/CSP/cache rules — letting a patcher loose on it would be destructive.
+    # Only a URL that redirects to ITSELF is a config bug the corrector can repair.
+    _redirect_3xx_values: list[dict[str, str]] = []
+    for _u in redirect_3xx:
+        _p = page_by_requested.get(_norm_self(_u) or _u) or page_by_any.get(_norm_self(_u) or _u)
+        if _p is None:
+            continue
+        _dest = _final_url(_p)
+        if _u in _all_toomany and _u not in _loop_toomany:
+            _field = "boucle: redirige vers elle-meme"
+        elif _u in _loop_toomany:
+            _field = "boucle multi-URL"
+        elif _is_canonical_normalization_redirect(_p):
+            _field = "canonicalisation attendue"
+        else:
+            _field = "redirection"
+        _redirect_3xx_values.append({"page": _u, "field": _field, "value": _dest or _u})
+    _attach_evidence(("redirect_3xx",), "page_values", _redirect_3xx_values)
     issues["redirect_302"] = _issue_block("redirect_302", redirect_302)
     issues["broken_redirect"] = _issue_block("broken_redirect", broken_redirect)
     issues["redirect_chain"] = _issue_block("redirect_chain", redirect_chain)
