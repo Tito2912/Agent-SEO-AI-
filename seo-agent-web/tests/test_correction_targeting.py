@@ -217,6 +217,21 @@ def test_sitemap_issues_still_reach_the_generator_through_the_candidate_list() -
     assert "sitemap.xml" in targets
 
 
+def test_indexability_variants_inherit_their_family() -> None:
+    # Ahrefs splits many issues into Indexable / Not indexable and the crawler emits the
+    # SUFFIXED key. A freshly injected missing-h1 defect showed up in Anomalies but never
+    # reached the corrections page because only the bare `missing_h1` was claimed.
+    for key in ("missing_h1_indexable", "missing_h1_not_indexable"):
+        assert app_module._github_issue_auto_fixable(key), key
+        assert key in app_module._PER_PAGE_ONLY_KEYS, key
+        targets, _ = _resolve(key, ["/about"])
+        assert targets == ["app/about/page.tsx"], key
+
+    # The expansion must not claim a key whose own base is advisory.
+    assert not app_module._github_issue_auto_fixable("orphan_page_indexable")
+    assert not app_module._github_issue_auto_fixable("page_has_links_to_broken_page_indexable")
+
+
 def test_a_missing_content_tag_is_written_on_the_page_never_in_the_layout() -> None:
     # Before the guard, asking for a meta description on 2 flagged pages targeted
     # app/layout.tsx + pages/_document.tsx and NOT the pages: every page of the site would have

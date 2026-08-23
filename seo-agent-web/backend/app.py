@@ -3213,6 +3213,23 @@ _GENERIC_CONTENT_FIX_KEYS = {
 }
 
 
+def _with_indexability_variants(keys: "set[str] | frozenset[str] | tuple[str, ...]") -> set[str]:
+    """Add the Indexable / Not-indexable twins of every key.
+
+    Ahrefs splits many issues along indexability and the crawler emits the SUFFIXED keys —
+    `missing_h1_indexable`, never a bare `missing_h1`. A handler that declares only the base
+    therefore never fires: a freshly injected missing-h1 defect showed up in Anomalies and never
+    reached the corrections page. The length and links-to-redirect families had spelled their
+    variants out by hand; deriving them removes the chance to forget."""
+    out = set(keys)
+    for key in keys:
+        if key.endswith(("_indexable", "_not_indexable")):
+            continue
+        out.add(f"{key}_indexable")
+        out.add(f"{key}_not_indexable")
+    return out
+
+
 def _handled_issue_keys() -> set[str]:
     """Every issue key some corrector actually claims. Built at call time because the handler
     tables are defined further down this module."""
@@ -3228,7 +3245,7 @@ def _handled_issue_keys() -> set[str]:
     for family in _LENGTH_FAMILIES.values():
         handled |= set(family)
     handled.add("missing_alt_text")
-    return handled
+    return _with_indexability_variants(handled)
 
 
 def _github_issue_auto_fixable(issue_key: str) -> bool:
@@ -3733,6 +3750,13 @@ def _github_fixable_issue_candidates(
         count = int(it.get("count") or 0)
         if count <= 0:
             continue
+        # The redirect-config family is fixable in principle but only for a URL that redirects
+        # to ITSELF. Offering "Créer PR" for a site whose redirects are all deliberate
+        # canonicalisation would hand the user a button that can only refuse.
+        if issue_key in _REDIRECT_CONFIG_KEYS:
+            _blk = (report.get("issues") or {}).get(issue_key) if isinstance(report.get("issues"), dict) else None
+            if not _redirect_3xx_self_loops(_blk):
+                continue
         sample_urls = _issue_sample_urls_from_report(report, issue_key, limit=3)
         primary_url = sample_urls[0] if sample_urls else base_url
         if _validate_settings_url(primary_url):
@@ -16369,7 +16393,7 @@ _HEAD_HINTS: dict[str, str] = {
 # Issues whose fix must be PER-PAGE only (never touch a shared layout/template): editing a
 # shared og:url/canonical there changes EVERY page (incl. already-correct ones). Deterministic
 # guard — shared templates are dropped from the target set for these keys.
-_PER_PAGE_ONLY_KEYS = {
+_PER_PAGE_ONLY_KEYS = _with_indexability_variants({
     "open_graph_url_not_matching_canonical",
     # Writing a title / description / h1 into a SHARED file gives every page the same value —
     # it converts "missing" into "duplicate" across the whole site. Before this guard, asking
@@ -16377,15 +16401,15 @@ _PER_PAGE_ONLY_KEYS = {
     # and NOT the pages themselves.
     "missing_title", "missing_meta_description", "missing_h1",
     "duplicate_titles", "duplicate_meta_descriptions",
-}
+})
 
 # Per-page content tags: the fix belongs in the flagged page's own source, so these page-target.
 # `missing_canonical` is here too (the page must be reached) but deliberately NOT in the
 # per-page-only set above: a shared layout that computes the canonical from the route is a
 # perfectly good fix, unlike a shared literal title.
-_PER_PAGE_CONTENT_KEYS = _PER_PAGE_ONLY_KEYS | {
+_PER_PAGE_CONTENT_KEYS = _PER_PAGE_ONLY_KEYS | _with_indexability_variants({
     "multiple_meta_description_tags", "missing_canonical", "duplicate_pages_without_canonical",
-}
+})
 
 
 # "Is this file shared across many pages?" now lives in backend/repo_index.py
@@ -16534,7 +16558,7 @@ def _issue_url_pairs(issue_block: Any) -> list[dict[str, str]]:
 # Issues whose fix needs the page's CURRENT state (which tag is absent, what an invalid or
 # duplicated value contains). Unlike url_pairs there is no mechanical rewrite here — the AI
 # still writes the tag — but it works from the real page instead of a generic instruction.
-_PAGE_VALUE_KEYS = {
+_PAGE_VALUE_KEYS = _with_indexability_variants({
     "open_graph_tags_incomplete",
     "twitter_card_incomplete",
     "html_lang_attribute_invalid",
@@ -16544,7 +16568,7 @@ _PAGE_VALUE_KEYS = {
     # Duplicates: the patcher must SEE the shared value to write something different from it.
     "duplicate_titles",
     "duplicate_meta_descriptions",
-}
+})
 
 
 def _open_pr_for_issue(
