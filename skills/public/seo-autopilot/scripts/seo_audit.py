@@ -6057,6 +6057,11 @@ def _score_issues(
     sitemap_noindex: list[str] = []
     sitemap_non_canonical: list[str] = []
     sitemap_timed_out: list[str] = []
+    # Evidence: the <loc> as listed → the URL it should list instead. Only the two REPLACE-shaped
+    # problems get pairs; a 4xx/5xx/noindex/timed-out entry has no replacement (it should be
+    # removed, a different operation) and stays advisory.
+    sitemap_redirect_pairs: list[dict[str, str]] = []
+    sitemap_noncanon_pairs: list[dict[str, str]] = []
 
     for u in sitemap_urls:
         u_norm = _norm_self(u) or u
@@ -6086,6 +6091,9 @@ def _score_issues(
             sitemap_timed_out.append(u_norm)
         if is_redirect:
             sitemap_3xx.append(u_norm)
+            _dest = _redirect_destination(p)
+            if _dest:
+                sitemap_redirect_pairs.append({"page": u_norm, "from": u_norm, "to": _dest})
         if is_4xx:
             sitemap_4xx.append(u_norm)
         if is_5xx:
@@ -6095,6 +6103,9 @@ def _score_issues(
         # Avoid double-counting: only report "non-canonical in sitemap" for otherwise OK URLs.
         if _is_non_canonical(p) and not (is_timeout or is_redirect or is_4xx or is_5xx or is_noindex):
             sitemap_non_canonical.append(u_norm)
+            _real = _norm_self(p.canonical)
+            if _real:
+                sitemap_noncanon_pairs.append({"page": u_norm, "from": u_norm, "to": _real})
 
     indexable_not_in_sitemap: list[str] = []
     sitemap_set_norm = {_norm_self(u) or u for u in sitemap_urls}
@@ -7040,6 +7051,9 @@ def _score_issues(
     issues["sitemap_5xx_page"] = _issue_block("sitemap_5xx_page", sitemap_5xx)
     issues["sitemap_noindex_page"] = _issue_block("sitemap_noindex_page", sitemap_noindex)
     issues["sitemap_non_canonical_page"] = _issue_block("sitemap_non_canonical_page", sitemap_non_canonical)
+    # Sitemap rewrite evidence: the listed <loc> → the URL that belongs there instead.
+    _attach_evidence(("sitemap_3xx_redirect",), "url_pairs", sitemap_redirect_pairs)
+    _attach_evidence(("sitemap_non_canonical_page",), "url_pairs", sitemap_noncanon_pairs)
     issues["sitemap_page_timed_out"] = _issue_block("sitemap_page_timed_out", sitemap_timed_out)
     issues["indexable_page_not_in_sitemap"] = _issue_block("indexable_page_not_in_sitemap", indexable_not_in_sitemap)
 

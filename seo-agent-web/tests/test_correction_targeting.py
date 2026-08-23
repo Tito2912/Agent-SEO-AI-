@@ -197,6 +197,17 @@ def test_the_candidate_list_still_applies_when_the_map_cannot_resolve_a_page() -
     assert "map" in calls
 
 
+def test_sitemap_fixes_land_in_the_sitemap_and_nowhere_else() -> None:
+    # The flagged URL also appears in every page that links to it, so the evidence grep drags
+    # those in. A sitemap issue is fixed in the sitemap, full stop.
+    targets, _ = _resolve(
+        "sitemap_non_canonical_page", ["/de/blog"],
+        located=["de/index.html", "index.html", "sitemap.xml"], tree=STATIC_TREE,
+    )
+
+    assert targets == ["sitemap.xml"]
+
+
 def test_sitemap_issues_still_reach_the_generator_through_the_candidate_list() -> None:
     # The candidate skip must not touch families whose fix is NOT in the flagged pages.
     targets, _ = _resolve(

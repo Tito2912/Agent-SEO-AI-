@@ -16620,6 +16620,48 @@ def _is_routing_config_path(path: str) -> bool:
     return (path or "").rsplit("/", 1)[-1].lower() in _ROUTING_CONFIG_BASENAMES
 
 
+# Sitemap entries that point at the wrong URL. The fix is a value swap inside the sitemap, so
+# it is deterministic. The REMOVE-shaped siblings (4xx/5xx/noindex/timed-out in sitemap) are not
+# here: dropping an entry is a different operation and the crawler gives them no replacement.
+_SITEMAP_REWRITE_KEYS = {"sitemap_3xx_redirect", "sitemap_non_canonical_page"}
+
+
+def _is_sitemap_path(path: str) -> bool:
+    """True for the file that produces the sitemap — the only place these issues can be fixed."""
+    return "sitemap" in (path or "").rsplit("/", 1)[-1].lower()
+
+
+_SITEMAP_LOC_RE = re.compile(r"(<loc>\s*)(.*?)(\s*</loc>)", re.I | re.S)
+
+
+def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTIC sitemap fix (no AI): replace a flagged `<loc>` with the URL that belongs
+    there — the redirect's destination, or the target's declared canonical.
+
+    ONLY `<loc>` is touched. The `xhtml:link` hreflang alternates in the same file point at the
+    same URLs and are tempting to "keep consistent", but they are a separate issue with its own
+    family; widening the blast radius here is exactly how a sitemap fix once rewrote a `<loc>`
+    it had no business touching. Returns (new_content, replacements)."""
+    mapping: dict[str, str] = {}
+    for pair in pairs or []:
+        frm, to = str(pair.get("from") or "").strip(), str(pair.get("to") or "").strip()
+        if frm and to and frm != to:
+            mapping.setdefault(frm, to)
+    if not mapping:
+        return content, 0
+    count = 0
+
+    def _one(m: "re.Match[str]") -> str:
+        nonlocal count
+        value = m.group(2).strip()
+        if value in mapping:
+            count += 1
+            return m.group(1) + mapping[value] + m.group(3)
+        return m.group(0)
+
+    return _SITEMAP_LOC_RE.sub(_one, content), count
+
+
 # Issues whose fix = repoint an asset reference at the URL it already resolves to.
 _ASSET_REWRITE_KEYS = {
     "page_has_redirected_image", "image_redirects",
@@ -17044,6 +17086,11 @@ def _resolve_issue_targets(
     # and vercel.json are editable extensions and would not have been so lucky.
     if issue_key in _ASSET_REWRITE_KEYS:
         targets = [p for p in targets if not _is_routing_config_path(p)]
+    # A sitemap issue is fixed in the sitemap, full stop. The flagged URL also appears in every
+    # page that links to it, so the evidence grep drags those in — the same trap that had a
+    # hreflang fix rewriting sitemap.xml, mirrored.
+    if issue_key in _SITEMAP_REWRITE_KEYS or issue_key in _SITEMAP_ADD_KEYS:
+        targets = [p for p in targets if _is_sitemap_path(p)]
     return targets[:max_files]
 
 
@@ -17334,7 +17381,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # value each tag must carry, so the fix stops being a guess. Appended to the family hint
     # (which stays useful for the AI fallback on dynamically built URLs).
     _url_pairs: list[dict[str, str]] = []
-    if issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS):
+    if issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS
+                   or issue_key in _SITEMAP_REWRITE_KEYS):
         _url_pairs = _issue_url_pairs(issues.get(issue_key))
         if _url_pairs:
             _pair_hint = _build_url_pair_hint(_url_pairs)
@@ -17351,7 +17399,12 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # ── Pick a DETERMINISTIC link rewriter for mechanical families (no AI) ──
     _link_rewriter: "Callable[[str], tuple[str, int]] | None" = None
     _rewriter_ai_fallback = False
-    if _url_pairs and issue_key in _ASSET_REWRITE_KEYS:
+    if _url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
+        # Targets are restricted to the sitemap file, so an AI fallback here can only ever see
+        # the right file — useful when the sitemap is GENERATED and holds no literal <loc>.
+        _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_sitemap_locs(raw, _p)  # noqa: E731
+        _rewriter_ai_fallback = True
+    elif _url_pairs and issue_key in _ASSET_REWRITE_KEYS:
         # An asset src that can't be matched literally is an imported/bundled asset: the
         # redirect then lives in the CDN or server config, not in the page — no AI fallback.
         _link_rewriter = lambda raw, _p=_url_pairs: _rewrite_asset_srcs(raw, _p)  # noqa: E731

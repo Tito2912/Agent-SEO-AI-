@@ -184,6 +184,44 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Sitemap entries ──────────────────────────────────────────────────────────────────
+
+SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<url><loc>https://site.com/a/</loc>
+<xhtml:link rel="alternate" hreflang="en" href="https://site.com/a/"/>
+<lastmod>2026-08-01</lastmod></url>
+<url><loc>https://site.com/keep</loc></url>
+</urlset>"""
+
+
+def test_a_flagged_loc_is_replaced_and_nothing_else_is() -> None:
+    new, n = app_module._rewrite_sitemap_locs(
+        SITEMAP, _pairs(("https://site.com/a/", "https://site.com/a")),
+    )
+
+    assert n == 1
+    assert "<loc>https://site.com/a</loc>" in new
+    assert "<loc>https://site.com/keep</loc>" in new
+    # The hreflang alternate carries the same URL but belongs to another issue family:
+    # widening the blast radius here is how a sitemap fix once rewrote a <loc> by mistake.
+    assert 'href="https://site.com/a/"' in new
+
+
+def test_a_generated_sitemap_yields_no_change_so_the_ai_fallback_runs() -> None:
+    src = "export default function sitemap() { return routes.map(toEntry); }"
+    assert app_module._rewrite_sitemap_locs(src, _pairs(("https://site.com/a/", "https://site.com/a"))) == (src, 0)
+
+
+def test_only_the_sitemap_file_can_carry_a_sitemap_fix() -> None:
+    assert app_module._is_sitemap_path("sitemap.xml")
+    assert app_module._is_sitemap_path("public/sitemap.xml")
+    assert app_module._is_sitemap_path("app/sitemap.ts")
+    assert app_module._is_sitemap_path("next-sitemap.config.js")
+    assert not app_module._is_sitemap_path("de/legal-notice.html")
+    assert not app_module._is_sitemap_path("app/layout.tsx")
+
+
 # ── Duplicate-PR guard ───────────────────────────────────────────────────────────────
 
 def test_an_open_pr_blocks_a_second_one_but_a_closed_one_does_not(monkeypatch) -> None:
