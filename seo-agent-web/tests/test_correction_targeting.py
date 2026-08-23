@@ -217,6 +217,28 @@ def test_sitemap_issues_still_reach_the_generator_through_the_candidate_list() -
     assert "sitemap.xml" in targets
 
 
+def test_a_missing_content_tag_is_written_on_the_page_never_in_the_layout() -> None:
+    # Before the guard, asking for a meta description on 2 flagged pages targeted
+    # app/layout.tsx + pages/_document.tsx and NOT the pages: every page of the site would have
+    # inherited one shared description, turning "missing" into "duplicate" sitewide.
+    for key in ("missing_meta_description", "missing_title", "missing_h1",
+                "duplicate_titles", "duplicate_meta_descriptions"):
+        targets, _ = _resolve(key, ["/about", "/en"])
+        assert set(targets) == {"app/about/page.tsx", "app/en/page.tsx"}, key
+        assert not any(ri.is_shared_path({}, p) for p in targets), key
+
+
+def test_a_missing_canonical_may_still_be_computed_in_a_shared_layout() -> None:
+    # Unlike a literal title, a canonical derived from the route is correct for every page, so
+    # the shared file is not FORBIDDEN here — it simply isn't needed while the route map can
+    # name the pages. When the map can't resolve the URL, the layout is reachable again.
+    resolved, _ = _resolve("missing_canonical", ["/about"])
+    assert resolved == ["app/about/page.tsx"]
+
+    unresolved, _ = _resolve("missing_canonical", ["/page-built-elsewhere"])
+    assert "app/layout.tsx" in unresolved
+
+
 def test_current_state_issues_target_the_flagged_pages() -> None:
     # A duplicated <h1> lives in the page's own source, so the page files come first.
     targets, calls = _resolve("multiple_h1", ["/about", "/en/avis-bitpanda"])

@@ -6211,6 +6211,21 @@ def _score_issues(
     }
     _write_issue_rows(issues_dir, "duplicate_titles", duplicate_title_rows)
     _write_issue_rows(issues_dir, "duplicate_meta_descriptions", duplicate_description_rows)
+    # Evidence: the value each page SHARES with its duplicates. Fixing a duplicate means writing
+    # something DIFFERENT per page, so the patcher has to see the collision — the page list alone
+    # would tell it nothing about what to move away from.
+    _attach_evidence(("duplicate_titles",), "page_values", [
+        {"page": str(r.get("url") or ""),
+         "field": f"title partage avec {int(r.get('group_count') or 0) - 1} autre(s) page(s)",
+         "value": str(r.get("title") or "")}
+        for r in duplicate_title_rows
+    ])
+    _attach_evidence(("duplicate_meta_descriptions",), "page_values", [
+        {"page": str(r.get("url") or ""),
+         "field": f"meta description partagee avec {int(r.get('group_count') or 0) - 1} autre(s) page(s)",
+         "value": str(r.get("meta_description") or "")}
+        for r in duplicate_description_rows
+    ])
 
     # Semrush-like issues (mega export)
     # Suppressed: Ahrefs doesn't surface permanent_redirects as a distinct issue

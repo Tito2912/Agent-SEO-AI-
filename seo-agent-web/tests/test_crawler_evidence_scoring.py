@@ -33,8 +33,10 @@ def _page(url: str, **kw: Any) -> Any:
         "final_url": url,
         "status_code": 200,
         "content_type": "text/html; charset=utf-8",
-        "title": "Un titre de page correct",
-        "meta_description": "Une meta description de longueur raisonnable pour ne pas declencher les regles de longueur.",
+        # Unique per URL: a shared default would make every fixture site trip duplicate_titles
+        # and duplicate_meta_descriptions, which is exactly what a "clean site" must not do.
+        "title": f"Titre propre de la page {url}",
+        "meta_description": f"Description unique et de longueur raisonnable pour la page {url}, sans declencher de regle.",
         "canonical": url,
         "lang": "fr",
         "h1": ["Titre principal"],

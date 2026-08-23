@@ -16369,7 +16369,23 @@ _HEAD_HINTS: dict[str, str] = {
 # Issues whose fix must be PER-PAGE only (never touch a shared layout/template): editing a
 # shared og:url/canonical there changes EVERY page (incl. already-correct ones). Deterministic
 # guard — shared templates are dropped from the target set for these keys.
-_PER_PAGE_ONLY_KEYS = {"open_graph_url_not_matching_canonical"}
+_PER_PAGE_ONLY_KEYS = {
+    "open_graph_url_not_matching_canonical",
+    # Writing a title / description / h1 into a SHARED file gives every page the same value —
+    # it converts "missing" into "duplicate" across the whole site. Before this guard, asking
+    # for a meta description on 2 flagged pages targeted app/layout.tsx and pages/_document.tsx
+    # and NOT the pages themselves.
+    "missing_title", "missing_meta_description", "missing_h1",
+    "duplicate_titles", "duplicate_meta_descriptions",
+}
+
+# Per-page content tags: the fix belongs in the flagged page's own source, so these page-target.
+# `missing_canonical` is here too (the page must be reached) but deliberately NOT in the
+# per-page-only set above: a shared layout that computes the canonical from the route is a
+# perfectly good fix, unlike a shared literal title.
+_PER_PAGE_CONTENT_KEYS = _PER_PAGE_ONLY_KEYS | {
+    "multiple_meta_description_tags", "missing_canonical", "duplicate_pages_without_canonical",
+}
 
 
 # "Is this file shared across many pages?" now lives in backend/repo_index.py
@@ -16525,6 +16541,9 @@ _PAGE_VALUE_KEYS = {
     "hreflang_annotation_invalid",
     "multiple_title_tags",
     "multiple_h1",
+    # Duplicates: the patcher must SEE the shared value to write something different from it.
+    "duplicate_titles",
+    "duplicate_meta_descriptions",
 }
 
 
@@ -17024,6 +17043,7 @@ def _resolve_issue_targets(
     want_page_targeting = (
         wants_page_targeting
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
+        or issue_key in _PER_PAGE_CONTENT_KEYS
         or _length_family_name(issue_key) is not None
     ) and issue_key not in _ASSET_REWRITE_KEYS
     index_resolved_all = False
