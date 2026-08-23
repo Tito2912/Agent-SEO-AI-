@@ -3202,25 +3202,53 @@ def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
     return _SEO_FILE_CANDIDATES_DEFAULT
 
 
+# Issues with no dedicated handler that a plain per-page content patch can still fix: the value
+# to write is derivable from the page itself, and the file to touch is the page's own source.
+# Anything NOT listed here and not claimed by a handler stays advisory — see below.
+_GENERIC_CONTENT_FIX_KEYS = {
+    "missing_title", "missing_meta_description", "missing_h1",
+    "duplicate_titles", "duplicate_meta_descriptions",
+    "multiple_meta_description_tags", "duplicate_pages_without_canonical",
+    "missing_canonical",
+}
+
+
+def _handled_issue_keys() -> set[str]:
+    """Every issue key some corrector actually claims. Built at call time because the handler
+    tables are defined further down this module."""
+    handled: set[str] = set(_GENERIC_CONTENT_FIX_KEYS)
+    for table in (_HEAD_HINTS, _HREFLANG_HINTS):
+        handled |= set(table)
+    for group in (
+        _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
+        _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
+        _REDIRECT_CONFIG_KEYS,
+    ):
+        handled |= set(group)
+    for family in _LENGTH_FAMILIES.values():
+        handled |= set(family)
+    handled.add("missing_alt_text")
+    return handled
+
+
 def _github_issue_auto_fixable(issue_key: str) -> bool:
+    """An issue is offered for auto-fix ONLY when a corrector claims it.
+
+    This used to be the opposite: anything whose file-candidate lookup returned a non-default
+    list was considered fixable, which silently made 85 of the 191 catalogued issues eligible
+    for a free-form AI patch — including `redirect_3xx` (candidates: netlify.toml, the file
+    holding HSTS and CSP) and the sitemap hygiene family. Both were real hazards found in
+    testing, both instances of the same permissive default. Opt-in closes the class: a new
+    issue key is advisory until someone writes a handler and adds it to `_handled_issue_keys`."""
     key = (issue_key or "").strip().lower()
     if not key:
         return False
-    excluded_prefixes = ("gsc_", "bing_", "pages_to_submit_to_indexnow", "external_")
-    if key.startswith(excluded_prefixes):
-        return False
-    excluded_tokens = ("backlink", "certificate", "dns_", "tls", "ai_content")
-    if any(tok in key for tok in excluded_tokens):
-        return False
-    # Advisory-only issues: content quality, Core Web Vitals / perf, external targets,
-    # crawl timeouts, and proprietary rank/traffic metrics can't be fixed by a mechanical
-    # code patch → the agent should give guidance, not open a (useless) PR.
+    # Advisory-only issues: content quality, Core Web Vitals / perf, external targets, crawl
+    # timeouts and proprietary rank/traffic metrics can't be fixed by a mechanical code patch.
+    # Kept ahead of the allow-list so a key can never be claimed by accident.
     if key in _ADVISORY_ISSUE_KEYS or any(tok in key for tok in _ADVISORY_ISSUE_TOKENS):
         return False
-    # Mechanical link families fixed deterministically (mixed-content http→https, double-slash).
-    if key in _MIXED_CONTENT_KEYS or key in _DOUBLE_SLASH_KEYS:
-        return True
-    return _seo_file_candidates_for_issue(key) != _SEO_FILE_CANDIDATES_DEFAULT or key in _SEO_FILE_CANDIDATES
+    return key in _handled_issue_keys()
 
 
 # Issues that are real but NOT mechanically code-fixable — the agent advises instead of patching.

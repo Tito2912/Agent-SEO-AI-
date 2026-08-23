@@ -398,9 +398,19 @@ def test_github_patched_content_has_size_limit() -> None:
 def test_github_fixable_issue_detection_covers_common_audit_keys() -> None:
     assert app_module._github_issue_auto_fixable("duplicate_titles")
     assert app_module._github_issue_auto_fixable("title_too_long_indexable")
-    assert app_module._github_issue_auto_fixable("http_404")
     assert app_module._github_issue_auto_fixable("missing_alt_text")
     assert not app_module._github_issue_auto_fixable("gsc_indexing_errors")
+
+    # Auto-fix is opt-in: an issue is offered only when a corrector claims it. A 404 is NOT
+    # claimed on purpose — "fixing" it means inventing a redirect rule in the routing config
+    # (netlify.toml, which also holds HSTS and CSP), and WHERE a dead URL should point is an
+    # editorial decision no crawl can derive.
+    assert not app_module._github_issue_auto_fixable("http_404")
+    assert not app_module._github_issue_auto_fixable("redirect_chain")
+    assert not app_module._github_issue_auto_fixable("noindex_page")
+    # A key nobody has written a handler for stays advisory instead of silently becoming
+    # eligible for a free-form patch.
+    assert not app_module._github_issue_auto_fixable("some_future_issue_key")
 
     title_candidates = app_module._seo_file_candidates_for_issue("duplicate_titles")
     assert "app/layout.tsx" in title_candidates
@@ -431,9 +441,10 @@ def test_github_fixable_issue_candidates_are_prioritized() -> None:
 
     candidates = app_module._github_fixable_issue_candidates(report=report, proj=proj, limit=10)
 
-    assert [c["key"] for c in candidates] == ["http_404", "missing_title"]
-    assert candidates[0]["url"] == "https://example.com/missing"
-    assert candidates[0]["priority"] == "high"
+    # http_404 is advisory (see above) and gsc_* is out of scope, so only the content issue
+    # is offered for auto-fix.
+    assert [c["key"] for c in candidates] == ["missing_title"]
+    assert candidates[0]["url"] == "https://example.com/a"
 
 
 def test_provider_api_url_helpers_reject_ambiguous_paths() -> None:
