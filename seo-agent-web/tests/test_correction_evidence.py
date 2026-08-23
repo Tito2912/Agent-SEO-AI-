@@ -184,6 +184,46 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Advice for the issues we refuse to fix ───────────────────────────────────────────
+
+def _redirect_report(*fields: str) -> dict[str, object]:
+    return {"issues": {"redirect_3xx": {"evidence": {"kind": "page_values", "items": [
+        {"page": f"https://site.com/{i}", "field": f, "value": "x"} for i, f in enumerate(fields)
+    ]}}}}
+
+
+def _advice(report: dict[str, object]) -> dict:
+    from backend import fix_suggestions
+    return fix_suggestions.suggest_issue_fix(
+        issue_key="redirect_3xx", label="Redirection 3XX", category="Redirects",
+        severity="warning", count=4, report=report, site_name="s", base_url="https://site.com",
+    )
+
+
+def test_advice_tells_a_healthy_site_to_change_nothing() -> None:
+    out = _advice(_redirect_report("canonicalisation attendue", "canonicalisation attendue"))
+
+    # We refuse to auto-fix these, so the advice is all we offer -- it must not imply a defect.
+    assert "canonicalisation volontaire" in out["why"]
+    assert any("Ne rien changer" in f for f in out["fix"])
+
+
+def test_advice_singles_out_the_loop_and_spares_the_rest() -> None:
+    out = _advice(_redirect_report("canonicalisation attendue", "boucle: redirige vers elle-meme"))
+
+    assert "Une de ces redirections forme une boucle" in out["why"]
+    assert any("Casser la boucle" in f for f in out["fix"])
+    assert any("Laisser l'autre telle quelle" in f for f in out["fix"])
+
+
+def test_advice_degrades_without_evidence_but_never_lies() -> None:
+    out = _advice({})
+
+    # A report predating the evidence contract still gets usable, non-committal guidance.
+    assert "Certaines sont voulues" in out["why"]
+    assert out["fix"]
+
+
 # ── Sitemap entries ──────────────────────────────────────────────────────────────────
 
 SITEMAP = """<?xml version="1.0" encoding="UTF-8"?>

@@ -82,6 +82,33 @@ def _looks_like_host_variant(urls: list[str]) -> bool:
     return len(paths) == 1 and (len(hosts) > 1 or len(schemes) > 1)
 
 
+def _redirect_3xx_breakdown(report: dict[str, Any]) -> dict[str, int]:
+    """Count the crawler's classification of each flagged redirect.
+
+    All zeros for a report predating the evidence contract, which is why the caller keeps a
+    generic branch: the advice degrades, it never lies."""
+    out = {"self_loop": 0, "multi_loop": 0, "expected": 0, "other": 0}
+    items: list[Any] = []
+    try:
+        block = ((report or {}).get("issues") or {}).get("redirect_3xx") or {}
+        evidence = block.get("evidence") or {}
+        if evidence.get("kind") == "page_values":
+            items = evidence.get("items") or []
+    except Exception:
+        items = []
+    for item in items:
+        field = str((item or {}).get("field") or "") if isinstance(item, dict) else ""
+        if field.startswith("boucle: "):
+            out["self_loop"] += 1
+        elif field.startswith("boucle"):
+            out["multi_loop"] += 1
+        elif field.startswith("canonicalisation"):
+            out["expected"] += 1
+        else:
+            out["other"] += 1
+    return out
+
+
 def suggest_issue_fix(
     *,
     issue_key: str,
@@ -235,6 +262,72 @@ def suggest_issue_fix(
             "Relancer un crawl et vérifier la stabilité (0 5xx / timeouts).",
             "Contrôler dans GSC les erreurs serveur.",
         ]
+    elif lk == "redirect_3xx":
+        # The crawler classifies every flagged redirect, so name what actually deserves
+        # attention instead of implying they are all defects. On a healthy site these ARE the
+        # domain's own http→https / www canonicalisation and the right advice is "nothing to do".
+        b = _redirect_3xx_breakdown(report)
+        if b["self_loop"] or b["multi_loop"]:
+            _n = b["self_loop"] + b["multi_loop"]
+            why = (
+                ("Une de ces redirections forme une boucle : " if _n == 1
+                 else f"{_n} de ces redirections forment une boucle : ")
+                + "l'URL ne parvient jamais à une page, elle est donc inatteignable pour Google."
+            )
+            fix = [
+                "Casser la boucle dans la config de redirection (règle qui renvoie une URL vers elle-même).",
+                "Vérifier les règles http↔https, www↔non-www et slash final, souvent en conflit entre elles.",
+            ]
+            if b["expected"]:
+                fix.append(
+                    ("Laisser l'autre telle quelle : c'est ta canonicalisation volontaire, elle est correcte."
+                     if b["expected"] == 1 else
+                     f"Laisser les {b['expected']} autres telles quelles : c'est ta canonicalisation "
+                     "volontaire, elles sont correctes.")
+                )
+            verify = ["Après déploiement, appeler l'URL : elle doit répondre 200 sans en-tête Location."]
+        elif b["expected"] and not b["other"]:
+            why = (
+                "Ces redirections sont la canonicalisation volontaire du site (http→https, www→apex, "
+                "suppression du .html). Ce ne sont pas des défauts : Ahrefs les compte, mais elles font "
+                "leur travail."
+            )
+            fix = [
+                "Ne rien changer dans la config de redirection.",
+                "Vérifier plutôt que tes liens internes, canonicals et sitemaps pointent directement "
+                "vers l'URL finale, pour éviter un saut inutile à chaque visite.",
+            ]
+            verify = ["Le compte ne baissera pas et c'est normal : ces redirections doivent exister."]
+        else:
+            why = (
+                "Des URLs du site répondent par une redirection. Certaines sont voulues "
+                "(canonicalisation), d'autres non — la distinction se fait au cas par cas."
+            )
+            fix = [
+                "Pour chaque URL, vérifier si la redirection est intentionnelle (http→https, www, .html).",
+                "Corriger les liens internes qui pointent vers la source plutôt que vers la destination.",
+            ]
+            verify = ["Relancer un crawl et comparer le détail des URLs listées."]
+    elif lk == "sitemap_3xx_redirect":
+        why = (
+            "Le sitemap liste des URLs qui redirigent. Google suit la redirection mais le sitemap "
+            "envoie un signal contradictoire : il déclare canonique une URL qui n'est pas la finale."
+        )
+        fix = [
+            "Remplacer chaque <loc> par la destination finale en 200.",
+            "Ne pas se contenter d'ajouter la bonne URL : retirer l'ancienne, sinon les deux coexistent.",
+        ]
+        verify = ["Relancer un crawl et vérifier que « sitemap_3xx_redirect » retombe à 0."]
+    elif lk == "certificate_expiration":
+        why = (
+            "Le certificat TLS approche de son expiration. Une fois expiré, les navigateurs bloquent "
+            "l'accès au site et le crawl s'arrête net — c'est une panne totale, pas une dégradation."
+        )
+        fix = [
+            "Vérifier que le renouvellement automatique est actif chez l'hébergeur (Let's Encrypt, CDN).",
+            "S'il est manuel, renouveler maintenant et poser un rappel avant la prochaine échéance.",
+        ]
+        verify = ["Contrôler la date d'expiration du certificat après renouvellement."]
     elif "redirect_chain" in lk:
         why = "Les chaînes de redirection augmentent la latence et gaspillent le budget de crawl."
         fix = [
