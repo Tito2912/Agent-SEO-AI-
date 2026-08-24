@@ -423,6 +423,9 @@ class PageData:
     response_bytes: int | None = None
     elapsed_ms: int | None = None
     pagespeed: dict[str, Any] | None = None
+    # True when the final status was the HOST refusing us (403/429/503 that survived retries),
+    # not a defect of the page. Scoring must never report these as the customer's broken pages.
+    blocked_by_host: bool = False
 
     title: str | None = None
     title_tag_count: int = 0
@@ -492,20 +495,23 @@ class RobotsRule:
 class RobotsGroup:
     user_agents: tuple[str, ...]
     rules: tuple[RobotsRule, ...]
+    crawl_delay: float = 0.0
 
 
 @dataclasses.dataclass(frozen=True)
 class RobotsRules:
     groups: tuple[RobotsGroup, ...]
 
-    def can_fetch(self, user_agent: str, url: str) -> bool:
+    def _groups_for(self, user_agent: str) -> list[RobotsGroup]:
+        """Groups whose User-agent token matches ours most specifically (robots.txt precedence).
+
+        Extracted so `can_fetch` and `crawl_delay_for` can never disagree about which group
+        applies — obeying one group's Disallow while taking another's Crawl-delay would be
+        worse than ignoring the file.
+        """
         ua = (user_agent or "").strip().lower()
         if not ua:
             ua = "*"
-
-        parts = urlsplit(url)
-        path = parts.path or "/"
-        path_query = path + (("?" + parts.query) if parts.query else "")
 
         best_ua_len = -1
         selected: list[RobotsGroup] = []
@@ -530,7 +536,24 @@ class RobotsRules:
             elif match_len == best_ua_len:
                 selected.append(g)
 
-        if best_ua_len < 0:
+        return selected if best_ua_len >= 0 else []
+
+    def crawl_delay_for(self, user_agent: str) -> float:
+        """Seconds the site asks us to wait between requests, 0 when it asks for nothing.
+
+        Ignoring this is how a crawler ends up firewalled by a customer's CDN — and the
+        customer then reads the resulting 403s as broken pages on their own site.
+        """
+        delays = [float(g.crawl_delay or 0.0) for g in self._groups_for(user_agent)]
+        return max(delays) if delays else 0.0
+
+    def can_fetch(self, user_agent: str, url: str) -> bool:
+        parts = urlsplit(url)
+        path = parts.path or "/"
+        path_query = path + (("?" + parts.query) if parts.query else "")
+
+        selected = self._groups_for(user_agent)
+        if not selected:
             return True
 
         # Merge rules from all equally-specific groups (handles duplicate "User-agent: *" blocks).
@@ -575,22 +598,26 @@ def _parse_robots_rules(text: str) -> RobotsRules:
     groups: list[RobotsGroup] = []
     current_user_agents: list[str] = []
     current_rules: list[RobotsRule] = []
+    current_delay = 0.0
     seen_rule = False
 
     def flush() -> None:
-        nonlocal current_user_agents, current_rules, seen_rule
+        nonlocal current_user_agents, current_rules, current_delay, seen_rule
         if not current_user_agents:
             current_rules = []
+            current_delay = 0.0
             seen_rule = False
             return
         groups.append(
             RobotsGroup(
                 user_agents=tuple([ua for ua in current_user_agents if ua]),
                 rules=tuple(current_rules),
+                crawl_delay=current_delay,
             )
         )
         current_user_agents = []
         current_rules = []
+        current_delay = 0.0
         seen_rule = False
 
     for raw in (text or "").splitlines():
@@ -632,7 +659,18 @@ def _parse_robots_rules(text: str) -> RobotsRules:
             seen_rule = True
             continue
 
-        # Ignore other directives here (crawl-delay, host, etc).
+        if field == "crawl-delay":
+            # Honoured, unlike before. A site that asks for 2 s and gets hammered at 0 s
+            # answers with 403/429, which the audit then reports as the customer's own
+            # broken pages. Capped: a hostile robots.txt must not be able to stall a crawl.
+            if current_user_agents:
+                try:
+                    current_delay = max(current_delay, min(float(value.replace(",", ".")), 30.0))
+                except (TypeError, ValueError):
+                    pass
+            continue
+
+        # Ignore other directives here (host, etc).
 
     flush()
     return RobotsRules(groups=tuple(groups))
@@ -3112,6 +3150,98 @@ except ValueError:
 _BROWSER_TLS = threading.local()
 
 
+# --- Politeness ------------------------------------------------------------------------------
+#
+# The crawler used to fire page requests back to back with no delay and no notion of the host
+# pushing back. A CDN answers that with 403 or 429, and `http_4xx` reported those to the
+# customer as broken pages on their own site — the worst failure an audit product can have,
+# because it discredits the whole report. Observed on avis-invest.com: 11 pages flagged 4XX
+# while all 11 answered 200 when checked by hand seconds later.
+#
+# Two rules follow: pace requests per host, and treat a block as a CRAWL problem, never as a
+# page defect.
+
+# Statuses that mean "you, right now" rather than "this page, always".
+_BLOCKING_STATUSES = {403, 429, 503}
+
+try:
+    _CRAWL_DELAY_FLOOR_S = float(os.getenv("SEO_AGENT_CRAWL_DELAY_S", "0"))
+except ValueError:
+    _CRAWL_DELAY_FLOOR_S = 0.0
+try:
+    _BLOCK_MAX_RETRIES = int(os.getenv("SEO_AGENT_BLOCK_MAX_RETRIES", "2"))
+except ValueError:
+    _BLOCK_MAX_RETRIES = 2
+
+_BLOCK_BACKOFF_START_S = 1.5
+_BLOCK_BACKOFF_MAX_S = 15.0
+
+
+class _HostThrottle:
+    """Per-host pacing that tightens when the host starts refusing.
+
+    Shared across crawler threads: the host sees one client, so the pacing has to be one
+    client's too. A thread waits its turn by claiming the next slot under the lock and
+    sleeping outside it, so slots are handed out in order without serialising the crawl.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._delay: dict[str, float] = {}
+        self._next_at: dict[str, float] = {}
+
+    def set_base_delay(self, host: str, seconds: float) -> None:
+        h = (host or "").lower()
+        base = max(float(seconds or 0.0), _CRAWL_DELAY_FLOOR_S)
+        with self._lock:
+            self._delay[h] = max(self._delay.get(h, 0.0), base)
+
+    def wait(self, host: str) -> None:
+        h = (host or "").lower()
+        with self._lock:
+            delay = self._delay.get(h, _CRAWL_DELAY_FLOOR_S)
+            if delay <= 0:
+                return
+            now = time.monotonic()
+            slot = max(now, self._next_at.get(h, 0.0))
+            self._next_at[h] = slot + delay
+        sleep_s = slot - time.monotonic()
+        if sleep_s > 0:
+            time.sleep(sleep_s)
+
+    def penalise(self, host: str, *, retry_after: str | None = None) -> float:
+        """Back off after a block; returns how long the caller should sleep before retrying."""
+        h = (host or "").lower()
+        with self._lock:
+            current = self._delay.get(h, 0.0)
+            self._delay[h] = min(max(current * 2.0, _BLOCK_BACKOFF_START_S), _BLOCK_BACKOFF_MAX_S)
+            delay = self._delay[h]
+        # A server that says how long to wait is more reliable than our guess.
+        if retry_after:
+            try:
+                return max(delay, min(float(str(retry_after).strip()), _BLOCK_BACKOFF_MAX_S))
+            except (TypeError, ValueError):
+                pass
+        return delay
+
+
+_CRAWL_THROTTLE = _HostThrottle()
+
+
+def _run_page_fetch(make_coro, *, timeout_s: float) -> Exception | None:
+    """Run one navigation, returning the exception instead of raising it.
+
+    The caller needs to distinguish "the browser failed" (report it against this page) from
+    "the host refused us" (retry, then exclude from the report), and that decision cannot be
+    made inside an except block.
+    """
+    try:
+        _run_in_browser(make_coro, timeout_s=timeout_s)
+    except Exception as exc:
+        return exc
+    return None
+
+
 class _BrowserSession:
     """One long-lived Chromium per crawler thread, on that thread's own event loop.
 
@@ -3308,9 +3438,33 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             await ctx.close()
 
     _total_timeout = float(config.timeout_s or 30) + 60
-    try:
-        _run_in_browser(_fetch_async, timeout_s=_total_timeout)
-    except Exception as e:
+    _host = (urlsplit(url).netloc or "").lower()
+    _holders = (redirect_chain, redirect_statuses, status_holder, final_url_holder, elapsed_holder, html_holder)
+    _blocked_tries = 0
+    while True:
+        # A retry must not inherit the blocked attempt's headers or empty body.
+        for _h in _holders:
+            _h.clear()
+        response_headers.clear()
+        _CRAWL_THROTTLE.wait(_host)
+        _fetch_error = _run_page_fetch(_fetch_async, timeout_s=_total_timeout)
+        _status = status_holder[0] if status_holder else None
+        if (
+            _fetch_error is None
+            and _status in _BLOCKING_STATUSES
+            and _blocked_tries < _BLOCK_MAX_RETRIES
+        ):
+            _blocked_tries += 1
+            time.sleep(_CRAWL_THROTTLE.penalise(_host, retry_after=response_headers.get("retry-after")))
+            continue
+        break
+    if _fetch_error is None and _status in _BLOCKING_STATUSES:
+        # Out of retries and still refused: the host is blocking us. Record that on the page so
+        # scoring can keep it out of the customer's error counts.
+        page.blocked_by_host = True
+        _CRAWL_THROTTLE.penalise(_host)
+    if _fetch_error is not None:
+        e = _fetch_error
         err_str = str(e)
         if (
             "err_too_many_redirects" in err_str.lower()
@@ -4272,6 +4426,15 @@ def _score_issues(
     strict_link_counts: bool = False,
     base_url: str | None = None,
 ) -> dict[str, dict[str, Any]]:
+    # A page the HOST refused us (403/429/503 surviving retries) was never audited. Scoring it
+    # would report the customer's own healthy pages as broken — and not only under `http_4xx`:
+    # a dozen families test `status_code >= 400`, so one blocked page also becomes a broken
+    # internal link, a broken hreflang target, a 4XX sitemap entry. Observed on a real site:
+    # 11 blocked pages produced 65 phantom errors. Drop them from the audit input entirely;
+    # `meta.blocked` carries them so the crawl can report itself as partial.
+    pages = [p for p in pages if not getattr(p, "blocked_by_host", False)]
+    if previous_pages is not None:
+        previous_pages = [p for p in previous_pages if not getattr(p, "blocked_by_host", False)]
     ISSUE_EXAMPLES_LIMIT = 200
     issues_dir = Path(str(output_dir)).resolve() / "issues" if output_dir else None
     sitemap_urls_norm: set[str] = set()
@@ -8257,6 +8420,18 @@ def main(argv: list[str]) -> int:
                 if no_slash_path:
                     lang_root_probes.append(urlunsplit((parts.scheme, parts.netloc, no_slash_path, "", "")))
 
+    # Pace ourselves the way the site asked. Doing this before the first fetch matters:
+    # discovering the limit by getting blocked is how phantom 4XX end up in a customer report.
+    _base_host = (urlsplit(config.base_url).netloc or "").lower()
+    _robots_delay = rp.crawl_delay_for(config.user_agent) if rp else 0.0
+    _CRAWL_THROTTLE.set_base_delay(_base_host, _robots_delay)
+    if _robots_delay > 0 or _CRAWL_DELAY_FLOOR_S > 0:
+        print(
+            f"[CRAWL] politeness = {max(_robots_delay, _CRAWL_DELAY_FLOOR_S):.2f}s between pages"
+            f" (robots crawl-delay={_robots_delay:.2f}s, floor={_CRAWL_DELAY_FLOOR_S:.2f}s)",
+            flush=True,
+        )
+
     probe_urls = _root_probe_urls(config.base_url)
     # Ahrefs-like: include sitemap file URLs as crawl targets (they appear as timed out / 3XX in Ahrefs exports).
     extra_sitemap_targets: list[str] = []  # Do not crawl sitemap XML files as pages (keeps parity with Ahrefs issues)
@@ -8347,7 +8522,17 @@ def main(argv: list[str]) -> int:
 
     page_list = list(pages.values())
     page_list.sort(key=lambda p: p.url)
+    blocked_pages = [p for p in page_list if getattr(p, "blocked_by_host", False)]
     print(f"[CRAWL] Done | pages={len(page_list)}", flush=True)
+    if blocked_pages:
+        # Loud on purpose: the audit that follows is partial, and silently returning a clean
+        # report for a site we were locked out of is worse than returning nothing.
+        print(
+            f"[CRAWL] BLOCKED by host on {len(blocked_pages)} page(s) after retries "
+            f"(403/429/503). They are excluded from the audit, not reported as site errors. "
+            f"Examples: {', '.join(p.url for p in blocked_pages[:3])}",
+            flush=True,
+        )
 
     pagespeed_meta: dict[str, Any] = {"enabled": False, "reason": "disabled_in_config"}
     if config.pagespeed_enabled:
@@ -8614,7 +8799,13 @@ def main(argv: list[str]) -> int:
         "profile": str(config.profile or "default"),
         "base_url": config.base_url,
         "max_pages": config.max_pages,
-        "pages_crawled": len(page_list),
+        "pages_crawled": len(page_list) - len(blocked_pages),
+        # Pages the host refused us (403/429/503 after retries). NOT customer errors: they are
+        # excluded from scoring, so a report with a non-zero count here is incomplete.
+        "blocked_by_host": {
+            "count": len(blocked_pages),
+            "urls": [p.url for p in blocked_pages][:200],
+        },
         # Ahrefs-like: links found vs crawled (uncrawled links)
         "urls_discovered": int(len(seen)),
         "urls_uncrawled": int(max(0, len(seen) - len(page_list))),

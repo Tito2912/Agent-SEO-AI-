@@ -1,0 +1,163 @@
+"""Being refused by a host is a crawl problem, never a defect of the customer's site.
+
+Observed in production on avis-invest.com: 11 pages reported as `http_4xx` while all 11
+answered 200 when checked by hand seconds later, plus 14 phantom "broken internal link" and
+29 phantom "hreflang to broken page". The site was healthy; the crawler had been firewalled.
+
+Two independent faults produced that, and both are pinned here:
+  - the crawler ignored robots.txt Crawl-delay and paced nothing, so it invited the block;
+  - scoring read a 403 as "this page is broken", and a dozen issue families test
+    `status_code >= 400`, so each blocked page multiplied into several phantom errors.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import sys
+import threading
+import time
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+_SPEC = importlib.util.spec_from_file_location(
+    "seo_audit_for_politeness_tests",
+    REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py",
+)
+assert _SPEC and _SPEC.loader
+seo_audit = importlib.util.module_from_spec(_SPEC)
+sys.modules["seo_audit_for_politeness_tests"] = seo_audit
+_SPEC.loader.exec_module(seo_audit)
+
+
+# --- robots.txt Crawl-delay ---------------------------------------------------------------
+
+def test_crawl_delay_is_read_for_the_matching_user_agent() -> None:
+    rules = seo_audit._parse_robots_rules(
+        "User-agent: *\nCrawl-delay: 2\nDisallow: /admin\n\n"
+        "User-agent: SEOAutopilot\nCrawl-delay: 5\nDisallow: /private\n"
+    )
+    assert rules.crawl_delay_for("SEOAutopilot/1.0") == 5.0
+    assert rules.crawl_delay_for("SomeOtherBot/2.0") == 2.0
+
+
+def test_crawl_delay_and_disallow_come_from_the_same_group() -> None:
+    # Obeying one group's Disallow while taking another's Crawl-delay would be incoherent.
+    rules = seo_audit._parse_robots_rules(
+        "User-agent: *\nCrawl-delay: 9\nDisallow: /\n\n"
+        "User-agent: SEOAutopilot\nCrawl-delay: 1\nDisallow: /nope\n"
+    )
+    assert rules.crawl_delay_for("SEOAutopilot/1.0") == 1.0
+    assert rules.can_fetch("SEOAutopilot/1.0", "https://x.test/anything") is True
+    assert rules.can_fetch("SEOAutopilot/1.0", "https://x.test/nope") is False
+
+
+def test_a_hostile_crawl_delay_cannot_stall_the_crawl() -> None:
+    rules = seo_audit._parse_robots_rules("User-agent: *\nCrawl-delay: 86400\n")
+    assert rules.crawl_delay_for("SEOAutopilot/1.0") == 30.0
+
+
+@pytest.mark.parametrize("value", ["", "abc", "-1", "1,5"])
+def test_malformed_crawl_delay_never_breaks_robots_parsing(value: str) -> None:
+    rules = seo_audit._parse_robots_rules(f"User-agent: *\nCrawl-delay: {value}\nDisallow: /x\n")
+    assert rules.can_fetch("Bot", "https://x.test/x") is False
+    assert rules.crawl_delay_for("Bot") >= 0.0
+
+
+def test_no_crawl_delay_means_no_delay() -> None:
+    rules = seo_audit._parse_robots_rules("User-agent: *\nDisallow: /x\n")
+    assert rules.crawl_delay_for("Bot") == 0.0
+
+
+# --- per-host throttle ---------------------------------------------------------------------
+
+def test_throttle_spaces_requests_by_the_configured_delay() -> None:
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("x.test", 0.05)
+    start = time.monotonic()
+    for _ in range(4):
+        t.wait("x.test")
+    assert time.monotonic() - start >= 0.05 * 3
+
+
+def test_throttle_slots_are_shared_across_threads() -> None:
+    # The host sees one client, so the pacing must be one client's — a per-thread delay would
+    # let N workers hit the site N times faster than the site asked for.
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("x.test", 0.05)
+    start = time.monotonic()
+    threads = [threading.Thread(target=lambda: t.wait("x.test")) for _ in range(4)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert time.monotonic() - start >= 0.05 * 3
+
+
+def test_hosts_are_paced_independently() -> None:
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("slow.test", 0.2)
+    t.wait("slow.test")
+    start = time.monotonic()
+    for _ in range(5):
+        t.wait("fast.test")
+    assert time.monotonic() - start < 0.1
+
+
+def test_being_blocked_makes_the_crawler_back_off() -> None:
+    t = seo_audit._HostThrottle()
+    first = t.penalise("x.test")
+    second = t.penalise("x.test")
+    assert first >= seo_audit._BLOCK_BACKOFF_START_S
+    assert second > first, "a repeated block must widen the delay, not repeat it"
+    for _ in range(10):
+        t.penalise("x.test")
+    assert t.penalise("x.test") <= seo_audit._BLOCK_BACKOFF_MAX_S
+
+
+def test_retry_after_from_the_server_wins_over_our_guess() -> None:
+    t = seo_audit._HostThrottle()
+    assert t.penalise("x.test", retry_after="12") == 12.0
+    # Junk headers fall back to the computed backoff instead of crashing the crawl.
+    assert t.penalise("x.test", retry_after="Wed, 21 Oct 2026 07:28:00 GMT") > 0
+
+
+# --- scoring ------------------------------------------------------------------------------
+
+def _page(url: str, status: int, *, blocked: bool = False, links: list[str] | None = None):
+    return seo_audit.PageData(
+        url=url,
+        final_url=url,
+        status_code=status,
+        content_type="text/html",
+        blocked_by_host=blocked,
+        title="Un titre de page parfaitement normal",
+        h1=["Titre"],
+        internal_links=list(links or []),
+    )
+
+
+def test_a_blocked_page_is_not_reported_as_a_broken_page() -> None:
+    ok = _page("https://x.test/", 200, links=["https://x.test/de/about"])
+    blocked = _page("https://x.test/de/about", 403, blocked=True)
+    issues = seo_audit._score_issues([ok, blocked], base_url="https://x.test/")
+
+    def count(key: str) -> int:
+        block = issues.get(key) or {}
+        return int(block.get("count") or 0)
+
+    assert count("http_4xx") == 0, "a page the host refused us was reported as the site's own 4XX"
+    assert count("bad_status") == 0
+    # The whole point: one blocked page used to become several unrelated phantom errors.
+    assert count("page_has_links_to_broken_page_indexable") == 0
+    assert count("page_has_links_to_broken_page") == 0
+
+
+def test_a_genuine_4xx_is_still_reported() -> None:
+    # The fix must not become a way to hide real errors.
+    ok = _page("https://x.test/", 200, links=["https://x.test/gone"])
+    gone = _page("https://x.test/gone", 404)
+    issues = seo_audit._score_issues([ok, gone], base_url="https://x.test/")
+    assert int((issues.get("http_4xx") or {}).get("count") or 0) == 1
+    assert int((issues.get("http_404") or {}).get("count") or 0) == 1
