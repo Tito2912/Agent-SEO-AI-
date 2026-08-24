@@ -287,13 +287,29 @@ def test_issue_counts_survive_a_malformed_report() -> None:
 # ── Mechanical vs model-written ──────────────────────────────────────────────────────
 
 def test_a_pr_says_whether_a_human_must_read_the_diff() -> None:
-    mechanical = app_module._fix_nature_note(False)
-    editorial = app_module._fix_nature_note(True)
+    mechanical = app_module._fix_nature_note(False, "page_has_links_to_redirect")
+    editorial = app_module._fix_nature_note(True, "duplicate_titles")
 
     assert "mécanique" in mechanical and "prévisible" in mechanical
     assert "À relire avant de merger" in editorial and "rédigé par le" in editorial
     # The two must not be confusable: identical-looking PRs are what made auto-merge unsafe.
     assert mechanical != editorial
+
+
+def test_a_mechanical_diff_resting_on_a_choice_is_flagged_as_such() -> None:
+    # Repairing a contradiction between two sources means deciding which one wins, and that
+    # belongs to the site owner. Predictable is not the same as uncontroversial: this fix is
+    # right for a site whose pages carry the convention, backwards for one whose sitemap does.
+    key = "more_than_one_page_for_same_language_in_hreflang"
+    note = app_module._fix_nature_note(False, key)
+
+    assert "Hypothèse à valider" in note
+    assert "mauvais sens" in note              # names the case where it would be wrong
+    assert "Correctif mécanique" not in note   # must not read as uncontroversial
+    # The indexability twins inherit the premise.
+    assert app_module._fix_premise_note(key + "_indexable")
+    # And an ordinary family carries no premise at all.
+    assert app_module._fix_premise_note("page_has_links_to_redirect") == ""
 
 
 # ── Advice for the issues we refuse to fix ───────────────────────────────────────────

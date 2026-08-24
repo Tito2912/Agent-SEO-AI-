@@ -15954,6 +15954,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     config_changed: list[str] = []   # deterministic redirect-config repairs, never AI-generated
     config_notes: list[str] = []
     any_ai_written = False           # one model-written file is enough to require a human read
+    any_premise_key = ""             # …and so is one fix that rests on a debatable assumption
     budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
     for issue in fixable:
         if budget <= 0:
@@ -16000,6 +16001,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
         )
         any_ai_written = any_ai_written or _ai_written
+        if not any_premise_key and _fix_premise_note(issue_key):
+            any_premise_key = issue_key
         patched = patched + [f for f in _cfg_changed if f not in patched]
         if patched:
             budget -= len(patched)
@@ -16025,7 +16028,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         files = r.get("files") or []
         detail = ", ".join(f"`{f}`" for f in files) if files else (r.get("error") or "")
         pr_lines.append(f"{icon} **{r['issue_label']}** — {detail}")
-    pr_lines.append(_fix_nature_note(any_ai_written).strip())
+    pr_lines.append(_fix_nature_note(any_ai_written, any_premise_key).strip())
     pr_lines.append("\nCorrection générée par [SEO Agent](https://noyaru.com).")
     pr_body = "\n".join(pr_lines)
 
@@ -16041,7 +16044,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # Auto-merge if Full Access mode — except when the run touched redirect rules. Routing
     # changes always go through a human, exactly as the per-issue path already required.
     _merged = False
-    if mode == "auto" and pr_number and not config_changed and not any_ai_written:
+    if mode == "auto" and pr_number and not config_changed and not any_ai_written and not any_premise_key:
         try:
             _github_api_put(
                 _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
@@ -17341,11 +17344,41 @@ def _resolve_issue_targets(
     return targets[:max_files]
 
 
-def _fix_nature_note(ai_written: bool) -> str:
-    """One line in the PR body saying whether a human needs to read the diff.
+# Families whose DIFF is mechanical but whose PREMISE is a judgement call. When an issue is a
+# contradiction between two sources, repairing it means deciding which source wins — and that
+# decision belongs to the site owner, not to us. A predictable diff is not the same thing as an
+# uncontroversial one, and these must never auto-merge however deterministic the rewrite is.
+_FIX_PREMISE_NOTES: dict[str, str] = {
+    "more_than_one_page_for_same_language_in_hreflang": (
+        "Ce correctif aligne le **sitemap** sur ce que déclarent tes **pages**, en tenant la page "
+        "pour la source d'autorité (c'est elle que Google lit à chaque passage). Si c'est ton "
+        "sitemap qui porte la convention voulue, il faut faire l'inverse — corriger les pages — et "
+        "cette PR va dans le mauvais sens."
+    ),
+}
 
-    A bounded rewrite fed by crawl values is predictable and mechanically verifiable; a value
-    the model WROTE is an editorial proposal. Both used to produce identical-looking PRs."""
+
+def _fix_premise_note(issue_key: str) -> str:
+    """The assumption a fix rests on, when it rests on one. Empty for the rest."""
+    for key in (issue_key, issue_key.removesuffix("_indexable").removesuffix("_not_indexable")):
+        if key in _FIX_PREMISE_NOTES:
+            return _FIX_PREMISE_NOTES[key]
+    return ""
+
+
+def _fix_nature_note(ai_written: bool, issue_key: str = "") -> str:
+    """One line in the PR body telling the reviewer WHAT to check.
+
+    Three cases, because two were not enough: a bounded rewrite fed by crawl values is
+    predictable; a value the model WROTE is an editorial proposal; and a rewrite that resolves a
+    contradiction between two sources is predictable in its diff but rests on a choice of which
+    source wins. All three used to produce identical-looking PRs."""
+    premise = _fix_premise_note(issue_key)
+    if premise:
+        return (
+            "\n\n> ⚖️ **Hypothèse à valider avant de merger.** Le diff est mécanique et prévisible, "
+            "mais il tranche une question de fond. " + premise
+        )
     if ai_written:
         return (
             "\n\n> ⚠️ **À relire avant de merger.** Le contenu de ce correctif a été **rédigé par le "
@@ -17765,7 +17798,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         f"**Fichiers modifiés :** {len(all_changed)}\n\n"
         + "\n".join(f"- `{p}`" for p in all_changed)
         + _config_note_block
-        + _fix_nature_note(_ai_written)
+        + _fix_nature_note(_ai_written, issue_key)
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
@@ -17778,7 +17811,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _merged = False
     # Auto-merge only what a human doesn't need to read: routing changes are risky, and a value
     # WRITTEN by the model is an editorial proposal, not a mechanical repair.
-    if mode == "auto" and pr_number and not config_changes and not _ai_written:
+    if mode == "auto" and pr_number and not config_changes and not _ai_written and not _fix_premise_note(issue_key):
         try:
             _github_api_put(_github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"), token=token, json_body={"merge_method": "squash", "commit_title": pr_title})
             _merged = True
