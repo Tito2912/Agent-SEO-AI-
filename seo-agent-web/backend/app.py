@@ -3147,8 +3147,21 @@ _SEO_FILE_CANDIDATES_DEFAULT = [
 ]
 
 
+_SITEMAP_FILE_CANDIDATES = [
+    "app/sitemap.ts", "app/sitemap.js", "src/app/sitemap.ts", "src/app/sitemap.js",
+    "app/sitemap.xml/route.ts", "next-sitemap.config.js", "next-sitemap.config.cjs",
+    "public/sitemap.xml", "sitemap.xml", "nuxt.config.ts",
+]
+
+
 def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
     key = (issue_key or "").strip().lower()
+    # A sitemap issue is repaired in the sitemap, whatever else its name happens to contain.
+    # Checked FIRST because the ordered substring chain below routes `sitemap_3xx_redirect` to
+    # the redirect config, `sitemap_non_canonical_page` to a layout, and the hreflang-vs-sitemap
+    # conflict to lib/seo.ts — three families that could then never find their own file.
+    if key in _SITEMAP_FAMILY_KEYS:
+        return _SITEMAP_FILE_CANDIDATES
     if key in _SEO_FILE_CANDIDATES:
         return _SEO_FILE_CANDIDATES[key]
     if key in {"duplicate_titles", "multiple_title_tags"} or key.startswith("title_too_"):
@@ -3168,11 +3181,7 @@ def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
     if "redirect" in key or key in {"http_404", "http_4xx", "links_to_404_page", "links_to_4xx_page"}:
         return _SEO_FILE_CANDIDATES["redirect_3xx"]
     if "sitemap" in key:
-        return [
-            "app/sitemap.ts", "app/sitemap.js", "src/app/sitemap.ts", "src/app/sitemap.js",
-            "app/sitemap.xml/route.ts", "next-sitemap.config.js", "next-sitemap.config.cjs",
-            "public/sitemap.xml", "sitemap.xml", "nuxt.config.ts",
-        ]
+        return _SITEMAP_FILE_CANDIDATES
     if "robots" in key or "noindex" in key or "nofollow" in key:
         return [
             "app/robots.ts", "app/robots.js", "src/app/robots.ts", "public/robots.txt",
@@ -16803,6 +16812,9 @@ _SITEMAP_REWRITE_KEYS = {"sitemap_3xx_redirect", "sitemap_non_canonical_page"}
 # The sitemap contradicts the page's own <head> for one hreflang code. Same file, same
 # restriction, but the repair edits an alternate href rather than a <loc>.
 _SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
+# Every family repaired inside the sitemap file. They must never page-target: their impacted
+# URLs are the pages the sitemap TALKS ABOUT, not the file to edit.
+_SITEMAP_FAMILY_KEYS = _SITEMAP_ADD_KEYS | _SITEMAP_REWRITE_KEYS | _SITEMAP_ALTERNATE_KEYS
 
 
 def _is_sitemap_path(path: str) -> bool:
@@ -17232,7 +17244,7 @@ def _resolve_issue_targets(
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
         or issue_key in _PER_PAGE_CONTENT_KEYS
         or _length_family_name(issue_key) is not None
-    ) and issue_key not in _ASSET_REWRITE_KEYS
+    ) and issue_key not in _ASSET_REWRITE_KEYS and issue_key not in _SITEMAP_FAMILY_KEYS
     index_resolved_all = False
     if want_page_targeting and impacted_urls:
         priority: list[str] = []
@@ -17324,7 +17336,7 @@ def _resolve_issue_targets(
     # A sitemap issue is fixed in the sitemap, full stop. The flagged URL also appears in every
     # page that links to it, so the evidence grep drags those in — the same trap that had a
     # hreflang fix rewriting sitemap.xml, mirrored.
-    if issue_key in _SITEMAP_REWRITE_KEYS or issue_key in _SITEMAP_ADD_KEYS or issue_key in _SITEMAP_ALTERNATE_KEYS:
+    if issue_key in _SITEMAP_FAMILY_KEYS:
         targets = [p for p in targets if _is_sitemap_path(p)]
     return targets[:max_files]
 

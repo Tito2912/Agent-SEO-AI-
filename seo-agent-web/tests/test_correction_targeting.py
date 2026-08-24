@@ -197,6 +197,18 @@ def test_the_candidate_list_still_applies_when_the_map_cannot_resolve_a_page() -
     assert "map" in calls
 
 
+def test_every_sitemap_family_finds_the_sitemap() -> None:
+    # Two bugs met here, both silent. The families set a rewriter, which switched page-targeting
+    # on, which filled the targets with page files that the sitemap-only filter then wiped. And
+    # the ordered substring chain routed sitemap_3xx_redirect to the redirect config,
+    # sitemap_non_canonical_page to a layout, and the hreflang conflict to lib/seo.ts.
+    # sitemap_3xx_redirect only ever worked because its slashed URL happened to be unresolvable.
+    for key in ("more_than_one_page_for_same_language_in_hreflang", "sitemap_3xx_redirect",
+                "sitemap_non_canonical_page", "indexable_page_not_in_sitemap"):
+        targets, _ = _resolve(key, ["/de/blog", "/about"], tree=STATIC_TREE, wants_page_targeting=True)
+        assert targets == ["sitemap.xml"], key
+
+
 def test_sitemap_fixes_land_in_the_sitemap_and_nowhere_else() -> None:
     # The flagged URL also appears in every page that links to it, so the evidence grep drags
     # those in. A sitemap issue is fixed in the sitemap, full stop.
