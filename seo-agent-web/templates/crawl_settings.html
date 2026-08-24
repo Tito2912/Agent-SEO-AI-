@@ -181,8 +181,8 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
             <div class="cs-grid g3">
               <div class="cs-field">
                 <span class="cs-label">Pages à analyser</span>
-                <input type="number" name="max_pages" min="1" max="200000" value="{{ crawl.max_pages }}" />
-                <span class="cs-hint">Max d'URLs à crawler. 500 pour un petit site, 5 000+ pour un site large.</span>
+                <input type="number" name="max_pages" min="1" max="{{ plan_crawl.max_pages_per_crawl }}" value="{{ crawl.max_pages }}" />
+                <span class="cs-hint">Max d'URLs à crawler. Votre plan autorise jusqu'à {{ plan_crawl.max_pages_per_crawl }} pages par crawl{% if plan_crawl.job_timeout_s %} (un crawl plus long que {{ (plan_crawl.job_timeout_s // 3600) }} h est interrompu){% endif %}. Au-delà, la demande est ramenée à ce plafond.</span>
               </div>
               <div class="cs-field">
                 <span class="cs-label">Connexions simultanées</span>

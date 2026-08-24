@@ -8042,7 +8042,15 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     _save_job(job)
 
     try:
+        # Per-plan timeout, resolved at queue time and carried on the job (the worker has no
+        # request context). Falls back to the global env default for admin/legacy jobs.
         raw_timeout = str(os.getenv("SEO_AGENT_CRAWL_JOB_TIMEOUT_SECONDS", "21600"))  # 6h
+        try:
+            plan_timeout = int(initial_result.get("job_timeout_s") or 0)
+        except Exception:
+            plan_timeout = 0
+        if plan_timeout > 0:
+            raw_timeout = str(plan_timeout)
         try:
             timeout_s = float(raw_timeout)
         except Exception:
@@ -8123,14 +8131,34 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                                 },
                         )
                 elif job.status != "done":
-                    with DB.session() as db:
-                        billing.usage_add(
-                            db,
-                            user_id=str(user_id),
-                            metric="pages_crawled_month",
-                            amount=-int(reserved_pages),
-                            meta={"kind": "crawl_refund", "job_id": job_id, "slug": slug},
-                        )
+                    # A crawl killed by its timeout has still fetched pages and still held a
+                    # worker slot for hours. Refunding the whole reservation made retrying an
+                    # impossible crawl free for the user and expensive for the platform. Bill
+                    # what the crawler reported fetching on stdout, refund the rest — a crawl
+                    # that died at page 0 (DNS, 403, cancelled immediately) is still free.
+                    prog = job.progress if isinstance(job.progress, dict) else {}
+                    try:
+                        crawled = max(0, int(prog.get("current") or 0))
+                    except Exception:
+                        crawled = 0
+                    crawled = min(crawled, int(reserved_pages))
+                    delta = crawled - int(reserved_pages)
+                    if delta != 0:
+                        with DB.session() as db:
+                            billing.usage_add(
+                                db,
+                                user_id=str(user_id),
+                                metric="pages_crawled_month",
+                                amount=int(delta),
+                                meta={
+                                    "kind": "crawl_partial",
+                                    "job_id": job_id,
+                                    "slug": slug,
+                                    "status": str(job.status),
+                                    "reserved_pages": int(reserved_pages),
+                                    "pages_crawled_before_failure": int(crawled),
+                                },
+                            )
             elif (not skip_billing) and isinstance(actual_pages_crawled, int) and actual_pages_crawled > 0:
                 with DB.session() as db:
                     billing.usage_add(
@@ -14906,6 +14934,21 @@ def crawl_project(
 
     if not bool(getattr(user, "is_admin", False)):
         with DB.session() as db:
+            # The scarce resource is worker slot-time, not the monthly page quota. Past the
+            # plan's max_pages_per_crawl the job provably cannot finish before its timeout:
+            # it would hold a slot for hours, die, and teach the user nothing except to retry.
+            # Clamp the request up front so the crawl that starts is one that can end.
+            plan_crawl = billing.crawl_config_for_plan(
+                billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+            )
+            plan_max_pages = int(plan_crawl.get("max_pages_per_crawl") or 0)
+            if plan_max_pages > 0 and planned_pages > plan_max_pages:
+                planned_pages = plan_max_pages
+                override_max_pages = plan_max_pages
+            plan_timeout_s = int(plan_crawl.get("job_timeout_s") or 0)
+            if plan_timeout_s > 0:
+                job.result["job_timeout_s"] = plan_timeout_s
+
             ok, remaining = billing.ensure_within_quota(
                 db, user_id=str(getattr(user, "id", "")), metric="pages_crawled_month", planned_amount=planned_pages
             )
@@ -15317,6 +15360,15 @@ def project_crawl_settings(
     }
     bing_auth = _effective_bing_connection(user_id=str(getattr(user, "id", "")))
     bing_api_ready = bool(bing_auth.get("token"))
+    # Show the plan's real per-crawl ceiling in the form. Offering 200 000 to everyone meant
+    # the limit was only ever discovered by a crawl that ran for hours and then died.
+    if bool(getattr(user, "is_admin", False)):
+        plan_crawl = {"max_pages_per_crawl": 200_000, "job_timeout_s": 0}
+    else:
+        with DB.session() as db:
+            plan_crawl = billing.crawl_config_for_plan(
+                billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+            )
     resp = templates.TemplateResponse(
         "crawl_settings.html",
         {
@@ -15331,6 +15383,7 @@ def project_crawl_settings(
             "bing": bing,
             "bing_api_ready": bing_api_ready,
             "bing_auth_mode": str(bing_auth.get("mode") or ""),
+            "plan_crawl": plan_crawl,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

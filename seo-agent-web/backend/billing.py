@@ -67,13 +67,24 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
     the `PLAN_CONFIG_JSON` env setting (editable in /settings/system) without a deploy. The
     `limits` map is generic — add a metric for any future paid feature and it's quota-enforced
     automatically by usage_add/ensure_within_quota. `correction` holds the AI-fix engine config
-    (model + max files per PR) per plan."""
+    (model + max files per PR) per plan, and `crawl` bounds a SINGLE crawl.
+
+    On `crawl`: the scarce resource is worker slot-time, not pages. A crawl costs a measured
+    ~22 s fixed + ~6.26 s/page (avis-invest.com, 84 pages, SEO_AGENT_BROWSER_WORKERS=1), so
+    `max_pages_per_crawl` is derived from `job_timeout_s` and NOT chosen freely:
+
+        max_pages_per_crawl ~= job_timeout_s * 0.8 / 6.26
+
+    The 0.8 leaves room for slower sites. Requesting more pages than that is not ambitious,
+    it is a crawl that provably cannot finish: it burns a whole slot, dies on the timeout,
+    and used to be refunded in full — so retrying was free for the user and expensive for us."""
     defaults: dict[str, dict[str, Any]] = {
         "free": {
             "label": "Free",
             "price_label": "0€",
             "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
             "correction": {"model": "", "max_files": 0},
+            "crawl": {"max_pages_per_crawl": 450, "job_timeout_s": 3_600},
             "features": ["Audit", "Suggestions IA (limitées)", "Exports"],
         },
         "solo": {
@@ -88,6 +99,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 100,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
+            "crawl": {"max_pages_per_crawl": 900, "job_timeout_s": 7_200},
             "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
@@ -102,6 +114,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 300,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
+            "crawl": {"max_pages_per_crawl": 1_800, "job_timeout_s": 14_400},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
@@ -118,6 +131,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 900,
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
+            "crawl": {"max_pages_per_crawl": 3_600, "job_timeout_s": 28_800},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
@@ -147,6 +161,12 @@ def _apply_plan_config_override(defaults: dict[str, dict[str, Any]]) -> None:
             for m, v in lim.items():
                 if isinstance(v, (int, float)) and not isinstance(v, bool):
                     defaults[plan_key]["limits"][str(m)] = int(v)
+        crawl = pv.get("crawl")
+        if isinstance(crawl, dict):
+            for k in ("max_pages_per_crawl", "job_timeout_s"):
+                v = crawl.get(k)
+                if isinstance(v, (int, float)) and not isinstance(v, bool) and int(v) > 0:
+                    defaults[plan_key].setdefault("crawl", {})[k] = int(v)
         corr = pv.get("correction")
         if isinstance(corr, dict):
             if "model" in corr:
@@ -163,6 +183,19 @@ def correction_config_for_plan(plan_key: str) -> dict[str, Any]:
     if isinstance(corr, dict):
         return {"model": str(corr.get("model") or ""), "max_files": int(corr.get("max_files") or 0)}
     return {"model": "", "max_files": 0}
+
+
+def crawl_config_for_plan(plan_key: str) -> dict[str, int]:
+    """Per-plan bounds for a single crawl (max pages + job timeout), with override applied."""
+    cat = plan_catalog()
+    plan = cat.get(str(plan_key or "").strip().lower()) or cat.get("free", {})
+    crawl = plan.get("crawl") if isinstance(plan, dict) else None
+    if not isinstance(crawl, dict):
+        crawl = (cat.get("free", {}) or {}).get("crawl") or {}
+    return {
+        "max_pages_per_crawl": int(crawl.get("max_pages_per_crawl") or 450),
+        "job_timeout_s": int(crawl.get("job_timeout_s") or 3_600),
+    }
 
 
 def price_id_for_plan(plan_key: str) -> str:
