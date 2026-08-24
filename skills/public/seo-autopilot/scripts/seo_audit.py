@@ -3088,6 +3088,140 @@ _PW_LAUNCH_ARGS = [
 ]
 
 
+# --- Per-thread browser session -------------------------------------------------------------
+#
+# _extract_page used to pay three startups for EVERY page: a fresh asyncio loop
+# (asyncio.run), a fresh Playwright driver process (async_playwright() as a context manager),
+# and a fresh Chromium (chromium.launch). Measured on the Render worker (bench_browser.py,
+# avis-invest.com, 6 pages): 2.54 s/page relaunching vs 1.88 s/page reusing the browser —
+# 26 % of the browser step, given back on every page of every crawl.
+#
+# Measured on a laptop the same change is 10 % SLOWER, because a warm OS page cache makes a
+# Chromium launch nearly free there. Only worker numbers were used to justify this.
+#
+# What is deliberately NOT shared: the browser CONTEXT. Reusing it measures faster still
+# (1.49 s/page) but lets cookies and localStorage bleed from one page to the next, which can
+# move exactly the JS-rendered output the Ahrefs parity is tuned against. Each page keeps its
+# own context; only the browser process is kept alive.
+
+try:
+    _BROWSER_RECYCLE_PAGES = int(os.getenv("SEO_AGENT_BROWSER_RECYCLE_PAGES", "150"))
+except ValueError:
+    _BROWSER_RECYCLE_PAGES = 150
+
+_BROWSER_TLS = threading.local()
+
+
+class _BrowserSession:
+    """One long-lived Chromium per crawler thread, on that thread's own event loop.
+
+    Playwright objects are bound to the loop that created them, so the loop is owned by the
+    session and never shared across threads.
+    """
+
+    def __init__(self) -> None:
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        self.pw: Any = None
+        self.browser: Any = None
+        self.served = 0
+
+    def _ensure_browser(self) -> Any:
+        if self.browser is None:
+            from playwright.async_api import async_playwright
+
+            self.pw = self.loop.run_until_complete(async_playwright().start())
+            self.browser = self.loop.run_until_complete(
+                self.pw.chromium.launch(headless=True, args=_PW_LAUNCH_ARGS)
+            )
+            self.served = 0
+        return self.browser
+
+    def run(self, make_coro, *, timeout_s: float) -> None:
+        browser = self._ensure_browser()
+        try:
+            self.loop.run_until_complete(asyncio.wait_for(make_coro(browser), timeout=timeout_s))
+        finally:
+            self.served += 1
+            # A browser kept forever leaks: Chromium costs 250-400 MB and the worker has 2 GB.
+            # Recycling bounds that without paying the launch on every page.
+            if _BROWSER_RECYCLE_PAGES > 0 and self.served >= _BROWSER_RECYCLE_PAGES:
+                self.close_browser()
+
+    def close_browser(self) -> None:
+        for closer in (
+            (lambda: self.browser.close()) if self.browser is not None else None,
+            (lambda: self.pw.stop()) if self.pw is not None else None,
+        ):
+            if closer is None:
+                continue
+            try:
+                self.loop.run_until_complete(closer())
+            except Exception:
+                pass
+        self.browser = None
+        self.pw = None
+        self.served = 0
+
+    def close(self) -> None:
+        self.close_browser()
+        try:
+            self.loop.close()
+        except Exception:
+            pass
+
+
+def _browser_session() -> _BrowserSession:
+    session = getattr(_BROWSER_TLS, "session", None)
+    if session is None:
+        session = _BrowserSession()
+        _BROWSER_TLS.session = session
+    return session
+
+
+def _run_in_browser(make_coro, *, timeout_s: float) -> None:
+    """Run one page fetch on this thread's browser, dropping the browser if it breaks."""
+    session = _browser_session()
+    try:
+        session.run(make_coro, timeout_s=timeout_s)
+    except Exception:
+        # A crashed or wedged browser would poison every later page on this thread, turning one
+        # bad URL into a whole failed crawl. Drop it; the next page launches a fresh one. The
+        # caller still sees the original error and reports it against this page only.
+        try:
+            session.close_browser()
+        except Exception:
+            pass
+        raise
+
+
+def _shutdown_browser_sessions(executor: "concurrent.futures.ThreadPoolExecutor", workers: int) -> None:
+    """Close every worker thread's browser before the crawl's post-processing starts.
+
+    Pool threads are not addressable from outside, and a Playwright browser can only be closed
+    on the loop that created it. Submitting exactly `workers` tasks that all block on a barrier
+    guarantees each one lands on a distinct thread, so each thread closes its own browser.
+    Without this, Chromium processes stay resident through the PageSpeed phase — minutes, on a
+    2 GB box that has already been OOM-killed for exactly this reason.
+    """
+    if workers <= 0:
+        return
+    barrier = threading.Barrier(workers)
+
+    def _close_mine() -> None:
+        try:
+            barrier.wait(timeout=30)
+        except Exception:
+            pass
+        session = getattr(_BROWSER_TLS, "session", None)
+        if session is not None:
+            session.close()
+            _BROWSER_TLS.session = None
+
+    futures = [executor.submit(_close_mine) for _ in range(workers)]
+    concurrent.futures.wait(futures, timeout=90)
+
+
 def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_parts) -> PageData:
     page = PageData(url=url, fetched_at=_now_iso())
     if rp and not config.ignore_robots and not rp.can_fetch(config.user_agent, url):
@@ -3102,84 +3236,80 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     elapsed_holder: list[int] = []
     html_holder: list[str] = []
 
-    async def _fetch_async() -> None:
+    async def _fetch_async(browser) -> None:
         import time as _time
-        from playwright.async_api import async_playwright
 
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=True, args=_PW_LAUNCH_ARGS)
-            ctx = await browser.new_context(
-                user_agent=config.user_agent,
-                ignore_https_errors=True,
+        ctx = await browser.new_context(
+            user_agent=config.user_agent,
+            ignore_https_errors=True,
+        )
+        pw_page = await ctx.new_page()
+        try:
+            # _on_response is kept ONLY for the TooManyRedirects error path.
+            # For successful navigations we use request.redirected_from instead
+            # (more reliable: queried post-navigation, not subject to event timing).
+            def _on_response(resp):
+                if resp.status in (301, 302, 303, 307, 308) and resp.request.is_navigation_request():
+                    redirect_chain.append(resp.url)
+                    redirect_statuses.append(resp.status)
+
+            pw_page.on("response", _on_response)
+
+            t0 = _time.monotonic()
+            response = await pw_page.goto(
+                url,
+                wait_until="domcontentloaded",
+                timeout=config.timeout_s * 1000,
             )
-            pw_page = await ctx.new_page()
-            try:
-                # _on_response is kept ONLY for the TooManyRedirects error path.
-                # For successful navigations we use request.redirected_from instead
-                # (more reliable: queried post-navigation, not subject to event timing).
-                def _on_response(resp):
-                    if resp.status in (301, 302, 303, 307, 308) and resp.request.is_navigation_request():
-                        redirect_chain.append(resp.url)
-                        redirect_statuses.append(resp.status)
+            elapsed_holder.append(int(round((_time.monotonic() - t0) * 1000)))
 
-                pw_page.on("response", _on_response)
+            if response is not None:
+                status_holder.append(response.status)
+                final_url_holder.append(pw_page.url)
+                headers = await response.all_headers()
+                for k, v in headers.items():
+                    response_headers[k.lower()] = v
 
-                t0 = _time.monotonic()
-                response = await pw_page.goto(
-                    url,
-                    wait_until="domcontentloaded",
-                    timeout=config.timeout_s * 1000,
-                )
-                elapsed_holder.append(int(round((_time.monotonic() - t0) * 1000)))
+                # Walk the redirect chain backwards via request.redirected_from.
+                # This is the canonical Playwright way to get the full redirect chain
+                # after a successful navigation — avoids event handler timing issues.
+                redirect_chain.clear()
+                redirect_statuses.clear()
+                tmp: list[tuple[str, int]] = []
+                r = response.request
+                while r.redirected_from is not None:
+                    prev_r = r.redirected_from
+                    prev_resp = await prev_r.response()
+                    if prev_resp is not None:
+                        tmp.insert(0, (prev_resp.url, prev_resp.status))
+                    r = prev_r
+                for _u, _s in tmp:
+                    redirect_chain.append(_u)
+                    redirect_statuses.append(_s)
 
-                if response is not None:
-                    status_holder.append(response.status)
-                    final_url_holder.append(pw_page.url)
-                    headers = await response.all_headers()
-                    for k, v in headers.items():
-                        response_headers[k.lower()] = v
-
-                    # Walk the redirect chain backwards via request.redirected_from.
-                    # This is the canonical Playwright way to get the full redirect chain
-                    # after a successful navigation — avoids event handler timing issues.
-                    redirect_chain.clear()
-                    redirect_statuses.clear()
-                    tmp: list[tuple[str, int]] = []
-                    r = response.request
-                    while r.redirected_from is not None:
-                        prev_r = r.redirected_from
-                        prev_resp = await prev_r.response()
-                        if prev_resp is not None:
-                            tmp.insert(0, (prev_resp.url, prev_resp.status))
-                        r = prev_r
-                    for _u, _s in tmp:
-                        redirect_chain.append(_u)
-                        redirect_statuses.append(_s)
-
-                    ct = response_headers.get("content-type", "").split(";")[0].strip().lower()
-                    if ct and "html" in ct:
-                        # Wait for client-side hydration so the captured DOM matches what
-                        # Ahrefs (which renders JS) sees — e.g. Next.js/SPA sites that set
-                        # <html lang>, inject links/meta after load. Bounded + best-effort:
-                        # never-idle pages (analytics/polling) hit the cap and proceed.
+                ct = response_headers.get("content-type", "").split(";")[0].strip().lower()
+                if ct and "html" in ct:
+                    # Wait for client-side hydration so the captured DOM matches what
+                    # Ahrefs (which renders JS) sees — e.g. Next.js/SPA sites that set
+                    # <html lang>, inject links/meta after load. Bounded + best-effort:
+                    # never-idle pages (analytics/polling) hit the cap and proceed.
+                    try:
+                        _ni_ms = int(os.getenv("SEO_AGENT_NETWORKIDLE_MS", "8000"))
+                    except ValueError:
+                        _ni_ms = 8000
+                    if _ni_ms > 0:
                         try:
-                            _ni_ms = int(os.getenv("SEO_AGENT_NETWORKIDLE_MS", "8000"))
-                        except ValueError:
-                            _ni_ms = 8000
-                        if _ni_ms > 0:
-                            try:
-                                await pw_page.wait_for_load_state("networkidle", timeout=_ni_ms)
-                            except Exception:
-                                pass
-                        html_holder.append(await pw_page.content())
-            finally:
-                await pw_page.close()
-                await ctx.close()
-                await browser.close()
+                            await pw_page.wait_for_load_state("networkidle", timeout=_ni_ms)
+                        except Exception:
+                            pass
+                    html_holder.append(await pw_page.content())
+        finally:
+            await pw_page.close()
+            await ctx.close()
 
     _total_timeout = float(config.timeout_s or 30) + 60
     try:
-        asyncio.run(asyncio.wait_for(_fetch_async(), timeout=_total_timeout))
+        _run_in_browser(_fetch_async, timeout_s=_total_timeout)
     except Exception as e:
         err_str = str(e)
         if (
@@ -8209,6 +8339,11 @@ def main(argv: list[str]) -> int:
                         flush=True,
                     )
                     last_progress = now
+
+        # Close the browsers BEFORE leaving the pool: PageSpeed runs next and has been
+        # observed taking 17 minutes, during which resident Chromium processes are pure
+        # OOM risk on a 2 GB worker.
+        _shutdown_browser_sessions(executor, _crawl_workers)
 
     page_list = list(pages.values())
     page_list.sort(key=lambda p: p.url)
