@@ -115,6 +115,8 @@ services:
         sync: false
       - key: SEO_AGENT_DISABLE_WORKER
         value: "true"
+      # Inert here: this service runs with SEO_AGENT_DISABLE_WORKER=true. Kept only so the
+      # value is visible next to the flag that disables it; the real setting is on the worker.
       - key: SEO_AGENT_WORKER_CONCURRENCY
         value: "1"
       - key: SEO_AGENT_CRAWL_JOB_TIMEOUT_SECONDS
@@ -177,6 +179,18 @@ services:
           property: connectionString
       - key: SEO_AGENT_SERVICE_MODE
         value: worker
+      # Two jobs in parallel so one large crawl can no longer freeze every other customer:
+      # the queue is FIFO and served by a single claimer, so a 6-hour crawl used to block the
+      # whole platform. This buys FAIRNESS, not throughput — the box is CPU-bound, so the same
+      # total pages/hour is simply shared instead of monopolised.
+      - key: SEO_AGENT_WORKER_CONCURRENCY
+        value: "2"
+      # …and each job now drives ONE headless Chromium instead of three. A browser costs
+      # 250-400 MB on a 2 GB instance, so 2 jobs x 3 browsers would be ~2.1 GB and OOM.
+      # 2 x 1 = 2 browsers is BELOW today's 1 x 3, so the memory profile improves while two
+      # crawls progress at once. Raise this once the instance has more RAM.
+      - key: SEO_AGENT_BROWSER_WORKERS
+        value: "1"
       - key: SEO_AGENT_DATA_DIR
         value: /var/data/data
       - key: SEO_AGENT_RUNS_DIR
