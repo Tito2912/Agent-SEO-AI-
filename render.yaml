@@ -171,10 +171,14 @@ services:
     # starter tier's 512 MB cannot crawl at all. The file said `starter` while the live service
     # ran on standard — a blueprint re-sync would have silently downgraded the worker into OOM.
     plan: standard
-    disk:
-      name: worker-data
-      mountPath: /var/data
-      sizeGB: 10
+    # DELIBERATELY NO DISK. Render refuses to scale a service to several instances while a
+    # disk is attached, and the worker is the CPU-bound half of the platform — crawling is
+    # where throughput dies, so it is the half that must scale horizontally.
+    # Nothing here needed persistence: /var/data/seo-runs is a CACHE (S3 is the source of
+    # truth, `_ensure_runs_artifact_local` re-downloads on read), jobs live in Postgres, and
+    # GSC refresh tokens live encrypted in the DB. The 3044 files found on the old disk were
+    # verified present in S3 before it was removed.
+    # Re-adding a disk here silently caps the platform at one worker again.
     envVars:
       - key: DATABASE_URL
         fromDatabase:
