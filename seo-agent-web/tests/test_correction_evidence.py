@@ -278,6 +278,15 @@ def test_a_clean_fix_reports_nothing() -> None:
     assert app_module._collateral_introduced(counts, {"title_too_short": 0, "missing_alt_text": 2}) == []
 
 
+def test_an_empty_baseline_must_not_make_everything_look_new() -> None:
+    # If the baseline report can't be loaded, diffing against {} would report every surviving
+    # issue as newly introduced. The caller therefore records no reading at all rather than a
+    # spectacular false positive -- this pins the shape that made the guard necessary.
+    survivors = {"redirect_3xx": 3, "certificate_expiration": 1, "redirect_chain": 1}
+
+    assert len(app_module._collateral_introduced({}, survivors)) == 3
+
+
 def test_issue_counts_survive_a_malformed_report() -> None:
     assert app_module._report_issue_counts({}) == {}
     assert app_module._report_issue_counts({"issues": "nope"}) == {}

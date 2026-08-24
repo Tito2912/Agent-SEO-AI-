@@ -790,6 +790,17 @@
           {% elif task.verify and task.verify.result == 'still_present' %}
             <span class="corr-verify-text err" title="Toujours présent">⚠</span>
           {% endif %}
+          {# Collateral damage: a fix that resolves its own issue while creating others is only
+             half a success, and that used to be invisible. #}
+          {% set _intro = (task.verify or {}).get('introduced') or [] %}
+          {% if _intro %}
+            <span class="corr-verify-text warn"
+                  title="Anomalies en hausse depuis le crawl de référence{% if (task.verify or {}).get('fixes_in_window', 1) > 1 %} — {{ task.verify.fixes_in_window }} corrections partagent cette fenêtre, la hausse ne peut pas être attribuée à une seule{% endif %} : {% for i in _intro %}{{ i.key }} +{{ i.delta }}{% if not loop.last %}, {% endif %}{% endfor %}">
+              ↑ {{ _intro | sum(attribute='delta') }}
+            </span>
+          {% elif task.verify and task.verify.get('baseline_ts') %}
+            <span class="corr-verify-text ok" title="Aucune anomalie en hausse depuis le crawl de référence">± 0</span>
+          {% endif %}
           <span class="corr-date">{% if task.updated_at %}{{ task.updated_at[:10] }}{% endif %}</span>
           <button type="button" class="corr-expand-btn" title="Modifier">
             <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>

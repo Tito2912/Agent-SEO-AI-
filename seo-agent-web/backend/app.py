@@ -3791,15 +3791,21 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir:
                 if prev.get("result") == result and prev.get("crawl_ts") == crawl_ts:
                     continue
                 _base_ts = str(t.crawl_ts or "")
-                _introduced = _collateral_introduced(_baseline_counts(_base_ts), after_counts)
+                _base_counts = _baseline_counts(_base_ts)
                 note_obj["verify"] = {
                     "result": result,
                     "verified_at": now_iso,
                     "crawl_ts": crawl_ts,
-                    "baseline_ts": _base_ts,
-                    "introduced": _introduced,
-                    "fixes_in_window": int(window_sizes.get(_base_ts, 1)),
                 }
+                # Only claim a collateral reading when the baseline report actually loaded.
+                # Diffing against an EMPTY baseline would report every surviving issue as newly
+                # introduced — a spectacular false positive on any pruned or unreadable run.
+                if _base_counts:
+                    note_obj["verify"].update({
+                        "baseline_ts": _base_ts,
+                        "introduced": _collateral_introduced(_base_counts, after_counts),
+                        "fixes_in_window": int(window_sizes.get(_base_ts, 1)),
+                    })
                 t.note = json.dumps(note_obj, ensure_ascii=False)
                 # A confirmed-resolved fix is complete.
                 if result == "resolved" and t.status != "done":
