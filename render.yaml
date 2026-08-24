@@ -167,7 +167,10 @@ services:
   - type: worker
     name: seo-agent-worker
     runtime: docker
-    plan: starter
+    # MUST stay standard (1 CPU / 2 GB): a headless Chromium alone costs 250-400 MB, so the
+    # starter tier's 512 MB cannot crawl at all. The file said `starter` while the live service
+    # ran on standard — a blueprint re-sync would have silently downgraded the worker into OOM.
+    plan: standard
     disk:
       name: worker-data
       mountPath: /var/data
