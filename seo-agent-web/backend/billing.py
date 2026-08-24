@@ -113,7 +113,9 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "assistant_messages_month": 6_000,
                 "backlink_searches_month": 1_000,
                 "backlink_replies_month": 1_000,
-                "ai_corrections_month": 150,
+                # Was 150 — HALF of Pro's 300, on a plan costing twice as much and raising every
+                # other metric 3-5x. Upgrading from Pro used to cut the correction quota in two.
+                "ai_corrections_month": 900,
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],

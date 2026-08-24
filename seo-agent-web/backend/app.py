@@ -16033,6 +16033,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     config_changed: list[str] = []   # deterministic redirect-config repairs, never AI-generated
     config_notes: list[str] = []
     any_ai_written = False           # one model-written file is enough to require a human read
+    ai_billable = 0                  # …but only the model-written ones are billed
     any_premise_key = ""             # …and so is one fix that rests on a debatable assumption
     budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
     for issue in fixable:
@@ -16071,7 +16072,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
                             "ok": bool(_cfg_changed), "files": _cfg_changed})
             continue
-        patched, skipped, targets, _ai_written = _deep_patch_issue_files(
+        patched, skipped, targets, _ai_files = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=min(6, budget),
@@ -16079,7 +16080,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             index=idx, link_rewriter=_prep["link_rewriter"],
             rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
         )
-        any_ai_written = any_ai_written or _ai_written
+        any_ai_written = any_ai_written or bool(_ai_files)
+        ai_billable += len(_ai_files)
         if not any_premise_key and _fix_premise_note(issue_key):
             any_premise_key = issue_key
         patched = patched + [f for f in _cfg_changed if f not in patched]
@@ -16164,7 +16166,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             pass
 
     # Bill all files patched across the bulk run (1 per file = 1 AI call).
-    _correction_charge(user, sum(len(r.get("files") or []) for r in fixed_results))
+    _correction_charge(user, ai_billable)
 
     return JSONResponse({
         "ok": True,
@@ -17603,8 +17605,10 @@ def _deep_patch_issue_files(
     so a file edited for several issues stacks correctly across calls. When link_rewriter is
     given (mechanical link families: links-to-redirect, mixed-content http→https, double-slash),
     the per-file fix is that DETERMINISTIC function (no AI) — precise and safe. Returns
-    (patched_files, skipped_files, targets, ai_written) — `ai_written` is True as soon as ONE
-    committed file was produced by the model rather than by a deterministic rewrite."""
+    (patched_files, skipped_files, targets, ai_files) — `ai_files` lists the committed files the
+    MODEL wrote, as opposed to those a deterministic rewrite produced. Callers use it twice: one
+    entry is enough to require a human before merging, and it is what billing must count, since a
+    bounded rewrite spends no tokens at all."""
     import base64 as _b64
     targets: list[str] = []
     # 1) Deterministic: files that reference the evidence (e.g. image srcs). Tarball grep is
@@ -17644,7 +17648,7 @@ def _deep_patch_issue_files(
     primary_url = impacted_urls[0] if impacted_urls else ""
     patched: list[str] = []
     skipped: list[str] = []
-    ai_written = False
+    ai_files: list[str] = []   # the subset the MODEL wrote — the only ones that cost tokens
 
     def _prepare(path: str) -> tuple[str, str | None, str, dict[str, Any] | None]:
         """Read a file + generate its patch. Parallel-safe (no shared mutable state)."""
@@ -17715,10 +17719,10 @@ def _deep_patch_issue_files(
             file_state[path] = {"sha": new_sha, "content": new_content}
             patched.append(path)
             if not patch.get("deterministic"):
-                ai_written = True
+                ai_files.append(path)
         except Exception:
             skipped.append(path)
-    return patched, skipped, targets, ai_written
+    return patched, skipped, targets, ai_files
 
 
 class _DeepFixBody(BaseModel):
@@ -17840,9 +17844,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         # Config-only family: the repair is the deterministic rule prune below. Never run the
         # content patcher here — its candidate list for this key is netlify.toml / next.config,
         # i.e. exactly the files that must not be rewritten from a prompt.
-        patched_files, skipped, targets, _ai_written = [], [], [], False
+        patched_files, skipped, targets, _ai_files = [], [], [], []
     else:
-        patched_files, skipped, targets, _ai_written = _deep_patch_issue_files(
+        patched_files, skipped, targets, _ai_files = _deep_patch_issue_files(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
@@ -17877,7 +17881,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         f"**Fichiers modifiés :** {len(all_changed)}\n\n"
         + "\n".join(f"- `{p}`" for p in all_changed)
         + _config_note_block
-        + _fix_nature_note(_ai_written, issue_key)
+        + _fix_nature_note(bool(_ai_files), issue_key)
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
@@ -17890,7 +17894,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _merged = False
     # Auto-merge only what a human doesn't need to read: routing changes are risky, and a value
     # WRITTEN by the model is an editorial proposal, not a mechanical repair.
-    if mode == "auto" and pr_number and not config_changes and not _ai_written and not _fix_premise_note(issue_key):
+    if mode == "auto" and pr_number and not config_changes and not _ai_files and not _fix_premise_note(issue_key):
         try:
             _github_api_put(_github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"), token=token, json_body={"merge_method": "squash", "commit_title": pr_title})
             _merged = True
@@ -17917,7 +17921,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
 
     # Bill the corrections (1 per file patched = 1 AI call) against the monthly quota.
     # Config-loop file ops (rename + _redirects prune) are deterministic (no AI call) → not billed.
-    _correction_charge(user, len(patched_files))
+    # Bill the model-written files only. A deterministic rewrite makes no API call, so charging
+    # it would sell compute that was never spent.
+    _correction_charge(user, len(_ai_files))
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,

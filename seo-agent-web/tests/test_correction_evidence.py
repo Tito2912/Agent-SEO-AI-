@@ -241,6 +241,29 @@ def test_a_pair_without_its_code_is_ignored_rather_than_guessed() -> None:
     assert app_module._rewrite_sitemap_alternates(SITEMAP_MULTILANG, legacy) == (SITEMAP_MULTILANG, 0)
 
 
+# ── Plan grid coherence ──────────────────────────────────────────────────────────────
+
+def test_every_paid_metric_grows_with_the_plan() -> None:
+    """A higher plan must never give less of anything.
+
+    `business` shipped with ai_corrections_month=150 against `pro`'s 300 — twice the price for
+    half the correction quota, while every other metric grew 3-5x. Nothing caught it because
+    nothing compared the tiers.
+    """
+    from backend import billing
+
+    ladder = ["free", "solo", "pro", "business"]
+    catalog = billing.plan_catalog()
+    metrics = {m for k in ladder for m in catalog[k]["limits"]}
+    for metric in sorted(metrics):
+        values = [int(catalog[k]["limits"].get(metric, 0)) for k in ladder]
+        assert values == sorted(values), f"{metric} decreases along the ladder: {values}"
+
+    # The correction engine's file cap follows the same rule.
+    caps = [int(catalog[k]["correction"]["max_files"]) for k in ladder]
+    assert caps == sorted(caps), caps
+
+
 # ── Collateral damage of a fix ───────────────────────────────────────────────────────
 
 def test_a_fix_that_creates_another_issue_is_reported() -> None:
