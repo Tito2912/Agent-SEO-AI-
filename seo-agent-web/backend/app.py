@@ -3237,7 +3237,7 @@ def _handled_issue_keys() -> set[str]:
     for table in (_HEAD_HINTS, _HREFLANG_HINTS):
         handled |= set(table)
     for group in (
-        _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
+        _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
     ):
@@ -16741,6 +16741,23 @@ def _build_page_values_hint(items: list[dict[str, str]]) -> str:
     )
 
 
+def _issue_hreflang_pairs(issue_block: Any) -> list[dict[str, str]]:
+    """Read `evidence.items` of kind `hreflang_pairs` — a url swap keyed on the hreflang code."""
+    if not isinstance(issue_block, dict):
+        return []
+    ev = issue_block.get("evidence")
+    if not isinstance(ev, dict) or ev.get("kind") != "hreflang_pairs":
+        return []
+    out: list[dict[str, str]] = []
+    for it in ev.get("items") or []:
+        if isinstance(it, dict) and it.get("page") and it.get("code") and it.get("from") and it.get("to"):
+            out.append({
+                "page": str(it["page"]), "code": str(it["code"]),
+                "from": str(it["from"]), "to": str(it["to"]),
+            })
+    return out[:40]
+
+
 def _build_url_pair_hint(pairs: list[dict[str, str]]) -> str:
     """Hint listing each current value → the value to write, for the AI fallback used when a
     file builds the URL dynamically and no literal can be rewritten."""
@@ -16783,6 +16800,9 @@ def _is_routing_config_path(path: str) -> bool:
 # it is deterministic. The REMOVE-shaped siblings (4xx/5xx/noindex/timed-out in sitemap) are not
 # here: dropping an entry is a different operation and the crawler gives them no replacement.
 _SITEMAP_REWRITE_KEYS = {"sitemap_3xx_redirect", "sitemap_non_canonical_page"}
+# The sitemap contradicts the page's own <head> for one hreflang code. Same file, same
+# restriction, but the repair edits an alternate href rather than a <loc>.
+_SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
 
 
 def _is_sitemap_path(path: str) -> bool:
@@ -16791,6 +16811,61 @@ def _is_sitemap_path(path: str) -> bool:
 
 
 _SITEMAP_LOC_RE = re.compile(r"(<loc>\s*)(.*?)(\s*</loc>)", re.I | re.S)
+
+
+_SITEMAP_URL_BLOCK_RE = re.compile(r"<url\b.*?</url>", re.I | re.S)
+_SITEMAP_ALT_TAG_RE = re.compile(r"<xhtml:link\b[^>]*>", re.I)
+_SITEMAP_ALT_CODE_RE = re.compile(r'hreflang\s*=\s*"([^"]*)"', re.I)
+_SITEMAP_ALT_HREF_RE = re.compile(r'(href\s*=\s*")([^"]*)(")', re.I)
+
+
+def _rewrite_sitemap_alternates(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTIC fix (no AI) for a sitemap alternate that contradicts the page's own <head>.
+
+    Scoped twice over, and both scopes are load-bearing:
+      - to the `<url>` block whose `<loc>` is that page, because the same URL appears as a `<loc>`,
+        as its own alternate, and as an alternate of every sibling block;
+      - to the hreflang CODE, because inside one block a single URL legitimately serves several
+        codes. Matching on the value alone rewrote a correct `fr` alternate while fixing
+        `x-default` — caught by replaying this against the real sitemap before shipping.
+    Only `xhtml:link` hrefs are touched, never a `<loc>`. Returns (new_content, replacements)."""
+    by_page: dict[str, dict[tuple[str, str], str]] = {}
+    for pair in pairs or []:
+        page = _link_path(str(pair.get("page") or ""), keep_slash=False)
+        code = str(pair.get("code") or "").strip().lower()
+        frm, to = str(pair.get("from") or "").strip(), str(pair.get("to") or "").strip()
+        if page and code and frm and to and frm != to:
+            by_page.setdefault(page, {}).setdefault((code, frm), to)
+    if not by_page:
+        return content, 0
+    count = 0
+
+    def _one_block(m: "re.Match[str]") -> str:
+        nonlocal count
+        block = m.group(0)
+        loc = re.search(r"<loc>\s*(.*?)\s*</loc>", block, re.I | re.S)
+        if not loc:
+            return block
+        mapping = by_page.get(_link_path(loc.group(1), keep_slash=False))
+        if not mapping:
+            return block
+
+        def _one_tag(t: "re.Match[str]") -> str:
+            nonlocal count
+            tag = t.group(0)
+            code_m = _SITEMAP_ALT_CODE_RE.search(tag)
+            href_m = _SITEMAP_ALT_HREF_RE.search(tag)
+            if not code_m or not href_m:
+                return tag
+            new_href = mapping.get((code_m.group(1).strip().lower(), href_m.group(2).strip()))
+            if not new_href:
+                return tag
+            count += 1
+            return tag[: href_m.start()] + href_m.group(1) + new_href + href_m.group(3) + tag[href_m.end():]
+
+        return _SITEMAP_ALT_TAG_RE.sub(_one_tag, block)
+
+    return _SITEMAP_URL_BLOCK_RE.sub(_one_block, content), count
 
 
 def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
@@ -17249,7 +17324,7 @@ def _resolve_issue_targets(
     # A sitemap issue is fixed in the sitemap, full stop. The flagged URL also appears in every
     # page that links to it, so the evidence grep drags those in — the same trap that had a
     # hreflang fix rewriting sitemap.xml, mirrored.
-    if issue_key in _SITEMAP_REWRITE_KEYS or issue_key in _SITEMAP_ADD_KEYS:
+    if issue_key in _SITEMAP_REWRITE_KEYS or issue_key in _SITEMAP_ADD_KEYS or issue_key in _SITEMAP_ALTERNATE_KEYS:
         targets = [p for p in targets if _is_sitemap_path(p)]
     return targets[:max_files]
 
@@ -17344,8 +17419,10 @@ def _prepare_issue_fix(
                 break
 
     url_pairs: list[dict[str, str]] = []
-    if issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS
-                   or issue_key in _SITEMAP_REWRITE_KEYS):
+    if issues and issue_key in _SITEMAP_ALTERNATE_KEYS:
+        url_pairs = _issue_hreflang_pairs(block)
+    elif issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS
+                     or issue_key in _SITEMAP_REWRITE_KEYS):
         url_pairs = _issue_url_pairs(block)
         if url_pairs:
             hint = _build_url_pair_hint(url_pairs)
@@ -17358,7 +17435,9 @@ def _prepare_issue_fix(
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
-    if url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
+    if url_pairs and issue_key in _SITEMAP_ALTERNATE_KEYS:
+        out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_alternates(raw, _p)  # noqa: E731
+    elif url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
         # Targets are restricted to the sitemap file, so an AI fallback can only ever see the
         # right file — useful when the sitemap is GENERATED and holds no literal <loc>.
         out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_locs(raw, _p)  # noqa: E731

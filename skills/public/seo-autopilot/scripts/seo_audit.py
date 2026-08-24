@@ -3786,10 +3786,15 @@ EVIDENCE_CAP = 40
 _EVIDENCE_FIELDS: dict[str, tuple[str, ...]] = {
     "url_pairs": ("page", "from", "to"),
     "page_values": ("page", "field", "value"),
+    # Same swap as url_pairs but keyed on the hreflang CODE too: inside one <url> block the same
+    # URL legitimately serves several codes (fr and x-default both pointing at the French home),
+    # so a value-only pair would rewrite a correct alternate while fixing the wrong one.
+    "hreflang_pairs": ("page", "code", "from", "to"),
 }
 _EVIDENCE_REQUIRED: dict[str, tuple[str, ...]] = {
     "url_pairs": ("from", "to"),
     "page_values": ("page", "field", "value"),
+    "hreflang_pairs": ("page", "code", "from", "to"),
 }
 
 
@@ -3820,7 +3825,7 @@ def _attach_issue_evidence(
         if any(not row[k] for k in required):
             continue
         # A pair pointing at itself can't drive a rewrite.
-        if kind == "url_pairs" and row["from"] == row["to"]:
+        if kind in ("url_pairs", "hreflang_pairs") and row["from"] == row["to"]:
             continue
         key = tuple(row[k] for k in fields)
         if key in seen:
@@ -5943,19 +5948,36 @@ def _score_issues(
         return pairs
 
     _more_than_one_lang: list[str] = []
+    # Evidence for the fixable half of this issue: the SITEMAP declares a different URL than the
+    # page's own <head> for the same hreflang code. The page is authoritative (Google reads it
+    # first), so the pair says "in the sitemap, replace what it claims with what the page says".
+    # A conflict INSIDE the source alone gets no pair: that one is fixed in the page, not here.
+    hreflang_sitemap_conflict_pairs: list[dict[str, str]] = []
     for p in ok_html_pages:
         _code_to_urls: dict[str, set[str]] = defaultdict(set)
+        _src_by_code: dict[str, str] = {}
+        _sm_by_code: dict[str, str] = {}
         # 1) page source-code hreflang (raw duplicates + deduped dict)
         for code, href in _source_hreflang_pairs(p):
-            _code_to_urls[code].add(_norm_self(href) or href)
+            _norm = _norm_self(href) or href
+            _code_to_urls[code].add(_norm)
+            _src_by_code.setdefault(code, _norm)
         # 2) XML sitemap hreflang for this same page URL
         for code, href in (_sitemap_hreflang_only(p) or {}).items():
             code = str(code or "").strip().lower()
             href = str(href or "").strip()
             if code and href:
-                _code_to_urls[code].add(_norm_self(href) or href)
+                _norm = _norm_self(href) or href
+                _code_to_urls[code].add(_norm)
+                _sm_by_code.setdefault(code, _norm)
         if any(len(urls) > 1 for urls in _code_to_urls.values()):
             _more_than_one_lang.append(p.url or "")
+            for code, sm_url in _sm_by_code.items():
+                src_url = _src_by_code.get(code)
+                if src_url and src_url != sm_url:
+                    hreflang_sitemap_conflict_pairs.append(
+                        {"page": _final_url(p), "code": code, "from": sm_url, "to": src_url}
+                    )
     more_than_one_page_for_same_language_in_hreflang = sorted(set(filter(None, _more_than_one_lang)))
 
     # Ahrefs flags EVERY member of a conflicting hreflang group. A page whose own source
@@ -7001,6 +7023,9 @@ def _score_issues(
     }
     issues["more_than_one_page_for_same_language_in_hreflang"] = _issue_block(
         "more_than_one_page_for_same_language_in_hreflang", more_than_one_page_for_same_language_in_hreflang
+    )
+    _attach_evidence(
+        ("more_than_one_page_for_same_language_in_hreflang",), "hreflang_pairs", hreflang_sitemap_conflict_pairs
     )
     # Ahrefs DOES flag this (verified on elevenlabs-avis). Driven by a hreflang group whose
     # alternates include an indexable page absent from the sitemap (no sitemap-level return tag).

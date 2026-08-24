@@ -184,6 +184,63 @@ def test_page_values_hint_names_the_page_and_what_is_wrong_on_it() -> None:
     assert app_module._build_page_values_hint([]) == ""
 
 
+# ── Sitemap alternate contradicting the page ─────────────────────────────────────────
+
+SITEMAP_MULTILANG = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://site.com/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://site.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://site.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://site.com/"/>
+  </url>
+  <url>
+    <loc>https://site.com/blog</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://site.com/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://site.com/blog"/>
+  </url>
+</urlset>"""
+
+
+_XDEF_PAIR = [{
+    "page": "https://site.com/", "code": "x-default",
+    "from": "https://site.com/", "to": "https://site.com/en/",
+}]
+
+
+def test_only_the_flagged_code_in_the_flagged_block_is_touched() -> None:
+    # Caught by replaying this against the real elevenlabs sitemap: matching on the URL alone
+    # also rewrote the `fr` alternate, which was CORRECT -- inside one block a single URL
+    # legitimately serves several codes. The pair has to carry the hreflang code.
+    new, n = app_module._rewrite_sitemap_alternates(SITEMAP_MULTILANG, _XDEF_PAIR)
+
+    assert n == 1
+    home, blog = new.split("<url>")[1], new.split("<url>")[2]
+    assert 'hreflang="x-default" href="https://site.com/en/"' in home
+    assert 'hreflang="fr" href="https://site.com/"' in home        # correct, left alone
+    assert 'hreflang="en" href="https://site.com/en/"' in home      # untouched
+    # The <loc> is never touched -- that belongs to another family.
+    assert "<loc>https://site.com/</loc>" in new
+    # The sibling block keeps its own values.
+    assert 'hreflang="fr" href="https://site.com/"' in blog
+    assert 'hreflang="x-default" href="https://site.com/blog"' in blog
+
+
+def test_a_page_absent_from_the_sitemap_changes_nothing() -> None:
+    new, n = app_module._rewrite_sitemap_alternates(
+        SITEMAP_MULTILANG,
+        [dict(_XDEF_PAIR[0], page="https://site.com/nowhere")],
+    )
+
+    assert (new, n) == (SITEMAP_MULTILANG, 0)
+
+
+def test_a_pair_without_its_code_is_ignored_rather_than_guessed() -> None:
+    legacy = [{"page": "https://site.com/", "from": "https://site.com/", "to": "https://site.com/en/"}]
+
+    assert app_module._rewrite_sitemap_alternates(SITEMAP_MULTILANG, legacy) == (SITEMAP_MULTILANG, 0)
+
+
 # ── Collateral damage of a fix ───────────────────────────────────────────────────────
 
 def test_a_fix_that_creates_another_issue_is_reported() -> None:
