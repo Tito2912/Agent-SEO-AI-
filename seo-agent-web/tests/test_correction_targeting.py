@@ -197,6 +197,47 @@ def test_the_candidate_list_still_applies_when_the_map_cannot_resolve_a_page() -
     assert "map" in calls
 
 
+def test_candidate_families_are_exclusive_and_cover_every_claimed_key() -> None:
+    """The structural guarantee behind the candidate table.
+
+    The legacy resolver matched ORDERED SUBSTRINGS and silently mis-routed three families at
+    once — sitemap_3xx_redirect to netlify.toml, sitemap_non_canonical_page to a layout, the
+    hreflang/sitemap conflict to lib/seo.ts — two of them broken since the day they shipped.
+    Explicit sets only help if no key belongs to two of them, so that is asserted here rather
+    than left to the order the families happen to be listed in.
+    """
+    from backend import audit_dashboard as dash
+
+    owner: dict[str, str] = {}
+    for name, keys, files in app_module._issue_file_families():
+        assert files, name
+        for key in app_module._with_indexability_variants(keys):
+            assert key not in owner, f"{key} claimed by {owner.get(key)} and {name}"
+            owner[key] = name
+
+    # And every key the corrector claims must land in one of them, or it falls back to the
+    # legacy chain that this table exists to retire.
+    claimed = [k for k in dash.ISSUE_CATALOG if app_module._github_issue_auto_fixable(k)]
+    assert claimed
+    for key in claimed:
+        assert app_module._claimed_family_candidates(key) is not None, key
+
+
+def test_a_content_fix_is_pointed_at_pages_not_at_the_layout() -> None:
+    # These families are per-page-only: their candidate list used to START with app/layout.tsx,
+    # the one file the guard then drops. Page sources first is what the fix actually needs.
+    for key in ("missing_title", "duplicate_titles", "title_too_long_indexable",
+                "meta_description_too_short", "multiple_h1"):
+        assert app_module._seo_file_candidates_for_issue(key)[0] == "app/page.tsx", key
+
+    # A links fix rewrites hrefs inside pages -- it was pointed at next.config.js.
+    for key in ("page_has_links_to_redirect_indexable", "https_page_links_to_http_css"):
+        assert app_module._seo_file_candidates_for_issue(key)[0] == "app/page.tsx", key
+
+    # And a hreflang target fix reaches the i18n helpers, not the redirect config.
+    assert "lib/seo.ts" in app_module._seo_file_candidates_for_issue("hreflang_to_redirect_or_broken_page")
+
+
 def test_every_sitemap_family_finds_the_sitemap() -> None:
     # Two bugs met here, both silent. The families set a rewriter, which switched page-targeting
     # on, which filled the targets with page files that the sitemap-only filter then wiped. And

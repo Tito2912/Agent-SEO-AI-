@@ -412,9 +412,15 @@ def test_github_fixable_issue_detection_covers_common_audit_keys() -> None:
     # eligible for a free-form patch.
     assert not app_module._github_issue_auto_fixable("some_future_issue_key")
 
+    # Candidate files come from an explicit family table, not an ordered substring chain.
+    # duplicate_titles is per-page-only, so its list leads with page sources: a shared layout
+    # could only be added here and then dropped again by the guard.
     title_candidates = app_module._seo_file_candidates_for_issue("duplicate_titles")
-    assert "app/layout.tsx" in title_candidates
+    assert title_candidates[0] == "app/page.tsx"
+    assert "app/layout.tsx" not in title_candidates
 
+    # Unclaimed keys still fall through to the legacy chain — harmless, they are advisory and
+    # their candidates are never consulted by the fix path.
     redirect_candidates = app_module._seo_file_candidates_for_issue("http_404")
     assert "netlify.toml" in redirect_candidates
 

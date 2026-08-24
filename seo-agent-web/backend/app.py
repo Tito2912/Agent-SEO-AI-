@@ -3154,14 +3154,87 @@ _SITEMAP_FILE_CANDIDATES = [
 ]
 
 
+_HREFLANG_FILE_CANDIDATES = [
+    "app/layout.tsx", "src/app/layout.tsx", "app/[lang]/layout.tsx", "app/[locale]/layout.tsx",
+    "pages/_document.tsx", "lib/seo.ts", "lib/metadata.ts", "lib/hreflang.ts", "i18n.ts",
+    "layout.html", "base.html",
+]
+_HEAD_FILE_CANDIDATES = [
+    "app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "pages/_app.tsx",
+    "layout.html", "base.html", "index.html", "head.tsx", "seo.tsx",
+]
+_CANONICAL_FILE_CANDIDATES = [
+    "app/layout.tsx", "src/app/layout.tsx", "pages/_document.tsx", "layout.html", "base.html",
+    "index.html", "head.tsx", "seo.tsx",
+]
+_PAGE_CONTENT_FILE_CANDIDATES = [
+    "app/page.tsx", "src/app/page.tsx", "pages/index.tsx", "index.html", "layout.html", "base.html",
+]
+_REDIRECT_CONFIG_FILE_CANDIDATES = _SEO_FILE_CANDIDATES["redirect_3xx"]
+_ASSET_FILE_CANDIDATES = _SEO_FILE_CANDIDATES["image_missing_alt"]
+
+
+def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
+    """Explicit key → candidate-files declaration, one entry per family a corrector CLAIMS.
+
+    Built from the handler tables themselves, so a family's files come from the same place that
+    claims its keys — one source of truth instead of two that can drift. Evaluated at call time
+    because those tables are defined further down this module.
+
+    This exists because the legacy resolver below matches ORDERED SUBSTRINGS, and that silently
+    mis-routed three families at once: `sitemap_3xx_redirect` hit the "redirect" branch and got
+    netlify.toml, `sitemap_non_canonical_page` hit "canonical" and got a layout, the hreflang↔
+    sitemap conflict hit "hreflang" and got lib/seo.ts. Two of them had been broken since the day
+    they shipped. Explicit sets cannot mis-route, and a test asserts they stay disjoint."""
+    length_keys: set[str] = set()
+    for family in _LENGTH_FAMILIES.values():
+        length_keys |= set(family)
+
+    # Some keys legitimately appear in two handler tables: a canonical-tag issue is listed in
+    # _HEAD_HINTS AND is a canonical fix; hreflang_to_non_canonical is a hreflang tag whose name
+    # says "canonical". Ownership is therefore SUBTRACTED here rather than left to list order —
+    # the whole point of this table is that no key resolves differently depending on position.
+    sitemap = set(_SITEMAP_FAMILY_KEYS)
+    redirect_config = set(_REDIRECT_CONFIG_KEYS)
+    links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
+    assets = set(_ASSET_REWRITE_KEYS) | {"missing_alt_text"}
+    hreflang = set(_HREFLANG_HINTS)                      # a hreflang tag, whatever its name says
+    canonical = ({k for k in _URL_PAIR_KEYS if "canonical" in k}
+                 | {"missing_canonical", "duplicate_pages_without_canonical"}) - hreflang
+    head = set(_HEAD_HINTS) - canonical - hreflang       # the rest of the <head>: OG, twitter, viewport
+    content = (length_keys | {
+        "missing_title", "missing_meta_description", "missing_h1",
+        "duplicate_titles", "duplicate_meta_descriptions",
+        "multiple_title_tags", "multiple_meta_description_tags", "multiple_h1",
+    }) - head - canonical
+    return [
+        ("sitemap", sitemap, _SITEMAP_FILE_CANDIDATES),
+        ("redirect-config", redirect_config, _REDIRECT_CONFIG_FILE_CANDIDATES),
+        ("links", links, _PAGE_CONTENT_FILE_CANDIDATES),
+        ("assets", assets, _ASSET_FILE_CANDIDATES),
+        ("hreflang", hreflang, _HREFLANG_FILE_CANDIDATES),
+        ("canonical", canonical, _CANONICAL_FILE_CANDIDATES),
+        ("head", head, _HEAD_FILE_CANDIDATES),
+        ("content", content, _PAGE_CONTENT_FILE_CANDIDATES),
+    ]
+
+
+def _claimed_family_candidates(key: str) -> "list[str] | None":
+    """Candidate files for a key a corrector claims, or None when no family declares it."""
+    for _name, keys, files in _issue_file_families():
+        if key in _with_indexability_variants(keys):
+            return files
+    return None
+
+
 def _seo_file_candidates_for_issue(issue_key: str) -> list[str]:
     key = (issue_key or "").strip().lower()
-    # A sitemap issue is repaired in the sitemap, whatever else its name happens to contain.
-    # Checked FIRST because the ordered substring chain below routes `sitemap_3xx_redirect` to
-    # the redirect config, `sitemap_non_canonical_page` to a layout, and the hreflang-vs-sitemap
-    # conflict to lib/seo.ts — three families that could then never find their own file.
-    if key in _SITEMAP_FAMILY_KEYS:
-        return _SITEMAP_FILE_CANDIDATES
+    # Claimed families resolve by EXPLICIT declaration. Everything below is the legacy substring
+    # chain, kept only for keys nobody claims: those are advisory, so their candidates are never
+    # consulted by the fix path and a mis-route there cannot reach a repository.
+    declared = _claimed_family_candidates(key)
+    if declared is not None:
+        return declared
     if key in _SEO_FILE_CANDIDATES:
         return _SEO_FILE_CANDIDATES[key]
     if key in {"duplicate_titles", "multiple_title_tags"} or key.startswith("title_too_"):
