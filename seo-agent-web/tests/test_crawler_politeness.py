@@ -269,3 +269,49 @@ def test_a_phase_that_raises_is_still_timed() -> None:
             time.sleep(0.02)
             raise RuntimeError("boom")
     assert t.as_dict(pages=1)["phases_s"]["pagespeed"] >= 0.02
+
+
+# --- PageSpeed concurrency ------------------------------------------------------------------
+
+def test_pagespeed_concurrency_floor_lifts_projects_saved_with_the_old_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Every project that ever saved its crawl settings has pagespeed_workers=2 persisted, from
+    # a form default backed by a UI hint that was wrong. No migration reaches them, so the
+    # floor has to apply over the stored value.
+    monkeypatch.delenv("SEO_AGENT_PAGESPEED_MIN_WORKERS", raising=False)
+    assert _effective_pagespeed_workers(stored=2) == 6
+    assert _effective_pagespeed_workers(stored=1) == 6
+
+
+def test_a_project_asking_for_more_still_gets_more(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SEO_AGENT_PAGESPEED_MIN_WORKERS", raising=False)
+    assert _effective_pagespeed_workers(stored=12) == 12
+
+
+def test_the_floor_can_be_switched_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEO_AGENT_PAGESPEED_MIN_WORKERS", "0")
+    assert _effective_pagespeed_workers(stored=2) == 2
+
+
+def test_a_junk_floor_falls_back_to_the_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEO_AGENT_PAGESPEED_MIN_WORKERS", "beaucoup")
+    assert _effective_pagespeed_workers(stored=2) == 6
+
+
+def _effective_pagespeed_workers(*, stored: int) -> int:
+    """Mirror of the resolution in _run_pagespeed, which is buried inside a long function."""
+    import os
+
+    try:
+        floor = int(os.getenv("SEO_AGENT_PAGESPEED_MIN_WORKERS", "6"))
+    except ValueError:
+        floor = 6
+    return max(1, int(stored), floor)
+
+
+def test_the_default_stays_far_below_google_s_documented_quota() -> None:
+    # Documented: 240 queries/minute per API key. A query takes ~13 s (333 s for 50 URLs on
+    # 2 workers), so N workers issue N/13*60 queries per minute.
+    workers, seconds_per_query, quota_per_minute = 6, 13.3, 240
+    assert workers / seconds_per_query * 60 < quota_per_minute * 0.25

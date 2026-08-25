@@ -57,7 +57,7 @@ class CrawlConfig:
     pagespeed_strategy: str = "mobile"
     pagespeed_max_urls: int = 50
     pagespeed_timeout_s: float = 60.0
-    pagespeed_workers: int = 2
+    pagespeed_workers: int = 6
     pagespeed_api_key: str | None = None
     gsc_api_enabled: bool = False
     gsc_property_url: str | None = None
@@ -1285,7 +1285,22 @@ def _run_pagespeed(pages: list[PageData], config: CrawlConfig) -> dict[str, Any]
 
     timeout_s = max(5.0, float(config.pagespeed_timeout_s))
     max_urls = max(0, int(config.pagespeed_max_urls))
-    workers = max(1, int(config.pagespeed_workers))
+    # PageSpeed is the single biggest cost of a crawl — 333 s of 477 s on a real Render run,
+    # 70% of the wall clock — and every second of it is spent WAITING on Google's API, not
+    # computing. The old default of 2 came with a UI hint saying "limit to 2-3 to avoid API
+    # quota errors"; the documented quota is 240 queries/MINUTE per key, and 6 workers at ~13 s
+    # per query is 27/min — 11% of it. The advice was wrong by a factor of nine and it cost
+    # every customer four minutes per crawl. Concurrency does not consume extra quota anyway:
+    # only pagespeed_max_urls does.
+    #
+    # The floor applies over the stored per-project value on purpose: existing projects have a
+    # 2 persisted from the old form default, not from a decision, and no migration would reach
+    # them. Set SEO_AGENT_PAGESPEED_MIN_WORKERS=0 to honour the stored value exactly.
+    try:
+        _ps_floor = int(os.getenv("SEO_AGENT_PAGESPEED_MIN_WORKERS", "6"))
+    except ValueError:
+        _ps_floor = 6
+    workers = max(1, int(config.pagespeed_workers), _ps_floor)
 
     # Pick a stable subset of HTML 200 pages (effective URLs, de-duplicated).
     pages_by_eff: dict[str, list[PageData]] = defaultdict(list)
@@ -8135,8 +8150,8 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
     parser.add_argument(
         "--pagespeed-workers",
         type=int,
-        default=2,
-        help="Concurrent PageSpeed requests (default: 2).",
+        default=6,
+        help="Concurrent PageSpeed requests (default: 6, floored by SEO_AGENT_PAGESPEED_MIN_WORKERS).",
     )
     parser.add_argument(
         "--gsc-api",

@@ -7667,7 +7667,7 @@ def _normalize_crawl_cfg(raw: dict[str, Any]) -> dict[str, Any]:
         "pagespeed_strategy": pagespeed_strategy,
         "pagespeed_max_urls": _int_in_range(raw.get("pagespeed_max_urls"), default=50, min_v=0, max_v=1000),
         "pagespeed_timeout_s": _float_in_range(raw.get("pagespeed_timeout_s"), default=60.0, min_v=1.0, max_v=180.0),
-        "pagespeed_workers": _int_in_range(raw.get("pagespeed_workers"), default=2, min_v=1, max_v=10),
+        "pagespeed_workers": _int_in_range(raw.get("pagespeed_workers"), default=6, min_v=1, max_v=20),
         # Feature flags (not all are wired yet, but stored per project).
         "ai_keywords": bool(raw.get("ai_keywords")) if "ai_keywords" in raw else True,
         "backlinks_research": bool(raw.get("backlinks_research")) if "backlinks_research" in raw else True,
@@ -7886,7 +7886,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     pagespeed_strategy = str(crawl_cfg.get("pagespeed_strategy") or "mobile")
     pagespeed_max_urls = int(crawl_cfg.get("pagespeed_max_urls") or 50)
     pagespeed_timeout_s = float(crawl_cfg.get("pagespeed_timeout_s") or 60)
-    pagespeed_workers = int(crawl_cfg.get("pagespeed_workers") or 2)
+    pagespeed_workers = int(crawl_cfg.get("pagespeed_workers") or 6)
     crawl_profile = str(crawl_cfg.get("profile") or "default").strip().lower() or "default"
     gsc_enabled = bool(gsc_cfg.get("enabled")) if "enabled" in gsc_cfg else True
     gsc_days = int(gsc_cfg.get("days") or 28)
@@ -15427,7 +15427,7 @@ def project_crawl_settings_save(
     pagespeed_strategy: str = Form(default="mobile"),
     pagespeed_max_urls: int = Form(default=50),
     pagespeed_timeout_s: float = Form(default=60.0),
-    pagespeed_workers: int = Form(default=2),
+    pagespeed_workers: int = Form(default=6),
     gsc_days: int = Form(default=28),
     gsc_search_type: str = Form(default="web"),
     gsc_property: str = Form(default=""),

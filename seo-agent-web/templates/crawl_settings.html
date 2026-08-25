@@ -336,8 +336,8 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                     </div>
                     <div class="cs-field">
                       <span class="cs-label">Requêtes simultanées</span>
-                      <input type="number" name="pagespeed_workers" min="1" max="10" value="{{ crawl.pagespeed_workers }}" />
-                      <span class="cs-hint">Limiter à 2–3 pour éviter les erreurs de quota API.</span>
+                      <input type="number" name="pagespeed_workers" min="1" max="20" value="{{ crawl.pagespeed_workers }}" />
+                      <span class="cs-hint">Analyses PageSpeed en parallèle. C'est de l'attente réseau, pas du calcul : 6 est le minimum appliqué, et le quota Google (240 requêtes/minute) n'est atteint qu'au-delà de 50.</span>
                     </div>
                   </div>
                 </div>
