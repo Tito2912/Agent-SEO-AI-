@@ -3298,12 +3298,19 @@ class _PhaseTimer:
     def add(self, name: str, seconds: float) -> None:
         self._t[name] = round(self._t.get(name, 0.0) + max(0.0, float(seconds)), 3)
 
-    def as_dict(self, *, pages: int) -> dict[str, Any]:
+    def as_dict(self, *, pages: int, throttled_s: float = 0.0) -> dict[str, Any]:
         crawl_s = float(self._t.get("crawl", 0.0))
         total = round(sum(self._t.values()), 3)
         out: dict[str, Any] = {"phases_s": dict(sorted(self._t.items())), "measured_total_s": total}
         if pages > 0:
-            out["marginal_s_per_page"] = round(crawl_s / pages, 3)
+            waiting = max(0.0, min(float(throttled_s), crawl_s))
+            # Two different costs were being reported as one. Time spent sleeping because a CDN
+            # pushed back is a property of THAT SITE, not of this crawler: three runs of the
+            # same site measured 1.66, 2.97 and 2.17 s/page while the underlying work never
+            # moved from ~1.7. Deriving per-plan page caps from the mixed figure means one
+            # customer behind an aggressive firewall sets the limit for everyone.
+            out["marginal_s_per_page"] = round((crawl_s - waiting) / pages, 3)
+            out["throttled_s_per_page"] = round(waiting / pages, 3)
             out["fixed_s"] = round(total - crawl_s, 3)
         return out
 
@@ -8902,13 +8909,18 @@ def main(argv: list[str]) -> int:
             flush=True,
         )
 
-    _timings = phases.as_dict(pages=max(0, len(page_list) - len(blocked_pages)))
-    _timings["throttle"] = _CRAWL_THROTTLE.stats()
+    _throttle_stats = _CRAWL_THROTTLE.stats()
+    _timings = phases.as_dict(
+        pages=max(0, len(page_list) - len(blocked_pages)),
+        throttled_s=float(_throttle_stats.get("slept_s") or 0.0),
+    )
+    _timings["throttle"] = _throttle_stats
     _ph = _timings.get("phases_s") or {}
     print(
         "[TIMING] "
         + " | ".join(f"{k}={v:.1f}s" for k, v in sorted(_ph.items(), key=lambda kv: -kv[1]))
         + f" || marginal={_timings.get('marginal_s_per_page', 0):.2f}s/page"
+        + f" (+{_timings.get('throttled_s_per_page', 0):.2f}s/page bloque par l'hote)"
         + f" fixed={_timings.get('fixed_s', 0):.0f}s"
         + f" || throttle: slept={_timings['throttle']['slept_s']:.0f}s"
         + f" penalties={_timings['throttle']['penalties']}"

@@ -374,3 +374,35 @@ def test_success_on_an_unknown_host_is_harmless() -> None:
     t = seo_audit._HostThrottle()
     t.succeeded("never-seen.test")
     assert t.stats()["current_delay_s"] == 0.0
+
+
+def test_time_spent_blocked_is_not_charged_to_the_crawler() -> None:
+    # Three runs of the same site measured 1.66, 2.97 and 2.17 s/page while the underlying work
+    # never moved from ~1.7: all the variance was a CDN pushing back. Folding that into the
+    # marginal cost lets one customer behind an aggressive firewall set the page cap for every
+    # other customer.
+    t = seo_audit._PhaseTimer()
+    t.add("crawl", 180.1)
+    t.add("pagespeed", 124.8)
+    out = t.as_dict(pages=83, throttled_s=35.0)
+    assert out["marginal_s_per_page"] == round((180.1 - 35.0) / 83, 3)
+    assert out["throttled_s_per_page"] == round(35.0 / 83, 3)
+    # The fixed cost is unaffected: throttling happens inside the crawl phase.
+    assert out["fixed_s"] == 124.8
+
+
+def test_a_crawl_nobody_blocked_reports_no_throttle_tax() -> None:
+    t = seo_audit._PhaseTimer()
+    t.add("crawl", 100.0)
+    out = t.as_dict(pages=50)
+    assert out["marginal_s_per_page"] == 2.0
+    assert out["throttled_s_per_page"] == 0.0
+
+
+def test_throttle_time_can_never_exceed_the_phase_that_contains_it() -> None:
+    # Defensive: a bogus sleep total must not produce a negative marginal cost and a page cap
+    # of infinity.
+    t = seo_audit._PhaseTimer()
+    t.add("crawl", 10.0)
+    out = t.as_dict(pages=5, throttled_s=999.0)
+    assert out["marginal_s_per_page"] == 0.0
