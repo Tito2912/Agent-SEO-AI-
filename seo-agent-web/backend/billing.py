@@ -69,22 +69,37 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
     automatically by usage_add/ensure_within_quota. `correction` holds the AI-fix engine config
     (model + max files per PR) per plan, and `crawl` bounds a SINGLE crawl.
 
-    On `crawl`: the scarce resource is worker slot-time, not pages. A crawl costs a measured
-    ~22 s fixed + ~6.26 s/page (avis-invest.com, 84 pages, SEO_AGENT_BROWSER_WORKERS=1), so
-    `max_pages_per_crawl` is derived from `job_timeout_s` and NOT chosen freely:
+    On `crawl`: `max_pages_per_crawl` is DERIVED, never chosen. Requesting more pages than the
+    derivation allows is not ambition, it is a crawl that provably cannot finish: it burns a
+    whole worker slot, dies on the timeout, and used to be refunded in full — free for the user
+    and expensive for us.
 
-        max_pages_per_crawl ~= job_timeout_s * 0.8 / 6.26
+    Two independent ceilings; the cap is the smaller.
 
-    The 0.8 leaves room for slower sites. Requesting more pages than that is not ambitious,
-    it is a crawl that provably cannot finish: it burns a whole slot, dies on the timeout,
-    and used to be refunded in full — so retrying was free for the user and expensive for us."""
+    TIME — from meta.timings on a real Render crawl (avis-invest.com, 84 pages, 2026-08-25):
+    pagespeed 333.3 s, crawl 139.4 s, resources 2.1 s, discovery 1.3 s, scoring 0.6 s. Only the
+    crawl phase scales with the site, so the marginal cost is 1.66 s/page and everything else is
+    a 337 s fixed cost (PageSpeed is capped at 50 URLs and does not grow).
+
+        time_cap ~= (job_timeout_s - 337) * 0.8 / 1.66
+
+    An earlier version of this table used 6.26 s/page — a whole crawl's duration divided by its
+    page count, which folds the fixed cost into every page and is wrong by 3.8x on an 84-page
+    crawl. It charged customers for a cost that does not exist.
+
+    MEMORY — PageData costs a measured 41.2 KB of live RAM per page (60 KB assumed here for
+    heavier sites). With SEO_AGENT_WORKER_CONCURRENCY=2, two crawls hold two page sets at once:
+    2 GB - 2 Chromium (400 MB each) - 300 MB runtime = 948 MB, i.e. ~474 MB and ~8 000 pages per
+    job. Business is bound by THIS, not by time (it uses 47% of its timeout). Raising it means
+    shrinking PageData — internal_link_items alone is 63% of that 41.2 KB — not buying a bigger
+    timeout."""
     defaults: dict[str, dict[str, Any]] = {
         "free": {
             "label": "Free",
             "price_label": "0€",
             "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
             "correction": {"model": "", "max_files": 0},
-            "crawl": {"max_pages_per_crawl": 450, "job_timeout_s": 3_600},
+            "crawl": {"max_pages_per_crawl": 1_500, "job_timeout_s": 3_600},
             "features": ["Audit", "Suggestions IA (limitées)", "Exports"],
         },
         "solo": {
@@ -99,7 +114,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 100,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
-            "crawl": {"max_pages_per_crawl": 900, "job_timeout_s": 7_200},
+            "crawl": {"max_pages_per_crawl": 3_000, "job_timeout_s": 7_200},
             "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
@@ -114,7 +129,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 300,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
-            "crawl": {"max_pages_per_crawl": 1_800, "job_timeout_s": 14_400},
+            "crawl": {"max_pages_per_crawl": 6_000, "job_timeout_s": 14_400},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
@@ -131,7 +146,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 900,
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
-            "crawl": {"max_pages_per_crawl": 3_600, "job_timeout_s": 28_800},
+            "crawl": {"max_pages_per_crawl": 8_000, "job_timeout_s": 28_800},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }

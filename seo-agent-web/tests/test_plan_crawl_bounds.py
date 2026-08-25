@@ -27,10 +27,16 @@ os.environ.setdefault("SEO_AGENT_RUNS_DIR", str(TEST_ROOT / "runs"))
 
 from backend import billing  # noqa: E402
 
-# Measured on Render (avis-invest.com, 84 pages crawled, SEO_AGENT_BROWSER_WORKERS=1):
-# two runs at 579 s and 517 s => 22 s fixed + 6.26 s/page.
-FIXED_S = 22.0
-PER_PAGE_S = 6.26
+# From meta.timings on a real Render crawl (avis-invest.com, 84 pages, 2026-08-25):
+# pagespeed 333.3s | crawl 139.4s | resources 2.1s | discovery 1.3s | scoring 0.6s.
+# Only the crawl phase scales with the site.
+FIXED_S = 337.0
+PER_PAGE_S = 1.66
+# PageData costs a measured 41.2 KB of live RAM per page; 60 KB assumed for heavier sites.
+RAM_KB_PER_PAGE = 60
+WORKER_CONCURRENCY = 2  # SEO_AGENT_WORKER_CONCURRENCY on the Render worker
+# 2 GB - one Chromium per concurrent job (400 MB) - 300 MB runtime, split across jobs.
+RAM_BUDGET_MB_PER_JOB = (2048 - 400 * WORKER_CONCURRENCY - 300) / WORKER_CONCURRENCY
 PLANS = ("free", "solo", "pro", "business")
 
 
@@ -49,12 +55,39 @@ def test_every_plan_cap_completes_inside_its_own_timeout():
 
 
 def test_caps_leave_headroom_for_sites_slower_than_the_reference():
-    # A cap sized to exactly 100% of the timeout would fail on any site slower than the one it
-    # was measured on. Keep at least 15% slack, and don't leave so much that the plan is stingy.
+    # A cap sized to 100% of the timeout would fail on any site slower than the reference.
+    # No lower bound here: business is bound by MEMORY, not time, and legitimately leaves
+    # half its timeout unused.
     for plan in PLANS:
         cfg = billing.crawl_config_for_plan(plan)
         used = _duration_s(cfg["max_pages_per_crawl"]) / cfg["job_timeout_s"]
-        assert 0.60 <= used <= 0.85, f"{plan}: cap uses {used:.0%} of its timeout"
+        assert used <= 0.85, f"{plan}: cap uses {used:.0%} of its timeout"
+
+
+def test_no_plan_can_ask_for_more_pages_than_fit_in_RAM():
+    # Two concurrent crawls each hold their own page set. A cap the box cannot hold does not
+    # produce a slow crawl, it produces an OOM-killed worker — and this box has been killed
+    # for exactly that before.
+    for plan in PLANS:
+        pages = billing.crawl_config_for_plan(plan)["max_pages_per_crawl"]
+        needed_mb = pages * RAM_KB_PER_PAGE / 1024
+        assert needed_mb <= RAM_BUDGET_MB_PER_JOB, (
+            f"{plan}: {pages} pages need {needed_mb:.0f} MB but a job has "
+            f"{RAM_BUDGET_MB_PER_JOB:.0f} MB"
+        )
+
+
+def test_the_fixed_cost_is_not_charged_to_every_page():
+    # Guards the mistake this table was rebuilt to correct: deriving caps from a whole crawl's
+    # duration divided by its page count folds PageSpeed's fixed cost into every page.
+    naive_per_page = (FIXED_S + 84 * PER_PAGE_S) / 84
+    assert naive_per_page > PER_PAGE_S * 3, "the reference crawl no longer illustrates the trap"
+    for plan in PLANS:
+        cfg = billing.crawl_config_for_plan(plan)
+        naive_cap = int(cfg["job_timeout_s"] * 0.8 / naive_per_page)
+        assert cfg["max_pages_per_crawl"] > naive_cap, (
+            f"{plan}: cap looks like it was derived from the average, not the marginal cost"
+        )
 
 
 def test_bounds_increase_with_the_plan():
@@ -80,7 +113,7 @@ def test_admin_override_can_retune_bounds_without_a_deploy(monkeypatch):
     cfg = billing.crawl_config_for_plan("pro")
     assert cfg == {"max_pages_per_crawl": 2_500, "job_timeout_s": 20_000}
     # Untouched plans keep their defaults.
-    assert billing.crawl_config_for_plan("solo")["max_pages_per_crawl"] == 900
+    assert billing.crawl_config_for_plan("solo")["max_pages_per_crawl"] == 3_000
 
 
 def test_override_ignores_junk_and_non_positive_values(monkeypatch):
@@ -89,7 +122,7 @@ def test_override_ignores_junk_and_non_positive_values(monkeypatch):
         json.dumps({"business": {"crawl": {"max_pages_per_crawl": 0, "job_timeout_s": "8h"}}}),
     )
     cfg = billing.crawl_config_for_plan("business")
-    assert cfg["max_pages_per_crawl"] == 3_600
+    assert cfg["max_pages_per_crawl"] == 8_000
     assert cfg["job_timeout_s"] == 28_800
 
 
