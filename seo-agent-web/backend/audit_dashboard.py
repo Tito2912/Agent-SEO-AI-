@@ -1462,9 +1462,22 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         bing_summary["sitemaps"] = {"rows": int(sm.get("rows") or 0)}
         bing_summary["url_info"] = {"checked": int(ui.get("checked") or 0)}
 
+    # Pages the host refused us (403/429/503 after retries). They were never audited, so a
+    # non-zero count means this report is INCOMPLETE — silently showing it as a clean audit is
+    # how a customer ends up trusting a score computed on a fraction of their site.
+    blocked_meta = meta.get("blocked_by_host") if isinstance(meta.get("blocked_by_host"), dict) else {}
+    blocked_urls = blocked_meta.get("urls") if isinstance(blocked_meta.get("urls"), list) else []
+    blocked_count = blocked_meta.get("count")
+    if not isinstance(blocked_count, int) or blocked_count < 0:
+        blocked_count = len(blocked_urls)
+
     return {
         "base_url": str(meta.get("base_url") or ""),
         "pages_crawled": int(pages_crawled),
+        "blocked_by_host": {
+            "count": int(blocked_count),
+            "urls": [str(u) for u in blocked_urls if isinstance(u, str)][:20],
+        },
         "resources_crawled": int(resources_crawled),
         "system_urls_crawled": int(system_urls_crawled),
         "urls_crawled": int(urls_crawled),

@@ -161,3 +161,62 @@ def test_a_genuine_4xx_is_still_reported() -> None:
     issues = seo_audit._score_issues([ok, gone], base_url="https://x.test/")
     assert int((issues.get("http_4xx") or {}).get("count") or 0) == 1
     assert int((issues.get("http_404") or {}).get("count") or 0) == 1
+
+
+# --- reporting a partial crawl as partial ---------------------------------------------------
+
+def _report(meta_extra: dict | None = None) -> dict:
+    return {
+        "meta": {"base_url": "https://x.test/", "pages_crawled": 2, **(meta_extra or {})},
+        "pages": [
+            {"url": "https://x.test/", "status_code": 200, "content_type": "text/html"},
+            {"url": "https://x.test/b", "status_code": 200, "content_type": "text/html"},
+        ],
+        "issues": {},
+    }
+
+
+def test_the_dashboard_knows_a_crawl_was_partial() -> None:
+    from backend import audit_dashboard
+
+    blocked = {"count": 11, "urls": [f"https://x.test/de/p{i}" for i in range(11)]}
+    summary = audit_dashboard.summarize_report(_report({"blocked_by_host": blocked}))
+    assert summary["blocked_by_host"]["count"] == 11
+    assert summary["blocked_by_host"]["urls"][0] == "https://x.test/de/p0"
+
+
+def test_a_complete_crawl_reports_nothing_blocked() -> None:
+    from backend import audit_dashboard
+
+    summary = audit_dashboard.summarize_report(_report())
+    assert summary["blocked_by_host"]["count"] == 0
+
+
+def test_reports_written_before_this_feature_still_summarise() -> None:
+    # Old reports on S3 have no blocked_by_host key at all; they must not blow up or
+    # invent a warning banner.
+    from backend import audit_dashboard
+
+    summary = audit_dashboard.summarize_report(_report({"blocked_by_host": "nonsense"}))
+    assert summary["blocked_by_host"]["count"] == 0
+
+
+def test_the_overview_warns_only_when_pages_were_blocked() -> None:
+    import jinja2
+
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(REPO_ROOT / "seo-agent-web" / "templates")))
+    source = (REPO_ROOT / "seo-agent-web" / "templates" / "project_overview.html").read_text(encoding="utf-8")
+    # Render just the banner fragment: the full page pulls in the whole app context.
+    start = source.index('{% set blocked =')
+    end = source.index("<h1>{{ project.site_name }}</h1>")
+    tpl = env.from_string(source[start:end])
+
+    clean = tpl.render(sum={"blocked_by_host": {"count": 0, "urls": []}})
+    assert "Crawl incomplet" not in clean
+
+    partial = tpl.render(sum={"blocked_by_host": {"count": 11, "urls": ["https://x.test/de/about"]}})
+    assert "Crawl incomplet" in partial and "11 pages inaccessibles" in partial
+    assert "https://x.test/de/about" in partial
+
+    # A summary from before the feature must render the same as a clean one, not crash.
+    assert "Crawl incomplet" not in tpl.render(sum={})

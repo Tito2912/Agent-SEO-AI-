@@ -61,6 +61,20 @@
     </div>
 
     <div class="ov-info">
+      {% set blocked = (sum.blocked_by_host.count if sum.blocked_by_host else 0) or 0 %}
+      {% if blocked %}
+        {# The score below was computed WITHOUT these pages. Saying so is the whole point. #}
+        <div class="ov-blocked" role="status">
+          <strong>Crawl incomplet — {{ blocked }} page{{ 's' if blocked > 1 else '' }} inaccessible{{ 's' if blocked > 1 else '' }}.</strong>
+          Le site a refusé ces pages au robot (403/429/503) même après plusieurs tentatives.
+          Elles ne sont pas comptées comme des erreurs de votre site, mais le score ci-dessous
+          est calculé sans elles.
+          {% if sum.blocked_by_host.urls %}
+            <span class="ov-blocked-urls">{{ sum.blocked_by_host.urls[:3] | join(' · ') }}{% if blocked > 3 %} … {% endif %}</span>
+          {% endif %}
+          <span class="ov-blocked-hint">Si cela se répète : baissez la vitesse de crawl dans Paramètres de crawl, ou autorisez le robot chez votre hébergeur/CDN.</span>
+        </div>
+      {% endif %}
       <h1>{{ project.site_name }}</h1>
       <div class="ov-info-sub">
         <a href="{{ project.base_url }}" target="_blank" rel="noopener">{{ project.base_url }}</a>
