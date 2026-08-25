@@ -3190,6 +3190,10 @@ except ValueError:
 
 _BLOCK_BACKOFF_START_S = 1.5
 _BLOCK_BACKOFF_MAX_S = 15.0
+# Backing off without ever recovering is a ratchet, not a throttle: one transient 403 on page 3
+# slowed the remaining 81 pages of a real crawl and pushed the marginal cost from 1.66 s/page to
+# 2.97. Each page that comes back clean eases the delay back toward the host's base rate.
+_BLOCK_RECOVERY_FACTOR = 0.75
 
 
 class _HostThrottle:
@@ -3202,14 +3206,42 @@ class _HostThrottle:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self._base: dict[str, float] = {}
         self._delay: dict[str, float] = {}
         self._next_at: dict[str, float] = {}
+        self._penalties: dict[str, int] = {}
+        self._peak: dict[str, float] = {}
+        self._slept = 0.0
 
     def set_base_delay(self, host: str, seconds: float) -> None:
         h = (host or "").lower()
         base = max(float(seconds or 0.0), _CRAWL_DELAY_FLOOR_S)
         with self._lock:
+            self._base[h] = max(self._base.get(h, 0.0), base)
             self._delay[h] = max(self._delay.get(h, 0.0), base)
+
+    def succeeded(self, host: str) -> None:
+        """A clean response: ease back toward the rate the host actually asked for."""
+        h = (host or "").lower()
+        with self._lock:
+            base = self._base.get(h, _CRAWL_DELAY_FLOOR_S)
+            current = self._delay.get(h, base)
+            if current > base:
+                eased = max(base, current * _BLOCK_RECOVERY_FACTOR)
+                # Geometric decay only approaches the base, so snap once the remainder is
+                # below noise. A throttle that never returns to its resting state is one
+                # nobody can assert on, and small residues accumulate across thousands of pages.
+                self._delay[h] = base if (eased - base) < 0.05 else eased
+
+    def stats(self) -> dict[str, Any]:
+        """What the pacing actually did, so a slow crawl can be diagnosed instead of guessed."""
+        with self._lock:
+            return {
+                "penalties": int(sum(self._penalties.values())),
+                "peak_delay_s": round(max(self._peak.values()), 2) if self._peak else 0.0,
+                "current_delay_s": round(max(self._delay.values()), 2) if self._delay else 0.0,
+                "slept_s": round(self._slept, 1),
+            }
 
     def wait(self, host: str) -> None:
         h = (host or "").lower()
@@ -3223,6 +3255,8 @@ class _HostThrottle:
         sleep_s = slot - time.monotonic()
         if sleep_s > 0:
             time.sleep(sleep_s)
+            with self._lock:
+                self._slept += sleep_s
 
     def penalise(self, host: str, *, retry_after: str | None = None) -> float:
         """Back off after a block; returns how long the caller should sleep before retrying."""
@@ -3231,6 +3265,8 @@ class _HostThrottle:
             current = self._delay.get(h, 0.0)
             self._delay[h] = min(max(current * 2.0, _BLOCK_BACKOFF_START_S), _BLOCK_BACKOFF_MAX_S)
             delay = self._delay[h]
+            self._penalties[h] = self._penalties.get(h, 0) + 1
+            self._peak[h] = max(self._peak.get(h, 0.0), delay)
         # A server that says how long to wait is more reliable than our guess.
         if retry_after:
             try:
@@ -3516,6 +3552,8 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             time.sleep(_CRAWL_THROTTLE.penalise(_host, retry_after=response_headers.get("retry-after")))
             continue
         break
+    if _fetch_error is None and _status not in _BLOCKING_STATUSES:
+        _CRAWL_THROTTLE.succeeded(_host)
     if _fetch_error is None and _status in _BLOCKING_STATUSES:
         # Out of retries and still refused: the host is blocking us. Record that on the page so
         # scoring can keep it out of the customer's error counts.
@@ -8865,12 +8903,16 @@ def main(argv: list[str]) -> int:
         )
 
     _timings = phases.as_dict(pages=max(0, len(page_list) - len(blocked_pages)))
+    _timings["throttle"] = _CRAWL_THROTTLE.stats()
     _ph = _timings.get("phases_s") or {}
     print(
         "[TIMING] "
         + " | ".join(f"{k}={v:.1f}s" for k, v in sorted(_ph.items(), key=lambda kv: -kv[1]))
         + f" || marginal={_timings.get('marginal_s_per_page', 0):.2f}s/page"
-        + f" fixed={_timings.get('fixed_s', 0):.0f}s",
+        + f" fixed={_timings.get('fixed_s', 0):.0f}s"
+        + f" || throttle: slept={_timings['throttle']['slept_s']:.0f}s"
+        + f" penalties={_timings['throttle']['penalties']}"
+        + f" peak={_timings['throttle']['peak_delay_s']:.1f}s",
         flush=True,
     )
 

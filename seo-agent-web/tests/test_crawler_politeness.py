@@ -315,3 +315,62 @@ def test_the_default_stays_far_below_google_s_documented_quota() -> None:
     # 2 workers), so N workers issue N/13*60 queries per minute.
     workers, seconds_per_query, quota_per_minute = 6, 13.3, 240
     assert workers / seconds_per_query * 60 < quota_per_minute * 0.25
+
+
+# --- the throttle must be a throttle, not a ratchet -----------------------------------------
+
+def test_a_transient_block_does_not_slow_the_rest_of_the_crawl_forever() -> None:
+    # This is the regression that shipped: penalise() only ever raised the delay and nothing
+    # lowered it, so one 403 on page 3 taxed the remaining 81 pages. Measured effect on a real
+    # crawl: marginal cost 1.66s/page -> 2.97s/page.
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("x.test", 0.0)
+    t.penalise("x.test")
+    t.penalise("x.test")
+    assert t.stats()["current_delay_s"] > 0
+
+    for _ in range(20):
+        t.succeeded("x.test")
+    assert t.stats()["current_delay_s"] == 0.0, "the crawler never returned to full speed"
+
+
+def test_recovery_stops_at_the_rate_the_host_asked_for() -> None:
+    # robots.txt said 2s. Recovering past that would be disobeying the site.
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("x.test", 2.0)
+    t.penalise("x.test")
+    for _ in range(50):
+        t.succeeded("x.test")
+    assert t.stats()["current_delay_s"] == 2.0
+
+
+def test_recovery_is_slower_than_backoff() -> None:
+    # Backing off must outrun recovery, or a host that blocks every other page never gets relief.
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("x.test", 0.0)
+    t.penalise("x.test")
+    after_one_block = t.stats()["current_delay_s"]
+    t.succeeded("x.test")
+    assert t.stats()["current_delay_s"] < after_one_block
+    t.penalise("x.test")
+    assert t.stats()["current_delay_s"] > after_one_block
+
+
+def test_the_throttle_reports_what_it_did() -> None:
+    # Without these numbers the 79% crawl slowdown had to be inferred from arithmetic rather
+    # than read off the log.
+    t = seo_audit._HostThrottle()
+    t.set_base_delay("x.test", 0.02)
+    t.penalise("x.test")
+    t.wait("x.test")
+    t.wait("x.test")
+    stats = t.stats()
+    assert stats["penalties"] == 1
+    assert stats["peak_delay_s"] >= seo_audit._BLOCK_BACKOFF_START_S
+    assert stats["slept_s"] >= 0.0
+
+
+def test_success_on_an_unknown_host_is_harmless() -> None:
+    t = seo_audit._HostThrottle()
+    t.succeeded("never-seen.test")
+    assert t.stats()["current_delay_s"] == 0.0
