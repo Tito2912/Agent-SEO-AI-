@@ -87,12 +87,12 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
     page count, which folds the fixed cost into every page and is wrong by 3.8x on an 84-page
     crawl. It charged customers for a cost that does not exist.
 
-    MEMORY — PageData costs a measured 41.2 KB of live RAM per page (60 KB assumed here for
-    heavier sites). With SEO_AGENT_WORKER_CONCURRENCY=2, two crawls hold two page sets at once:
-    2 GB - 2 Chromium (400 MB each) - 300 MB runtime = 948 MB, i.e. ~474 MB and ~8 000 pages per
-    job. Business is bound by THIS, not by time (it uses 47% of its timeout). Raising it means
-    shrinking PageData — internal_link_items alone is 63% of that 41.2 KB — not buying a bigger
-    timeout."""
+    MEMORY — PageData now costs a measured 11.3 KB of live RAM per page, down from 41.2 KB
+    (shared URL strings + a slots record per link instead of a dict). Keeping the same prudence
+    margin gives 16.4 KB. With SEO_AGENT_WORKER_CONCURRENCY=2, two crawls hold two page sets at
+    once: 2 GB - 2 Chromium (400 MB each) - 300 MB runtime = 948 MB, i.e. ~474 MB and ~29 500
+    pages per job. Every plan is TIME-bound again; business went 8 000 -> 13 000 on the back of
+    that single change."""
     defaults: dict[str, dict[str, Any]] = {
         "free": {
             "label": "Free",
@@ -146,7 +146,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 900,
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
-            "crawl": {"max_pages_per_crawl": 8_000, "job_timeout_s": 28_800},
+            "crawl": {"max_pages_per_crawl": 13_000, "job_timeout_s": 28_800},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }

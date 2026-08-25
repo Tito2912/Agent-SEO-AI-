@@ -32,8 +32,9 @@ from backend import billing  # noqa: E402
 # Only the crawl phase scales with the site.
 FIXED_S = 337.0
 PER_PAGE_S = 1.66
-# PageData costs a measured 41.2 KB of live RAM per page; 60 KB assumed for heavier sites.
-RAM_KB_PER_PAGE = 60
+# PageData costs a measured 11.3 KB of live RAM per page (was 41.2 before shared URL strings
+# and a slots record per link); 16.4 KB keeps the same prudence margin as the old 60.
+RAM_KB_PER_PAGE = 16.4
 WORKER_CONCURRENCY = 2  # SEO_AGENT_WORKER_CONCURRENCY on the Render worker
 # 2 GB - one Chromium per concurrent job (400 MB) - 300 MB runtime, split across jobs.
 RAM_BUDGET_MB_PER_JOB = (2048 - 400 * WORKER_CONCURRENCY - 300) / WORKER_CONCURRENCY
@@ -122,7 +123,7 @@ def test_override_ignores_junk_and_non_positive_values(monkeypatch):
         json.dumps({"business": {"crawl": {"max_pages_per_crawl": 0, "job_timeout_s": "8h"}}}),
     )
     cfg = billing.crawl_config_for_plan("business")
-    assert cfg["max_pages_per_crawl"] == 8_000
+    assert cfg["max_pages_per_crawl"] == 13_000
     assert cfg["job_timeout_s"] == 28_800
 
 
