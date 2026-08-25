@@ -3228,6 +3228,49 @@ class _HostThrottle:
 _CRAWL_THROTTLE = _HostThrottle()
 
 
+class _PhaseTimer:
+    """Wall-clock per phase, written to meta.timings.
+
+    Total crawl duration alone is a trap: it mixes a FIXED cost (robots, sitemaps, PageSpeed —
+    capped at 50 URLs so it does not grow with the site) with the MARGINAL cost of one more
+    page. Dividing the total by the page count therefore overstates the marginal cost on small
+    crawls, and per-plan page caps derived from it come out far too low. Measure the split once
+    instead of re-deriving it from a linear fit across runs.
+    """
+
+    def __init__(self) -> None:
+        self._t: dict[str, float] = {}
+
+    def time(self, name: str) -> "_PhaseTimerCtx":
+        return _PhaseTimerCtx(self, name)
+
+    def add(self, name: str, seconds: float) -> None:
+        self._t[name] = round(self._t.get(name, 0.0) + max(0.0, float(seconds)), 3)
+
+    def as_dict(self, *, pages: int) -> dict[str, Any]:
+        crawl_s = float(self._t.get("crawl", 0.0))
+        total = round(sum(self._t.values()), 3)
+        out: dict[str, Any] = {"phases_s": dict(sorted(self._t.items())), "measured_total_s": total}
+        if pages > 0:
+            out["marginal_s_per_page"] = round(crawl_s / pages, 3)
+            out["fixed_s"] = round(total - crawl_s, 3)
+        return out
+
+
+class _PhaseTimerCtx:
+    def __init__(self, owner: _PhaseTimer, name: str) -> None:
+        self._owner = owner
+        self._name = name
+        self._start = 0.0
+
+    def __enter__(self) -> "_PhaseTimerCtx":
+        self._start = time.monotonic()
+        return self
+
+    def __exit__(self, *_exc: Any) -> None:
+        self._owner.add(self._name, time.monotonic() - self._start)
+
+
 def _run_page_fetch(make_coro, *, timeout_s: float) -> Exception | None:
     """Run one navigation, returning the exception instead of raising it.
 
@@ -8349,10 +8392,12 @@ def main(argv: list[str]) -> int:
         flush=True,
     )
 
+    phases = _PhaseTimer()
     robots_error: str | None = None
     rp: RobotsRules | None = None
     discovered_sitemaps: list[str] = []
     system_fetches: list[dict[str, Any]] = []
+    _discovery_t0 = time.monotonic()
     llms_ok, llms_err = _check_llms_txt(
         root,
         timeout_s=config.timeout_s,
@@ -8432,6 +8477,8 @@ def main(argv: list[str]) -> int:
             flush=True,
         )
 
+    phases.add("discovery", time.monotonic() - _discovery_t0)
+
     probe_urls = _root_probe_urls(config.base_url)
     # Ahrefs-like: include sitemap file URLs as crawl targets (they appear as timed out / 3XX in Ahrefs exports).
     extra_sitemap_targets: list[str] = []  # Do not crawl sitemap XML files as pages (keeps parity with Ahrefs issues)
@@ -8469,6 +8516,7 @@ def main(argv: list[str]) -> int:
     _crawl_workers = max(1, min(int(config.workers), _browser_cap))
     print(f"[CRAWL] browser concurrency = {_crawl_workers} (config.workers={config.workers}, cap={_browser_cap})", flush=True)
 
+    _crawl_t0 = time.monotonic()
     with concurrent.futures.ThreadPoolExecutor(max_workers=_crawl_workers) as executor:
         last_progress = time.monotonic()
         while queue and len(pages) < config.max_pages:
@@ -8520,6 +8568,8 @@ def main(argv: list[str]) -> int:
         # OOM risk on a 2 GB worker.
         _shutdown_browser_sessions(executor, _crawl_workers)
 
+    phases.add("crawl", time.monotonic() - _crawl_t0)
+
     page_list = list(pages.values())
     page_list.sort(key=lambda p: p.url)
     blocked_pages = [p for p in page_list if getattr(p, "blocked_by_host", False)]
@@ -8536,14 +8586,16 @@ def main(argv: list[str]) -> int:
 
     pagespeed_meta: dict[str, Any] = {"enabled": False, "reason": "disabled_in_config"}
     if config.pagespeed_enabled:
-        pagespeed_meta = _run_pagespeed(page_list, config)
+        with phases.time("pagespeed"):
+            pagespeed_meta = _run_pagespeed(page_list, config)
 
     cwv_summary = _compute_cwv_summary(page_list)
 
     gsc_meta: dict[str, Any] = {"enabled": False, "reason": "disabled_in_config"}
     if config.gsc_api_enabled:
         print("[GSC] Fetching Search Console data…", flush=True)
-        gsc_meta = _run_gsc_api(config)
+        with phases.time("gsc"):
+            gsc_meta = _run_gsc_api(config)
         if gsc_meta.get("ok"):
             print(f"[GSC] OK | property={gsc_meta.get('property')} days={gsc_meta.get('days')}", flush=True)
         else:
@@ -8572,16 +8624,17 @@ def main(argv: list[str]) -> int:
             prev_pages = _pages_from_report(prev_report)
             print(f"[COMPARE] previous={prev_ts} pages={len(prev_pages)}", flush=True)
 
-    issues = _score_issues(
-        page_list,
-        sitemap_urls=set(sitemap_seed_urls),
-        sitemap_urlsets=sitemap_urlsets,
-        sitemap_hreflang=sitemap_hreflang_by_url,
-        previous_pages=prev_pages,
-        output_dir=config.output_dir,
-        strict_link_counts=bool(config.strict_link_counts),
-        base_url=config.base_url,
-    )
+    with phases.time("scoring"):
+        issues = _score_issues(
+            page_list,
+            sitemap_urls=set(sitemap_seed_urls),
+            sitemap_urlsets=sitemap_urlsets,
+            sitemap_hreflang=sitemap_hreflang_by_url,
+            previous_pages=prev_pages,
+            output_dir=config.output_dir,
+            strict_link_counts=bool(config.strict_link_counts),
+            base_url=config.base_url,
+        )
 
     # --- Semrush-like robots/sitemap issues (system-level) ---
     robots_url = urljoin(root, "/robots.txt")
@@ -8772,6 +8825,7 @@ def main(argv: list[str]) -> int:
     resources_checked = bool(config.check_resources and config.max_resources > 0)
     if resources_checked:
         print(f"[RESOURCES] Checking internal resources | max_per_type={int(config.max_resources)}", flush=True)
+        _resources_t0 = time.monotonic()
         resources, resources_counts = _fetch_internal_resources(page_list, config, base_parts)
         issues.update(
             _score_resource_issues(
@@ -8789,13 +8843,28 @@ def main(argv: list[str]) -> int:
                 output_dir=config.output_dir,
             )
         )
+        phases.add("resources", time.monotonic() - _resources_t0)
         print(
             f"[RESOURCES] Done | image={resources_counts.get('image', 0)} javascript={resources_counts.get('javascript', 0)} css={resources_counts.get('css', 0)}",
             flush=True,
         )
 
+    _timings = phases.as_dict(pages=max(0, len(page_list) - len(blocked_pages)))
+    _ph = _timings.get("phases_s") or {}
+    print(
+        "[TIMING] "
+        + " | ".join(f"{k}={v:.1f}s" for k, v in sorted(_ph.items(), key=lambda kv: -kv[1]))
+        + f" || marginal={_timings.get('marginal_s_per_page', 0):.2f}s/page"
+        + f" fixed={_timings.get('fixed_s', 0):.0f}s",
+        flush=True,
+    )
+
     meta = {
         "started_at": _now_iso(),
+        # Per-phase wall clock. `marginal_s_per_page` is the ONLY figure that should drive
+        # per-plan page caps: `fixed_s` does not grow with the site, so folding it into a
+        # per-page average makes small crawls look far more expensive than large ones.
+        "timings": _timings,
         "profile": str(config.profile or "default"),
         "base_url": config.base_url,
         "max_pages": config.max_pages,

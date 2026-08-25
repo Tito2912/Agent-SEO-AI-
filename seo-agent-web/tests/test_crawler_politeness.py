@@ -220,3 +220,52 @@ def test_the_overview_warns_only_when_pages_were_blocked() -> None:
 
     # A summary from before the feature must render the same as a clean one, not crash.
     assert "Crawl incomplet" not in tpl.render(sum={})
+
+
+# --- phase timings ---------------------------------------------------------------------------
+
+def test_marginal_cost_ignores_the_fixed_phases() -> None:
+    # The whole point: PageSpeed is capped at 50 URLs, so it does NOT grow with the site.
+    # Folding it into a per-page average is what produced per-plan caps several times too low.
+    t = seo_audit._PhaseTimer()
+    t.add("discovery", 3.0)
+    t.add("crawl", 200.0)
+    t.add("pagespeed", 300.0)
+    t.add("scoring", 7.0)
+    out = t.as_dict(pages=100)
+    assert out["marginal_s_per_page"] == 2.0, "marginal cost must come from the crawl phase alone"
+    assert out["fixed_s"] == 310.0
+    assert out["measured_total_s"] == 510.0
+    # The naive figure this replaces would have been 5.1s/page — 2.5x too high.
+
+
+def test_repeated_phases_accumulate() -> None:
+    t = seo_audit._PhaseTimer()
+    t.add("resources", 1.5)
+    t.add("resources", 2.5)
+    assert t.as_dict(pages=1)["phases_s"]["resources"] == 4.0
+
+
+def test_timing_survives_a_crawl_with_no_pages() -> None:
+    t = seo_audit._PhaseTimer()
+    t.add("discovery", 2.0)
+    out = t.as_dict(pages=0)
+    assert "marginal_s_per_page" not in out, "no pages means no marginal cost, not a division by zero"
+    assert out["measured_total_s"] == 2.0
+
+
+def test_the_context_manager_records_elapsed_time() -> None:
+    t = seo_audit._PhaseTimer()
+    with t.time("crawl"):
+        time.sleep(0.05)
+    assert t.as_dict(pages=1)["phases_s"]["crawl"] >= 0.05
+
+
+def test_a_phase_that_raises_is_still_timed() -> None:
+    # A crash mid-PageSpeed must not erase the measurement of everything before it.
+    t = seo_audit._PhaseTimer()
+    with pytest.raises(RuntimeError):
+        with t.time("pagespeed"):
+            time.sleep(0.02)
+            raise RuntimeError("boom")
+    assert t.as_dict(pages=1)["phases_s"]["pagespeed"] >= 0.02
