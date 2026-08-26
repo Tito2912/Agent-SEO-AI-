@@ -20,6 +20,7 @@ previous AI-based mapping — this module is only ever an accelerator, never a g
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 # Build output / vendored code: never a source file to patch. Compared SEGMENT by segment,
@@ -142,7 +143,13 @@ def detect_stack(all_paths: list[str]) -> str:
         p.startswith("next.config.") or p == "package.json" for p in paths
     ):
         return STACK_NEXT_PAGES
-    if has("config.toml", "config.yaml", "hugo.toml", "hugo.yaml") and any(p.startswith("layouts/") for p in paths):
+    if any(p.startswith("layouts/") for p in paths) and (
+        has("config.toml", "config.yaml", "hugo.toml", "hugo.yaml")
+        # `hugo new site` splits config per environment; a repo using it was being read as a
+        # pile of static HTML, which maps no routes at all.
+        or any(p.startswith("config/") and p.rsplit("/", 1)[-1].startswith(("hugo.", "config."))
+               for p in paths)
+    ):
         return STACK_HUGO
     if has("_config.yml") and any(p.startswith(("_layouts/", "_posts/")) for p in paths):
         return STACK_JEKYLL
@@ -185,17 +192,83 @@ def _flat_page_route(path: str, root: str) -> str | None:
     return _route_from_segments(segments)
 
 
+def _jekyll_routes(path: str) -> list[str]:
+    """Jekyll has no `pages/` directory: a page is any Markdown/HTML file that is not under an
+    underscore directory, and a post is `_posts/YYYY-MM-DD-title.ext`.
+
+    Posts use Jekyll's DEFAULT permalink (`/:year/:month/:day/:title`). A site that overrides
+    `permalink:` in _config.yml gets no route from us rather than a wrong one — we only see
+    file paths, and pointing a fix at the wrong page is worse than declining to guess.
+    """
+    if _ext(path) not in _CONTENT_EXTS + ("html", "htm"):
+        return []
+    segments = path.split("/")
+    base = segments[-1]
+    stem = base.rsplit(".", 1)[0]
+
+    if segments[0] == "_posts":
+        m = re.match(r"^(\d{4})-(\d{2})-(\d{2})-(.+)$", stem)
+        if not m:
+            return []
+        year, month, day, title = m.groups()
+        return [_route_from_segments([year, month, day, title])]
+
+    # Underscore directories are Jekyll internals (_layouts, _includes, _data, _drafts).
+    if any(seg.startswith("_") for seg in segments[:-1]):
+        return []
+    parents = segments[:-1]
+    if stem == "index":
+        return [_route_from_segments(parents)]
+    return [_route_from_segments(parents + [stem])]
+
+
+_LANG_SUFFIX_RE = re.compile(r"^[a-z]{2}(-[a-z]{2})?$", re.IGNORECASE)
+
+
 def _hugo_route(path: str) -> str | None:
-    """`content/blog/post.md` → `/blog/post`; `content/blog/_index.md` → `/blog`."""
+    """`content/blog/post.md` → `/blog/post`; `content/blog/_index.md` → `/blog`.
+
+    A language suffix (`a-propos.fr.md`) maps to `/fr/a-propos`, never to `/a-propos`. Whether
+    Hugo serves the default language at the bare path depends on
+    `defaultContentLanguageInSubdir`, which is in the config we cannot read — and if two
+    languages both claimed `/a-propos`, a fix aimed at that URL could land on the wrong one.
+    Being absent is recoverable; being wrong is not.
+    """
     if not path.startswith("content/") or _ext(path) not in _CONTENT_EXTS:
         return None
     inner = path[len("content/"):]
     base = inner.rsplit("/", 1)[-1]
     stem = base.rsplit(".", 1)[0]
+    lang = ""
+    if "." in stem:
+        head, tail = stem.rsplit(".", 1)
+        if head and _LANG_SUFFIX_RE.match(tail):
+            stem, lang = head, tail.lower()
     segments = inner.split("/")[:-1]
     if stem not in {"_index", "index"}:
         segments.append(stem)
+    if lang:
+        segments = [lang] + segments
     return _route_from_segments(segments)
+
+
+# Directories holding the generator's TEMPLATES. Their .html files look exactly like static
+# pages to `_static_routes`, which runs on every stack — so a Hugo repo mapped
+# `/layouts/_default/single` to the template that renders the whole site, and Jekyll mapped
+# `/_includes/header`. No crawled URL looks like that, but the corrector must never hold a
+# mapping whose file rewrites every page.
+_TEMPLATE_DIRS: dict[str, tuple[str, ...]] = {
+    STACK_HUGO: ("layouts/", "themes/", "archetypes/"),
+    STACK_JEKYLL: ("_layouts/", "_includes/", "_data/", "_drafts/", "_sass/"),
+}
+
+
+def _is_template_path(stack: str, path: str) -> bool:
+    prefixes = _TEMPLATE_DIRS.get(stack)
+    if not prefixes:
+        return False
+    rel = _strip_src(path)
+    return rel.startswith(prefixes) or any(f"/{d}" in f"/{rel}" for d in prefixes)
 
 
 def _static_routes(path: str) -> list[str]:
@@ -296,20 +369,27 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
             add(_flat_page_route(p, "pages"), p)
         if stack == STACK_HUGO:
             add(_hugo_route(p), p)
+        if stack == STACK_JEKYLL:
+            for r in _jekyll_routes(p):
+                add(r, p)
         # Static HTML is additive on every stack: a Next.js export or a Hugo site can ship
-        # hand-written pages under public/, and those ARE the file to patch.
-        for r in _static_routes(p):
-            add(r, p)
+        # hand-written pages under public/, and those ARE the file to patch. Template
+        # directories are the exception — there the .html IS the site-wide template.
+        if not _is_template_path(stack, p):
+            for r in _static_routes(p):
+                add(r, p)
 
     # Content collections (`content/**/*.mdx` feeding a dynamic route): the MDX file is the
     # real per-page source — patching the `[slug]` template instead would hardcode one value
     # onto every page of the route. Only mapped when a dynamic template covers the prefix.
-    if stack in {STACK_NEXT_APP, STACK_NEXT_PAGES, STACK_ASTRO}:
+    if stack in {STACK_NEXT_APP, STACK_NEXT_PAGES, STACK_ASTRO, STACK_NUXT}:
         prefixes = sorted({v for v in dynamic.values()}, key=len, reverse=True)
         for p in paths:
-            if not p.startswith("content/") or _ext(p) not in _CONTENT_EXTS:
+            # Astro's documented location is `src/content/`; Next and Nuxt use `content/`.
+            rel = _strip_src(p)
+            if not rel.startswith("content/") or _ext(rel) not in _CONTENT_EXTS:
                 continue
-            inner = p[len("content/"):]
+            inner = rel[len("content/"):]
             stem = inner.rsplit("/", 1)[-1].rsplit(".", 1)[0]
             parents = inner.split("/")[:-1]
             candidate = _route_from_segments(parents + ([] if stem in {"index", "_index"} else [stem]))
