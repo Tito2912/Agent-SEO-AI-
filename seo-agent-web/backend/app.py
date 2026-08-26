@@ -8609,6 +8609,24 @@ def _password_reset_ttl_s() -> int:
     return _PASSWORD_RESET_TTL_DEFAULT_S
 
 
+def _seconds_until(expires_at: datetime | None, *, minimum: int = 60) -> int:
+    """Seconds from now until `expires_at`, whether it arrives naive or timezone-aware.
+
+    Both auth emails used to compute this inline as `_dt_as_naive_utc(x) - datetime.now(utc)`,
+    i.e. NAIVE minus AWARE, which raises TypeError in Python. It raised on the first line of
+    composing the message, before any mail code ran — so email verification and password reset
+    had never once worked in production, and the only symptom either produced was a generic
+    "réessaie plus tard" with no [MAIL] line in the logs to contradict it.
+
+    One helper, used by both, so the two cannot drift apart again.
+    """
+    exp = _dt_as_naive_utc(expires_at)
+    if exp is None:
+        return minimum
+    now = _dt_as_naive_utc(datetime.now(timezone.utc)) or datetime.now(timezone.utc)
+    return max(minimum, int((exp - now).total_seconds()))
+
+
 def _dt_as_naive_utc(value: datetime | None) -> datetime | None:
     if not value:
         return None
@@ -8684,8 +8702,7 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
 
 def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: datetime) -> None:
     logger.info("[MAIL] reset compose to=%s url_host=%s", _mask_email(to_email), urlsplit(str(reset_url)).netloc)
-    exp = _dt_as_naive_utc(expires_at) or datetime.now(timezone.utc)
-    ttl_s = max(60, int(((_dt_as_naive_utc(expires_at) or exp) - datetime.now(timezone.utc)).total_seconds()))
+    ttl_s = _seconds_until(expires_at)
     ttl_minutes = max(1, int(math.ceil(float(ttl_s) / 60.0)))
 
     app_name = _safe_env("APP_NAME") or "SEO Agent"
@@ -8841,8 +8858,7 @@ def _valid_email_verification_row(db, *, token: str) -> EmailVerificationToken |
 
 
 def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at: datetime) -> None:
-    exp = _dt_as_naive_utc(expires_at) or datetime.now(timezone.utc)
-    ttl_s = max(60, int((exp - datetime.now(timezone.utc)).total_seconds()))
+    ttl_s = _seconds_until(expires_at)
     ttl_hours = max(1, int(math.ceil(float(ttl_s) / 3600.0)))
 
     app_name = _safe_env("APP_NAME") or "SEO Agent"
