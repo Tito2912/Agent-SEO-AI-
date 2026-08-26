@@ -11158,7 +11158,26 @@ def auth_signup_submit(
                 target_id=str(getattr(user, "id", "") or ""),
                 meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
             )
-            return _signup_error("Impossible d’envoyer l’email de vérification. Réessaie plus tard.", 503)
+            # The account was created several lines above, so bouncing back to the signup form
+            # is a dead end: retrying the same address now answers "Ce compte existe déjà" and
+            # never mentions that a resend page exists. Send them where they can actually
+            # finish, and say the account exists so the refusal further up makes sense.
+            _audit_log(
+                request,
+                action="auth.signup",
+                status="created_unverified",
+                actor_email=e,
+                target_type="user",
+                target_id=str(getattr(user, "id", "") or ""),
+                meta={"reason": "verification_email_failed"},
+            )
+            return RedirectResponse(
+                url=_path_with_flash(
+                    f"/auth/verify/resend?next={quote(n)}&email={quote(e)}",
+                    err="Ton compte est créé, mais l’email de vérification n’a pas pu partir. Renvoie-le ci-dessous.",
+                ),
+                status_code=303,
+            )
 
         _audit_log(
             request,
