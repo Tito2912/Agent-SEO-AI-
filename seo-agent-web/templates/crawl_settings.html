@@ -326,8 +326,8 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                     </div>
                     <div class="cs-field">
                       <span class="cs-label">Pages à tester (max)</span>
-                      <input type="number" name="pagespeed_max_urls" min="0" max="1000" value="{{ crawl.pagespeed_max_urls }}" />
-                      <span class="cs-hint">Plus il y en a, plus le crawl dure longtemps.</span>
+                      <input type="number" name="pagespeed_max_urls" min="0" max="{{ plan_crawl.max_pagespeed_urls }}" value="{{ crawl.pagespeed_max_urls }}" />
+                      <span class="cs-hint">Votre plan analyse jusqu'à {{ plan_crawl.max_pagespeed_urls }} page{{ 's' if plan_crawl.max_pagespeed_urls > 1 else '' }} par crawl. Les mesures sont réutilisées tant que la page n'a pas changé, donc un crawl régulier n'en reconsomme presque aucune.</span>
                     </div>
                     <div class="cs-field">
                       <span class="cs-label">Timeout par analyse (s)</span>

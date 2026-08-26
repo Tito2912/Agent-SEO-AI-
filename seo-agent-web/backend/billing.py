@@ -92,14 +92,21 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
     margin gives 16.4 KB. With SEO_AGENT_WORKER_CONCURRENCY=2, two crawls hold two page sets at
     once: 2 GB - 2 Chromium (400 MB each) - 300 MB runtime = 948 MB, i.e. ~474 MB and ~29 500
     pages per job. Every plan is TIME-bound again; business went 8 000 -> 13 000 on the back of
-    that single change."""
+    that single change.
+
+    `max_pagespeed_urls` rations the only resource in the product that is NOT ours: the Google
+    PageSpeed API allows 25 000 queries/day per key, one key is shared by every customer, and
+    50 URLs per crawl capped the whole platform at ~500 crawls/day. Every plan got 50 — a Free
+    account received exactly the depth of Core Web Vitals a 199 EUR customer paid for, which is
+    a hole in the price list before it is a quota problem. Free keeps 5 rather than 0 on
+    purpose: CWV is a visible feature and a taste of it is what makes the upgrade worth buying."""
     defaults: dict[str, dict[str, Any]] = {
         "free": {
             "label": "Free",
             "price_label": "0€",
             "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
             "correction": {"model": "", "max_files": 0},
-            "crawl": {"max_pages_per_crawl": 1_500, "job_timeout_s": 3_600},
+            "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
             "features": ["Audit", "Suggestions IA (limitées)", "Exports"],
         },
         "solo": {
@@ -114,7 +121,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 100,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
-            "crawl": {"max_pages_per_crawl": 3_000, "job_timeout_s": 7_200},
+            "crawl": {"max_pages_per_crawl": 3_000, "max_pagespeed_urls": 15, "job_timeout_s": 7_200},
             "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
@@ -129,7 +136,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 300,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
-            "crawl": {"max_pages_per_crawl": 6_000, "job_timeout_s": 14_400},
+            "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
@@ -146,7 +153,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 900,
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
-            "crawl": {"max_pages_per_crawl": 13_000, "job_timeout_s": 28_800},
+            "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},
             "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
@@ -178,7 +185,7 @@ def _apply_plan_config_override(defaults: dict[str, dict[str, Any]]) -> None:
                     defaults[plan_key]["limits"][str(m)] = int(v)
         crawl = pv.get("crawl")
         if isinstance(crawl, dict):
-            for k in ("max_pages_per_crawl", "job_timeout_s"):
+            for k in ("max_pages_per_crawl", "job_timeout_s", "max_pagespeed_urls"):
                 v = crawl.get(k)
                 if isinstance(v, (int, float)) and not isinstance(v, bool) and int(v) > 0:
                     defaults[plan_key].setdefault("crawl", {})[k] = int(v)
@@ -210,6 +217,7 @@ def crawl_config_for_plan(plan_key: str) -> dict[str, int]:
     return {
         "max_pages_per_crawl": int(crawl.get("max_pages_per_crawl") or 450),
         "job_timeout_s": int(crawl.get("job_timeout_s") or 3_600),
+        "max_pagespeed_urls": int(crawl.get("max_pagespeed_urls") or 5),
     }
 
 

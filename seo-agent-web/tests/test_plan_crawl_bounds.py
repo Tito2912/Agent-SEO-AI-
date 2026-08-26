@@ -112,7 +112,10 @@ def test_admin_override_can_retune_bounds_without_a_deploy(monkeypatch):
         json.dumps({"pro": {"crawl": {"max_pages_per_crawl": 2_500, "job_timeout_s": 20_000}}}),
     )
     cfg = billing.crawl_config_for_plan("pro")
-    assert cfg == {"max_pages_per_crawl": 2_500, "job_timeout_s": 20_000}
+    assert cfg["max_pages_per_crawl"] == 2_500
+    assert cfg["job_timeout_s"] == 20_000
+    # A partial override leaves the bounds it did not mention alone.
+    assert cfg["max_pagespeed_urls"] == 30
     # Untouched plans keep their defaults.
     assert billing.crawl_config_for_plan("solo")["max_pages_per_crawl"] == 3_000
 
@@ -140,3 +143,44 @@ def test_monthly_quota_stays_reachable_within_the_per_crawl_cap():
             f"{plan}: reaching {limits['pages_crawled_month']} pages needs {per_project:.0f} "
             f"crawls per project per month at {cap} pages each"
         )
+
+
+# --- the PageSpeed ration -------------------------------------------------------------------
+
+PAGESPEED_DAILY_QUOTA = 25_000  # Google, per API key, shared by every customer
+
+
+def test_every_plan_rations_the_pagespeed_quota():
+    urls = [billing.crawl_config_for_plan(p)["max_pagespeed_urls"] for p in PLANS]
+    assert urls == sorted(urls) and len(set(urls)) == len(urls), (
+        "a plan gives no more Core Web Vitals depth than a cheaper one"
+    )
+    assert urls[-1] <= 50, "no plan may spend more of a shared external quota than the old flat 50"
+
+
+def test_free_still_gets_a_taste_of_core_web_vitals():
+    # Zero would remove the feature that makes the upgrade worth buying; the point of the
+    # ration is to make Free cheap to serve, not to hide the product.
+    assert billing.crawl_config_for_plan("free")["max_pagespeed_urls"] > 0
+
+
+def test_the_ration_makes_daily_capacity_predictable():
+    # The reason this exists: with a flat 50 for everyone, platform capacity was ~500 crawls a
+    # day whatever the subscriber mix. Now the cheap plans cost proportionally less.
+    free = billing.crawl_config_for_plan("free")["max_pagespeed_urls"]
+    business = billing.crawl_config_for_plan("business")["max_pagespeed_urls"]
+    assert PAGESPEED_DAILY_QUOTA / free >= 10 * (PAGESPEED_DAILY_QUOTA / business), (
+        "a free crawl should cost an order of magnitude less quota than a Business one"
+    )
+
+
+def test_the_ration_is_admin_tunable_without_a_deploy(monkeypatch):
+    monkeypatch.setenv("PLAN_CONFIG_JSON", json.dumps({"solo": {"crawl": {"max_pagespeed_urls": 25}}}))
+    assert billing.crawl_config_for_plan("solo")["max_pagespeed_urls"] == 25
+    assert billing.crawl_config_for_plan("pro")["max_pagespeed_urls"] == 30
+
+
+def test_an_unknown_plan_gets_the_cheapest_ration():
+    assert billing.crawl_config_for_plan("enterprise")["max_pagespeed_urls"] == (
+        billing.crawl_config_for_plan("free")["max_pagespeed_urls"]
+    )

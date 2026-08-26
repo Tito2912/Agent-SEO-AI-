@@ -7885,6 +7885,15 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     pagespeed = bool(crawl_cfg.get("pagespeed")) if "pagespeed" in crawl_cfg else True
     pagespeed_strategy = str(crawl_cfg.get("pagespeed_strategy") or "mobile")
     pagespeed_max_urls = int(crawl_cfg.get("pagespeed_max_urls") or 50)
+    # The PageSpeed quota is the one resource we buy from someone else and cannot buy more of:
+    # 25 000 queries/day for the whole platform. Ration it by plan rather than letting a free
+    # account spend the same share as a Business one.
+    try:
+        _plan_ps_urls = int(initial_result.get("max_pagespeed_urls") or 0)
+    except (TypeError, ValueError):
+        _plan_ps_urls = 0
+    if _plan_ps_urls > 0:
+        pagespeed_max_urls = min(pagespeed_max_urls, _plan_ps_urls)
     pagespeed_timeout_s = float(crawl_cfg.get("pagespeed_timeout_s") or 60)
     pagespeed_workers = int(crawl_cfg.get("pagespeed_workers") or 6)
     crawl_profile = str(crawl_cfg.get("profile") or "default").strip().lower() or "default"
@@ -14967,6 +14976,9 @@ def crawl_project(
             plan_timeout_s = int(plan_crawl.get("job_timeout_s") or 0)
             if plan_timeout_s > 0:
                 job.result["job_timeout_s"] = plan_timeout_s
+            plan_ps_urls = int(plan_crawl.get("max_pagespeed_urls") or 0)
+            if plan_ps_urls > 0:
+                job.result["max_pagespeed_urls"] = plan_ps_urls
 
             ok, remaining = billing.ensure_within_quota(
                 db, user_id=str(getattr(user, "id", "")), metric="pages_crawled_month", planned_amount=planned_pages
@@ -15382,7 +15394,7 @@ def project_crawl_settings(
     # Show the plan's real per-crawl ceiling in the form. Offering 200 000 to everyone meant
     # the limit was only ever discovered by a crawl that ran for hours and then died.
     if bool(getattr(user, "is_admin", False)):
-        plan_crawl = {"max_pages_per_crawl": 200_000, "job_timeout_s": 0}
+        plan_crawl = {"max_pages_per_crawl": 200_000, "job_timeout_s": 0, "max_pagespeed_urls": 1_000}
     else:
         with DB.session() as db:
             plan_crawl = billing.crawl_config_for_plan(
