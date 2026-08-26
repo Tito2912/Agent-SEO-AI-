@@ -17,6 +17,7 @@ import concurrent.futures
 import dataclasses
 import datetime as dt
 import gzip
+import hashlib
 import ipaddress
 import json
 import os
@@ -59,6 +60,7 @@ class CrawlConfig:
     pagespeed_timeout_s: float = 60.0
     pagespeed_workers: int = 6
     pagespeed_api_key: str | None = None
+    pagespeed_cache_path: str | None = None
     gsc_api_enabled: bool = False
     gsc_property_url: str | None = None
     gsc_days: int = 28
@@ -1285,6 +1287,102 @@ def _pagespeed_fetch(
     return None, last_err or "unknown pagespeed error"
 
 
+# --- PageSpeed result cache -----------------------------------------------------------------
+#
+# PageSpeed is the single scarcest resource in the product, and not because of CPU: the API
+# allows 25 000 queries/day per key, one key is shared by every customer, and 50 URLs per crawl
+# means ~500 crawls/day for the whole platform. Nothing was cached, so a customer crawling
+# weekly re-measured the same 50 unchanged URLs every time.
+#
+# Entries are invalidated by a CONTENT SIGNATURE rather than by age alone: a page whose title,
+# description, word count, scripts and stylesheets are unchanged renders the same, so its lab
+# metrics are re-usable. A TTL backstops the cases a signature cannot see (a CDN change, a
+# third-party script swapped behind the same URL).
+#
+# Secondary benefit worth as much as the quota: PageSpeed lab runs vary 10-15% between two
+# identical requests, so today a customer's CWV score drifts when nothing changed. Reusing a
+# result makes the reported score stable until the page actually changes.
+
+try:
+    _PAGESPEED_CACHE_TTL_DAYS = float(os.getenv("SEO_AGENT_PAGESPEED_CACHE_TTL_DAYS", "14"))
+except ValueError:
+    _PAGESPEED_CACHE_TTL_DAYS = 14.0
+_PAGESPEED_CACHE_MAX_ENTRIES = 5_000
+
+
+def _pagespeed_signature(pages: list[PageData], strategy: str) -> str:
+    """What must change for a cached measurement to stop being valid.
+
+    Deliberately built from render-affecting fields only: a new paragraph of body text does not
+    change how fast the page loads, but a new script bundle does.
+    """
+    p = pages[0] if pages else None
+    if p is None:
+        return ""
+    parts = [
+        strategy,
+        str(p.title or ""),
+        str(p.meta_description or ""),
+        str(p.text_word_count or 0),
+        str(p.images_total or 0),
+        "|".join(sorted(p.script_urls or [])),
+        "|".join(sorted(p.css_urls or [])),
+    ]
+    # json.dumps rather than a separator: no separator can be guaranteed absent from a
+    # title or a URL, and a collision here would silently serve a stale measurement.
+    return hashlib.sha256(json.dumps(parts, ensure_ascii=False).encode("utf-8", "replace")).hexdigest()[:32]
+
+
+def _pagespeed_cache_load(path_str: str | None) -> dict[str, dict[str, Any]]:
+    if not path_str:
+        return {}
+    try:
+        raw = json.loads(Path(path_str).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    entries = raw.get("entries") if isinstance(raw, dict) else None
+    return entries if isinstance(entries, dict) else {}
+
+
+def _pagespeed_cache_save(path_str: str | None, entries: dict[str, dict[str, Any]]) -> None:
+    if not path_str:
+        return
+    # Newest first, so trimming drops what is least likely to be asked for again.
+    ordered = sorted(
+        entries.items(), key=lambda kv: str(kv[1].get("fetched_at") or ""), reverse=True
+    )[:_PAGESPEED_CACHE_MAX_ENTRIES]
+    try:
+        path = Path(path_str)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(
+            json.dumps({"v": 1, "entries": dict(ordered)}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        tmp.replace(path)  # never leave a half-written cache behind a killed crawl
+    except Exception as e:
+        print(f"[PAGESPEED] cache save failed: {type(e).__name__}: {e}", flush=True)
+
+
+def _pagespeed_cache_hit(
+    entry: Any, *, signature: str, now: float
+) -> dict[str, Any] | None:
+    if not isinstance(entry, dict) or not signature:
+        return None
+    if str(entry.get("signature") or "") != signature:
+        return None
+    summary = entry.get("summary")
+    if not isinstance(summary, dict):
+        return None
+    try:
+        age_days = (now - float(entry.get("fetched_ts") or 0.0)) / 86400.0
+    except (TypeError, ValueError):
+        return None
+    if age_days < 0 or age_days > _PAGESPEED_CACHE_TTL_DAYS:
+        return None
+    return summary
+
+
 def _run_pagespeed(pages: list[PageData], config: CrawlConfig) -> dict[str, Any]:
     key = (config.pagespeed_api_key or "").strip()
     if not (config.pagespeed_enabled and key):
@@ -1341,7 +1439,34 @@ def _run_pagespeed(pages: list[PageData], config: CrawlConfig) -> dict[str, Any]
         print("[PAGESPEED] No eligible URLs (HTML 200) to test", flush=True)
         return {"enabled": True, "strategy": strategy, "requested": 0, "tested": 0, "errors": 0}
 
-    print(f"[PAGESPEED] Start | urls={len(targets)} strategy={strategy} workers={workers}", flush=True)
+    requested = len(targets)
+    cache = _pagespeed_cache_load(config.pagespeed_cache_path)
+    now_ts = time.time()
+    signatures: dict[str, str] = {}
+    cached = 0
+    for eff in list(targets):
+        sig = _pagespeed_signature(pages_by_eff.get(eff) or [], strategy)
+        signatures[eff] = sig
+        summary = _pagespeed_cache_hit(cache.get(eff), signature=sig, now=now_ts)
+        if summary is None:
+            continue
+        for p in pages_by_eff.get(eff, []):
+            p.pagespeed = summary
+        targets.remove(eff)
+        cached += 1
+
+    if not targets:
+        print(f"[PAGESPEED] Done | {cached}/{requested} served from cache, no API call needed", flush=True)
+        return {
+            "enabled": True, "strategy": strategy, "requested": requested,
+            "tested": 0, "cached": cached, "errors": 0, "duration_s": 0.0,
+        }
+
+    print(
+        f"[PAGESPEED] Start | urls={len(targets)} (cache hits={cached}/{requested}) "
+        f"strategy={strategy} workers={workers}",
+        flush=True,
+    )
     started = time.monotonic()
     last_progress = started
 
@@ -1374,6 +1499,14 @@ def _run_pagespeed(pages: list[PageData], config: CrawlConfig) -> dict[str, Any]
                 ok += 1
                 for p in pages_by_eff.get(eff, []):
                     p.pagespeed = summary
+                sig = signatures.get(eff) or ""
+                if sig:
+                    cache[eff] = {
+                        "signature": sig,
+                        "fetched_ts": time.time(),
+                        "fetched_at": _now_iso(),
+                        "summary": summary,
+                    }
             else:
                 errors += 1
                 for p in pages_by_eff.get(eff, []):
@@ -1386,8 +1519,21 @@ def _run_pagespeed(pages: list[PageData], config: CrawlConfig) -> dict[str, Any]
                 last_progress = now
 
     duration_s = time.monotonic() - started
-    print(f"[PAGESPEED] Done | ok={ok} errors={errors} duration={duration_s:.1f}s", flush=True)
-    return {"enabled": True, "strategy": strategy, "requested": len(targets), "tested": ok, "errors": errors, "duration_s": round(duration_s, 2)}
+    _pagespeed_cache_save(config.pagespeed_cache_path, cache)
+    print(
+        f"[PAGESPEED] Done | ok={ok} errors={errors} cached={cached}/{requested} "
+        f"duration={duration_s:.1f}s",
+        flush=True,
+    )
+    return {
+        "enabled": True,
+        "strategy": strategy,
+        "requested": requested,
+        "tested": ok,
+        "cached": cached,
+        "errors": errors,
+        "duration_s": round(duration_s, 2),
+    }
 
 
 def _gsc_property_candidates(base_url: str, configured: str | None) -> list[str]:
@@ -8246,6 +8392,11 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
         help="PageSpeed API timeout seconds (default: 60).",
     )
     parser.add_argument(
+        "--pagespeed-cache",
+        default=None,
+        help="JSON file reusing PageSpeed results for pages that have not changed (quota saver).",
+    )
+    parser.add_argument(
         "--pagespeed-workers",
         type=int,
         default=6,
@@ -8406,6 +8557,7 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
         pagespeed_timeout_s=max(1.0, float(args.pagespeed_timeout)),
         pagespeed_workers=max(1, int(args.pagespeed_workers)),
         pagespeed_api_key=pagespeed_api_key,
+        pagespeed_cache_path=(str(args.pagespeed_cache).strip() or None) if args.pagespeed_cache else None,
         gsc_api_enabled=bool(args.gsc_api),
         gsc_property_url=(str(args.gsc_property).strip() if isinstance(args.gsc_property, str) and str(args.gsc_property).strip() else None),
         gsc_days=max(1, int(args.gsc_days)),

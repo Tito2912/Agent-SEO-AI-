@@ -7956,6 +7956,16 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         cmd.extend(["--pagespeed-max-urls", str(max(0, pagespeed_max_urls))])
         cmd.extend(["--pagespeed-timeout", str(max(1.0, float(pagespeed_timeout_s)))])
         cmd.extend(["--pagespeed-workers", str(max(1, pagespeed_workers))])
+        # One cache per PROJECT (not per crawl): its whole purpose is to survive from one
+        # crawl to the next. The worker has no disk since the horizontal-scaling change, so
+        # it has to come back from S3 first and be pushed again after — same lifecycle as a
+        # report. A missing cache is a cold start, never an error.
+        pagespeed_cache_path = (runs_dir / slug / "pagespeed-cache.json").resolve()
+        try:
+            _ensure_runs_file_local(pagespeed_cache_path)
+        except Exception as e:
+            logger.warning("[PAGESPEED] cache restore failed: %s: %s", type(e).__name__, e)
+        cmd.extend(["--pagespeed-cache", str(pagespeed_cache_path)])
     if gsc_enabled:
         gsc_dir = site_dir / "gsc"
         gsc_dir.mkdir(parents=True, exist_ok=True)
@@ -8111,6 +8121,15 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 _sync_runs_path_to_object_store(site_dir)
         except Exception as e:
             logger.error("[S3] crawl sync error: %s: %s", type(e).__name__, e)
+        try:
+            # Push the cache even when the crawl failed: the PageSpeed results it collected
+            # before dying are still valid, and re-buying them costs the platform's scarcest
+            # quota (25 000 API queries/day, shared by every customer).
+            ps_cache = (runs_dir / slug / "pagespeed-cache.json").resolve()
+            if ps_cache.exists():
+                _sync_runs_path_to_object_store(ps_cache)
+        except Exception as e:
+            logger.error("[S3] pagespeed cache sync error: %s: %s", type(e).__name__, e)
         try:
             if (not skip_billing) and reserved_pages > 0:
                 if job.status == "done" and isinstance(actual_pages_crawled, int) and actual_pages_crawled >= 0:
