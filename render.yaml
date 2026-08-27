@@ -129,6 +129,18 @@ services:
         sync: false
       - key: SEO_AGENT_RETENTION_EVERY_SECONDS
         value: "21600"
+      # Mail transport. MAIL_API_PROVIDER + MAIL_API_KEY drive a provider over its HTTP API
+      # and take precedence over the SMTP block below; SMTP_FROM/SMTP_FROM_NAME still supply
+      # the sender. Declared here because an undeclared variable is one a blueprint re-sync
+      # can drop — and losing these does not break loudly, it turns email verification off.
+      - key: MAIL_API_PROVIDER
+        sync: false
+      - key: MAIL_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
+        sync: false
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT

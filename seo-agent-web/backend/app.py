@@ -8744,10 +8744,13 @@ def _send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -
     if not cfg:
         raise RuntimeError("mail_not_configured")
     provider, api_key = _mail_api_transport(cfg)
+    # Only name the SMTP host when SMTP is what will actually be used. The dispatch line
+    # printed `host=smtp.sendgrid.net` while sending through Brevo, which is exactly the kind
+    # of detail that sends a future debugging session to the wrong vendor.
+    where = f"{cfg.get('host')}:{cfg.get('port')}" if not provider else provider
     print(
-        f"[MAIL] dispatch host={cfg.get('host')}:{cfg.get('port')} "
-        f"from={_mask_email(str(cfg.get('from') or ''))} to={_mask_email(to_addr)} "
-        f"transport={provider or 'smtp'}",
+        f"[MAIL] dispatch via={where} transport={provider or 'smtp'} "
+        f"from={_mask_email(str(cfg.get('from') or ''))} to={_mask_email(to_addr)}",
         flush=True,
     )
     sender = _MAIL_API_SENDERS.get(provider) if provider else None
