@@ -11741,6 +11741,18 @@ def billing_page(
                 err_out = str(e).strip() or "Erreur sync Stripe"
 
         plan_key = billing.effective_plan_key(db, user_id=str(user.id))
+        if stripe_ready and plan_key == "free" and billing.stripe_customer_id(db, user_id=str(user.id)):
+            # A Stripe customer exists for this account but no plan is active: a payment went
+            # through and was never reconciled. That state used to be unrecoverable — the
+            # session-based sync needs a session_id that only exists on the redirect back from
+            # payment, so closing that tab meant paying and staying on Free with no way out.
+            # Everything needed is already stored; ask Stripe on every visit until it resolves.
+            try:
+                if billing.sync_subscription_from_customer(db, user_id=str(user.id)):
+                    plan_key = billing.effective_plan_key(db, user_id=str(user.id))
+                    err_out = ""
+            except Exception as e:
+                logger.warning("[BILLING] customer sync failed: %s: %s", type(e).__name__, e)
         limits = billing.plan_limits(db, user_id=str(user.id))
         sub = billing.subscription_for_user(db, user_id=str(user.id))
         sub_active = bool(sub and str(getattr(sub, "status", "") or "").strip().lower() in billing.ACTIVE_SUB_STATUSES)

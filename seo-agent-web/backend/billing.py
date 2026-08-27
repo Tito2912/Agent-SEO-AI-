@@ -849,6 +849,26 @@ def sync_from_checkout_session(db: Session, *, session_id: str) -> BillingSubscr
     return sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
 
 
+def sync_subscription_from_customer(db: Session, *, user_id: str) -> BillingSubscription | None:
+    """Reconcile straight from the Stripe customer already mapped to this user.
+
+    The session-based path needs a `session_id`, which only exists on the redirect back from
+    payment. Anyone who closed that tab, or whose reconciliation failed once, had no way back:
+    they had paid, the customer mapping was in our database, and the page still said Free.
+    Everything needed was already stored — nothing was asking Stripe.
+    """
+    stripe_init()
+    if not stripe_enabled():
+        return None
+    cid = stripe_customer_id(db, user_id=user_id)
+    if not cid:
+        return None
+    sub_id = _latest_subscription_id_for_customer(cid)
+    if not sub_id:
+        return None
+    return sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+
+
 def _latest_subscription_id_for_customer(stripe_customer_id: str) -> str:
     """The subscription to trust for a customer: an active one, else the most recent.
 

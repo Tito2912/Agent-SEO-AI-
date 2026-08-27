@@ -99,3 +99,51 @@ def test_a_stripe_outage_does_not_raise_into_the_billing_page(monkeypatch: pytes
 def test_no_customer_means_no_lookup(customer_id, stripe_listing) -> None:
     assert billing._latest_subscription_id_for_customer(customer_id) == ""
     assert stripe_listing["calls"] == [], "Stripe was called without a customer to ask about"
+
+
+# --- recovering without a session id --------------------------------------------------------
+
+def test_a_paid_customer_can_be_reconciled_from_the_stored_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The state a real purchase left behind: customer mapped, no subscription, no session id.
+
+    The session-based sync needs a `session_id` that only exists on the redirect back from
+    payment. Close that tab and there was no way back — the account had paid and stayed on
+    Free permanently. Everything needed was already in our own database.
+    """
+    calls: list[str] = []
+
+    monkeypatch.setattr(billing, "stripe_init", lambda: None)
+    monkeypatch.setattr(billing, "stripe_enabled", lambda: True)
+    monkeypatch.setattr(billing, "stripe_customer_id", lambda db, *, user_id: CUSTOMER)
+    monkeypatch.setattr(billing, "_latest_subscription_id_for_customer", lambda cid: "sub_retrouve")
+
+    def _sync(db, *, stripe_subscription_id):
+        calls.append(stripe_subscription_id)
+        return object()
+
+    monkeypatch.setattr(billing, "sync_subscription_from_stripe", _sync)
+
+    assert billing.sync_subscription_from_customer(None, user_id="u1") is not None
+    assert calls == ["sub_retrouve"]
+
+
+def test_an_account_that_never_paid_is_left_alone(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No Stripe customer means nothing to reconcile; this must not call Stripe on every page
+    # view for every free account.
+    called: list[str] = []
+    monkeypatch.setattr(billing, "stripe_init", lambda: None)
+    monkeypatch.setattr(billing, "stripe_enabled", lambda: True)
+    monkeypatch.setattr(billing, "stripe_customer_id", lambda db, *, user_id: "")
+    monkeypatch.setattr(
+        billing, "_latest_subscription_id_for_customer", lambda cid: called.append(cid) or ""
+    )
+    assert billing.sync_subscription_from_customer(None, user_id="u1") is None
+    assert called == []
+
+
+def test_nothing_happens_when_stripe_is_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(billing, "stripe_init", lambda: None)
+    monkeypatch.setattr(billing, "stripe_enabled", lambda: False)
+    assert billing.sync_subscription_from_customer(None, user_id="u1") is None
