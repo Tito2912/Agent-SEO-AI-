@@ -61,7 +61,10 @@
     </div>
 
     <div class="ov-info">
-      {% set blocked = (sum.blocked_by_host.count if sum.blocked_by_host else 0) or 0 %}
+      {# `sum` only exists once a crawl has completed — same guard as the KPIs below. Without
+         it, every project that has never been crawled 500s, which is every project a new
+         customer has just created. #}
+      {% set blocked = (sum.blocked_by_host.count if (project.current and sum is defined and sum.blocked_by_host) else 0) or 0 %}
       {% if blocked %}
         {# The score below was computed WITHOUT these pages. Saying so is the whole point. #}
         <div class="ov-blocked" role="status">

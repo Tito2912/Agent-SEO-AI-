@@ -202,24 +202,34 @@ def test_reports_written_before_this_feature_still_summarise() -> None:
 
 
 def test_the_overview_warns_only_when_pages_were_blocked() -> None:
+    """Covers the banner's CONTENT only.
+
+    This renders a fragment with `sum` handed to it, so it cannot see whether `sum` exists on
+    the real page — and it did not: the banner shipped above the `{% if project.current %}`
+    guard that defines it, and every never-crawled project 500'd. That scoping is covered by
+    tests/test_project_overview_empty.py, which renders the real page through the real handler.
+    A fragment test is worth what it says on the tin and no more.
+    """
     import jinja2
 
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(REPO_ROOT / "seo-agent-web" / "templates")))
     source = (REPO_ROOT / "seo-agent-web" / "templates" / "project_overview.html").read_text(encoding="utf-8")
-    # Render just the banner fragment: the full page pulls in the whole app context.
     start = source.index('{% set blocked =')
     end = source.index("<h1>{{ project.site_name }}</h1>")
     tpl = env.from_string(source[start:end])
+    crawled = {"current": {"timestamp": "20260827-120000"}}
 
-    clean = tpl.render(sum={"blocked_by_host": {"count": 0, "urls": []}})
+    clean = tpl.render(project=crawled, sum={"blocked_by_host": {"count": 0, "urls": []}})
     assert "Crawl incomplet" not in clean
 
-    partial = tpl.render(sum={"blocked_by_host": {"count": 11, "urls": ["https://x.test/de/about"]}})
+    partial = tpl.render(
+        project=crawled, sum={"blocked_by_host": {"count": 11, "urls": ["https://x.test/de/about"]}}
+    )
     assert "Crawl incomplet" in partial and "11 pages inaccessibles" in partial
     assert "https://x.test/de/about" in partial
 
     # A summary from before the feature must render the same as a clean one, not crash.
-    assert "Crawl incomplet" not in tpl.render(sum={})
+    assert "Crawl incomplet" not in tpl.render(project=crawled, sum={})
 
 
 # --- phase timings ---------------------------------------------------------------------------
