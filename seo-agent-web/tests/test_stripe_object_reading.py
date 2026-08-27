@@ -117,3 +117,59 @@ def test_an_older_sdk_shape_is_still_accepted() -> None:
             return {"id": "sub_legacy"}
 
     assert billing._stripe_to_dict(_Legacy()) == {"id": "sub_legacy"}
+
+
+# --- storing the payload ------------------------------------------------------------------
+
+import json  # noqa: E402
+from decimal import Decimal  # noqa: E402
+
+
+def test_a_decimal_from_the_sdk_does_not_break_the_write() -> None:
+    """The failure that turned a working reconciliation into a 500.
+
+    stripe_data is a JSON column holding the raw response. The SDK returns Decimal for fields
+    like unit_amount_decimal, SQLAlchemy could not flush it, and a failed flush POISONS the
+    session: every later query in the same request raised PendingRollbackError, so /billing
+    answered 500 the moment a subscription was finally readable.
+    """
+    payload = {
+        "id": "sub_x",
+        "items": {"data": [{"price": {"id": "price_pro", "unit_amount_decimal": Decimal("4900")}}]},
+    }
+    safe = billing._json_safe(payload)
+    json.dumps(safe)  # the operation that used to raise
+    assert safe["items"]["data"][0]["price"]["unit_amount_decimal"] == 4900.0
+    assert safe["items"]["data"][0]["price"]["id"] == "price_pro"
+
+
+def test_an_unknown_type_is_stringified_rather_than_aborting_the_write() -> None:
+    # stripe_data is a diagnostic record. Losing a field's exact typing is a much smaller
+    # problem than losing the subscription it accompanies.
+    class _Exotic:
+        def __str__(self) -> str:
+            return "exotique"
+
+    safe = billing._json_safe({"weird": _Exotic(), "keep": 1})
+    json.dumps(safe)
+    assert safe == {"weird": "exotique", "keep": 1}
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"a": [Decimal("1"), {"b": Decimal("2")}]},
+        {"nested": {"deep": {"deeper": [Decimal("0.01")]}}},
+        {"none": None, "bool": True, "int": 1, "float": 1.5, "str": "x"},
+        {},
+    ],
+)
+def test_every_shape_survives_serialisation(payload) -> None:
+    json.dumps(billing._json_safe(payload))
+
+
+def test_keys_are_strings_after_sanitising() -> None:
+    # A non-string key is the other way a JSON dump fails.
+    safe = billing._json_safe({1: "a", "2": "b"})
+    json.dumps(safe)
+    assert set(safe) == {"1", "2"}

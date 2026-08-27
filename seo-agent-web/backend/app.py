@@ -11739,6 +11739,10 @@ def billing_page(
                 billing.sync_from_checkout_session(db, session_id=session_id)
             except Exception as e:
                 err_out = str(e).strip() or "Erreur sync Stripe"
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
 
         plan_key = billing.effective_plan_key(db, user_id=str(user.id))
         if stripe_ready and plan_key == "free" and billing.stripe_customer_id(db, user_id=str(user.id)):
@@ -11752,7 +11756,14 @@ def billing_page(
                     plan_key = billing.effective_plan_key(db, user_id=str(user.id))
                     err_out = ""
             except Exception as e:
+                # A failed flush leaves the Session unusable: every later query in this request
+                # raises PendingRollbackError and the page 500s. Reconciliation is best-effort,
+                # so hand the request back a working session and render the plan we know about.
                 logger.warning("[BILLING] customer sync failed: %s: %s", type(e).__name__, e)
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
         limits = billing.plan_limits(db, user_id=str(user.id))
         sub = billing.subscription_for_user(db, user_id=str(user.id))
         sub_active = bool(sub and str(getattr(sub, "status", "") or "").strip().lower() in billing.ACTIVE_SUB_STATUSES)

@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func, select
@@ -33,6 +34,30 @@ def _stripe_obj_id(value: Any) -> str:
     if isinstance(value, dict):
         return str(value.get("id") or "").strip()
     return str(value or "").strip()
+
+def _json_safe(value: Any) -> Any:
+    """Make a Stripe payload storable in a JSON column.
+
+    stripe_data holds the raw response. Once _stripe_to_dict started actually returning it,
+    the first real write failed with "Object of type Decimal is not JSON serializable" — the
+    SDK hands back Decimal for fields like unit_amount_decimal. SQLAlchemy could not flush,
+    which POISONED the session, so every later query in the same request raised
+    PendingRollbackError and /billing answered 500.
+
+    Unknown types become their string form rather than aborting the write: this column is a
+    diagnostic record, and losing its exact typing is a far smaller problem than losing the
+    subscription it accompanies.
+    """
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
 
 def _stripe_to_dict(obj: Any) -> dict[str, Any]:
     """Every Stripe response this module reads passes through here.
@@ -578,7 +603,7 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         existing.current_period_start = cps
         existing.current_period_end = cpe
         existing.trial_end = trial_end
-        existing.stripe_data = stripe_subscription
+        existing.stripe_data = _json_safe(stripe_subscription)
         db.add(existing)
         db.commit()
         return existing
@@ -594,7 +619,7 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         current_period_start=cps,
         current_period_end=cpe,
         trial_end=trial_end,
-        stripe_data=stripe_subscription,
+        stripe_data=_json_safe(stripe_subscription),
     )
     db.add(row)
     try:
