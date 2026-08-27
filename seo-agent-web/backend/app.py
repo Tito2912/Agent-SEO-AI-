@@ -8796,6 +8796,25 @@ def _password_reset_ttl_s() -> int:
     return _PASSWORD_RESET_TTL_DEFAULT_S
 
 
+def _utc_now_naive() -> datetime:
+    """UTC now, tz-stripped, matching what _dt_as_naive_utc returns for stored values.
+
+    Every datetime bug in this file has been the same one: a value normalised to naive being
+    compared or subtracted against an aware `datetime.now(timezone.utc)`. Python raises rather
+    than guessing, and the raise lands inside a request handler as a 500 or a swallowed
+    "réessaie plus tard". Both sides now come from helpers that agree.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _dt_is_past(value: datetime | None) -> bool:
+    """True when `value` is already past. Missing means "no expiry", never "expired"."""
+    moment = _dt_as_naive_utc(value)
+    if moment is None:
+        return False
+    return moment <= _utc_now_naive()
+
+
 def _seconds_until(expires_at: datetime | None, *, minimum: int = 60) -> int:
     """Seconds from now until `expires_at`, whether it arrives naive or timezone-aware.
 
@@ -8810,8 +8829,7 @@ def _seconds_until(expires_at: datetime | None, *, minimum: int = 60) -> int:
     exp = _dt_as_naive_utc(expires_at)
     if exp is None:
         return minimum
-    now = _dt_as_naive_utc(datetime.now(timezone.utc)) or datetime.now(timezone.utc)
-    return max(minimum, int((exp - now).total_seconds()))
+    return max(minimum, int((exp - _utc_now_naive()).total_seconds()))
 
 
 def _dt_as_naive_utc(value: datetime | None) -> datetime | None:
@@ -8880,9 +8898,7 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
         return None
     if getattr(row, "used_at", None):
         return None
-    now = datetime.now(timezone.utc)
-    exp = _dt_as_naive_utc(getattr(row, "expires_at", None))
-    if exp and exp <= now:
+    if _dt_is_past(getattr(row, "expires_at", None)):
         return None
     return row
 
@@ -9037,9 +9053,7 @@ def _valid_email_verification_row(db, *, token: str) -> EmailVerificationToken |
         return None
     if getattr(row, "used_at", None):
         return None
-    now = datetime.now(timezone.utc)
-    exp = _dt_as_naive_utc(getattr(row, "expires_at", None))
-    if exp and exp <= now:
+    if _dt_is_past(getattr(row, "expires_at", None)):
         return None
     return row
 
