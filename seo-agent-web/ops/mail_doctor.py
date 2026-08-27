@@ -59,14 +59,25 @@ def main(argv: list[str]) -> int:
     for key, value in sorted(_redacted(cfg).items()):
         print(f"  {key:<12} {value}")
 
-    sendgrid_key = seo_app._sendgrid_api_key_from_smtp_cfg(cfg)
-    transport = "SendGrid HTTP API" if sendgrid_key else f"SMTP {cfg['host']}:{cfg['port']}"
+    provider, _key = seo_app._mail_api_transport(cfg)
+    transport = f"API HTTP {provider}" if provider else f"SMTP brut {cfg['host']}:{cfg['port']}"
     print(f"\n--- transport retenu: {transport} ---")
-    if not sendgrid_key and str(cfg.get("host") or "").lower() == "smtp.sendgrid.net":
-        # The HTTP API exists precisely because PaaS hosts block outbound SMTP ports; falling
-        # back to SMTP on a SendGrid host is almost always a misconfigured username.
-        print("  ATTENTION: hôte SendGrid mais l'API HTTP n'est pas retenue.")
-        print("  SMTP_USERNAME doit valoir exactement 'apikey' et SMTP_PASSWORD être la clé.")
+    if not provider:
+        host = str(cfg.get("host") or "").lower()
+        known = seo_app._MAIL_API_HOSTS.get(host)
+        if known:
+            # An HTTP path exists for this host but the credentials do not fit it, so the
+            # send goes out over a port the platform may well be filtering.
+            print(f"  ATTENTION: {host} propose une API HTTP ({known}) mais elle n'est pas retenue.")
+            if known == "sendgrid":
+                print("  SMTP_USERNAME doit valoir exactement 'apikey'.")
+            else:
+                print("  Renseigne MAIL_API_PROVIDER et MAIL_API_KEY: la cle SMTP d'un")
+                print("  fournisseur n'est pas sa cle d'API transactionnelle.")
+        else:
+            # This is the path PaaS providers block, which is why the HTTP APIs exist.
+            print("  Envoi via SMTP sortant. Si l'hebergeur filtre le port, l'echec sera")
+            print("  un timeout et non un refus applicatif.")
 
     print(f"\n--- envoi vers {to_addr} ---")
     try:

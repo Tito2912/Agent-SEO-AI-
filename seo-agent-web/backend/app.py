@@ -8565,6 +8565,138 @@ def _sendgrid_send_email(
     print(f"[MAIL] sendgrid api accepted status={resp.status_code} to={to_masked}", flush=True)
 
 
+def _brevo_send_email(
+    *, api_key: str, to_addr: str, subject: str, body: str, from_addr: str, from_name: str = "", html_body: str = ""
+) -> None:
+    """Brevo transactional API. 300 emails/day free, EU-hosted."""
+    key = str(api_key or "").strip()
+    if not key:
+        raise RuntimeError("brevo_api_key_missing")
+
+    sender: dict[str, str] = {"email": str(from_addr).strip()}
+    if str(from_name or "").strip():
+        sender["name"] = str(from_name).strip()
+    payload: dict[str, Any] = {
+        "sender": sender,
+        "to": [{"email": str(to_addr).strip()}],
+        "subject": str(subject),
+        "textContent": str(body),
+    }
+    if html_body:
+        payload["htmlContent"] = str(html_body)
+
+    _http_mail_post(
+        provider="brevo",
+        url="https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": key, "Content-Type": "application/json", "accept": "application/json"},
+        payload=payload,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def _resend_send_email(
+    *, api_key: str, to_addr: str, subject: str, body: str, from_addr: str, from_name: str = "", html_body: str = ""
+) -> None:
+    """Resend transactional API."""
+    key = str(api_key or "").strip()
+    if not key:
+        raise RuntimeError("resend_api_key_missing")
+
+    name = str(from_name or "").strip()
+    sender = f"{name} <{str(from_addr).strip()}>" if name else str(from_addr).strip()
+    payload: dict[str, Any] = {
+        "from": sender,
+        "to": [str(to_addr).strip()],
+        "subject": str(subject),
+        "text": str(body),
+    }
+    if html_body:
+        payload["html"] = str(html_body)
+
+    _http_mail_post(
+        provider="resend",
+        url="https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        payload=payload,
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
+
+
+def _http_mail_post(
+    *, provider: str, url: str, headers: dict[str, str], payload: dict[str, Any], to_addr: str, from_addr: str
+) -> None:
+    """One place where an HTTP mail API is called, logged and judged.
+
+    The provider's own words are what make a refusal actionable — "Maximum credits exceeded"
+    took an afternoon to find because the signup handler replaced it with "réessaie plus tard".
+    So the response body is logged verbatim (truncated), on every provider, always.
+    """
+    to_masked = _mask_email(to_addr)
+    from_masked = _mask_email(from_addr)
+    try:
+        print(f"[MAIL] {provider} api sending to={to_masked} from={from_masked}", flush=True)
+        resp = requests.post(url, headers=headers, json=payload, timeout=15.0)
+    except Exception as e:
+        print(f"[MAIL] {provider} api error: {type(e).__name__}: {e}", flush=True)
+        raise
+
+    if resp.status_code >= 400:
+        detail = (resp.text or "").strip().replace(chr(10), " ")[:500]
+        print(f"[MAIL] {provider} api failed status={resp.status_code} detail={detail}", flush=True)
+        raise RuntimeError(f"{provider}_api_http_{resp.status_code}")
+
+    print(f"[MAIL] {provider} api accepted status={resp.status_code} to={to_masked}", flush=True)
+
+
+# Which HTTP API a given SMTP host implies. Keyed on host so switching provider stays an
+# environment change: set SMTP_HOST/SMTP_USERNAME/SMTP_PASSWORD and the right transport is
+# picked automatically, no deploy and no code edit.
+_MAIL_API_HOSTS: dict[str, str] = {
+    "smtp.sendgrid.net": "sendgrid",
+    "smtp-relay.brevo.com": "brevo",
+    "smtp-relay.sendinblue.com": "brevo",
+    "smtp.resend.com": "resend",
+}
+
+
+def _mail_api_transport(cfg: dict[str, Any]) -> tuple[str, str]:
+    """(provider, api_key) for the configured host, or ("", "") to use plain SMTP.
+
+    An explicit MAIL_API_PROVIDER + MAIL_API_KEY wins, so a provider can be used over HTTP
+    without pretending to be an SMTP server at all.
+    """
+    explicit = str(_safe_env("MAIL_API_PROVIDER") or "").strip().lower()
+    explicit_key = str(_safe_env("MAIL_API_KEY") or "").strip()
+    if explicit and explicit_key:
+        return explicit, explicit_key
+
+    host = str(cfg.get("host") or "").strip().lower()
+    provider = _MAIL_API_HOSTS.get(host, "")
+    if not provider:
+        return "", ""
+
+    password = str(cfg.get("password") or "").strip()
+    username = str(cfg.get("username") or "").strip().lower()
+    if provider == "sendgrid":
+        # SendGrid's SMTP username is the literal word "apikey"; anything else means the
+        # password is not the API key and the HTTP call would 401.
+        return ("sendgrid", password) if username == "apikey" and password else ("", "")
+    # Brevo's SMTP password is an SMTP key, NOT the transactional API key, so it cannot be
+    # reused over HTTP. Resend's SMTP password IS the API key.
+    if provider == "resend":
+        return ("resend", password) if password else ("", "")
+    return "", ""
+
+
+_MAIL_API_SENDERS = {
+    "sendgrid": lambda **kw: _sendgrid_send_email(**kw),
+    "brevo": lambda **kw: _brevo_send_email(**kw),
+    "resend": lambda **kw: _resend_send_email(**kw),
+}
+
+
 def _send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -> None:
     """
     Prefer SendGrid HTTP API when the current SMTP config matches SendGrid.
@@ -8574,15 +8706,17 @@ def _send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -
     cfg = _smtp_config()
     if not cfg:
         raise RuntimeError("smtp_not_configured")
-    sg_key = _sendgrid_api_key_from_smtp_cfg(cfg)
-    logger.info(
-        "[MAIL] dispatch host=%s:%s from=%s to=%s sendgrid_api=%s",
-        str(cfg.get("host") or ""), int(cfg.get("port") or 0),
-        _mask_email(str(cfg.get("from") or "")), _mask_email(to_addr), bool(sg_key),
+    provider, api_key = _mail_api_transport(cfg)
+    print(
+        f"[MAIL] dispatch host={cfg.get('host')}:{cfg.get('port')} "
+        f"from={_mask_email(str(cfg.get('from') or ''))} to={_mask_email(to_addr)} "
+        f"transport={provider or 'smtp'}",
+        flush=True,
     )
-    if sg_key:
-        _sendgrid_send_email(
-            api_key=sg_key,
+    sender = _MAIL_API_SENDERS.get(provider) if provider else None
+    if sender is not None:
+        sender(
+            api_key=api_key,
             to_addr=to_addr,
             subject=subject,
             body=body,
@@ -8591,6 +8725,8 @@ def _send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -
             html_body=html_body,
         )
         return
+    if provider:
+        raise RuntimeError(f"mail_api_provider_unknown_{provider}")
 
     _smtp_send_email(to_addr=to_addr, subject=subject, body=body, html_body=html_body)
 
