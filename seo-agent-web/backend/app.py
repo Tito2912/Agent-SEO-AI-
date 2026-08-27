@@ -20707,26 +20707,22 @@ def backlinks_queue_mark_sent(request: Request, slug: str, opp_id: str) -> JSONR
 # Cron Render — vérification automatique des backlinks
 # ---------------------------------------------------------------------------
 
-def _sendgrid_send(*, subject: str, text_body: str) -> None:
-    api_key = str(os.environ.get("SENDGRID_API_KEY") or "").strip()
-    from_email = str(os.environ.get("SENDGRID_FROM_EMAIL") or "").strip()
-    to_email = str(os.environ.get("NOTIFICATION_EMAIL") or "").strip()
-    if not api_key or not from_email or not to_email:
+def _notify_operator(*, subject: str, text_body: str) -> None:
+    """Operator notification (backlink cron), through the same transport as everything else.
+
+    This used to call SendGrid's API directly with its own SENDGRID_API_KEY, bypassing
+    _send_email entirely — so it was a second vendor lock nobody would have found until it,
+    too, went silent. It swallowed every exception, which is defensible for a notification
+    but means it can never explain itself; the transport layer logs the provider's own words.
+    """
+    to_email = str(_safe_env("NOTIFICATION_EMAIL") or _support_email() or "").strip()
+    if not to_email:
         return
     try:
-        requests.post(
-            "https://api.sendgrid.com/v3/mail/send",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "personalizations": [{"to": [{"email": to_email}]}],
-                "from": {"email": from_email},
-                "subject": subject,
-                "content": [{"type": "text/plain", "value": text_body}],
-            },
-            timeout=15,
-        )
-    except Exception:
-        pass
+        _send_email(to_addr=to_email, subject=subject, body=text_body)
+    except Exception as e:
+        # Never let a failed notification break the cron run it is reporting on.
+        logger.warning("[MAIL] operator notification failed: %s: %s", type(e).__name__, e)
 
 
 @app.get("/cron/check-backlinks")
@@ -20789,7 +20785,7 @@ def cron_check_backlinks(request: Request) -> JSONResponse:
             f"- {item['title'][:70]}\n  Source : {item['url']}\n  Cible  : {item['target_url']}"
             for item in newly_lost
         )
-        _sendgrid_send(
+        _notify_operator(
             subject=f"⚠️ {len(newly_lost)} backlink(s) perdu(s) — Agent SEO",
             text_body=(
                 f"{len(newly_lost)} backlink(s) ne semblent plus actifs :\n\n{lines}\n\n"
