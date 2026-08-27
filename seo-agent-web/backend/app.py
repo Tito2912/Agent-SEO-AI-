@@ -10659,6 +10659,9 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
         db.commit()
         uid = str(getattr(user, "id", "") or "")
         email_out = str(getattr(user, "email", "") or "")
+        owns_nothing = not int(
+            db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == uid)) or 0
+        )
 
     if not uid:
         resp = templates.TemplateResponse(
@@ -10671,7 +10674,13 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
         return resp
 
     token_out = auth.make_session_token(user_id=uid, secret=secret)
-    resp = RedirectResponse(url=n, status_code=303)
+    # `next` is wherever the visitor happened to be when they signed up — often a page owned by
+    # somebody else. A brand-new account owns nothing, so following it makes "Job introuvable"
+    # the first screen of the product. Observed on a real signup: the ownership check was right,
+    # the welcome was not. An account that already owns projects keeps its destination, so an
+    # invite link to a real page still works.
+    destination = "/" if owns_nothing else n
+    resp = RedirectResponse(url=destination, status_code=303)
     proto = (request.headers.get("x-forwarded-proto") or request.url.scheme or "http").split(",")[0].strip()
     secure_cookie = proto == "https"
     resp.set_cookie(

@@ -138,3 +138,36 @@ def test_a_forged_token_is_refused(captured_link) -> None:
 def test_a_link_with_no_token_is_refused(captured_link) -> None:
     with TestClient(app) as client:
         assert client.get("/auth/verify?next=/", follow_redirects=False).status_code == 400
+
+
+# --- where a brand-new account lands ------------------------------------------------------
+
+def test_a_new_account_is_not_dropped_on_someone_elses_page(captured_link) -> None:
+    """Observed on a real signup: verification succeeded and the first screen said
+    "Job introuvable."
+
+    The visitor had started signing up from a job page belonging to another account, so `next`
+    carried a deep link the new account could never open. The ownership check was right; the
+    welcome was not.
+    """
+    with TestClient(app) as client:
+        page = client.get("/auth/signup?next=/jobs/ae025623-7a2c-470d-910c-74c8f6da9df3")
+        token = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
+        assert token
+        client.post(
+            "/auth/signup",
+            data={
+                "email": "arrivant@exemple.fr",
+                "password": PASSWORD,
+                "next": "/jobs/ae025623-7a2c-470d-910c-74c8f6da9df3",
+                "_csrf": token.group(1),
+            },
+            follow_redirects=False,
+        )
+        assert captured_link
+        response = client.get(captured_link[0].replace("http://testserver", ""), follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/", (
+        f"a new account was sent to {response.headers['location']}, which it cannot open"
+    )
