@@ -472,7 +472,18 @@ def _env_effective_value(key: str) -> tuple[str | None, str]:
 
 
 def _safe_env(name: str) -> str:
-    return str(os.environ.get(name) or "").strip().strip('"').strip("'")
+    """Env value with a MATCHED pair of surrounding quotes removed, and nothing else.
+
+    `.strip('"').strip("'")` removes every quote character at either end, not a wrapping pair.
+    A secret ending in a quote came back truncated — silently, and every value in this app
+    passes through here, including API keys and SMTP passwords. Found by a CSP policy ending
+    in `'self'` losing its last character.
+    """
+    raw = str(os.environ.get(name) or "").strip()
+    for quote_char in ('"', "'"):
+        if len(raw) >= 2 and raw[0] == quote_char and raw[-1] == quote_char:
+            return raw[1:-1]
+    return raw
 
 
 def _env_bool(name: str) -> bool:
@@ -537,7 +548,15 @@ def _content_security_policy(request: Request) -> str:
         "base-uri 'self'",
         "object-src 'none'",
         "frame-ancestors 'none'",
-        "form-action 'self'",
+        # Chrome and Safari enforce form-action across the REDIRECT that follows a form POST,
+        # so `'self'` alone silently blocks every hand-off this app makes: Stripe checkout and
+        # the billing portal, and "Continuer avec Google". The server logs a successful 303 and
+        # the browser does nothing — the failure has no server-side trace at all.
+        # Only hosts this app actually 303s a form POST to are listed.
+        "form-action 'self' "
+        "https://checkout.stripe.com https://billing.stripe.com "
+        "https://accounts.google.com https://github.com "
+        "https://app.netlify.com https://www.bing.com",
         "img-src 'self' data: https:",
         "font-src 'self' data:",
         "style-src 'self' 'unsafe-inline'",
