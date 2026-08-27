@@ -175,3 +175,71 @@ def test_an_unknown_explicit_provider_fails_loudly_instead_of_silently_using_smt
     monkeypatch.setattr(app_module, "_smtp_config", lambda: _cfg())
     with pytest.raises(RuntimeError, match="mail_api_provider_unknown_mailchimp"):
         app_module._send_email(to_addr="p@exemple.fr", subject="S", body="B")
+
+
+# --- an HTTP-API-only configuration ------------------------------------------------------
+
+@pytest.fixture()
+def no_smtp(monkeypatch: pytest.MonkeyPatch):
+    """No SMTP server at all — the natural state once a provider is driven over HTTP."""
+    monkeypatch.setattr(app_module, "_smtp_config", lambda: None)
+    for key in ("MAIL_API_PROVIDER", "MAIL_API_KEY", "MAIL_FROM", "MAIL_FROM_NAME"):
+        monkeypatch.delenv(key, raising=False)
+
+
+def _configure_api_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MAIL_API_PROVIDER", "brevo")
+    monkeypatch.setenv("MAIL_API_KEY", "xkeysib-secret")
+    monkeypatch.setenv("MAIL_FROM", "contact@noyaru.com")
+    monkeypatch.setenv("MAIL_FROM_NAME", "Noyaru")
+
+
+def test_an_api_only_setup_counts_as_configured(no_smtp, monkeypatch: pytest.MonkeyPatch) -> None:
+    _configure_api_only(monkeypatch)
+    cfg = app_module._mail_config()
+    assert cfg is not None
+    assert cfg["from"] == "contact@noyaru.com"
+    assert cfg["from_name"] == "Noyaru"
+
+
+def test_email_verification_stays_on_without_an_smtp_server(
+    no_smtp, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The trap this exists to prevent: removing SMTP_HOST after moving to an HTTP provider used
+    # to switch verification OFF silently, letting every signup through unverified while
+    # sending was in fact perfectly configured.
+    monkeypatch.delenv("EMAIL_VERIFICATION_DISABLED", raising=False)
+    assert app_module._email_verification_enabled() is False
+    _configure_api_only(monkeypatch)
+    assert app_module._email_verification_enabled() is True
+
+
+def test_an_api_only_setup_actually_sends(no_smtp, monkeypatch: pytest.MonkeyPatch) -> None:
+    _configure_api_only(monkeypatch)
+    calls: list[dict] = []
+
+    class _Resp:
+        status_code = 201
+        text = ""
+
+    monkeypatch.setattr(
+        app_module.requests, "post",
+        lambda url, headers=None, json=None, timeout=None: (
+            calls.append({"url": url, "json": json or {}}) or _Resp()
+        ),
+    )
+    app_module._send_email(to_addr="p@exemple.fr", subject="S", body="B")
+    assert calls and "api.brevo.com" in calls[0]["url"]
+    assert calls[0]["json"]["sender"]["email"] == "contact@noyaru.com"
+
+
+@pytest.mark.parametrize("missing", ["MAIL_API_PROVIDER", "MAIL_API_KEY", "MAIL_FROM"])
+def test_a_half_configured_api_setup_is_not_treated_as_working(
+    no_smtp, monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    # Half-configured must read as "cannot send", not as "verification off".
+    _configure_api_only(monkeypatch)
+    monkeypatch.delenv(missing, raising=False)
+    assert app_module._mail_config() is None
+    with pytest.raises(RuntimeError, match="mail_not_configured"):
+        app_module._send_email(to_addr="p@exemple.fr", subject="S", body="B")

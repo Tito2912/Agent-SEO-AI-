@@ -48,9 +48,10 @@ def main(argv: list[str]) -> int:
         return 2
     to_addr = argv[1].strip()
 
-    cfg = seo_app._smtp_config()
+    cfg = seo_app._mail_config()
     if not cfg:
-        print("SMTP non configuré: SMTP_HOST ou l'expéditeur est absent.")
+        print("Aucun envoi possible: ni SMTP_HOST/SMTP_FROM, ni MAIL_API_PROVIDER +")
+        print("MAIL_API_KEY + MAIL_FROM ne sont renseignés.")
         print("Conséquence: _email_verification_enabled() est False, donc l'inscription")
         print("ne tente aucun envoi et ne signale aucune erreur — elle passe simplement.")
         return 1

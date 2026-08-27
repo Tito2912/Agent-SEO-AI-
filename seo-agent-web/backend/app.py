@@ -8661,6 +8661,42 @@ _MAIL_API_HOSTS: dict[str, str] = {
 }
 
 
+def _mail_config() -> dict[str, Any] | None:
+    """Everything needed to send, from EITHER an SMTP setup or an HTTP-API-only setup.
+
+    Driving a provider purely over HTTP is the point of MAIL_API_PROVIDER — Brevo's SMTP
+    password is not its transactional API key, so configuring it as an SMTP server is a lie.
+    But `_smtp_config()` returns None without SMTP_HOST, and `_email_verification_enabled()`
+    is built on it: an operator who set the API pair and removed SMTP_HOST would silently turn
+    email verification OFF and let every signup through unverified, with no error anywhere.
+    Sending would still be configured; only the switch would think otherwise.
+
+    So configuration means "we can send", by either route.
+    """
+    cfg = _smtp_config()
+    if cfg:
+        return cfg
+
+    provider = str(_safe_env("MAIL_API_PROVIDER") or "").strip().lower()
+    api_key = str(_safe_env("MAIL_API_KEY") or "").strip()
+    from_addr = str(_safe_env("MAIL_FROM") or _safe_env("SMTP_FROM") or "").strip()
+    if not (provider and api_key and from_addr):
+        return None
+    return {
+        "host": "",
+        "port": 0,
+        "username": "",
+        "password": "",
+        "from": from_addr,
+        "from_name": str(
+            _safe_env("MAIL_FROM_NAME") or _safe_env("SMTP_FROM_NAME") or _safe_env("APP_NAME") or ""
+        ).strip(),
+        "ssl": False,
+        "starttls": False,
+        "timeout_s": 10.0,
+    }
+
+
 def _mail_api_transport(cfg: dict[str, Any]) -> tuple[str, str]:
     """(provider, api_key) for the configured host, or ("", "") to use plain SMTP.
 
@@ -8699,13 +8735,14 @@ _MAIL_API_SENDERS = {
 
 def _send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -> None:
     """
-    Prefer SendGrid HTTP API when the current SMTP config matches SendGrid.
+    Prefer a provider's HTTP API over raw SMTP whenever the configuration identifies one.
 
-    Render/other PaaS environments can block outbound SMTP ports; HTTPS is much more reliable.
+    Render and other PaaS platforms commonly filter outbound SMTP ports, so HTTPS is both more
+    reliable and the only route that reports a refusal in the provider's own words.
     """
-    cfg = _smtp_config()
+    cfg = _mail_config()
     if not cfg:
-        raise RuntimeError("smtp_not_configured")
+        raise RuntimeError("mail_not_configured")
     provider, api_key = _mail_api_transport(cfg)
     print(
         f"[MAIL] dispatch host={cfg.get('host')}:{cfg.get('port')} "
@@ -8908,7 +8945,7 @@ def _email_verify_ttl_s() -> int:
 def _email_verification_enabled() -> bool:
     if _env_bool("EMAIL_VERIFICATION_DISABLED"):
         return False
-    return bool(_smtp_config())
+    return bool(_mail_config())
 
 
 def _email_verify_token_hash(token: str) -> str:
