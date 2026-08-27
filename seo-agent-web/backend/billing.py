@@ -835,9 +835,43 @@ def sync_from_checkout_session(db: Session, *, session_id: str) -> BillingSubscr
     uid = str(meta.get("user_id") or "").strip() or str(sess.get("client_reference_id") or "").strip()
     if uid and customer_id:
         upsert_customer_mapping(db, user_id=uid, stripe_customer_id=customer_id)
+    if not sub_id and customer_id:
+        # Stripe attaches the subscription to the Checkout Session ASYNCHRONOUSLY, so on the
+        # redirect back from payment `session.subscription` is frequently still null. The
+        # webhook normally fills it in moments later — but if the webhook is not configured,
+        # or its signing secret does not match, nothing ever does: the customer has paid,
+        # sees "Free", and no error is recorded anywhere. Observed on a real test purchase,
+        # which left a customer mapping and no subscription.
+        # Asking Stripe directly makes the first purchase work on its own.
+        sub_id = _latest_subscription_id_for_customer(customer_id)
     if not sub_id:
         return None
     return sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+
+
+def _latest_subscription_id_for_customer(stripe_customer_id: str) -> str:
+    """The subscription to trust for a customer: an active one, else the most recent.
+
+    `status="all"` on purpose — a subscription can be `incomplete` for a few seconds after
+    payment, and returning nothing in that window is what leaves a paying customer on Free.
+    """
+    cid = (stripe_customer_id or "").strip()
+    if not cid:
+        return ""
+    try:
+        listing = _stripe_to_dict(
+            stripe.Subscription.list(customer=cid, status="all", limit=10)  # type: ignore[attr-defined]
+        )
+    except Exception:
+        return ""
+    rows = [r for r in (listing.get("data") or []) if isinstance(r, dict)]
+    if not rows:
+        return ""
+    rows.sort(key=lambda r: int(r.get("created") or 0), reverse=True)
+    for row in rows:
+        if str(row.get("status") or "").strip().lower() in ACTIVE_SUB_STATUSES:
+            return str(row.get("id") or "").strip()
+    return str(rows[0].get("id") or "").strip()
 
 
 def construct_webhook_event(*, payload: bytes, sig_header: str) -> dict[str, Any]:
