@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import UTC, datetime
 from typing import Any
@@ -20,6 +21,8 @@ except ImportError:  # pragma: no cover
     from models import BillingCustomer, BillingSubscription, UsageEvent  # type: ignore
 
 
+logger = logging.getLogger("seo_agent.billing")
+
 ACTIVE_SUB_STATUSES: set[str] = {"active", "trialing"}
 
 PLAN_ORDER: dict[str, int] = {"free": 0, "solo": 1, "pro": 2, "business": 3}
@@ -32,14 +35,38 @@ def _stripe_obj_id(value: Any) -> str:
     return str(value or "").strip()
 
 def _stripe_to_dict(obj: Any) -> dict[str, Any]:
+    """Every Stripe response this module reads passes through here.
+
+    It used to try `to_dict_recursive()` and swallow the failure. That method was removed in
+    stripe-python 8, and StripeObject stopped subclassing dict — so on stripe 15 this returned
+    {} for EVERY response, silently. The whole billing integration was inert: checkout
+    reconciliation found no subscription, webhooks decoded to nothing, invoices came back
+    empty. A customer paid, the plan stayed Free, and no error was recorded anywhere, because
+    from the code's point of view Stripe had simply answered with nothing.
+
+    A conversion failure is now logged instead of hidden. Reading nothing where a response was
+    expected is a bug every time, and the silence is what let this survive a whole SDK major.
+    """
     if not obj:
         return {}
     if isinstance(obj, dict):
         return obj
-    try:
-        return obj.to_dict_recursive()
-    except Exception:
-        return {}
+    for attempt in ("to_dict", "to_dict_recursive"):  # stripe >= 8, then older SDKs
+        method = getattr(obj, attempt, None)
+        if not callable(method):
+            continue
+        try:
+            converted = method()
+        except Exception as exc:
+            logger.warning("[STRIPE] %s() failed on %s: %s", attempt, type(obj).__name__, exc)
+            continue
+        if isinstance(converted, dict):
+            return converted
+    logger.error(
+        "[STRIPE] cannot read a %s response — the SDK API changed; billing is inert until fixed",
+        type(obj).__name__,
+    )
+    return {}
 
 
 def _env(name: str) -> str:
@@ -496,12 +523,7 @@ def sync_subscription_from_stripe(db: Session, *, stripe_subscription_id: str) -
     sid = (stripe_subscription_id or "").strip()
     if not sid:
         return None
-    sub = stripe.Subscription.retrieve(sid)  # type: ignore[attr-defined]
-    if not isinstance(sub, dict):
-        try:
-            sub = sub.to_dict_recursive()
-        except Exception:
-            sub = {}
+    sub = _stripe_to_dict(stripe.Subscription.retrieve(sid))  # type: ignore[attr-defined]
     return upsert_subscription(db, stripe_subscription=sub)
 
 
@@ -902,12 +924,9 @@ def construct_webhook_event(*, payload: bytes, sig_header: str) -> dict[str, Any
     if not secret:
         raise RuntimeError("stripe_webhook_secret_missing")
     event = stripe.Webhook.construct_event(payload, sig_header, secret)  # type: ignore[attr-defined]
-    if isinstance(event, dict):
-        return event
-    try:
-        return event.to_dict_recursive()
-    except Exception:
-        return {}
+    # Same conversion as everywhere else: a webhook that decodes to {} does nothing at all,
+    # which is how renewals and cancellations would have been lost even once configured.
+    return _stripe_to_dict(event)
 
 
 def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
