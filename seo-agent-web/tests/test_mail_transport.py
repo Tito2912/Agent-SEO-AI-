@@ -243,3 +243,58 @@ def test_a_half_configured_api_setup_is_not_treated_as_working(
     assert app_module._mail_config() is None
     with pytest.raises(RuntimeError, match="mail_not_configured"):
         app_module._send_email(to_addr="p@exemple.fr", subject="S", body="B")
+
+
+@pytest.mark.parametrize(
+    "body,headers,expected",
+    [
+        ({"messageId": "<abc@brevo>"}, {}, "<abc@brevo>"),        # Brevo
+        ({"id": "re_123"}, {}, "re_123"),                          # Resend
+        ({}, {"X-Message-Id": "sg_456"}, "sg_456"),                # SendGrid, header only
+    ],
+)
+def test_the_providers_message_id_is_logged(
+    body, headers, expected, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Accepted is not delivered. Without the provider's id, finding this message in THEIR logs
+    # — where the delivery answer actually lives — means guessing from a timestamp.
+    import json as _json
+
+    class _Resp:
+        status_code = 201
+        text = _json.dumps(body)
+
+        def json(self):
+            return body
+
+    _Resp.headers = headers
+
+    printed: list[str] = []
+    monkeypatch.setenv("MAIL_API_PROVIDER", "brevo")
+    monkeypatch.setenv("MAIL_API_KEY", "k")
+    monkeypatch.setattr(app_module, "_smtp_config", lambda: _cfg())
+    monkeypatch.setattr(app_module.requests, "post", lambda *a, **k: _Resp())
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(str(x) for x in a)))
+
+    app_module._send_email(to_addr="p@exemple.fr", subject="S", body="B")
+    assert any(expected in line for line in printed), printed
+
+
+def test_a_provider_that_returns_no_id_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Resp:
+        status_code = 202
+        text = ""
+        headers: dict[str, str] = {}
+
+        def json(self):
+            raise ValueError("no body")
+
+    printed: list[str] = []
+    monkeypatch.setenv("MAIL_API_PROVIDER", "sendgrid")
+    monkeypatch.setenv("MAIL_API_KEY", "k")
+    monkeypatch.setattr(app_module, "_smtp_config", lambda: _cfg())
+    monkeypatch.setattr(app_module.requests, "post", lambda *a, **k: _Resp())
+    monkeypatch.setattr("builtins.print", lambda *a, **k: printed.append(" ".join(str(x) for x in a)))
+
+    app_module._send_email(to_addr="p@exemple.fr", subject="S", body="B")
+    assert any("aucun identifiant" in line for line in printed), printed

@@ -8523,46 +8523,32 @@ def _sendgrid_api_key_from_smtp_cfg(cfg: dict[str, Any]) -> str:
 def _sendgrid_send_email(
     *, api_key: str, to_addr: str, subject: str, body: str, from_addr: str, from_name: str = "", html_body: str = ""
 ) -> None:
+    """SendGrid transactional API."""
     key = str(api_key or "").strip()
     if not key:
         raise RuntimeError("sendgrid_api_key_missing")
 
-    to_masked = _mask_email(to_addr)
-    from_masked = _mask_email(from_addr)
-    try:
-        print(f"[MAIL] sendgrid api sending to={to_masked} from={from_masked}", flush=True)
-        from_obj: dict[str, str] = {"email": str(from_addr).strip()}
-        if str(from_name or "").strip():
-            from_obj["name"] = str(from_name).strip()
+    from_obj: dict[str, str] = {"email": str(from_addr).strip()}
+    if str(from_name or "").strip():
+        from_obj["name"] = str(from_name).strip()
 
-        content_blocks: list[dict[str, str]] = [{"type": "text/plain", "value": str(body)}]
-        if html_body:
-            content_blocks.append({"type": "text/html", "value": str(html_body)})
+    content_blocks: list[dict[str, str]] = [{"type": "text/plain", "value": str(body)}]
+    if html_body:
+        content_blocks.append({"type": "text/html", "value": str(html_body)})
 
-        resp = requests.post(
-            "https://api.sendgrid.com/v3/mail/send",
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "personalizations": [{"to": [{"email": str(to_addr).strip()}]}],
-                "from": from_obj,
-                "subject": str(subject),
-                "content": content_blocks,
-            },
-            timeout=15.0,
-        )
-    except Exception as e:
-        print(f"[MAIL] sendgrid api error: {type(e).__name__}: {e}", flush=True)
-        raise
-
-    if resp.status_code >= 400:
-        detail = (resp.text or "").strip().replace("\n", " ")[:500]
-        print(f"[MAIL] sendgrid api failed status={resp.status_code} detail={detail}", flush=True)
-        raise RuntimeError(f"sendgrid_api_http_{resp.status_code}")
-
-    print(f"[MAIL] sendgrid api accepted status={resp.status_code} to={to_masked}", flush=True)
+    _http_mail_post(
+        provider="sendgrid",
+        url="https://api.sendgrid.com/v3/mail/send",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        payload={
+            "personalizations": [{"to": [{"email": str(to_addr).strip()}]}],
+            "from": from_obj,
+            "subject": str(subject),
+            "content": content_blocks,
+        },
+        to_addr=to_addr,
+        from_addr=from_addr,
+    )
 
 
 def _brevo_send_email(
@@ -8647,7 +8633,32 @@ def _http_mail_post(
         print(f"[MAIL] {provider} api failed status={resp.status_code} detail={detail}", flush=True)
         raise RuntimeError(f"{provider}_api_http_{resp.status_code}")
 
-    print(f"[MAIL] {provider} api accepted status={resp.status_code} to={to_masked}", flush=True)
+    # Accepted is not delivered. The provider's own message id is the only way to find this
+    # message in THEIR logs, which is where the answer lives once we know we handed it over.
+    message_id = ""
+    try:
+        data = resp.json()
+        if isinstance(data, dict):
+            for field in ("messageId", "message_id", "id"):
+                value = data.get(field)
+                if isinstance(value, str) and value.strip():
+                    message_id = value.strip()
+                    break
+    except Exception:
+        pass
+    if not message_id:
+        # SendGrid returns an empty body and puts the id in a header. Guarded like the body
+        # above: the mail has already been accepted, and nothing about LOGGING it may turn a
+        # successful send into a failed one.
+        try:
+            message_id = str((resp.headers or {}).get("X-Message-Id") or "").strip()
+        except Exception:
+            message_id = ""
+    print(
+        f"[MAIL] {provider} api accepted status={resp.status_code} to={to_masked}"
+        + (f" message_id={message_id}" if message_id else " (aucun identifiant renvoyé)"),
+        flush=True,
+    )
 
 
 # Which HTTP API a given SMTP host implies. Keyed on host so switching provider stays an
