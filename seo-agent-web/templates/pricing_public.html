@@ -46,7 +46,7 @@
           {% endfor %}
         </ul>
         <div class="plan-limits">
-          {{ plan.limits.projects }} site{{ 's' if plan.limits.projects > 1 else '' }} · {{ plan.limits.pages_crawled_month }} pages/mois · {{ plan.limits.assistant_messages_month }} messages IA/mois
+          {{ plan.limits.projects }} site{{ 's' if plan.limits.projects > 1 else '' }} · {{ plan.limits.pages_crawled_month }} pages/mois · {{ plan.limits.assistant_messages_month }} messages IA/mois{% if plan.limits.ai_corrections_month %} · {{ plan.limits.ai_corrections_month }} corrections/mois{% endif %}
         </div>
         <div class="row-actions">
           {% if request.state.user %}
