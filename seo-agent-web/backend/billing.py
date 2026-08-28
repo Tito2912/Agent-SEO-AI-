@@ -728,6 +728,39 @@ def _release_schedule_if_any(stripe_subscription: dict[str, Any]) -> None:
         return
 
 
+def cancel_scheduled_plan_change(db: Session, *, user_id: str) -> bool:
+    """Release the schedule holding a booked plan change, so the customer simply keeps their plan.
+
+    The escape used to be implicit: only re-upgrading released the schedule (via
+    `_release_schedule_if_any`), which meant a customer who simply changed their mind had to
+    perform an unrelated plan change or write to support.
+
+    Unlike `_release_schedule_if_any`, a failure here is NOT swallowed — this one was asked for
+    by a person who is waiting to be told whether it worked. Returns False when there was
+    nothing to cancel; raises when Stripe refused.
+    """
+    sub = subscription_for_user(db, user_id=user_id)
+    if not sub:
+        return False
+    data = getattr(sub, "stripe_data", None)
+    schedule_id = _stripe_schedule_id_for_subscription(data) if isinstance(data, dict) else ""
+    if not schedule_id:
+        return False
+
+    stripe_init()
+    if not stripe_enabled():
+        raise RuntimeError("stripe_not_configured")
+    stripe.SubscriptionSchedule.release(schedule_id)  # type: ignore[attr-defined]
+
+    # Re-read the subscription: `schedule` is now null there, and the banner is drawn from it.
+    # Skipping this leaves the page announcing a change that no longer exists.
+    sub_id = str(getattr(sub, "stripe_subscription_id", "") or "").strip()
+    if sub_id:
+        sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+    logger.info("[STRIPE] released scheduled plan change %s for user %s", schedule_id, user_id)
+    return True
+
+
 def pending_plan_change(db: Session, *, user_id: str) -> dict[str, Any] | None:
     """The plan change already scheduled for the end of the period, if any.
 

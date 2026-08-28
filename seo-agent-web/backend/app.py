@@ -11930,6 +11930,46 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
         return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
 
 
+@app.post("/billing/cancel-scheduled-change")
+def billing_cancel_scheduled_change(request: Request) -> RedirectResponse:
+    """Undo a booked plan change: the customer keeps the plan they are on."""
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+    retry_after = _rate_limit_retry_after(
+        bucket="billing_cancel_sched_user", subject=str(getattr(user, "id", "")), limit=10, window_s=10 * 60
+    )
+    if isinstance(retry_after, int):
+        return RedirectResponse(
+            url=_path_with_flash("/billing", err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
+            status_code=303,
+        )
+    try:
+        with DB.session() as db:
+            released = billing.cancel_scheduled_plan_change(db, user_id=str(user.id))
+    except Exception as e:
+        _audit_log(
+            request, action="billing.cancel_scheduled_change", status="error", user=user,
+            meta={"error": str(e)[:240]},
+        )
+        return RedirectResponse(
+            url=_path_with_flash("/billing", err="Impossible d'annuler le changement pour le moment. Réessaie dans un instant."),
+            status_code=303,
+        )
+    _audit_log(
+        request, action="billing.cancel_scheduled_change",
+        status="ok" if released else "nothing_to_cancel", user=user,
+    )
+    if not released:
+        # Already gone (a second click, or the change landed meanwhile): say so plainly rather
+        # than claim to have undone something.
+        return RedirectResponse(url=_path_with_flash("/billing", msg="Aucun changement de plan n'était programmé."), status_code=303)
+    return RedirectResponse(
+        url=_path_with_flash("/billing", msg="Changement de plan annulé. Tu restes sur ton plan actuel."),
+        status_code=303,
+    )
+
+
 @app.post("/billing/portal")
 def billing_portal(request: Request) -> RedirectResponse:
     user = getattr(request.state, "user", None)

@@ -227,3 +227,79 @@ def test_an_unreadable_schedule_still_warns_and_never_500s(monkeypatch) -> None:
 
     assert response.status_code == 200, "a Stripe outage took the billing page down"
     assert "Un changement de plan est déjà demandé" in response.text
+
+
+# --- Cancelling the booked change -------------------------------------------------------------
+# Until this existed the only escape was to perform an unrelated upgrade, which happens to call
+# `_release_schedule_if_any`. A customer who simply changed their mind had to guess that, or
+# write to support.
+
+
+def _csrf_post(client, path: str, *, form_page: str = "/billing"):
+    """POST the way the page does: CSRF-protected, so a test that skips it just gets a 403."""
+    import re
+
+    html = client.get(form_page).text
+    m = re.search(r'name="_csrf"\s+value="([^"]*)"', html)
+    assert m, "no CSRF token on the page"
+    return client.post(path, data={"_csrf": m.group(1)}, follow_redirects=False)
+
+
+def _released(monkeypatch) -> list[str]:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        billing.stripe.SubscriptionSchedule, "release", lambda sid, **_k: calls.append(sid)
+    )
+    monkeypatch.setattr(
+        billing, "sync_subscription_from_stripe", lambda db, *, stripe_subscription_id: None
+    )
+    return calls
+
+
+def test_the_customer_can_cancel_the_booked_change(monkeypatch) -> None:
+    _install_schedule(monkeypatch)
+    released = _released(monkeypatch)
+    client = _customer(schedule_id=SCHEDULE_ID)
+
+    assert "Annuler ce changement" in client.get("/billing").text, "no way out was offered"
+
+    response = _csrf_post(client, "/billing/cancel-scheduled-change")
+    assert response.status_code == 303
+    assert released == [SCHEDULE_ID], "the Stripe schedule was never released"
+    assert "annul" in response.headers["location"].lower()
+
+
+def test_cancelling_twice_does_not_claim_to_have_undone_something(monkeypatch) -> None:
+    # Second click, or the change landed meanwhile. Saying "cancelled" would be a lie.
+    _install_schedule(monkeypatch)
+    released = _released(monkeypatch)
+    client = _customer(schedule_id=None)
+
+    response = _csrf_post(client, "/billing/cancel-scheduled-change")
+    assert response.status_code == 303
+    assert released == [], "Stripe was called for a schedule that does not exist"
+    assert "Aucun+changement" in response.headers["location"].replace("%20", "+")
+
+
+def test_a_stripe_refusal_is_reported_not_swallowed(monkeypatch) -> None:
+    """`_release_schedule_if_any` ignores failures because nobody is waiting on it. Here someone
+    clicked a button and must be told whether it worked."""
+    _install_schedule(monkeypatch)
+
+    def _boom(sid, **_k):
+        raise RuntimeError("stripe is down")
+
+    monkeypatch.setattr(billing.stripe.SubscriptionSchedule, "release", _boom)
+    client = _customer(schedule_id=SCHEDULE_ID)
+
+    response = _csrf_post(client, "/billing/cancel-scheduled-change")
+    assert response.status_code == 303
+    assert "err=" in response.headers["location"], "a failed cancellation reported success"
+
+
+def test_the_escape_is_offered_even_when_the_details_could_not_be_read(monkeypatch) -> None:
+    # Cancelling reads the schedule id from the stored subscription, not from the lookup that
+    # just failed, so this state must not be a dead end.
+    _install_schedule(monkeypatch, raises=True)
+    body = _customer(schedule_id=SCHEDULE_ID).get("/billing").text
+    assert "Annuler ce changement" in body

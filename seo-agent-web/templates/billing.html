@@ -168,6 +168,15 @@
           <strong>Un changement de plan est déjà demandé</strong> et prendra effet à la fin de la
           période en cours. Son détail n'a pas pu être récupéré à l'instant ; recharge la page.
         {% endif %}
+        {#
+          Outside the branch on purpose: cancelling reads the schedule id from the stored
+          subscription, not from the lookup that just failed, so a customer whose details could
+          not be fetched can still get out.
+        #}
+        <form method="post" action="/billing/cancel-scheduled-change" class="inline" style="margin-top:10px;">
+          <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+          <button class="btn" type="submit">Annuler ce changement</button>
+        </form>
       </div>
     {% endif %}
 
