@@ -51,9 +51,11 @@
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
     </div>
 
+    {% set defects = issues | rejectattr('is_delta') | list %}
+    {% set changes = issues | selectattr('is_delta') | list %}
     {% if issues %}
       {% set ns = namespace(errors=0, warnings=0, notices=0) %}
-      {% for it in issues %}
+      {% for it in defects %}
         {% if it.severity == 'error' %}{% set ns.errors = ns.errors + 1 %}
         {% elif it.severity == 'warning' %}{% set ns.warnings = ns.warnings + 1 %}
         {% elif it.severity == 'notice' %}{% set ns.notices = ns.notices + 1 %}
@@ -149,7 +151,7 @@
     </div>
 
     <section class="card">
-      {% if not issues %}
+      {% if not defects %}
         <p class="muted">Aucune anomalie pour ces filtres.</p>
       {% else %}
         <div class="table-wrap">
@@ -164,7 +166,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for it in issues %}
+              {% for it in defects %}
                 <tr>
                   <td>
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
@@ -196,5 +198,43 @@
         </div>
       {% endif %}
     </section>
+
+    {% if changes %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2 style="margin:0; font-size:15px;">Changements depuis le crawl précédent</h2>
+        </div>
+        <p class="muted small">
+          Ce ne sont pas des anomalies : ces lignes indiquent ce qui a bougé sur le site entre les
+          deux derniers crawls. Une correction appliquée fait normalement apparaître le changement
+          correspondant ici. Elles ne comptent pas dans le total d'anomalies.
+        </p>
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Changement</th>
+                <th>Catégorie</th>
+                <th class="num">Pages</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in changes %}
+                <tr>
+                  <td>
+                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
+                    <div class="muted small mono">{{ it.key }}</div>
+                  </td>
+                  <td>{{ cat_labels.get(it.category, it.category) }}</td>
+                  <td class="num mono">
+                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
   {% endif %}
 {% endblock %}
