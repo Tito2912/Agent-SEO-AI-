@@ -151,107 +151,87 @@
       <span class="muted small">Upgrade instantané · Downgrade fin de période</span>
     </div>
 
+    {% if pending_change %}
+      <div class="setting-note" style="margin-bottom:12px;">
+        {% if pending_change.known %}
+          <strong>Changement de plan déjà demandé.</strong>
+          Ton abonnement passera en <strong>{{ pending_change.label }}</strong>
+          {% if pending_change.effective_at %}
+            le <strong>{{ pending_change.effective_at.strftime('%d/%m/%Y') }}</strong>,
+          {% else %}
+            à la fin de la période en cours,
+          {% endif %}
+          à la fin de la période déjà payée. D'ici là tu gardes {{ plan.label if plan else plan_key }}
+          et tous ses quotas — rien n'est prélevé pour ce changement.
+        {% else %}
+          <strong>Un changement de plan est déjà demandé</strong> et prendra effet à la fin de la
+          période en cours. Son détail n'a pas pu être récupéré à l'instant ; recharge la page.
+        {% endif %}
+      </div>
+    {% endif %}
+
     {% if not stripe_ready %}
       <p class="muted">Stripe n'est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
     {% else %}
       {% set rank = {'free': 0, 'solo': 1, 'pro': 2, 'business': 3} %}
       {% set current_rank = rank.get(plan_key, 0) %}
+      {#
+        One macro instead of three near-identical cards: the scheduled-downgrade state has to be
+        reflected on every plan, and three copies of that logic would drift apart.
+      #}
+      {% macro plan_card(key) %}
+        {% set plan = catalog[key] %}
+        {% set is_current = plan_key == key %}
+        {% set is_scheduled = pending_change and pending_change.known and pending_change.plan_key == key %}
+        {% set is_upgrade = subscription_active and rank.get(key, 0) > current_rank %}
+        <div class="card">
+          <div class="card-title-row">
+            <h2>{{ plan.label }}</h2>
+            {% if is_scheduled %}
+              <span class="badge notice">changement programmé</span>
+            {% else %}
+              <span class="badge notice">{{ plan.price_label }}</span>
+            {% endif %}
+          </div>
+          <ul class="examples">
+            {% for f in plan.features %}
+              <li>{{ f }}</li>
+            {% endfor %}
+          </ul>
+          <div class="row-actions">
+            {% if prices[key] %}
+              <form method="post" action="/billing/checkout" class="inline">
+                <input type="hidden" name="plan_key" value="{{ key }}" />
+                <button
+                  type="submit"
+                  class="btn primary"
+                  {% if is_current or is_scheduled %}disabled{% endif %}
+                  {% if is_scheduled %}title="Ce changement est déjà demandé{% if pending_change.effective_at %}, il prend effet le {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}."{% endif %}
+                >
+                  {% if is_current %}
+                    Plan actuel
+                  {% elif is_scheduled %}
+                    Déjà programmé{% if pending_change.effective_at %} · {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}
+                  {% elif is_upgrade %}
+                    Upgrade
+                  {% elif subscription_active %}
+                    Downgrade fin de période
+                  {% else %}
+                    Choisir {{ plan.label }}
+                  {% endif %}
+                </button>
+              </form>
+            {% else %}
+              <span class="muted small">Price ID manquant (Render env).</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endmacro %}
+
       <div class="grid three">
-        <div class="card">
-          <div class="card-title-row">
-            <h2>{{ catalog.solo.label }}</h2>
-            <span class="badge notice">{{ catalog.solo.price_label }}</span>
-          </div>
-          <ul class="examples">
-            {% for f in catalog.solo.features %}
-              <li>{{ f }}</li>
-            {% endfor %}
-          </ul>
-          <div class="row-actions">
-            {% if prices.solo %}
-              <form method="post" action="/billing/checkout" class="inline">
-                <input type="hidden" name="plan_key" value="solo" />
-                <button type="submit" class="btn primary" {% if plan_key == 'solo' %}disabled{% endif %}>
-                  {% if plan_key == 'solo' %}
-                    Plan actuel
-                  {% elif subscription_active and rank.get('solo', 0) > current_rank %}
-                    Upgrade
-                  {% elif subscription_active %}
-                    Downgrade fin de période
-                  {% else %}
-                    Choisir Solo
-                  {% endif %}
-                </button>
-              </form>
-            {% else %}
-              <span class="muted small">Price ID manquant (Render env).</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title-row">
-            <h2>{{ catalog.pro.label }}</h2>
-            <span class="badge notice">{{ catalog.pro.price_label }}</span>
-          </div>
-          <ul class="examples">
-            {% for f in catalog.pro.features %}
-              <li>{{ f }}</li>
-            {% endfor %}
-          </ul>
-          <div class="row-actions">
-            {% if prices.pro %}
-              <form method="post" action="/billing/checkout" class="inline">
-                <input type="hidden" name="plan_key" value="pro" />
-                <button type="submit" class="btn primary" {% if plan_key == 'pro' %}disabled{% endif %}>
-                  {% if plan_key == 'pro' %}
-                    Plan actuel
-                  {% elif subscription_active and rank.get('pro', 0) > current_rank %}
-                    Upgrade
-                  {% elif subscription_active %}
-                    Downgrade fin de période
-                  {% else %}
-                    Choisir Pro
-                  {% endif %}
-                </button>
-              </form>
-            {% else %}
-              <span class="muted small">Price ID manquant (Render env).</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title-row">
-            <h2>{{ catalog.business.label }}</h2>
-            <span class="badge notice">{{ catalog.business.price_label }}</span>
-          </div>
-          <ul class="examples">
-            {% for f in catalog.business.features %}
-              <li>{{ f }}</li>
-            {% endfor %}
-          </ul>
-          <div class="row-actions">
-            {% if prices.business %}
-              <form method="post" action="/billing/checkout" class="inline">
-                <input type="hidden" name="plan_key" value="business" />
-                <button type="submit" class="btn primary" {% if plan_key == 'business' %}disabled{% endif %}>
-                  {% if plan_key == 'business' %}
-                    Plan actuel
-                  {% elif subscription_active and rank.get('business', 0) > current_rank %}
-                    Upgrade
-                  {% elif subscription_active %}
-                    Downgrade fin de période
-                  {% else %}
-                    Choisir Business
-                  {% endif %}
-                </button>
-              </form>
-            {% else %}
-              <span class="muted small">Price ID manquant (Render env).</span>
-            {% endif %}
-          </div>
-        </div>
+        {{ plan_card('solo') }}
+        {{ plan_card('pro') }}
+        {{ plan_card('business') }}
       </div>
     {% endif %}
   </div>

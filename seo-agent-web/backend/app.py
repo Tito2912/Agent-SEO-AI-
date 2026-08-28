@@ -11775,6 +11775,12 @@ def billing_page(
             db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
         )
         invoices = billing.list_invoices(db, user_id=str(user.id))
+        try:
+            pending_change = billing.pending_plan_change(db, user_id=str(user.id)) if sub_active else None
+        except Exception as e:
+            # Informational only: never take the billing page down over a banner.
+            logger.warning("[STRIPE] pending plan change unreadable: %s: %s", type(e).__name__, e)
+            pending_change = None
 
     def _limit_label(key: str) -> str:
         v = limits.get(key)
@@ -11804,6 +11810,7 @@ def billing_page(
             "plan": plan,
             "subscription": sub,
             "subscription_active": sub_active,
+            "pending_change": pending_change,
             "limits": limits,
             "limits_labels": {
                 "projects": _limit_label("projects"),

@@ -728,6 +728,59 @@ def _release_schedule_if_any(stripe_subscription: dict[str, Any]) -> None:
         return
 
 
+def pending_plan_change(db: Session, *, user_id: str) -> dict[str, Any] | None:
+    """The plan change already scheduled for the end of the period, if any.
+
+    Nothing records it locally — a downgrade lives in a Stripe `subscription_schedule`, and the
+    stored subscription object only carries its id. So this reads the source of truth, but only
+    when that id is present: an account with no scheduled change costs no API call, which is the
+    ordinary case on every /billing render.
+
+    Returns {plan_key, label, effective_at, known} or None. `known=False` means a change IS
+    pending but Stripe could not be read: better a vague warning than a page that invites the
+    customer to request the same downgrade twice.
+    """
+    sub = subscription_for_user(db, user_id=user_id)
+    if not sub:
+        return None
+    data = getattr(sub, "stripe_data", None)
+    schedule_id = _stripe_obj_id((data or {}).get("schedule")) if isinstance(data, dict) else ""
+    if not schedule_id:
+        return None
+
+    current_price = str(getattr(sub, "stripe_price_id", "") or "").strip()
+    try:
+        sched = _stripe_to_dict(stripe.SubscriptionSchedule.retrieve(schedule_id))  # type: ignore[attr-defined]
+    except Exception as e:
+        logger.warning("[STRIPE] schedule %s unreadable: %s: %s", schedule_id, type(e).__name__, e)
+        return {"plan_key": "", "label": "", "effective_at": None, "known": False}
+    if not sched or str(sched.get("status") or "").strip().lower() not in {"active", "not_started"}:
+        return None
+
+    for phase in sched.get("phases") or []:
+        if not isinstance(phase, dict):
+            continue
+        items = phase.get("items") if isinstance(phase.get("items"), list) else []
+        price_id = _stripe_obj_id(items[0].get("price")) if items and isinstance(items[0], dict) else ""
+        if not price_id or price_id == current_price:
+            continue  # the phase the customer is living in right now
+        plan_key = plan_for_price_id(price_id)
+        if not plan_key:
+            continue
+        start = phase.get("start_date")
+        try:
+            effective_at = datetime.fromtimestamp(int(start), tz=UTC) if start else None
+        except (TypeError, ValueError, OSError):
+            effective_at = None
+        return {
+            "plan_key": plan_key,
+            "label": str((plan_catalog().get(plan_key) or {}).get("label") or plan_key.title()),
+            "effective_at": effective_at,
+            "known": True,
+        }
+    return None
+
+
 def _invoice_is_settled(invoice_id: str) -> tuple[bool, str]:
     """Did this invoice actually collect its money?
 
