@@ -16772,6 +16772,17 @@ def _issue_evidence_srcs(issue_block: Any) -> list[str]:
     return out[:30]
 
 
+# Target windows for the length families, derived from the CRAWLER's own thresholds
+# (seo_audit.py: TITLE_TOO_LONG=70 / TITLE_TOO_SHORT=15, DESC_TOO_LONG=160 / DESC_TOO_SHORT=100).
+# They sit just under the ceiling, not far below it: the first model-written PR on a customer
+# account (voiceoverstudioai.com #2) cut titles from 81 to 47-50 because the hint asked for
+# 50-60 while nothing is flagged until 70 — the model obeyed, and ~20 characters of keyword
+# surface were dropped on every page for no gain. The margin absorbs a template suffix
+# (" | Marque") that lands on the RENDERED string. `test_length_hint_windows.py` fails if these
+# ever drift outside the crawler's thresholds.
+_LENGTH_WINDOWS: dict[str, tuple[int, int]] = {"title": (60, 68), "description": (140, 155)}
+
+
 def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str) -> str:
     """Build a corrector hint from the crawler's `length_samples` (rendered value + length per
     page), so the AI targets the optimal window on the RENDERED string (template suffix incl.)."""
@@ -16785,7 +16796,8 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
                     samples[u] = info
     if not samples:
         return ""
-    window = "50-60 caractères" if kind == "title" else "120-160 caractères"
+    low, high = _LENGTH_WINDOWS["title" if kind == "title" else "description"]
+    window = f"{low}-{high} caractères"
     label = "titre" if kind == "title" else "meta description"
     lines = []
     for u, info in list(samples.items())[:25]:
@@ -16797,6 +16809,11 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
         f"template inclus) et sa longueur réelle pour chaque page. Vise un RENDU de {window}. "
         f"Le rendu = ta valeur source + un éventuel suffixe de template (ex. ' | Marque') : ajuste la "
         f"source pour que le RENDU entre dans la fenêtre (ne te fie pas à la seule longueur de la source).\n"
+        f"NE RACCOURCIS PAS PLUS QUE NÉCESSAIRE : vise le HAUT de la fenêtre ({high} car.), pas le bas. "
+        f"Un {label} nettement plus court que la fenêtre perd de la surface de mots-clés sans rien "
+        f"corriger. Retire la partie la MOINS informative (une clause de fin, un qualificatif redondant) "
+        f"et conserve la marque, l'année et les termes de recherche déjà présents ; ne réécris pas "
+        f"depuis zéro et ne traduis jamais : garde la langue de la page.\n"
         + "\n".join(lines)
     )
 
