@@ -20,6 +20,35 @@ Severity = str  # "error" | "warning" | "notice"
 
 SEVERITY_ORDER: dict[Severity, int] = {"error": 0, "warning": 1, "notice": 2}
 
+# Between-crawl DELTA metrics (Ahrefs marks these `[Δ]`). They describe what MOVED since the
+# previous crawl, not something wrong with the site, and Ahrefs shows "—" for them instead of an
+# Actual-issues count. Listing them next to defects, with a "+1" in the Évolution column, makes a
+# successful correction read as a regression the agent caused: fixing a canonical necessarily
+# raises `canonical_url_changed` on the very next crawl. They are counted apart and rendered
+# apart. Their siblings (`title_tag_changed`, `meta_description_changed`, `h1_tag_changed`,
+# `word_count_changed`) already have their emission zeroed in seo_audit.py for the same reason;
+# these three still emit because, unlike those, the movement itself is worth seeing.
+DELTA_ISSUE_KEYS: frozenset[str] = frozenset(
+    {
+        "canonical_url_changed",
+        "indexable_page_became_non_indexable",
+        "noindex_page_became_indexable",
+        "title_tag_changed",
+        "meta_description_changed",
+        "h1_tag_changed",
+        "word_count_changed",
+        "serp_title_changed",
+        "redirect_target_changed",
+        "robots_txt_changed",
+    }
+)
+
+
+def is_delta_issue_key(key: str) -> bool:
+    """True for a between-crawl change metric rather than a site defect."""
+    return str(key or "") in DELTA_ISSUE_KEYS
+
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Keys that are present in report.json but are not shown as "issues" in the UI.
@@ -1171,8 +1200,13 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         elif prev_issues is not None:
             change = count
 
-        by_severity[meta_info.severity] = by_severity.get(meta_info.severity, 0) + count
-        by_category[meta_info.category] = by_category.get(meta_info.category, 0) + count
+        is_delta = is_delta_issue_key(str(key))
+        if is_delta:
+            # A change metric has no "previous count" worth diffing — the count IS the change.
+            change = None
+        else:
+            by_severity[meta_info.severity] = by_severity.get(meta_info.severity, 0) + count
+            by_category[meta_info.category] = by_category.get(meta_info.category, 0) + count
 
         if meta_info.severity == "error" and str(key) != "bad_status":
             # `bad_status` is a legacy, catch-all counter; rely on per-page status_code/error instead.
@@ -1186,6 +1220,7 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
                 "severity": meta_info.severity,
                 "count": count,
                 "change": change,
+                "is_delta": is_delta,
             }
         )
 
@@ -1197,7 +1232,8 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
 
     issue_rows.sort(key=lambda r: (SEVERITY_ORDER.get(r["severity"], 99), -int(r["count"]), r["label"]))
 
-    top_issues = issue_rows[:10]
+    # "Top issues" is a work list, so a change metric has no place in it.
+    top_issues = [r for r in issue_rows if not r.get("is_delta")][:10]
 
     issues_total = int(sum(by_severity.values()))
 

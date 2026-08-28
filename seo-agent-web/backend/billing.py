@@ -159,7 +159,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
             "correction": {"model": "", "max_files": 0},
             "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
-            "features": ["Audit", "Suggestions IA (limitées)", "Exports"],
+            "features": ["Audit complet", "Suggestions IA (limitées)", "Exports", "Corrections en pull request : non incluses"],
         },
         "solo": {
             "label": "Solo",
@@ -174,7 +174,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
             "crawl": {"max_pages_per_crawl": 3_000, "max_pagespeed_urls": 15, "job_timeout_s": 7_200},
-            "features": ["Audit", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (100/mois)", "Audit complet", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
         "pro": {
             "label": "Pro",
@@ -189,7 +189,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
             "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
-            "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (300/mois)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
             "label": "Business",
@@ -206,7 +206,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
             "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},
-            "features": ["Audit", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (900/mois)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
     _apply_plan_config_override(defaults)
