@@ -113,7 +113,7 @@ def _card(body: str, label: str) -> str:
     return body.split(head, 1)[1].split("</form>", 1)[0]
 
 
-def _install_schedule(monkeypatch, *, status: str = "active", raises: bool = False):
+def _install_schedule(monkeypatch, *, status: str = "active", raises: bool = False, start_date: int | None = -1):
     calls: list[str] = []
 
     def _retrieve(schedule_id, **_kw):
@@ -125,7 +125,8 @@ def _install_schedule(monkeypatch, *, status: str = "active", raises: bool = Fal
             "status": status,
             "phases": [
                 {"start_date": 1756317960, "items": [{"price": BUSINESS_PRICE}]},
-                {"start_date": int(EFFECTIVE.timestamp()), "items": [{"price": PRO_PRICE}]},
+                {"start_date": int(EFFECTIVE.timestamp()) if start_date == -1 else start_date,
+                 "items": [{"price": PRO_PRICE}]},
             ],
         }, "sk_test_x")
 
@@ -142,6 +143,40 @@ def test_the_page_says_a_downgrade_is_booked_and_when(monkeypatch) -> None:
     )
     assert "27/09/2026" in body, "the customer cannot tell when the change takes effect"
     assert "Pro" in body
+
+
+def _banner_text(body: str) -> str:
+    """The banner as a reader sees it.
+
+    Tags are stripped to '' and not to ' ': replacing them with a space invents punctuation
+    spacing that is not on the page. Reading it the other way is how a phantom "27/09/2026 ,"
+    got diagnosed as a defect here.
+    """
+    import re
+
+    banner = body.split("Changement de plan déjà demandé", 1)[1].split("</div>", 1)[0]
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", banner)).strip()
+
+
+def test_the_banner_reads_as_a_sentence_when_the_date_is_known(monkeypatch) -> None:
+    _install_schedule(monkeypatch)
+    text = _banner_text(_customer(schedule_id=SCHEDULE_ID).get("/billing").text)
+
+    assert " ," not in text and " ." not in text, f"stray space before punctuation: {text!r}"
+    assert "27/09/2026, à la fin de la période déjà payée." in text
+
+
+def test_the_banner_still_reads_as_a_sentence_when_the_date_is_missing(monkeypatch) -> None:
+    """A phase Stripe returns without a usable start_date.
+
+    This branch used to render "à la fin de la période en cours, à la fin de la période déjà
+    payée" — the deadline twice, in the one case where the page has the least to say.
+    """
+    _install_schedule(monkeypatch, start_date=None)
+    text = _banner_text(_customer(schedule_id=SCHEDULE_ID).get("/billing").text)
+
+    assert text.count("à la fin de la période") == 1, f"the deadline is stated twice: {text!r}"
+    assert "Pro" in text and " ," not in text
 
 
 def test_the_plan_already_scheduled_cannot_be_requested_again(monkeypatch) -> None:

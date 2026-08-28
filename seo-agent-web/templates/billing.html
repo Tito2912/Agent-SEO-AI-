@@ -156,13 +156,14 @@
         {% if pending_change.known %}
           <strong>Changement de plan déjà demandé.</strong>
           Ton abonnement passera en <strong>{{ pending_change.label }}</strong>
-          {% if pending_change.effective_at %}
-            le <strong>{{ pending_change.effective_at.strftime('%d/%m/%Y') }}</strong>,
-          {% else %}
-            à la fin de la période en cours,
-          {% endif %}
-          à la fin de la période déjà payée. D'ici là tu gardes {{ plan.label if plan else plan_key }}
-          et tous ses quotas — rien n'est prélevé pour ce changement.
+          {%- if pending_change.effective_at %}
+            le <strong>{{ pending_change.effective_at.strftime('%d/%m/%Y') }}</strong>, à la fin
+            de la période déjà payée.
+          {%- else %}
+            à la fin de la période déjà payée.
+          {%- endif %}
+          D'ici là tu gardes {{ plan.label if plan else plan_key }} et tous ses quotas — rien
+          n'est prélevé pour ce changement.
         {% else %}
           <strong>Un changement de plan est déjà demandé</strong> et prendra effet à la fin de la
           période en cours. Son détail n'a pas pu être récupéré à l'instant ; recharge la page.
