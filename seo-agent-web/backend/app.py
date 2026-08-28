@@ -11870,6 +11870,7 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
         if sub_active and current != "free":
             try:
                 if billing.plan_rank(pk) > billing.plan_rank(current):
+                    # An upgrade is billed on the spot; a refused card leaves the plan untouched.
                     billing.change_plan_now(db, user_id=str(user.id), target_plan_key=pk)
                     _audit_log(
                         request,
@@ -11878,7 +11879,7 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
                         user=user,
                         meta={"mode": "upgrade_now", "from": current, "to": pk},
                     )
-                    return RedirectResponse(url=f"/billing?msg={quote('Plan mis à jour.')}", status_code=303)
+                    return RedirectResponse(url=f"/billing?msg={quote('Plan mis à jour. La différence a été facturée.')}", status_code=303)
                 _, effective_at = billing.schedule_plan_change_at_period_end(db, user_id=str(user.id), target_plan_key=pk)
                 _audit_log(
                     request,
@@ -11892,6 +11893,17 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
                 else:
                     msg = "Downgrade planifié en fin de période."
                 return RedirectResponse(url=f"/billing?msg={quote(msg)}", status_code=303)
+            except billing.UpgradePaymentFailed as e:
+                # Not an internal error: the card was refused and the plan was rolled back.
+                # Say so in the customer's terms instead of surfacing a Stripe string.
+                _audit_log(
+                    request,
+                    action="billing.plan_change",
+                    status="payment_failed",
+                    user=user,
+                    meta={"from": current, "to": pk, "invoice_status": e.invoice_status},
+                )
+                return RedirectResponse(url=f"/billing?err={quote(str(e))}", status_code=303)
             except Exception as e:
                 _audit_log(
                     request,

@@ -26,6 +26,20 @@ logger = logging.getLogger("seo_agent.billing")
 
 ACTIVE_SUB_STATUSES: set[str] = {"active", "trialing"}
 
+
+class UpgradePaymentFailed(RuntimeError):
+    """The prorated difference could not be collected, so the upgrade was rolled back.
+
+    Raised instead of leaving the customer between two plans. The message is shown to them.
+    """
+
+    def __init__(self, invoice_status: str = "") -> None:
+        self.invoice_status = str(invoice_status or "")
+        super().__init__(
+            "Le paiement de la différence a été refusé par ta banque. Ton plan n'a pas changé. "
+            "Vérifie ta carte dans « Gérer l'abonnement », puis réessaie."
+        )
+
 PLAN_ORDER: dict[str, int] = {"free": 0, "solo": 1, "pro": 2, "business": 3}
 
 def _stripe_obj_id(value: Any) -> str:
@@ -714,6 +728,49 @@ def _release_schedule_if_any(stripe_subscription: dict[str, Any]) -> None:
         return
 
 
+def _invoice_is_settled(invoice_id: str) -> tuple[bool, str]:
+    """Did this invoice actually collect its money?
+
+    Deliberately reads only `status` / `amount_remaining` / `paid`: `invoice.payment_intent` was
+    removed from the API in 2025 and reading it would make this silently wrong on the next
+    version bump — the exact failure that kept `_stripe_to_dict` broken for a whole SDK major.
+    An unreadable invoice counts as NOT settled: refusing an upgrade that was paid is
+    recoverable, granting one that was not is not.
+    """
+    inv_id = (invoice_id or "").strip()
+    if not inv_id:
+        # `always_invoice` on a zero-amount change creates nothing to pay.
+        return True, "no_invoice"
+    try:
+        inv = _stripe_to_dict(stripe.Invoice.retrieve(inv_id))  # type: ignore[attr-defined]
+    except Exception as e:
+        logger.error("[STRIPE] invoice retrieve failed for %s: %s: %s", inv_id, type(e).__name__, e)
+        return False, "unreadable"
+    if not inv:
+        logger.error("[STRIPE] invoice %s decoded to nothing", inv_id)
+        return False, "unreadable"
+    status = str(inv.get("status") or "").strip().lower()
+    try:
+        remaining = int(inv.get("amount_remaining") or 0)
+    except (TypeError, ValueError):
+        remaining = 0
+    settled = status == "paid" or bool(inv.get("paid")) or (status != "void" and remaining <= 0)
+    logger.info("[STRIPE] upgrade invoice %s status=%s remaining=%s settled=%s", inv_id, status, remaining, settled)
+    return settled, status
+
+
+def _void_invoice_quietly(invoice_id: str) -> None:
+    """Drop a failed upgrade invoice so it does not sit in dunning for a plan the customer
+    never got. Best effort: the rollback matters, this is tidying."""
+    inv_id = (invoice_id or "").strip()
+    if not inv_id:
+        return
+    try:
+        stripe.Invoice.void_invoice(inv_id)  # type: ignore[attr-defined]
+    except Exception as e:
+        logger.warning("[STRIPE] could not void failed upgrade invoice %s: %s: %s", inv_id, type(e).__name__, e)
+
+
 def change_plan_now(db: Session, *, user_id: str, target_plan_key: str) -> BillingSubscription | None:
     stripe_init()
     if not stripe_enabled():
@@ -746,16 +803,58 @@ def change_plan_now(db: Session, *, user_id: str, target_plan_key: str) -> Billi
     if not item_id:
         raise RuntimeError("stripe_subscription_item_missing")
 
+    # What to restore if the customer cannot pay the difference.
+    previous_price_id = _stripe_subscription_price_id(stripe_sub)
+    previous_plan_key = plan_for_price_id(previous_price_id) or str(
+        (stripe_sub.get("metadata") or {}).get("plan_key") or ""
+    ).strip().lower()
+
+    # `always_invoice`, not `create_prorations`: bill the difference NOW instead of parking it on
+    # the next invoice. Deferring meant granting the higher plan immediately against a payment
+    # method last validated a month earlier, and leaving the customer with a plan change no
+    # invoice explained — the owner himself could not tell why he was on Business.
     updated = stripe.Subscription.modify(  # type: ignore[attr-defined]
         sub_id,
         cancel_at_period_end=False,
-        proration_behavior="create_prorations",
+        proration_behavior="always_invoice",
         items=[{"id": item_id, "price": price_id}],
         metadata={"user_id": uid, "plan_key": pk},
     )
     updated_dict = _stripe_to_dict(updated)
     if not updated_dict:
         return sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+
+    invoice_id = _stripe_obj_id(updated_dict.get("latest_invoice"))
+    settled, invoice_status = _invoice_is_settled(invoice_id)
+    if not settled:
+        # An immediate charge can be refused, or need 3-D Secure it cannot obtain off-session.
+        # Without this, the subscription would go past_due, `effective_plan_key` would read it as
+        # `free`, and a customer would lose the plan they were ALREADY paying for merely for
+        # trying to upgrade — strictly worse than deferring. Put them back where they were.
+        logger.error(
+            "[STRIPE] upgrade %s -> %s refused for user %s (invoice %s: %s); rolling back",
+            previous_plan_key or "?", pk, uid, invoice_id or "-", invoice_status,
+        )
+        if previous_price_id:
+            try:
+                reverted = stripe.Subscription.modify(  # type: ignore[attr-defined]
+                    sub_id,
+                    proration_behavior="none",  # the rollback must not bill anything of its own
+                    items=[{"id": item_id, "price": previous_price_id}],
+                    metadata={"user_id": uid, "plan_key": previous_plan_key or pk},
+                )
+                reverted_dict = _stripe_to_dict(reverted)
+                if reverted_dict:
+                    upsert_subscription(db, stripe_subscription=reverted_dict)
+                else:
+                    sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+            except Exception as e:
+                # Leave the DB describing Stripe's real state rather than a guess.
+                logger.error("[STRIPE] rollback of failed upgrade %s failed: %s: %s", sub_id, type(e).__name__, e)
+                sync_subscription_from_stripe(db, stripe_subscription_id=sub_id)
+        _void_invoice_quietly(invoice_id)
+        raise UpgradePaymentFailed(invoice_status)
+
     return upsert_subscription(db, stripe_subscription=updated_dict)
 
 
