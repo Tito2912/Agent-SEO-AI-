@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -44,6 +44,20 @@ class Database:
             future=True,
             connect_args=connect_args,
         )
+        if url.startswith("sqlite:///"):
+            # SQLite ignores foreign keys unless asked, per connection. Without this, every
+            # `ondelete="CASCADE"` in models.py is decoration: deleting a project leaves its
+            # issue tasks, backlink opportunities and tracked keywords behind, and a row can be
+            # written against a parent that does not exist. Postgres — production — enforces
+            # them, so the two engines disagreed silently, which is the worst way to disagree.
+            @event.listens_for(self.engine, "connect")
+            def _enforce_sqlite_foreign_keys(dbapi_connection, _record):  # noqa: ANN001
+                cursor = dbapi_connection.cursor()
+                try:
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                finally:
+                    cursor.close()
+
         self.SessionLocal = sessionmaker(
             bind=self.engine,
             autoflush=False,

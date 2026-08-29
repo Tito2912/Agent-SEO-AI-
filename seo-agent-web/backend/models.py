@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import uuid
 import time
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -286,6 +286,77 @@ class BacklinkOpportunity(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+class TrackedKeyword(Base):
+    """A query the customer decided to follow, and the page meant to answer it.
+
+    Search Console only keeps ~16 months and gives no per-project history, so following a query
+    over time means storing it. The row is the DECISION (this query matters, this page should
+    win it); the measurements live in TrackedKeywordSnapshot, because a decision and an
+    observation have different lifetimes — editing the target page must not rewrite the past.
+    """
+
+    __tablename__ = "tracked_keywords"
+    __table_args__ = (
+        # One row per query per project: adding the same keyword twice is the same decision.
+        UniqueConstraint("project_id", "query", name="uq_tracked_kw_project_query"),
+        Index("ix_tracked_kw_project_status", "project_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    query: Mapped[str] = mapped_column(String(512), nullable=False)
+    target_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    # Where the keyword came from: "gsc_opportunity" when the product proposed it, "manual" when
+    # the customer typed it. Worth keeping — a suggestion that gets tracked is the product
+    # working, and that is measurable.
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="manual")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="tracked")
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class TrackedKeywordSnapshot(Base):
+    """One measurement of one tracked keyword, on one day.
+
+    Separate from the keyword itself so history survives every edit to the decision, and so a
+    re-measure on a day already recorded overwrites rather than accumulates — the unique
+    constraint is what makes a refresh idempotent instead of doubling the curve.
+    """
+
+    __tablename__ = "tracked_keyword_snapshots"
+    __table_args__ = (
+        UniqueConstraint("keyword_id", "captured_on", name="uq_tracked_kw_snapshot_day"),
+        Index("ix_tracked_kw_snapshot_kw_day", "keyword_id", "captured_on"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    keyword_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("tracked_keywords.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    captured_on: Mapped[date] = mapped_column(Date, nullable=False)
+    clicks: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    impressions: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Stored as they come from Search Console rather than recomputed: position is an average
+    # over the window and CTR is clicks/impressions for that window, so deriving either later
+    # from the other two would quietly invent a number.
+    ctr: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    position: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    page: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
 class IssueTask(Base):
