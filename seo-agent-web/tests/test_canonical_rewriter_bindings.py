@@ -227,3 +227,74 @@ def test_the_gatsby_fixture_is_never_handed_the_next_js_idiom() -> None:
 
     hint = ri.stack_idiom_hint(index)
     assert "Gatsby" in hint and "JAMAIS" in hint
+
+
+@pytest.mark.parametrize(
+    "stack, relative, port",
+    [
+        ("next-pages", "pages/blog.js", 8745),
+        ("nuxt", "pages/blog.vue", 8746),
+    ],
+)
+def test_the_remaining_fixtures_are_fixed_in_one_line(stack: str, relative: str, port: int) -> None:
+    """Next Pages writes the canonical through `next/head`, Nuxt through a `useHead()` call.
+
+    Different idioms, same underlying shape: the VALUE is a module-level binding. Six stacks now
+    agree on that, which is why one widening covered five of them.
+    """
+    page = WEB_ROOT / "tests" / "fixtures" / stack / relative
+    if not page.exists():  # pragma: no cover - fixtures are committed alongside this test
+        pytest.skip(f"{stack} fixture missing")
+    source = page.read_text(encoding="utf-8")
+    assert f"127.0.0.1:{port}/blog/" in source, "the fixture must ship WITH its defect"
+
+    pair = [{
+        "page": f"http://127.0.0.1:{port}/blog",
+        "from": f"http://127.0.0.1:{port}/blog/",
+        "to": f"http://127.0.0.1:{port}/blog",
+    }]
+    new, count = app_module._rewrite_head_url_values(source, pair)
+    assert count == 1
+    changed = [(a, b) for a, b in zip(source.splitlines(), new.splitlines()) if a != b]
+    assert len(changed) == 1 and "const canonical" in changed[0][0]
+
+
+@pytest.mark.parametrize(
+    "stack, expected, route, source_file",
+    [
+        ("astro", "astro", "/blog", "src/pages/blog.astro"),
+        ("hugo", "hugo", "/blog", "content/blog.md"),
+        ("sveltekit", "sveltekit", "/blog", "src/routes/blog/+page.svelte"),
+        ("gatsby", "gatsby", "/blog", "src/pages/blog.js"),
+        ("next-pages", "next-pages", "/blog", "pages/blog.js"),
+        ("nuxt", "nuxt", "/blog", "pages/blog.vue"),
+    ],
+)
+def test_every_buildable_fixture_maps_its_page_to_its_own_source(
+    stack: str, expected: str, route: str, source_file: str
+) -> None:
+    """One assertion per stack that has been through the full loop.
+
+    These trees are the REAL repos the loop ran against, not hand-written path lists, so a
+    detection or routing regression shows up here rather than on a customer's repo.
+    """
+    from backend import repo_index as ri
+
+    root = WEB_ROOT / "tests" / "fixtures" / stack
+    if not root.exists():  # pragma: no cover
+        pytest.skip(f"{stack} fixture missing")
+    generated = {
+        "node_modules", "public", "dist", "build", "out", ".next", ".nuxt",
+        ".output", ".svelte-kit", ".cache", "resources",
+    }
+    paths = sorted(
+        str(p.relative_to(root)).replace("\\", "/")
+        for p in root.rglob("*")
+        if p.is_file() and not (generated & set(p.parts)) and not p.name.endswith(".log")
+    )
+    index = ri.build_repo_index(paths)
+    assert index["stack"] == expected
+    assert index["routes"].get(route) == [source_file], (
+        f"{stack}: {route} resolved to {index['routes'].get(route)}"
+    )
+    assert ri.stack_idiom_hint(index), f"{stack} has routes but no idiom — the Gatsby failure"

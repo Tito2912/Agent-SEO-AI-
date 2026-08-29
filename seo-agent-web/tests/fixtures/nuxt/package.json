@@ -1,0 +1,8 @@
+{
+  "name": "noyaru-fixture-nuxt",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": { "build": "nuxt generate" },
+  "devDependencies": { "nuxt": "^3.19.3" }
+}
