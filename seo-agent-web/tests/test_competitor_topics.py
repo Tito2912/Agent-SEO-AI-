@@ -211,3 +211,82 @@ def test_the_home_page_is_never_offered_as_the_page_to_retarget() -> None:
 def test_three_shared_terms_is_the_line_the_real_data_drew() -> None:
     # Every sound match on two live sites shared four terms; every spurious one shared two.
     assert comp.MIN_SHARED_TERMS == 3
+
+
+# ── what the FIRST REAL RUN exposed (2026-08-29, voiceoverstudioai vs elevenlabs-avis) ────────
+#
+# Both defects are in the PAIRING, not in the subject reading, and neither was visible offline:
+# the engine had been driven on page lists, and the screen is what put a retarget button next to
+# each match. What the real 20 subjects showed was a German rival page paired with an English
+# page here, and the rival's blog index paired with ours.
+
+def _lang_page(url, title, lang=None, h1=None):
+    row = page(url, title, h1 or [title])
+    if lang:
+        row["lang"] = lang
+    return row
+
+
+def test_a_subject_is_stated_in_a_language_and_the_pair_must_agree() -> None:
+    """Real pair: "Erstellen Sie eine realistische ElevenLabs AI Voice…" matched
+    /blog/elevenlabs-for-podcasts-2026, an ENGLISH page, on {elevenlabs, voice, ai, 2026}.
+    Retargeting it would have aimed a German subject at the wrong locale while the German page
+    sat one URL away."""
+    rival = _lang_page("https://rival.fr/de/elevenlabs-stimme-2026",
+                       "Erstellen Sie eine realistische ElevenLabs AI Voice in 5 Minuten", "de")
+    english = _lang_page("https://site.fr/blog/elevenlabs-voice-2026",
+                         "Build a realistic ElevenLabs AI voice in 5 minutes", "en")
+    german = _lang_page("https://site.fr/blog/elevenlabs-stimme-2026-de",
+                        "ElevenLabs AI Stimme in 5 Minuten erstellen", "de")
+
+    only_english = comp.compare([english], [rival])
+    assert only_english[0]["covered"] is False, "a German subject was covered by an English page"
+
+    with_german = comp.compare([english, german], [rival])
+    assert with_german[0]["covered"] is True
+    assert with_german[0]["own_url"] == german["url"], "the wrong locale was chosen"
+
+
+def test_a_page_that_does_not_declare_its_language_still_matches() -> None:
+    """Abstention, like every other guard here: Gatsby and Nuxt emit no <html lang> by default,
+    and refusing those matches would cost more than the drift it prevents."""
+    rival = _lang_page("https://rival.fr/x", "ElevenLabs voice cloning 2026", "en")
+    mine = page("https://site.fr/elevenlabs-voice-cloning-2026", "ElevenLabs voice cloning 2026")
+    assert comp.compare([mine], [rival])[0]["covered"] is True
+
+
+def test_the_language_can_come_from_the_url_when_the_page_is_silent() -> None:
+    assert comp.page_language({"url": "https://site.fr/blog/guide-kling-ai-fr"}) == "fr"
+    assert comp.page_language({"url": "https://site.fr/de/blog/x"}) == "de"
+    assert comp.page_language({"url": "https://site.fr/blog/kling-ai-pricing-2026"}) == ""
+    assert comp.page_language({"url": "https://site.fr/x", "lang": "de-DE"}) == "de"
+
+
+def test_a_listing_page_is_never_the_page_to_retarget() -> None:
+    """Real pair: the rival's blog index matched /blog here at the floor. A listing is a shelf,
+    not a subject — rewriting its title toward one article's subject describes the shelf as if it
+    were one book, and moves a page that ranks for the section name."""
+    rival = page("https://rival.fr/blog", "ElevenLabs Reviews Blog — AI voice & voiceover guides")
+    listing = page("https://site.fr/blog", "Blog — guides voix IA et voiceover ElevenLabs")
+    findings = comp.compare([listing], [rival])
+    assert findings and findings[0]["covered"] is False
+    assert findings[0]["own_url"] == ""
+
+
+@pytest.mark.parametrize(
+    "url, is_listing",
+    [
+        ("https://site.fr/blog", True),
+        ("https://site.fr/en/blog", True),
+        ("https://site.fr/fr/actualites", True),
+        ("https://site.fr/tags", True),
+        # The word has to BE the page, not appear in it — the substring version of this test
+        # would drop real articles from retargeting.
+        ("https://site.fr/blog/article", False),
+        ("https://site.fr/blog/news-du-mois", False),
+        ("https://site.fr/blog/elevenlabs-2026", False),
+        ("https://site.fr/", False),
+    ],
+)
+def test_the_listing_rule_matches_a_segment_not_a_substring(url, is_listing) -> None:
+    assert comp._is_listing_page(url) is is_listing

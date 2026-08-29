@@ -161,6 +161,62 @@ def _is_crawlable_page(page: dict[str, Any]) -> bool:
     return not _UTILITY_PAGE_RE.search(url + " " + str(page.get("title") or ""))
 
 
+# Section indexes: a blog listing is not a subject, it is a shelf. Same argument as the home
+# page below — measured on the first real run, where the rival's blog index matched
+# `/blog` here at the floor and offered it as the page to retarget. Rewriting a listing's title
+# toward one article's subject is wrong twice: it describes the shelf as if it were one book,
+# and it moves a page that ranks for the section name.
+_LISTING_WORDS = frozenset("""
+blog blogs article articles actualite actualites news category categories categorie
+tag tags archive archives ressources resources guides
+""".split())
+
+# `lang` as the crawler read it (`<html lang>`), falling back to what the URL says. Both are
+# needed: Gatsby and Nuxt emit no `<html lang>` by default, and plenty of real sites carry the
+# locale only in the slug.
+_URL_LANG_RE = re.compile(r"(?:^|[/_-])(fr|en|de|es|it|pt|nl|pl)(?:[/_.-]|$)", re.I)
+
+
+def _is_listing_page(url: str) -> bool:
+    """`/blog`, `/en/blog`, `/fr/actualites` — a shelf, not a subject.
+
+    The word has to BE the page, not appear in it: `/blog/article` and `/blog/news-du-mois` are
+    articles, and excluding them would quietly drop real pages from retargeting. Same reflex as
+    every other string test in this project that decides an identity — match the exact segment,
+    never a substring.
+    """
+    u = _normalised_url(url)
+    path = u.split("://", 1)[1] if "://" in u else u
+    path = "/" + path.split("/", 1)[1] if "/" in path else "/"
+    segments = [seg for seg in path.split("/") if seg]
+    if not segments or segments[-1].lower() not in _LISTING_WORDS:
+        return False
+    # Anything before it may only be a locale: /en/blog is a listing, /blog/news is a post.
+    return all(len(seg) == 2 and seg.isalpha() for seg in segments[:-1])
+
+
+def page_language(page: dict[str, Any]) -> str:
+    """The page's language, or '' when it does not say.
+
+    Abstains rather than guesses, like every other guard here: an unknown language must not
+    exclude a legitimate match.
+    """
+    if not isinstance(page, dict):
+        return ""
+    declared = str(page.get("lang") or "").strip().lower()
+    if declared:
+        return declared.replace("_", "-").split("-", 1)[0]
+    match = _URL_LANG_RE.search(_normalised_url(page.get("url")).rsplit("/", 1)[-1] or "")
+    if match:
+        return match.group(1).lower()
+    path = _normalised_url(page.get("url"))
+    path = path.split("://", 1)[1] if "://" in path else path
+    for segment in path.split("/")[1:]:
+        if len(segment) == 2 and segment.lower() in {"fr", "en", "de", "es", "it", "pt", "nl", "pl"}:
+            return segment.lower()
+    return ""
+
+
 def compare(
     own_pages: Iterable[dict[str, Any]],
     competitor_pages: Iterable[dict[str, Any]],
@@ -176,9 +232,11 @@ def compare(
     avoiding.
     """
     own = [
-        (p, page_terms(p))
+        (p, page_terms(p), page_language(p))
         for p in own_pages or []
-        if _is_crawlable_page(p) and not _is_home_page(p.get("url"))
+        if _is_crawlable_page(p)
+        and not _is_home_page(p.get("url"))
+        and not _is_listing_page(p.get("url"))
     ]
     findings: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -197,8 +255,16 @@ def compare(
         if len(terms) < 2:
             continue  # nothing said about the subject; a match here would be an accident
 
+        # A subject is stated in a language. Measured on the first real run: a GERMAN rival page
+        # matched an ENGLISH page here on {elevenlabs, voice, 2026} and offered it for
+        # retargeting — which would have pointed the German subject at the wrong locale while
+        # the right page sat one URL away. When both sides say what they are, they must agree;
+        # when either abstains, the match stands.
+        page_lang = page_language(page)
         best_page, best_score, best_terms = None, 0.0, set()
-        for candidate, candidate_terms in own:
+        for candidate, candidate_terms, candidate_lang in own:
+            if page_lang and candidate_lang and page_lang != candidate_lang:
+                continue
             score = overlap(terms, candidate_terms)
             if score > best_score:
                 best_page, best_score, best_terms = candidate, score, candidate_terms

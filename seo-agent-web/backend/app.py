@@ -7862,6 +7862,9 @@ def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]
             "url": url,
             "title": str(page.get("title") or ""),
             "h1": [str(x) for x in h1][:3] if isinstance(h1, list) else str(h1 or ""),
+            # The language belongs to the subject: without it a German rival page can be paired
+            # with an English page of ours, which is a retargeting PR aimed at the wrong locale.
+            "lang": str(page.get("lang") or ""),
             "status_code": page.get("status_code"),
         })
     return out

@@ -355,16 +355,21 @@ def test_a_downgraded_account_stops_being_refreshed(customer) -> None:
 
 # ── what the crawl keeps ──────────────────────────────────────────────────────────────────────
 
-def test_only_the_three_fields_the_engine_reads_are_stored() -> None:
+def test_only_the_fields_the_engine_reads_are_stored() -> None:
     """A rival's report describes a site we are not auditing: keeping its anomalies would store
-    findings nobody will ever act on, about somebody else's site."""
+    findings nobody will ever act on, about somebody else's site.
+
+    `lang` earns its place — the first real run paired a German rival page with an English page
+    here, and the language is what refuses that. Everything else stays out.
+    """
     report = {"pages": [
-        {"url": "https://rival.fr/a", "title": "A", "h1": ["A"], "status_code": 200,
+        {"url": "https://rival.fr/a", "title": "A", "h1": ["A"], "status_code": 200, "lang": "de",
          "meta_description": "…", "internal_links": [1, 2, 3], "canonical": "…"},
         {"url": "https://rival.fr/dead", "error": "timeout"},
     ]}
     kept = app_module._competitor_pages_from_report(report)
-    assert kept == [{"url": "https://rival.fr/a", "title": "A", "h1": ["A"], "status_code": 200}]
+    assert kept == [{"url": "https://rival.fr/a", "title": "A", "h1": ["A"], "lang": "de",
+                     "status_code": 200}]
 
 
 def test_a_refusal_is_actually_shown_to_the_customer(customer) -> None:
