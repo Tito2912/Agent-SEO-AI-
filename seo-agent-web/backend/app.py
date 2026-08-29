@@ -17589,6 +17589,49 @@ def _braced_block(content: str, open_brace_idx: int) -> tuple[int, int]:
     return (-1, -1)
 
 
+# A page's title and description are written four ways across the stacks this product supports:
+# a component prop (`title="…"`), TOML front matter (`title = "…"`), YAML front matter — quoted
+# OR BARE (`title: A propos`, which every quoted-value pattern misses) — and a JS binding
+# (`const title = '…'`). The lookbehind keeps `og:title`, `twitter:title` and `data-title` out:
+# those are COPIES of the value, not its declaration, and rewriting a copy leaves the original
+# contradicting it.
+_HEAD_TEXT_FIELDS = ("title", "description")
+_HEAD_TEXT_QUOTED_RE = {
+    field: re.compile(
+        r'(?<![\w:.-])' + field + r'\s*[:=]\s*(["\'])(?P<value>.*?)\1',
+        re.I,
+    )
+    for field in _HEAD_TEXT_FIELDS
+}
+_HEAD_TEXT_BARE_YAML_RE = {
+    field: re.compile(
+        r'(?m)^' + field + r':[ \t]+(?P<value>(?!["\'])\S[^\r\n]*?)[ \t]*$',
+        re.I,
+    )
+    for field in _HEAD_TEXT_FIELDS
+}
+
+
+def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
+    """The page's own `title` or `description` as WRITTEN in the file.
+
+    Returns (literal, value): the exact substring to replace and the text it carries, so a
+    rewrite is a bounded swap rather than a regeneration of the file. None when the value is
+    assembled rather than written — a template suffix, a function call, an interpolation — in
+    which case the caller must not guess at it.
+    """
+    key = (field or "").strip().lower()
+    if key not in _HEAD_TEXT_QUOTED_RE:
+        return None
+    quoted = _HEAD_TEXT_QUOTED_RE[key].search(content or "")
+    if quoted:
+        return quoted.group(0), quoted.group("value")
+    bare = _HEAD_TEXT_BARE_YAML_RE[key].search(content or "")
+    if bare:
+        return bare.group(0), bare.group("value")
+    return None
+
+
 def _length_kind(family: str) -> str:
     """Normalise a length family name to the key the window/ceiling tables use.
 
@@ -17665,6 +17708,74 @@ def _length_value_for_page(
     logger.warning("[correction-ai] %s: le modele est reste au-dessus de %d apres 2 essais, "
                    "coupe deterministe a %d car.", kind, ceiling, len(trimmed))
     return trimmed
+
+
+def _rewrite_for_query(
+    content: str, *, query: str, url: str, site_name: str = "", model_override: str = "",
+) -> tuple[str, int]:
+    """Rewrite a page's own title and description to answer a search query it already ranks for.
+
+    This is the loop the rest of the product exists to close: Search Console says which query a
+    page is seen on and not clicked, and the fix is the snippet. The page keeps its subject — it
+    already ranks, so the content is right — and only the two lines a searcher actually reads
+    are rewritten.
+
+    Bounded on purpose: each value is swapped for its replacement in place, so nothing else in
+    the file moves, and a value that is assembled rather than written is left alone. The length
+    is enforced by `_length_value_for_page`, not requested, because a model does not count
+    characters — measured four times over.
+    """
+    text = str(query or "").strip()
+    if not text:
+        return content, 0
+
+    new_content = content
+    count = 0
+    for field, kind in (("title", "title"), ("description", "description")):
+        found = _find_head_text_value(new_content, field)
+        if not found:
+            continue
+        literal, current = found
+        if not current.strip():
+            continue
+        low, high = _LENGTH_WINDOWS[kind]
+        ceiling = _LENGTH_CEILINGS[kind]
+        label = "titre" if kind == "title" else "meta description"
+        system = (
+            f"Tu es un expert SEO. Une page se positionne deja sur la requete donnee mais n'est "
+            f"presque jamais cliquee. Reecris son {label} pour qu'il reponde a cette requete et "
+            f"donne envie de cliquer. Garde la langue de la page, sa marque et son sujet : la "
+            f"page est pertinente, c'est sa presentation qui ne l'est pas. "
+            f"Vise {low} a {high} caracteres. "
+            'Reponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
+        )
+        user = json.dumps(
+            {"requete": text, "url": url, "site": site_name,
+             f"{label}_actuel": current, "longueur_actuelle": len(current),
+             "cible": f"{low}-{high}"},
+            ensure_ascii=False,
+        )
+        parsed = _correction_ai_json(system=system, user_msg=user, max_tokens=600,
+                                     temperature=0.2, model_override=model_override)
+        proposed = str((parsed or {}).get("value") or "").strip()
+        if not proposed or proposed == current:
+            continue
+        if len(proposed) > ceiling:
+            # Same guarantee as the length families: retry with the measurement, then trim.
+            proposed = _length_value_for_page(
+                current=proposed, kind=kind, url=url, site_name=site_name,
+                model_override=model_override,
+            )
+        if not proposed or len(proposed) > ceiling or proposed == current:
+            continue
+        # A quote inside the replacement would break the literal it is going into; the model is
+        # not asked to escape, so a value carrying the wrong quote is refused rather than fixed.
+        if ('"' in proposed and '"' in literal) or ("'" in proposed and "'" in literal.replace("\\'", "")):
+            logger.info("[keywords] %s refuse : la valeur proposee contient un guillemet", field)
+            continue
+        new_content = new_content.replace(literal, literal.replace(current, proposed, 1), 1)
+        count += 1
+    return new_content, count
 
 
 def _rewrite_length_values(
