@@ -3875,6 +3875,12 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir:
             changed = False
             for t in tasks:
                 key = str(t.issue_key or "")
+                if key == _KEYWORD_REWRITE_KEY:
+                    # A crawl cannot answer this one. It never flags the key, so the loop below
+                    # would read "absent from the report" as "resolved" and badge the task
+                    # verified — for a rewrite whose only real verdict is weeks of Search Console
+                    # clicks. No reading beats a confident wrong one.
+                    continue
                 block = issues.get(key)
                 count = int(block.get("count") or 0) if isinstance(block, dict) else 0
                 url_norm = _norm_url_for_match(str(t.url or ""))
@@ -16536,6 +16542,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             evidence=_prep["evidence"], extra_hint=_prep["extra_hint"], model_override=gate_model,
             index=idx, link_rewriter=_prep["link_rewriter"],
             rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
+            rewriter_is_ai=bool(_prep["rewriter_is_ai"]),
         )
         any_ai_written = any_ai_written or bool(_ai_files)
         ai_billable += len(_ai_files)
@@ -17710,6 +17717,62 @@ def _length_value_for_page(
     return trimmed
 
 
+# Function words that belong to ONE of the four languages the product serves. Built by taking a
+# per-language list and REMOVING everything shared, because the tokens that collide ("a", "un",
+# "la", "en", "des") are exactly the ones that make a naive count answer confidently and wrongly.
+_LANGUAGE_MARKERS_RAW: dict[str, str] = {
+    "fr": "les des une pour avec vous nos notre votre cette qui que sur dans aux du ses leur "
+          "tout tous toute comment pourquoi quand est sont était ont mais ainsi plus sans chez "
+          "et ne pas ou vos toutes meilleur",
+    "en": "the and with for your this that what when how are was were their our from has have "
+          "about into than then them they will would should could been being of to in it its "
+          "is at by only every without before after best which while just",
+    "de": "der die das und mit für ist sind auf aus bei nach wie wenn nicht sich auch ein eine "
+          "einer eines über zum zur dass werden wurde können",
+    "es": "los las una pero con del por para son como cuando también sobre entre hasta sus "
+          "este esta estos estas muy más pueden hacer el al lo nuestro cada",
+}
+
+
+def _build_language_markers() -> dict[str, frozenset[str]]:
+    seen: dict[str, int] = {}
+    for words in _LANGUAGE_MARKERS_RAW.values():
+        for w in set(words.split()):
+            seen[w] = seen.get(w, 0) + 1
+    return {
+        lang: frozenset(w for w in set(words.split()) if seen[w] == 1 and len(w) > 1)
+        for lang, words in _LANGUAGE_MARKERS_RAW.items()
+    }
+
+
+_LANGUAGE_MARKERS = _build_language_markers()
+_WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+
+
+def _dominant_language(text: str) -> str:
+    """'fr' | 'en' | 'de' | 'es', or '' when the text does not say clearly.
+
+    Deliberately abstains rather than guesses: this is used to REFUSE a rewrite, and refusing a
+    correct one because a five-word title carried no marker would be worse than the drift it
+    guards against.
+    """
+    words = {w.lower() for w in _WORD_RE.findall(text or "")}
+    if not words:
+        return ""
+    scores = sorted(
+        ((len(words & markers), lang) for lang, markers in _LANGUAGE_MARKERS.items()),
+        reverse=True,
+    )
+    best, runner_up = scores[0], scores[1]
+    return best[1] if best[0] >= 2 and best[0] > runner_up[0] else ""
+
+
+# Not a crawler key: no crawl ever emits it. It exists so a keyword rewrite is tracked like any
+# other correction (duplicate-PR guard, PR link, corrections board) — and it is deliberately kept
+# out of the post-crawl verification, which could only ever read its absence as success.
+_KEYWORD_REWRITE_KEY = "keyword_snippet_rewrite"
+
+
 def _rewrite_for_query(
     content: str, *, query: str, url: str, site_name: str = "", model_override: str = "",
 ) -> tuple[str, int]:
@@ -17741,17 +17804,28 @@ def _rewrite_for_query(
         low, high = _LENGTH_WINDOWS[kind]
         ceiling = _LENGTH_CEILINGS[kind]
         label = "titre" if kind == "title" else "meta description"
+        # The page's own language, read from the value being replaced. Measured on a real
+        # customer page (an English review, `lang: "en"`): asked in French to rewrite a "meta
+        # description", the model returned FRENCH four times out of four while keeping the title
+        # English — a page shipped with a title in one language and its description in another.
+        # "Garde la langue de la page" was already in the prompt; naming the language is the
+        # cheap half, and the check below is the half that holds.
+        lang_before = _dominant_language(current)
+        _lang_names = {"fr": "francais", "en": "anglais", "de": "allemand", "es": "espagnol"}
         system = (
             f"Tu es un expert SEO. Une page se positionne deja sur la requete donnee mais n'est "
             f"presque jamais cliquee. Reecris son {label} pour qu'il reponde a cette requete et "
             f"donne envie de cliquer. Garde la langue de la page, sa marque et son sujet : la "
             f"page est pertinente, c'est sa presentation qui ne l'est pas. "
-            f"Vise {low} a {high} caracteres. "
+            + (f"La page est en {_lang_names[lang_before]} : reponds dans cette langue, meme si "
+               f"la requete ou ces instructions sont dans une autre. " if lang_before else "")
+            + f"Vise {low} a {high} caracteres. "
             'Reponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
         )
         user = json.dumps(
             {"requete": text, "url": url, "site": site_name,
              f"{label}_actuel": current, "longueur_actuelle": len(current),
+             "langue_de_la_page": lang_before or "inconnue",
              "cible": f"{low}-{high}"},
             ensure_ascii=False,
         )
@@ -17760,6 +17834,24 @@ def _rewrite_for_query(
         proposed = str((parsed or {}).get("value") or "").strip()
         if not proposed or proposed == current:
             continue
+        if lang_before and _dominant_language(proposed) not in ("", lang_before):
+            # Translating a page's snippet is not a rewrite, it is a defect: half the page ends
+            # up in another language than the rest. One retry, then the field is left alone —
+            # keeping the old value costs the customer a click, changing the language costs them
+            # the page.
+            retry = _correction_ai_json(
+                system=system,
+                user_msg=json.dumps({**json.loads(user),
+                                     "ta_proposition_refusee": proposed,
+                                     "probleme": "tu as change de langue ; ecris en "
+                                                 f"{_lang_names.get(lang_before, lang_before)}"},
+                                    ensure_ascii=False),
+                max_tokens=600, temperature=0.2, model_override=model_override)
+            proposed = str((retry or {}).get("value") or "").strip()
+            if not proposed or _dominant_language(proposed) not in ("", lang_before):
+                logger.warning("[keywords] %s refuse : le modele a repondu dans une autre langue "
+                               "que la page (%s)", field, lang_before)
+                continue
         if len(proposed) > ceiling:
             # Same guarantee as the length families: retry with the measurement, then trim.
             proposed = _length_value_for_page(
@@ -18263,6 +18355,8 @@ def _prepare_issue_fix(
         "extra_hint": "",
         "link_rewriter": None,
         "rewriter_ai_fallback": False,
+        # A bounded rewriter is not necessarily a model-free one. See `_deep_patch_issue_files`.
+        "rewriter_is_ai": False,
         "loop_paths": [],
         "refusal": None,
     }
@@ -18301,6 +18395,10 @@ def _prepare_issue_fix(
                 _rewrite_length_values(raw, _s, _f, site_name=_n, model_override=_m)
             )
             out["rewriter_ai_fallback"] = True
+            # …but the value it writes comes from the MODEL. Without this the family shipped a
+            # PR badged "correctif mécanique", billed nothing, and — on Full Access — merged
+            # itself: three decisions all reading "bounded" as "no model was involved".
+            out["rewriter_is_ai"] = True
 
     content_pairs: list[dict[str, str]] = []
     if issue_key in _REDIRECT_LINK_KEYS and issues:
@@ -18382,6 +18480,8 @@ def _deep_patch_issue_files(
     evidence: list[str] | None = None, extra_hint: str = "", model_override: str = "",
     link_rewriter: "Callable[[str], tuple[str, int]] | None" = None,
     rewriter_ai_fallback: bool = False,
+    rewriter_is_ai: bool = False,
+    targets_override: list[str] | None = None,
     index: dict[str, Any] | None = None,
 ) -> tuple[list[str], list[str], list[str], bool]:
     """Resolve the source files for one issue and commit patches into fix_branch.
@@ -18392,11 +18492,18 @@ def _deep_patch_issue_files(
     Each file is patched to fix ALL its in-file occurrences. file_state caches sha/content
     so a file edited for several issues stacks correctly across calls. When link_rewriter is
     given (mechanical link families: links-to-redirect, mixed-content http→https, double-slash),
-    the per-file fix is that DETERMINISTIC function (no AI) — precise and safe. Returns
+    the per-file fix is that bounded function instead of a full-file patch.
+    `rewriter_is_ai` says whether that bounded function CALLS the model anyway — the length
+    families ask it for the value and enforce the length in code, and so does the keyword
+    snippet rewrite. Bounded and model-free are not the same property, and three decisions read
+    the difference: billing, the PR body's "who wrote this" note, and auto-merge eligibility.
+    `targets_override` skips target resolution entirely for a caller that already knows the file
+    (the keyword rewrite knows its page from Search Console), so no AI file-picker gets to
+    choose where an editorial rewrite lands. Returns
     (patched_files, skipped_files, targets, ai_files) — `ai_files` lists the committed files the
     MODEL wrote, as opposed to those a deterministic rewrite produced. Callers use it twice: one
     entry is enough to require a human before merging, and it is what billing must count, since a
-    bounded rewrite spends no tokens at all."""
+    rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
     targets: list[str] = []
     # 1) Deterministic: files that reference the evidence (e.g. image srcs). Tarball grep is
@@ -18420,11 +18527,18 @@ def _deep_patch_issue_files(
         for f in located:
             if f not in targets:
                 targets.append(f)
-    targets = _resolve_issue_targets(
-        all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
-        impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
-        wants_page_targeting=link_rewriter is not None,
-    )
+    if targets_override is not None:
+        # The caller named the files. Used when the page is known independently of any crawl
+        # issue (Search Console gives the URL, the repo route map gives its source), where the
+        # resolution chain below could only add guesses — and its last two steps are AI file
+        # pickers, the step behind every wrong-file patch this corrector has ever shipped.
+        targets = [p for p in targets_override if p in all_paths][:max_files]
+    else:
+        targets = _resolve_issue_targets(
+            all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
+            impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
+            wants_page_targeting=link_rewriter is not None,
+        )
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     _idiom = repo_index.stack_idiom_hint(index) if index else ""
     if _idiom:
@@ -18457,9 +18571,13 @@ def _deep_patch_issue_files(
         if link_rewriter is not None:
             new_content, n = link_rewriter(raw)
             if n > 0:
-                # Marked so the caller can tell a bounded rewrite from a model writing prose:
-                # only the former is safe to merge without a human reading it.
-                return (path, raw, cur_sha, {"patched_content": new_content, "deterministic": True})
+                # Marked so the caller can tell a rewrite that spent no tokens from one that did:
+                # only the former is free to the customer, badgeable as mechanical, and safe to
+                # merge without a human reading it. A bounded rewriter can still call the model
+                # (the length families, the keyword snippet), and claiming otherwise would have
+                # auto-merged model-written prose into a customer's site for free.
+                return (path, raw, cur_sha,
+                        {"patched_content": new_content, "deterministic": not rewriter_is_ai})
             # Nothing literal to swap. For link families that means the file simply doesn't
             # contain the link. For canonical/hreflang the URL may be BUILT (getSiteUrl(path),
             # a template literal), and only the AI can fix the logic that produces it — the
@@ -18639,7 +18757,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
             extra_hint=extra_hint, model_override=gate_model,
-            link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback, index=idx,
+            link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback,
+            rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
         )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     config_changes: list[str] = []
@@ -20055,6 +20174,8 @@ def project_keyword_opportunities(request: Request, slug: str, days: int | None 
             # "nothing to report" are different answers and lead to different actions.
             "gsc_ok": bool(payload.get("ok")),
             "gsc_reason": str(payload.get("reason") or ""),
+            # The rewrite button opens a PR, so it only renders when a repo is connected.
+            "github_cfg": _project_github_cfg(proj_row),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -20122,6 +20243,200 @@ def project_keyword_untrack(request: Request, slug: str, keyword_id: str = Form(
                 db.delete(row)
                 db.commit()
     return RedirectResponse(url=f"/projects/{slug}/keywords/opportunities", status_code=303)
+
+
+class _KeywordRewriteBody(BaseModel):
+    query: str = ""
+    url: str = ""
+
+
+def _same_site_url(candidate: str, base_url: str) -> bool:
+    """Is `candidate` a page of the project's own site?
+
+    The query and the page come from Search Console, but they reach this endpoint through the
+    browser, and this endpoint opens a pull request on a customer's repository. A URL from
+    another host names a page this repo does not own.
+    """
+    try:
+        from urllib.parse import urlparse
+        a, b = urlparse(candidate or ""), urlparse(base_url or "")
+    except Exception:
+        return False
+    if a.scheme not in ("http", "https") or not a.netloc or not b.netloc:
+        return False
+    return a.netloc.lower().removeprefix("www.") == b.netloc.lower().removeprefix("www.")
+
+
+@app.post("/api/projects/{slug}/keywords/rewrite-pr")
+def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBody) -> JSONResponse:
+    """Rewrite one page's title and description to answer a query it already ranks for, in a PR.
+
+    This closes the loop the rest of the product exists for: Search Console names the query AND
+    the page, `_rewrite_for_query` rewrites the two lines a searcher actually reads, and the
+    customer gets a pull request on their own repository. The page keeps its subject — it already
+    ranks, so the content is right — only its presentation changes.
+
+    Deliberately narrower than the anomaly corrector in three ways, because no crawl backs it:
+    the target file comes from the repo route map ALONE (never an AI file picker), the values are
+    written by the model so the PR says so and never auto-merges, and a page whose title is
+    assembled rather than written is refused instead of guessed at.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    query = (body.query or "").strip()
+    page_url = (body.url or "").strip()
+    if not query or not page_url:
+        return JSONResponse({"ok": False, "error": "Requête ou page manquante."}, status_code=400)
+    if not _same_site_url(page_url, str(proj.base_url or "")):
+        return JSONResponse({"ok": False, "error": "Cette page n'appartient pas au site du projet."}, status_code=400)
+
+    cfg = _project_github_cfg(proj)
+    if not cfg["repo"]:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
+    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+    repo_parts = _github_repo_parts(cfg["repo"])
+    if repo_parts is None:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
+    owner, repo_name = repo_parts
+    branch = cfg["branch"]
+    if not _github_branch_allowed(branch):
+        return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
+
+    # One open PR per PAGE, not per query: two queries pointing at the same page rewrite the same
+    # two lines, and the second PR would conflict with the first.
+    _open_pr = _open_pr_for_issue(
+        project_id=str(proj.id), issue_key=_KEYWORD_REWRITE_KEY, url=page_url,
+        owner=owner, repo_name=repo_name, token=token,
+    )
+    if _open_pr:
+        return JSONResponse({"ok": False, "duplicate": True, "pr_url": _open_pr, "error": (
+            "Une PR de réécriture est déjà ouverte pour cette page et attend ta revue. Une "
+            "seconde toucherait les mêmes lignes, donc un conflit. Merge ou ferme celle-ci "
+            "d'abord."
+        )}, status_code=409)
+
+    try:
+        tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Lecture du dépôt impossible : {e}"}, status_code=400)
+    all_paths = [
+        item["path"] for item in (tree_data.get("tree") or [])
+        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
+    ]
+    idx = repo_index.build_repo_index(all_paths)
+    # The route map answers URL to source deterministically. Shared files are dropped for the
+    # same reason the length families drop them: a title written into a layout becomes EVERY
+    # page's title. And when the map cannot name the file we stop, rather than let an AI picker
+    # choose where an editorial rewrite lands.
+    targets = [
+        path for path in repo_index.route_files(idx, page_url)
+        if path in all_paths and not repo_index.is_shared_path(idx, path)
+    ][:max(1, min(int(gate_max_files or 1), 3))]
+    logger.info("[keywords] rewrite-pr %s %s -> %s", slug, page_url, targets or "aucun fichier")
+    if not targets:
+        return JSONResponse({"ok": False, "error": (
+            "Le fichier source de cette page n'a pas pu être identifié dans le dépôt. Vérifie "
+            "que le dépôt connecté contient bien le code du site."
+        )}, status_code=422)
+
+    from datetime import datetime as _dt
+    try:
+        ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
+        base_sha = ref_data["object"]["sha"]
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
+    fix_branch = f"seo-keyword/{_safe_github_branch_suffix(query)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+    try:
+        _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
+
+    site_name = str(proj.site_name or slug)
+    issue_label = f"Réécriture du titre et de la description pour « {query} »"
+    file_state: dict[str, dict[str, str]] = {}
+    patched_files, skipped, _targets, ai_files = _deep_patch_issue_files(
+        owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
+        all_paths=all_paths, issue_key=_KEYWORD_REWRITE_KEY, issue_label=issue_label,
+        impacted_urls=[page_url], site_name=site_name, file_state=file_state,
+        max_files=len(targets), model_override=gate_model, targets_override=targets,
+        link_rewriter=(lambda raw: _rewrite_for_query(
+            raw, query=query, url=page_url, site_name=site_name, model_override=gate_model,
+        )),
+        # No AI fallback: a page whose title is assembled from parts has no literal to swap, and
+        # handing the whole file to a free-form patch is how a shared template gets rewritten.
+        rewriter_ai_fallback=False,
+        rewriter_is_ai=True,
+        index=idx,
+    )
+    if not patched_files:
+        return JSONResponse({"ok": False, "error": (
+            f"Aucune réécriture appliquée sur {', '.join(targets)}. Le titre et la description de "
+            "cette page sont probablement assemblés (variable, gabarit) plutôt qu'écrits dans le "
+            "fichier : ils ne peuvent pas être remplacés sans réécrire la logique de la page."
+        ), "skipped": skipped}, status_code=422)
+
+    pr_title = f"seo(mots-clés) : titre et description pour « {query} »"
+    pr_body = (
+        "## Réécriture de snippet pour une requête déjà positionnée\n\n"
+        f"**Requête :** {query}\n"
+        f"**Page :** {page_url}\n"
+        f"**Fichiers modifiés :** {len(patched_files)}\n\n"
+        + "\n".join(f"- `{p}`" for p in patched_files)
+        + "\n\nCette page ressort déjà sur cette requête dans Search Console : son sujet est le "
+          "bon. Ce qui est réécrit ici, c'est ce qu'un internaute lit avant de cliquer — le "
+          "titre et la meta description."
+        + _fix_nature_note(True, _KEYWORD_REWRITE_KEY)
+        + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
+    )
+    try:
+        pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={"title": pr_title, "body": pr_body, "head": fix_branch, "base": branch})
+        pr_url = pr_data.get("html_url", "")
+        pr_number = pr_data.get("number", 0)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
+
+    # Never auto-merged, whatever the project's mode: every value in this diff was written by the
+    # model, and a title is the most editorial thing this corrector touches.
+    try:
+        _note = json.dumps({"pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
+                            "branch": fix_branch, "files": patched_files, "query": query,
+                            "keyword": True}, ensure_ascii=False)
+        with DB.session() as _db:
+            _ex = _db.scalar(select(IssueTask).where(
+                IssueTask.project_id == proj.id, IssueTask.issue_key == _KEYWORD_REWRITE_KEY,
+                IssueTask.url == page_url))
+            if _ex:
+                _ex.status = "in_progress"
+                _ex.issue_label = issue_label
+                _ex.note = _note
+            else:
+                _db.add(IssueTask(
+                    project_id=str(proj.id), user_id=str(getattr(user, "id", "") or ""),
+                    issue_key=_KEYWORD_REWRITE_KEY, issue_label=issue_label, crawl_ts="",
+                    url=page_url, status="in_progress", severity="notice", note=_note,
+                ))
+            _db.commit()
+    except Exception:
+        pass
+
+    # Every file here carries model-written text, so every file costs one correction: the same
+    # unit as the anomaly corrector, one file written by the model.
+    _correction_charge(user, len(ai_files))
+
+    return JSONResponse({
+        "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
+        "files": patched_files, "files_count": len(patched_files), "query": query,
+    })
 
 
 @app.get("/projects/{slug}/performance", response_class=HTMLResponse)

@@ -74,17 +74,26 @@
                     {% endif %}
                   </td>
                   <td class="num">
-                    {% if o.query in already_tracked %}
-                      <span class="muted small">suivie</span>
-                    {% else %}
-                      <form method="post" action="/projects/{{ slug }}/keywords/track" class="inline">
-                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                        <input type="hidden" name="query" value="{{ o.query }}" />
-                        <input type="hidden" name="target_url" value="{{ o.page }}" />
-                        <input type="hidden" name="source" value="gsc_opportunity" />
-                        <button class="btn" type="submit">Suivre</button>
-                      </form>
-                    {% endif %}
+                    <div class="kw-actions">
+                      {% if o.query in already_tracked %}
+                        <span class="muted small">suivie</span>
+                      {% else %}
+                        <form method="post" action="/projects/{{ slug }}/keywords/track" class="inline">
+                          <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                          <input type="hidden" name="query" value="{{ o.query }}" />
+                          <input type="hidden" name="target_url" value="{{ o.page }}" />
+                          <input type="hidden" name="source" value="gsc_opportunity" />
+                          <button class="btn" type="submit">Suivre</button>
+                        </form>
+                      {% endif %}
+                      {# The whole point of naming the page and not only the query: the corrector
+                         can be pointed at it. #}
+                      {% if o.page and github_cfg and github_cfg.repo %}
+                        <button type="button" class="btn primary" data-keyword-pr
+                                data-query="{{ o.query }}" data-url="{{ o.page }}"
+                                title="Ouvre une pull request qui réécrit le titre et la meta description de cette page pour cette requête">Réécrire (PR)</button>
+                      {% endif %}
+                    </div>
                   </td>
                 </tr>
               {% endfor %}
@@ -151,11 +160,18 @@
                   <span class="muted small">{{ 'proposée' if t.source == 'gsc_opportunity' else 'ajoutée à la main' }}</span>
                 </td>
                 <td class="num">
-                  <form method="post" action="/projects/{{ slug }}/keywords/untrack" class="inline">
-                    <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                    <input type="hidden" name="keyword_id" value="{{ t.id }}" />
-                    <button class="btn danger" type="submit">Retirer</button>
-                  </form>
+                  <div class="kw-actions">
+                    {% if t.target_url and github_cfg and github_cfg.repo %}
+                      <button type="button" class="btn primary" data-keyword-pr
+                              data-query="{{ t.query }}" data-url="{{ t.target_url }}"
+                              title="Ouvre une pull request qui réécrit le titre et la meta description de la page cible">Réécrire (PR)</button>
+                    {% endif %}
+                    <form method="post" action="/projects/{{ slug }}/keywords/untrack" class="inline">
+                      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                      <input type="hidden" name="keyword_id" value="{{ t.id }}" />
+                      <button class="btn danger" type="submit">Retirer</button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             {% endfor %}
@@ -170,4 +186,54 @@
       </p>
     {% endif %}
   </section>
+
+  <style>
+    .kw-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; }
+    #kw-status { margin-top:10px; font-size:13px; }
+    #kw-status.ok { color:#34d399; }
+    #kw-status.error { color:#f87171; }
+  </style>
+  <div id="kw-status" class="muted" role="status" aria-live="polite"></div>
+
+  <script>
+  (function () {
+    var slug = {{ slug | tojson }};
+    var box = document.getElementById('kw-status');
+    function say(html, cls) { box.className = cls || 'muted'; box.innerHTML = html; }
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-keyword-pr]');
+      if (!btn) return;
+      var query = btn.dataset.query || '', url = btn.dataset.url || '';
+      var original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Réécriture…';
+      say('Le modèle réécrit le titre et la description de <span class="mono">' + esc(url) +
+          '</span> pour la requête &laquo; ' + esc(query) + ' &raquo;. Cela prend une vingtaine de secondes.');
+      fetch('/api/projects/' + encodeURIComponent(slug) + '/keywords/rewrite-pr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query, url: url })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          btn.disabled = false;
+          btn.textContent = d.ok ? 'PR créée' : original;
+          /* A refusal can still point somewhere useful - the PR already awaiting review. */
+          var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
+          if (!d.ok) { say(esc(d.error || 'Erreur pendant la réécriture.') + link, 'error'); return; }
+          say('Pull request ouverte sur ' + esc(d.files_count) + ' fichier(s).' + link +
+              ' Le texte est écrit par le modèle : relis-le avant de merger.', 'ok');
+        })
+        .catch(function () {
+          btn.disabled = false;
+          btn.textContent = original;
+          say('Erreur réseau pendant la réécriture.', 'error');
+        });
+    });
+  })();
+  </script>
 {% endblock %}

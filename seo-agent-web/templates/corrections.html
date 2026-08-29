@@ -773,8 +773,14 @@
       <div class="corr-item-head">
         <span class="corr-dot" style="background:{{ sev_color.get(task.severity, 'var(--border)') }};margin-top:1px;flex-shrink:0;"></span>
         <div class="corr-item-info">
-          <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
-             class="corr-item-label">{{ task.issue_label }}</a>
+          {# A keyword rewrite has no anomaly page: no crawl produced it. Linking to one would
+             be a 404 on the row that describes the correction. #}
+          {% if task.issue_key == 'keyword_snippet_rewrite' %}
+            <a href="/projects/{{ slug }}/keywords/opportunities" class="corr-item-label">{{ task.issue_label }}</a>
+          {% else %}
+            <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
+               class="corr-item-label">{{ task.issue_label }}</a>
+          {% endif %}
           {% if task.url %}
             <span class="corr-item-url" title="{{ task.url }}">{{ task.url }}</span>
           {% endif %}
