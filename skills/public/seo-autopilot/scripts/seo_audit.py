@@ -5842,13 +5842,20 @@ def _score_issues(
     )
     _title_len_samples: dict[str, dict[str, Any]] = {}
     _meta_len_samples: dict[str, dict[str, Any]] = {}
+    # The sample used to cap at 160 (title) / 200 (description) while `len` recorded the TRUE
+    # length, so the corrector's hint showed a 200-character string labelled "268 caractères".
+    # The caps bit exactly the values this family exists to fix — anything long enough to be
+    # flagged was long enough to be truncated — and the model, shown a string it could not
+    # reconcile with the instruction, returned that string. Cap high enough that a real title or
+    # description is never cut, and still bounded so a pathological page cannot bloat the report.
+    _LEN_SAMPLE_CAP = 1000
     for p in ok_html_pages:
         if p.url in _title_affected and p.url not in _title_len_samples and len(_title_len_samples) < 50:
             _t = (p.title or "").strip()
-            _title_len_samples[p.url] = {"rendered": _t[:160], "len": len(_t)}
+            _title_len_samples[p.url] = {"rendered": _t[:_LEN_SAMPLE_CAP], "len": len(_t)}
         if p.url in _meta_affected and p.url not in _meta_len_samples and len(_meta_len_samples) < 50:
             _d = (p.meta_description or "").strip()
-            _meta_len_samples[p.url] = {"rendered": _d[:200], "len": len(_d)}
+            _meta_len_samples[p.url] = {"rendered": _d[:_LEN_SAMPLE_CAP], "len": len(_d)}
 
     pages_have_high_ai_content_levels_set: set[str] = set()
     privacy_path_re = re.compile(r"(privacy|confidentialit|rgpd|gdpr)", re.IGNORECASE)

@@ -16852,6 +16852,14 @@ def _issue_evidence_srcs(issue_block: Any) -> list[str]:
 # ever drift outside the crawler's thresholds.
 _LENGTH_WINDOWS: dict[str, tuple[int, int]] = {"title": (60, 68), "description": (140, 155)}
 
+# The CRAWLER's own thresholds (seo_audit.py TITLE_TOO_LONG / DESC_TOO_LONG). The window is a
+# preference; this is the hard bound, and the hint must state it as such. Measured on the model
+# production actually uses: given only "aim for 140-155" plus "remove the least informative
+# clause, do not shorten more than necessary", Claude removed ONE clause and stopped at 200
+# characters — obeying the conservative half while missing the constraint the family exists for.
+# A preference cannot be the only bound in a prompt whose success is a hard inequality.
+_LENGTH_CEILINGS: dict[str, int] = {"title": 70, "description": 160}
+
 
 def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str) -> str:
     """Build a corrector hint from the crawler's `length_samples` (rendered value + length per
@@ -16866,20 +16874,45 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
                     samples[u] = info
     if not samples:
         return ""
-    low, high = _LENGTH_WINDOWS["title" if kind == "title" else "description"]
+    _k = "title" if kind == "title" else "description"
+    low, high = _LENGTH_WINDOWS[_k]
+    ceiling = _LENGTH_CEILINGS[_k]
     window = f"{low}-{high} caractères"
     label = "titre" if kind == "title" else "meta description"
     lines = []
+    truncated_any = False
     for u, info in list(samples.items())[:25]:
         rendered = str(info.get("rendered") or "")
         ln = info.get("len")
-        lines.append(f"  - {u} → {label} RENDU actuel ({ln} car.) : \"{rendered}\"")
+        # A sample shorter than the length it is labelled with is TRUNCATED. Older crawls capped
+        # it at 200 characters while reporting the true length, so the model was shown a
+        # 200-character string called "268 caractères" — an instruction it cannot satisfy, and it
+        # answered with the string it was given. Say so rather than let it guess; the full value
+        # is in the file the model already has.
+        cut = isinstance(ln, int) and len(rendered) < ln
+        truncated_any = truncated_any or cut
+        suffix = " [EXTRAIT TRONQUÉ]" if cut else ""
+        # State the number of characters to REMOVE, not just the target. A model does not count
+        # characters: told only "at most 160", it removes one trailing clause and stops — 268
+        # became 200 on three separate runs, above the threshold every time, whatever the wording
+        # of the constraint. Subtraction is a task it can actually carry out.
+        excess = f" → RETIRE AU MOINS {ln - ceiling} caractères" if isinstance(ln, int) and ln > ceiling else ""
+        lines.append(f"  - {u} → {label} RENDU actuel ({ln} car.){suffix}{excess} : \"{rendered}\"")
+    if truncated_any:
+        lines.append(
+            "  ATTENTION : les extraits marqués [EXTRAIT TRONQUÉ] sont coupés — ils ne montrent "
+            "PAS la valeur entière. Lis la valeur complète dans le fichier fourni et raccourcis "
+            "à partir de celle-là ; ne recopie jamais un extrait tronqué tel quel."
+        )
     return (
         f"IMPORTANT — longueur sur le RENDU : ci-dessous le {label} TEL QU'IL EST RENDU (suffixe de "
         f"template inclus) et sa longueur réelle pour chaque page. Vise un RENDU de {window}. "
         f"Le rendu = ta valeur source + un éventuel suffixe de template (ex. ' | Marque') : ajuste la "
         f"source pour que le RENDU entre dans la fenêtre (ne te fie pas à la seule longueur de la source).\n"
-        f"NE RACCOURCIS PAS PLUS QUE NÉCESSAIRE : vise le HAUT de la fenêtre ({high} car.), pas le bas. "
+        f"CONTRAINTE ABSOLUE : le RENDU doit faire AU PLUS {ceiling} caractères — c'est le seuil qui "
+        f"déclenche l'anomalie, et rester au-dessus ne corrige RIEN. Si retirer une seule clause ne "
+        f"suffit pas à passer sous {ceiling}, retires-en davantage jusqu'à y arriver. "
+        f"Ensuite seulement : NE RACCOURCIS PAS PLUS QUE NÉCESSAIRE, vise le HAUT de la fenêtre ({high} car.), pas le bas. "
         f"Un {label} nettement plus court que la fenêtre perd de la surface de mots-clés sans rien "
         f"corriger. Retire la partie la MOINS informative (une clause de fin, un qualificatif redondant) "
         f"et conserve la marque, l'année et les termes de recherche déjà présents ; ne réécris pas "
