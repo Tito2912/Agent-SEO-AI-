@@ -43,6 +43,28 @@ STACK_JEKYLL = "jekyll"
 STACK_STATIC = "static-html"
 STACK_UNKNOWN = "unknown"
 
+# Stacks added 2026-08-29 after measuring what the detector did with generators it had never
+# been shown. Gatsby was the dangerous one: `src/pages/*` is its routing convention too, so it
+# was read as next-pages, the route map came out CORRECT, and the patcher was then told to write
+# `next/head` — a module that does not exist in Gatsby. Right file, wrong idiom, full confidence:
+# the PR reads fine and breaks the build. A stack we cannot map is a visible "no fixable file";
+# a stack we map with the wrong idiom is a broken customer site.
+STACK_GATSBY = "gatsby"
+STACK_SVELTEKIT = "sveltekit"
+STACK_REMIX = "remix"
+STACK_ELEVENTY = "eleventy"
+STACK_DOCUSAURUS = "docusaurus"
+STACK_WORDPRESS = "wordpress"
+
+# Identified on purpose, and deliberately NOT route-mapped. Each has a routing model we have not
+# implemented (Remix's flat dotted filenames, Eleventy and Docusaurus permalink/slug front
+# matter, WordPress routing that lives in a database rather than the repo). Naming them buys an
+# honest refusal and a truthful log line instead of a confident wrong guess; supporting them is
+# a separate piece of work, and this constant is what a future PR should shrink.
+UNSUPPORTED_STACKS: frozenset[str] = frozenset(
+    {STACK_REMIX, STACK_ELEVENTY, STACK_DOCUSAURUS, STACK_WORDPRESS}
+)
+
 # Per-stack instruction telling the patcher which idiom to write head tags in. Without
 # it the prompts say "or the framework's equivalent", i.e. the model guesses — which is
 # how a Next.js `metadata` export once got replaced by a raw <head> block.
@@ -72,9 +94,24 @@ _STACK_IDIOMS: dict[str, str] = {
         "Stack: Jekyll. Le <head> vit dans `_includes`/`_layouts` ; les valeurs par page "
         "viennent du front matter."
     ),
+    STACK_GATSBY: (
+        "Stack: Gatsby. Les balises <head> se déclarent via l'export `Head` de la page "
+        "(Gatsby Head API : `export const Head = () => (<><title>…</title><meta …/></>)`), "
+        "ou via `<Helmet>` si le projet importe déjà react-helmet. N'importe JAMAIS `next/head` "
+        "ni `next/…` : ces modules n'existent pas dans un projet Gatsby et le build casse."
+    ),
+    STACK_SVELTEKIT: (
+        "Stack: SvelteKit. Les balises <head> se déclarent dans un bloc "
+        "`<svelte:head>…</svelte:head>` du fichier `+page.svelte` de la route. "
+        "`src/app.html` est le gabarit de TOUT le site : n'y mets jamais une valeur propre à "
+        "une seule page."
+    ),
     STACK_STATIC: (
         "Stack: HTML statique. Édite directement le <head> du fichier .html de la page."
     ),
+    # UNSUPPORTED_STACKS deliberately get NO entry. An empty idiom makes the prompts fall back
+    # to "or the framework's equivalent", i.e. the model guesses — and with no route map there
+    # are no targets either, so the deep-fix refuses out loud instead of guessing quietly.
 }
 
 
@@ -87,7 +124,14 @@ def is_noise_path(path: str) -> bool:
 def _clean_paths(all_paths: list[str]) -> list[str]:
     out: list[str] = []
     for p in all_paths or []:
-        s = str(p or "").strip().lstrip("./")
+        s = str(p or "").strip()
+        # `lstrip("./")` strips a SET of characters, not the prefix: it turned `.htaccess` into
+        # `htaccess`, `.eleventy.js` into `eleventy.js` and `.github/...` into `github/...`, so
+        # every dotfile at the repo root was renamed before anything could match on it. Same
+        # shape as the `out/` substring bug: a loose string operation deciding something
+        # structural.
+        if s.startswith("./"):
+            s = s[2:]
         if not s or s.startswith("/") or is_noise_path(s):
             continue
         out.append(s)
@@ -139,6 +183,21 @@ def detect_stack(all_paths: list[str]) -> str:
         return STACK_ASTRO
     if has("nuxt.config.ts", "nuxt.config.js"):
         return STACK_NUXT
+    # These must be checked BEFORE next-pages and static-html: a Gatsby or Docusaurus repo has
+    # `src/pages/*`, and a SvelteKit repo ships `src/app.html`, so each was being mistaken for a
+    # stack it is not. A config file at the root is the strongest signal a repo gives.
+    if has("docusaurus.config.js", "docusaurus.config.ts", "docusaurus.config.mjs"):
+        return STACK_DOCUSAURUS
+    if has("gatsby-config.js", "gatsby-config.ts", "gatsby-config.mjs"):
+        return STACK_GATSBY
+    if has("svelte.config.js", "svelte.config.ts"):
+        return STACK_SVELTEKIT
+    if has("remix.config.js", "remix.config.ts", "remix.config.mjs"):
+        return STACK_REMIX
+    if has(".eleventy.js", ".eleventy.cjs", "eleventy.config.js", "eleventy.config.mjs"):
+        return STACK_ELEVENTY
+    if has("wp-config.php") or any(p.startswith("wp-content/") for p in paths):
+        return STACK_WORDPRESS
     if any(_strip_src(p).startswith("pages/") for p in paths) and any(
         p.startswith("next.config.") or p == "package.json" for p in paths
     ):
@@ -262,13 +321,41 @@ _TEMPLATE_DIRS: dict[str, tuple[str, ...]] = {
     STACK_JEKYLL: ("_layouts/", "_includes/", "_data/", "_drafts/", "_sass/"),
 }
 
+# Single files that are the document shell for the WHOLE site. The static-HTML mapping runs
+# additively on every stack, so without this `src/app.html` becomes a route and SvelteKit gets
+# offered its own shell as the file to patch for one page's title.
+_SHELL_FILES: dict[str, tuple[str, ...]] = {
+    STACK_SVELTEKIT: ("src/app.html",),
+}
+
 
 def _is_template_path(stack: str, path: str) -> bool:
+    if path in _SHELL_FILES.get(stack, ()):
+        return True
     prefixes = _TEMPLATE_DIRS.get(stack)
     if not prefixes:
         return False
     rel = _strip_src(path)
     return rel.startswith(prefixes) or any(f"/{d}" in f"/{rel}" for d in prefixes)
+
+
+def _sveltekit_route(path: str) -> str | None:
+    """`src/routes/about/+page.svelte` → `/about`; `src/routes/+page.svelte` → `/`.
+
+    Only `+page.*` is a page. `+layout.*`, `+server.*` and `src/app.html` are not: `app.html` is
+    the document shell for the WHOLE site, and mapping it to a route is how SvelteKit was read
+    as static HTML and offered as the file to patch for one page's title.
+    """
+    rel = path
+    if not rel.startswith("src/routes/"):
+        return None
+    base = rel.rsplit("/", 1)[-1]
+    if not base.startswith("+page.") or _ext(rel) not in _ROUTE_EXTS:
+        return None
+    segments = rel[len("src/routes/"):].split("/")[:-1]
+    # Route groups `(marketing)` are organisational and do not appear in the URL.
+    segments = [s for s in segments if not (s.startswith("(") and s.endswith(")"))]
+    return _route_from_segments(segments)
 
 
 def _static_routes(path: str) -> list[str]:
@@ -367,6 +454,12 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
             add(_flat_page_route(p, "pages"), p)
         if stack == STACK_NUXT:
             add(_flat_page_route(p, "pages"), p)
+        if stack == STACK_GATSBY:
+            # Gatsby's file-system routing IS `src/pages/*`, the same shape as Next Pages, so
+            # the mapping was never the problem — only the idiom the patcher was handed.
+            add(_flat_page_route(p, "pages"), p)
+        if stack == STACK_SVELTEKIT:
+            add(_sveltekit_route(p), p)
         if stack == STACK_HUGO:
             add(_hugo_route(p), p)
         if stack == STACK_JEKYLL:
