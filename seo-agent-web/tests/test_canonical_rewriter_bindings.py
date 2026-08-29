@@ -128,3 +128,39 @@ def test_the_shared_layout_is_not_a_target_for_a_per_page_value() -> None:
         pytest.skip("astro fixture missing")
     _new, count = _rewrite(layout.read_text(encoding="utf-8"))
     assert count == 0
+
+
+def test_the_real_hugo_page_from_the_fixture_is_fixed_in_one_line() -> None:
+    """Second stack, second language: TOML front matter, `canonical = "…"`.
+
+    Hugo separates what Astro joins — the <head> is a `layouts/` template, the per-page value is
+    front matter — so this is the same concept written a third way. It passes only because of the
+    widening the Astro loop forced; that is the point of doing these one stack at a time.
+    """
+    page = WEB_ROOT / "tests" / "fixtures" / "hugo" / "content" / "blog.md"
+    if not page.exists():  # pragma: no cover - the fixture is committed alongside this test
+        pytest.skip("hugo fixture missing")
+    source = page.read_text(encoding="utf-8")
+    assert "127.0.0.1:8742/blog/" in source, (
+        "the fixture must ship WITH its defect — that is the whole point of it"
+    )
+
+    pair = [{
+        "page": "http://127.0.0.1:8742/blog",
+        "from": "http://127.0.0.1:8742/blog/",
+        "to": "http://127.0.0.1:8742/blog",
+    }]
+    new, count = app_module._rewrite_head_url_values(source, pair)
+    assert count == 1, "TOML front matter is not reachable by the deterministic rewriter"
+    changed = [(a, b) for a, b in zip(source.splitlines(), new.splitlines()) if a != b]
+    assert len(changed) == 1 and changed[0][0].startswith("canonical = ")
+
+
+def test_the_hugo_template_holds_no_literal_url_to_rewrite() -> None:
+    # `href="{{ .Params.canonical }}"` is a binding, not a value. Nothing to rewrite in the
+    # shared template — and writing one page's canonical there would stamp it on every page.
+    layout = WEB_ROOT / "tests" / "fixtures" / "hugo" / "layouts" / "_default" / "baseof.html"
+    if not layout.exists():  # pragma: no cover
+        pytest.skip("hugo fixture missing")
+    _new, count = _rewrite(layout.read_text(encoding="utf-8"))
+    assert count == 0

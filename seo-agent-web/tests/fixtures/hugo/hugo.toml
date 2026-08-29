@@ -1,0 +1,9 @@
+baseURL = 'http://127.0.0.1:8742/'
+languageCode = 'fr-fr'
+title = 'Site fixture Hugo'
+# Hugo builds /blog as blog/index.html; the static server resolves /blog to it and 301s /blog/,
+# which is what turns a trailing-slash canonical into a defect the crawler can see.
+# Hugo's own sitemap uses trailing-slash permalinks, which contradicts the no-trailing-slash
+# host this fixture is served on and would add two unrelated anomalies. A real Hugo site
+# deployed that way ships its own sitemap for the same reason.
+disableKinds = ['taxonomy', 'term', 'RSS', 'sitemap']

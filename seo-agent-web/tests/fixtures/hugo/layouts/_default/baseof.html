@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{{ .Title }}</title>
+    <meta name="description" content="{{ .Params.description }}" />
+    {{/* The <head> lives in the TEMPLATE; the per-page value comes from front matter. That
+         split is what makes Hugo different from Astro, and it is what this fixture exercises:
+         a per-page fix must land in content/, never here. */}}
+    <link rel="canonical" href="{{ .Params.canonical }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ .Title }}" />
+    <meta property="og:description" content="{{ .Params.description }}" />
+    <meta property="og:url" content="{{ .Params.canonical }}" />
+    <meta property="og:image" content="http://127.0.0.1:8742/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ .Title }}" />
+    <meta name="twitter:description" content="{{ .Params.description }}" />
+    <meta name="twitter:image" content="http://127.0.0.1:8742/og.png" />
+  </head>
+  <body>
+    <h1>{{ .Title }}</h1>
+    {{ block "main" . }}{{ end }}
+    <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
+  </body>
+</html>
