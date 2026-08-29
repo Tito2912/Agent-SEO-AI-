@@ -5610,15 +5610,19 @@ def _gsc_rows_to_perf_items(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         key = str(keys[0]) if keys else ""
         if not key:
             continue
-        items.append(
-            {
-                "keyword": key,
-                "clicks": _to_int(row.get("clicks")),
-                "impressions": _to_int(row.get("impressions")),
-                "ctr": _to_float(row.get("ctr")),
-                "position": _to_float(row.get("position")),
-            }
-        )
+        item = {
+            "keyword": key,
+            "clicks": _to_int(row.get("clicks")),
+            "impressions": _to_int(row.get("impressions")),
+            "ctr": _to_float(row.get("ctr")),
+            "position": _to_float(row.get("position")),
+        }
+        # A second key means the request asked for query AND page together — the pairing that
+        # turns "this query underperforms" into "this page underperforms on this query", i.e.
+        # something the corrector can be pointed at.
+        if len(keys) > 1 and str(keys[1] or "").strip():
+            item["page"] = str(keys[1]).strip()
+        items.append(item)
     return items
 
 
@@ -5672,8 +5676,11 @@ def _fetch_gsc_live_items(
             return {"ok": False, "enabled": True, "source": "gsc", "reason": cred_reason or "missing_credentials"}
 
         dimension = (dim or "query").strip().lower()
-        if dimension not in {"query", "page"}:
+        if dimension not in {"query", "page", "query_page"}:
             dimension = "query"
+        # `fetch_gsc` has always taken a LIST; only this caller narrowed it to one entry, so the
+        # query→page pairing Search Console can return was never asked for.
+        dimensions = ["query", "page"] if dimension == "query_page" else [dimension]
 
         today = dt.datetime.now(dt.timezone.utc).date()
         end_date = today - dt.timedelta(days=3)
@@ -5697,7 +5704,7 @@ def _fetch_gsc_live_items(
                     property_url=property_url,
                     start_date=start_date,
                     end_date=end_date,
-                    dimensions=[dimension],
+                    dimensions=dimensions,
                     search_type=search_type,
                     row_limit=fetch_limit,
                     timeout_s=30.0,
@@ -14878,7 +14885,11 @@ def project_search_items(
 
     source_key = str(source or "").strip().lower()
     dimension = str(dim or "query").strip().lower()
-    if dimension not in {"query", "page"}:
+    # `query_page` returns the pairing, which is what makes a keyword opportunity actionable:
+    # not "this query underperforms" but "THIS PAGE underperforms on this query". Google Search
+    # Console only; Bing's reporting has no equivalent joint dimension here.
+    allowed = {"query", "page", "query_page"} if source_key == "gsc" else {"query", "page"}
+    if dimension not in allowed:
         dimension = "query"
 
     default_days = int((gsc_cfg.get("days") if source_key == "gsc" else bing_cfg.get("days")) or 28)
