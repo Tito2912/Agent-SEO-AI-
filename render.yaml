@@ -95,6 +95,12 @@ services:
         sync: false
       - key: BING_WEBMASTER_API_KEY
         sync: false
+      # Declared even though it is set in the dashboard: the service is Blueprint managed, and
+      # an UNDECLARED var can be dropped by a blueprint re-sync. Losing this one does not fail —
+      # it silently downgrades every correction from Claude to the OpenAI fallback and drops the
+      # per-plan model tier with it. Same reason the MAIL_* keys are declared here.
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: GOOGLE_GEMINI_API_KEY
@@ -235,6 +241,8 @@ services:
       - key: S3_PREFIX
         value: seo-runs
       # Integrations / AI keys used during jobs
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: GOOGLE_GEMINI_API_KEY
