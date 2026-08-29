@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{{ page.title }}</title>
+    <meta name="description" content="{{ page.description }}" />
+    <!-- The SHARED layout. The <head> lives here; the per-page value comes from front matter.
+         A per-page fix must land in the page, never in this file. -->
+    <link rel="canonical" href="{{ page.canonical }}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ page.title }}" />
+    <meta property="og:description" content="{{ page.description }}" />
+    <meta property="og:url" content="{{ page.canonical }}" />
+    <meta property="og:image" content="http://127.0.0.1:8747/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ page.title }}" />
+    <meta name="twitter:description" content="{{ page.description }}" />
+    <meta name="twitter:image" content="http://127.0.0.1:8747/og.png" />
+  </head>
+  <body>
+    <h1>{{ page.title }}</h1>
+    {{ content }}
+    <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
+  </body>
+</html>

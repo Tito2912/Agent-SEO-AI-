@@ -268,6 +268,7 @@ def test_the_remaining_fixtures_are_fixed_in_one_line(stack: str, relative: str,
         ("gatsby", "gatsby", "/blog", "src/pages/blog.js"),
         ("next-pages", "next-pages", "/blog", "pages/blog.js"),
         ("nuxt", "nuxt", "/blog", "pages/blog.vue"),
+        ("jekyll", "jekyll", "/blog", "blog.html"),
     ],
 )
 def test_every_buildable_fixture_maps_its_page_to_its_own_source(
@@ -298,3 +299,35 @@ def test_every_buildable_fixture_maps_its_page_to_its_own_source(
         f"{stack}: {route} resolved to {index['routes'].get(route)}"
     )
     assert ri.stack_idiom_hint(index), f"{stack} has routes but no idiom — the Gatsby failure"
+
+
+def test_the_real_jekyll_page_from_the_fixture_is_fixed_in_one_line() -> None:
+    """YAML front matter — the third serialisation, after Astro's JS and Hugo's TOML.
+
+    This one needed no widening: `canonical:` as an object property is the form the rewriter
+    already knew. Measured anyway, because an unverified prediction is worth nothing.
+    """
+    page = WEB_ROOT / "tests" / "fixtures" / "jekyll" / "blog.html"
+    if not page.exists():  # pragma: no cover
+        pytest.skip("jekyll fixture missing")
+    source = page.read_text(encoding="utf-8")
+    assert "127.0.0.1:8747/blog/" in source, "the fixture must ship WITH its defect"
+
+    pair = [{
+        "page": "http://127.0.0.1:8747/blog",
+        "from": "http://127.0.0.1:8747/blog/",
+        "to": "http://127.0.0.1:8747/blog",
+    }]
+    new, count = app_module._rewrite_head_url_values(source, pair)
+    assert count == 1
+    changed = [(a, b) for a, b in zip(source.splitlines(), new.splitlines()) if a != b]
+    assert len(changed) == 1 and changed[0][0].startswith("canonical:")
+
+
+def test_the_jekyll_layout_holds_no_literal_url_to_rewrite() -> None:
+    # Liquid: `href="{{ page.canonical }}"` is a binding, not a value.
+    layout = WEB_ROOT / "tests" / "fixtures" / "jekyll" / "_layouts" / "default.html"
+    if not layout.exists():  # pragma: no cover
+        pytest.skip("jekyll fixture missing")
+    _new, count = _rewrite(layout.read_text(encoding="utf-8"))
+    assert count == 0

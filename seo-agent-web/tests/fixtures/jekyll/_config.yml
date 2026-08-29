@@ -1,0 +1,7 @@
+title: Site fixture Jekyll
+url: "http://127.0.0.1:8747"
+# The host simulated by tests/static_site_server.py serves /blog and 301s /blog/, so pages are
+# built as flat .html files rather than directories with an index.
+permalink: /:title:output_ext
+plugins: []
+exclude: [README.md, Gemfile, Gemfile.lock, vendor, '*.log']
