@@ -1,0 +1,245 @@
+{% extends "layout.html" %}
+{% block title %}Concurrents - {{ project.site_name if project else slug }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Concurrents</h1>
+    <p class="muted">
+      {{ project.site_name }} · ce que tes concurrents traitent, et ce que tes pages répondent déjà
+    </p>
+  </div>
+
+  {% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>{% endif %}
+  {% if msg %}<div class="alert" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>{% endif %}
+
+  {% if not has_access %}
+    <section class="card">
+      <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
+      <p class="muted">
+        Analyser un concurrent, c'est crawler son site : du temps de calcul dépensé sur un site
+        qui n'est pas le tien. Cette page est incluse à partir du plan Pro.
+      </p>
+      <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
+    </section>
+  {% else %}
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2 style="margin:0;">Sites suivis</h2>
+        <span class="muted small">{{ competitors|length }} / {{ max_competitors }}</span>
+      </div>
+
+      <p class="muted small">
+        Chaque analyse lit jusqu'à {{ max_pages }} pages du concurrent — titres, H1 et URL,
+        rien d'autre : ses performances ne nous regardent pas. Elle se relance toute seule tous
+        les {{ refresh_days }} jours, et à la demande quand tu cliques.
+      </p>
+
+      <form method="post" action="/projects/{{ slug }}/competitors/add" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <label>
+          Ajouter un concurrent
+          <input name="url" placeholder="exemple-concurrent.com" required />
+        </label>
+        <div class="modal-actions between">
+          <span></span>
+          <button class="btn primary" type="submit">Ajouter</button>
+        </div>
+      </form>
+
+      {% if competitors %}
+        <div class="table-wrap" style="margin-top:14px;">
+          <table class="table compact">
+            <thead>
+              <tr><th>Domaine</th><th>État</th><th class="num">Pages lues</th><th>Dernière analyse</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for c in competitors %}
+                <tr>
+                  <td><a href="{{ c.base_url }}" target="_blank" rel="noreferrer nofollow">{{ c.domain }}</a></td>
+                  <td>
+                    {# Four states, four different next actions. "Jamais analysé" and "analysé,
+                       rien trouvé" are not the same answer. #}
+                    {% if c.status == 'ready' %}
+                      <span class="badge ok">Analysé</span>
+                    {% elif c.status == 'crawling' %}
+                      <span class="badge warning">Analyse en cours…</span>
+                    {% elif c.status == 'failed' %}
+                      <span class="badge error" title="{{ c.error }}">Illisible</span>
+                    {% else %}
+                      <span class="badge notice">Jamais analysé</span>
+                    {% endif %}
+                  </td>
+                  <td class="num mono">{{ c.pages_count or '—' }}</td>
+                  <td class="muted small">{{ c.last_crawled_at or '—' }}</td>
+                  <td class="num">
+                    <div class="kw-actions">
+                      <form method="post" action="/projects/{{ slug }}/competitors/analyze" class="inline">
+                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                        <input type="hidden" name="competitor_id" value="{{ c.id }}" />
+                        <button class="btn" type="submit" {% if c.status == 'crawling' %}disabled{% endif %}>
+                          {{ 'Analyser' if c.status in ('new', 'failed') else 'Réanalyser' }}
+                        </button>
+                      </form>
+                      <form method="post" action="/projects/{{ slug }}/competitors/remove" class="inline">
+                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                        <input type="hidden" name="competitor_id" value="{{ c.id }}" />
+                        <button class="btn danger" type="submit">Retirer</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% if c.status == 'failed' and c.error %}
+                  <tr><td colspan="5" class="muted small">{{ c.error }}</td></tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top:12px;">
+          Aucun concurrent suivi. Ajoute le domaine d'un site qui te dispute les mêmes
+          recherches : la comparaison se fait sur les sujets qu'il publie, sans acheter de
+          base de mots-clés à personne.
+        </p>
+      {% endif %}
+    </section>
+
+    {% if own_pages_count == 0 %}
+      <section class="card">
+        <h2 style="margin-top:0;">Il manque ton propre crawl</h2>
+        <p class="muted">
+          La comparaison a besoin des deux côtés. Lance un crawl de ton site : sans lui, on peut
+          lister ce que publie un concurrent, mais pas dire si tu y réponds déjà.
+        </p>
+        <a class="btn primary" href="/projects/{{ slug }}" style="margin-top:12px;display:inline-block;">Aller au projet</a>
+      </section>
+    {% elif findings %}
+      <section class="card">
+        <div class="card-title-row">
+          <h2 style="margin:0;">Sujets traités par tes concurrents</h2>
+          <span class="muted small">
+            {{ summary.total }} sujet{{ 's' if summary.total > 1 }} ·
+            {{ summary.covered }} déjà couvert{{ 's' if summary.covered > 1 }} ·
+            {{ summary.uncovered }} non couvert{{ 's' if summary.uncovered > 1 }}
+          </span>
+        </div>
+
+        <p class="muted small">
+          Comparé à tes {{ own_pages_count }} pages du crawl {{ own_crawl_ts }}. Un sujet
+          « couvert » veut dire qu'une de tes pages parle déjà de ça : on peut donc réécrire son
+          titre et sa description pour le dire clairement. Un sujet « non couvert » est signalé,
+          jamais corrigé automatiquement — glisser un mot-clé dans une page qui ne traite pas le
+          sujet, c'est du bourrage, et ça dégrade le site.
+        </p>
+
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Sujet du concurrent</th>
+                <th>Concurrent</th>
+                <th>Ta page</th>
+                <th class="num">Recouvrement</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for f in findings %}
+                <tr>
+                  <td>
+                    <a href="{{ f.competitor_url }}" target="_blank" rel="noreferrer nofollow">{{ f.competitor_title or f.competitor_url }}</a>
+                    <div class="muted small mono">{{ f.terms | join(' · ') }}</div>
+                  </td>
+                  <td class="muted small">{{ f.competitor_domain }}</td>
+                  <td>
+                    {% if f.covered %}
+                      <a href="{{ f.own_url }}" target="_blank" rel="noreferrer">{{ f.own_title or f.own_url }}</a>
+                    {% else %}
+                      <span class="badge notice">Aucune page sur ce sujet</span>
+                    {% endif %}
+                  </td>
+                  <td class="num mono">{{ '%.0f'|format(f.match_score * 100) }} %</td>
+                  <td class="num">
+                    {% if f.covered and github_cfg and github_cfg.repo %}
+                      <button type="button" class="btn primary" data-keyword-pr
+                              data-query="{{ f.competitor_title }}" data-url="{{ f.own_url }}"
+                              title="Ouvre une pull request qui réécrit le titre et la meta description de ta page pour ce sujet">Recibler (PR)</button>
+                    {% elif f.covered %}
+                      <span class="muted small">GitHub requis</span>
+                    {% else %}
+                      <span class="muted small">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% elif competitors %}
+      <section class="card">
+        <p class="muted">
+          {% if competitors | selectattr('status', 'equalto', 'ready') | list %}
+            Aucun sujet exploitable trouvé chez les concurrents analysés. C'est un résultat, pas
+            une panne : leurs pages ne partagent pas assez de termes avec les tiennes pour qu'on
+            parle du même sujet.
+          {% else %}
+            Lance une analyse sur un des sites ci-dessus pour voir ce qu'il publie.
+          {% endif %}
+        </p>
+      </section>
+    {% endif %}
+
+    <style>
+      .kw-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; }
+      #kw-status { margin-top:10px; font-size:13px; }
+      #kw-status.ok { color:#34d399; }
+      #kw-status.error { color:#f87171; }
+    </style>
+    <div id="kw-status" class="muted" role="status" aria-live="polite"></div>
+
+    <script>
+    (function () {
+      /* Same endpoint as the keywords page: retargeting IS a snippet rewrite, and the subject
+         plays the part of the query. */
+      var slug = {{ slug | tojson }};
+      var box = document.getElementById('kw-status');
+      function say(html, cls) { box.className = cls || 'muted'; box.innerHTML = html; }
+      function esc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-keyword-pr]');
+        if (!btn) return;
+        var query = btn.dataset.query || '', url = btn.dataset.url || '';
+        var original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Réécriture…';
+        say('Le modèle réécrit le titre et la description de <span class="mono">' + esc(url) +
+            '</span> pour ce sujet. Cela prend une vingtaine de secondes.');
+        fetch('/api/projects/' + encodeURIComponent(slug) + '/keywords/rewrite-pr', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: query, url: url })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            btn.disabled = false;
+            btn.textContent = d.ok ? 'PR créée' : original;
+            var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
+            if (!d.ok) { say(esc(d.error || 'Erreur pendant la réécriture.') + link, 'error'); return; }
+            say('Pull request ouverte sur ' + esc(d.files_count) + ' fichier(s).' + link +
+                ' Le texte est écrit par le modèle : relis-le avant de merger.', 'ok');
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = original;
+            say('Erreur réseau pendant la réécriture.', 'error');
+          });
+      });
+    })();
+    </script>
+  {% endif %}
+{% endblock %}

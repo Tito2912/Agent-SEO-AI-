@@ -101,6 +101,11 @@
               Mots-clés
             </a>
 
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}" href="/projects/{{ project.slug }}/competitors">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+              Concurrents <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Pro+</span>
+            </a>
+
             <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
               Backlinks

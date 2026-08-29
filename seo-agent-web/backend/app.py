@@ -118,6 +118,7 @@ try:
         AuditLog,
         BacklinkOpportunity,
         BillingSubscription,
+        CompetitorSite,
         EmailVerificationToken,
         IssueTask,
         JobRecord,
@@ -131,12 +132,14 @@ try:
     )
     from . import auth as auth  # type: ignore
     from . import keywords as keywords_mod  # type: ignore
+    from . import competitors as competitors_mod  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
     from models import (  # type: ignore
         AuditLog,
         BacklinkOpportunity,
         BillingSubscription,
+        CompetitorSite,
         EmailVerificationToken,
         IssueTask,
         JobRecord,
@@ -150,6 +153,7 @@ except ImportError:
     )
     import auth as auth  # type: ignore
     import keywords as keywords_mod  # type: ignore
+    import competitors as competitors_mod  # type: ignore
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -190,7 +194,7 @@ _CSRF_COOKIE_NAME = "seo_agent_csrf"
 _CSRF_FORM_FIELD = "_csrf"
 _CSRF_HEADER_NAME = "x-csrf-token"
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/auto-search-backlinks", "/cron/auto-post-backlinks"}
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/auto-search-backlinks", "/cron/auto-post-backlinks", "/cron/refresh-competitors"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -6604,6 +6608,13 @@ def _execute_queued_job(job_id: str) -> None:
         _run_crawl_job(job.id, user_id, slug, cfg)
         return
 
+    if jtype == "competitor":
+        _run_competitor_crawl_job(
+            job.id, str(result.get("user_id") or "").strip(),
+            str(result.get("competitor_id") or "").strip(),
+        )
+        return
+
     if jtype == "autopilot":
         cfg = _resolve_config_path(job.config_path) if job.config_path else None
         if not cfg:
@@ -7817,6 +7828,168 @@ def _effective_project_crawl_settings(
     bing_cfg.update({k: v for k, v in overrides_bing.items() if v is not None})
 
     return _normalize_crawl_cfg(crawl_cfg), _normalize_gsc_cfg(gsc_cfg), _normalize_bing_cfg(bing_cfg)
+
+
+# A rival crawl is capped hard, and the cap is a budget decision rather than a technical one:
+# worker SLOT-TIME is the scarce resource (2 slots, shared by every customer), and the measured
+# cost is ~1.75 s/page. 100 pages is ~3 minutes of a slot with PageSpeed off — which it is here,
+# because a competitor's Core Web Vitals are none of our business: this crawl reads titles, H1s
+# and URLs and nothing else. Owner's decision, 2026-08-29.
+_COMPETITOR_MAX_PAGES = 100
+# Each rival is another crawl, so the list is bounded too.
+_COMPETITOR_MAX_PER_PROJECT = 5
+# A month between automatic refreshes. A rival does not republish its site every week, and the
+# customer can always ask for a fresh pass from the page.
+_COMPETITOR_REFRESH_DAYS = 30
+
+
+def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """The three fields `competitors.page_terms` reads, and nothing else.
+
+    Deliberately not the whole report: everything else in it describes a site we are not
+    auditing — anomalies nobody will fix, and a page count that is not the customer's.
+    """
+    pages = report.get("pages") if isinstance(report, dict) else None
+    out: list[dict[str, Any]] = []
+    for page in pages if isinstance(pages, list) else []:
+        if not isinstance(page, dict) or page.get("error"):
+            continue
+        url = str(page.get("url") or "").strip()
+        if not url:
+            continue
+        h1 = page.get("h1")
+        out.append({
+            "url": url,
+            "title": str(page.get("title") or ""),
+            "h1": [str(x) for x in h1][:3] if isinstance(h1, list) else str(h1 or ""),
+            "status_code": page.get("status_code"),
+        })
+    return out
+
+
+def _run_competitor_crawl_job(job_id: str, user_id: str, competitor_id: str) -> None:
+    """Crawl one rival domain and keep what it says about its own subjects.
+
+    Nothing here touches the customer's project: no report is written, no anomaly is scored, no
+    quota is spent. The output is a list of {url, title, h1} stored on the CompetitorSite row.
+    """
+    import tempfile
+
+    _mark_job_active(job_id, True)
+    job = _load_job(job_id)
+    if not job:
+        _mark_job_active(job_id, False)
+        return
+    job.status = "running"
+    job.started_at = time.time()
+
+    with DB.session() as db:
+        row = db.get(CompetitorSite, competitor_id)
+        base_url = str(row.base_url or "").strip() if row else ""
+        domain = str(row.domain or "") if row else ""
+        if row is not None:
+            row.status = "crawling"
+            row.error = None
+            db.commit()
+
+    if not base_url:
+        job.status = "failed"
+        job.returncode = 2
+        job.stderr = f"Concurrent introuvable : {competitor_id}"
+        job.finished_at = time.time()
+        _save_job(job)
+        _mark_job_active(job_id, False)
+        return
+
+    validation_err = _validate_public_crawl_target(base_url)
+    if validation_err:
+        _competitor_mark_failed(competitor_id, f"Cible refusée : {validation_err}")
+        job.status = "failed"
+        job.returncode = 2
+        job.stderr = f"Refus crawl target: {validation_err}"
+        job.finished_at = time.time()
+        _save_job(job)
+        _mark_job_active(job_id, False)
+        return
+
+    script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
+    out_dir = Path(tempfile.mkdtemp(prefix="competitor-"))
+    cmd = [
+        sys.executable, "-u", str(script), base_url,
+        "--max-pages", str(_COMPETITOR_MAX_PAGES),
+        "--workers", "3",
+        "--timeout", "15",
+        "--output-dir", str(out_dir),
+    ]
+    # No --ignore-robots, ever: this is somebody else's site. A rival that refuses us is not a
+    # defect to report, it is an answer to respect — the same rule the crawler already follows
+    # for a customer's own hosts.
+    job.command = cmd
+    job.stdout = job.stdout or ""
+    job.stderr = job.stderr or ""
+    _save_job(job)
+
+    try:
+        returncode = _run_subprocess_streaming(
+            job, cmd, cwd=REPO_ROOT, job_kind="crawl", timeout_s=1800.0,
+        )
+        job.returncode = returncode
+        report = None
+        try:
+            report_path = out_dir / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+        except Exception:
+            report = None
+        pages = _competitor_pages_from_report(report) if isinstance(report, dict) else []
+        if not pages:
+            # Distinguish the two, because they lead to different actions: a site that refused
+            # us is not a site we failed to read.
+            _competitor_mark_failed(competitor_id, (
+                "Aucune page lisible. Ce site bloque peut-être les robots (robots.txt, "
+                "pare-feu) : ce n'est pas une anomalie de ton côté."
+            ))
+            job.status = "failed" if returncode != 0 else "done"
+        else:
+            with DB.session() as db:
+                row = db.get(CompetitorSite, competitor_id)
+                if row is not None:
+                    row.pages = pages
+                    row.pages_count = len(pages)
+                    row.status = "ready"
+                    row.error = None
+                    row.last_crawled_at = datetime.now(timezone.utc)
+                    db.commit()
+            job.status = "done"
+        job.finished_at = time.time()
+        _save_job(job)
+        logger.info("[competitors] %s: %d page(s) retenues (rc=%s)", domain, len(pages), returncode)
+    except Exception as e:
+        _competitor_mark_failed(competitor_id, f"{type(e).__name__}: {e}")
+        job.status = "failed"
+        job.returncode = job.returncode if job.returncode is not None else 1
+        job.stderr = _trim_log((job.stderr or "") + f"\n[COMPETITOR] {type(e).__name__}: {e}\n")
+        job.finished_at = time.time()
+        _save_job(job)
+    finally:
+        _mark_job_active(job_id, False)
+        try:
+            import shutil as _shutil
+            _shutil.rmtree(out_dir, ignore_errors=True)
+        except Exception:
+            pass
+
+
+def _competitor_mark_failed(competitor_id: str, message: str) -> None:
+    try:
+        with DB.session() as db:
+            row = db.get(CompetitorSite, competitor_id)
+            if row is not None:
+                row.status = "failed"
+                row.error = message[:2000]
+                row.last_crawled_at = datetime.now(timezone.utc)
+                db.commit()
+    except Exception:
+        pass
 
 
 def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | None) -> None:
@@ -20437,6 +20610,253 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
         "files": patched_files, "files_count": len(patched_files), "query": query,
     })
+
+
+def _competitor_has_access(db, *, user_id: str) -> bool:
+    """Pro and above. Owner's decision, 2026-08-29.
+
+    One step above the backlink "Opportunités" gate (`_opp_has_access`, Solo+): a rival crawl
+    spends worker slot-time on a site that is not the customer's, and the retargeting it feeds
+    is the part of the product no competitor can copy.
+    """
+    plan_key = billing.effective_plan_key(db, user_id=str(user_id))
+    return billing.plan_rank(plan_key) >= billing.plan_rank("pro")
+
+
+def _competitor_domain(url: str) -> str:
+    from urllib.parse import urlparse
+    host = urlparse(url if "://" in url else f"https://{url}").netloc.lower().strip()
+    return host.removeprefix("www.")
+
+
+def _competitor_rows(db, project_id: str) -> list[Any]:
+    return list(db.scalars(
+        select(CompetitorSite)
+        .where(CompetitorSite.project_id == str(project_id))
+        .order_by(CompetitorSite.created_at.asc())
+    ))
+
+
+def _own_pages_for_project(runs_dir: Path, slug: str) -> tuple[list[dict[str, Any]], str]:
+    """The customer's own pages, from their latest crawl that actually has a report."""
+    crawls = dash.list_project_crawls(runs_dir, slug)
+    for ts in reversed(crawls):
+        report = dash.load_report_json(runs_dir, slug, ts)
+        pages = report.get("pages") if isinstance(report, dict) else None
+        if isinstance(pages, list) and pages:
+            return [p for p in pages if isinstance(p, dict)], ts
+    return [], ""
+
+
+@app.get("/projects/{slug}/competitors", response_class=HTMLResponse)
+def project_competitors(request: Request, slug: str,
+                        msg: str | None = None, err: str | None = None) -> HTMLResponse:
+    """What rivals build pages about, and which of those subjects this site already answers.
+
+    Four states, and they lead to different actions: no access, no rival added, a rival added
+    but never crawled, and a comparison. An empty table would conflate the last three.
+    """
+    proj_row = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    runs_dir = _runs_dir_for_request(request)
+    own_pages, own_crawl_ts = _own_pages_for_project(runs_dir, slug)
+
+    with DB.session() as db:
+        has_access = bool(user) and (
+            bool(getattr(user, "is_admin", False))
+            or _competitor_has_access(db, user_id=str(getattr(user, "id", "")))
+        )
+        rows = _competitor_rows(db, str(proj_row.id)) if has_access else []
+        competitors = [{
+            "id": str(r.id), "domain": r.domain, "base_url": r.base_url, "status": r.status,
+            "pages_count": int(r.pages_count or 0), "error": r.error or "",
+            "last_crawled_at": r.last_crawled_at.strftime("%d/%m/%Y") if r.last_crawled_at else "",
+            "pages": r.pages if isinstance(r.pages, list) else [],
+        } for r in rows]
+
+    findings: list[dict[str, Any]] = []
+    for comp in competitors:
+        if comp["status"] != "ready" or not comp["pages"]:
+            continue
+        for finding in competitors_mod.compare(own_pages, comp["pages"], limit=25):
+            finding["competitor_domain"] = comp["domain"]
+            findings.append(finding)
+    # Uncovered first, as the engine orders them: a subject nobody here answers is the more
+    # interesting finding, even though it is the one the product will not act on.
+    findings.sort(key=lambda f: (f["covered"], -f["match_score"]))
+    summary = competitors_mod.summarise(findings)
+
+    github_cfg = _project_github_cfg(proj_row)
+    resp = templates.TemplateResponse(
+        "competitors.html",
+        {
+            "request": request,
+            "project": {"slug": proj_row.slug, "site_name": proj_row.site_name,
+                        "base_url": proj_row.base_url},
+            "slug": slug,
+            "has_access": has_access,
+            "competitors": competitors,
+            "findings": findings[:100],
+            "summary": summary,
+            "own_pages_count": len(own_pages),
+            "own_crawl_ts": own_crawl_ts,
+            "max_competitors": _COMPETITOR_MAX_PER_PROJECT,
+            "max_pages": _COMPETITOR_MAX_PAGES,
+            "refresh_days": _COMPETITOR_REFRESH_DAYS,
+            "github_cfg": github_cfg,
+            # Every refusal on this page redirects with a message. Without these two the
+            # customer whose rival was refused would see the page redraw and say nothing.
+            "msg": msg,
+            "err": err,
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/projects/{slug}/competitors/add")
+def project_competitor_add(request: Request, slug: str, url: str = Form(default="")) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    page = f"/projects/{slug}/competitors"
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+
+    raw = (url or "").strip()
+    if raw and "://" not in raw:
+        raw = f"https://{raw}"
+    domain = _competitor_domain(raw)
+    if not domain:
+        return RedirectResponse(url=_path_with_flash(page, err="Adresse invalide."), status_code=303)
+    if domain == _competitor_domain(str(proj.base_url or "")):
+        return RedirectResponse(url=_path_with_flash(
+            page, err="C'est ton propre site : compare-le à un concurrent."), status_code=303)
+    # Same guard as a project's crawl target: no private host, no exotic port, no IP literal.
+    validation_err = _validate_public_crawl_target(raw)
+    if validation_err:
+        return RedirectResponse(url=_path_with_flash(page, err=f"Cible refusée : {validation_err}"),
+                                status_code=303)
+
+    with DB.session() as db:
+        if not (bool(getattr(user, "is_admin", False))
+                or _competitor_has_access(db, user_id=str(user.id))):
+            return RedirectResponse(url=_path_with_flash(page, err="Plan Pro+ requis"), status_code=303)
+        rows = _competitor_rows(db, str(proj.id))
+        if any(r.domain == domain for r in rows):
+            return RedirectResponse(url=_path_with_flash(
+                page, msg="Ce concurrent est déjà suivi."), status_code=303)
+        if len(rows) >= _COMPETITOR_MAX_PER_PROJECT:
+            return RedirectResponse(url=_path_with_flash(page, err=(
+                f"Maximum {_COMPETITOR_MAX_PER_PROJECT} concurrents par projet : chacun est un "
+                "crawl, et le temps de worker est la ressource rare.")), status_code=303)
+        db.add(CompetitorSite(project_id=str(proj.id), user_id=str(user.id),
+                              domain=domain, base_url=raw, status="new"))
+        db.commit()
+    return RedirectResponse(url=page, status_code=303)
+
+
+@app.post("/projects/{slug}/competitors/remove")
+def project_competitor_remove(request: Request, slug: str,
+                              competitor_id: str = Form(default="")) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return RedirectResponse(url="/auth/login", status_code=303)
+    cid = (competitor_id or "").strip()
+    if cid:
+        with DB.session() as db:
+            row = db.get(CompetitorSite, cid)
+            # Scoped to the project in the URL, whose ownership was already checked: an id alone
+            # must never be enough to touch another account's row.
+            if row and str(row.project_id) == str(proj.id):
+                db.delete(row)
+                db.commit()
+    return RedirectResponse(url=f"/projects/{slug}/competitors", status_code=303)
+
+
+@app.post("/projects/{slug}/competitors/analyze")
+def project_competitor_analyze(request: Request, slug: str,
+                               competitor_id: str = Form(default="")) -> RedirectResponse:
+    """Queue the rival crawl. Bounded at queue time, and never twice at once."""
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    page = f"/projects/{slug}/competitors"
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+    retry_after = _rate_limit_retry_after(bucket="competitor_crawl_user",
+                                          subject=str(getattr(user, "id", "")), limit=10, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return RedirectResponse(url=_path_with_flash(page, err=(
+            f"Trop d'analyses lancées. Réessaie dans {_format_retry_after(retry_after)}.")), status_code=303)
+
+    with DB.session() as db:
+        if not (bool(getattr(user, "is_admin", False))
+                or _competitor_has_access(db, user_id=str(user.id))):
+            return RedirectResponse(url=_path_with_flash(page, err="Plan Pro+ requis"), status_code=303)
+        row = db.get(CompetitorSite, (competitor_id or "").strip())
+        if not row or str(row.project_id) != str(proj.id):
+            return RedirectResponse(url=_path_with_flash(page, err="Concurrent introuvable."), status_code=303)
+        if row.status == "crawling":
+            # A queued crawl the customer cannot see is a button they will press again.
+            return RedirectResponse(url=_path_with_flash(
+                page, msg="L'analyse de ce concurrent est déjà en cours."), status_code=303)
+        cid, domain = str(row.id), row.domain
+        row.status = "crawling"
+        row.error = None
+        db.commit()
+
+    job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time())
+    job.result = {"type": "competitor", "user_id": str(user.id), "competitor_id": cid,
+                  "slug": slug, "domain": domain}
+    _save_job(job)
+    with DB.session() as db:
+        row = db.get(CompetitorSite, cid)
+        if row is not None:
+            row.last_job_id = job.id
+            db.commit()
+    return RedirectResponse(url=_path_with_flash(
+        page, msg=f"Analyse de {domain} lancée (jusqu'à {_COMPETITOR_MAX_PAGES} pages)."),
+        status_code=303)
+
+
+@app.post("/cron/refresh-competitors")
+def cron_refresh_competitors(request: Request) -> JSONResponse:
+    """Re-crawl every rival whose last pass is older than the refresh window.
+
+    On demand AND monthly, the owner's answer: the button keeps the customer in control, and
+    this keeps the page from quietly describing a site as it was six months ago.
+    """
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=_COMPETITOR_REFRESH_DAYS)
+    queued: list[str] = []
+    with DB.session() as db:
+        rows = list(db.scalars(select(CompetitorSite).where(CompetitorSite.status != "crawling")))
+        for row in rows:
+            last = row.last_crawled_at
+            if last is not None:
+                if last.tzinfo is None:
+                    last = last.replace(tzinfo=timezone.utc)
+                if last > cutoff:
+                    continue
+            # A rival whose plan no longer includes the feature stops being refreshed: the crawl
+            # costs worker time either way, and it would feed a page the customer cannot open.
+            if not _competitor_has_access(db, user_id=str(row.user_id)):
+                continue
+            job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time())
+            job.result = {"type": "competitor", "user_id": str(row.user_id),
+                          "competitor_id": str(row.id), "domain": row.domain}
+            _save_job(job)
+            row.status = "crawling"
+            row.last_job_id = job.id
+            queued.append(row.domain)
+        db.commit()
+    logger.info("[competitors] refresh: %d crawl(s) mis en file", len(queued))
+    return JSONResponse({"ok": True, "queued": len(queued), "domains": queued[:20]})
 
 
 @app.get("/projects/{slug}/performance", response_class=HTMLResponse)

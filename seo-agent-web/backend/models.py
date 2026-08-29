@@ -359,6 +359,55 @@ class TrackedKeywordSnapshot(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class CompetitorSite(Base):
+    """A rival domain the customer wants their pages compared against.
+
+    The crawled pages are stored HERE, as a trimmed list, rather than as a report on disk: a
+    competitor crawl produces one thing the product needs — what each page is about — and the
+    worker has no disk (see the S3 note in render.yaml). A hundred pages of {url, title, h1}
+    is a few kilobytes, so the comparison can be recomputed on every page load from the
+    customer's own latest crawl without fetching anything.
+
+    Not a Project: a rival is not a site we audit. Making it one would put it in the customer's
+    site quota, run PageSpeed on it, score anomalies nobody will fix, and offer to open pull
+    requests against a repository that is not theirs.
+    """
+
+    __tablename__ = "competitor_sites"
+    __table_args__ = (
+        # One row per rival per project. Adding the same domain twice is the same decision, and
+        # a second crawl of it would spend worker time to produce the same answer.
+        UniqueConstraint("project_id", "domain", name="uq_competitor_project_domain"),
+        Index("ix_competitor_project_status", "project_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    domain: Mapped[str] = mapped_column(String(255), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    # "new" until a crawl has run, then "crawling" / "ready" / "failed". The UI shows all four
+    # differently on purpose: "never analysed" and "analysed, nothing found" are different
+    # answers, the same distinction the keywords page makes.
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="new")
+    last_job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    last_crawled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    pages_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # [{url, title, h1}] — everything `competitors.page_terms` reads, and nothing else.
+    pages: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class IssueTask(Base):
     __tablename__ = "issue_tasks"
     __table_args__ = (
