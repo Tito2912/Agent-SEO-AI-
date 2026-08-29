@@ -1,6 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
 const canonical = 'http://127.0.0.1:8741/liens';
+// No x-default in this group -> x_default_hreflang_missing, a hint-only family (no evidence).
+const alternates = [
+  { lang: 'fr', href: 'http://127.0.0.1:8741/liens' },
+  { lang: 'en', href: 'http://127.0.0.1:8741/en' },
+];
 // TWO MORE INJECTED DEFECTS, both in a rewriter the canonical loop never exercised:
 //  * the <a href> points at a URL the host 301s away from  -> page_has_links_to_redirect,
 //    repaired by _rewrite_redirect_links (a DIFFERENT rewriter from the canonical one).
@@ -11,6 +16,7 @@ const canonical = 'http://127.0.0.1:8741/liens';
   title="Liens du site de test Astro"
   description="Page qui pointe deliberement vers des URL que l'hebergeur redirige, pour exercer la reecriture des liens et des ressources."
   canonical={canonical}
+  alternates={alternates}
 >
   <p>Voir <a href="http://127.0.0.1:8741/a-propos/">la page a propos</a>.</p>
   <img src="http://127.0.0.1:8741/og.png/" alt="Logo du site de test" width="1" height="1" />

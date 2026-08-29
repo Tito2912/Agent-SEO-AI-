@@ -169,3 +169,37 @@ def test_the_shared_layout_declares_no_literal_url() -> None:
     assert count == 0
     _new2, count2 = app_module._rewrite_redirect_links(text, PAIR)
     assert count2 == 0
+
+
+# ── the two model-written families the fixture also carries ───────────────────────────────────
+# Their CONTENT cannot be asserted — a model writes it. What can be asserted is that the fixture
+# still poses the question, and what the measured answer was.
+
+def test_the_fixture_still_carries_a_too_long_meta_description() -> None:
+    """Exercised for real against the production model (gpt-4o-mini) on 2026-08-29: rewritten to
+    140 characters, inside [100, 160], and the anomaly cleared after rebuild."""
+    import re
+
+    page = FIXTURE / "src" / "pages" / "a-propos.astro"
+    if not page.exists():  # pragma: no cover
+        pytest.skip("astro fixture missing")
+    match = re.search(r'description="([^"]*)"', page.read_text(encoding="utf-8"))
+    assert match, "the control page lost its description"
+    assert len(match.group(1)) > 160, (
+        "the fixture no longer poses the meta_description_too_long question"
+    )
+
+
+def test_the_fixture_still_declares_alternates_without_x_default() -> None:
+    """Hint-only family: no evidence at all, the model works from the instruction alone.
+    Measured 2026-08-29: the x-default entry was added to the right array, anomaly cleared."""
+    page = FIXTURE / "src" / "pages" / "liens.astro"
+    if not page.exists():  # pragma: no cover
+        pytest.skip("astro fixture missing")
+    text = page.read_text(encoding="utf-8")
+    assert "const alternates" in text, "the alternates array is gone"
+    # Match an ENTRY, not the word: the comment above the array names the family it poses, and
+    # a bare substring check failed on its own documentation.
+    assert "lang: 'x-default'" not in text, (
+        "the fixture no longer poses the x_default_hreflang_missing question"
+    )

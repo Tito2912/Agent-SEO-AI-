@@ -3007,6 +3007,17 @@ def _correction_ai_json(
     json_hint = "\n\nRéponds UNIQUEMENT avec l'objet JSON valide, sans texte autour ni bloc markdown."
     for prov in order:
         model = (model_override if (prov == "anthropic" and model_override) else _correction_ai_model(prov))
+        if model_override and prov != "anthropic":
+            # The per-plan model (Sonnet for Solo/Pro, Opus for Business) only applies to the
+            # Anthropic path. With no ANTHROPIC_API_KEY the whole tier differentiation is
+            # silently dropped and every plan gets the OpenAI fallback — a 199 EUR customer runs
+            # the same engine as a 49 EUR one. Say so, once per call: this project has already
+            # lost a whole SDK major to a failure that logged nothing.
+            logger.warning(
+                "[correction-ai] per-plan model %r ignored: provider is %s (set ANTHROPIC_API_KEY "
+                "to honour the plan tier, or drop `correction.model` from the catalogue)",
+                model_override, prov,
+            )
         if not model:
             continue
         try:
