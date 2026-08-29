@@ -5,7 +5,37 @@ correctif écrit par l'agent compile encore, et que reconstruire fait vraiment d
 l'anomalie.** Le ciblage peut être juste pendant que le résultat est faux — c'est exactement ce
 qui est arrivé sur Gatsby, où le bon fichier recevait du code d'un autre framework.
 
-## Le défaut injecté
+## Les cinq défauts injectés
+
+Ce fixture a d'abord porté un seul défaut, puis a été étendu pour exercer **les cinq réécriveurs
+déterministes** du correcteur — ceux qui donnent le badge « correctif mécanique » et l'éligibilité
+à l'auto-merge. Chacun est isolé sur sa propre page ou son propre fichier.
+
+| Fichier | Défaut | Réécriveur exercé |
+|---|---|---|
+| `src/pages/blog.astro` | canonical vers une URL qui redirige | `_rewrite_head_url_values` (branche canonical) |
+| `src/pages/en.astro` | alternate hreflang vers une URL qui redirige | `_rewrite_head_url_values` (branche alternate) |
+| `src/pages/liens.astro` | `<a href>` vers une URL qui redirige | `_rewrite_redirect_links` |
+| `src/pages/liens.astro` | `<img src>` vers une URL qui redirige | `_rewrite_asset_srcs` |
+| `public/sitemap.xml` | `<loc>` vers une URL qui redirige | `_rewrite_sitemap_locs` |
+
+**Résultat mesuré (2026-08-29) : 13 anomalies → 0**, conséquences comprises
+(`sitemap_non_canonical_page`, `missing_reciprocal_hreflang`, `indexable_page_not_in_sitemap`,
+`redirect_3xx`). Pages crawlées 8 → 5.
+
+**Deux réécriveurs sur cinq ne faisaient rien**, et l'échec était silencieux :
+`_rewrite_redirect_links` réduisait chaque paire à son **chemin**, donc un site écrivant ses liens
+internes en absolu ne correspondait à rien ; `_rewrite_head_url_values` connaissait la balise
+`<link rel="alternate">` et la table `languages: {}` mais pas un **tableau d'objets**
+`{ lang, href }`, la façon dont un composant alimente un layout partagé. Les deux sont corrigés,
+et `test_deterministic_rewriters_families.py` épingle les garde-fous : un littéral de code, un
+chemin voisin plus long et un tableau de navigation restent intacts.
+
+À noter, parce que le mauvais diagnostic était à un commit près : `_rewrite_asset_srcs` a d'abord
+semblé défaillant lui aussi. Il ne l'était pas — mon harnais ne lui passait aucun fichier localisé,
+donc la famille n'avait tout simplement pas de cible.
+
+## Le premier défaut, en détail
 
 `src/pages/blog.astro` déclare `const canonical = '…/blog/'` alors que le site sert `/blog` et
 redirige `/blog/` vers lui en 301. C'est le défaut trouvé sur un vrai site client

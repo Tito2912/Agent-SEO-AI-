@@ -2,11 +2,18 @@
 import Base from '../layouts/Base.astro';
 // CONTROL PAGE: nothing is wrong here. If a fix touches this file, the fix is too broad.
 const canonical = 'http://127.0.0.1:8741/a-propos';
+// Reciprocal side of the hreflang pair whose /en counterpart carries the injected defect.
+const alternates = [
+  { lang: 'fr', href: 'http://127.0.0.1:8741/a-propos' },
+  { lang: 'en', href: 'http://127.0.0.1:8741/en' },
+  { lang: 'x-default', href: 'http://127.0.0.1:8741/a-propos' },
+];
 ---
 <Base
   title="A propos du site de test Astro"
   description="Page temoin du site fixture Astro : elle est saine et doit rester rigoureusement intacte apres l'application de la correction automatique."
   canonical={canonical}
+  alternates={alternates}
 >
   <p>Page temoin : elle doit rester intacte apres la correction.</p>
 </Base>

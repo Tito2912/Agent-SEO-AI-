@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+const canonical = 'http://127.0.0.1:8741/en';
+// INJECTED DEFECT: the hreflang alternate points at a URL the host 301s away from.
+// -> hreflang_to_redirect_or_broken_page, repaired by the <link rel="alternate"> branch of
+// _rewrite_head_url_values — the branch the canonical-only loop never touched.
+const alternates = [
+  { lang: 'en', href: 'http://127.0.0.1:8741/en' },
+  { lang: 'fr', href: 'http://127.0.0.1:8741/a-propos/' },
+  { lang: 'x-default', href: 'http://127.0.0.1:8741/en' },
+];
+---
+<Base
+  title="English page of the Astro test site"
+  description="English counterpart used to exercise the hreflang branch of the deterministic head rewriter on a really built site."
+  canonical={canonical}
+  alternates={alternates}
+>
+  <p>English content.</p>
+</Base>

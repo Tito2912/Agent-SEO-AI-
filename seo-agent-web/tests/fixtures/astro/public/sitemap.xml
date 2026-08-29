@@ -3,4 +3,6 @@
 <url><loc>http://127.0.0.1:8741/</loc></url>
 <url><loc>http://127.0.0.1:8741/blog</loc></url>
 <url><loc>http://127.0.0.1:8741/a-propos</loc></url>
+<url><loc>http://127.0.0.1:8741/liens/</loc></url>
+<url><loc>http://127.0.0.1:8741/en</loc></url>
 </urlset>

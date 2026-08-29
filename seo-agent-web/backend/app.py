@@ -17087,9 +17087,18 @@ def _rewrite_redirect_links(content: str, pairs: list[dict[str, str]]) -> tuple[
     link absolute. Returns (new_content, replacements)."""
     new = content
     total = 0
+    # Both writings of each pair. Reducing every pair to its PATH meant a site writing internal
+    # links absolutely (`href="https://site.fr/x/"`, common in generated MDX and in content
+    # pasted from the live site) matched NOTHING and the family produced an empty patch —
+    # silently, because this family deliberately bypasses the AI fallback. The absolute form
+    # maps to the absolute target and the path form to the path target, so a relative link is
+    # never turned absolute, nor the reverse.
+    variants: list[tuple[str, str]] = []
     for p in pairs or []:
-        frm = _link_path(p.get("from", ""), keep_slash=True)
-        to = _link_path(p.get("to", ""), keep_slash=True)
+        for a, b in _url_value_variants(p):
+            if (a, b) not in variants:
+                variants.append((a, b))
+    for frm, to in variants:
         if not frm or not to or frm == to:
             continue
         # Match ONLY in real link contexts — an href attribute/prop (HTML/JSX/MDX) or a
@@ -17480,8 +17489,30 @@ _REL_CANONICAL_RE = re.compile(r'rel\s*=\s*["\']?(canonical|alternate)\b', re.I)
 # The lookbehind is what keeps `data-canonical=` and `mycanonical:` out; the old pattern
 # rewrote `mycanonical:` too.
 _JS_CANONICAL_RE = re.compile(r'(?<![\w-])(canonical\s*[:=]\s*)(["\'])(.*?)\2')
-_JS_LANGUAGES_RE = re.compile(r"languages\s*:\s*\{")
+# A binding that HOLDS the alternates, in the shapes a component actually uses:
+# `languages: { … }`, `alternates: [ … ]`, `const hreflangs = [ … ]`. Scoping the rewrite to
+# such a block is what keeps a plain nav `href:` out of it — the rule of this rewriter is
+# that a menu pointing at the same URL is deliberately left alone.
+_JS_LANGUAGES_RE = re.compile(r"(?:languages|alternates|hreflangs?|alternateLinks)\s*[:=]\s*[{\[]", re.I)
 _QUOTED_VALUE_RE = re.compile(r'(:\s*)(["\'])(.*?)\2')
+
+
+def _bracketed_block(content: str, open_idx: int, opener: str = "{") -> tuple[int, int]:
+    """Span of the `{...}` or `[...]` block starting at open_idx, bracket-matched.
+
+    An alternates list is an ARRAY of objects, so brace matching alone stopped at the first
+    inner object and saw one entry out of N. Returns (-1, -1) when unbalanced.
+    """
+    closer = "]" if opener == "[" else "}"
+    depth = 0
+    for i in range(open_idx, len(content)):
+        if content[i] == opener:
+            depth += 1
+        elif content[i] == closer:
+            depth -= 1
+            if depth == 0:
+                return (open_idx, i + 1)
+    return (-1, -1)
 
 
 def _braced_block(content: str, open_brace_idx: int) -> tuple[int, int]:
@@ -17549,7 +17580,8 @@ def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple
         m = _JS_LANGUAGES_RE.search(new, pos)
         if not m:
             break
-        start, end = _braced_block(new, new.index("{", m.start()))
+        opener = m.group(0)[-1]
+        start, end = _bracketed_block(new, m.end() - 1, opener)
         if start < 0:
             pos = m.end()
             continue

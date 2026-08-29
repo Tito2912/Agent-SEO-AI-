@@ -1,7 +1,7 @@
 ---
 // The SHARED layout. A per-page fix must never land here: writing one page's canonical into it
 // would stamp that value onto every page of the site.
-const { title, description, canonical } = Astro.props;
+const { title, description, canonical, alternates = [] } = Astro.props;
 ---
 <!doctype html>
 <html lang="fr">
@@ -11,6 +11,7 @@ const { title, description, canonical } = Astro.props;
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {alternates.map((a) => (<link rel="alternate" hreflang={a.lang} href={a.href} />))}
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -24,6 +25,6 @@ const { title, description, canonical } = Astro.props;
   <body>
     <h1>{title}</h1>
     <slot />
-    <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">À propos</a></nav>
+    <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">À propos</a> <a href="/liens">Liens</a> <a href="/en">English</a></nav>
   </body>
 </html>
