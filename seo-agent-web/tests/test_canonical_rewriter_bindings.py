@@ -164,3 +164,66 @@ def test_the_hugo_template_holds_no_literal_url_to_rewrite() -> None:
         pytest.skip("hugo fixture missing")
     _new, count = _rewrite(layout.read_text(encoding="utf-8"))
     assert count == 0
+
+
+def test_the_real_sveltekit_page_from_the_fixture_is_fixed_in_one_line() -> None:
+    """`const canonical` inside a Svelte `<script>`, with `href={canonical}` in <svelte:head>."""
+    page = WEB_ROOT / "tests" / "fixtures" / "sveltekit" / "src" / "routes" / "blog" / "+page.svelte"
+    if not page.exists():  # pragma: no cover - the fixture is committed alongside this test
+        pytest.skip("sveltekit fixture missing")
+    source = page.read_text(encoding="utf-8")
+    assert "127.0.0.1:8743/blog/" in source, "the fixture must ship WITH its defect"
+
+    pair = [{
+        "page": "http://127.0.0.1:8743/blog",
+        "from": "http://127.0.0.1:8743/blog/",
+        "to": "http://127.0.0.1:8743/blog",
+    }]
+    new, count = app_module._rewrite_head_url_values(source, pair)
+    assert count == 1
+    changed = [(a, b) for a, b in zip(source.splitlines(), new.splitlines()) if a != b]
+    assert len(changed) == 1 and "const canonical" in changed[0][0]
+
+
+def test_the_real_gatsby_page_from_the_fixture_is_fixed_in_one_line() -> None:
+    """JSX with the Gatsby Head API: the value is a module-level binding."""
+    page = WEB_ROOT / "tests" / "fixtures" / "gatsby" / "src" / "pages" / "blog.js"
+    if not page.exists():  # pragma: no cover
+        pytest.skip("gatsby fixture missing")
+    source = page.read_text(encoding="utf-8")
+    assert "127.0.0.1:8744/blog/" in source, "the fixture must ship WITH its defect"
+
+    pair = [{
+        "page": "http://127.0.0.1:8744/blog",
+        "from": "http://127.0.0.1:8744/blog/",
+        "to": "http://127.0.0.1:8744/blog",
+    }]
+    new, count = app_module._rewrite_head_url_values(source, pair)
+    assert count == 1
+    changed = [(a, b) for a, b in zip(source.splitlines(), new.splitlines()) if a != b]
+    assert len(changed) == 1 and "const canonical" in changed[0][0]
+
+
+def test_the_gatsby_fixture_is_never_handed_the_next_js_idiom() -> None:
+    """The bug that made this stack worth proving: right file, another framework's code.
+
+    A Gatsby repo detected as next-pages got told to import `next/head`, which does not exist
+    there — a PR that reads fine and breaks the build.
+    """
+    from backend import repo_index as ri
+
+    root = WEB_ROOT / "tests" / "fixtures" / "gatsby"
+    if not root.exists():  # pragma: no cover
+        pytest.skip("gatsby fixture missing")
+    skip = {"node_modules", "public", ".cache"}
+    paths = sorted(
+        str(p.relative_to(root)).replace("\\", "/")
+        for p in root.rglob("*")
+        if p.is_file() and not (skip & set(p.parts))
+    )
+    index = ri.build_repo_index(paths)
+    assert index["stack"] == "gatsby"
+    assert index["routes"].get("/blog") == ["src/pages/blog.js"]
+
+    hint = ri.stack_idiom_hint(index)
+    assert "Gatsby" in hint and "JAMAIS" in hint
