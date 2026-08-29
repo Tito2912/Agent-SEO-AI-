@@ -125,10 +125,12 @@ try:
         PasswordResetToken,
         Project,
         RateLimitBucket,
+        TrackedKeyword,
         User,
         UserConnection,
     )
     from . import auth as auth  # type: ignore
+    from . import keywords as keywords_mod  # type: ignore
 except ImportError:
     from db import Database  # type: ignore
     from models import (  # type: ignore
@@ -142,10 +144,12 @@ except ImportError:
         PasswordResetToken,
         Project,
         RateLimitBucket,
+        TrackedKeyword,
         User,
         UserConnection,
     )
     import auth as auth  # type: ignore
+    import keywords as keywords_mod  # type: ignore
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -19872,6 +19876,141 @@ def _ahrefs_api_get(
     if data.get("error"):
         raise RuntimeError(f"Ahrefs: {data.get('error')}")
     return data
+
+
+@app.get("/projects/{slug}/keywords/opportunities", response_class=HTMLResponse)
+def project_keyword_opportunities(request: Request, slug: str, days: int | None = None) -> HTMLResponse:
+    """What to DO about the queries this site ranks for.
+
+    The performance page reports; this one recommends. It asks Search Console for the query AND
+    the page together, because a keyword opportunity that names only the query is a remark, and
+    one that names the page is something the corrector can be pointed at.
+    """
+    proj_row = _db_project_or_404(request, slug)
+    runs_dir = _runs_dir_for_request(request)
+    project = dash.project_overview(runs_dir, slug, timestamp=None, compare_to=None) or {
+        "slug": slug,
+        "site_name": str(proj_row.site_name or slug),
+        "base_url": str(proj_row.base_url or ""),
+        "crawls": [],
+        "current": {"timestamp": ""},
+    }
+    user = getattr(request.state, "user", None)
+    _, gsc_cfg, _bing_cfg = _effective_project_crawl_settings(
+        slug,
+        config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
+        project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
+    )
+    requested_days = max(1, min(int(days or int(gsc_cfg.get("days") or 28)), 365))
+
+    payload = _fetch_gsc_live_items(
+        user_id=str(getattr(user, "id", "")),
+        slug=slug,
+        base_url=str(proj_row.base_url or ""),
+        gsc_cfg=gsc_cfg,
+        days=requested_days,
+        dim="query_page",
+        limit=5000,
+    )
+    rows = payload.get("items") if isinstance(payload.get("items"), list) else []
+    opportunities = keywords_mod.find_opportunities(rows)
+    summary = keywords_mod.summarise(opportunities)
+
+    with DB.session() as db:
+        tracked_rows = list(db.scalars(
+            select(TrackedKeyword)
+            .where(TrackedKeyword.project_id == str(proj_row.id))
+            .order_by(TrackedKeyword.created_at.desc())
+        ))
+        tracked = [
+            {"id": str(r.id), "query": r.query, "target_url": r.target_url or "",
+             "source": r.source, "status": r.status}
+            for r in tracked_rows
+        ]
+    already = {t["query"] for t in tracked}
+
+    resp = templates.TemplateResponse(
+        "keyword_opportunities.html",
+        {
+            "request": request,
+            "project": project,
+            "slug": slug,
+            "opportunities": opportunities,
+            "summary": summary,
+            "tracked": tracked,
+            "already_tracked": already,
+            "days": requested_days,
+            # Say WHY the list is empty rather than showing an empty table: "not connected" and
+            # "nothing to report" are different answers and lead to different actions.
+            "gsc_ok": bool(payload.get("ok")),
+            "gsc_reason": str(payload.get("reason") or ""),
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@app.post("/projects/{slug}/keywords/track")
+def project_keyword_track(
+    request: Request,
+    slug: str,
+    query: str = Form(default=""),
+    target_url: str = Form(default=""),
+    source: str = Form(default="gsc_opportunity"),
+) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+    text = (query or "").strip()
+    if not text:
+        return RedirectResponse(url=f"/projects/{slug}/keywords/opportunities", status_code=303)
+
+    try:
+        with DB.session() as db:
+            existing = db.scalar(
+                select(TrackedKeyword).where(
+                    TrackedKeyword.project_id == str(proj.id), TrackedKeyword.query == text
+                )
+            )
+            if existing:
+                # Tracking the same query twice is the same decision; refresh the target instead
+                # of failing on the unique constraint.
+                if target_url.strip():
+                    existing.target_url = target_url.strip()
+                db.commit()
+            else:
+                db.add(TrackedKeyword(
+                    project_id=str(proj.id), user_id=str(user.id), query=text[:512],
+                    target_url=(target_url.strip() or None),
+                    source=(source or "manual").strip()[:32],
+                ))
+                db.commit()
+    except Exception as e:
+        logger.error("[keywords] track failed: %s: %s", type(e).__name__, e)
+        return RedirectResponse(
+            url=_path_with_flash(f"/projects/{slug}/keywords/opportunities",
+                                 err="Impossible d'ajouter ce mot-clé pour le moment."),
+            status_code=303,
+        )
+    return RedirectResponse(url=f"/projects/{slug}/keywords/opportunities", status_code=303)
+
+
+@app.post("/projects/{slug}/keywords/untrack")
+def project_keyword_untrack(request: Request, slug: str, keyword_id: str = Form(default="")) -> RedirectResponse:
+    proj = _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return RedirectResponse(url="/auth/login", status_code=303)
+    kid = (keyword_id or "").strip()
+    if kid:
+        with DB.session() as db:
+            row = db.get(TrackedKeyword, kid)
+            # Scoped to the project from the URL, which ownership already checked: an id alone
+            # must never be enough to delete another account's row.
+            if row and str(row.project_id) == str(proj.id):
+                db.delete(row)
+                db.commit()
+    return RedirectResponse(url=f"/projects/{slug}/keywords/opportunities", status_code=303)
 
 
 @app.get("/projects/{slug}/performance", response_class=HTMLResponse)

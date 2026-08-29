@@ -1,0 +1,173 @@
+{% extends "layout.html" %}
+{% block title %}Mots-clés - {{ project.site_name if project else slug }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Mots-clés</h1>
+    <p class="muted">
+      {{ project.site_name }} · Search Console · {{ days }} derniers jours
+    </p>
+  </div>
+
+  {% if not gsc_ok %}
+    {# "Not connected" and "nothing to report" are different answers and lead to different
+       actions, so the page says which one it is instead of showing an empty table. #}
+    <section class="card">
+      <h2 style="margin-top:0;">Search Console n'est pas connecté</h2>
+      <p class="muted">
+        Ces recommandations viennent des données de recherche de ton propre site : rien n'est
+        deviné, rien n'est acheté à un tiers. Connecte Search Console dans
+        <a href="/projects/{{ slug }}/settings/crawl">Paramètres de crawl</a> pour les obtenir.
+      </p>
+      {% if gsc_reason %}<p class="muted small mono">{{ gsc_reason }}</p>{% endif %}
+    </section>
+  {% else %}
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2 style="margin:0;">À travailler en priorité</h2>
+        <span class="muted small">{{ summary.total }} requête{{ 's' if summary.total > 1 }} · {{ summary.impressions }} impressions</span>
+      </div>
+
+      {% if not opportunities %}
+        <p class="muted">
+          Aucune requête ne remplit les critères sur cette période. C'est le bon résultat quand
+          le site convertit correctement ce qu'il montre.
+        </p>
+      {% else %}
+        <p class="muted small">
+          Ces requêtes sont déjà vues par des internautes. Elles n'ont pas besoin d'un meilleur
+          classement mais d'un meilleur titre, d'une meilleure description — ou, pour celles de
+          seconde page, d'un meilleur contenu.
+        </p>
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Requête</th>
+                <th>Situation</th>
+                <th class="num">Position</th>
+                <th class="num">Impressions</th>
+                <th class="num">Clics</th>
+                <th>Page concernée</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in opportunities %}
+                {% set labels = {
+                  'seen_never_clicked': 'Vue, jamais cliquée',
+                  'clicked_less_than_usual': 'Beaucoup moins cliquée que la normale',
+                  'near_page_one': 'Aux portes de la page 1'
+                } %}
+                <tr>
+                  <td>{{ o.query }}</td>
+                  <td><span class="badge notice">{{ labels.get(o.kind, o.kind) }}</span></td>
+                  <td class="num mono">{{ '%.1f'|format(o.position) }}</td>
+                  <td class="num mono">{{ o.impressions }}</td>
+                  <td class="num mono">{{ o.clicks }}</td>
+                  <td>
+                    {% if o.page %}
+                      <a href="{{ o.page }}" target="_blank" rel="noreferrer">{{ o.page|replace('https://', '')|replace('http://', '') }}</a>
+                    {% else %}
+                      <span class="muted small">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="num">
+                    {% if o.query in already_tracked %}
+                      <span class="muted small">suivie</span>
+                    {% else %}
+                      <form method="post" action="/projects/{{ slug }}/keywords/track" class="inline">
+                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                        <input type="hidden" name="query" value="{{ o.query }}" />
+                        <input type="hidden" name="target_url" value="{{ o.page }}" />
+                        <input type="hidden" name="source" value="gsc_opportunity" />
+                        <button class="btn" type="submit">Suivre</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if summary.potential_clicks is none %}
+          <p class="muted small" style="margin-top:10px;">
+            Aucune estimation de gain n'est affichée : ce site n'a encore aucune requête dans les
+            trois premières positions, donc rien de vérifiable à quoi le comparer. Un chiffre que
+            tu ne peux pas contrôler ne vaut pas la peine d'être affiché.
+          </p>
+        {% else %}
+          <p class="muted small" style="margin-top:10px;">
+            Environ <strong>{{ summary.potential_clicks }}</strong> clics par période si ces
+            requêtes convertissaient comme celles où ce site est déjà dans les trois premiers.
+          </p>
+        {% endif %}
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2 style="margin:0;">Mots-clés suivis</h2>
+      <span class="muted small">{{ tracked|length }}</span>
+    </div>
+
+    <form method="post" action="/projects/{{ slug }}/keywords/track" class="setting-form">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <input type="hidden" name="source" value="manual" />
+      <label>
+        Ajouter un mot-clé
+        <input name="query" placeholder="ex. logiciel de voix off IA" required />
+      </label>
+      <label>
+        Page qui doit le gagner (facultatif)
+        <input name="target_url" placeholder="https://…" />
+      </label>
+      <div class="modal-actions between">
+        <span></span>
+        <button class="btn primary" type="submit">Suivre</button>
+      </div>
+    </form>
+
+    {% if tracked %}
+      <div class="table-wrap" style="margin-top:14px;">
+        <table class="table compact">
+          <thead>
+            <tr><th>Requête</th><th>Page cible</th><th>Origine</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for t in tracked %}
+              <tr>
+                <td>{{ t.query }}</td>
+                <td>
+                  {% if t.target_url %}
+                    <a href="{{ t.target_url }}" target="_blank" rel="noreferrer">{{ t.target_url|replace('https://', '')|replace('http://', '') }}</a>
+                  {% else %}
+                    <span class="muted small">non définie</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="muted small">{{ 'proposée' if t.source == 'gsc_opportunity' else 'ajoutée à la main' }}</span>
+                </td>
+                <td class="num">
+                  <form method="post" action="/projects/{{ slug }}/keywords/untrack" class="inline">
+                    <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                    <input type="hidden" name="keyword_id" value="{{ t.id }}" />
+                    <button class="btn danger" type="submit">Retirer</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:12px;">
+        Aucun mot-clé suivi pour l'instant. Search Console ne garde qu'environ seize mois et ne
+        conserve pas d'historique par projet : suivre une requête ici est ce qui permet d'en voir
+        l'évolution dans le temps.
+      </p>
+    {% endif %}
+  </section>
+{% endblock %}

@@ -91,9 +91,14 @@
               Paramètres de crawl
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords') %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
               Performance
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %}active{% endif %}" href="/projects/{{ project.slug }}/keywords/opportunities">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              Mots-clés
             </a>
 
             <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
