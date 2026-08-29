@@ -17471,7 +17471,15 @@ def _rewrite_asset_srcs(content: str, pairs: list[dict[str, str]]) -> tuple[str,
 _LINK_TAG_RE = re.compile(r"<link\b[^>]*>", re.I)
 _HREF_ATTR_RE = re.compile(r'(href\s*=\s*)(["\'])(.*?)\2', re.I | re.S)
 _REL_CANONICAL_RE = re.compile(r'rel\s*=\s*["\']?(canonical|alternate)\b', re.I)
-_JS_CANONICAL_RE = re.compile(r'(canonical\s*:\s*)(["\'])(.*?)\2')
+# A canonical URL is written three ways in a component: as an object property
+# (`canonical: "…"`), as a binding (`const canonical = "…"`), and as a literal prop
+# (`<Base canonical="…">`). Only the first was matched, so on Astro — where the <link> lives in
+# the shared layout as `href={canonical}` and the VALUE sits in the page as an assignment — the
+# deterministic rewriter found nothing and the family silently degraded to a model-written
+# patch, losing its "mechanical fix" badge on the most idiomatic way to write a canonical.
+# The lookbehind is what keeps `data-canonical=` and `mycanonical:` out; the old pattern
+# rewrote `mycanonical:` too.
+_JS_CANONICAL_RE = re.compile(r'(?<![\w-])(canonical\s*[:=]\s*)(["\'])(.*?)\2')
 _JS_LANGUAGES_RE = re.compile(r"languages\s*:\s*\{")
 _QUOTED_VALUE_RE = re.compile(r'(:\s*)(["\'])(.*?)\2')
 

@@ -1,0 +1,29 @@
+---
+// The SHARED layout. A per-page fix must never land here: writing one page's canonical into it
+// would stamp that value onto every page of the site.
+const { title, description, canonical } = Astro.props;
+---
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content="http://127.0.0.1:8741/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="http://127.0.0.1:8741/og.png" />
+  </head>
+  <body>
+    <h1>{title}</h1>
+    <slot />
+    <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">À propos</a></nav>
+  </body>
+</html>

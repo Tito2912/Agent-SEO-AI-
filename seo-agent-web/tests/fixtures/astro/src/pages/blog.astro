@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+// THE INJECTED DEFECT: the trailing slash. The site serves /blog and 301s /blog/ to it, so this
+// page declares as canonical a URL that redirects away. Exactly the defect found on a real
+// customer site (voiceoverstudioai.com, PR#1) — the correct fix IS removing this one character.
+const canonical = 'http://127.0.0.1:8741/blog/';
+---
+<Base
+  title="Blog du site de test Astro"
+  description="Index du blog du site fixture Astro, servant a verifier que la correction du canonical ne touche ni le layout partage ni les autres pages."
+  canonical={canonical}
+>
+  <p>Articles.</p>
+</Base>
