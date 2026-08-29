@@ -16490,6 +16490,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         _prep = _prepare_issue_fix(
             issue_key=issue_key, issues=report_issues, impacted=impacted, all_paths=all_paths,
             site_name=site_name, owner=owner, repo_name=repo_name, branch=branch, token=token,
+            model_override=gate_model,
         )
         if _prep["refusal"]:
             results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
@@ -16874,7 +16875,7 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
                     samples[u] = info
     if not samples:
         return ""
-    _k = "title" if kind == "title" else "description"
+    _k = _length_kind(kind)
     low, high = _LENGTH_WINDOWS[_k]
     ceiling = _LENGTH_CEILINGS[_k]
     window = f"{low}-{high} caractères"
@@ -17573,6 +17574,119 @@ def _braced_block(content: str, open_brace_idx: int) -> tuple[int, int]:
     return (-1, -1)
 
 
+def _length_kind(family: str) -> str:
+    """Normalise a length family name to the key the window/ceiling tables use.
+
+    `_length_family_name` answers 'meta' or 'title'; `_LENGTH_WINDOWS` / `_LENGTH_CEILINGS` are
+    keyed 'description' or 'title'. The hint absorbed that mismatch with an inline ternary, so
+    the first consumer that looked the value up strictly got None and silently did nothing.
+    """
+    return "title" if str(family or "") == "title" else "description"
+
+
+def _trim_to_ceiling(value: str, ceiling: int) -> str:
+    """Cut `value` to at most `ceiling` characters on a word boundary, without inventing text.
+
+    Last resort only. Never adds an ellipsis: a meta description ending in "…" tells a reader the
+    sentence was cut, which is worse than a slightly abrupt end.
+    """
+    v = value.strip()
+    if len(v) <= ceiling:
+        return v
+    cut = v[:ceiling]
+    space = cut.rfind(" ")
+    if space > ceiling * 0.6:  # keep a whole last word unless that guts the value
+        cut = cut[:space]
+    return cut.rstrip(" ,;:-–—").rstrip()
+
+
+def _length_value_for_page(
+    *, current: str, kind: str, url: str, site_name: str, model_override: str = "",
+) -> str:
+    """Ask the model for the VALUE alone, then make the length true ourselves.
+
+    The family's success criterion is a hard inequality, and a model does not count characters:
+    given a 268-character description and a 160 ceiling it returned 200, then 200 again under an
+    explicit "AU PLUS 160", then 191 when told exactly how many characters to remove. Four runs,
+    four failures — no wording fixed it, because the problem is not the wording.
+
+    So the model does what it is good at (choosing what to drop and keeping the sense) and the
+    code does what it is good at (measuring). One retry carries the real measurement back, and a
+    deterministic trim guarantees the bound if the retry misses too.
+    """
+    kind = _length_kind(kind)
+    low, high = _LENGTH_WINDOWS[kind]
+    ceiling = _LENGTH_CEILINGS[kind]
+    label = "titre" if kind == "title" else "meta description"
+    system = (
+        f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, trop long. "
+        f"Réécris-le pour qu'il tienne en {low} à {high} caractères. "
+        "Garde la langue, la marque, l'année et les termes de recherche déjà présents ; retire "
+        "la partie la moins informative plutôt que de réécrire depuis zéro. "
+        'Réponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
+    )
+    attempt = ""
+    for round_no in range(2):
+        if round_no == 0:
+            user = json.dumps({"url": url, "site": site_name, "actuel": current,
+                               "longueur_actuelle": len(current), "cible": f"{low}-{high}"},
+                              ensure_ascii=False)
+        else:
+            # The one thing the model cannot work out for itself: how long its own answer was.
+            user = json.dumps({"url": url, "site": site_name, "actuel": current,
+                               "ta_proposition": attempt, "longueur_de_ta_proposition": len(attempt),
+                               "probleme": f"trop long de {len(attempt) - ceiling} caracteres",
+                               "cible": f"{low}-{high}"}, ensure_ascii=False)
+        parsed = _correction_ai_json(system=system, user_msg=user, max_tokens=600,
+                                     temperature=0.1, model_override=model_override)
+        attempt = str((parsed or {}).get("value") or "").strip()
+        if not attempt:
+            return ""
+        if len(attempt) <= ceiling:
+            return attempt
+        logger.info("[correction-ai] %s: proposition de %d car. > %d, nouvel essai",
+                    kind, len(attempt), ceiling)
+    trimmed = _trim_to_ceiling(attempt, ceiling)
+    logger.warning("[correction-ai] %s: le modele est reste au-dessus de %d apres 2 essais, "
+                   "coupe deterministe a %d car.", kind, ceiling, len(trimmed))
+    return trimmed
+
+
+def _rewrite_length_values(
+    content: str, samples: dict[str, dict[str, Any]], kind: str, *,
+    site_name: str = "", model_override: str = "",
+) -> tuple[str, int]:
+    """Replace each over-long title/description with a validated shorter one, in place.
+
+    The value is located in the file by its literal text, so nothing else moves — the family
+    stops being a full-file rewrite. A rendered value that is not found verbatim (a template
+    suffix, a value built from parts) yields no replacement, and the caller's AI fallback takes
+    over exactly as before.
+    """
+    kind = _length_kind(kind)
+    ceiling = _LENGTH_CEILINGS.get(kind)
+    if not ceiling or not isinstance(samples, dict):
+        return content, 0
+    new = content
+    count = 0
+    for url, info in list(samples.items())[:25]:
+        if not isinstance(info, dict):
+            continue
+        rendered = str(info.get("rendered") or "").strip()
+        declared = info.get("len")
+        if not rendered or not isinstance(declared, int) or declared <= ceiling:
+            continue
+        if len(rendered) < declared or rendered not in new:
+            continue  # truncated sample, or the value is assembled rather than written
+        value = _length_value_for_page(current=rendered, kind=kind, url=str(url),
+                                       site_name=site_name, model_override=model_override)
+        if not value or len(value) > ceiling or value == rendered:
+            continue
+        new = new.replace(rendered, value, 1)
+        count += 1
+    return new, count
+
+
 def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTIC canonical/hreflang value rewrite (no AI).
 
@@ -18006,6 +18120,7 @@ def _fix_nature_note(ai_written: bool, issue_key: str = "") -> str:
 def _prepare_issue_fix(
     *, issue_key: str, issues: dict[str, Any] | None, impacted: list[str], all_paths: list[str],
     site_name: str, owner: str, repo_name: str, branch: str, token: str,
+    model_override: str = "",
 ) -> dict[str, Any]:
     """Everything needed to fix ONE issue: locator evidence, the patch hint, the deterministic
     rewriter when the family has one, self-redirect paths for the config fixer, and a refusal
@@ -18044,6 +18159,22 @@ def _prepare_issue_fix(
     fam = _length_family_name(issue_key)
     if fam and issues:
         out["extra_hint"] = _build_length_hint(issues, _length_family_keys(issue_key), fam)
+        # Value-first: the model proposes the text, the code enforces the length. Registered as
+        # a `link_rewriter` like the deterministic families, with the AI fallback left ON so a
+        # value that cannot be located verbatim still gets the old full-file patch.
+        _len_samples: dict[str, Any] = {}
+        for _k in _length_family_keys(issue_key):
+            _blk = issues.get(_k)
+            _ls = _blk.get("length_samples") if isinstance(_blk, dict) else None
+            if isinstance(_ls, dict):
+                for _u, _i in _ls.items():
+                    _len_samples.setdefault(_u, _i)
+        if _len_samples:
+            out["link_rewriter"] = (  # noqa: E731
+                lambda raw, _s=_len_samples, _f=fam, _n=site_name, _m=model_override:
+                _rewrite_length_values(raw, _s, _f, site_name=_n, model_override=_m)
+            )
+            out["rewriter_ai_fallback"] = True
 
     content_pairs: list[dict[str, str]] = []
     if issue_key in _REDIRECT_LINK_KEYS and issues:
@@ -18346,7 +18477,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _prep = _prepare_issue_fix(
         issue_key=issue_key, issues=issues, impacted=impacted, all_paths=all_paths,
         site_name=str(proj.site_name or ""), owner=owner, repo_name=repo_name,
-        branch=branch, token=token,
+        branch=branch, token=token, model_override=gate_model,
     )
     if _prep["refusal"]:
         # Refused before the branch is created, so a dead-end click leaves nothing behind.
