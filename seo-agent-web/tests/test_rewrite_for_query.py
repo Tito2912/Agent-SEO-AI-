@@ -108,11 +108,13 @@ SOURCE = 'title="Ancien titre"\ndescription="Ancienne description de la page."\n
 
 
 def test_both_lines_are_swapped_in_place(model) -> None:
-    model(["Nouveau titre qui répond à la requête", "Nouvelle description qui répond à la requête."])
+    # Values inside the window, so this test stays about the SWAP: one outside it now costs a
+    # second call, which `test_a_proposal_under_the_window_is_sent_back_once` covers.
+    model(["Nouveau titre qui repond enfin a la requete posee par le visiteur", "Nouvelle description qui repond a la requete du visiteur, dit ce que la page apporte et donne envie de cliquer dessus."])
     new, count = app_module._rewrite_for_query(
         SOURCE, query="ma requête", url="https://site.fr/p", site_name="site.fr")
     assert count == 2
-    assert 'title="Nouveau titre qui répond à la requête"' in new
+    assert 'title="Nouveau titre qui repond enfin a la requete posee par le visiteur"' in new
     assert "<p>corps</p>" in new, "the rewrite touched the body"
 
 
@@ -143,7 +145,8 @@ def test_an_answer_identical_to_the_current_value_is_not_a_change(model) -> None
 def test_a_value_carrying_the_wrong_quote_is_refused(model) -> None:
     """The replacement goes inside a quoted literal. A model is not asked to escape, so a value
     that would break the literal is refused rather than silently corrupting the file."""
-    model(['Un titre avec des "guillemets" dedans', "Une description correcte."])
+    model(['Un titre avec des "guillemets" qui casseraient le literal ici',
+           "Nouvelle description qui repond a la requete du visiteur, dit ce que la page apporte et donne envie de cliquer dessus."])
     new, count = app_module._rewrite_for_query(SOURCE, query="ma requête", url="https://site.fr/p")
     assert 'title="Ancien titre"' in new, "a broken literal was written into the file"
     assert count == 1, "the description should still have been rewritten"
@@ -247,7 +250,35 @@ def test_a_value_with_no_detectable_language_is_left_to_the_model(model) -> None
     """The guard only fires when the page's own value says which language it is in. A brand-name
     title says nothing, and refusing there would block correct rewrites for no reading."""
     source = 'title="Kling AI Pricing 2026"\ndescription="Kling AI Pricing 2026"'
-    model(["Kling AI : prix et crédits 2026", "Kling AI : prix, crédits et coût réel par clip."])
+    model(["Kling AI : prix, credits et cout reel par clip en 2026, le guide",
+           "Kling AI : prix, credits et cout reel par clip en 2026. Ce que chaque plan "
+           "contient, et lequel choisir selon ton usage reel."])
     new, count = app_module._rewrite_for_query(source, query="kling ai prix",
                                               url="https://site.fr/p", site_name="site.fr")
     assert count == 2
+
+
+def test_a_proposal_under_the_window_is_sent_back_once(model, monkeypatch) -> None:
+    """A snippet the model wrote at 48 characters against a 60-68 window is legal — nothing
+    flags a title until 15 — so no later crawl will ever ask those characters back. The keyword
+    path used to route only OVER-long values through the window helper, which is how PR#3's title
+    shipped at 56. The extra call happens only when the first answer misses."""
+    seen: list[str] = []
+
+    def _fake(*, system, user_msg, **kw):
+        seen.append({"system": system, "user": user_msg})
+        return {"value": "Titre court" if len(seen) == 1 else
+                "Nouveau titre qui repond enfin a la requete posee par le visiteur"}
+
+    monkeypatch.setattr(app_module, "_correction_ai_json", _fake)
+    source = 'title="Ancien titre de la page qui ne repond pas du tout a la requete visee"'
+    new, count = app_module._rewrite_for_query(
+        source, query="ma requête", url="https://site.fr/p", site_name="site.fr")
+    low, high = app_module._LENGTH_WINDOWS["title"]
+    value = app_module._find_head_text_value(new, "title")[1]
+    assert count == 1 and low <= len(value) <= high, f"{len(value)} caractères"
+    assert len(seen) == 2, "the short proposal was accepted without a second look"
+    # The second call is the window helper's first round: it states the problem in its SYSTEM
+    # prompt, and carries the measured length of the value it was handed.
+    assert "trop court" in seen[1]["system"]
+    assert '"longueur_actuelle": 11' in seen[1]["user"]

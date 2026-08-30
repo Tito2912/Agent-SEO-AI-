@@ -17844,16 +17844,23 @@ def _trim_to_ceiling(value: str, ceiling: int) -> str:
 def _length_value_for_page(
     *, current: str, kind: str, url: str, site_name: str, model_override: str = "",
 ) -> str:
-    """Ask the model for the VALUE alone, then make the length true ourselves.
+    """Ask the model for the VALUE alone, then make the length true ourselves — at BOTH ends.
 
-    The family's success criterion is a hard inequality, and a model does not count characters:
+    The family's success criterion is a numeric interval, and a model does not count characters:
     given a 268-character description and a 160 ceiling it returned 200, then 200 again under an
     explicit "AU PLUS 160", then 191 when told exactly how many characters to remove. Four runs,
     four failures — no wording fixed it, because the problem is not the wording.
 
-    So the model does what it is good at (choosing what to drop and keeping the sense) and the
-    code does what it is good at (measuring). One retry carries the real measurement back, and a
-    deterministic trim guarantees the bound if the retry misses too.
+    The same blindness works downwards, and it went unnoticed longer because nothing flags it:
+    on a real five-page correction (PR#4) four titles landed at exactly 57 characters against a
+    60-68 window. That is not an anomaly — a title is only "too short" under 15 by Ahrefs parity
+    — so no crawl would ever ask for those characters back. Keyword surface simply evaporated.
+
+    So the model does what it is good at (choosing what to keep and what to drop) and the code
+    does what it is good at (measuring). One retry carries the real measurement back, whichever
+    side it missed on; the best of the attempts is kept, and a deterministic trim guarantees the
+    ceiling. Nothing is ever padded: too short is answered by asking for a clause the model
+    itself removed, never by inventing text.
     """
     kind = _length_kind(kind)
     low, high = _LENGTH_WINDOWS[kind]
@@ -17866,16 +17873,22 @@ def _length_value_for_page(
     # identical risk. Naming the language is the cheap half; `_dominant_language` below is the
     # half that holds, and it abstains whenever the value does not say what it is.
     lang_before = _dominant_language(current)
+    too_short = len(current) < low
     system = (
-        f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, trop long. "
-        f"Réécris-le pour qu'il tienne en {low} à {high} caractères. "
-        "Garde la langue, la marque, l'année et les termes de recherche déjà présents ; retire "
-        "la partie la moins informative plutôt que de réécrire depuis zéro. "
+        f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, "
+        + ("trop court. " if too_short else "trop long. ")
+        + f"Réécris-le pour qu'il tienne en {low} à {high} caractères. "
+        + ("Garde la langue, la marque, l'année et les termes de recherche déjà présents ; "
+           "développe ce que la page traite réellement, sans jamais inventer une promesse "
+           "qu'elle ne tient pas. " if too_short else
+           "Garde la langue, la marque, l'année et les termes de recherche déjà présents ; "
+           "retire la partie la moins informative plutôt que de réécrire depuis zéro. ")
         + (f"La page est en {_LANGUAGE_NAMES[lang_before]} : réponds dans cette langue, même si "
            "ces instructions sont dans une autre. " if lang_before in _LANGUAGE_NAMES else "")
         + 'Réponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
     )
     attempt = ""
+    attempts: list[str] = []
     for round_no in range(2):
         if round_no == 0:
             user = json.dumps({"url": url, "site": site_name, "actuel": current,
@@ -17883,30 +17896,56 @@ def _length_value_for_page(
                               ensure_ascii=False)
         else:
             # The one thing the model cannot work out for itself: how long its own answer was.
+            # Stated as an operation to carry out — remove N, or take back a clause — because
+            # "aim at 60-68" is precisely the instruction it cannot follow.
+            n = len(attempt)
+            problem = (f"trop long de {n - ceiling} caracteres" if n > ceiling else
+                       f"trop court : {n} caracteres, il en faut {low} a {high}. Reprends un "
+                       "element informatif que tu as retire (ce que la page traite vraiment), "
+                       "n'invente rien" if n < low else
+                       f"{n} caracteres, vise {low} a {high}")
             user = json.dumps({"url": url, "site": site_name, "actuel": current,
-                               "ta_proposition": attempt, "longueur_de_ta_proposition": len(attempt),
-                               "probleme": f"trop long de {len(attempt) - ceiling} caracteres",
+                               "ta_proposition": attempt, "longueur_de_ta_proposition": n,
+                               "probleme": problem,
                                "cible": f"{low}-{high}"}, ensure_ascii=False)
         parsed = _correction_ai_json(system=system, user_msg=user, max_tokens=600,
                                      temperature=0.1, model_override=model_override)
         attempt = str((parsed or {}).get("value") or "").strip()
         if not attempt:
-            return ""
+            break
         if lang_before and _dominant_language(attempt) not in ("", lang_before):
-            # Translating half a page's snippet is not a shortening, it is a defect. Refusing
-            # leaves the over-long value in place, which is a flagged anomaly the customer can
-            # see; a translated one is a page nobody flags and everybody reads.
+            # Translating half a page's snippet is not a rewrite, it is a defect. Refusing
+            # leaves the flagged value in place, which the customer can see; a translated one is
+            # a page nobody flags and everybody reads.
             logger.warning("[correction-ai] %s: reponse dans une autre langue que la page (%s), "
                            "valeur refusee", kind, lang_before)
             return ""
-        if len(attempt) <= ceiling:
+        attempts.append(attempt)
+        if low <= len(attempt) <= high:
             return attempt
-        logger.info("[correction-ai] %s: proposition de %d car. > %d, nouvel essai",
-                    kind, len(attempt), ceiling)
-    trimmed = _trim_to_ceiling(attempt, ceiling)
-    logger.warning("[correction-ai] %s: le modele est reste au-dessus de %d apres 2 essais, "
-                   "coupe deterministe a %d car.", kind, ceiling, len(trimmed))
-    return trimmed
+        logger.info("[correction-ai] %s: proposition de %d car. hors fenetre %d-%d, nouvel essai",
+                    kind, len(attempt), low, high)
+
+    if not attempts:
+        return ""
+    # Keep whichever attempt sits closest to the window, longer wins a tie: the point of the
+    # second call was to recover surface, so a value that gave some back must not be discarded
+    # for one that gave less.
+    def _distance(value: str) -> int:
+        n = len(value)
+        return 0 if low <= n <= high else (n - high if n > high else low - n)
+
+    best = min(attempts, key=lambda v: (_distance(v), -len(v)))
+    if len(best) > ceiling:
+        best = _trim_to_ceiling(best, ceiling)
+        logger.warning("[correction-ai] %s: le modele est reste au-dessus de %d apres 2 essais, "
+                       "coupe deterministe a %d car.", kind, ceiling, len(best))
+    elif len(best) < low:
+        # Never padded: a value below the window is legal (nothing flags a title until 15) and
+        # inventing words to reach a target would put a promise on the page that it does not keep.
+        logger.info("[correction-ai] %s: %d car., sous la fenetre %d-%d apres 2 essais, valeur "
+                    "gardee telle quelle", kind, len(best), low, high)
+    return best
 
 
 # Function words that belong to ONE of the four languages the product serves. Built by taking a
@@ -18045,12 +18084,14 @@ def _rewrite_for_query(
                 logger.warning("[keywords] %s refuse : le modele a repondu dans une autre langue "
                                "que la page (%s)", field, lang_before)
                 continue
-        if len(proposed) > ceiling:
-            # Same guarantee as the length families: retry with the measurement, then trim.
+        if not (low <= len(proposed) <= high):
+            # Same guarantee as the length families, on BOTH sides: PR#3's title came out at 56
+            # against a 60-68 window because only the too-long case was routed here, and nothing
+            # downstream ever asks for those characters back.
             proposed = _length_value_for_page(
                 current=proposed, kind=kind, url=url, site_name=site_name,
                 model_override=model_override,
-            )
+            ) or proposed
         if not proposed or len(proposed) > ceiling or proposed == current:
             continue
         # A quote inside the replacement would break the literal it is going into; the model is

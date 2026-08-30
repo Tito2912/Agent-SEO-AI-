@@ -215,3 +215,80 @@ def test_a_value_whose_language_is_unreadable_is_left_to_the_model(monkeypatch) 
         current="Kling AI Pricing 2026 Credits Plans Cost Guide Comparison Table Full Review",
         kind="title", url="https://site.fr/x", site_name="site.fr")
     assert out == "Kling AI Preise 2026: Credits und Tarife"
+
+
+# ── the window has two ends (2026-08-30) ──────────────────────────────────────────────────────
+#
+# Measured on a real five-page correction: four titles landed at exactly 57 against a 60-68
+# window. Nothing flags that — a title is only "too short" under 15 by Ahrefs parity — so no
+# later crawl would ever ask those characters back, and the keyword surface was simply lost.
+
+def _sequence(monkeypatch, values):
+    """Answer with each value in turn, and record what the model was told."""
+    seen: list[dict] = []
+    queue = list(values)
+
+    def _fake(**kw):
+        seen.append({"system": kw.get("system", ""), "user": kw.get("user_msg", "")})
+        return {"value": queue.pop(0)} if queue else {}
+
+    monkeypatch.setattr(app_module, "_correction_ai_json", _fake)
+    return seen
+
+
+LONG_TITLE = "Kling AI Bild zu Video 2026: jedes Standbild mit realistischer Bewegung animieren"
+
+
+def test_a_value_under_the_window_is_sent_back_with_its_measurement(monkeypatch) -> None:
+    seen = _sequence(monkeypatch, [
+        "Kling AI Bild zu Video 2026: Standbilder animieren",            # 50, under the window
+        "Kling AI Bild zu Video 2026: Standbilder realistisch animieren",  # 62, inside it
+    ])
+    out = app_module._length_value_for_page(
+        current=LONG_TITLE, kind="title", url="https://site.fr/x", site_name="site.fr")
+    low, high = app_module._LENGTH_WINDOWS["title"]
+    assert low <= len(out) <= high, f"{len(out)} chars, window {low}-{high}"
+    assert len(seen) == 2, "the short value was accepted without a second look"
+    assert "trop court" in seen[1]["user"], "the retry did not say what was wrong"
+    assert "n'invente rien" in seen[1]["user"], "the retry did not forbid inventing text"
+
+
+def test_a_first_answer_inside_the_window_costs_no_second_call(monkeypatch) -> None:
+    """The extra call happens only when it is needed."""
+    seen = _sequence(monkeypatch, ["Kling AI Bild zu Video 2026: Standbilder realistisch animieren"])
+    out = app_module._length_value_for_page(
+        current=LONG_TITLE, kind="title", url="https://site.fr/x", site_name="site.fr")
+    assert len(seen) == 1 and out
+
+
+def test_a_value_that_stays_short_is_kept_never_padded(monkeypatch) -> None:
+    """Below the window is legal; inventing words to reach a target would put a promise on the
+    page that the page does not keep. The best of the two attempts wins, and longer breaks the
+    tie — the second call exists to recover surface."""
+    _sequence(monkeypatch, [
+        "Kling AI Bild zu Video 2026: animieren",            # 38
+        "Kling AI Bild zu Video 2026: Standbilder animieren",  # 50, closer to the window
+    ])
+    out = app_module._length_value_for_page(
+        current=LONG_TITLE, kind="title", url="https://site.fr/x", site_name="site.fr")
+    assert out == "Kling AI Bild zu Video 2026: Standbilder animieren"
+
+
+def test_the_ceiling_still_wins_over_the_window(monkeypatch) -> None:
+    """Both ends are enforced, but only one of them is a hard threshold: over the ceiling the
+    crawler flags the page, under the window nobody does."""
+    ceiling = app_module._LENGTH_CEILINGS["title"]
+    _sequence(monkeypatch, ["A" * 120, "B" * 110])
+    out = app_module._length_value_for_page(
+        current=LONG_TITLE, kind="title", url="https://site.fr/x", site_name="site.fr")
+    assert len(out) <= ceiling
+
+
+def test_a_too_short_current_value_is_asked_to_grow(monkeypatch) -> None:
+    """The same helper now serves the short side of the family, so the prompt has to stop saying
+    the value is too long."""
+    seen = _sequence(monkeypatch, ["Kling AI Bild zu Video 2026: Standbilder realistisch animieren"])
+    app_module._length_value_for_page(
+        current="Kling AI", kind="title", url="https://site.fr/x", site_name="site.fr")
+    assert "trop court" in seen[0]["system"]
+    assert "trop long" not in seen[0]["system"]
