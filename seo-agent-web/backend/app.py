@@ -17795,6 +17795,43 @@ _HEAD_TEXT_BARE_YAML_RE = {
 }
 
 
+# A page written as plain HTML declares its two values as MARKUP, not as a property: `<title>…`
+# and `<meta name="description" content="…">`. The patterns above know a component prop, TOML,
+# YAML quoted and bare, and a JS binding — every way a FRAMEWORK writes it, and none of the way
+# HTML does. static-html is one of the two stacks validated in production (elevenlabs-avis.com),
+# so a real customer clicking "Réécrire (PR)" was told their values were "assemblées".
+# The signal is a DOCUMENT, and it has to be case-SENSITIVE on the tag: `<Head>` is Next's
+# component, and matching it made the locator refuse `pages/*.js` outright — a Pages Router
+# page declares its values as JS bindings above that component, and the `<title>{title}</title>`
+# inside it is an expression. Measured: the case-insensitive version cost next-pages 2/2 -> 0/2.
+_HTML_DOC_RE = re.compile(r"(?i:<!doctype\s+html\b)|<html[\s>]")
+# No `{` or `<` inside: `<title>{title}</title>` is an expression, not a value, and rewriting it
+# would replace the page's logic with one page's text.
+_HTML_TITLE_RE = re.compile(r"<title\b[^>]*>(?P<value>[^<{}]*)</title>", re.I)
+# The lookahead pins `name="description"` EXACTLY, so `og:description` and `twitter:description`
+# — copies of the value, whose rewrite would leave the original contradicting them — stay out,
+# and the attribute order stays free (`content` before `name` is just as common).
+_META_DESC_RE = re.compile(
+    r"<meta\b(?=[^>]*\bname\s*=\s*([\"'])description\1)[^>]*?"
+    # The value stops at ITS OWN closing quote, not at any quote: with `content` written
+    # before `name`, a class of "anything but < > { }" swallowed the rest of the tag and
+    # returned `…ici." name="description`. Excluding both quote characters instead would
+    # have broken every French description — `content="Page d'accueil"` is ordinary.
+    r"\bcontent\s*=\s*(?P<q>[\"'])(?P<value>(?:(?!(?P=q))[^<>{}])*)(?P=q)[^>]*>",
+    re.I,
+)
+
+
+def _find_head_text_in_markup(content: str, field: str) -> tuple[str, str] | None:
+    """The value as HTML writes it: the `<title>` element, or the description `<meta>` tag."""
+    pattern = _HTML_TITLE_RE if field == "title" else _META_DESC_RE
+    match = pattern.search(content or "")
+    if not match:
+        return None
+    value = match.group("value").strip()
+    return (match.group(0), value) if value else None
+
+
 def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
     """The page's own `title` or `description` as WRITTEN in the file.
 
@@ -17806,13 +17843,19 @@ def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
     key = (field or "").strip().lower()
     if key not in _HEAD_TEXT_QUOTED_RE:
         return None
+    # In a full HTML document the markup is the ONLY place to look. The attribute patterns below
+    # would happily match a link's `title="tooltip"` and rewrite that instead of the page title —
+    # the same shape as every other loose match this project has been bitten by.
+    if _HTML_DOC_RE.search(content or ""):
+        return _find_head_text_in_markup(content, key)
     quoted = _HEAD_TEXT_QUOTED_RE[key].search(content or "")
     if quoted:
         return quoted.group(0), quoted.group("value")
     bare = _HEAD_TEXT_BARE_YAML_RE[key].search(content or "")
     if bare:
         return bare.group(0), bare.group("value")
-    return None
+    # A component or template that carries the literal markup without being a whole document.
+    return _find_head_text_in_markup(content, key)
 
 
 def _length_kind(family: str) -> str:

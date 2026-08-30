@@ -282,3 +282,81 @@ def test_a_proposal_under_the_window_is_sent_back_once(model, monkeypatch) -> No
     # prompt, and carries the measured length of the value it was handed.
     assert "trop court" in seen[1]["system"]
     assert '"longueur_actuelle": 11' in seen[1]["user"]
+
+
+# ── the way HTML writes it (2026-08-30) ───────────────────────────────────────────────────────
+#
+# The patterns above cover every way a FRAMEWORK declares the two values — a component prop,
+# TOML, YAML quoted and bare, a JS binding. None of them covers the way plain HTML does it, and
+# static-html is one of the two stacks validated in PRODUCTION (elevenlabs-avis.com): a real
+# customer on a static site clicking "Réécrire (PR)" was told their values were "assemblées".
+
+STATIC_PAGE = '''<!doctype html>
+<html lang="fr"><head>
+<title>Ancien titre de la page statique</title>
+<meta name="description" content="Ancienne description de cette page statique." />
+<meta property="og:title" content="Copie OG" />
+<meta name="twitter:description" content="Copie twitter" />
+</head><body><a href="/x" title="info-bulle">lien</a></body></html>'''
+
+
+def test_a_static_html_page_declares_its_values_in_markup(model) -> None:
+    assert app_module._find_head_text_value(STATIC_PAGE, "title")[1] == "Ancien titre de la page statique"
+    assert app_module._find_head_text_value(STATIC_PAGE, "description")[1] == (
+        "Ancienne description de cette page statique.")
+
+
+def test_the_copies_and_the_tooltips_are_left_alone_on_a_static_page(model) -> None:
+    """`og:`/`twitter:` are COPIES — rewriting one leaves the original contradicting it — and a
+    link's `title=` attribute is a tooltip. The attribute patterns would have matched that
+    tooltip, which is why a full document is read as markup only."""
+    model(["Nouveau titre qui repond enfin a la requete posee par le visiteur",
+           "Nouvelle description qui repond a la requete du visiteur, dit ce que la page "
+           "apporte et donne envie de cliquer dessus."])
+    new, count = app_module._rewrite_for_query(
+        STATIC_PAGE, query="ma requête", url="https://site.fr/p", site_name="site.fr")
+    assert count == 2
+    assert "Copie OG" in new and "Copie twitter" in new
+    assert 'title="info-bulle"' in new, "a link's tooltip was rewritten as if it were the title"
+    assert "<title>Nouveau titre qui repond enfin a la requete posee par le visiteur</title>" in new
+
+
+def test_a_next_pages_component_is_not_mistaken_for_an_html_document(model) -> None:
+    """`<Head>` is Next.js's component, not a document. Matching it case-insensitively made the
+    locator read `<title>{title}</title>` — an expression — and refuse the file outright, taking
+    next-pages from 2/2 to 0/2. The page's values are the JS bindings above it."""
+    source = (
+        "import Head from 'next/head';\n\n"
+        "const title = 'Ancien titre de cette page Next Pages';\n"
+        "const description = \"Ancienne description de cette page Next Pages du site.\";\n\n"
+        "export default function Page() {\n"
+        "  return (<main><Head><title>{title}</title>"
+        "<meta name=\"description\" content={description} /></Head></main>);\n}\n"
+    )
+    found = app_module._find_head_text_value(source, "title")
+    assert found and found[1] == "Ancien titre de cette page Next Pages"
+    assert app_module._find_head_text_value(source, "description")[1].startswith("Ancienne description")
+
+
+def test_a_templated_title_element_is_still_refused(model) -> None:
+    """`<title>{title}</title>` in a component is the page's LOGIC. Replacing it would hardcode
+    one page's text into whatever the expression serves."""
+    assert app_module._find_head_text_value("<title>{title}</title>", "title") is None
+    assert app_module._find_head_text_value("<title></title>", "title") is None
+
+
+def test_the_description_meta_is_matched_whatever_the_attribute_order(model) -> None:
+    page = ('<!doctype html><html><head><meta content="La vraie description de la page ici." '
+            'name="description"></head><body></body></html>')
+    assert app_module._find_head_text_value(page, "description")[1] == (
+        "La vraie description de la page ici.")
+
+
+def test_a_french_apostrophe_inside_the_meta_survives(model) -> None:
+    """`content="Page d'accueil…"` is ordinary French, and excluding both quote characters to
+    stop the value overrunning would have broken every description on a French site."""
+    page = ('<!doctype html><html><head>'
+            '<meta name="description" content="Page d\'accueil du site, avec ce qu\'on y trouve.">'
+            '</head><body></body></html>')
+    assert app_module._find_head_text_value(page, "description")[1] == (
+        "Page d'accueil du site, avec ce qu'on y trouve.")
