@@ -17868,6 +17868,18 @@ def _length_kind(family: str) -> str:
     return "title" if str(family or "") == "title" else "description"
 
 
+def _rendered_len(value: str) -> int:
+    """Length of the value AS RENDERED, entities resolved.
+
+    The crawler measures the string a browser produced, so `&amp;` counts as one character there
+    and as five in the file. Measured on a real customer page (elevenlabs-avis.com): a title
+    spelled 60 characters renders 56 — a whole clause of margin, on the very number this family
+    exists to control. Counting the source would optimise a length nobody ever sees.
+    """
+    import html as _html
+    return len(_html.unescape(value or ""))
+
+
 def _trim_to_ceiling(value: str, ceiling: int) -> str:
     """Cut `value` to at most `ceiling` characters on a word boundary, without inventing text.
 
@@ -17875,13 +17887,23 @@ def _trim_to_ceiling(value: str, ceiling: int) -> str:
     sentence was cut, which is worse than a slightly abrupt end.
     """
     v = value.strip()
-    if len(v) <= ceiling:
+    if _rendered_len(v) <= ceiling:
         return v
-    cut = v[:ceiling]
+    # Walk back until what REMAINS fits on screen: `&amp;` is five characters in the file and
+    # one in the result, so cutting at a source offset would both cut too early and risk landing
+    # inside an entity.
+    cut = v
+    while cut and _rendered_len(cut) > ceiling:
+        cut = cut[:-1]
     space = cut.rfind(" ")
-    if space > ceiling * 0.6:  # keep a whole last word unless that guts the value
+    if space > len(cut) * 0.6:  # keep a whole last word unless that guts the value
         cut = cut[:space]
-    return cut.rstrip(" ,;:-–—").rstrip()
+    cut = cut.rstrip(" ,;:-–—").rstrip()
+    # AFTER the punctuation strip, not before: that strip removes a trailing `;`, which turns a
+    # perfectly good `&amp;` at the end into `&amp`. Measured on `_trim_to_ceiling("abcdef &amp; ghi", 9)`.
+    if "&" in cut and cut.rfind("&") > cut.rfind(";"):
+        cut = cut[:cut.rfind("&")].rstrip(" ,;:-–—").rstrip()
+    return cut
 
 
 def _length_value_for_page(
@@ -17916,7 +17938,7 @@ def _length_value_for_page(
     # identical risk. Naming the language is the cheap half; `_dominant_language` below is the
     # half that holds, and it abstains whenever the value does not say what it is.
     lang_before = _dominant_language(current)
-    too_short = len(current) < low
+    too_short = _rendered_len(current) < low
     system = (
         f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, "
         + ("trop court. " if too_short else "trop long. ")
@@ -17935,13 +17957,14 @@ def _length_value_for_page(
     for round_no in range(2):
         if round_no == 0:
             user = json.dumps({"url": url, "site": site_name, "actuel": current,
-                               "longueur_actuelle": len(current), "cible": f"{low}-{high}"},
+                               "longueur_actuelle": _rendered_len(current),
+                               "cible": f"{low}-{high}"},
                               ensure_ascii=False)
         else:
             # The one thing the model cannot work out for itself: how long its own answer was.
             # Stated as an operation to carry out — remove N, or take back a clause — because
             # "aim at 60-68" is precisely the instruction it cannot follow.
-            n = len(attempt)
+            n = _rendered_len(attempt)
             problem = (f"trop long de {n - ceiling} caracteres" if n > ceiling else
                        f"trop court : {n} caracteres, il en faut {low} a {high}. Reprends un "
                        "element informatif que tu as retire (ce que la page traite vraiment), "
@@ -17964,10 +17987,10 @@ def _length_value_for_page(
                            "valeur refusee", kind, lang_before)
             return ""
         attempts.append(attempt)
-        if low <= len(attempt) <= high:
+        if low <= _rendered_len(attempt) <= high:
             return attempt
         logger.info("[correction-ai] %s: proposition de %d car. hors fenetre %d-%d, nouvel essai",
-                    kind, len(attempt), low, high)
+                    kind, _rendered_len(attempt), low, high)
 
     if not attempts:
         return ""
@@ -17975,19 +17998,19 @@ def _length_value_for_page(
     # second call was to recover surface, so a value that gave some back must not be discarded
     # for one that gave less.
     def _distance(value: str) -> int:
-        n = len(value)
+        n = _rendered_len(value)
         return 0 if low <= n <= high else (n - high if n > high else low - n)
 
-    best = min(attempts, key=lambda v: (_distance(v), -len(v)))
-    if len(best) > ceiling:
+    best = min(attempts, key=lambda v: (_distance(v), -_rendered_len(v)))
+    if _rendered_len(best) > ceiling:
         best = _trim_to_ceiling(best, ceiling)
         logger.warning("[correction-ai] %s: le modele est reste au-dessus de %d apres 2 essais, "
-                       "coupe deterministe a %d car.", kind, ceiling, len(best))
-    elif len(best) < low:
+                       "coupe deterministe a %d car.", kind, ceiling, _rendered_len(best))
+    elif _rendered_len(best) < low:
         # Never padded: a value below the window is legal (nothing flags a title until 15) and
         # inventing words to reach a target would put a promise on the page that it does not keep.
         logger.info("[correction-ai] %s: %d car., sous la fenetre %d-%d apres 2 essais, valeur "
-                    "gardee telle quelle", kind, len(best), low, high)
+                    "gardee telle quelle", kind, _rendered_len(best), low, high)
     return best
 
 
@@ -18099,7 +18122,7 @@ def _rewrite_for_query(
         )
         user = json.dumps(
             {"requete": text, "url": url, "site": site_name,
-             f"{label}_actuel": current, "longueur_actuelle": len(current),
+             f"{label}_actuel": current, "longueur_actuelle": _rendered_len(current),
              "langue_de_la_page": lang_before or "inconnue",
              "cible": f"{low}-{high}"},
             ensure_ascii=False,
@@ -18127,7 +18150,7 @@ def _rewrite_for_query(
                 logger.warning("[keywords] %s refuse : le modele a repondu dans une autre langue "
                                "que la page (%s)", field, lang_before)
                 continue
-        if not (low <= len(proposed) <= high):
+        if not (low <= _rendered_len(proposed) <= high):
             # Same guarantee as the length families, on BOTH sides: PR#3's title came out at 56
             # against a 60-68 window because only the too-long case was routed here, and nothing
             # downstream ever asks for those characters back.
@@ -18135,7 +18158,7 @@ def _rewrite_for_query(
                 current=proposed, kind=kind, url=url, site_name=site_name,
                 model_override=model_override,
             ) or proposed
-        if not proposed or len(proposed) > ceiling or proposed == current:
+        if not proposed or _rendered_len(proposed) > ceiling or proposed == current:
             continue
         # A quote inside the replacement would break the literal it is going into; the model is
         # not asked to escape, so a value carrying the wrong quote is refused rather than fixed.

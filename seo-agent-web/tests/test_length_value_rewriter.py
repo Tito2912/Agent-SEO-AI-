@@ -292,3 +292,43 @@ def test_a_too_short_current_value_is_asked_to_grow(monkeypatch) -> None:
         current="Kling AI", kind="title", url="https://site.fr/x", site_name="site.fr")
     assert "trop court" in seen[0]["system"]
     assert "trop long" not in seen[0]["system"]
+
+
+# ── the length the searcher sees (2026-08-30) ─────────────────────────────────────────────────
+#
+# Measured on a real customer page (elevenlabs-avis.com, static HTML): the home title is spelled
+# 60 characters and RENDERS 56, because of one `&amp;`. The crawler measures the browser's
+# string, so counting the file's would optimise a length nobody ever sees — on the very number
+# this family exists to control.
+
+def test_the_length_is_the_rendered_one_not_the_spelled_one() -> None:
+    real = "ElevenLabs Avis | Voix IA, clonage vocal, tarifs &amp; guide"
+    assert len(real) == 60 and app_module._rendered_len(real) == 56
+
+
+def test_a_value_inside_the_window_on_screen_is_accepted(monkeypatch) -> None:
+    """65 on screen, 69 in the file: counting the source would have called the model a second
+    time to fix a value that is already right, and the ceiling check would have flagged it."""
+    value = "Kling AI Bild zu Video 2026: Standbilder &amp; Fotos animieren lassen"
+    low, high = app_module._LENGTH_WINDOWS["title"]
+    assert len(value) == 69 and app_module._rendered_len(value) == 65  # guards the fixture itself
+    assert low <= app_module._rendered_len(value) <= high < len(value)
+    seen = []
+    monkeypatch.setattr(app_module, "_correction_ai_json",
+                        lambda **kw: (seen.append(1), {"value": value})[1])
+    out = app_module._length_value_for_page(
+        current="T" * 120, kind="title", url="https://site.fr/x", site_name="site.fr")
+    assert out == value
+
+
+def test_the_trim_never_leaves_half_an_entity() -> None:
+    """The punctuation strip removes a trailing `;`, which turns a good `&amp;` into `&amp` —
+    so the entity check runs AFTER it, not before."""
+    out = app_module._trim_to_ceiling("abcdef &amp; ghi", 9)
+    assert out.rfind("&") <= out.rfind(";"), out
+    assert app_module._rendered_len(out) <= 9
+
+    long_one = "Titre avec &amp; entite et des mots en trop pour tenir dans la limite fixee"
+    cut = app_module._trim_to_ceiling(long_one, 70)
+    assert "&amp;" in cut and cut.rfind("&") <= cut.rfind(";")
+    assert app_module._rendered_len(cut) <= 70
