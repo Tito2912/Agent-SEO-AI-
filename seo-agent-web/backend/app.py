@@ -17859,12 +17859,21 @@ def _length_value_for_page(
     low, high = _LENGTH_WINDOWS[kind]
     ceiling = _LENGTH_CEILINGS[kind]
     label = "titre" if kind == "title" else "meta description"
+    # These instructions are in French, and the page may not be. `_rewrite_for_query` was asked
+    # the same way and answered in French on an English page four runs out of four while keeping
+    # the title English — a page shipped with its two snippet lines in different languages.
+    # This family shortens German, Spanish and French titles on the same account, so it runs the
+    # identical risk. Naming the language is the cheap half; `_dominant_language` below is the
+    # half that holds, and it abstains whenever the value does not say what it is.
+    lang_before = _dominant_language(current)
     system = (
         f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, trop long. "
         f"Réécris-le pour qu'il tienne en {low} à {high} caractères. "
         "Garde la langue, la marque, l'année et les termes de recherche déjà présents ; retire "
         "la partie la moins informative plutôt que de réécrire depuis zéro. "
-        'Réponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
+        + (f"La page est en {_LANGUAGE_NAMES[lang_before]} : réponds dans cette langue, même si "
+           "ces instructions sont dans une autre. " if lang_before in _LANGUAGE_NAMES else "")
+        + 'Réponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
     )
     attempt = ""
     for round_no in range(2):
@@ -17882,6 +17891,13 @@ def _length_value_for_page(
                                      temperature=0.1, model_override=model_override)
         attempt = str((parsed or {}).get("value") or "").strip()
         if not attempt:
+            return ""
+        if lang_before and _dominant_language(attempt) not in ("", lang_before):
+            # Translating half a page's snippet is not a shortening, it is a defect. Refusing
+            # leaves the over-long value in place, which is a flagged anomaly the customer can
+            # see; a translated one is a page nobody flags and everybody reads.
+            logger.warning("[correction-ai] %s: reponse dans une autre langue que la page (%s), "
+                           "valeur refusee", kind, lang_before)
             return ""
         if len(attempt) <= ceiling:
             return attempt
@@ -17922,6 +17938,7 @@ def _build_language_markers() -> dict[str, frozenset[str]]:
 
 
 _LANGUAGE_MARKERS = _build_language_markers()
+_LANGUAGE_NAMES = {"fr": "francais", "en": "anglais", "de": "allemand", "es": "espagnol"}
 _WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
 
 
@@ -17987,14 +18004,14 @@ def _rewrite_for_query(
         # "Garde la langue de la page" was already in the prompt; naming the language is the
         # cheap half, and the check below is the half that holds.
         lang_before = _dominant_language(current)
-        _lang_names = {"fr": "francais", "en": "anglais", "de": "allemand", "es": "espagnol"}
         system = (
             f"Tu es un expert SEO. Une page se positionne deja sur la requete donnee mais n'est "
             f"presque jamais cliquee. Reecris son {label} pour qu'il reponde a cette requete et "
             f"donne envie de cliquer. Garde la langue de la page, sa marque et son sujet : la "
             f"page est pertinente, c'est sa presentation qui ne l'est pas. "
-            + (f"La page est en {_lang_names[lang_before]} : reponds dans cette langue, meme si "
-               f"la requete ou ces instructions sont dans une autre. " if lang_before else "")
+            + (f"La page est en {_LANGUAGE_NAMES[lang_before]} : reponds dans cette langue, "
+               f"meme si la requete ou ces instructions sont dans une autre. "
+               if lang_before in _LANGUAGE_NAMES else "")
             + f"Vise {low} a {high} caracteres. "
             'Reponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
         )
@@ -18020,7 +18037,7 @@ def _rewrite_for_query(
                 user_msg=json.dumps({**json.loads(user),
                                      "ta_proposition_refusee": proposed,
                                      "probleme": "tu as change de langue ; ecris en "
-                                                 f"{_lang_names.get(lang_before, lang_before)}"},
+                                                 f"{_LANGUAGE_NAMES.get(lang_before, lang_before)}"},
                                     ensure_ascii=False),
                 max_tokens=600, temperature=0.2, model_override=model_override)
             proposed = str((retry or {}).get("value") or "").strip()

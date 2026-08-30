@@ -168,3 +168,50 @@ def test_only_the_flagged_value_moves(answers) -> None:
     new, count = app_module._rewrite_length_values(content, _samples(TOO_LONG), "meta")
     assert count == 1
     assert other in new, "an unflagged value was rewritten"
+
+
+# ── the page's language, in the family that shortens German and Spanish titles ────────────────
+#
+# These instructions are written in French and the page often is not: on this customer's account
+# the same shortening runs over DE, ES and FR pages. `_rewrite_for_query`, asked the same way,
+# answered in French on an English page four runs out of four — so the risk here is measured,
+# not hypothetical.
+
+EN_TITLE = ("Kling AI pricing 2026: what the credits really cost for every plan and how to "
+            "budget the whole thing properly")
+
+
+def test_a_shortened_value_in_another_language_is_refused(monkeypatch) -> None:
+    """The over-long value stays: it is a flagged anomaly the customer can see. A translated one
+    is a page nobody flags and everybody reads."""
+    monkeypatch.setattr(app_module, "_correction_ai_json", lambda **kw: {
+        "value": "Kling AI prix 2026 : ce que coutent vraiment les credits et comment les gerer"})
+    out = app_module._length_value_for_page(
+        current=EN_TITLE, kind="title", url="https://site.fr/blog/kling-ai-pricing-2026",
+        site_name="site.fr")
+    assert out == ""
+
+
+def test_the_page_language_is_named_in_the_shortening_prompt(monkeypatch) -> None:
+    seen: list[str] = []
+
+    def _fake(**kw):
+        seen.append(kw.get("system", ""))
+        return {"value": "Kling AI pricing 2026: what the credits cost and how to budget them"}
+
+    monkeypatch.setattr(app_module, "_correction_ai_json", _fake)
+    out = app_module._length_value_for_page(
+        current=EN_TITLE, kind="title", url="https://site.fr/blog/kling-ai-pricing-2026",
+        site_name="site.fr")
+    assert out and any("anglais" in s for s in seen)
+
+
+def test_a_value_whose_language_is_unreadable_is_left_to_the_model(monkeypatch) -> None:
+    """Abstention: a title made of brand and keywords says nothing about its language, and
+    refusing there would block correct shortenings for no reading at all."""
+    monkeypatch.setattr(app_module, "_correction_ai_json", lambda **kw: {
+        "value": "Kling AI Preise 2026: Credits und Tarife"})
+    out = app_module._length_value_for_page(
+        current="Kling AI Pricing 2026 Credits Plans Cost Guide Comparison Table Full Review",
+        kind="title", url="https://site.fr/x", site_name="site.fr")
+    assert out == "Kling AI Preise 2026: Credits und Tarife"
