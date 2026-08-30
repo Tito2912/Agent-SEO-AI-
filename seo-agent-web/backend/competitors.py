@@ -174,7 +174,7 @@ tag tags archive archives ressources resources guides
 # `lang` as the crawler read it (`<html lang>`), falling back to what the URL says. Both are
 # needed: Gatsby and Nuxt emit no `<html lang>` by default, and plenty of real sites carry the
 # locale only in the slug.
-_URL_LANG_RE = re.compile(r"(?:^|[/_-])(fr|en|de|es|it|pt|nl|pl)(?:[/_.-]|$)", re.I)
+_URL_LANGS = frozenset("fr en de es it pt nl pl".split())
 
 
 def _is_listing_page(url: str) -> bool:
@@ -206,15 +206,21 @@ def page_language(page: dict[str, Any]) -> str:
     declared = str(page.get("lang") or "").strip().lower()
     if declared:
         return declared.replace("_", "-").split("-", 1)[0]
-    match = _URL_LANG_RE.search(_normalised_url(page.get("url")).rsplit("/", 1)[-1] or "")
-    if match:
-        return match.group(1).lower()
     path = _normalised_url(page.get("url"))
     path = path.split("://", 1)[1] if "://" in path else path
-    for segment in path.split("/")[1:]:
-        if len(segment) == 2 and segment.lower() in {"fr", "en", "de", "es", "it", "pt", "nl", "pl"}:
-            return segment.lower()
-    return ""
+    segments = [seg for seg in path.split("/")[1:] if seg]
+    if not segments:
+        return ""
+    # A locale in a slug is a SUFFIX by convention (`…-2026-fr`), never a token in the middle.
+    # Measured on this customer's real files: `kling-ai-image-en-video-2026-fr` is a FRENCH page
+    # whose slug contains the French preposition "en" — an anywhere-match read it as English and
+    # would have paired it with the wrong locale, the very thing this function exists to prevent.
+    last = segments[-1].rsplit("-", 1)[-1].rsplit("_", 1)[-1].lower()
+    if last in _URL_LANGS:
+        return last
+    # …or a path PREFIX (`/de/blog/x`), the other convention.
+    first = segments[0].lower()
+    return first if len(first) == 2 and first in _URL_LANGS else ""
 
 
 def compare(

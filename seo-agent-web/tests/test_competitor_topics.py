@@ -262,6 +262,16 @@ def test_the_language_can_come_from_the_url_when_the_page_is_silent() -> None:
     assert comp.page_language({"url": "https://site.fr/x", "lang": "de-DE"}) == "de"
 
 
+def test_a_locale_in_a_slug_is_a_suffix_never_a_word_in_the_middle() -> None:
+    """Caught on this customer's real files: `kling-ai-image-en-video-2026-fr` is a FRENCH page
+    whose slug contains the French preposition "en". An anywhere-match read it as English and
+    would have paired it with the wrong locale — the exact failure this function exists to
+    prevent, reintroduced by the function itself."""
+    assert comp.page_language({"url": "https://site.fr/blog/kling-ai-image-en-video-2026-fr"}) == "fr"
+    assert comp.page_language({"url": "https://site.fr/blog/kling-ai-imagen-a-video-2026-es"}) == "es"
+    assert comp.page_language({"url": "https://site.fr/blog/elevenlabs-for-podcasts-2026"}) == ""
+
+
 def test_a_listing_page_is_never_the_page_to_retarget() -> None:
     """Real pair: the rival's blog index matched /blog here at the floor. A listing is a shelf,
     not a subject — rewriting its title toward one article's subject describes the shelf as if it
