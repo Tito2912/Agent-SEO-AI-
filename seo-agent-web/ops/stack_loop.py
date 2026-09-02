@@ -41,7 +41,6 @@ Example, one stack end to end:
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import shutil
@@ -219,19 +218,20 @@ def cmd_publish(args) -> int:
                                           "auto_init": False})
         print(f"dépôt {args.repo} créé")
 
-    remote = f"https://x-access-token:{token}@github.com/{owner}/{name}.git"
     run = lambda *a: subprocess.run(a, cwd=tree, check=True, capture_output=True, text=True)  # noqa: E731
     if not (tree / ".git").exists():
         run("git", "init", "-b", "main")
         run("git", "add", "-A")
         run("git", "-c", "user.email=noyaru@example.invalid", "-c", "user.name=Noyaru",
             "commit", "-m", f"fixture {stack.fixture} avec son defaut injecte")
-    run("git", "remote", "remove", "origin") if (tree / ".git" / "config").read_text(
-        encoding="utf-8").find("[remote \"origin\"]") >= 0 else None
-    run("git", "remote", "add", "origin", remote)
-    run("git", "push", "-u", "origin", "main")
+    # The URL is passed to THIS push and never stored: `git remote add` would write the token
+    # into .git/config, where it outlives the run and the operator's attention.
+    run("git", "push", "--force",
+        f"https://x-access-token:{token}@github.com/{owner}/{name}.git", "main:main")
     print(f"{args.stack:<12} poussé sur https://github.com/{args.repo}")
-    print("   → connecte-le maintenant à un site Netlify (Add new site → Import from Git)")
+    # ASCII on purpose: this runs on a Windows console in cp1252, where a printed arrow raises
+    # UnicodeEncodeError and makes a successful push look like a crash.
+    print("   -> connecte-le maintenant a un site Netlify (Add new site -> Import from Git)")
     return 0
 
 
