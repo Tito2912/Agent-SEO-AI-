@@ -76,10 +76,16 @@ def test_a_copy_or_an_assembled_value_is_not_mistaken_for_the_declaration(label,
         ("nuxt", "nuxt/pages/a-propos.vue"),
         ("sveltekit", "sveltekit/src/routes/a-propos/+page.svelte"),
         ("gatsby", "gatsby/src/pages/a-propos.js"),
+        # The two written on 2026-08-30 to complete the nine. static-html is the one that was
+        # BROKEN — its values are markup, which none of the framework patterns matched — and
+        # next-app is the stack every customer PR so far has run on, which had no fixture of
+        # its own because those were somebody's live repositories.
+        ("static-html", "static-html/a-propos.html"),
+        ("next-app", "next-app/app/a-propos/page.tsx"),
     ],
 )
 def test_both_values_are_found_in_every_real_fixture(stack: str, relative: str) -> None:
-    """The seven repos the correction loop was proven on, not hand-written snippets."""
+    """The nine repos the correction loop is claimed on, not hand-written snippets."""
     path = FIXTURES / relative
     if not path.exists():  # pragma: no cover - fixtures are committed alongside this test
         pytest.skip(f"{stack} fixture missing")

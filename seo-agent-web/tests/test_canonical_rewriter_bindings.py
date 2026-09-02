@@ -331,3 +331,37 @@ def test_the_jekyll_layout_holds_no_literal_url_to_rewrite() -> None:
         pytest.skip("jekyll fixture missing")
     _new, count = _rewrite(layout.read_text(encoding="utf-8"))
     assert count == 0
+
+
+# ── the two stacks added on 2026-08-30 to complete the nine ───────────────────────────────────
+
+@pytest.mark.parametrize(
+    "stack, relative, port",
+    [
+        # HTML writes the canonical as MARKUP — the form the snippet locator was missing, and
+        # the stack a real customer runs (elevenlabs-avis.com).
+        ("static-html", "static-html/blog.html", 8748),
+        # Next App Router writes it as an object property in a TypeScript export. It is the
+        # stack of every customer pull request so far, and it had no fixture of its own.
+        ("next-app", "next-app/app/blog/page.tsx", 8749),
+    ],
+)
+def test_the_injected_canonical_is_fixed_in_one_line(stack: str, relative: str, port: int) -> None:
+    page = WEB_ROOT / "tests" / "fixtures" / relative
+    if not page.exists():  # pragma: no cover - fixtures ship with the tests
+        pytest.skip(f"{stack} fixture missing")
+    source = page.read_text(encoding="utf-8")
+    base = f"http://127.0.0.1:{port}"
+    pairs = [{"page": f"{base}/blog", "from": f"{base}/blog/", "to": f"{base}/blog"}]
+
+    fixed, count = app_module._rewrite_head_url_values(source, pairs)
+    assert count == 1, f"{stack}: {count} replacement(s), expected exactly one"
+    changed = [(a, b) for a, b in zip(source.splitlines(), fixed.splitlines()) if a != b]
+    assert len(changed) == 1 and changed[0][1].count(f"{base}/blog") == 1
+    assert f"{base}/blog/" not in changed[0][1]
+
+    control = page.parent.parent / "a-propos" / "page.tsx" if stack == "next-app" else (
+        page.parent / "a-propos.html")
+    _, untouched = app_module._rewrite_head_url_values(
+        control.read_text(encoding="utf-8"), pairs)
+    assert untouched == 0, f"{stack}: the control page was rewritten"

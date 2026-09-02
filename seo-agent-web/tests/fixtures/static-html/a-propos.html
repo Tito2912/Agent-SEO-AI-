@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>A propos du site de test static-html</title>
+    <meta name="description" content="Page temoin du site fixture static-html : elle est saine et doit rester rigoureusement intacte apres l'application de la correction automatique." />
+    <link rel="canonical" href="http://127.0.0.1:8748/a-propos" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="A propos du site de test static-html" />
+    <meta property="og:description" content="Page temoin du site fixture static-html." />
+    <meta property="og:url" content="http://127.0.0.1:8748/a-propos" />
+    <meta property="og:image" content="http://127.0.0.1:8748/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="A propos du site de test static-html" />
+    <meta name="twitter:description" content="Page temoin du site fixture static-html." />
+    <meta name="twitter:image" content="http://127.0.0.1:8748/og.png" />
+    <!-- Une info-bulle de lien, exactement le piege qui faisait reecrire le mauvais texte :
+         le titre de la page est dans <title>, jamais dans un attribut title=. -->
+  </head>
+  <body>
+    <h1>A propos</h1>
+    <p>Page temoin : elle doit rester intacte apres la correction.</p>
+    <nav><a href="/" title="revenir a l'accueil">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
+  </body>
+</html>

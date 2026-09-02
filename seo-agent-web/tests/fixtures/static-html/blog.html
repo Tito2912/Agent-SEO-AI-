@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Blog du site de test static-html</title>
+    <meta name="description" content="Index du blog du site fixture static-html, qui sert a verifier que la correction du canonical ne touche ni l'accueil ni la page temoin." />
+    <!-- LE DEFAUT INJECTE : le slash final. L'hote sert /blog et redirige /blog/ vers lui.
+         En HTML pur il n'y a ni front matter ni binding : la valeur est dans le balisage, ce
+         qui est precisement la forme que le reecriveur ignorait jusqu'au 30/08/2026. -->
+    <link rel="canonical" href="http://127.0.0.1:8748/blog/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Blog du site de test static-html" />
+    <meta property="og:description" content="Index du blog du site fixture static-html." />
+    <meta property="og:url" content="http://127.0.0.1:8748/blog" />
+    <meta property="og:image" content="http://127.0.0.1:8748/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Blog du site de test static-html" />
+    <meta name="twitter:description" content="Index du blog du site fixture static-html." />
+    <meta name="twitter:image" content="http://127.0.0.1:8748/og.png" />
+  </head>
+  <body>
+    <h1>Blog</h1>
+    <p>Articles.</p>
+    <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
+  </body>
+</html>
