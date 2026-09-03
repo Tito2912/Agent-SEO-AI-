@@ -49,8 +49,10 @@ audit_report.md
 cleanup.ps1
 domains.json
 index.txt
-docs/
-tools/
+# Anchored: this excludes the repo-root dev-notes folder only. Unanchored, it also swallowed
+# seo-agent-web/content/docs/ — the product documentation, which must ship.
+/docs/
+/tools/
 
 # OS / editor
 .DS_Store

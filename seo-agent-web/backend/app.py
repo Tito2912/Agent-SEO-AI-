@@ -106,10 +106,10 @@ except ImportError:
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
-    from . import seo_resources as seo_resources  # type: ignore
+    from . import content_library as content_library  # type: ignore
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
-    import seo_resources  # type: ignore
+    import content_library  # type: ignore
 
 
 try:
@@ -8462,7 +8462,16 @@ async def _app_lifespan(_app: FastAPI):
         _shutdown()
 
 
-app = FastAPI(title="SEO Agent", lifespan=_app_lifespan)
+# `/docs` is the customer documentation, so FastAPI's interactive schema moves out of the way.
+# It also moves BEHIND authentication: the public-path allowlist matches the /docs prefix, and
+# leaving Swagger there would have published every internal route to anyone who asked.
+app = FastAPI(
+    title="SEO Agent",
+    lifespan=_app_lifespan,
+    docs_url="/internal/api-explorer",
+    redoc_url=None,
+    openapi_url="/internal/openapi.json",
+)
 app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "static")), name="static")
 
 
@@ -8561,7 +8570,7 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
         "/privacy",
         "/support",
         "/status",
-    } or path.startswith("/ressources-seo"):
+    } or path.startswith("/ressources-seo") or path.startswith("/docs"):
         return await call_next(request)
 
     auth = str(request.headers.get("authorization") or "")
@@ -8649,13 +8658,71 @@ def _support_email() -> str:
 
 
 def _public_nav_items() -> list[dict[str, str]]:
+    """The public header. Order matters: it is the order a visitor reads.
+
+    `primary` marks the links the header shows; the footer renders the whole list. Before
+    this, /docs and /ressources-seo existed but appeared in neither, reachable only from a
+    block halfway down the home page.
+    """
     return [
-        {"href": "/pricing", "label": "Pricing"},
-        {"href": "/terms", "label": "CGU"},
-        {"href": "/privacy", "label": "Confidentialité"},
-        {"href": "/support", "label": "Support"},
-        {"href": "/status", "label": "Statut"},
+        {"href": "/pricing", "label": "Tarifs", "primary": "1"},
+        {"href": "/docs", "label": "Documentation", "primary": "1"},
+        {"href": "/ressources-seo", "label": "Guides SEO", "primary": "1"},
+        {"href": "/support", "label": "Support", "primary": "1"},
+        {"href": "/status", "label": "Statut", "primary": ""},
+        {"href": "/terms", "label": "CGU", "primary": ""},
+        {"href": "/privacy", "label": "Confidentialité", "primary": ""},
     ]
+
+
+def _plan_token_value(catalog: dict[str, Any], plan_key: str, group: str, field: str) -> str:
+    """One plan number, formatted for prose. Never raises — a missing key renders as "-"."""
+    plan = catalog.get(plan_key) if isinstance(catalog.get(plan_key), dict) else {}
+    bucket = plan.get(group) if isinstance(plan.get(group), dict) else {}
+    raw = bucket.get(field)
+    if raw is None:
+        return "-"
+    try:
+        number = int(raw)
+    except (TypeError, ValueError):
+        return str(raw)
+    if number == 0:
+        return "0"
+    # Narrow no-break space: the French thousands separator that never wraps mid-number.
+    return f"{number:,}".replace(",", " ")
+
+
+def _content_tokens() -> dict[str, str]:
+    """Values a content page may interpolate with `{{token}}`.
+
+    Documentation that hardcodes a quota is documentation that lies the first time an admin
+    tunes PLAN_CONFIG_JSON. These are read live, per request, from the same catalogue the
+    billing code enforces.
+    """
+    tokens: dict[str, str] = {
+        "app_name": _app_name(),
+        "support_email": _support_email(),
+        "competitors_max": str(_COMPETITOR_MAX_PER_PROJECT),
+        "competitor_pages": str(_COMPETITOR_MAX_PAGES),
+        "competitor_refresh_days": str(_COMPETITOR_REFRESH_DAYS),
+    }
+    try:
+        catalog = billing.plan_catalog()
+    except Exception:
+        logger.warning("[content] plan catalogue unavailable; plan tokens will render as-is")
+        return tokens
+    for key in ("free", "solo", "pro", "business"):
+        plan = catalog.get(key) if isinstance(catalog.get(key), dict) else {}
+        tokens[f"price_{key}"] = str(plan.get("price_label") or "-")
+        tokens[f"label_{key}"] = str(plan.get("label") or key.title())
+        tokens[f"projects_{key}"] = _plan_token_value(catalog, key, "limits", "projects")
+        tokens[f"pages_{key}"] = _plan_token_value(catalog, key, "limits", "pages_crawled_month")
+        tokens[f"corrections_{key}"] = _plan_token_value(catalog, key, "limits", "ai_corrections_month")
+        tokens[f"assistant_{key}"] = _plan_token_value(catalog, key, "limits", "assistant_messages_month")
+        tokens[f"maxpages_{key}"] = _plan_token_value(catalog, key, "crawl", "max_pages_per_crawl")
+        tokens[f"pagespeed_{key}"] = _plan_token_value(catalog, key, "crawl", "max_pagespeed_urls")
+        tokens[f"files_{key}"] = _plan_token_value(catalog, key, "correction", "max_files")
+    return tokens
 
 
 def _public_url(request: Request, path: str) -> str:
@@ -9767,7 +9834,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/cron/autopilot",
         "/cron/auto-search-backlinks",
         "/cron/auto-post-backlinks",
-    } or path.startswith("/ressources-seo"):
+    } or path.startswith("/ressources-seo") or path.startswith("/docs"):
         return await call_next(request)
 
     if not request.state.user:
@@ -11785,14 +11852,94 @@ def status_public(request: Request) -> HTMLResponse:
     )
 
 
+def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> dict[str, Any]:
+    """Article schema, plus FAQPage when the page carries one."""
+    article = {
+        "@type": "TechArticle" if page["collection"] == "docs" else "Article",
+        "headline": page.get("title"),
+        "description": page.get("description"),
+        "dateModified": page.get("updated_at"),
+        "datePublished": page.get("published_at") or page.get("updated_at"),
+        "author": {"@type": "Organization", "name": _app_name()},
+        "publisher": {"@type": "Organization", "name": _app_name()},
+        "mainEntityOfPage": _public_url(request, path),
+        "keywords": ", ".join(page.get("keywords") or []),
+    }
+    faq = page.get("faq") or []
+    if faq:
+        return {
+            "@context": "https://schema.org",
+            "@graph": [
+                article,
+                {
+                    "@type": "FAQPage",
+                    "mainEntity": [
+                        {
+                            "@type": "Question",
+                            "name": item["question"],
+                            "acceptedAnswer": {"@type": "Answer", "text": item["answer"]},
+                        }
+                        for item in faq
+                    ],
+                },
+            ],
+        }
+    return {"@context": "https://schema.org", **article}
+
+
+@app.api_route("/docs", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def docs_index_public(request: Request) -> HTMLResponse:
+    tokens = _content_tokens()
+    sections = [
+        {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
+        for section in content_library.docs_sections()
+    ]
+    return templates.TemplateResponse(
+        "docs_index.html",
+        _public_template_context(
+            request,
+            sections=sections,
+            canonical_url=_public_url(request, "/docs"),
+            meta_description=(
+                f"Documentation {_app_name()} : prise en main, crawl, anomalies, corrections "
+                "automatiques en pull request, Search Console, concurrents, backlinks et quotas."
+            ),
+        ),
+    )
+
+
+@app.api_route("/docs/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def docs_article_public(request: Request, slug: str) -> HTMLResponse:
+    raw = content_library.get_doc(slug)
+    if not raw:
+        raise HTTPException(status_code=404, detail="doc_not_found")
+    tokens = _content_tokens()
+    page = content_library.resolve(raw, tokens)
+    path = f"/docs/{page['slug']}"
+    return templates.TemplateResponse(
+        "docs_article.html",
+        _public_template_context(
+            request,
+            page=page,
+            sections=[
+                {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
+                for section in content_library.docs_sections()
+            ],
+            related=content_library.resolve_all(content_library.related_pages(raw), tokens),
+            canonical_url=_public_url(request, path),
+            json_ld=_content_json_ld(request, page, path=path),
+        ),
+    )
+
+
 @app.api_route("/ressources-seo", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resources_public(request: Request) -> HTMLResponse:
-    resources = seo_resources.all_resources()
+    tokens = _content_tokens()
     return templates.TemplateResponse(
         "seo_resources_public.html",
         _public_template_context(
             request,
-            resources=resources,
+            resources=content_library.resolve_all(content_library.blog_pages(), tokens),
             canonical_url=_public_url(request, "/ressources-seo"),
             meta_description=(
                 "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, "
@@ -11804,54 +11951,20 @@ def seo_resources_public(request: Request) -> HTMLResponse:
 
 @app.api_route("/ressources-seo/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
-    resource = seo_resources.get_resource(slug)
-    if not resource:
+    raw = content_library.get_article(slug)
+    if not raw:
         raise HTTPException(status_code=404, detail="resource_not_found")
-    path = f"/ressources-seo/{resource['slug']}"
-    article_schema = {
-        "@type": "Article",
-        "headline": resource.get("title"),
-        "description": resource.get("description"),
-        "dateModified": resource.get("updated_at"),
-        "datePublished": resource.get("updated_at"),
-        "author": {"@type": "Organization", "name": _app_name()},
-        "publisher": {"@type": "Organization", "name": _app_name()},
-        "mainEntityOfPage": _public_url(request, path),
-        "keywords": ", ".join(resource.get("keywords") or []),
-    }
-    faq = resource.get("faq") if isinstance(resource, dict) else None
-    if isinstance(faq, list) and faq:
-        json_ld = {
-            "@context": "https://schema.org",
-            "@graph": [
-                article_schema,
-                {
-                    "@type": "FAQPage",
-                    "mainEntity": [
-                        {
-                            "@type": "Question",
-                            "name": str(item.get("question") or ""),
-                            "acceptedAnswer": {
-                                "@type": "Answer",
-                                "text": str(item.get("answer") or ""),
-                            },
-                        }
-                        for item in faq
-                        if isinstance(item, dict) and item.get("question") and item.get("answer")
-                    ],
-                },
-            ],
-        }
-    else:
-        json_ld = {"@context": "https://schema.org", **article_schema}
+    tokens = _content_tokens()
+    page = content_library.resolve(raw, tokens)
+    path = f"/ressources-seo/{page['slug']}"
     return templates.TemplateResponse(
         "seo_resource_article_public.html",
         _public_template_context(
             request,
-            resource=resource,
-            resources=seo_resources.all_resources(),
+            page=page,
+            related=content_library.resolve_all(content_library.related_pages(raw), tokens),
             canonical_url=_public_url(request, path),
-            json_ld=json_ld,
+            json_ld=_content_json_ld(request, page, path=path),
         ),
     )
 
@@ -11868,6 +11981,7 @@ Allow: /privacy
 Allow: /support
 Allow: /status
 Allow: /ressources-seo
+Allow: /docs
 Disallow: /auth/
 Disallow: /billing
 Disallow: /jobs
@@ -11893,15 +12007,9 @@ def sitemap_xml(request: Request) -> PlainTextResponse:
         {"path": "/support", "lastmod": now, "changefreq": "monthly"},
         {"path": "/status", "lastmod": now, "changefreq": "weekly"},
         {"path": "/ressources-seo", "lastmod": now, "changefreq": "weekly"},
+        {"path": "/docs", "lastmod": now, "changefreq": "weekly"},
     ]
-    for resource in seo_resources.all_resources():
-        urls.append(
-            {
-                "path": f"/ressources-seo/{resource.get('slug')}",
-                "lastmod": str(resource.get("updated_at") or now),
-                "changefreq": "monthly",
-            }
-        )
+    urls.extend(content_library.sitemap_entries())
     url_blocks = "\n".join(
         (
             f"  <url><loc>{html.escape(base + str(item['path']))}</loc>"
@@ -12237,7 +12345,9 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             _public_template_context(
                 request,
                 catalog=billing.plan_catalog(),
-                featured_resources=seo_resources.featured_resources(3),
+                featured_resources=content_library.resolve_all(
+                    content_library.featured_articles(3), _content_tokens()
+                ),
                 canonical_url=_public_url(request, "/"),
             ),
         )
@@ -13167,6 +13277,7 @@ def _dashboard_onboarding_state(
         {
             "key": "project",
             "label": "Ajouter un site",
+            "doc_href": "/docs/ajouter-un-projet",
             "done": has_projects,
             "detail": "Projet créé." if has_projects else "Crée le premier projet à auditer.",
             "action_label": "Ajouter",
@@ -13176,6 +13287,7 @@ def _dashboard_onboarding_state(
         {
             "key": "crawl",
             "label": "Lancer un premier crawl",
+            "doc_href": "/docs/lancer-un-crawl",
             "done": has_attempted_crawl,
             "detail": (
                 "Crawl terminé."
@@ -13189,6 +13301,7 @@ def _dashboard_onboarding_state(
         {
             "key": "issues",
             "label": "Traiter les anomalies",
+            "doc_href": "/docs/anomalies-et-priorites",
             "done": can_review_issues,
             "detail": "Rapport disponible." if can_review_issues else "Les anomalies apparaîtront après le premier crawl.",
             "action_label": "Voir",
@@ -13198,6 +13311,7 @@ def _dashboard_onboarding_state(
         {
             "key": "gsc",
             "label": "Connecter Search Console",
+            "doc_href": "/docs/connecter-search-console",
             "done": gsc_connected,
             "detail": "Données search connectées." if gsc_connected else "Ajoute les performances réelles de recherche.",
             "action_label": "Connecter",
@@ -13207,6 +13321,7 @@ def _dashboard_onboarding_state(
         {
             "key": "github",
             "label": "Connecter GitHub",
+            "doc_href": "/docs/connecter-github",
             "done": github_connected,
             "detail": "Correction via PR disponible." if github_connected else "Permet de proposer des corrections dans le code.",
             "action_label": "Connecter",

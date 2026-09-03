@@ -32,6 +32,6 @@ audit_report.md
 cleanup.ps1
 domains.json
 index.txt
-docs/
+/docs/
 tools/
 avis-invest.com/

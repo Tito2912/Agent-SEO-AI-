@@ -49,6 +49,7 @@
     <div class="page-header">
       <h1>Anomalies</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
+      <a href="/docs/anomalies-et-priorites" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </div>
 
     {% set defects = issues | rejectattr('is_delta') | list %}
