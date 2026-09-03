@@ -111,8 +111,12 @@ STACKS: dict[str, Stack] = {
     # Nuxt builds locally on Node 20 and failed on Netlify's default image — the version is
     # pinned rather than guessed at a second time. NODE_VERSION is also what keeps a fixture
     # reproducible a year from now, when the platform's default has moved on.
+    # NITRO_PRESET is not decoration: on Netlify, Nitro auto-detects the host and stops writing
+    # `.output/public` — the deploy then fails with "Deploy directory '.output/public' does not
+    # exist" even when the build succeeded. `static` pins the output where netlify.toml looks.
     "nuxt": Stack("nuxt", "npm run build", ".output/public",
-                  env={"NPM_FLAGS": "--legacy-peer-deps", "NODE_VERSION": "20"}),
+                  env={"NPM_FLAGS": "--legacy-peer-deps", "NODE_VERSION": "20",
+                       "NITRO_PRESET": "static"}),
     "sveltekit": Stack("sveltekit", "npm run build", "build"),
     "gatsby": Stack("gatsby", "npm run build", "public",
                     defect_style="noslash",
