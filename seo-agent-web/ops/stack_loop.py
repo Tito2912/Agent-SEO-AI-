@@ -114,7 +114,11 @@ STACKS: dict[str, Stack] = {
     # NITRO_PRESET is not decoration: on Netlify, Nitro auto-detects the host and stops writing
     # `.output/public` — the deploy then fails with "Deploy directory '.output/public' does not
     # exist" even when the build succeeded. `static` pins the output where netlify.toml looks.
+    # Third stack to emit directory indexes, after Hugo and Gatsby: Nitro's static output serves
+    # /blog/ and redirects /blog, so the slashed canonical is CORRECT here and the defect is the
+    # slash-less one. Measured on the deployed site, not deduced from the generator's docs.
     "nuxt": Stack("nuxt", "npm run build", ".output/public",
+                  defect_style="noslash",
                   env={"NPM_FLAGS": "--legacy-peer-deps", "NODE_VERSION": "20",
                        "NITRO_PRESET": "static"}),
     "sveltekit": Stack("sveltekit", "npm run build", "build"),
@@ -413,9 +417,29 @@ def cmd_verify(args) -> int:
     print(f"\n{'anomalie':<45} avant  après")
     for key in keys:
         b, a = before.get(key, 0), after.get(key, 0)
-        if b or a:
-            print(f"{key:<45} {b:>5}  {a:>5}{'   ← résolue' if b and not a else ''}")
+        if not (b or a):
+            continue
+        # A metric computed BETWEEN crawls is not a defect: a successful correction necessarily
+        # raises `canonical_url_changed`, and counting it as an anomaly makes this tool report
+        # that the fix broke something. Measured on nuxt — canonical 1 -> 0, and the only counter
+        # that went up was that one. The product already separates them in its own UI.
+        if _is_delta_key(key):
+            note = "   (suivi de changement, pas un défaut)"
+        elif b and not a:
+            note = "   ← résolue"
+        else:
+            note = ""
+        print(f"{key:<45} {b:>5}  {a:>5}{note}")
+    real_before = sum(v for k, v in before.items() if not _is_delta_key(k))
+    real_after = sum(v for k, v in after.items() if not _is_delta_key(k))
+    print(f"\n{'total (hors métriques de suivi)':<45} {real_before:>5}  {real_after:>5}")
     return 0
+
+
+def _is_delta_key(key: str) -> bool:
+    """Metrics that move BY CONSTRUCTION when a correction lands, and are not defects."""
+    return (key.endswith("_changed") or key.startswith("became_")
+            or "_became_" in key or key.startswith("pages_") or key.startswith("no_of_urls"))
 
 
 _ISSUE_ROW_RE = re.compile(
