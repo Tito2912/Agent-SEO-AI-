@@ -18071,6 +18071,37 @@ def _dominant_language(text: str) -> str:
 _KEYWORD_REWRITE_KEY = "keyword_snippet_rewrite"
 
 
+# Characters that end a bare YAML scalar or change its meaning. `: ` is the one that bit: a title
+# reading "À propos : notre site" written unquoted into Jekyll front matter raises a YAML
+# exception that Jekyll SWALLOWS — the file is then treated as having no front matter at all and
+# copied verbatim, so the page loses its title, its description, its canonical AND its layout.
+# The pull request diff looked perfect; only the rebuilt page showed it.
+_YAML_NEEDS_QUOTES_RE = re.compile(r":\s|\s#|^[\s>|&*!%@`\[\]{}?,'\"-]|:$")
+_BARE_YAML_LINE_RE = re.compile(r"^[ \t]*[\w.-]+:[ \t]+(?![\s\"'])", re.M)
+
+
+def _safe_inline_replacement(content: str, old: str, new: str) -> str | None:
+    """`new`, quoted if the place it is going is a bare YAML scalar and it would break it.
+
+    Returns None when the value cannot be written safely — it carries a double quote of its own,
+    and escaping on the model's behalf would be guessing at what it meant.
+    """
+    if not new:
+        return new
+    line = ""
+    for candidate in (content or "").splitlines():
+        if old in candidate:
+            line = candidate
+            break
+    if not line or not _BARE_YAML_LINE_RE.match(line):
+        return new
+    if not _YAML_NEEDS_QUOTES_RE.search(new):
+        return new
+    if '"' in new:
+        return None
+    return f'"{new}"'
+
+
 _SOCIAL_KEYS = {
     "title": ("og:title", "twitter:title"),
     "description": ("og:description", "twitter:description"),
@@ -18198,7 +18229,12 @@ def _rewrite_for_query(
         if ('"' in proposed and '"' in literal) or ("'" in proposed and "'" in literal.replace("\\'", "")):
             logger.info("[keywords] %s refuse : la valeur proposee contient un guillemet", field)
             continue
-        new_content = new_content.replace(literal, literal.replace(current, proposed, 1), 1)
+        safe = _safe_inline_replacement(new_content, current, proposed)
+        if safe is None:
+            logger.info("[keywords] %s refuse : la valeur ne peut pas etre ecrite en YAML nu", field)
+            continue
+        new_content = new_content.replace(literal, literal.replace(current, safe, 1), 1)
+        proposed = safe.strip('"')
         # The og:/twitter: tags that repeated this exact value are copies of it, and a page that
         # declares one title while sharing another is worse than one that does neither.
         new_content, copies = _sync_social_copies(new_content, field, current, proposed)
@@ -18238,7 +18274,10 @@ def _rewrite_length_values(
                                        site_name=site_name, model_override=model_override)
         if not value or len(value) > ceiling or value == rendered:
             continue
-        new = new.replace(rendered, value, 1)
+        safe = _safe_inline_replacement(new, rendered, value)
+        if safe is None:
+            continue
+        new = new.replace(rendered, safe, 1)
         count += 1
     return new, count
 

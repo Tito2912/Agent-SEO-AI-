@@ -419,3 +419,63 @@ def test_a_page_whose_tags_are_bound_to_a_variable_needs_no_copy_sync(model) -> 
     source = 'const title = \'Ancien titre\';\n<meta property="og:title" content={title} />'
     out, n = app_module._sync_social_copies(source, "title", "Ancien titre", NEW_TITLE)
     assert n == 0 and out == source
+
+
+# ── a value written into bare YAML has to survive being read back (2026-09-04) ────────────────
+#
+# The worst failure of the nine-stack loop, and it went through a MERGED pull request whose diff
+# looked perfect. The model wrote `title: À propos : notre site de test Jekyll` into Jekyll front
+# matter — unquoted, with a `: ` inside. Jekyll raises a YAML exception there and SWALLOWS it:
+# the file is then treated as having no front matter at all and copied verbatim, so the page lost
+# its title, its description, its canonical AND its layout. Only the rebuilt page showed it.
+
+JEKYLL_FRONT_MATTER = (
+    "---\n"
+    "layout: default\n"
+    "title: A propos du site de test Jekyll\n"
+    'description: "Une description deja quotee, assez longue pour tenir dans la fenetre visee '
+    'par la famille et rester lisible."\n'
+    "---\n\n<p>corps</p>\n"
+)
+
+
+def test_a_colon_in_a_bare_yaml_value_gets_quoted(model) -> None:
+    # Both inside the window, so this test stays about the QUOTING: a value outside it costs a
+    # second call and would drain the stubbed queue instead.
+    title = "À propos : notre site de test Jekyll et son fonctionnement reel"
+    desc = ("Découvrez le site de test Jekyll : une page témoin saine et stable, idéale pour "
+            "vérifier vos corrections automatiques en toute sécurité aujourd hui.")
+    model([title, desc])
+    new, count = app_module._rewrite_for_query(
+        JEKYLL_FRONT_MATTER, query="site de test jekyll", url="https://site.fr/a-propos",
+        site_name="site.fr")
+    assert count == 2
+    assert f'title: "{title}"' in new, "the bare value was left unquoted with a colon inside"
+    # The description line was ALREADY quoted: it must not gain a second pair.
+    assert f'description: "{desc}"' in new
+
+
+def test_a_bare_value_without_yaml_traps_is_not_quoted_for_nothing(model) -> None:
+    model(["Un titre parfaitement ordinaire pour cette page de test Jekyll ici",
+           "Une description parfaitement ordinaire, assez longue pour la fenetre visee par la "
+           "famille et sans aucun piege de syntaxe cache dedans, promis."])
+    new, _ = app_module._rewrite_for_query(
+        JEKYLL_FRONT_MATTER, query="q", url="https://site.fr/a-propos", site_name="site.fr")
+    assert "title: Un titre parfaitement ordinaire pour cette page de test Jekyll ici" in new
+
+
+def test_a_value_that_cannot_be_written_safely_is_refused() -> None:
+    """Quoting a value that carries its own double quote means escaping on the model's behalf,
+    which is guessing at what it meant. The field keeps its old value instead."""
+    assert app_module._safe_inline_replacement(
+        JEKYLL_FRONT_MATTER, "A propos du site de test Jekyll",
+        'Un titre : avec un " guillemet') is None
+
+
+def test_markup_and_javascript_are_untouched_by_the_yaml_rule() -> None:
+    """The rule reads the LINE the value sits on: a colon in an HTML title or a JS string is
+    ordinary, and quoting it would corrupt the file it is going into."""
+    html = "<title>Ancien titre</title>"
+    assert app_module._safe_inline_replacement(html, "Ancien titre", "Nouveau : titre") == "Nouveau : titre"
+    js = "const title = 'Ancien titre';"
+    assert app_module._safe_inline_replacement(js, "Ancien titre", "Nouveau : titre") == "Nouveau : titre"
