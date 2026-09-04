@@ -457,3 +457,17 @@ def test_the_hint_forbids_request_apis_and_names_the_route_as_the_source() -> No
     # And the honest way out when the file at hand cannot know the route.
     assert "laisse ce fichier tel quel" in hint
     assert "hreflang" in hint
+
+
+def test_a_page_values_family_is_not_told_to_re_crawl_when_nothing_was_patched() -> None:
+    """The 422 built for an empty patch used to end with "aucune evidence captée (relance un
+    crawl récent)". That string reads the GREP locator evidence, which `page_values` families
+    never fill — so the served-lang refusal blamed a missing crawl while its evidence was
+    present and the real story was the model declining to patch a file that cannot know the
+    route. A refusal naming the wrong cause sends the customer to fix the wrong thing."""
+    import inspect
+    source = inspect.getsource(app_module.api_issue_deep_fix)
+    assert "_PAGE_VALUE_KEYS" in source, "the refusal no longer distinguishes evidence kinds"
+    assert "relance un crawl récent" in source
+    # …and the branch that must exist for those families.
+    assert "structurelle" in source

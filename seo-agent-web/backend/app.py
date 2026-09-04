@@ -19180,7 +19180,19 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     if not targets and not config_changes:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
     if not all_changed:
-        _ev = (" Éléments détectés (échantillon) : " + ", ".join(evidence[:5])) if evidence else " Aucune evidence captée (relance un crawl récent)."
+        # `evidence` here is the GREP locator kind (image srcs, redirecting links). Families
+        # driven by `page_values` never fill it, so telling their user to "run a fresh crawl"
+        # sends them to fix something that is not broken — measured on the served-lang family,
+        # whose evidence was present and whose real story was the model declining to patch.
+        if evidence:
+            _ev = " Éléments détectés (échantillon) : " + ", ".join(evidence[:5])
+        elif issue_key in _PAGE_VALUE_KEYS:
+            _ev = (" Le modèle n'a rien réécrit dans ces fichiers. C'est le refus attendu quand "
+                   "le correctif ne tient pas dans une réécriture bornée — par exemple un "
+                   "fichier qui ne peut pas connaître la route sur un site généré "
+                   "statiquement. La correction est alors structurelle et revient à toi.")
+        else:
+            _ev = " Aucune evidence captée (relance un crawl récent)."
         return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).{_ev}", "skipped": skipped, "evidence": evidence[:10]}, status_code=422)
 
     # Config changes touch routing → always open a PR for human review (never auto-merge).
