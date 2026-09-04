@@ -17162,6 +17162,15 @@ _HREFLANG_HINTS: dict[str, str] = {
         "principale du site / la racine, souvent la même URL que l'alternate par défaut). "
         "Ne modifie AUCUN autre alternate existant."
     ),
+    "served_html_lang_mismatch": (
+        "Ces pages envoient un <html lang> qui contredit leur propre hreflang, et ne le "
+        "corrigent qu'APRES execution du JavaScript. Le correctif est dans le rendu SERVEUR : "
+        "l'attribut lang doit deja porter la langue de la page dans le HTML livre, deduite de "
+        "la route ou de la locale de la page, jamais fixee en dur pour tout le site ni posee "
+        "par un effet cote client. Corrige la ou l'attribut est ecrit (layout, gabarit, "
+        "helper de metadonnees) et ne touche a aucun hreflang : ce sont eux qui disent la "
+        "verite ici."
+    ),
     "html_lang_attribute_missing": (
         "La balise <html> de ces pages n'a pas d'attribut lang. Ajoute lang=\"xx\" avec le code "
         "de langue correct de la page (déduis-le de l'URL/locale ou des hreflang de la page). "
@@ -17440,6 +17449,9 @@ def _issue_url_pairs(issue_block: Any) -> list[dict[str, str]]:
 # still writes the tag — but it works from the real page instead of a generic instruction.
 _PAGE_VALUE_KEYS = _with_indexability_variants({
     "open_graph_tags_incomplete",
+    # The crawler attaches the served language and the one the page's own hreflang claims, so
+    # the patch works from what the document actually says rather than from the issue's label.
+    "served_html_lang_mismatch",
     "twitter_card_incomplete",
     "html_lang_attribute_invalid",
     "hreflang_annotation_invalid",
@@ -18538,6 +18550,13 @@ def _deep_fix_redirect_config_loops(
     return changed, notes
 
 
+# Families whose flagged pages are the DATA, not the place to fix. `<html lang>` is written once
+# — in a layout, a template, a metadata helper — and rendered onto every page, so prioritising
+# the 93 flagged sources would spend the whole file cap on files that must not change. Same
+# reasoning that keeps the sitemap and asset families out of page targeting.
+_SHARED_RENDER_FIX_KEYS = _with_indexability_variants({"served_html_lang_mismatch"})
+
+
 def _resolve_issue_targets(
     *, all_paths: list[str], index: dict[str, Any] | None, issue_key: str, issue_label: str,
     impacted_urls: list[str], located: list[str], max_files: int,
@@ -18568,7 +18587,8 @@ def _resolve_issue_targets(
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
         or issue_key in _PER_PAGE_CONTENT_KEYS
         or _length_family_name(issue_key) is not None
-    ) and issue_key not in _ASSET_REWRITE_KEYS and issue_key not in _SITEMAP_FAMILY_KEYS
+    ) and issue_key not in _ASSET_REWRITE_KEYS and issue_key not in _SITEMAP_FAMILY_KEYS \
+        and issue_key not in _SHARED_RENDER_FIX_KEYS
     index_resolved_all = False
     if want_page_targeting and impacted_urls:
         priority: list[str] = []

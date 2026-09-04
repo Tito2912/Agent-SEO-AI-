@@ -411,3 +411,39 @@ def test_targeting_works_without_an_index_so_a_missing_map_is_never_fatal() -> N
     assert "app/about/page.tsx" in targets
     assert "app/layout.tsx" not in targets
     assert "map" in calls
+
+
+# ── the served-lang family targets where the attribute is WRITTEN (2026-09-04) ─────────────────
+#
+# `served_html_lang_mismatch` was born from a customer audit: 93 pages shipping `lang="en"` and
+# correcting it after hydration. Two things had to be true for it to be usable, and neither is
+# automatic — a new key is ADVISORY until a corrector claims it, and a family with 93 impacted
+# pages will spend its whole file cap on them unless it is told not to.
+
+def test_the_served_lang_family_is_claimed_by_a_corrector() -> None:
+    """Without this the anomaly appears in the audit and never on the corrections page — the
+    exact trap that made `missing_h1_indexable` invisible for hours in August."""
+    assert "served_html_lang_mismatch" in app_module._handled_issue_keys()
+    assert app_module._github_issue_auto_fixable("served_html_lang_mismatch")
+    assert "served_html_lang_mismatch" in app_module._PAGE_VALUE_KEYS
+
+
+def test_it_targets_the_file_where_lang_is_written_not_the_flagged_pages() -> None:
+    """`<html lang>` is written once and rendered onto every page. Prioritising the flagged
+    sources would fill the cap with files that must not change, and leave out the only one that
+    must — the same reasoning that keeps the sitemap and asset families out of page targeting."""
+    paths = ["app/layout.tsx", "lib/seo.ts", "content/index-fr.mdx", "content/index-de.mdx"]
+    targets = app_module._resolve_issue_targets(
+        all_paths=paths, index=None, issue_key="served_html_lang_mismatch", issue_label="x",
+        impacted_urls=["https://s.fr/index-fr", "https://s.fr/index-de"], located=[],
+        max_files=8, ai_map=lambda: [], ai_pick=lambda: [],
+    )
+    assert "app/layout.tsx" in targets
+    assert not any(t.startswith("content/") for t in targets), targets
+
+
+def test_the_hint_sends_the_patch_to_the_server_render() -> None:
+    """The whole point of the family: the value is already corrected client-side, so a fix that
+    lands in a client effect changes nothing a crawler will ever see."""
+    hint = app_module._HREFLANG_HINTS["served_html_lang_mismatch"]
+    assert "SERVEUR" in hint and "hreflang" in hint
