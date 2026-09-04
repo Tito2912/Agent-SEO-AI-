@@ -18071,6 +18071,39 @@ def _dominant_language(text: str) -> str:
 _KEYWORD_REWRITE_KEY = "keyword_snippet_rewrite"
 
 
+_SOCIAL_KEYS = {
+    "title": ("og:title", "twitter:title"),
+    "description": ("og:description", "twitter:description"),
+}
+
+
+def _sync_social_copies(content: str, field: str, old: str, new: str) -> tuple[str, int]:
+    """Carry a rewritten value into the `og:`/`twitter:` tags that were COPIES of it.
+
+    `_find_head_text_value` refuses to *read* a social copy, because rewriting the copy would
+    leave the original contradicting it. The mirror image had no answer: when the original is
+    rewritten, a hand-written copy stays behind. Measured on the static-html loop — after the
+    snippet rewrite the page declared one title and shared another.
+
+    Only an EXACT copy is updated. A social tag deliberately written differently is left alone:
+    that is an editorial choice, and this function has no way to tell a better one.
+    """
+    names = _SOCIAL_KEYS.get((field or "").strip().lower())
+    if not names or not old or old == new:
+        return content, 0
+    count = 0
+
+    def _one(match: "re.Match[str]") -> str:
+        nonlocal count
+        tag = match.group(0)
+        if not any(name in tag for name in names) or old not in tag:
+            return tag
+        count += 1
+        return tag.replace(old, new)
+
+    return re.sub(r"<meta\b[^>]*>", _one, content), count
+
+
 def _rewrite_for_query(
     content: str, *, query: str, url: str, site_name: str = "", model_override: str = "",
 ) -> tuple[str, int]:
@@ -18166,6 +18199,11 @@ def _rewrite_for_query(
             logger.info("[keywords] %s refuse : la valeur proposee contient un guillemet", field)
             continue
         new_content = new_content.replace(literal, literal.replace(current, proposed, 1), 1)
+        # The og:/twitter: tags that repeated this exact value are copies of it, and a page that
+        # declares one title while sharing another is worse than one that does neither.
+        new_content, copies = _sync_social_copies(new_content, field, current, proposed)
+        if copies:
+            logger.info("[keywords] %s : %d copie(s) og:/twitter: mises a jour", field, copies)
         count += 1
     return new_content, count
 

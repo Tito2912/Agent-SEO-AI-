@@ -366,3 +366,56 @@ def test_a_french_apostrophe_inside_the_meta_survives(model) -> None:
             '</head><body></body></html>')
     assert app_module._find_head_text_value(page, "description")[1] == (
         "Page d'accueil du site, avec ce qu'on y trouve.")
+
+
+# ── the copies follow the original (2026-09-04) ───────────────────────────────────────────────
+#
+# Found by reviewing the nine-stack pull requests: on static-html the `og:`/`twitter:` tags are
+# hand-written copies of the title and description, and the snippet rewrite left them behind —
+# the merged page would have declared one title and shared another. `_find_head_text_value`
+# already refuses to READ a copy; nothing updated one when the original moved.
+
+SOCIAL_PAGE = '''<!doctype html>
+<html lang="fr"><head>
+<title>Ancien titre de la page statique</title>
+<meta name="description" content="Ancienne description de cette page statique." />
+<meta property="og:title" content="Ancien titre de la page statique" />
+<meta property="og:description" content="Ancienne description de cette page statique." />
+<meta name="twitter:title" content="Ancien titre de la page statique" />
+<meta property="og:url" content="https://site.fr/p" />
+</head><body></body></html>'''
+
+NEW_TITLE = "Nouveau titre qui repond enfin a la requete posee par le visiteur"
+NEW_DESC = ("Nouvelle description qui repond a la requete du visiteur, dit ce que la page "
+            "apporte et donne envie de cliquer dessus.")
+
+
+def test_the_social_copies_follow_the_rewritten_value(model) -> None:
+    model([NEW_TITLE, NEW_DESC])
+    new, count = app_module._rewrite_for_query(
+        SOCIAL_PAGE, query="ma requête", url="https://site.fr/p", site_name="site.fr")
+    assert count == 2
+    assert new.count(NEW_TITLE) == 3, "og:title and twitter:title did not follow the <title>"
+    assert new.count(NEW_DESC) == 2, "og:description did not follow the description"
+    assert "Ancien titre" not in new and "Ancienne description" not in new
+    assert 'og:url" content="https://site.fr/p"' in new, "an unrelated social tag was touched"
+
+
+def test_a_social_tag_written_differently_is_left_alone(model) -> None:
+    """Only an EXACT copy is updated. A social tag deliberately worded differently is an
+    editorial choice, and this code has no way to tell a better one."""
+    page = SOCIAL_PAGE.replace(
+        '<meta property="og:title" content="Ancien titre de la page statique" />',
+        '<meta property="og:title" content="Un titre social ecrit expres autrement" />')
+    model([NEW_TITLE, NEW_DESC])
+    new, _ = app_module._rewrite_for_query(
+        page, query="ma requête", url="https://site.fr/p", site_name="site.fr")
+    assert "Un titre social ecrit expres autrement" in new
+
+
+def test_a_page_whose_tags_are_bound_to_a_variable_needs_no_copy_sync(model) -> None:
+    """Every framework fixture binds og:title to the same variable, so there is nothing to
+    carry: the function must not invent work on those."""
+    source = 'const title = \'Ancien titre\';\n<meta property="og:title" content={title} />'
+    out, n = app_module._sync_social_copies(source, "title", "Ancien titre", NEW_TITLE)
+    assert n == 0 and out == source
