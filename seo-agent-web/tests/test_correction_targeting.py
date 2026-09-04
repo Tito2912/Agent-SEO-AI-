@@ -442,8 +442,18 @@ def test_it_targets_the_file_where_lang_is_written_not_the_flagged_pages() -> No
     assert not any(t.startswith("content/") for t in targets), targets
 
 
-def test_the_hint_sends_the_patch_to_the_server_render() -> None:
-    """The whole point of the family: the value is already corrected client-side, so a fix that
-    lands in a client effect changes nothing a crawler will ever see."""
+def test_the_hint_forbids_request_apis_and_names_the_route_as_the_source() -> None:
+    """Measured on the first real pull request this family produced: the model reached for
+    `headers()` in a Next.js layout on a site built with `output: 'export'`. There is no request
+    at render time there — the Netlify preview build FAILED, and had it built, the header would
+    have been absent and the patch would have changed nothing while reading perfectly.
+
+    So the hint has to forbid the whole family of request-time APIs and name what to use
+    instead: the route, at generation time."""
     hint = app_module._HREFLANG_HINTS["served_html_lang_mismatch"]
-    assert "SERVEUR" in hint and "hreflang" in hint
+    for forbidden in ("headers()", "cookies()", "searchParams", "useEffect", "window"):
+        assert forbidden in hint, f"the hint does not rule out {forbidden}"
+    assert "ROUTE" in hint and "export" in hint
+    # And the honest way out when the file at hand cannot know the route.
+    assert "laisse ce fichier tel quel" in hint
+    assert "hreflang" in hint

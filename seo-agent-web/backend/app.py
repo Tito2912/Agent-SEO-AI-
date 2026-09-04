@@ -17164,12 +17164,20 @@ _HREFLANG_HINTS: dict[str, str] = {
     ),
     "served_html_lang_mismatch": (
         "Ces pages envoient un <html lang> qui contredit leur propre hreflang, et ne le "
-        "corrigent qu'APRES execution du JavaScript. Le correctif est dans le rendu SERVEUR : "
-        "l'attribut lang doit deja porter la langue de la page dans le HTML livre, deduite de "
-        "la route ou de la locale de la page, jamais fixee en dur pour tout le site ni posee "
-        "par un effet cote client. Corrige la ou l'attribut est ecrit (layout, gabarit, "
-        "helper de metadonnees) et ne touche a aucun hreflang : ce sont eux qui disent la "
-        "verite ici."
+        "corrigent qu'APRES execution du JavaScript. Le correctif doit produire la bonne "
+        "langue DANS LE HTML LIVRE, sans attendre le navigateur. "
+        "N'utilise JAMAIS une API de requete (headers(), cookies(), searchParams, req, "
+        "window, document, useEffect) : ces sites sont tres souvent generes statiquement "
+        "(Next `output: 'export'`, Astro, Hugo, Nuxt generate...), il n'y a alors AUCUNE "
+        "requete au moment du rendu — le build echoue, ou pire, la valeur reste celle par "
+        "defaut et rien n'est corrige. "
+        "Deduis la langue de la ROUTE au moment de la generation : le parametre de segment "
+        "de la page ([lang], [locale]), la locale deja portee par le front matter ou les "
+        "metadonnees de la page, ou le suffixe/prefixe de son chemin. Si le fichier fourni "
+        "n'a pas acces a la route (layout racine d'un export statique), ne l'invente pas : "
+        "laisse ce fichier tel quel et explique-le, plutot que de produire un patch qui "
+        "compile sans rien changer. "
+        "Ne touche a aucun hreflang : ce sont eux qui disent la verite ici."
     ),
     "html_lang_attribute_missing": (
         "La balise <html> de ces pages n'a pas d'attribut lang. Ajoute lang=\"xx\" avec le code "
