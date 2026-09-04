@@ -788,6 +788,12 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "hreflang_and_html_lang_mismatch": IssueMeta(
         "hreflang_and_html_lang_mismatch", "Hreflang et HTML lang incohérents", "Localization", "error"
     ),
+    "served_html_lang_mismatch": IssueMeta(
+        "served_html_lang_mismatch",
+        "Langue du HTML servi incohérente avec le hreflang",
+        "Localization",
+        "error",
+    ),
     "page_referenced_for_more_than_one_language_in_hreflang": IssueMeta(
         "page_referenced_for_more_than_one_language_in_hreflang",
         "Page référencée pour plusieurs langues",

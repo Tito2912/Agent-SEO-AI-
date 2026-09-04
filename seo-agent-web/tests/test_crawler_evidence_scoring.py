@@ -186,3 +186,54 @@ def test_a_clean_site_produces_no_evidence_at_all() -> None:
     issues = seo_audit._score_issues(pages, base_url=BASE)
 
     assert not [k for k, v in issues.items() if isinstance(v, dict) and "evidence" in v]
+
+
+# ── the language the SERVER declares (2026-09-04) ─────────────────────────────────────────────
+#
+# Found by comparing a real customer audit against Ahrefs: on voiceoverstudioai.com, 93 pages
+# ship `<html lang="en">` and correct it to fr/de/es only once JavaScript runs. The crawler
+# renders before reading, so it saw the corrected value and reported nothing, while Ahrefs read
+# the served document and made it the site's biggest error. Both readings are true; only one of
+# them describes the page a crawler receives first, and it is the one nobody was told about.
+#
+# `hreflang_and_html_lang_mismatch` (rendered) stays disabled — its value depends on WHEN the DOM
+# is snapshotted, which is why it was never matchable. The served document does not move between
+# two reads.
+
+def _hreflang_page(url: str, code: str, **kw):
+    """A page whose self-referencing hreflang says `code`."""
+    return _page(url, hreflang={code: url, "x-default": url}, **kw)
+
+
+def test_a_served_lang_contradicting_the_hreflang_is_flagged() -> None:
+    pages = [_hreflang_page("https://site.fr/index-fr", "fr", lang="fr", served_lang="en")]
+    issues = seo_audit._score_issues(pages, base_url="https://site.fr/")
+    block = issues["served_html_lang_mismatch"]
+    assert block["count"] == 1, "the served document was not judged on its own terms"
+    values = block.get("evidence", {}).get("items", [])
+    assert values and values[0]["value"].startswith("en"), values
+    assert "fr" in values[0]["value"], "the evidence must name the language the page claims"
+
+
+def test_the_rendered_value_agreeing_is_not_enough_to_clear_it() -> None:
+    """The exact shape of the customer's site: rendered lang correct, served lang wrong. The
+    rendered check finds nothing — which is why it could not surface this."""
+    pages = [_hreflang_page("https://site.fr/index-de", "de", lang="de", served_lang="en")]
+    issues = seo_audit._score_issues(pages, base_url="https://site.fr/")
+    assert issues["served_html_lang_mismatch"]["count"] == 1
+    assert issues["hreflang_and_html_lang_mismatch"]["count"] == 0
+
+
+def test_a_page_served_in_its_own_language_is_not_flagged() -> None:
+    pages = [_hreflang_page("https://site.fr/index-fr", "fr", lang="fr", served_lang="fr"),
+             _hreflang_page("https://site.fr/index-en", "en", lang="en", served_lang="en-US")]
+    issues = seo_audit._score_issues(pages, base_url="https://site.fr/")
+    assert issues["served_html_lang_mismatch"]["count"] == 0, "a region variant is not a mismatch"
+
+
+def test_a_page_whose_served_lang_could_not_be_read_is_not_flagged() -> None:
+    """The fetch is best-effort: a page it could not read must not become an anomaly, the same
+    abstention rule the language guards in the corrector follow."""
+    pages = [_hreflang_page("https://site.fr/index-fr", "fr", lang="fr", served_lang=None)]
+    issues = seo_audit._score_issues(pages, base_url="https://site.fr/")
+    assert issues["served_html_lang_mismatch"]["count"] == 0

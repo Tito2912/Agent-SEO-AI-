@@ -448,6 +448,11 @@ class PageData:
     h2: list[str] = dataclasses.field(default_factory=list)
     hreflang: dict[str, str] = dataclasses.field(default_factory=dict)
     hreflang_raw: list[dict[str, str]] = dataclasses.field(default_factory=list)
+    # `lang` above is the POST-HYDRATION value. This one is what the server sent, and the two
+    # genuinely differ: measured on voiceoverstudioai.com, 93 pages ship `lang="en"` and correct
+    # it to fr/de/es only once JavaScript runs. Both are true; only this one describes the
+    # document a crawler reads first.
+    served_lang: str | None = None
     ld_json_blocks: int = 0
     schema_org_errors: list[str] = dataclasses.field(default_factory=list)
     schema_types: list[str] = dataclasses.field(default_factory=list)
@@ -3632,6 +3637,27 @@ def _shutdown_browser_sessions(executor: "concurrent.futures.ThreadPoolExecutor"
     concurrent.futures.wait(futures, timeout=90)
 
 
+_SERVED_LANG_RE = re.compile(r"<html\b[^>]*\blang=[\"']([^\"']+)", re.I)
+
+
+def _served_html_lang(url: str, config: "CrawlConfig") -> str | None:
+    """The `<html lang>` of the document as SERVED, without running any JavaScript.
+
+    One extra HTTP request, and only for pages that declare hreflang — nothing else can be
+    flagged by the comparison it feeds, so a monolingual site pays nothing at all.
+    """
+    try:
+        _status, body, _err, _final, _hops = _fetch_text(
+            url, timeout_s=float(config.timeout_s or 15), user_agent=config.user_agent,
+        )
+    except Exception:
+        return None
+    if not body:
+        return None
+    match = _SERVED_LANG_RE.search(body[:200_000])
+    return (match.group(1).strip().lower() or None) if match else None
+
+
 def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_parts) -> PageData:
     page = PageData(url=url, fetched_at=_now_iso())
     if rp and not config.ignore_robots and not rp.can_fetch(config.user_agent, url):
@@ -3822,6 +3848,9 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
         if href_norm:
             hreflang_norm[str(code or "").strip().lower()] = href_norm
     page.hreflang = hreflang_norm
+    if hreflang_norm:
+        # Only pages carrying hreflang can produce the mismatch, so only they pay the request.
+        page.served_lang = _served_html_lang(page.final_url or url, config)
     hreflang_raw: list[dict[str, str]] = []
     for code, href in getattr(parser, "hreflang_pairs", []) or []:
         href_norm = _normalize_url(str(href or "").strip(), base=base_for_urls)
@@ -6309,6 +6338,11 @@ def _score_issues(
     hreflang_to_non_canonical: list[str] = []
     hreflang_referenced_multi_lang: list[str] = []
     hreflang_html_lang_mismatch: list[str] = []
+    # Same comparison, on the document the SERVER sent. It is a separate issue rather than a
+    # replacement: the rendered value is the truth about the page a browser ends up with, and
+    # this one is the truth about the page a crawler reads first. Both can be worth saying.
+    served_html_lang_mismatch: list[str] = []
+    served_lang_values: list[dict[str, str]] = []
     missing_reciprocal_hreflang_set: set[str] = set()
     # Evidence: hreflang href → the URL it should point to (see _attach_evidence).
     hreflang_redirect_pairs: list[dict[str, str]] = []
@@ -6361,6 +6395,18 @@ def _score_issues(
                     _hl_primary = code_norm.split("-", 1)[0]
                     if _html_primary and _hl_primary and _html_primary != _hl_primary:
                         hreflang_html_lang_mismatch.append(p.url)
+                    # The served document, judged on its own terms. Measured on a real customer
+                    # site: 93 pages ship `lang="en"` and become fr/de/es only after hydration,
+                    # so the rendered comparison above finds nothing while a crawler reading the
+                    # HTML — Ahrefs among them — sees 93 pages declaring the wrong language.
+                    _served_primary = str(p.served_lang or "").strip().lower().split("-", 1)[0]
+                    if _served_primary and _hl_primary and _served_primary != _hl_primary:
+                        served_html_lang_mismatch.append(p.url)
+                        served_lang_values.append({
+                            "page": _final_url(p),
+                            "field": "lang servi",
+                            "value": f"{_served_primary} (hreflang : {_hl_primary})",
+                        })
                     break
 
         # Ahrefs-like: treat x-default missing as relevant only for indexable pages.
@@ -7609,6 +7655,14 @@ def _score_issues(
     issues["hreflang_and_html_lang_mismatch"] = _issue_block(
         "hreflang_and_html_lang_mismatch", []
     )
+    # Its deterministic half. The disabled check above depends on WHEN the DOM is snapshotted —
+    # which is exactly why it could never be matched — while the served document does not change
+    # between two reads. Owner's decision, 2026-09-04, on the measurement that a customer site
+    # had 93 of these and the product said nothing.
+    issues["served_html_lang_mismatch"] = _issue_block(
+        "served_html_lang_mismatch", served_html_lang_mismatch
+    )
+    _attach_evidence(("served_html_lang_mismatch",), "page_values", served_lang_values)
     issues["hreflang_defined_but_html_lang_missing"] = _issue_block(
         "hreflang_defined_but_html_lang_missing", hreflang_defined_but_html_lang_missing
     )
