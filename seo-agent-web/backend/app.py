@@ -3232,11 +3232,16 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     # _HEAD_HINTS AND is a canonical fix; hreflang_to_non_canonical is a hreflang tag whose name
     # says "canonical". Ownership is therefore SUBTRACTED here rather than left to list order —
     # the whole point of this table is that no key resolves differently depending on position.
+    # The served-lang family owns its files: `<html lang>` is written in ONE place per stack, and
+    # that place is a Jekyll layout, a Hugo baseof, an Astro layout, a SvelteKit shell — never the
+    # Next-centric list the hreflang family carries. Subtracted from `hreflang` below for the same
+    # reason the others are: no key may resolve differently depending on table order.
+    served_lang = set(_SERVED_LANG_FIX_KEYS)
     sitemap = set(_SITEMAP_FAMILY_KEYS)
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
     links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
     assets = set(_ASSET_REWRITE_KEYS) | {"missing_alt_text"}
-    hreflang = set(_HREFLANG_HINTS)                      # a hreflang tag, whatever its name says
+    hreflang = set(_HREFLANG_HINTS) - served_lang        # a hreflang tag, whatever its name says
     canonical = ({k for k in _URL_PAIR_KEYS if "canonical" in k}
                  | {"missing_canonical", "duplicate_pages_without_canonical"}) - hreflang
     head = set(_HEAD_HINTS) - canonical - hreflang       # the rest of the <head>: OG, twitter, viewport
@@ -3250,11 +3255,30 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
         ("redirect-config", redirect_config, _REDIRECT_CONFIG_FILE_CANDIDATES),
         ("links", links, _PAGE_CONTENT_FILE_CANDIDATES),
         ("assets", assets, _ASSET_FILE_CANDIDATES),
+        ("served-lang", served_lang, _SERVED_LANG_FILE_CANDIDATES),
         ("hreflang", hreflang, _HREFLANG_FILE_CANDIDATES),
         ("canonical", canonical, _CANONICAL_FILE_CANDIDATES),
         ("head", head, _HEAD_FILE_CANDIDATES),
         ("content", content, _PAGE_CONTENT_FILE_CANDIDATES),
     ]
+
+
+# One file per stack, in the order the resolver will try them: the place each generator writes
+# `<html lang>`. Measured on the nine fixtures rather than assumed — this is the list that makes
+# the family work on a Jekyll or Hugo repository, where the hreflang family's Next-shaped
+# candidates match nothing at all and the correction ended in "aucun fichier corrigeable".
+_SERVED_LANG_FILE_CANDIDATES = [
+    "_layouts/default.html",              # Jekyll
+    "layouts/_default/baseof.html",       # Hugo
+    "src/layouts/Base.astro",             # Astro
+    "src/layouts/Layout.astro",
+    "gatsby-ssr.js",                      # Gatsby
+    "nuxt.config.ts", "nuxt.config.js",   # Nuxt (global default a page then overrides)
+    "pages/_document.tsx", "pages/_document.js",   # Next.js Pages Router
+    "src/app.html",                       # SvelteKit shell
+    "src/hooks.server.ts", "src/hooks.server.js",  # …and where it becomes route-aware
+    "app/layout.tsx", "src/app/layout.tsx",        # Next.js App Router
+]
 
 
 def _claimed_family_candidates(key: str) -> "list[str] | None":
@@ -18465,6 +18489,87 @@ def _strip_self_referential_rules(content: str, path: str) -> tuple[str, list[st
 # review than a modified line, and this one does not need invention — every flagged page already
 # declares its own language through the hreflang pointing at its own canonical, which is exactly
 # how the anomaly was detected. Owner's decision, 2026-09-04: deterministic only.
+_HTML_OPEN_TAG_RE = re.compile(r"<html\b[^>]*>", re.I)
+_HTML_LANG_ATTR_RE = re.compile(r'\blang=["\']([^"\']*)["\']', re.I)
+_CANONICAL_HREF_RE = re.compile(
+    r'<link[^>]*rel=["\']canonical["\'][^>]*href=["\']([^"\']+)["\']', re.I)
+_ALTERNATE_TAG_RE = re.compile(r'<link\b[^>]*rel=["\']alternate["\'][^>]*>', re.I)
+
+
+def _self_declared_lang(content: str) -> str:
+    """The language the page declares about ITSELF, or '' when it does not.
+
+    Not a guess and not a convention: the page carries a canonical, and the hreflang alternate
+    pointing at that same canonical names its language. That pair is what the crawler compares to
+    raise the anomaly in the first place, so reading it back is the one interpretation that
+    cannot disagree with the finding.
+    """
+    canonical = _CANONICAL_HREF_RE.search(content or "")
+    if not canonical:
+        return ""
+    self_url = _norm_url_for_match(canonical.group(1))
+    for tag in _ALTERNATE_TAG_RE.findall(content or ""):
+        code = re.search(r'hreflang=["\']([^"\']+)["\']', tag, re.I)
+        href = re.search(r'href=["\']([^"\']+)["\']', tag, re.I)
+        if not code or not href:
+            continue
+        value = code.group(1).strip().lower()
+        if value == "x-default":
+            continue
+        if _norm_url_for_match(href.group(1)) == self_url:
+            return value
+    return ""
+
+
+def _rewrite_served_lang(content: str) -> tuple[str, int]:
+    """DETERMINISTIC `<html lang>` repair for a page written by hand (no model, no tokens).
+
+    Only touches the opening `<html>` tag, only when the page itself says which language it is
+    in, and only when the two disagree on the primary subtag — `en-US` against `en` is not a
+    mismatch. A page that declares nothing is left exactly as it is.
+    """
+    lang = _self_declared_lang(content)
+    if not lang:
+        return content, 0
+    tag = _HTML_OPEN_TAG_RE.search(content or "")
+    if not tag:
+        return content, 0
+    current = _HTML_LANG_ATTR_RE.search(tag.group(0))
+    if current and current.group(1).strip().lower().split("-")[0] == lang.split("-")[0]:
+        return content, 0
+    if current:
+        fixed = _HTML_LANG_ATTR_RE.sub(f'lang="{lang}"', tag.group(0), count=1)
+    else:
+        fixed = re.sub(r"^<html\b", f'<html lang="{lang}"', tag.group(0), count=1, flags=re.I)
+    return content.replace(tag.group(0), fixed, 1), 1
+
+
+# What to tell the model, per stack, about the ONE place that writes `<html lang>` and how it can
+# know the page there. Measured on the nine fixtures: every stack writes it in a single file, and
+# eight of them can make it route-aware. The ninth is why the post-build fallback exists.
+_SERVED_LANG_STACK_IDIOM: dict[str, str] = {
+    "jekyll": "Jekyll : le layout (_layouts/*.html) doit ecrire lang=\"{{ page.lang }}\" — chaque "
+              "page porte deja sa langue dans son front matter.",
+    "hugo": "Hugo : baseof.html doit ecrire lang=\"{{ .Site.Language.Lang }}\" (ou .Params.lang si "
+            "la page la porte), jamais une langue fixe.",
+    "astro": "Astro : le layout recoit la langue de la page en prop (Astro.props). Ajoute-la a "
+             "l'appel du layout dans les pages concernees et ecris <html lang={lang}>.",
+    "gatsby": "Gatsby : gatsby-ssr.js expose onRenderBody({ pathname, setHtmlAttributes }) — "
+              "deduis la langue du pathname et appelle setHtmlAttributes({ lang }).",
+    "nuxt": "Nuxt : nuxt.config fixe une langue globale ; la page doit la surcharger avec "
+            "useHead({ htmlAttrs: { lang } }) dans son propre composant.",
+    "next-pages": "Next.js Pages Router : pages/_document recoit le contexte de la page — deduis "
+                  "la langue du chemin et passe-la a <Html lang={...}>.",
+    "sveltekit": "SvelteKit : src/app.html est une coquille statique, elle ne peut pas connaitre "
+                 "la page. Mets-y un marqueur (ex. lang=\"%lang%\") et remplace-le dans le hook "
+                 "handle de src/hooks.server.(js|ts) via transformPageChunk, a partir de "
+                 "event.url.pathname.",
+    "static-html": "HTML statique : l'attribut est ecrit dans la page elle-meme, corrige-le la.",
+    "next-app": "Next.js App Router : seul un segment de langue ([lang]/[locale]) permet au layout "
+                "de connaitre la route. Si le projet n'en a pas, ne touche pas au layout racine.",
+}
+
+
 _SERVED_LANG_FIX_KEYS = _with_indexability_variants({"served_html_lang_mismatch"})
 _HTML_LANG_FIXER_PATH = "scripts/fix-html-lang.mjs"
 _HTML_LANG_FIXER_CALL = "node scripts/fix-html-lang.mjs"
@@ -18539,6 +18644,26 @@ for await (const file of htmlFiles(root)) {
 }
 console.log(`[fix-html-lang] ${changed} page(s) corrigee(s) sur ${seen} dans ${root}/`);
 """
+
+
+def _served_lang_strategy(all_paths: list[str]) -> str:
+    """"source", "deterministic" or "postbuild" — how this repository can be fixed.
+
+    Measured on the nine fixtures: every stack writes `<html lang>` in exactly ONE file, and
+    eight of them can make it depend on the page. Only Next.js App Router cannot, because the
+    root layout never receives the route — unless the app has a locale segment, in which case it
+    does and the source fix is back on the table. That single exception is the whole reason the
+    post-build script exists; using it anywhere else would add a build step to a project that
+    does not need one.
+    """
+    stack = repo_index.detect_stack(all_paths) or ""
+    if stack == "static-html":
+        return "deterministic"
+    if stack == "next-app" and not any(
+        re.search(r"app/.*\[(lang|locale|lng)\]/", path) for path in all_paths
+    ):
+        return "postbuild"
+    return "source"
 
 
 def _deep_fix_served_html_lang(
@@ -18758,7 +18883,11 @@ def _resolve_issue_targets(
         or issue_key in _PER_PAGE_CONTENT_KEYS
         or _length_family_name(issue_key) is not None
     ) and issue_key not in _ASSET_REWRITE_KEYS and issue_key not in _SITEMAP_FAMILY_KEYS \
-        and issue_key not in _SHARED_RENDER_FIX_KEYS
+        and not (issue_key in _SHARED_RENDER_FIX_KEYS
+                 # …except where the attribute lives in the page itself: on a hand-written site
+                 # the flagged pages ARE the files to fix, and excluding them would leave the
+                 # family with nothing to target at all.
+                 and str((index or {}).get("stack") or "") != "static-html")
     index_resolved_all = False
     if want_page_targeting and impacted_urls:
         priority: list[str] = []
@@ -18941,6 +19070,17 @@ def _prepare_issue_fix(
             )
             return out
         out["loop_paths"] = loops
+        return out
+
+    if issue_key in _SERVED_LANG_FIX_KEYS:
+        stack = repo_index.detect_stack(all_paths) or ""
+        idiom = _SERVED_LANG_STACK_IDIOM.get(stack, "")
+        out["extra_hint"] = (_HREFLANG_HINTS.get("served_html_lang_mismatch", "")
+                             + (" " + idiom if idiom else ""))
+        if _served_lang_strategy(all_paths) == "deterministic":
+            # A hand-written page says its own language; no model is needed to read it back.
+            out["link_rewriter"] = (lambda raw: _rewrite_served_lang(raw))  # noqa: E731
+            out["rewriter_ai_fallback"] = False
         return out
 
     fam = _length_family_name(issue_key)
@@ -19313,11 +19453,17 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _rewriter_ai_fallback = _prep["rewriter_ai_fallback"]
     _loop_paths = _prep["loop_paths"]
     file_state: dict[str, dict[str, str]] = {}
-    if issue_key in _SERVED_LANG_FIX_KEYS:
-        # Deterministic family, and the only one that CREATES a file. The content patcher has
-        # nothing useful to do here: the root layout of a static export cannot know the route,
-        # which is how this family produced a pull request that broke a customer's build before
-        # the fixer existed.
+    # Assigned only on the post-build path below, and read unconditionally further down: without
+    # this, EVERY stack that fixes itself at the source raised UnboundLocalError — a 500 on the
+    # eight stacks the routing exists to serve. Caught by the endpoint test, not by the decision
+    # tests, which is the whole reason that test was written.
+    _lang_changes: list[str] = []
+    _lang_notes: list[str] = []
+    if issue_key in _SERVED_LANG_FIX_KEYS and _served_lang_strategy(all_paths) == "postbuild":
+        # The ONE shape where no source fix exists: Next.js App Router with no locale segment,
+        # whose root layout never receives the route. Everywhere else the patcher runs, with the
+        # stack's own idiom in the hint — adding a build step to a project that can fix itself
+        # at the source would be a worse correction, not a safer one.
         patched_files, skipped, targets, _ai_files = [], [], [], []
         try:
             _lang_changes, _lang_notes = _deep_fix_served_html_lang(
@@ -19350,8 +19496,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # The served-lang fixer above lands in the same two lists: both are deterministic repairs
     # that touch build/routing files, so both take the same route through the PR body and the
     # same refusal to auto-merge.
-    config_changes: list[str] = list(_lang_changes) if issue_key in _SERVED_LANG_FIX_KEYS else []
-    config_notes: list[str] = list(_lang_notes) if issue_key in _SERVED_LANG_FIX_KEYS else []
+    config_changes: list[str] = list(_lang_changes)
+    config_notes: list[str] = list(_lang_notes)
     if _loop_paths:
         try:
             config_changes, config_notes = _deep_fix_redirect_config_loops(
