@@ -18460,6 +18460,168 @@ def _strip_self_referential_rules(content: str, path: str) -> tuple[str, list[st
     return new, removed
 
 
+# The served-lang family is the first one the corrector fixes by CREATING a file, and the file is
+# written HERE rather than by the model. The reason is the risk: an invented file reads worse in
+# review than a modified line, and this one does not need invention — every flagged page already
+# declares its own language through the hreflang pointing at its own canonical, which is exactly
+# how the anomaly was detected. Owner's decision, 2026-09-04: deterministic only.
+_SERVED_LANG_FIX_KEYS = _with_indexability_variants({"served_html_lang_mismatch"})
+_HTML_LANG_FIXER_PATH = "scripts/fix-html-lang.mjs"
+_HTML_LANG_FIXER_CALL = "node scripts/fix-html-lang.mjs"
+_HTML_LANG_FIXER_SCRIPT = """#!/usr/bin/env node
+// Aligne <html lang> sur la langue que la page declare elle-meme, apres la generation.
+//
+// Genere par SEO Agent (https://noyaru.com) pour une anomalie mesuree : sur un site genere
+// statiquement, le gabarit racine ne connait pas la route, donc il ecrit une langue unique pour
+// tout le site et le HTML LIVRE est faux — meme si du JavaScript le corrige ensuite dans le
+// navigateur. Ce script corrige le HTML livre, sans rien deviner : chaque page porte deja son
+// canonical et ses alternates hreflang, et l'alternate qui pointe sur son propre canonical DIT
+// sa langue. Aucune convention d'URL n'est supposee.
+//
+// Une page sans canonical, sans alternates, ou dont aucun alternate ne pointe sur elle-meme,
+// est laissee STRICTEMENT intacte.
+
+import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
+const CANDIDATE_DIRS = ['out', 'dist', 'build', '.output/public', 'public', '_site'];
+const norm = (u) => String(u || '').trim().replace(/#.*$/, '').replace(/\\/+$/, '').toLowerCase();
+
+async function* htmlFiles(dir) {
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) yield* htmlFiles(full);
+    else if (entry.name.endsWith('.html')) yield full;
+  }
+}
+
+function selfLang(html) {
+  const canonical = html.match(/<link[^>]+rel=["']canonical["'][^>]*>/i);
+  if (!canonical) return null;
+  const href = canonical[0].match(/href=["']([^"']+)["']/i);
+  if (!href) return null;
+  const self = norm(href[1]);
+  const tags = html.match(/<link[^>]+rel=["']alternate["'][^>]*>/gi) || [];
+  for (const tag of tags) {
+    const code = tag.match(/hreflang=["']([^"']+)["']/i);
+    const target = tag.match(/href=["']([^"']+)["']/i);
+    if (!code || !target) continue;
+    const value = code[1].trim().toLowerCase();
+    if (value === 'x-default') continue;
+    if (norm(target[1]) === self) return value;
+  }
+  return null;
+}
+
+const root = CANDIDATE_DIRS.find((d) => existsSync(d));
+if (!root) {
+  console.log('[fix-html-lang] aucun dossier de sortie trouve, rien a faire');
+  process.exit(0);
+}
+
+let changed = 0;
+let seen = 0;
+for await (const file of htmlFiles(root)) {
+  seen += 1;
+  const html = await readFile(file, 'utf8');
+  const lang = selfLang(html);
+  if (!lang) continue;
+  const openTag = html.match(/<html\\b[^>]*>/i);
+  if (!openTag) continue;
+  const current = openTag[0].match(/\\blang=["']([^"']+)["']/i);
+  if (current && current[1].trim().toLowerCase().split('-')[0] === lang.split('-')[0]) continue;
+  const fixed = current
+    ? openTag[0].replace(/\\blang=["'][^"']*["']/i, `lang="${lang}"`)
+    : openTag[0].replace(/^<html\\b/i, `<html lang="${lang}"`);
+  await writeFile(file, html.replace(openTag[0], fixed), 'utf8');
+  changed += 1;
+}
+console.log(`[fix-html-lang] ${changed} page(s) corrigee(s) sur ${seen} dans ${root}/`);
+"""
+
+
+def _deep_fix_served_html_lang(
+    *, owner: str, repo_name: str, token: str, fix_branch: str, all_paths: list[str],
+    file_state: dict[str, dict[str, str]],
+) -> tuple[list[str], list[str]]:
+    """Add the post-build language fixer and chain it into the project's build.
+
+    Why post-build rather than in the source: on a statically generated site the root layout
+    cannot know the route, so `<html lang>` is written once for every page. The correct source
+    fix is a per-locale segment — a restructure of the whole app, which is not something to do
+    to a customer's repository from a button. Rewriting the OUTPUT is bounded, reversible, and
+    verifiable: the built page either carries the right language or it does not.
+
+    Returns (changed paths, notes for the PR body). Refuses — with a reason — when the project
+    has no npm build to chain onto.
+    """
+    import base64 as _b64
+    import json as _json
+
+    if "package.json" not in all_paths:
+        return [], ["Aucun package.json : ce projet n'a pas d'étape de build à laquelle rattacher "
+                    "le correctif. Sur un générateur sans build npm (Hugo, Jekyll), la langue doit "
+                    "être corrigée dans le gabarit lui-même."]
+    try:
+        fd = _github_api_get(_github_content_api_path(owner, repo_name, "package.json"),
+                             token=token, params={"ref": fix_branch})
+        raw = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+        pkg_sha = fd.get("sha", "")
+        pkg = _json.loads(raw)
+    except Exception as exc:
+        return [], [f"package.json illisible : {exc}"]
+
+    scripts = pkg.get("scripts") if isinstance(pkg.get("scripts"), dict) else {}
+    build = str(scripts.get("build") or "").strip()
+    if not build:
+        return [], ["package.json n'a pas de script `build` : rien à quoi rattacher le correctif."]
+    if _HTML_LANG_FIXER_CALL in build:
+        return [], ["Le correctif est déjà branché sur le script build."]
+
+    changed: list[str] = []
+    notes: list[str] = []
+
+    # 1) the fixer itself — created, never regenerated over an existing one.
+    if _HTML_LANG_FIXER_PATH not in all_paths:
+        try:
+            _github_api_put(
+                _github_content_api_path(owner, repo_name, _HTML_LANG_FIXER_PATH), token=token,
+                json_body={
+                    "message": f"fix(seo): {_HTML_LANG_FIXER_PATH}\n\nGenerated by SEO Agent",
+                    "content": _b64.b64encode(_HTML_LANG_FIXER_SCRIPT.encode("utf-8")).decode("ascii"),
+                    "branch": fix_branch,
+                },
+            )
+            changed.append(_HTML_LANG_FIXER_PATH)
+            notes.append(f"`{_HTML_LANG_FIXER_PATH}` ajouté : après la génération, il aligne "
+                         "`<html lang>` sur la langue que chaque page déclare déjà via le "
+                         "hreflang pointant sur son propre canonical. Une page sans canonical, "
+                         "sans alternates, ou dont aucun alternate ne pointe sur elle-même, est "
+                         "laissée intacte.")
+        except Exception as exc:
+            return [], [f"Création de {_HTML_LANG_FIXER_PATH} impossible : {exc}"]
+
+    # 2) chain it, preserving whatever the build already does.
+    pkg["scripts"]["build"] = f"{build} && {_HTML_LANG_FIXER_CALL}"
+    try:
+        new_pkg = _json.dumps(pkg, indent=2, ensure_ascii=False) + "\n"
+        _github_api_put(
+            _github_content_api_path(owner, repo_name, "package.json"), token=token,
+            json_body={
+                "message": "fix(seo): chaine le correctif de langue apres le build\n\nGenerated by SEO Agent",
+                "content": _b64.b64encode(new_pkg.encode("utf-8")).decode("ascii"),
+                "branch": fix_branch, "sha": pkg_sha,
+            },
+        )
+        changed.append("package.json")
+        notes.append(f"`build` devient `{pkg['scripts']['build']}` : la commande existante est "
+                     "conservée telle quelle, le correctif s'exécute après elle.")
+    except Exception as exc:
+        return changed, notes + [f"package.json non modifié : {exc}"]
+    return changed, notes
+
+
 def _deep_fix_redirect_config_loops(
     *, owner: str, repo_name: str, token: str, fix_branch: str,
     all_paths: list[str], loop_paths: list[str], file_state: dict[str, dict[str, str]],
@@ -19151,7 +19313,26 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _rewriter_ai_fallback = _prep["rewriter_ai_fallback"]
     _loop_paths = _prep["loop_paths"]
     file_state: dict[str, dict[str, str]] = {}
-    if issue_key in _REDIRECT_CONFIG_KEYS:
+    if issue_key in _SERVED_LANG_FIX_KEYS:
+        # Deterministic family, and the only one that CREATES a file. The content patcher has
+        # nothing useful to do here: the root layout of a static export cannot know the route,
+        # which is how this family produced a pull request that broke a customer's build before
+        # the fixer existed.
+        patched_files, skipped, targets, _ai_files = [], [], [], []
+        try:
+            _lang_changes, _lang_notes = _deep_fix_served_html_lang(
+                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, file_state=file_state,
+            )
+        except Exception as exc:
+            _lang_changes, _lang_notes = [], [f"Correctif impossible : {exc}"]
+        if not _lang_changes:
+            # Refused before the pull request exists, so a dead-end click leaves no branch and
+            # no PR behind — and the reason it refused is what the customer reads.
+            return JSONResponse({"ok": False, "error": " ".join(_lang_notes) or (
+                "Le correctif de langue n'a pas pu être appliqué sur ce dépôt."
+            )}, status_code=422)
+    elif issue_key in _REDIRECT_CONFIG_KEYS:
         # Config-only family: the repair is the deterministic rule prune below. Never run the
         # content patcher here — its candidate list for this key is netlify.toml / next.config,
         # i.e. exactly the files that must not be rewritten from a prompt.
@@ -19166,8 +19347,11 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
         )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
-    config_changes: list[str] = []
-    config_notes: list[str] = []
+    # The served-lang fixer above lands in the same two lists: both are deterministic repairs
+    # that touch build/routing files, so both take the same route through the PR body and the
+    # same refusal to auto-merge.
+    config_changes: list[str] = list(_lang_changes) if issue_key in _SERVED_LANG_FIX_KEYS else []
+    config_notes: list[str] = list(_lang_notes) if issue_key in _SERVED_LANG_FIX_KEYS else []
     if _loop_paths:
         try:
             config_changes, config_notes = _deep_fix_redirect_config_loops(
