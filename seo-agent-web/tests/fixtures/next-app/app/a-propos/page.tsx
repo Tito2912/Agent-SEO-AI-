@@ -1,7 +1,14 @@
 export const metadata = {
   title: "A propos du site de test Next App Router",
   description: "Page temoin du fixture Next App Router : elle est saine et doit rester rigoureusement intacte apres l'application de la correction automatique.",
-  alternates: { canonical: "http://127.0.0.1:8749/a-propos" },
+  alternates: {
+    canonical: "http://127.0.0.1:8749/a-propos",
+    languages: {
+      fr: "http://127.0.0.1:8749/a-propos",
+      en: "http://127.0.0.1:8749/",
+      "x-default": "http://127.0.0.1:8749/",
+    },
+  },
   openGraph: {
     type: "website",
     title: "A propos du site de test Next App Router",
