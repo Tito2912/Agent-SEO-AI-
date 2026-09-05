@@ -99,5 +99,24 @@ def test_the_hint_forbids_the_other_half_of_the_contradiction() -> None:
     hint = prep["extra_hint"]
     assert "noindex" in hint and "exclusion" in hint
     assert "astro.config" in hint, "a generated sitemap has no <loc> to delete"
+    # Measured on creativeai-tools.com: told only "exclude these paths", the model wrote
+    # /blog/(category|tag)/ — 32 entries dropped where 31 are flagged, and the extra one serves
+    # `index, follow`. A correction that removes an indexable page is a new defect.
+    assert "motif d'URL" in hint, "nothing steers the model away from a path pattern"
+    assert "EXACTEMENT" in hint
     assert prep["link_rewriter"] is not None
     assert prep["rewriter_ai_fallback"] is True
+
+
+def test_a_second_dead_sitemap_is_not_handed_to_the_model() -> None:
+    """Measured on a real repository: creativeai-tools.com ships app/sitemap.ts (served) AND
+    legacy-static/sitemap.xml (dead). Both match the sitemap-file filter and none of the 31
+    flagged URLs is in the legacy one. The AI fallback exists for a GENERATED sitemap; letting it
+    reach a literal XML file that simply does not list the page invites an edit to a file that is
+    neither served nor wrong."""
+    assert app_module._looks_like_sitemap_xml(SITEMAP)
+    assert not app_module._looks_like_sitemap_xml(
+        "export default async function sitemap() { return metas.map(m => ({url: m.url})); }")
+    source = __import__("inspect").getsource(app_module._deep_patch_issue_files)
+    assert "_looks_like_sitemap_xml" in source, "the guard is not on the fallback path"
+    assert source.index("rewriter_ai_fallback") < source.index("_looks_like_sitemap_xml")

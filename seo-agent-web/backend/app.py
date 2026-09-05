@@ -17711,6 +17711,78 @@ def _rewrite_sitemap_alternates(content: str, pairs: list[dict[str, str]]) -> tu
     return _SITEMAP_URL_BLOCK_RE.sub(_one_block, content), count
 
 
+_LOCAL_IMPORT_RE = re.compile(r"""import\s+[^;\n]*?from\s+['"](@/[^'"]+|\.{1,2}/[^'"]+)['"]""")
+_EXPORTED_TYPE_RE = re.compile(
+    r"export\s+(?:type\s+(\w+)\s*=\s*\{|interface\s+(\w+)\s*\{)", re.M)
+
+
+def _imported_type_context(
+    *, owner: str, repo_name: str, token: str, branch: str, target: str,
+    all_paths: list[str], budget: int = 1800,
+) -> str:
+    """The exported object types of the local modules `target` imports, as text for the hint.
+
+    The patcher shows the model one file. When that file maps over a type declared elsewhere, the
+    only way for it to filter on a field is to guess the field exists — and a guess that misses
+    is a TypeScript error, which is a failed build on the customer's site rather than a bad
+    suggestion. Returns "" when nothing local is imported or nothing can be read.
+    """
+    import base64 as _b64
+
+    def _read(path: str) -> str:
+        try:
+            data = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token,
+                                   params={"ref": branch})
+            return _b64.b64decode(data.get("content", "").replace("\n", "")).decode(
+                "utf-8", errors="replace")
+        except Exception:
+            return ""
+
+    source = _read(target)
+    if not source:
+        return ""
+    target_dir = target.rsplit("/", 1)[0] if "/" in target else ""
+    out: list[str] = []
+    for spec in dict.fromkeys(_LOCAL_IMPORT_RE.findall(source)):
+        if spec.startswith("@/"):
+            stem = spec[2:]
+        else:  # ./x or ../x, resolved against the importing file
+            parts = [p for p in target_dir.split("/") if p]
+            for chunk in spec.split("/"):
+                if chunk == "..":
+                    parts = parts[:-1]
+                elif chunk not in (".", ""):
+                    parts.append(chunk)
+            stem = "/".join(parts)
+        for ext in (".ts", ".tsx", ".d.ts", ".js", ".jsx"):
+            candidate = stem + ext
+            if candidate not in all_paths:
+                continue
+            body = _read(candidate)
+            for match in _EXPORTED_TYPE_RE.finditer(body):
+                start = body.index("{", match.start())
+                depth, end = 0, start
+                for i in range(start, min(len(body), start + 4000)):
+                    if body[i] == "{":
+                        depth += 1
+                    elif body[i] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            end = i + 1
+                            break
+                name = match.group(1) or match.group(2)
+                out.append(f"// {candidate}\nexport type {name} = " + body[start:end])
+            break
+    text = "\n".join(out)
+    return text[:budget]
+
+
+def _looks_like_sitemap_xml(content: str) -> bool:
+    """True for a literal XML sitemap, as opposed to the code that generates one."""
+    head = (content or "")[:4000].lower()
+    return "<urlset" in head or "<sitemapindex" in head
+
+
 def _remove_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): drop the whole `<url>` block of each flagged page.
 
@@ -19209,12 +19281,31 @@ def _prepare_issue_fix(
         out["rewriter_ai_fallback"] = True
         out["extra_hint"] = (
             "Ces URL sont listees dans le sitemap alors que les pages elles-memes portent "
-            "noindex. Retire ces entrees du sitemap. Si le sitemap est GENERE (astro.config, "
-            "next-sitemap.config, nuxt.config, gatsby-config, plugin Jekyll/Hugo), ajoute une "
-            "regle d'exclusion pour ces chemins au lieu d'editer un fichier XML. Ne touche a "
-            "aucune autre entree, et ne retire pas le noindex des pages.\n"
+            "noindex. Retire EXACTEMENT ces entrees, aucune autre.\n"
+            "Si le sitemap est GENERE (app/sitemap.ts, astro.config, next-sitemap.config, "
+            "nuxt.config, gatsby-config, plugin Jekyll/Hugo), ajoute-y une regle d'exclusion "
+            "plutot que d'editer un fichier XML. Cette regle doit filtrer sur le signal que la "
+            "page porte DEJA (son champ robots / noindex dans le front matter ou les metadonnees "
+            "que le generateur lit deja) et surtout PAS sur un motif d'URL : un motif attrape "
+            "aussi les pages indexables qui partagent le meme prefixe, et les retirer du sitemap "
+            "serait une nouvelle anomalie. N'ajoute pas de liste d'URL en dur si le champ existe. "
+            "Ne retire jamais le noindex des pages : c'est l'autre moitie de la contradiction, "
+            "et ce n'est pas celle qu'on corrige ici.\n"
             + "\n".join(f"- {u}" for u in list(impacted)[:20])
         )
+        # The generator maps over a type declared in ANOTHER file. Without it the model can only
+        # guess which fields exist, and a guess that misses is a TypeScript error — a failed
+        # build on the customer's site, not a bad suggestion.
+        for _cand in [q for q in all_paths if _is_sitemap_path(q)
+                      and q.rsplit(".", 1)[-1].lower() in ("ts", "tsx", "js", "jsx", "mjs")]:
+            _types = _imported_type_context(owner=owner, repo_name=repo_name, token=token,
+                                            branch=branch, target=_cand, all_paths=all_paths)
+            if _types:
+                out["extra_hint"] += (
+                    "\n\nCHAMPS REELLEMENT DISPONIBLES (types importes par " + _cand + "). "
+                    "N'utilise AUCUN champ absent de ces declarations — un champ invente est une "
+                    "erreur TypeScript, donc un build casse chez le client :\n" + _types)
+                break
     elif url_pairs and issue_key in _SITEMAP_ALTERNATE_KEYS:
         out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_alternates(raw, _p)  # noqa: E731
     elif url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
@@ -19351,6 +19442,12 @@ def _deep_patch_issue_files(
             # a template literal), and only the AI can fix the logic that produces it — the
             # exact values to reach are in the hint.
             if not rewriter_ai_fallback:
+                return (path, raw, cur_sha, {"no_change": True, "patched_content": raw})
+            if issue_key in _SITEMAP_REMOVE_KEYS and _looks_like_sitemap_xml(raw):
+                # The fallback exists for a GENERATED sitemap, where the entry to drop lives in a
+                # filter rather than in a `<loc>`. A literal XML sitemap that does not list the
+                # page is simply the wrong file — a repository can carry a second, dead one, and
+                # asking the model to "fix" it invites an edit to a file that is not served.
                 return (path, raw, cur_sha, {"no_change": True, "patched_content": raw})
         try:
             patch = _openai_generate_file_patch(
