@@ -3381,7 +3381,8 @@ def _handled_issue_keys() -> set[str]:
     for table in (_HEAD_HINTS, _HREFLANG_HINTS):
         handled |= set(table)
     for group in (
-        _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
+        _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
+        _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
     ):
@@ -17641,7 +17642,10 @@ _SITEMAP_REWRITE_KEYS = {"sitemap_3xx_redirect", "sitemap_non_canonical_page"}
 _SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
 # Every family repaired inside the sitemap file. They must never page-target: their impacted
 # URLs are the pages the sitemap TALKS ABOUT, not the file to edit.
-_SITEMAP_FAMILY_KEYS = _SITEMAP_ADD_KEYS | _SITEMAP_REWRITE_KEYS | _SITEMAP_ALTERNATE_KEYS
+# Removal, not rewriting: there is no replacement URL for a page that should not be listed.
+_SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page"}
+_SITEMAP_FAMILY_KEYS = (_SITEMAP_ADD_KEYS | _SITEMAP_REWRITE_KEYS | _SITEMAP_ALTERNATE_KEYS
+                        | _SITEMAP_REMOVE_KEYS)
 
 
 def _is_sitemap_path(path: str) -> bool:
@@ -17705,6 +17709,42 @@ def _rewrite_sitemap_alternates(content: str, pairs: list[dict[str, str]]) -> tu
         return _SITEMAP_ALT_TAG_RE.sub(_one_tag, block)
 
     return _SITEMAP_URL_BLOCK_RE.sub(_one_block, content), count
+
+
+def _remove_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
+    """DETERMINISTIC sitemap fix (no AI): drop the whole `<url>` block of each flagged page.
+
+    A sitemap listing a `noindex` page tells Google two opposite things at once. Removing the
+    entry is the smaller of the two possible repairs — it changes a hint, while removing the
+    `noindex` would change what gets indexed — so it is the one made here, under a premise note
+    that says so.
+
+    Only `<url>` blocks are considered. A sitemap INDEX lists its children in `<sitemap>` blocks
+    that also carry a `<loc>`, and deleting one of those would take an entire sitemap out of the
+    file; `_SITEMAP_URL_BLOCK_RE` cannot match them, which is the property this relies on.
+    """
+    wanted = {_norm_url_for_match(u) for u in (urls or []) if str(u or "").strip()}
+    if not wanted:
+        return content, 0
+    count = 0
+
+    def _one(m: "re.Match[str]") -> str:
+        nonlocal count
+        loc = _SITEMAP_LOC_RE.search(m.group(0))
+        if loc and _norm_url_for_match(loc.group(2).strip()) in wanted:
+            count += 1
+            return ""
+        return m.group(0)
+
+    out = _SITEMAP_URL_BLOCK_RE.sub(_one, content)
+    if count:
+        # A deleted block leaves the line it sat on, indentation and all. A sitemap diff should
+        # read as "these entries are gone", not as a reflow of the whole file.
+        out = "\n".join(line for line in out.split("\n") if line.strip())
+        # Removing a block leaves the blank line it sat on; a sitemap diff should read as
+        # "these entries are gone", not "the whole file was reflowed".
+        out = re.sub(r"\n[ \t]*\n[ \t]*\n+", "\n\n", out)
+    return out, count
 
 
 def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
@@ -18989,6 +19029,11 @@ def _resolve_issue_targets(
 # decision belongs to the site owner, not to us. A predictable diff is not the same thing as an
 # uncontroversial one, and these must never auto-merge however deterministic the rewrite is.
 _FIX_PREMISE_NOTES: dict[str, str] = {
+    "sitemap_noindex_page": (
+        "Ce correctif retire ces pages du **sitemap**, en tenant leur `noindex` pour "
+        "intentionnel. Si ces pages doivent au contraire etre indexees, c'est le `noindex` "
+        "qu'il faut retirer — et cette PR va dans le mauvais sens."
+    ),
     "more_than_one_page_for_same_language_in_hreflang": (
         "Ce correctif aligne le **sitemap** sur ce que déclarent tes **pages**, en tenant la page "
         "pour la source d'autorité (c'est elle que Google lit à chaque passage). Si c'est ton "
@@ -19154,7 +19199,23 @@ def _prepare_issue_fix(
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
-    if url_pairs and issue_key in _SITEMAP_ALTERNATE_KEYS:
+    if issue_key in _SITEMAP_REMOVE_KEYS and impacted:
+        # The flagged pages ARE the entries to drop — this family needs no url pairs, because
+        # there is nothing to point them at.
+        out["evidence"] = list(impacted)
+        out["link_rewriter"] = lambda raw, _u=list(impacted): _remove_sitemap_locs(raw, _u)  # noqa: E731
+        # A generated sitemap holds no literal <loc> to delete; there the fix is an exclusion
+        # rule in the generator's config, which only the model can write.
+        out["rewriter_ai_fallback"] = True
+        out["extra_hint"] = (
+            "Ces URL sont listees dans le sitemap alors que les pages elles-memes portent "
+            "noindex. Retire ces entrees du sitemap. Si le sitemap est GENERE (astro.config, "
+            "next-sitemap.config, nuxt.config, gatsby-config, plugin Jekyll/Hugo), ajoute une "
+            "regle d'exclusion pour ces chemins au lieu d'editer un fichier XML. Ne touche a "
+            "aucune autre entree, et ne retire pas le noindex des pages.\n"
+            + "\n".join(f"- {u}" for u in list(impacted)[:20])
+        )
+    elif url_pairs and issue_key in _SITEMAP_ALTERNATE_KEYS:
         out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_alternates(raw, _p)  # noqa: E731
     elif url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
         # Targets are restricted to the sitemap file, so an AI fallback can only ever see the
