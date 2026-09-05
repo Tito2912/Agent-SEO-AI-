@@ -471,3 +471,20 @@ def test_a_page_values_family_is_not_told_to_re_crawl_when_nothing_was_patched()
     assert "relance un crawl récent" in source
     # …and the branch that must exist for those families.
     assert "structurelle" in source
+
+
+def test_adding_a_page_to_a_sitemap_never_invents_its_alternates() -> None:
+    """Measured on systeme-avis.com. Told to append four missing URLs "respecting the format used
+    by the other entries", the model copied the neighbours' xhtml:link alternates — including
+    `x-default -> /mentions-legales`, while the pages declare `x-default -> /en/legal-notice`.
+    That contradiction between sitemap and page IS this site's existing
+    more_than_one_page_for_same_language_in_hreflang (24 of them), so the correction would have
+    created four more of the next anomaly.
+
+    Field conventions describe the ENTRY and are still copied. Alternates describe the PAGE, and
+    the file cannot know them for a page it never listed."""
+    hint = app_module._build_sitemap_hint(["https://x.fr/de/legal", "https://x.fr/es/legal"])
+    assert "https://x.fr/de/legal" in hint and "https://x.fr/es/legal" in hint
+    assert "changeFrequency" in hint, "entry-level conventions are still worth copying"
+    assert "xhtml:link" in hint and "N'INVENTE PAS" in hint, (
+        "nothing stops the model from copying a neighbour's hreflang alternates")

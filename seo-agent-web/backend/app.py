@@ -17369,7 +17369,12 @@ def _build_sitemap_hint(urls: list[str]) -> str:
         "au sitemap produit par ce fichier (append au tableau/à la sortie existante, en respectant "
         "le format déjà utilisé pour les autres entrées — mêmes champs lastModified/changeFrequency/"
         "priority s'ils existent). N'enlève AUCUNE entrée existante et ne modifie pas la logique de "
-        "génération des autres pages :\n" + lines
+        "génération des autres pages.\n"
+        "N'INVENTE PAS d'alternates hreflang (xhtml:link, alternates, languages) pour ces "
+        "nouvelles entrées, meme si les entrees voisines en portent : ces balises decrivent ce "
+        "que la PAGE declare sur ses traductions, et ce fichier ne peut pas le savoir pour une "
+        "page qu'il ne listait pas. Une entree avec le seul <loc> est valide ; une alternate "
+        "recopiee sur la voisine contredit la page et cree une nouvelle anomalie.\n" + lines
     )
 
 
