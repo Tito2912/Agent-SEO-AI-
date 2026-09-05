@@ -3185,11 +3185,20 @@ _SEO_FILE_CANDIDATES_DEFAULT = [
 ]
 
 
+# The files whose NAME says "sitemap" come first: when a repository commits one, that is the
+# file to edit. The generator configs below are the fallback for the stacks that commit nothing —
+# astro and nuxt declare their sitemap inside a config whose name gives no clue.
+_SITEMAP_GENERATOR_CONFIGS = [
+    "astro.config.mjs", "astro.config.ts", "astro.config.js",
+    "nuxt.config.ts", "nuxt.config.js",
+    "gatsby-config.js", "gatsby-config.ts", "gatsby-config.mjs",
+    "svelte.config.js",
+]
 _SITEMAP_FILE_CANDIDATES = [
     "app/sitemap.ts", "app/sitemap.js", "src/app/sitemap.ts", "src/app/sitemap.js",
     "app/sitemap.xml/route.ts", "next-sitemap.config.js", "next-sitemap.config.cjs",
-    "public/sitemap.xml", "sitemap.xml", "nuxt.config.ts",
-]
+    "public/sitemap.xml", "sitemap.xml", "static/sitemap.xml",
+] + _SITEMAP_GENERATOR_CONFIGS
 
 
 _HREFLANG_FILE_CANDIDATES = [
@@ -19092,7 +19101,11 @@ def _resolve_issue_targets(
     # page that links to it, so the evidence grep drags those in — the same trap that had a
     # hreflang fix rewriting sitemap.xml, mirrored.
     if issue_key in _SITEMAP_FAMILY_KEYS:
-        targets = [p for p in targets if _is_sitemap_path(p)]
+        # A committed sitemap always wins. Only when the repository holds none is the fix in the
+        # config that generates it — reaching for the config while a real sitemap.xml sits next
+        # to it would edit a rule instead of the data it produced.
+        named = [p for p in targets if _is_sitemap_path(p)]
+        targets = named or [p for p in targets if p in _SITEMAP_GENERATOR_CONFIGS]
     return targets[:max_files]
 
 

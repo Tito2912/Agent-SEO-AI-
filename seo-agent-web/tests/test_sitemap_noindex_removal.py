@@ -120,3 +120,39 @@ def test_a_second_dead_sitemap_is_not_handed_to_the_model() -> None:
     source = __import__("inspect").getsource(app_module._deep_patch_issue_files)
     assert "_looks_like_sitemap_xml" in source, "the guard is not on the fallback path"
     assert source.index("rewriter_ai_fallback") < source.index("_looks_like_sitemap_xml")
+
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize("stack,tree,expected", [
+    # Generated from a config whose NAME says nothing — the two stacks the family used to refuse.
+    ("astro", ["astro.config.mjs", "package.json", "src/pages/index.astro"], "astro.config.mjs"),
+    ("nuxt", ["nuxt.config.ts", "package.json", "pages/index.vue"], "nuxt.config.ts"),
+    ("next-pages", ["package.json", "next-sitemap.config.js"], "next-sitemap.config.js"),
+    ("next-app", ["package.json", "app/sitemap.ts"], "app/sitemap.ts"),
+    # A committed sitemap always wins, even when a generator config sits next to it.
+    ("gatsby", ["gatsby-config.js", "static/sitemap.xml"], "static/sitemap.xml"),
+    ("sveltekit", ["svelte.config.js", "static/sitemap.xml"], "static/sitemap.xml"),
+    ("hugo", ["hugo.toml", "static/sitemap.xml"], "static/sitemap.xml"),
+    ("jekyll", ["_config.yml", "sitemap.xml"], "sitemap.xml"),
+    ("static-html", ["index.html", "sitemap.xml"], "sitemap.xml"),
+])
+def test_every_stack_has_a_sitemap_to_fix(stack: str, tree: list[str], expected: str) -> None:
+    """The family is advertised on nine stacks and refused on two of them: the target filter kept
+    only paths with "sitemap" in the FILE NAME, while astro and nuxt declare theirs inside a
+    config. `nuxt.config.ts` was even in the candidate list already — offered, then filtered out."""
+    targets = app_module._resolve_issue_targets(
+        issue_key="sitemap_noindex_page", issue_label="l", all_paths=tree,
+        impacted_urls=["https://x.fr/a"], evidence=[], located=[], index=None, max_files=5)
+    assert targets and targets[0] == expected, f"{stack}: {targets}"
+
+
+def test_a_generator_config_never_outranks_a_committed_sitemap() -> None:
+    """Editing the rule that produced a file, while the file itself sits in the repository, fixes
+    the wrong thing — the committed sitemap would keep its stale entries."""
+    targets = app_module._resolve_issue_targets(
+        issue_key="sitemap_3xx_redirect", issue_label="l",
+        all_paths=["gatsby-config.js", "static/sitemap.xml"],
+        impacted_urls=["https://x.fr/a"], evidence=[], located=[], index=None, max_files=5)
+    assert "gatsby-config.js" not in targets
