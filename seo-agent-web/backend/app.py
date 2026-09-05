@@ -19498,14 +19498,22 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # same refusal to auto-merge.
     config_changes: list[str] = list(_lang_changes)
     config_notes: list[str] = list(_lang_notes)
+    loop_notes: list[str] = []
     if _loop_paths:
+        _loop_changes: list[str] = []
         try:
-            config_changes, config_notes = _deep_fix_redirect_config_loops(
+            _loop_changes, loop_notes = _deep_fix_redirect_config_loops(
                 owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
                 all_paths=all_paths, loop_paths=_loop_paths[:gate_max_files], file_state=file_state,
             )
         except Exception:
-            config_changes, config_notes = [], []
+            _loop_changes, loop_notes = [], []
+        # Extend, never assign: an assignment here would drop a language fix already committed to
+        # the branch from `all_changed`, and the pull request would list fewer files than it
+        # carries. Unreachable today — the served-lang family never yields loop paths — and now
+        # unreachable by construction rather than by luck.
+        config_changes += _loop_changes
+        config_notes += loop_notes
     all_changed = patched_files + config_changes
     if not targets and not config_changes:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
@@ -19526,7 +19534,17 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         return JSONResponse({"ok": False, "error": f"Aucun fichier patché (essayés : {', '.join(targets)}).{_ev}", "skipped": skipped, "evidence": evidence[:10]}, status_code=422)
 
     # Config changes touch routing → always open a PR for human review (never auto-merge).
-    _config_note_block = ("\n\n**Correction config (boucle de redirection) :**\n" + "\n".join(f"- {n}" for n in config_notes)) if config_notes else ""
+    # Each deterministic repair is announced under its OWN heading. The single hard-coded
+    # "boucle de redirection" title dated from when only one family wrote here, and it went
+    # out on a real customer's pull request describing a language fix as a redirect fix.
+    _config_note_block = "".join(
+        f"\n\n**{_heading} :**\n" + "\n".join(f"- {_n}" for _n in _notes)
+        for _heading, _notes in (
+            ("Correction post-build (langue du HTML servi)", list(_lang_notes)),
+            ("Correction config (boucle de redirection)", loop_notes),
+        )
+        if _notes
+    )
     pr_title = f"fix(seo): {issue_label} — {len(all_changed)} fichier(s)"
     pr_body = (
         f"## Correction SEO automatique (couverture étendue)\n\n"

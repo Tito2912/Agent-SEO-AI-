@@ -171,6 +171,7 @@ def test_the_hand_written_stack_targets_its_pages_not_a_shared_file() -> None:
 # of hole a decision table can hide.
 
 import base64  # noqa: E402
+import json  # noqa: E402
 import tempfile  # noqa: E402
 import uuid  # noqa: E402
 
@@ -261,3 +262,55 @@ def test_a_stack_that_can_fix_itself_never_gets_a_build_step(jekyll_customer) ->
         "a Jekyll site was given a post-build script it does not need")
     assert "package.json" not in written, "its build was chained onto for nothing"
     assert any(p.endswith("default.html") for p in written), written
+
+
+@pytest.fixture()
+def next_app_customer(jekyll_customer, monkeypatch):
+    """The same customer, on the one stack that has no source fix — so the build step is real."""
+    client, slug, written = jekyll_customer
+    tree = ["package.json", "app/layout.tsx", "app/page.tsx", "next.config.js"]
+
+    def _get(path, **kw):
+        if "/git/trees/" in path:
+            return {"tree": [{"path": q, "type": "blob"} for q in tree]}
+        if "/git/ref" in path:
+            return {"object": {"sha": "base"}}
+        if path.endswith("/package.json"):
+            return {"content": base64.b64encode(
+                json.dumps({"name": "s", "scripts": {"build": "next build"}}).encode()).decode(),
+                "sha": "pkg"}
+        return {"content": base64.b64encode(b"<html lang=\"fr\"></html>").decode(), "sha": "sha"}
+
+    monkeypatch.setattr(app_module, "_github_api_get", _get)
+    bodies: list[str] = []
+
+    def _post(path, **kw):
+        if path.endswith("/pulls"):
+            bodies.append((kw.get("json_body") or {}).get("body", ""))
+            return {"html_url": "https://github.com/client/site.fr/pull/9", "number": 9}
+        return {"ok": True}
+
+    monkeypatch.setattr(app_module, "_github_api_post", _post)
+    return client, slug, written, bodies
+
+
+def test_the_pull_request_names_the_anomaly_it_actually_fixed(next_app_customer) -> None:
+    """It went out wrong once, on a real customer repository: the post-build language fix was
+    announced under the heading "Correction config (boucle de redirection)" — the title of the
+    only family that used to write there. A correction the reader mistrusts is a correction that
+    does not get merged."""
+    client, slug, written, bodies = next_app_customer
+    client.get(f"/projects/{slug}/issues")
+    token = client.cookies.get(app_module._CSRF_COOKIE_NAME, "")
+    resp = client.post(
+        f"/api/projects/{slug}/issues/served_html_lang_mismatch/deep-fix",
+        json={"url": "", "crawl_ts": "20260904-101010"},
+        headers={app_module._CSRF_HEADER_NAME: token},
+    )
+    assert resp.status_code == 200, resp.text
+    assert "scripts/fix-html-lang.mjs" in written, "this stack does need the build step"
+    assert bodies, "no pull request was opened"
+    body = bodies[0]
+    assert "langue du html servi" in body.lower(), body
+    assert "boucle de redirection" not in body, (
+        "the language fix is announced as a redirect fix")
