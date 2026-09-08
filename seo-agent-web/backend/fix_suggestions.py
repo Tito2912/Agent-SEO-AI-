@@ -109,6 +109,58 @@ def _redirect_3xx_breakdown(report: dict[str, Any]) -> dict[str, int]:
     return out
 
 
+def _norm_link(u: str) -> str:
+    return (u or "").split("#")[0].rstrip("/").lower()
+
+
+def _under_linked_context(report: dict[str, Any], issue_key: str) -> list[dict[str, Any]]:
+    """For each under-linked page: who links to it today, and who plausibly should.
+
+    Candidates are same-language pages that already link to at least two of the target's
+    siblings — pages demonstrably about the same section — and do not link to it yet. Ranked by
+    how many siblings they cover. Empty when the target has no real neighbourhood, which happens
+    and must be said rather than papered over with generic advice.
+    """
+    pages = report.get("pages")
+    pages = pages if isinstance(pages, list) else list((pages or {}).values())
+    if not pages:
+        return []
+    by_url = {_norm_link(p.get("url")): p for p in pages if isinstance(p, dict)}
+    out: list[dict[str, Any]] = []
+    for target in _sample_urls(report, issue_key, limit=8):
+        t = _norm_link(target)
+        page = by_url.get(t) or {}
+        lang = page.get("lang")
+        prefix = t.rsplit("/", 1)[0]
+        siblings = {u for u in by_url if u.startswith(prefix + "/") and u != t}
+        current: list[str] = []
+        candidates: list[tuple[int, str]] = []
+        for src in pages:
+            if not isinstance(src, dict):
+                continue
+            u = _norm_link(src.get("url"))
+            if u == t:
+                continue  # a page linking to itself is not an incoming link
+            links = {_norm_link(i.get("target_url"))
+                     for i in (src.get("internal_link_items") or [])
+                     if isinstance(i, dict) and not i.get("nofollow")}
+            if t in links:
+                current.append(u)
+                continue
+            if src.get("lang") == lang:
+                shared = len(links & siblings)
+                if shared >= 2:
+                    candidates.append((shared, u))
+        candidates.sort(reverse=True)
+        out.append({
+            "url": target,
+            "title": str(page.get("title") or "")[:120],
+            "linked_by": sorted(set(current))[:3],
+            "candidates": [u for _n, u in candidates[:3]],
+        })
+    return out
+
+
 def suggest_issue_fix(
     *,
     issue_key: str,
@@ -137,6 +189,37 @@ def suggest_issue_fix(
     verify: list[str] = []
 
     lk = key.lower()
+
+    if lk.startswith("page_has_only_one_dofollow_incoming_internal_link"):
+        rows = _under_linked_context(report, key)
+        why = ("Ces pages ne reçoivent qu'UN seul lien interne en dofollow. Un lien unique rend "
+               "la page fragile : si la page source change, elle devient orpheline, et Google lit "
+               "ce maillage comme le signe d'une page secondaire.")
+        fix = ["Ajouter un deuxième lien interne contextuel depuis une page qui traite du même "
+               "sujet, avec une ancre descriptive (pas « cliquez ici »)."]
+        for row in rows:
+            src = row["linked_by"][0] if row["linked_by"] else "aucune page identifiée"
+            if row["candidates"]:
+                fix.append(f"{row['url']} — liée aujourd'hui par {src}. Candidates (même langue, "
+                           f"traitant déjà du même dossier) : " + ", ".join(row["candidates"]))
+            else:
+                fix.append(f"{row['url']} — liée aujourd'hui par {src}. Aucune page candidate : "
+                           "cette page n'a pas de voisinage. Le lien doit venir d'un contenu à "
+                           "créer, ou d'un index de section qui n'existe pas encore.")
+        verify = [
+            "Relancer un crawl : la page doit avoir au moins deux pages sources distinctes.",
+            "Vérifier que le lien ajouté est en dofollow et porte une ancre descriptive.",
+        ]
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort,
+            "sample_urls": sample_urls, "why": why, "fix": fix, "verify": verify,
+            "auto_fixable": False,
+            "auto_fix_note": ("Non corrigé automatiquement : choisir la page source et écrire "
+                              "l'ancre est un acte éditorial, et sur les sites mesurés un tiers "
+                              "des cas n'a aucune page candidate. L'agent nomme les pages, la "
+                              "décision reste au propriétaire."),
+        }
 
     # Content fundamentals
     if lk == "missing_title":
