@@ -156,3 +156,68 @@ def test_a_generator_config_never_outranks_a_committed_sitemap() -> None:
         all_paths=["gatsby-config.js", "static/sitemap.xml"],
         impacted_urls=["https://x.fr/a"], evidence=[], located=[], index=None, max_files=5)
     assert "gatsby-config.js" not in targets
+
+
+# ── announcing what a correction will BREAK ────────────────────────────────────────────────────
+#
+# Removing 31 noindex pages from creativeai-tools.com's sitemap was right — 31 to 0, 52 fewer
+# anomalies overall — and it surfaced one new `missing_reciprocal_hreflang`: an in-sitemap page
+# whose alternates had just been delisted. Run against the crawl report the corrector already
+# loads, the prediction below named that page before the merge. No crawler change was needed:
+# report.json has carried `pages[].hreflang` all along.
+
+PAGES = [
+    # stays in the sitemap, and one of its alternates is about to leave it
+    {"url": "https://x.fr/blog/category/case-studies/",
+     "hreflang": {"en": "https://x.fr/blog/category/case-studies/",
+                  "de": "https://x.fr/de/blog/category/case-studies/",
+                  "x-default": "https://x.fr/blog/category/case-studies/"}},
+    # itself removed — it cannot lose a partner it is leaving with
+    {"url": "https://x.fr/de/blog/category/case-studies/",
+     "hreflang": {"en": "https://x.fr/blog/category/case-studies/"}},
+    # untouched
+    {"url": "https://x.fr/contact", "hreflang": {}},
+]
+REMOVED = ["https://x.fr/de/blog/category/case-studies/"]
+
+
+def test_it_names_the_page_that_will_lose_its_partner() -> None:
+    assert app_module._sitemap_removal_side_effects(REMOVED, PAGES) == [
+        "https://x.fr/blog/category/case-studies/"]
+
+
+def test_a_page_that_is_itself_removed_is_not_a_victim() -> None:
+    hits = app_module._sitemap_removal_side_effects(REMOVED, PAGES)
+    assert "https://x.fr/de/blog/category/case-studies/" not in hits
+
+
+def test_x_default_alone_is_not_a_language_pairing() -> None:
+    pages = [{"url": "https://x.fr/a", "hreflang": {"x-default": "https://x.fr/gone"}}]
+    assert app_module._sitemap_removal_side_effects(["https://x.fr/gone"], pages) == []
+
+
+def test_a_page_that_was_never_in_the_sitemap_cannot_lose_reciprocity() -> None:
+    """The issue is about SITEMAP return tags. Warning about a page that is not listed would send
+    the owner after something that was never true."""
+    assert app_module._sitemap_removal_side_effects(
+        REMOVED, PAGES, {"https://x.fr/blog/category/case-studies/"}) == []
+
+
+def test_no_pages_no_crash_and_no_claim() -> None:
+    assert app_module._sitemap_removal_side_effects(REMOVED, None) == []
+    assert app_module._sitemap_removal_side_effects([], PAGES) == []
+
+
+def test_the_prediction_reaches_the_pull_request_body() -> None:
+    prep = app_module._prepare_issue_fix(
+        issue_key="sitemap_noindex_page", issues={}, impacted=REMOVED,
+        all_paths=["sitemap.xml"], site_name="x.fr", owner="o", repo_name="r",
+        branch="main", token="t", model_override="", pages=PAGES)
+    note = prep["side_effects"]
+    assert "Effet de bord" in note and "case-studies" in note
+    # …and stays silent when there is nothing to warn about.
+    quiet = app_module._prepare_issue_fix(
+        issue_key="sitemap_noindex_page", issues={}, impacted=REMOVED,
+        all_paths=["sitemap.xml"], site_name="x.fr", owner="o", repo_name="r",
+        branch="main", token="t", model_override="", pages=None)
+    assert quiet["side_effects"] == ""

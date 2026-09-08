@@ -17791,6 +17791,39 @@ def _imported_type_context(
     return text[:budget]
 
 
+def _sitemap_removal_side_effects(
+    removed: list[str], pages: list[dict[str, Any]] | None,
+    not_in_sitemap: set[str] | None = None,
+) -> list[str]:
+    """Pages that will lose an hreflang partner when `removed` leaves the sitemap.
+
+    A page still listed in the sitemap whose alternate has just been delisted is exactly what
+    `missing_reciprocal_hreflang` reports. Knowing it BEFORE the merge is the difference between
+    a correction and a trade the owner never agreed to. Verified against a real outcome: on
+    creativeai-tools.com this predicted one page, and the next crawl flagged that same one.
+    """
+    gone = {_norm_url_for_match(u) for u in (removed or []) if str(u or "").strip()}
+    if not gone or not pages:
+        return []
+    outside = {_norm_url_for_match(u) for u in (not_in_sitemap or set())}
+    hit: list[str] = []
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        url = str(page.get("url") or "")
+        self_norm = _norm_url_for_match(url)
+        if not self_norm or self_norm in gone or self_norm in outside:
+            continue  # itself removed, or never in the sitemap to begin with
+        alts = page.get("hreflang") if isinstance(page.get("hreflang"), dict) else {}
+        for code, href in alts.items():
+            if str(code or "").strip().lower() == "x-default":
+                continue  # x-default is not a language pairing
+            if _norm_url_for_match(str(href)) in gone:
+                hit.append(url)
+                break
+    return sorted(hit)
+
+
 def _looks_like_sitemap_xml(content: str) -> bool:
     """True for a literal XML sitemap, as opposed to the code that generates one."""
     head = (content or "")[:4000].lower()
@@ -19186,7 +19219,7 @@ def _fix_nature_note(ai_written: bool, issue_key: str = "",
 def _prepare_issue_fix(
     *, issue_key: str, issues: dict[str, Any] | None, impacted: list[str], all_paths: list[str],
     site_name: str, owner: str, repo_name: str, branch: str, token: str,
-    model_override: str = "",
+    model_override: str = "", pages: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Everything needed to fix ONE issue: locator evidence, the patch hint, the deterministic
     rewriter when the family has one, self-redirect paths for the config fixer, and a refusal
@@ -19203,6 +19236,7 @@ def _prepare_issue_fix(
         "extra_hint": "",
         "link_rewriter": None,
         "rewriter_ai_fallback": False,
+        "side_effects": "",
         # A bounded rewriter is not necessarily a model-free one. See `_deep_patch_issue_files`.
         "rewriter_is_ai": False,
         "loop_paths": [],
@@ -19313,6 +19347,19 @@ def _prepare_issue_fix(
         # there is nothing to point them at.
         out["evidence"] = list(impacted)
         out["link_rewriter"] = lambda raw, _u=list(impacted): _remove_sitemap_locs(raw, _u)  # noqa: E731
+        _orphaned = _sitemap_removal_side_effects(
+            list(impacted), pages,
+            dash.extract_impacted_pages("indexable_page_not_in_sitemap",
+                                        (issues or {}).get("indexable_page_not_in_sitemap")),
+        )
+        if _orphaned:
+            out["side_effects"] = (
+                f"\n\n> 🔎 **Effet de bord prévu : {len(_orphaned)} page(s).** Ces pages restent "
+                "dans le sitemap mais déclarent en hreflang une des URL retirées ; au prochain "
+                "crawl elles apparaîtront en `missing_reciprocal_hreflang`. C'est le signe d'une "
+                "asymétrie du site — une version de langue indexable dont les traductions ne le "
+                "sont pas — et la trancher t'appartient :\n"
+                + "\n".join(f"> - `{u}`" for u in _orphaned[:10]))
         # A generated sitemap holds no literal <loc> to delete; there the fix is an exclusion
         # rule in the generator's config, which only the model can write.
         out["rewriter_ai_fallback"] = True
@@ -19620,7 +19667,9 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     idx = repo_index.build_repo_index(all_paths)
     logger.info("[corrections] deep-fix %s %s", issue_key, repo_index.index_summary(idx))
 
+    _report_pages = report.get("pages") if isinstance(report, dict) else None
     _prep = _prepare_issue_fix(
+        pages=_report_pages if isinstance(_report_pages, list) else None,
         issue_key=issue_key, issues=issues, impacted=impacted, all_paths=all_paths,
         site_name=str(proj.site_name or ""), owner=owner, repo_name=repo_name,
         branch=branch, token=token, model_override=gate_model,
@@ -19749,6 +19798,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         + "\n".join(f"- `{p}`" for p in all_changed)
         + _config_note_block
         + _fix_nature_note(bool(_ai_files), issue_key, _prep.get("url_pairs"))
+        + str(_prep.get("side_effects") or "")
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
