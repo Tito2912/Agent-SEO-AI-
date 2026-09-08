@@ -488,3 +488,38 @@ def test_adding_a_page_to_a_sitemap_never_invents_its_alternates() -> None:
     assert "changeFrequency" in hint, "entry-level conventions are still worth copying"
     assert "xhtml:link" in hint and "N'INVENTE PAS" in hint, (
         "nothing stops the model from copying a neighbour's hreflang alternates")
+
+
+def test_a_premise_the_reader_cannot_check_names_the_two_values() -> None:
+    """A pull request that asks a human to arbitrate between two sources has to show them both.
+    Measured on systeme-avis.com: the note said "this fix treats the page as authoritative"
+    without ever naming `x-default -> /` against `x-default -> /en/`. Finding that meant reading
+    a 24-line diff and knowing which side each half came from."""
+    pairs = [{"page": "https://x.fr/a", "code": "x-default",
+              "from": "https://x.fr/", "to": "https://x.fr/en/"},
+             {"page": "https://x.fr/b", "code": "x-default",
+              "from": "https://x.fr/blog", "to": "https://x.fr/en/blog"}]
+    note = app_module._fix_nature_note(
+        False, "more_than_one_page_for_same_language_in_hreflang", pairs)
+    assert "x-default" in note
+    assert "https://x.fr/" in note and "https://x.fr/en/" in note
+    assert "2 entrée(s)" in note
+    # Without pairs the note still stands — it must never depend on evidence being there.
+    bare = app_module._fix_nature_note(
+        False, "more_than_one_page_for_same_language_in_hreflang")
+    assert "Hypothèse à valider" in bare and "Concrètement" not in bare
+
+
+def test_a_pair_that_changes_nothing_is_not_announced_as_a_conflict() -> None:
+    same = [{"page": "https://x.fr/a", "code": "fr",
+             "from": "https://x.fr/a", "to": "https://x.fr/a"}]
+    assert "Concrètement" not in app_module._fix_nature_note(
+        False, "more_than_one_page_for_same_language_in_hreflang", same)
+
+
+def test_the_mechanical_and_editorial_badges_are_untouched_by_pairs() -> None:
+    """Only a premise family gains the extra line; the other two badges must not drift."""
+    assert "Correctif mécanique" in app_module._fix_nature_note(False, "sitemap_3xx_redirect", [
+        {"page": "p", "code": "", "from": "a", "to": "b"}])
+    assert "rédigé par le modèle" in app_module._fix_nature_note(True, "missing_title", [
+        {"page": "p", "code": "", "from": "a", "to": "b"}])

@@ -19133,22 +19133,39 @@ _FIX_PREMISE_NOTES: dict[str, str] = {
 }
 
 
-def _fix_premise_note(issue_key: str) -> str:
+def _premise_conflict_line(pairs: list[dict[str, str]] | None) -> str:
+    """The two values actually in conflict, in one sentence.
+
+    A reviewer asked to arbitrate between two sources needs to see them. Built from the same
+    crawl pairs that drive the rewrite, so it cannot drift from what the diff does.
+    """
+    rows = [p for p in (pairs or []) if p.get("from") and p.get("to")
+            and str(p["from"]).strip() != str(p["to"]).strip()]
+    if not rows:
+        return ""
+    codes = sorted({str(p.get("code") or "").strip().lower() for p in rows if p.get("code")})
+    what = f"`{codes[0]}`" if len(codes) == 1 else f"{len(codes)} codes hreflang"
+    return (f"\n>\n> Concrètement, sur {what} : ton **sitemap** déclare `{rows[0]['from']}`, "
+            f"tes **pages** déclarent `{rows[0]['to']}` — {len(rows)} entrée(s) concernée(s).")
+
+
+def _fix_premise_note(issue_key: str, pairs: list[dict[str, str]] | None = None) -> str:
     """The assumption a fix rests on, when it rests on one. Empty for the rest."""
     for key in (issue_key, issue_key.removesuffix("_indexable").removesuffix("_not_indexable")):
         if key in _FIX_PREMISE_NOTES:
-            return _FIX_PREMISE_NOTES[key]
+            return _FIX_PREMISE_NOTES[key] + _premise_conflict_line(pairs)
     return ""
 
 
-def _fix_nature_note(ai_written: bool, issue_key: str = "") -> str:
+def _fix_nature_note(ai_written: bool, issue_key: str = "",
+                     pairs: list[dict[str, str]] | None = None) -> str:
     """One line in the PR body telling the reviewer WHAT to check.
 
     Three cases, because two were not enough: a bounded rewrite fed by crawl values is
     predictable; a value the model WROTE is an editorial proposal; and a rewrite that resolves a
     contradiction between two sources is predictable in its diff but rests on a choice of which
     source wins. All three used to produce identical-looking PRs."""
-    premise = _fix_premise_note(issue_key)
+    premise = _fix_premise_note(issue_key, pairs)
     if premise:
         return (
             "\n\n> ⚖️ **Hypothèse à valider avant de merger.** Le diff est mécanique et prévisible, "
@@ -19287,6 +19304,8 @@ def _prepare_issue_fix(
         if values:
             hint = _build_page_values_hint(values)
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
+
+    out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
     if issue_key in _SITEMAP_REMOVE_KEYS and impacted:
@@ -19729,7 +19748,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         f"**Fichiers modifiés :** {len(all_changed)}\n\n"
         + "\n".join(f"- `{p}`" for p in all_changed)
         + _config_note_block
-        + _fix_nature_note(bool(_ai_files), issue_key)
+        + _fix_nature_note(bool(_ai_files), issue_key, _prep.get("url_pairs"))
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
