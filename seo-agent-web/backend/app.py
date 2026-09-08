@@ -18112,6 +18112,7 @@ def _trim_to_ceiling(value: str, ceiling: int) -> str:
 
 def _length_value_for_page(
     *, current: str, kind: str, url: str, site_name: str, model_override: str = "",
+    affix_len: int = 0,
 ) -> str:
     """Ask the model for the VALUE alone, then make the length true ourselves — at BOTH ends.
 
@@ -18134,6 +18135,10 @@ def _length_value_for_page(
     kind = _length_kind(kind)
     low, high = _LENGTH_WINDOWS[kind]
     ceiling = _LENGTH_CEILINGS[kind]
+    # What the template adds at render time (`| Brand`) counts for the searcher but is not in the
+    # file. The model is asked for the part the file holds, so the target shrinks by that much.
+    if affix_len > 0:
+        low, high, ceiling = max(1, low - affix_len), max(2, high - affix_len), max(3, ceiling - affix_len)
     label = "titre" if kind == "title" else "meta description"
     # These instructions are in French, and the page may not be. `_rewrite_for_query` was asked
     # the same way and answered in French on an English page four runs out of four while keeping
@@ -18448,6 +18453,34 @@ def _rewrite_for_query(
     return new_content, count
 
 
+_TEMPLATE_SEPARATORS = (" | ", " — ", " – ", " - ", " · ", " :: ", " • ")
+
+
+def _value_without_template_affix(rendered: str, content: str) -> tuple[str, int]:
+    """Split a rendered value into (what the file holds, how much the template adds).
+
+    Most sites render `<page value><separator><brand>`. The file holds only the first part, so a
+    verbatim search for the rendered value finds nothing and the bounded rewriter stands down —
+    silently handing the page to a free-form patch with no length guarantee. Returns
+    ("", 0) when no split is found, which keeps the previous behaviour exactly.
+    """
+    text = (rendered or "").strip()
+    if not text or not content:
+        return "", 0
+    best = ""
+    for sep in _TEMPLATE_SEPARATORS:
+        idx = text.find(sep)
+        while idx > 0:
+            head = text[:idx].strip()
+            # A one-word head is more likely a stray separator inside the sentence than a split.
+            if len(head) >= 15 and head in content and len(head) > len(best):
+                best = head
+            idx = text.find(sep, idx + 1)
+    if not best:
+        return "", 0
+    return best, len(text) - len(best)
+
+
 def _rewrite_length_values(
     content: str, samples: dict[str, dict[str, Any]], kind: str, *,
     site_name: str = "", model_override: str = "",
@@ -18472,16 +18505,22 @@ def _rewrite_length_values(
         declared = info.get("len")
         if not rendered or not isinstance(declared, int) or declared <= ceiling:
             continue
-        if len(rendered) < declared or rendered not in new:
-            continue  # truncated sample, or the value is assembled rather than written
-        value = _length_value_for_page(current=rendered, kind=kind, url=str(url),
-                                       site_name=site_name, model_override=model_override)
-        if not value or len(value) > ceiling or value == rendered:
+        if len(rendered) < declared:
+            continue  # truncated sample
+        target, affix = rendered, 0
+        if rendered not in new:
+            target, affix = _value_without_template_affix(rendered, new)
+            if not target:
+                continue  # the value is assembled rather than written — AI fallback takes over
+        value = _length_value_for_page(current=target, kind=kind, url=str(url),
+                                       site_name=site_name, model_override=model_override,
+                                       affix_len=affix)
+        if not value or len(value) + affix > ceiling or value == target:
             continue
-        safe = _safe_inline_replacement(new, rendered, value)
+        safe = _safe_inline_replacement(new, target, value)
         if safe is None:
             continue
-        new = new.replace(rendered, safe, 1)
+        new = new.replace(target, safe, 1)
         count += 1
     return new, count
 
