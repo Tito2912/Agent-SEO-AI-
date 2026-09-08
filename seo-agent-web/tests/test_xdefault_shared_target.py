@@ -24,8 +24,6 @@ if str(WEB_ROOT) not in sys.path:
 os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
 os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
 
-import pytest  # noqa: E402
-
 from backend import app as app_module  # noqa: E402
 
 BUILDER = "export async function buildAlternates() { return { canonical, languages }; }"
