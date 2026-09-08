@@ -19205,6 +19205,29 @@ def _fix_premise_note(issue_key: str, pairs: list[dict[str, str]] | None = None)
     return ""
 
 
+_SKIPPED_REASONS: dict[str, str] = {
+    "length": ("le modèle n'a pas produit de valeur DANS la fenêtre demandée en deux essais. "
+               "C'est le refus attendu sur une page mince (contact, à-propos) : atteindre la "
+               "longueur cible y demanderait d'inventer du contenu."),
+}
+
+
+def _skipped_note(issue_key: str, skipped: list[str], targets: list[str]) -> str:
+    """The files this run could NOT fix, and why — inside the pull request.
+
+    A correction that silently drops two thirds of its targets looks like a complete one. The
+    reviewer sees "5 files" and has no way to learn that 8 pages stay flagged.
+    """
+    rows = [p for p in dict.fromkeys(skipped or []) if p]
+    if not rows:
+        return ""
+    reason = (_SKIPPED_REASONS["length"] if _length_family_name(issue_key)
+              else "le modèle n'a rien renvoyé d'exploitable pour ces fichiers.")
+    head = (f"\n\n> ⏭️ **Non corrigés : {len(rows)} fichier(s) sur {len(targets or rows)}.** "
+            + reason + " Ces pages resteront signalées au prochain crawl :\n")
+    return head + "\n".join(f"> - `{p}`" for p in rows[:12])
+
+
 def _fix_nature_note(ai_written: bool, issue_key: str = "",
                      pairs: list[dict[str, str]] | None = None) -> str:
     """One line in the PR body telling the reviewer WHAT to check.
@@ -19814,6 +19837,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         + "\n".join(f"- `{p}`" for p in all_changed)
         + _config_note_block
         + _fix_nature_note(bool(_ai_files), issue_key, _prep.get("url_pairs"))
+        + _skipped_note(issue_key, skipped, targets)
         + str(_prep.get("side_effects") or "")
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
