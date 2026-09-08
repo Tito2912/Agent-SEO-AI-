@@ -16734,6 +16734,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
                 _cfg_changed, _cfg_notes = _deep_fix_redirect_config_loops(
                     owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
                     all_paths=all_paths, loop_paths=_prep["loop_paths"][:6], file_state=file_state,
+                    index=idx,
                 )
             except Exception:
                 _cfg_changed, _cfg_notes = [], []
@@ -18909,6 +18910,7 @@ def _deep_fix_served_html_lang(
 def _deep_fix_redirect_config_loops(
     *, owner: str, repo_name: str, token: str, fix_branch: str,
     all_paths: list[str], loop_paths: list[str], file_state: dict[str, dict[str, str]],
+    index: dict[str, Any] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Fix clean URLs that self-redirect because of conflicting `_redirects` rules.
 
@@ -18969,8 +18971,12 @@ def _deep_fix_redirect_config_loops(
         flat = f"public/{rel}.html"
         dir_index = f"public/{rel}/index.html"
         existing_flat = _locate_flat_html_for_path(lp, all_paths)
-        if existing_flat:
-            pass  # already a flat file — good, keep it as-is
+        # A framework route serves the clean URL just as well as a flat HTML file, and that is
+        # what the other eight stacks look like: app/de/page.tsx, pages/de.tsx, src/pages/de.astro.
+        # Without this the fixer only ever worked on hand-written sites.
+        route_files = repo_index.route_files(index, lp, limit=2) if index else []
+        if existing_flat or route_files:
+            pass  # something already serves this URL — the rules are the only problem
         elif dir_index in all_paths and _github_file_path_allowed(flat):
             # Self-heal a previous wrong dir-index conversion: move it back to a flat file.
             fr = _read(dir_index)
@@ -18982,9 +18988,18 @@ def _deep_fix_redirect_config_loops(
             _delete(dir_index, di_sha, f"fix(seo): remove dir-index — {dir_index}")
             changed.extend([flat, dir_index])
         else:
-            continue  # no source file to serve this clean URL — don't guess
+            # Never silently. An empty result on a site that visibly loops reads as "nothing to
+            # fix", which is the most misleading thing the corrector can say.
+            notes.append(
+                f"{lp} : aucun fichier source ni route trouvés pour cette URL dans le dépôt. "
+                "Retirer les règles de redirection sans savoir ce qui sert la page la rendrait "
+                "404 — la boucle doit être corrigée à la main.")
+            continue
         fixed_paths.append(lp)
-        notes.append(f"{lp} : servi par le fichier plat (règles auto-référentielles retirées)")
+        _served_by = existing_flat or (route_files[0] if route_files else "")
+        notes.append(f"{lp} : servi par `{_served_by}` (règles auto-référentielles retirées)"
+                     if _served_by else
+                     f"{lp} : règles auto-référentielles retirées")
 
     # Remove the self-referential `_redirects` rules for every fixed path.
     if fixed_paths:
@@ -19749,6 +19764,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             _loop_changes, loop_notes = _deep_fix_redirect_config_loops(
                 owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
                 all_paths=all_paths, loop_paths=_loop_paths[:gate_max_files], file_state=file_state,
+                index=idx,
             )
         except Exception:
             _loop_changes, loop_notes = [], []
