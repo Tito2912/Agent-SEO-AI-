@@ -18769,6 +18769,7 @@ _SERVED_LANG_STACK_IDIOM: dict[str, str] = {
 }
 
 
+_X_DEFAULT_KEYS = _with_indexability_variants({"x_default_hreflang_missing"})
 _SERVED_LANG_FIX_KEYS = _with_indexability_variants({"served_html_lang_mismatch"})
 _HTML_LANG_FIXER_PATH = "scripts/fix-html-lang.mjs"
 _HTML_LANG_FIXER_CALL = "node scripts/fix-html-lang.mjs"
@@ -19293,6 +19294,45 @@ def _fix_nature_note(ai_written: bool, issue_key: str = "",
     )
 
 
+# Files that can hold a SHARED hreflang alternates map. Ordered: a dedicated seo/metadata helper
+# is a better target than a layout, which is a better target than an i18n config.
+_SHARED_ALTERNATES_CANDIDATES = [
+    "lib/seo.ts", "lib/seo.tsx", "lib/seo.js",
+    "lib/metadata.ts", "lib/metadata.js", "lib/hreflang.ts", "lib/alternates.ts",
+    "src/lib/seo.ts", "src/lib/metadata.ts",
+    "app/layout.tsx", "src/app/layout.tsx",
+    "i18n.ts", "i18n.js", "next-intl.config.js",
+]
+
+
+def _shared_alternates_file(
+    *, owner: str, repo_name: str, token: str, branch: str, all_paths: list[str],
+) -> str:
+    """The one file that builds the hreflang alternates for every page, when there is one.
+
+    Presence in the tree is not enough — a repository can carry lib/seo.ts that never touches
+    alternates. The file has to actually build the languages map AND be missing x-default, which
+    is exactly the anomaly. Returns "" when no such file exists, so a hand-written site keeps
+    being fixed page by page.
+    """
+    import base64 as _b64
+
+    for candidate in _SHARED_ALTERNATES_CANDIDATES:
+        if candidate not in all_paths:
+            continue
+        try:
+            data = _github_api_get(_github_content_api_path(owner, repo_name, candidate),
+                                   token=token, params={"ref": branch})
+            body = _b64.b64decode(data.get("content", "").replace("\n", "")).decode(
+                "utf-8", errors="replace")
+        except Exception:
+            continue
+        low = body.lower()
+        if ("languages" in low or "alternates" in low) and "x-default" not in low:
+            return candidate
+    return ""
+
+
 def _prepare_issue_fix(
     *, issue_key: str, issues: dict[str, Any] | None, impacted: list[str], all_paths: list[str],
     site_name: str, owner: str, repo_name: str, branch: str, token: str,
@@ -19314,6 +19354,7 @@ def _prepare_issue_fix(
         "link_rewriter": None,
         "rewriter_ai_fallback": False,
         "side_effects": "",
+        "targets_override": None,
         # A bounded rewriter is not necessarily a model-free one. See `_deep_patch_issue_files`.
         "rewriter_is_ai": False,
         "loop_paths": [],
@@ -19381,6 +19422,18 @@ def _prepare_issue_fix(
         out["extra_hint"] = _build_sitemap_hint(impacted)
     if issue_key in _HREFLANG_HINTS:
         out["extra_hint"] = _HREFLANG_HINTS[issue_key]
+    if issue_key in _X_DEFAULT_KEYS:
+        # x-default belongs to the GROUP, not to a page. Where one helper builds the alternates
+        # for every page, the flagged pages are the data and that helper is the fix — editing a
+        # handful of them would touch files that do not control the languages map at all.
+        _shared = _shared_alternates_file(owner=owner, repo_name=repo_name, token=token,
+                                          branch=branch, all_paths=all_paths)
+        if _shared:
+            out["targets_override"] = [_shared]
+            out["extra_hint"] += (
+                f"\nCe dépôt construit les alternates de TOUTES les pages dans `{_shared}` : "
+                "ajoute-y l'entrée x-default une seule fois, à l'endroit où la map des langues "
+                "est assemblée. Ne touche pas aux pages ni aux fichiers de contenu.")
     if issue_key in _HEAD_HINTS:
         out["extra_hint"] = _HEAD_HINTS[issue_key]
     # OG url≠canonical: reuse the layout's inherited og:image, since Next replaces openGraph
@@ -19812,6 +19865,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             extra_hint=extra_hint, model_override=gate_model,
             link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback,
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
+            targets_override=_prep.get("targets_override"),
         )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     # The served-lang fixer above lands in the same two lists: both are deterministic repairs
