@@ -19081,6 +19081,15 @@ def _resolve_issue_targets(
     for the issue type → AI URL mapping → AI tree pick. Shared templates are then dropped for
     issues whose fix must stay per-page."""
     targets = list(located)
+    if targets and (issue_key in _ASSET_REWRITE_KEYS or issue_key == "missing_alt_text"):
+        # An asset is written once and rendered everywhere. Among the files the grep found, one
+        # that is not a route is a component — it covers every flagged page — while a route file
+        # covers exactly one. Ordering matters because `max_files` truncates: on a real repository
+        # four route files pushed out the single component that carried the image.
+        _route_files = {f for files in ((index or {}).get("routes") or {}).values()
+                        for f in (files or [])}
+        _order = {f: i for i, f in enumerate(targets)}  # frozen: sort() would mutate the lookup
+        targets.sort(key=lambda f: (f in _route_files, _order[f]))
     # Per-page fixes (mechanical link families + head/hreflang, and the title/meta length
     # families whose value belongs in the per-page source): the flagged pages ARE the files to
     # fix, so they are PRIORITISED — the max_files cap must never patch a subset of them.
@@ -19582,19 +19591,23 @@ def _deep_patch_issue_files(
     # 1) Deterministic: files that reference the evidence (e.g. image srcs). Tarball grep is
     #    complete (scans every file in 1 download); code search / per-file grep are fallbacks.
     if evidence:
+        # Search WIDER than the file cap. The cap belongs to the ranking step below, not to the
+        # search: on a real repository the tarball grep returned four route files and stopped,
+        # dropping the one shared component that carried the flagged image on all 70 pages.
+        _find_limit = max(max_files * 3, 12)
         located: list[str] = []
         try:
-            located = _github_tarball_grep(owner, repo_name, branch, token, evidence, limit=max_files)
+            located = _github_tarball_grep(owner, repo_name, branch, token, evidence, limit=_find_limit)
         except Exception:
             located = []
         if not located:
             try:
-                located = _github_code_search_paths(owner, repo_name, token, evidence, limit=max_files)
+                located = _github_code_search_paths(owner, repo_name, token, evidence, limit=_find_limit)
             except Exception:
                 located = []
         if not located:
             try:
-                located = _github_grep_repo_for_terms(owner, repo_name, branch, token, all_paths, evidence, limit=max_files)
+                located = _github_grep_repo_for_terms(owner, repo_name, branch, token, all_paths, evidence, limit=_find_limit)
             except Exception:
                 located = []
         for f in located:

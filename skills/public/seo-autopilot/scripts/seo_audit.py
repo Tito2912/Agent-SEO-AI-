@@ -853,7 +853,18 @@ class PageHTMLExtractor(HTMLParser):
             src = (attrs_dict.get("src") or "").strip()
             if src:
                 self.image_srcs.append(src)
-            if not alt:
+            # `alt=""` is a DECLARATION that the image carries no information, and it is only
+            # credible when the markup says so: `aria-hidden="true"` or role presentation/none.
+            # Measured on prosperfactory.com, where 70 flagged images were one logo written
+            # exactly that way, with the link's accessible name in an adjacent sr-only span.
+            # Writing alt text onto an element assistive tech is told to ignore clears a counter
+            # and changes nothing. A bare `alt=""` with no marker stays flagged: ambiguous is
+            # still worth reporting, and an <img> with NO alt attribute always is.
+            _decorative = (
+                (attrs_dict.get("aria-hidden") or "").strip().lower() == "true"
+                or (attrs_dict.get("role") or "").strip().lower() in ("presentation", "none")
+            )
+            if not alt and not (_decorative and "alt" in attrs_dict):
                 self.images_missing_alt += 1
                 if src and len(self.image_srcs_missing_alt) < 20:
                     self.image_srcs_missing_alt.append(src)
