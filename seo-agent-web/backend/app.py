@@ -18721,6 +18721,39 @@ def _path_family(path: str) -> set[str]:
     return {p, p + "/", p + ".html", p + "/index.html"}
 
 
+_PLACEHOLDER_RE = re.compile(r":[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _strip_self_referential_wildcards(content: str) -> tuple[str, list[str]]:
+    """Remove wildcard `_redirects` rules that redirect every URL to itself.
+
+    Measured on videocaptionstudio.com: `//:splat /:splat 301!`, added to "handle stray double
+    slashes". Netlify collapses the repeated slash in the source, leaving `/:splat -> /:splat` —
+    a catch-all self-redirect that served the homepage a literal `/:splat` and a 404.
+
+    Only a rule whose source and target are the SAME pattern once slashes are collapsed is
+    touched. `/*  /index.html 200` and `/old/*  /new/:splat 301` both go somewhere else and are
+    left alone. Needs no path list, which is why the per-path stripper never saw it.
+    """
+    removed: list[str] = []
+    out: list[str] = []
+    for line in content.splitlines():
+        toks = line.split()
+        stripped = line.strip()
+        if len(toks) >= 2 and not stripped.startswith("#"):
+            src, dst = toks[0], toks[1]
+            has_wildcard = "*" in src or _PLACEHOLDER_RE.search(src)
+            norm = lambda v: re.sub(r"/{2,}", "/", v).rstrip("/") or "/"  # noqa: E731
+            if has_wildcard and norm(src) == norm(dst) and src != dst:
+                removed.append(stripped)
+                continue
+        out.append(line)
+    new = "\n".join(out)
+    if content.endswith("\n") and not new.endswith("\n"):
+        new += "\n"
+    return new, removed
+
+
 def _strip_self_referential_rules(content: str, path: str) -> tuple[str, list[str]]:
     """Remove every `_redirects` rule whose source AND target both address the same
     clean URL family (`/x`, `/x/`, `/x.html`, `/x/index.html`) — i.e. self-referential
@@ -19101,21 +19134,28 @@ def _deep_fix_redirect_config_loops(
                      if _served_by else
                      f"{lp} : règles auto-référentielles retirées")
 
-    # Remove the self-referential `_redirects` rules for every fixed path.
-    if fixed_paths:
-        cfg_path = _locate_redirects_config(all_paths)
-        if cfg_path:
-            cr = _read(cfg_path)
-            if cr is not None:
-                cfg_content, cfg_sha = cr
-                new_cfg = cfg_content
-                total_removed: list[str] = []
-                for lp in fixed_paths:
-                    new_cfg, removed = _strip_self_referential_rules(new_cfg, lp)
-                    total_removed.extend(removed)
-                if total_removed and new_cfg != cfg_content and _put(cfg_path, new_cfg, cfg_sha, f"fix(seo): drop self-referential redirect rules (loop) — {cfg_path}"):
-                    changed.append(cfg_path)
-                    notes.append(f"{cfg_path} : {len(total_removed)} règle(s) auto-référentielle(s) retirée(s)")
+    # Remove the self-referential `_redirects` rules. Per-path first, then the wildcard ones —
+    # which name no path at all, so they never needed a flagged path to justify removing them.
+    cfg_path = _locate_redirects_config(all_paths)
+    if cfg_path:
+        cr = _read(cfg_path)
+        if cr is not None:
+            cfg_content, cfg_sha = cr
+            new_cfg = cfg_content
+            total_removed: list[str] = []
+            for lp in fixed_paths:
+                new_cfg, removed = _strip_self_referential_rules(new_cfg, lp)
+                total_removed.extend(removed)
+            new_cfg, wildcard_removed = _strip_self_referential_wildcards(new_cfg)
+            for rule in wildcard_removed:
+                notes.append(f"`{rule}` retirée : cette règle joker se redirige vers elle-même "
+                             "(les barres répétées sont normalisées), ce qui renvoyait le "
+                             "placeholder littéral et cassait toutes les URL, à commencer par "
+                             "la page d'accueil.")
+            total_removed.extend(wildcard_removed)
+            if total_removed and new_cfg != cfg_content and _put(cfg_path, new_cfg, cfg_sha, f"fix(seo): drop self-referential redirect rules (loop) — {cfg_path}"):
+                changed.append(cfg_path)
+                notes.append(f"{cfg_path} : {len(total_removed)} règle(s) auto-référentielle(s) retirée(s)")
     return changed, notes
 
 
