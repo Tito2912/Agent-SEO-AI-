@@ -85,8 +85,12 @@ class Spec:
 CATALOGUE: list[Spec] = [
     # ── A. balises <head> manquantes ou dupliquees ────────────────────────────────────────
     Spec("missing-title", "missing_title", "aucun titre declare.", title=None),
-    Spec("missing-meta-description", "missing_meta_description",
-         "aucune meta description.", desc=None),
+    # La famille N'EST PAS `missing_meta_description` : le crawler ne la reserve qu'aux pages
+    # NON indexables, et replie le cas indexable dans `meta_description_too_short_indexable`
+    # — parite Ahrefs, ecrite noir sur blanc dans seo_audit.py. Mesure : la page est bien servie
+    # sans aucune balise description, et c'est bien la variante « trop courte » qui se declenche.
+    Spec("missing-meta-description", "meta_description_too_short_indexable",
+         "aucune meta description sur une page indexable.", desc=None),
     Spec("missing-h1", "missing_h1", "aucun <h1> dans le corps.", h1=0),
     Spec("multiple-h1", "multiple_h1", "deux <h1> sur la meme page.", h1=2),
     Spec("multiple-title-tags", "multiple_title_tags", "deux balises <title>.",
@@ -150,7 +154,12 @@ CATALOGUE: list[Spec] = [
          "lien vers une URL qui redirige (declaree cote hote).", link_to_redirect=True),
 
     # ── G. donnees structurees ────────────────────────────────────────────────────────────
-    Spec("schema-invalid", "structured_data_schema_org_validation_error",
+    # `SCHEMA_ORG_HARD_ERRORS` ne contient que `invalid_json` et `missing_type` ; un prix en
+    # chaine appartient a `RICH_RESULTS_ERRORS`. Mesure : la page produit bien
+    # `schema_org_errors: ['offer_price_is_string']` et c'est la famille rich results qui compte.
+    # `structured_data_schema_org_validation_error` demanderait un JSON casse ou sans @type —
+    # une page a ajouter au parcours, pas une correction de celle-ci.
+    Spec("schema-invalid", "structured_data_google_rich_results_validation_error",
          "Offer dont le prix est une chaine.", jsonld_bad_price=True),
 
     # ── H. attribut lang ──────────────────────────────────────────────────────────────────

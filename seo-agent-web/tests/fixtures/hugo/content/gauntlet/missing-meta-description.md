@@ -3,7 +3,7 @@ url = "/gauntlet/missing-meta-description"
 title = 'Page de test du parcours d obstacles Noyaru'
 html_attrs = ' lang="fr"'
 raw_head = '''
-  <!-- FAMILLE VISEE : missing_meta_description — aucune meta description. -->
+  <!-- FAMILLE VISEE : meta_description_too_short_indexable — aucune meta description sur une page indexable. -->
   <meta name="viewport" content="width=device-width" />
   <title>Page de test du parcours d'obstacles Noyaru</title>
   <link rel="canonical" href="https://noyaru-stack-hugo.netlify.app/gauntlet/missing-meta-description" />

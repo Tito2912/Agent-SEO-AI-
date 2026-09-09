@@ -1,5 +1,5 @@
 <script setup>
-// FAMILLE VISEE : structured_data_schema_org_validation_error
+// FAMILLE VISEE : structured_data_google_rich_results_validation_error
 // Offer dont le prix est une chaine.
 useHead({
     title: 'Page de test du parcours d\'obstacles Noyaru',

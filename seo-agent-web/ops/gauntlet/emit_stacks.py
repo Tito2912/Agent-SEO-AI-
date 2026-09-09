@@ -48,10 +48,20 @@ SITES: dict[str, str] = {
     "next-app": "https://noyaru-stack-next-app.netlify.app",
 }
 
+_VIEWPORT_SHELL = (
+    "MESURE sur le site deploye : la page servie porte UNE balise viewport alors qu'elle n'en "
+    "declare aucune. Le generateur l'injecte depuis sa coquille partagee, et rien dans l'API "
+    "d'une page ne l'enleve — la famille ne peut donc pas s'y produire.")
+
+_HEAD_API_DEDUPES = (
+    "MESURE sur le site deploye : la page servie n'en porte qu'UNE alors qu'elle en declare "
+    "deux. L'API de tete de cette stack est un dictionnaire, pas une liste de balises : la "
+    "seconde valeur ecrase la premiere au lieu de s'y ajouter.")
+
 # Ce qu'une stack ne peut pas exprimer PAR PAGE, et pourquoi. La raison est toujours
 # architecturale : le fragment concerne vit dans un fichier partage par tout le site, donc le
 # modifier depuis une page changerait les autres — ce que le correcteur refuse a juste titre
-# (`_PER_PAGE_ONLY_KEYS`, `repo_index.is_shared_path`).
+# (`_PER_PAGE_ONLY_KEYS`, `repo_index.is_shared_path`) — ou bien l'API de tete deduplique.
 CANNOT: dict[str, dict[str, str]] = {
     "next-app": {
         "html_lang_attribute_missing":
@@ -75,6 +85,9 @@ CANNOT: dict[str, dict[str, str]] = {
             "<Html lang> vit dans pages/_document.js, partage par tout le site.",
         "html_lang_attribute_invalid": "meme raison.",
         "hreflang_defined_but_html_lang_missing": "meme raison.",
+        "viewport_not_set": _VIEWPORT_SHELL,
+        "multiple_title_tags": _HEAD_API_DEDUPES,
+        "multiple_meta_description_tags": _HEAD_API_DEDUPES,
     },
     "sveltekit": {
         "html_lang_attribute_missing":
@@ -82,12 +95,20 @@ CANNOT: dict[str, dict[str, str]] = {
             "dans <head>.",
         "html_lang_attribute_invalid": "meme raison.",
         "hreflang_defined_but_html_lang_missing": "meme raison.",
+        "viewport_not_set": _VIEWPORT_SHELL,
+        "multiple_title_tags": _HEAD_API_DEDUPES,
     },
     "gatsby": {
         "html_lang_attribute_missing":
             "les attributs de <html> passent par onRenderBody dans gatsby-ssr.js, global au site.",
         "html_lang_attribute_invalid": "meme raison.",
         "hreflang_defined_but_html_lang_missing": "meme raison.",
+        "viewport_not_set": _VIEWPORT_SHELL,
+    },
+    "nuxt": {
+        "viewport_not_set": _VIEWPORT_SHELL,
+        "multiple_title_tags": _HEAD_API_DEDUPES,
+        "multiple_meta_description_tags": _HEAD_API_DEDUPES,
     },
 }
 
@@ -322,7 +343,13 @@ def emit_astro(spec: Spec, site: str) -> tuple[str, str]:
     """
     lang = "" if spec.lang is None else f' lang="{spec.lang}"'
     head = render_html_tags(head_tags(spec, site))
-    body = "\n".join("    " + b for b in body_bits(spec, site))
+    # `is:inline` est OBLIGATOIRE ici. Sans lui, Astro TRAITE le script : mesure sur le site
+    # deploye, `<script src="http://.../app.js">` ressortait en
+    # `<script type="module" src="/_astro/….js">` — l'URL http avait disparu et la famille ne
+    # pouvait plus se declencher. `is:inline` est l'idiome Astro pour un script laisse tel quel.
+    body = "\n".join(
+        "    " + (b.replace("<script ", "<script is:inline ", 1) if b.startswith("<script") else b)
+        for b in body_bits(spec, site))
     doc = (f"---\n// FAMILLE VISEE : {spec.family}\n// {spec.note}\n---\n"
            f"<!doctype html>\n<html{lang}>\n  <head>\n"
            f'    <meta charset="utf-8" />\n{head}\n  </head>\n'
@@ -404,9 +431,17 @@ def emit_nuxt(spec: Spec, site: str) -> tuple[str, str]:
         head_obj.append("    meta: [\n" + ",\n".join(metas) + "\n    ],")
     if links:
         head_obj.append("    link: [\n" + ",\n".join(links) + "\n    ],")
+    if spec.http_js:
+        # Le script passe par useHead, PAS par le template. Mesure sur le site deploye : ecrit
+        # dans le template, il figurait bien dans le HTML servi mais avait disparu du DOM une
+        # fois Vue hydrate — et c'est le DOM rendu que le crawler mesure. useHead est de toute
+        # facon l'idiome Nuxt pour une balise de tete, donc c'est ce que le correcteur verra.
+        scripts.append("      { src: "
+                       + _js_str(site.replace("https://", "http://") + "/app.js") + " }")
     if scripts:
         head_obj.append("    script: [\n" + ",\n".join(scripts) + "\n    ],")
-    body = "\n".join("    " + b for b in body_bits(spec, site))
+    body = "\n".join("    " + b for b in body_bits(spec, site)
+                     if not b.startswith("<script"))
     doc = ("<script setup>\n"
            f"// FAMILLE VISEE : {spec.family}\n// {spec.note}\n"
            "useHead({\n" + "\n".join(head_obj) + "\n});\n</script>\n\n"
@@ -458,8 +493,15 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
                 "export const viewport = {};\n")
     body = "\n".join("      " + b for b in body_bits(spec, site))
     extra = ""
+    if spec.http_css:
+        # L'objet `metadata` ne sait pas declarer un <link rel="stylesheet"> : il n'a de cle que
+        # pour les balises qu'il connait. Mesure : `https_page_links_to_http_css` etait la SEULE
+        # famille manquante sur cette stack, parce que cet emetteur ne passe pas par
+        # `head_tags`. Next remonte dans <head> un <link> rendu par la page.
+        extra += ('\n      <link rel="stylesheet" href="'
+                  + site.replace("https://", "http://") + '/style.css" />')
     if spec.jsonld_bad_price:
-        extra = ('\n      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
+        extra += ('\n      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
                  '`{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de test",'
                  '"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}` }} />')
     doc = (f"// FAMILLE VISEE : {spec.family}\n// {spec.note}\n"
@@ -502,6 +544,23 @@ def build(stack: str, root: Path | None = None) -> tuple[list[str], list[tuple[s
         reason = skipped(stack, spec)
         if reason:
             refused.append((spec.slug, reason))
+            # Un refus doit aussi EFFACER la page ecrite par un passage precedent. Sans cela,
+            # une famille declaree impossible continue d'etre deployee et crawlee, et le banc
+            # se contredit lui-meme : la page produit l'anomalie que le refus dit inatteignable.
+            rel, _ = emit(spec, site)
+            stale = base / rel
+            # Defensif de bout en bout : sous Windows, OneDrive garde des verrous et un
+            # `rmdir` refuse a fait tomber toute la generation au milieu des neuf stacks. Un
+            # dossier vide qui survit est sans consequence ; une generation interrompue, non.
+            try:
+                if stale.exists():
+                    stale.unlink()
+                # SvelteKit range chaque route dans son propre dossier : le laisser vide ferait
+                # un 404 la ou l'index du parcours annonce une page.
+                if stale.parent.is_dir() and not any(stale.parent.iterdir()):
+                    stale.parent.rmdir()
+            except OSError as exc:
+                print(f"   (nettoyage impossible pour {rel} : {exc.strerror})")
             continue
         rel, content = emit(spec, site)
         path = base / rel

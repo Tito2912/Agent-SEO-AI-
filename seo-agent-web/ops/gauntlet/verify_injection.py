@@ -103,6 +103,33 @@ def detected(report: Path) -> dict[str, int]:
     return out
 
 
+def _urls_of(block: object) -> list[str]:
+    """Les URL portees par un bloc d'anomalie, quelle que soit la cle qui les range."""
+    if isinstance(block, list):
+        return [str(u) for u in block if isinstance(u, str)]
+    if not isinstance(block, dict):
+        return []
+    for key in ("urls", "items", "pages", "examples", "sample"):
+        val = block.get(key)
+        if isinstance(val, list):
+            return [str(u) if isinstance(u, str) else str((u or {}).get("url") or "")
+                    for u in val]
+    return []
+
+
+def outside_gauntlet(report: Path, family: str) -> bool:
+    """La famille ne touche-t-elle QUE des pages hors du parcours ?
+
+    Les fixtures portent leurs propres defauts, anterieurs au banc : la page `a-propos` d'Astro
+    declare une description de 268 caracteres, deliberement, pour la famille des longueurs. Les
+    compter comme « parasites » du parcours ferait crier au loup a chaque passage et noierait un
+    vrai parasite le jour ou il apparaitra.
+    """
+    data = json.loads(report.read_text(encoding="utf-8"))
+    urls = _urls_of((data.get("issues") or {}).get(family))
+    return bool(urls) and not any("/gauntlet" in u for u in urls)
+
+
 def compare(stack: str, report: Path) -> dict:
     want = expected_families(stack)
     got = detected(report)
@@ -118,8 +145,10 @@ def compare(stack: str, report: Path) -> dict:
                    and not any(k == n or k.startswith(n + "_") for n in want)
                    and k.replace("_indexable", "").replace("_not_indexable", "") not in want
                    and k not in base - want)
+    hors = [k for k in extra if outside_gauntlet(report, k)]
+    extra = [k for k in extra if k not in hors]
     return {"stack": stack, "attendues": len(want), "detectees": len(want) - len(missing),
-            "manquantes": missing, "parasites": extra}
+            "manquantes": missing, "parasites": extra, "hors_parcours": hors}
 
 
 def main() -> int:
@@ -153,6 +182,8 @@ def main() -> int:
             print(f"             MANQUE   {name}")
         for name in r["parasites"]:
             print(f"             PARASITE {name}")
+        for name in r.get("hors_parcours", []):
+            print(f"             (hors parcours, defaut propre a la fixture) {name}")
         ok = ok and not r["manquantes"] and not r["parasites"]
     (workdir / "injection.json").write_text(
         json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")

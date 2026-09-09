@@ -20,10 +20,8 @@
   <li><a href="/gauntlet/missing-meta-description">missing-meta-description</a></li>
   <li><a href="/gauntlet/missing-h1">missing-h1</a></li>
   <li><a href="/gauntlet/multiple-h1">multiple-h1</a></li>
-  <li><a href="/gauntlet/multiple-title-tags">multiple-title-tags</a></li>
   <li><a href="/gauntlet/multiple-meta-description-tags">multiple-meta-description-tags</a></li>
   <li><a href="/gauntlet/title-too-short">title-too-short</a></li>
-  <li><a href="/gauntlet/viewport-not-set">viewport-not-set</a></li>
   <li><a href="/gauntlet/duplicate-a">duplicate-a</a></li>
   <li><a href="/gauntlet/duplicate-b">duplicate-b</a></li>
   <li><a href="/gauntlet/canonical-http">canonical-http</a></li>

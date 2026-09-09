@@ -5,3 +5,8 @@ url: "http://127.0.0.1:8747"
 permalink: /:title:output_ext
 plugins: []
 exclude: [README.md, Gemfile, Gemfile.lock, vendor, '*.log']
+# Jekyll ecarte d'office tout fichier commençant par `_`, y compris `_redirects` — le fichier de
+# redirections de l'hote. Mesure en ligne : `/gauntlet/ancienne-page` renvoyait 404 sur cette
+# stack contre 301 sur toutes les autres, ce qui privait le parcours de la famille
+# `page_has_links_to_redirect` ET lui ajoutait un « lien vers page cassee » parasite.
+include: ['_redirects']
