@@ -9,8 +9,6 @@ a later family sees the earlier fixes (that is also what a real multi-issue run 
 import datetime as dt
 import json
 import os
-import re
-import subprocess
 import sys
 
 sys.path.insert(0, "seo-agent-web")

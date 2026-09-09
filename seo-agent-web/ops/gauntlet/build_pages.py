@@ -109,7 +109,7 @@ PAGES["duplicate-b"] = page("duplicate-b", family="duplicate_titles + duplicate_
 # ── B. canonical ──────────────────────────────────────────────────────────────────────────────
 PAGES["canonical-http"] = page("canonical-http", family="canonical_from_https_to_http",
     note="page servie en https, canonical en http.",
-    canonical=f"http://noyaru-stack-static-html.netlify.app/gauntlet/canonical-http.html")
+    canonical="http://noyaru-stack-static-html.netlify.app/gauntlet/canonical-http.html")
 PAGES["canonical-other"] = page("canonical-other",
     family="non_canonical_page_specified_as_canonical_one",
     note="canonical vers une page qui porte elle-meme un autre canonical.",
