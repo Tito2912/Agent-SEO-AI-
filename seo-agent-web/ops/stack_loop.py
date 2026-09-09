@@ -83,7 +83,14 @@ class Stack:
     env: dict[str, str] = field(default_factory=dict)
     # Directories that are BUILD OUTPUT: committing them would make the deploy a no-op and the
     # re-crawl meaningless, since the site would not be rebuilt from the patched source.
-    ignore: tuple[str, ...] = ("node_modules", "dist", "build", "public", "out", ".output",
+    # `public` N'EST PAS ici, et c'est un correctif, pas un oubli. Chez Gatsby et Hugo, public/
+    # est bien la sortie de build — ces deux stacks le declarent donc explicitement dans leur
+    # propre liste. Mais chez Astro, Nuxt et les deux Next, public/ est le dossier SOURCE des
+    # fichiers statiques : l'ignorer par defaut le retirait de l'arborescence publiee. Mesure sur
+    # les sites en ligne le 09/09/2026 — `/sitemap.xml` et `/robots.txt` repondaient 404 sur
+    # astro, nuxt et next-pages. Consequence : le crawler n'avait aucun sitemap a lire sur ces
+    # stacks, donc aucune famille sitemap ne pouvait s'y declencher.
+    ignore: tuple[str, ...] = ("node_modules", "dist", "build", "out", ".output",
                                "_site", ".astro", ".svelte-kit", ".cache", ".netlify",
                                # The framework CACHES, which are build output under another
                                # name: measured, `.next` alone put 74 generated files into the
