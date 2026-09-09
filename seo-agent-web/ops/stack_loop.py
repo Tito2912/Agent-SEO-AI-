@@ -46,6 +46,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -262,6 +263,19 @@ def cmd_prepare(args) -> int:
 
 # ── publish ───────────────────────────────────────────────────────────────────────────────────
 
+_SECRET_RE = re.compile(r"\b(gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,})")
+
+
+def _scrub(text: str) -> str:
+    """Masquer tout ce qui ressemble a un jeton GitHub avant d'imprimer quoi que ce soit.
+
+    Dernier filet, pas la protection principale : le jeton ne doit deja plus se trouver dans
+    l'URL ni dans argv. Mais un message d'erreur de git peut le recracher de son cote, et c'est
+    exactement dans ce cas-la qu'on ne le relit pas avant de l'afficher.
+    """
+    return _SECRET_RE.sub("<jeton masque>", text or "")
+
+
 def _github(method: str, path: str, token: str, payload: dict | None = None) -> dict:
     import requests
     r = requests.request(method, f"{GITHUB_API}{path}", timeout=30, json=payload,
@@ -293,16 +307,37 @@ def cmd_publish(args) -> int:
                                           "auto_init": False})
         print(f"dépôt {args.repo} créé")
 
-    run = lambda *a: subprocess.run(a, cwd=tree, check=True, capture_output=True, text=True)  # noqa: E731
+    def run(*a: str) -> subprocess.CompletedProcess:
+        try:
+            return subprocess.run(a, cwd=tree, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as exc:
+            # NE JAMAIS laisser remonter l'exception telle quelle : son repr contient
+            # `process.args`. Le 09/09/2026, neuf pushs refuses pour un simple manque de droits
+            # ont imprime le jeton en clair neuf fois dans la trace.
+            raise SystemExit(_scrub(
+                f"{' '.join(a[:3])} a echoue (code {exc.returncode}) :\n"
+                f"{exc.stderr or exc.stdout or ''}")) from None
+
     if not (tree / ".git").exists():
         run("git", "init", "-b", "main")
         run("git", "add", "-A")
         run("git", "-c", "user.email=noyaru@example.invalid", "-c", "user.name=Noyaru",
             "commit", "-m", f"fixture {stack.fixture} avec son defaut injecte")
-    # The URL is passed to THIS push and never stored: `git remote add` would write the token
-    # into .git/config, where it outlives the run and the operator's attention.
-    run("git", "push", "--force",
-        f"https://x-access-token:{token}@github.com/{owner}/{name}.git", "main:main")
+    # Le jeton ne figure NI dans l'URL NI dans argv : il est ecrit le temps du push dans un
+    # fichier d'identifiants temporaire, que git lit tout seul. `git remote add` l'aurait grave
+    # dans .git/config ou il survit au run ; le mettre dans l'URL le laisse fuir par toute
+    # erreur de sous-processus, par la liste des processus et par les traces de git lui-meme.
+    cred_dir = Path(tempfile.mkdtemp(prefix="noyaru-cred-"))
+    cred = cred_dir / "git-credentials"
+    try:
+        cred.write_text(f"https://x-access-token:{token}@github.com\n", encoding="utf-8")
+        os.chmod(cred, 0o600)
+        run("git", "-c", "credential.helper=",
+            "-c", f"credential.helper=store --file={cred.as_posix()}",
+            "push", "--force", f"https://github.com/{owner}/{name}.git", "main:main")
+    finally:
+        cred.unlink(missing_ok=True)
+        shutil.rmtree(cred_dir, ignore_errors=True)
     print(f"{args.stack:<12} poussé sur https://github.com/{args.repo}")
     # ASCII on purpose: this runs on a Windows console in cp1252, where a printed arrow raises
     # UnicodeEncodeError and makes a successful push look like a crash.
