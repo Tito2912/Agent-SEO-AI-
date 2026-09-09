@@ -17119,9 +17119,24 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
     label = "titre" if kind == "title" else "meta description"
     lines = []
     truncated_any = False
+    absent_any = False
     for u, info in list(samples.items())[:25]:
         rendered = str(info.get("rendered") or "")
         ln = info.get("len")
+        # ABSENTE n'est pas COURTE, et c'est le fait que le repli IA ne recevait pas. Sur une
+        # page INDEXABLE, le crawler ne leve pas `missing_meta_description` — parite Ahrefs, il
+        # replie le cas dans `..._too_short_indexable` — donc la page arrive ici, dans une
+        # famille de LONGUEUR dont toutes les consignes parlent de raccourcir. Le reecriveur
+        # borne la saute a juste titre (rien a remplacer sur place), et le modele lisait
+        # « RENDU actuel (0 car.) » au milieu d'instructions de raccourcissement : il ne
+        # touchait a rien. Mesure sur le parcours static-html — la page ressortait sans
+        # description apres correction, alors qu'elle etait la PREMIERE cible de sa famille.
+        if not rendered.strip() and (ln == 0 or ln is None):
+            absent_any = True
+            lines.append(
+                f"  - {u} → AUCUNE {label} sur cette page : la balise n'existe pas, il faut "
+                f"l'AJOUTER, avec un RENDU de {low}-{high} caractères, dans la langue de la page.")
+            continue
         # A sample shorter than the length it is labelled with is TRUNCATED. Older crawls capped
         # it at 200 characters while reporting the true length, so the model was shown a
         # 200-character string called "268 caractères" — an instruction it cannot satisfy, and it
@@ -17136,6 +17151,14 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
         # of the constraint. Subtraction is a task it can actually carry out.
         excess = f" → RETIRE AU MOINS {ln - ceiling} caractères" if isinstance(ln, int) and ln > ceiling else ""
         lines.append(f"  - {u} → {label} RENDU actuel ({ln} car.){suffix}{excess} : \"{rendered}\"")
+    if absent_any:
+        lines.append(
+            "  ATTENTION : les pages marquées « AUCUNE » n'ont AUCUNE balise de ce type — il "
+            "faut la CRÉER, à l'endroit qu'impose la stack de ce fichier, et non raccourcir une "
+            "valeur existante. Les consignes de raccourcissement ci-dessus ne les concernent "
+            "pas. N'en ajoute qu'UNE : une seconde balise à côté d'une existante échangerait "
+            "cette anomalie contre celle des balises en double."
+        )
     if truncated_any:
         lines.append(
             "  ATTENTION : les extraits marqués [EXTRAIT TRONQUÉ] sont coupés — ils ne montrent "
