@@ -27,8 +27,14 @@ from backend import repo_index  # noqa: E402
 # scratchpad is session-scoped and this bench has to outlive the session that built it.
 SD = os.environ["GAUNTLET_WORKDIR"]
 TOKEN = os.environ["FIXTURE_TOKEN"]
-OWNER, REPO, BRANCH = "pployeraffiliation-a11y", "noyaru-stack-static-html", "main"
-SITE = "noyaru-stack-static-html.netlify.app"
+# La stack se choisit par `GAUNTLET_STACK`. Le parcours n'a plus rien de propre au HTML statique
+# depuis qu'il existe dans les neuf idiomes, et c'est justement d'une stack a l'autre que les
+# defauts de ciblage se voient : un objet `metadata` TypeScript ne se corrige pas comme du
+# front matter YAML.
+STACK = os.environ.get("GAUNTLET_STACK", "static-html")
+OWNER, BRANCH = "pployeraffiliation-a11y", "main"
+REPO = f"noyaru-stack-{STACK}"
+SITE = f"{REPO}.netlify.app"
 
 report = json.load(open(os.path.join(SD, "before", "report.json"), encoding="utf-8"))
 issues = report["issues"]
@@ -54,7 +60,7 @@ paths = [b["path"] for b in tree.get("tree", []) if b.get("type") == "blob"]
 idx = repo_index.build_repo_index(paths)
 base = m._github_api_get(m._github_api_path("repos", OWNER, REPO, "git", "ref", f"heads/{BRANCH}"),
                          token=TOKEN)["object"]["sha"]
-fix_branch = f"gauntlet-{dt.datetime.now(dt.UTC).strftime('%Y%m%d-%H%M%S')}"
+fix_branch = f"gauntlet-{STACK}-{dt.datetime.now(dt.UTC).strftime('%Y%m%d-%H%M%S')}"
 m._github_api_post(m._github_api_path("repos", OWNER, REPO, "git", "refs"), token=TOKEN,
                    json_body={"ref": f"refs/heads/{fix_branch}", "sha": base})
 print("branche :", fix_branch)
