@@ -18525,7 +18525,14 @@ def _rewrite_length_values(
         value = _length_value_for_page(current=target, kind=kind, url=str(url),
                                        site_name=site_name, model_override=model_override,
                                        affix_len=affix)
-        if not value or len(value) + affix > ceiling or value == target:
+        # Both ends here too. Only the ceiling was checked, so a value that came back still under
+        # the crawler's floor was written and counted as a fix: the anomaly survives the
+        # correction and the customer is billed a unit for it. And the length that decides is the
+        # RENDERED one, as everywhere else in this family — `&amp;` is one character on screen.
+        _new_len = _rendered_len(value) + affix
+        if not value or value == target:
+            continue
+        if _new_len > ceiling or _new_len < _LENGTH_FLOORS[kind]:
             continue
         safe = _safe_inline_replacement(new, target, value)
         if safe is None:
@@ -18585,6 +18592,15 @@ _META_DESC_VALUE_RE = re.compile(
     r'(<meta\b[^>]*name\s*=\s*["\']description["\'][^>]*content\s*=\s*)(["\'])(.*?)(\2)',
     re.I | re.S)
 _FRONTMATTER_VALUE_RE = re.compile(r"(?m)^(\s*(title|description)\s*:\s*)(.+?)\s*$")
+# Front matter is the LEADING `---` block, and nothing else in the file. The line shape above is
+# equally how a JavaScript object literal writes a property — `export const metadata = { title:
+# '...', }` IS Next.js App Router, Astro and Nuxt — and there the value group runs to the end of
+# the line, so it swallows the closing quote and the trailing comma. Trimming that shipped an
+# unterminated string literal into the pull request (nothing downstream parses what we commit),
+# and it counted those three characters toward the ceiling, so a title of exactly 70 — at the
+# ceiling, therefore legal — was measured at 73 and cut.
+_FRONTMATTER_BLOCK_RE = re.compile(
+    r"\A\ufeff?---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
 
 
 _HTTPS_DOWNGRADE_RE = re.compile(r'(["\'(])http://([^"\'\s)]+)')
@@ -18609,6 +18625,12 @@ def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, li
         rest = match.group(2)
         if "https://" + rest not in old_content:
             return match.group(0)  # never was https here; not ours to change
+        if match.group(0) in old_content:
+            # Already http BEFORE this patch, so this patch did not downgrade it. Upgrading it
+            # anyway puts a change no family asked for into the pull request — and since the
+            # caller tests `no_change` AFTER the guards, a guard-only edit is enough to turn a
+            # patch that changed nothing into a commit and a billed correction unit.
+            return match.group(0)
         notes.append("http:// -> https:// sur " + rest[:60])
         return match.group(1) + "https://" + rest
 
@@ -18652,12 +18674,23 @@ def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, l
 
         out = regex.sub(_one, out)
 
-    # Front matter (MDX, Markdown, Jekyll): the same values, written as YAML.
-    old_fm = {m.group(2): m.group(3) for m in _FRONTMATTER_VALUE_RE.finditer(old_content)}
+    # Front matter (MDX, Markdown, Jekyll): the same values, written as YAML — inside the leading
+    # `---` block ONLY. Everywhere else that line shape belongs to somebody else's syntax; see
+    # `_FRONTMATTER_BLOCK_RE`. A file with no such block leaves this pass with nothing to do.
+    block = _FRONTMATTER_BLOCK_RE.match(out)
+    if not block:
+        return out, notes
+    old_block = _FRONTMATTER_BLOCK_RE.match(old_content)
+    # A LIST of old values per field, not one: keyed by field name, the dict remembered only the
+    # LAST `title:` line of the old file, so every earlier one compared unequal and was trimmed
+    # even though the patch never wrote it — the exact opposite of what this function promises.
+    old_fm: dict[str, list[str]] = {}
+    for _m in _FRONTMATTER_VALUE_RE.finditer(old_block.group(1) if old_block else ""):
+        old_fm.setdefault(_m.group(2), []).append(_m.group(3))
 
     def _one_fm(match: "re.Match[str]") -> str:
         field, value = match.group(2), match.group(3)
-        if old_fm.get(field) == value:
+        if value in old_fm.get(field, []):
             return match.group(0)
         quoted = len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'"
         bare = value[1:-1] if quoted else value
@@ -18666,7 +18699,8 @@ def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, l
             return match.group(0)
         return match.group(1) + (value[0] + fixed + value[0] if quoted else fixed)
 
-    return _FRONTMATTER_VALUE_RE.sub(_one_fm, out), notes
+    start, end = block.start(1), block.end(1)
+    return out[:start] + _FRONTMATTER_VALUE_RE.sub(_one_fm, out[start:end]) + out[end:], notes
 
 
 def _rewrite_jsonld_numeric_strings(content: str) -> tuple[str, int]:
