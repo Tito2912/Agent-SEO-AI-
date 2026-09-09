@@ -18660,6 +18660,57 @@ def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, li
     return _HTTPS_DOWNGRADE_RE.sub(_one, new_content), notes
 
 
+_QUOTED_VALUE_LINE_RE = re.compile(
+    r"""^(\s*(?:const\s+|let\s+|var\s+)?[A-Za-z_$][\w$]*\s*[:=]\s*)(['"])(.*)(\2)(\s*[,;]?\s*)$""")
+
+
+def _escape_quotes_in_written_values(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Echapper le delimiteur qu'une valeur ecrite par ce patch contient sans l'echapper.
+
+    Mesure sur le passage des neuf stacks : HUIT fichiers livres non parsables, sur nuxt et
+    next-app, toujours la meme ligne —
+
+        title: 'Page de test du parcours d'obstacles Noyaru - Duplicate A',
+
+    ou l'apostrophe de `d'obstacles` TERMINE la chaine. `node --check` : `SyntaxError`. En
+    francais c'est le cas courant, et le produit corrige des sites francais. Les stacks dont les
+    valeurs atterrissent dans un attribut a guillemets DOUBLES n'ont rien eu : le defaut ne
+    frappe que le litteral JS a guillemets simples.
+
+    Rien en aval ne l'arretait — `_github_patched_content_error` ne mesure que taille et vide.
+
+    Deux abstentions volontaires, parce qu'un garde-fou qui casse une ligne valide est pire que
+    le defaut qu'il repare :
+    * une ligne que ce patch n'a PAS ecrite n'est jamais touchee, comme pour les trois autres ;
+    * une valeur qui contient ` + ` ou `${` est une EXPRESSION, pas une chaine : y coller un
+      antislash casserait du code qui marche. On la laisse, quitte a ne pas la reparer.
+    """
+    if not new_content or new_content == old_content:
+        return new_content, []
+    old_lines = set(old_content.splitlines())
+    notes: list[str] = []
+    out: list[str] = []
+    for line in new_content.splitlines():
+        match = _QUOTED_VALUE_LINE_RE.match(line)
+        if not match or line in old_lines:
+            out.append(line)
+            continue
+        head, quote, value, close, tail = match.groups()
+        if " + " in value or "${" in value:
+            out.append(line)
+            continue
+        fixed = re.sub(r"(?<!\\)" + re.escape(quote), "\\\\" + quote, value)
+        if fixed == value:
+            out.append(line)
+            continue
+        notes.append(f"{quote} echappe dans une valeur ecrite : {value[:60]}")
+        out.append(head + quote + fixed + close + tail)
+    joined = "\n".join(out)
+    if new_content.endswith("\n"):
+        joined += "\n"
+    return joined, notes
+
+
 def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, list[str]]:
     """Trim any title/description this patch WROTE back under its ceiling.
 
@@ -20023,7 +20074,11 @@ def _deep_patch_issue_files(
         # nothing on its path measures length.
         new_content, _len_notes = _enforce_length_ceilings(new_content, raw)
         new_content, _scheme_notes = _forbid_https_downgrade(new_content, raw)
-        for _n in _len_notes + _scheme_notes:
+        # En DERNIER : les deux garde-fous ci-dessus reecrivent des valeurs, et une valeur
+        # raccourcie peut se terminer sur une apostrophe tout comme celle d'origine. Echapper
+        # avant eux laisserait passer ce qu'ils viennent d'ecrire.
+        new_content, _quote_notes = _escape_quotes_in_written_values(new_content, raw)
+        for _n in _len_notes + _scheme_notes + _quote_notes:
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue

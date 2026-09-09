@@ -1,0 +1,93 @@
+"""Une apostrophe dans une chaine a guillemets simples casse le fichier.
+
+Mesure sur le passage des neuf stacks (09/09/2026) : le correcteur a livre HUIT fichiers
+JS/TS non parsables, sur nuxt (3) et next-app (5). Toujours la meme ligne :
+
+    title: 'Page de test du parcours d'obstacles Noyaru - Duplicate A',
+
+`node --check` repond `SyntaxError: Unexpected identifier 'obstacles'` — l'apostrophe de
+`d'obstacles` TERMINE la chaine. En francais c'est le cas COURANT, pas le cas limite, et le
+produit corrige des sites francais.
+
+Les quatre autres stacks JS sont indemnes parce que leurs valeurs atterrissent dans des
+attributs a guillemets doubles, ou une apostrophe ne signifie rien. Le defaut ne frappe que la
+ou la valeur tombe dans un litteral JS a guillemets simples.
+
+Rien en aval ne l'arretait : `_github_patched_content_error` ne regarde que la taille et le
+vide. Un fichier qui ne compile plus partait au commit, dans la pull request, et chez le client.
+
+Le garde-fou n'agit QUE sur les lignes que ce patch a ecrites — meme regle que les trois autres,
+pour la meme raison : une apostrophe deja presente avant le patch appartient au fichier, pas a
+nous.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+WEB_ROOT = Path(__file__).resolve().parents[1]
+if str(WEB_ROOT) not in sys.path:
+    sys.path.insert(0, str(WEB_ROOT))
+
+os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
+os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
+
+from backend import app as app_module  # noqa: E402
+
+OLD = ("export const metadata = {\n"
+       "  title: 'Ancien titre',\n"
+       "  description: 'Ancienne description.',\n"
+       "};\n")
+
+
+def test_an_apostrophe_written_by_the_patch_is_escaped() -> None:
+    """Le cas mesure sur next-app et nuxt."""
+    new = OLD.replace("Ancien titre", "Page de test du parcours d'obstacles Noyaru")
+    out, notes = app_module._escape_quotes_in_written_values(new, OLD)
+    line = next(ln for ln in out.splitlines() if "title:" in ln)
+    assert line.count("'") == 3, f"la chaine n'est pas refermee proprement : {line!r}"
+    assert "d\\'obstacles" in line, f"apostrophe non echappee : {line!r}"
+    assert notes
+
+
+def test_a_double_quoted_value_is_left_alone() -> None:
+    """Une apostrophe dans une chaine a guillemets DOUBLES est parfaitement legale — c'est
+    pourquoi astro, gatsby, sveltekit et next-pages sont sortis indemnes du passage."""
+    old = '  title: "Ancien",\n'
+    new = '  title: "Le parcours d\'obstacles",\n'
+    out, notes = app_module._escape_quotes_in_written_values(new, old)
+    assert out == new and notes == []
+
+
+def test_a_line_the_patch_did_not_write_is_left_alone() -> None:
+    """Meme regle que les trois autres garde-fous : ce qui etait la avant ne nous appartient
+    pas. Un fichier deja casse a sa propre famille et sa propre pull request."""
+    already = "  title: 'Un titre d'origine',\n"
+    out, notes = app_module._escape_quotes_in_written_values(already, already)
+    assert out == already and notes == []
+
+
+def test_an_already_escaped_apostrophe_is_not_doubled() -> None:
+    """Reechapper produirait `d\\\\'obstacles`, soit un antislash litteral dans le titre servi."""
+    new = OLD.replace("Ancien titre", "Le parcours d\\'obstacles")
+    out, _ = app_module._escape_quotes_in_written_values(new, OLD)
+    assert "d\\\\'" not in out
+    assert "d\\'obstacles" in out
+
+
+def test_an_expression_is_never_touched() -> None:
+    """`title: 'a' + suffixe` et un gabarit `${...}` sont du CODE, pas une valeur. Y coller un
+    antislash casserait une ligne qui marchait."""
+    old = "  title: 'x',\n"
+    for expr in ("  title: 'Debut d' + suffixe,\n", "  title: `Debut ${marque} d'ici`,\n"):
+        out, notes = app_module._escape_quotes_in_written_values(expr, old)
+        assert out == expr and notes == [], f"expression modifiee : {expr!r}"
+
+
+def test_the_guard_runs_on_every_patch() -> None:
+    import inspect
+    src = inspect.getsource(app_module._deep_patch_issue_files)
+    assert "_escape_quotes_in_written_values(new_content, raw)" in src
+    assert src.index("_escape_quotes_in_written_values") < src.index('patch.get("no_change")')
