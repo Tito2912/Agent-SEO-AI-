@@ -78,3 +78,28 @@ def test_the_guard_runs_on_every_patch_not_just_the_length_family() -> None:
     src = inspect.getsource(app_module._deep_patch_issue_files)
     assert "_enforce_length_ceilings(new_content, raw)" in src
     assert src.index("_enforce_length_ceilings") < src.index('patch.get("no_change")')
+
+
+def test_a_title_written_inside_a_comment_is_not_a_title() -> None:
+    """The guard's own defect, found by the gauntlet on its third pass.
+
+    A fixture comment said the word `<title>` out loud. The lazy `.*?` match ran from that
+    occurrence all the way to the real closing tag and "trimmed" the markup in between, writing a
+    title made of HTML fragments — and the page then had no usable title at all. A customer
+    comment can say `<title>` just as easily.
+    """
+    old = ('<!-- ici, aucune balise <title>. -->\n<head>\n'
+           '  <meta charset="utf-8" />\n</head>')
+    new = old.replace("</head>", "  <title>" + ("Un titre neuf " * 8) + "</title>\n</head>")
+    out, notes = app_module._enforce_length_ceilings(new, old)
+    value = re.findall(r"<title>([^<]*)</title>", out)
+    assert value and app_module._rendered_len(value[0]) <= app_module._LENGTH_CEILINGS["title"]
+    assert "aucune balise <title>. -->" in out, "the comment was rewritten"
+    assert '<meta charset="utf-8" />' in out, "markup between the two was swallowed"
+    assert notes
+
+
+def test_a_page_with_only_a_commented_title_is_left_alone() -> None:
+    old = '<!-- aucune balise <title>. -->\n<head><meta charset="utf-8" /></head>'
+    out, notes = app_module._enforce_length_ceilings(old, old)
+    assert out == old and notes == []

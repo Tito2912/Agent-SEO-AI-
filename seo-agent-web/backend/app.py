@@ -18576,7 +18576,11 @@ _STRUCTURED_DATA_KEYS = _with_indexability_variants({
 })
 
 
-_TITLE_TAG_VALUE_RE = re.compile(r"(<title[^>]*>)(.*?)(</title>)", re.I | re.S)
+# `[^<]*`, not `.*?`: a <title> can never contain a tag, and the lazy version happily matched
+# from a `<title>` written inside an HTML COMMENT through to the real closing tag, then
+# "trimmed" the markup in between. Found by the gauntlet on a fixture whose comment says
+# the word <title> out loud — but a customer comment can say it too.
+_TITLE_TAG_VALUE_RE = re.compile(r"(<title[^>]*>)([^<]*)(</title>)", re.I)
 _META_DESC_VALUE_RE = re.compile(
     r'(<meta\b[^>]*name\s*=\s*["\']description["\'][^>]*content\s*=\s*)(["\'])(.*?)(\2)',
     re.I | re.S)
