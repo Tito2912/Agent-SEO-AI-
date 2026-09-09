@@ -18525,6 +18525,66 @@ def _rewrite_length_values(
     return new, count
 
 
+_OG_URL_KEYS = _with_indexability_variants({"open_graph_url_not_matching_canonical"})
+_OG_URL_TAG_RE = re.compile(
+    r'<meta\b[^>]*property\s*=\s*["\']og:url["\'][^>]*>', re.I)
+_CONTENT_ATTR_RE = re.compile(r'(content\s*=\s*)(["\'])(.*?)(\2)', re.I | re.S)
+
+
+def _og_url_pairs_from_pages(
+    impacted: list[str], pages: list[dict[str, Any]] | None,
+) -> list[dict[str, str]]:
+    """(og:url actuel → canonical) for each flagged page, read from the crawl.
+
+    The correct value is not a matter of taste: og:url must name the URL the page declares as
+    canonical. Both are already measured, so the fix needs no model at all.
+    """
+    if not pages:
+        return []
+    wanted = {_norm_url_for_match(u) for u in (impacted or [])}
+    out: list[dict[str, str]] = []
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        if wanted and _norm_url_for_match(str(page.get("url") or "")) not in wanted:
+            continue
+        og = str(page.get("og_url") or "").strip()
+        canonical = str(page.get("canonical") or "").strip()
+        if og and canonical and _norm_url_for_match(og) != _norm_url_for_match(canonical):
+            out.append({"page": str(page.get("url") or ""), "from": og, "to": canonical})
+    return out
+
+
+def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTIC og:url repair (no AI). Touches ONLY the `og:url` meta tag.
+
+    `twitter:url` and the canonical link are deliberately left alone: this family is about one
+    tag disagreeing with the canonical, and widening the blast radius is how a bounded fix stops
+    being bounded.
+    """
+    mapping = {_norm_url_for_match(p["from"]): p["to"]
+               for p in (pairs or []) if p.get("from") and p.get("to")}
+    if not mapping:
+        return content, 0
+    count = 0
+
+    def _one_tag(match: "re.Match[str]") -> str:
+        nonlocal count
+
+        def _one_attr(attr: "re.Match[str]") -> str:
+            nonlocal count
+            value = attr.group(3).strip()
+            target = mapping.get(_norm_url_for_match(value))
+            if target and target != value:
+                count += 1
+                return attr.group(1) + attr.group(2) + target + attr.group(4)
+            return attr.group(0)
+
+        return _CONTENT_ATTR_RE.sub(_one_attr, match.group(0))
+
+    return _OG_URL_TAG_RE.sub(_one_tag, content), count
+
+
 def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTIC canonical/hreflang value rewrite (no AI).
 
@@ -19479,6 +19539,18 @@ def _prepare_issue_fix(
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
+
+    if issue_key in _OG_URL_KEYS:
+        _og_pairs = _og_url_pairs_from_pages(list(impacted), pages)
+        if _og_pairs:
+            out["url_pairs"] = list(_og_pairs)
+            out["evidence"] = [p["from"] for p in _og_pairs]
+            out["link_rewriter"] = lambda raw, _p=_og_pairs: _rewrite_og_url(raw, _p)  # noqa: E731
+            # A framework builds og:url in code, where no literal value exists to swap.
+            out["rewriter_ai_fallback"] = True
+            out["extra_hint"] += ("\n" + _build_url_pair_hint(_og_pairs)
+                                  + "\nNe touche QUE og:url : le canonical est la référence et "
+                                    "il est déjà correct.")
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
     if issue_key in _SITEMAP_REMOVE_KEYS and impacted:
