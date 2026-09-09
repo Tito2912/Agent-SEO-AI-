@@ -307,9 +307,12 @@ def cmd_publish(args) -> int:
                                           "auto_init": False})
         print(f"dépôt {args.repo} créé")
 
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
     def run(*a: str) -> subprocess.CompletedProcess:
         try:
-            return subprocess.run(a, cwd=tree, check=True, capture_output=True, text=True)
+            return subprocess.run(a, cwd=tree, check=True, capture_output=True, text=True,
+                                  env=env)
         except subprocess.CalledProcessError as exc:
             # NE JAMAIS laisser remonter l'exception telle quelle : son repr contient
             # `process.args`. Le 09/09/2026, neuf pushs refuses pour un simple manque de droits
@@ -330,11 +333,21 @@ def cmd_publish(args) -> int:
     cred_dir = Path(tempfile.mkdtemp(prefix="noyaru-cred-"))
     cred = cred_dir / "git-credentials"
     try:
-        cred.write_text(f"https://x-access-token:{token}@github.com\n", encoding="utf-8")
+        # `newline=""` est OBLIGATOIRE : en mode texte, Python traduit `\n` en `\r\n` sous
+        # Windows, et le retour chariot se retrouve DANS l'hote que git compare. L'entree ne
+        # correspond alors a rien et git redemande le mot de passe, sans jamais dire pourquoi.
+        cred.write_text(f"https://x-access-token:{token}@github.com\n",
+                        encoding="utf-8", newline="")
         os.chmod(cred, 0o600)
+        # Le NOM d'utilisateur reste dans l'URL — `x-access-token` n'est pas un secret, et sans
+        # lui git n'a personne a qui associer l'entree du fichier : il redemande le nom sur le
+        # terminal et echoue avec « could not read Username ». Seul le mot de passe passe par
+        # le fichier. `GIT_TERMINAL_PROMPT=0` transforme une invite en erreur nette plutot qu'en
+        # attente sur un terminal absent.
         run("git", "-c", "credential.helper=",
             "-c", f"credential.helper=store --file={cred.as_posix()}",
-            "push", "--force", f"https://github.com/{owner}/{name}.git", "main:main")
+            "push", "--force",
+            f"https://x-access-token@github.com/{owner}/{name}.git", "main:main")
     finally:
         cred.unlink(missing_ok=True)
         shutil.rmtree(cred_dir, ignore_errors=True)
