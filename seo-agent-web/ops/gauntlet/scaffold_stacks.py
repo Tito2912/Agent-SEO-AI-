@@ -59,6 +59,20 @@ def slugs_for(stack: str) -> list[str]:
     return [s.slug for s in CATALOGUE if not skipped(stack, s)]
 
 
+def index_path(stack: str) -> str:
+    """L'URL a laquelle l'index du parcours est REELLEMENT servi.
+
+    Mesure sur les neuf sites deployes, pas deduite : partout `/gauntlet/`, sauf SvelteKit. La,
+    l'index est une ROUTE et non un fichier statique, et `trailingSlash: 'never'` — le defaut du
+    framework — la sert a `/gauntlet` en faisant 301 sur `/gauntlet/`.
+
+    Se tromper de forme coute deux anomalies parasites, sur les deux pages qui doivent rester
+    irreprochables : un lien vers une redirection sur l'ACCUEIL, et un canonical vers une
+    redirection sur l'INDEX lui-meme.
+    """
+    return "/gauntlet" if stack == "sveltekit" else "/gauntlet/"
+
+
 def index_html(stack: str, suffix: str) -> tuple[str, str]:
     """L'index du parcours, dans le seul idiome dont il a besoin : du HTML statique.
 
@@ -68,6 +82,7 @@ def index_html(stack: str, suffix: str) -> tuple[str, str]:
     generateur l'exposerait aux anomalies que le parcours injecte justement.
     """
     site = SITES[stack]
+    here = site + index_path(stack)
     items = "\n".join(
         f'      <li><a href="/gauntlet/{s}{suffix}">{s}</a></li>' for s in slugs_for(stack))
     doc = f"""<!doctype html>
@@ -79,11 +94,11 @@ def index_html(stack: str, suffix: str) -> tuple[str, str]:
     <meta name="viewport" content="width=device-width" />
     <title>{INDEX_TITLE}</title>
     <meta name="description" content="{INDEX_DESC}" />
-    <link rel="canonical" href="{site}/gauntlet/" />
+    <link rel="canonical" href="{here}" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="{INDEX_TITLE}" />
     <meta property="og:description" content="{INDEX_DESC}" />
-    <meta property="og:url" content="{site}/gauntlet/" />
+    <meta property="og:url" content="{here}" />
     <meta property="og:image" content="{site}/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{INDEX_TITLE}" />
@@ -125,11 +140,11 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
         site_ = SITES[stack]
         route = (f"<svelte:head>\n  <title>{INDEX_TITLE}</title>\n"
                  f'  <meta name="description" content="{INDEX_DESC}" />\n'
-                 f'  <link rel="canonical" href="{site_}/gauntlet/" />\n'
+                 f'  <link rel="canonical" href="{site_}{index_path(stack)}" />\n'
                  f'  <meta property="og:type" content="website" />\n'
                  f'  <meta property="og:title" content="{INDEX_TITLE}" />\n'
                  f'  <meta property="og:description" content="{INDEX_DESC}" />\n'
-                 f'  <meta property="og:url" content="{site_}/gauntlet/" />\n'
+                 f'  <meta property="og:url" content="{site_}{index_path(stack)}" />\n'
                  f'  <meta property="og:image" content="{site_}/og.png" />\n'
                  f'  <meta name="twitter:card" content="summary_large_image" />\n'
                  f'  <meta name="twitter:title" content="{INDEX_TITLE}" />\n'
@@ -165,7 +180,7 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
     io.open(static / "_redirects", "w", encoding="utf-8", newline="\n").write(
         "# /gauntlet/ancienne-page n'existe pas : elle redirige, pour que la page\n"
         "# link-to-redirect porte bien la famille page_has_links_to_redirect.\n"
-        f"/gauntlet/ancienne-page   /gauntlet/{suffix or ''}   301\n")
+        f"/gauntlet/ancienne-page   {index_path(stack)}   301\n")
     done.append("_redirects")
 
     # ── le sitemap : sans entree, les pages du parcours ne sont pas crawlees ──────────────
@@ -173,7 +188,7 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
     if sm.exists():
         text = io.open(sm, encoding="utf-8").read()
         text = re.sub(r"\n?  <url><loc>[^<]*/gauntlet/[^<]*</loc></url>", "", text)
-        extra = [f"  <url><loc>{site}/gauntlet/</loc></url>"]
+        extra = [f"  <url><loc>{site}{index_path(stack)}</loc></url>"]
         extra += [f"  <url><loc>{site}/gauntlet/{s}{suffix}</loc></url>"
                   for s in slugs_for(stack)]
         if "</urlset>" in text:
@@ -202,7 +217,15 @@ def link_from_home(stack: str, root: Path | None = None) -> bool:
     if not path.exists():
         return False
     text = io.open(path, encoding="utf-8").read()
-    if "/gauntlet/" in text:
+    want = index_path(stack)
+    if f'"{want}"' in text or f"]({want})" in text:
+        return True
+    # Un lien vers le parcours existe deja, mais dans l'autre forme. Le laisser tel quel etait
+    # le comportement d'avant — et sur SvelteKit cela faisait pointer l'accueil vers une
+    # redirection. On CORRIGE au lieu de s'arreter au premier `/gauntlet` rencontre.
+    fixed = re.sub(r'(?<=["(])/gauntlet/?(?=["\)])', want, text)
+    if fixed != text:
+        io.open(path, "w", encoding="utf-8", newline="\n").write(fixed)
         return True
     # La navigation des neuf fixtures vit dans le GABARIT PARTAGE, pas dans l'accueil. Poser le
     # lien la-bas le mettrait sur chaque page du site et changerait le graphe interne de toutes
@@ -214,9 +237,9 @@ def link_from_home(stack: str, root: Path | None = None) -> bool:
     line = next(ln for ln in text.splitlines() if anchor in ln)
     indent = line[: len(line) - len(line.lstrip())]
     if path.suffix == ".md":  # Hugo : le corps est du markdown
-        added = f"\n{indent}[Parcours d obstacles](/gauntlet/)"
+        added = f"\n{indent}[Parcours d obstacles]({index_path(stack)})"
     else:
-        added = f'\n{indent}<p><a href="/gauntlet/">Parcours d obstacles</a></p>'
+        added = f'\n{indent}<p><a href="{index_path(stack)}">Parcours d obstacles</a></p>'
     io.open(path, "w", encoding="utf-8", newline="\n").write(
         text.replace(line, line + added, 1))
     return True

@@ -21,4 +21,4 @@
 
 <h1>{title}</h1>
 <p>Site fixture pour prouver la boucle complete sur la stack SvelteKit.</p>
-<p><a href="/gauntlet/">Parcours d obstacles</a></p>
+<p><a href="/gauntlet">Parcours d obstacles</a></p>

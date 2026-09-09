@@ -1,11 +1,11 @@
 <svelte:head>
   <title>Parcours d'obstacles du correcteur — pages de test</title>
   <meta name="description" content="Index des pages de test du parcours d'obstacles : chacune porte une anomalie et une seule, pour exercer une famille du correcteur." />
-  <link rel="canonical" href="https://noyaru-stack-sveltekit.netlify.app/gauntlet/" />
+  <link rel="canonical" href="https://noyaru-stack-sveltekit.netlify.app/gauntlet" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Parcours d'obstacles du correcteur — pages de test" />
   <meta property="og:description" content="Index des pages de test du parcours d'obstacles : chacune porte une anomalie et une seule, pour exercer une famille du correcteur." />
-  <meta property="og:url" content="https://noyaru-stack-sveltekit.netlify.app/gauntlet/" />
+  <meta property="og:url" content="https://noyaru-stack-sveltekit.netlify.app/gauntlet" />
   <meta property="og:image" content="https://noyaru-stack-sveltekit.netlify.app/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Parcours d'obstacles du correcteur — pages de test" />
