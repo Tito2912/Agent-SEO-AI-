@@ -4,7 +4,6 @@
 <url><loc>http://127.0.0.1:8743/blog</loc></url>
 <url><loc>http://127.0.0.1:8743/a-propos</loc></url>
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet</loc></url>
-  <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet</loc></url>
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet/missing-title</loc></url>
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet/missing-meta-description</loc></url>
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet/missing-h1</loc></url>

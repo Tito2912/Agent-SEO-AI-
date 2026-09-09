@@ -176,6 +176,16 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
         "// Script minimal, meme raison que style.css : une seule anomalie par page.\n")
     done += ["style.css", "app.js"]
 
+    # next-app etait la seule fixture sans robots.txt — mesure : 404 en ligne, alors que les
+    # huit autres en servaient un. Deux familles se declenchent la-dessus
+    # (`robots_txt_not_found`, `sitemap_not_in_robots`), donc cette absence aurait compte comme
+    # deux anomalies parasites sur cette stack et faussé la comparaison entre les neuf.
+    robots = static / "robots.txt"
+    if not robots.exists():
+        io.open(robots, "w", encoding="utf-8", newline="\n").write(
+            f"User-agent: *\nAllow: /\n\nSitemap: {site}/sitemap.xml\n")
+        done.append("robots.txt")
+
     # ── la redirection dont `link-to-redirect` a besoin ───────────────────────────────────
     io.open(static / "_redirects", "w", encoding="utf-8", newline="\n").write(
         "# /gauntlet/ancienne-page n'existe pas : elle redirige, pour que la page\n"
@@ -187,7 +197,10 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
     sm = static / "sitemap.xml"
     if sm.exists():
         text = io.open(sm, encoding="utf-8").read()
-        text = re.sub(r"\n?  <url><loc>[^<]*/gauntlet/[^<]*</loc></url>", "", text)
+        # Pas de barre obligatoire apres `/gauntlet` : sur SvelteKit l'index est `/gauntlet`
+        # tout court, et un motif qui l'exigeait ne le retirait pas — l'entree se serait
+        # dupliquee a chaque regeneration. Ce nettoyage est ce qui rend l'echafaudage rejouable.
+        text = re.sub(r"\n?  <url><loc>[^<]*/gauntlet[^<]*</loc></url>", "", text)
         extra = [f"  <url><loc>{site}{index_path(stack)}</loc></url>"]
         extra += [f"  <url><loc>{site}/gauntlet/{s}{suffix}</loc></url>"
                   for s in slugs_for(stack)]
