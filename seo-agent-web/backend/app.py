@@ -17093,6 +17093,10 @@ _LENGTH_WINDOWS: dict[str, tuple[int, int]] = {"title": (60, 68), "description":
 # characters — obeying the conservative half while missing the constraint the family exists for.
 # A preference cannot be the only bound in a prompt whose success is a hard inequality.
 _LENGTH_CEILINGS: dict[str, int] = {"title": 70, "description": 160}
+# The other end, mirrored from the crawler (TITLE_TOO_SHORT=15, DESC_TOO_SHORT=100). NOT the
+# window floor: a 120-character description is short of ideal and flagged by nobody, and
+# rewriting it would churn a value no crawl complains about.
+_LENGTH_FLOORS: dict[str, int] = {"title": 15, "description": 100}
 
 
 def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str) -> str:
@@ -18503,7 +18507,13 @@ def _rewrite_length_values(
             continue
         rendered = str(info.get("rendered") or "").strip()
         declared = info.get("len")
-        if not rendered or not isinstance(declared, int) or declared <= ceiling:
+        if not rendered or not isinstance(declared, int):
+            continue
+        # Both ends, but against the CRAWLER's thresholds, not the optimal window. A 120-character
+        # description is short of ideal and flagged by nobody; rewriting it would churn a value
+        # no crawl complains about. Only what the crawler itself flags is repaired.
+        _floor = _LENGTH_FLOORS[kind]
+        if _floor <= declared <= ceiling:
             continue
         if len(rendered) < declared:
             continue  # truncated sample
@@ -18571,6 +18581,34 @@ _META_DESC_VALUE_RE = re.compile(
     r'(<meta\b[^>]*name\s*=\s*["\']description["\'][^>]*content\s*=\s*)(["\'])(.*?)(\2)',
     re.I | re.S)
 _FRONTMATTER_VALUE_RE = re.compile(r"(?m)^(\s*(title|description)\s*:\s*)(.+?)\s*$")
+
+
+_HTTPS_DOWNGRADE_RE = re.compile(r'(["\'(])http://([^"\'\s)]+)')
+
+
+def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Restore https on any URL this patch turned from https into http.
+
+    Measured on the gauntlet: repairing a canonical that pointed at a non-canonical page copied
+    that page's DECLARED canonical, which happened to be `http://` on an https site — a value
+    another family was flagging in the very same run. The page came out worse than it went in.
+
+    Nothing a correction writes ever needs to drop to http, so the rule is absolute rather than
+    contextual. Only URLs whose https form was present BEFORE are restored: a genuinely
+    http-only third party is left alone.
+    """
+    if "http://" not in new_content:
+        return new_content, []
+    notes: list[str] = []
+
+    def _one(match: "re.Match[str]") -> str:
+        rest = match.group(2)
+        if "https://" + rest not in old_content:
+            return match.group(0)  # never was https here; not ours to change
+        notes.append("http:// -> https:// sur " + rest[:60])
+        return match.group(1) + "https://" + rest
+
+    return _HTTPS_DOWNGRADE_RE.sub(_one, new_content), notes
 
 
 def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, list[str]]:
@@ -19923,7 +19961,8 @@ def _deep_patch_issue_files(
         # ceiling. The de-duplication family shipped 171- and 161-character descriptions because
         # nothing on its path measures length.
         new_content, _len_notes = _enforce_length_ceilings(new_content, raw)
-        for _n in _len_notes:
+        new_content, _scheme_notes = _forbid_https_downgrade(new_content, raw)
+        for _n in _len_notes + _scheme_notes:
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
