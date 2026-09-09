@@ -18555,6 +18555,43 @@ def _og_url_pairs_from_pages(
     return out
 
 
+_JSONLD_BLOCK_RE = re.compile(
+    r'(<script\b[^>]*type\s*=\s*["\']application/ld\+json["\'][^>]*>)(.*?)(</script>)',
+    re.I | re.S)
+_NUMERIC_STRING_FIELD_RE = re.compile(
+    r'("(?:price|lowPrice|highPrice|offerCount)"\s*:\s*)"(\d+(?:\.\d+)?)"')
+_STRUCTURED_DATA_KEYS = _with_indexability_variants({
+    "structured_data_google_rich_results_validation_error",
+    "structured_data_schema_org_validation_error",
+})
+
+
+def _rewrite_jsonld_numeric_strings(content: str) -> tuple[str, int]:
+    """DETERMINISTIC JSON-LD repair (no AI): unquote numeric fields that are quoted.
+
+    `"price": "0"` becomes `"price": 0`. Only inside a ld+json block, only for the four fields
+    schema.org types as Number, and only when the text is a bare number — `"29.99 USD"` stays a
+    string, because unquoting it would produce JSON that does not parse. `priceCurrency` is Text
+    by definition and never moves.
+    """
+    count = 0
+
+    def _one_block(match: "re.Match[str]") -> str:
+        nonlocal count
+        body = match.group(2)
+        fixed, n = _NUMERIC_STRING_FIELD_RE.subn(r"\g<1>\g<2>", body)
+        if not n:
+            return match.group(0)
+        try:
+            json.loads(fixed)
+        except Exception:
+            return match.group(0)  # never leave a block that no longer parses
+        count += n
+        return match.group(1) + fixed + match.group(3)
+
+    return _JSONLD_BLOCK_RE.sub(_one_block, content), count
+
+
 def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTIC og:url repair (no AI). Touches ONLY the `og:url` meta tag.
 
@@ -19579,6 +19616,16 @@ def _prepare_issue_fix(
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
+
+    if issue_key in _STRUCTURED_DATA_KEYS:
+        out["link_rewriter"] = lambda raw: _rewrite_jsonld_numeric_strings(raw)  # noqa: E731
+        # A framework builds the JSON-LD in code, where no literal block exists to repair.
+        out["rewriter_ai_fallback"] = True
+        out["extra_hint"] += (
+            "\nDans le JSON-LD, les champs numeriques de schema.org (price, lowPrice, highPrice, "
+            "offerCount) doivent etre des NOMBRES, pas des chaines : `\"price\": \"0\"` devient "
+            "`\"price\": 0`. Ne touche pas a priceCurrency (c'est du texte), ne change aucune "
+            "valeur, et laisse une chaine qui n'est pas un nombre pur (\"29.99 USD\") telle quelle.")
 
     if issue_key in _OG_URL_KEYS:
         _og_pairs = _og_url_pairs_from_pages(list(impacted), pages)
