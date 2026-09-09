@@ -23,5 +23,13 @@ export const metadata = {
 };
 
 export default function Page() {
-  return <main><h1>Accueil</h1><p>Site de test Next App Router.</p></main>;
+  return (
+    <main>
+      <h1>Accueil</h1>
+      <p>Site de test Next App Router.</p>
+      {/* Le parcours d'obstacles doit avoir un lien entrant, sinon ses 25 pages sont
+          orphelines et portent une anomalie de plus que celle qu'elles visent. */}
+      <p><a href="/gauntlet/">Parcours d obstacles</a></p>
+    </main>
+  );
 }

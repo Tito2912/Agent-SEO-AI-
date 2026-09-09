@@ -1,4 +1,20 @@
 <!doctype html>
+{{/* Hugo applique TOUJOURS ce gabarit de base aux pages single/list : un layout du parcours
+     place ailleurs serait quand meme enveloppe par celui-ci. La branche ci-dessous est donc
+     la facon honnete de laisser une page du banc declarer son <head> entier — et elle ne
+     retire rien a ce que la fixture demontre : la page reste la SEULE source de ses valeurs,
+     et une correction par page doit atterrir dans content/, jamais dans ce fichier. */}}
+{{ if .Params.raw_head }}
+<html{{ with .Params.html_attrs }}{{ . | safeHTMLAttr }}{{ end }}>
+  <head>
+    <meta charset="utf-8" />
+{{ .Params.raw_head | safeHTML }}
+  </head>
+  <body>
+{{ .Params.raw_body | safeHTML }}
+  </body>
+</html>
+{{ else }}
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
@@ -25,3 +41,4 @@
     <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
   </body>
 </html>
+{{ end }}

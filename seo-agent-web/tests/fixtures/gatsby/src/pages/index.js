@@ -9,7 +9,7 @@ export default function Page() {
     <main>
       <h1>{title}</h1>
       <p>Site fixture pour prouver la boucle complete sur la stack Gatsby.</p>
-      <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
+      <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a> <a href="/gauntlet/">Parcours d obstacles</a></nav>
     </main>
   );
 }

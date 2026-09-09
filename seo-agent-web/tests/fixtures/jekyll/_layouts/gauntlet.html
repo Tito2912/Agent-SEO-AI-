@@ -1,0 +1,21 @@
+<!doctype html>
+{%- comment -%}
+  Le gabarit du PARCOURS D'OBSTACLES, distinct de `default`.
+
+  `default` code son <head> en dur — titre, description, viewport, Open Graph, Twitter — ce qui
+  est realiste pour un site, mais rend impossible une page SANS titre ou SANS viewport : deux
+  des anomalies que le banc doit porter. Plutot que de truffer le gabarit partage de conditions
+  pour les besoins du test, le parcours a le sien, qui n'imprime que ce que la page lui donne.
+
+  La propriete qui compte reste vraie : la page est la SEULE source de ses valeurs, et une
+  correction par page doit atterrir dans la page, jamais ici.
+{%- endcomment -%}
+<html{{ page.html_attrs }}>
+  <head>
+    <meta charset="utf-8" />
+{{ page.raw_head }}
+  </head>
+  <body>
+{{ page.raw_body }}
+  </body>
+</html>

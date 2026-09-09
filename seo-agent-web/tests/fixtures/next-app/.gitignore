@@ -1,0 +1,8 @@
+node_modules/
+out/
+.next/
+*.log
+# Artefacts poses par `next build` en local : la fixture se deployait sans eux, les
+# ajouter maintenant changerait le build Netlify pour une raison etrangere au banc.
+next-env.d.ts
+package-lock.json

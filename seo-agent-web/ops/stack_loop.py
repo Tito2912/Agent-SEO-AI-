@@ -221,6 +221,12 @@ def cmd_prepare(args) -> int:
             for value in (f"{site}/a-propos", f"{site}/blog", "/a-propos", "/blog"):
                 for quote in ('"', "'"):
                     text = text.replace(f"{quote}{value}{quote}", f"{quote}{value}/{quote}")
+            # Les pages du parcours d'obstacles suivent la meme convention que le reste du site.
+            # Laissees sans slash sur une stack qui emet des index de repertoire, les 31 pages
+            # declareraient CHACUNE un canonical pointant vers une redirection : une anomalie
+            # parasite par page, qui noierait celle que chaque page est faite pour porter.
+            text = re.sub(r'(["\'])((?:' + re.escape(site) + r')?/gauntlet/[a-z0-9-]+)(["\'])',
+                          r"\1\2/\3", text)
             if text != original:
                 path.write_text(text, encoding="utf-8")
         # …and now the one page that must be wrong.

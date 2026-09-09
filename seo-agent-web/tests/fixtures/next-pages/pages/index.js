@@ -25,7 +25,7 @@ export default function Page() {
       </Head>
       <h1>{title}</h1>
       <p>Site fixture pour prouver la boucle complete sur la stack Next.js Pages Router.</p>
-      <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a></nav>
+      <nav><a href="/">Accueil</a> <a href="/blog">Blog</a> <a href="/a-propos">A propos</a> <a href="/gauntlet/">Parcours d obstacles</a></nav>
     </main>
   );
 }

@@ -1,0 +1,3 @@
+/* Feuille minimale : elle existe pour que la page qui la charge en http ne porte pas
+   AUSSI une ressource introuvable. Une anomalie par page. */
+body { font-family: system-ui; }

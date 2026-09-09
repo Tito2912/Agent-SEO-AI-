@@ -5,3 +5,4 @@ canonical = "http://127.0.0.1:8742/"
 +++
 
 Site fixture pour prouver la boucle complete sur la stack Hugo.
+[Parcours d obstacles](/gauntlet/)
