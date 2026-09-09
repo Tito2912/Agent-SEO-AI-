@@ -18566,6 +18566,67 @@ _STRUCTURED_DATA_KEYS = _with_indexability_variants({
 })
 
 
+_TITLE_TAG_VALUE_RE = re.compile(r"(<title[^>]*>)(.*?)(</title>)", re.I | re.S)
+_META_DESC_VALUE_RE = re.compile(
+    r'(<meta\b[^>]*name\s*=\s*["\']description["\'][^>]*content\s*=\s*)(["\'])(.*?)(\2)',
+    re.I | re.S)
+_FRONTMATTER_VALUE_RE = re.compile(r"(?m)^(\s*(title|description)\s*:\s*)(.+?)\s*$")
+
+
+def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Trim any title/description this patch WROTE back under its ceiling.
+
+    Measured on the gauntlet: the de-duplication family wrote two descriptions at 171 and 161
+    characters. Nothing in that family measures length — the window lives in the length family —
+    so a correct fix shipped the next anomaly with it.
+
+    Only values that CHANGED are considered. A page that already had an over-long title keeps it:
+    that is another family's job, with its own pull request and its own note.
+    """
+    notes: list[str] = []
+
+    def _trim(value: str, kind: str) -> str:
+        ceiling = _LENGTH_CEILINGS[kind]
+        if _rendered_len(value) <= ceiling:
+            return value
+        cut = _trim_to_ceiling(value, ceiling)
+        notes.append(f"{kind}: {_rendered_len(value)} → {_rendered_len(cut)} car. "
+                     f"(plafond {ceiling}, coupe deterministe)")
+        return cut
+
+    out = new_content
+    for regex, kind, group in ((_TITLE_TAG_VALUE_RE, "title", 2),
+                               (_META_DESC_VALUE_RE, "description", 3)):
+        old_vals = [m.group(group) for m in regex.finditer(old_content)]
+
+        def _one(match: "re.Match[str]", _k=kind, _g=group, _old=old_vals) -> str:
+            value = match.group(_g)
+            if value in _old:
+                return match.group(0)  # untouched by this patch
+            fixed = _trim(value, _k)
+            if fixed == value:
+                return match.group(0)
+            return match.group(0).replace(value, fixed, 1)
+
+        out = regex.sub(_one, out)
+
+    # Front matter (MDX, Markdown, Jekyll): the same values, written as YAML.
+    old_fm = {m.group(2): m.group(3) for m in _FRONTMATTER_VALUE_RE.finditer(old_content)}
+
+    def _one_fm(match: "re.Match[str]") -> str:
+        field, value = match.group(2), match.group(3)
+        if old_fm.get(field) == value:
+            return match.group(0)
+        quoted = len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'"
+        bare = value[1:-1] if quoted else value
+        fixed = _trim(bare, "title" if field == "title" else "description")
+        if fixed == bare:
+            return match.group(0)
+        return match.group(1) + (value[0] + fixed + value[0] if quoted else fixed)
+
+    return _FRONTMATTER_VALUE_RE.sub(_one_fm, out), notes
+
+
 def _rewrite_jsonld_numeric_strings(content: str) -> tuple[str, int]:
     """DETERMINISTIC JSON-LD repair (no AI): unquote numeric fields that are quoted.
 
@@ -19858,6 +19919,12 @@ def _deep_patch_issue_files(
             skipped.append(path)
             continue
         new_content = str(patch["patched_content"])
+        # Whatever family wrote it, a title or description this patch produced must respect its
+        # ceiling. The de-duplication family shipped 171- and 161-character descriptions because
+        # nothing on its path measures length.
+        new_content, _len_notes = _enforce_length_ceilings(new_content, raw)
+        for _n in _len_notes:
+            logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
         if _github_patched_content_error(new_content):
