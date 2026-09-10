@@ -22,12 +22,10 @@ export function Head() {
       <link rel="canonical" href="https://noyaru-stack-gatsby.netlify.app/gauntlet/missing-meta-description" />
       <meta property="og:type" content="article" />
       <meta property="og:title" content="Page de test du parcours d'obstacles Noyaru" />
-      <meta property="og:description" content="" />
       <meta property="og:url" content="https://noyaru-stack-gatsby.netlify.app/gauntlet/missing-meta-description" />
       <meta property="og:image" content="https://noyaru-stack-gatsby.netlify.app/og.png" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Page de test du parcours d'obstacles Noyaru" />
-      <meta name="twitter:description" content="" />
       <meta name="twitter:image" content="https://noyaru-stack-gatsby.netlify.app/og.png" />
     </>
   );

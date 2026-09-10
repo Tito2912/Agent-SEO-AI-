@@ -8,14 +8,12 @@ export const metadata = {
   openGraph: {
     type: 'article',
     title: 'Page de test du parcours d\'obstacles Noyaru',
-    description: '',
     url: 'https://noyaru-stack-next-app.netlify.app/gauntlet/missing-meta-description',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Page de test du parcours d\'obstacles Noyaru',
-    description: '',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
 };

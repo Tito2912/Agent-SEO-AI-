@@ -169,11 +169,18 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
         tags.append(("link", {"rel": "alternate", "hreflang": code,
                               "href": _target(site, target)}))
 
+    # Une valeur ABSENTE ne laisse pas une balise sociale VIDE derriere elle. Mesure sur la
+    # verification des neuf stacks : la page sans description portait `og:description content=""`,
+    # le correcteur a rempli cette balise-la et considere le travail fait — la meta description,
+    # elle, manquait toujours. Une page reelle sans description n'a pas d'Open Graph vide : la
+    # fixture fabriquait une situation qui n'existe pas, et le correcteur s'y est laisse prendre.
     if spec.og == "full":
+        tags.append(("meta", {"property": "og:type", "content": "article"}))
+        if title is not None:
+            tags.append(("meta", {"property": "og:title", "content": title}))
+        if desc is not None:
+            tags.append(("meta", {"property": "og:description", "content": desc}))
         tags += [
-            ("meta", {"property": "og:type", "content": "article"}),
-            ("meta", {"property": "og:title", "content": title or ""}),
-            ("meta", {"property": "og:description", "content": desc or ""}),
             ("meta", {"property": "og:url", "content": url}),
             ("meta", {"property": "og:image", "content": site + OG_IMAGE}),
         ]
@@ -181,12 +188,12 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
         tags.append(("meta", {"property": "og:title", "content": "Open Graph incomplet"}))
 
     if spec.tw == "full":
-        tags += [
-            ("meta", {"name": "twitter:card", "content": "summary_large_image"}),
-            ("meta", {"name": "twitter:title", "content": title or ""}),
-            ("meta", {"name": "twitter:description", "content": desc or ""}),
-            ("meta", {"name": "twitter:image", "content": site + OG_IMAGE}),
-        ]
+        tags.append(("meta", {"name": "twitter:card", "content": "summary_large_image"}))
+        if title is not None:
+            tags.append(("meta", {"name": "twitter:title", "content": title}))
+        if desc is not None:
+            tags.append(("meta", {"name": "twitter:description", "content": desc}))
+        tags.append(("meta", {"name": "twitter:image", "content": site + OG_IMAGE}))
     elif spec.tw == "partial":
         tags.append(("meta", {"name": "twitter:card", "content": "summary"}))
 
@@ -473,18 +480,24 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
     if alt:
         lines.append("  alternates: {\n" + "\n".join(alt) + "\n  },")
     if spec.og == "full":
-        lines += ["  openGraph: {", "    type: 'article',",
-                  f"    title: {_js_str(spec.title or '')},",
-                  f"    description: {_js_str(spec.desc or '')},",
-                  f"    url: {_js_str(url)},",
+        # Meme regle que dans `head_tags` : pas de valeur sociale VIDE derriere une valeur
+        # absente, sinon le correcteur remplit la copie et laisse l'original manquant.
+        lines += ["  openGraph: {", "    type: 'article',"]
+        if spec.title is not None:
+            lines.append(f"    title: {_js_str(spec.title)},")
+        if spec.desc is not None:
+            lines.append(f"    description: {_js_str(spec.desc)},")
+        lines += [f"    url: {_js_str(url)},",
                   f"    images: [{_js_str(site + OG_IMAGE)}],", "  },"]
     elif spec.og == "partial":
         lines += ["  openGraph: { title: 'Open Graph incomplet' },"]
     if spec.tw == "full":
-        lines += ["  twitter: {", "    card: 'summary_large_image',",
-                  f"    title: {_js_str(spec.title or '')},",
-                  f"    description: {_js_str(spec.desc or '')},",
-                  f"    images: [{_js_str(site + OG_IMAGE)}],", "  },"]
+        lines += ["  twitter: {", "    card: 'summary_large_image',"]
+        if spec.title is not None:
+            lines.append(f"    title: {_js_str(spec.title)},")
+        if spec.desc is not None:
+            lines.append(f"    description: {_js_str(spec.desc)},")
+        lines += [f"    images: [{_js_str(site + OG_IMAGE)}],", "  },"]
     elif spec.tw == "partial":
         lines += ["  twitter: { card: 'summary' },"]
     lines.append("};")
