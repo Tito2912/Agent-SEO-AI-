@@ -18595,6 +18595,26 @@ def _og_url_pairs_from_pages(
     return out
 
 
+def _og_fallback_allowed(pairs: list[dict[str, str]]) -> bool:
+    """Le repli IA peut-il ecrire un og:url sans risquer de le poser sur la mauvaise page ?
+
+    Non des qu'il y a plus d'une paire. La bonne valeur est PAR PAGE, et rien dans le fichier
+    que le modele edite ne lui dit a quelle page ce fichier correspond : on lui montre une
+    paire, il l'ecrit, quelle que soit la page.
+
+    Mesure sur la verification des neuf stacks (10/09/2026) : la famille AUGMENTAIT apres
+    correction — 2 -> 6 sur gatsby — parce que des pages etrangeres ressortaient avec le og:url
+    d'une autre, l'index du parcours compris.
+
+    Avec une seule paire il n'y a pas d'ambiguite, et le cas qui justifiait ce repli reste
+    couvert : un framework qui construit og:url dans du code, ou aucun litteral n'existe a
+    remplacer. Au-dela, le reecriveur deterministe suffit — lui trouve la valeur dans le
+    fichier, donc il ne peut pas se tromper de page — et une page dont la valeur ne s'y trouve
+    pas n'est simplement pas celle-la.
+    """
+    return len(pairs or []) == 1
+
+
 _JSONLD_BLOCK_RE = re.compile(
     r'(<script\b[^>]*type\s*=\s*["\']application/ld\+json["\'][^>]*>)(.*?)(</script>)',
     re.I | re.S)
@@ -19844,8 +19864,11 @@ def _prepare_issue_fix(
             out["url_pairs"] = list(_og_pairs)
             out["evidence"] = [p["from"] for p in _og_pairs]
             out["link_rewriter"] = lambda raw, _p=_og_pairs: _rewrite_og_url(raw, _p)  # noqa: E731
-            # A framework builds og:url in code, where no literal value exists to swap.
-            out["rewriter_ai_fallback"] = True
+            # A framework builds og:url in code, where no literal value exists to swap — mais
+            # SEULEMENT quand une page est concernee. Au-dela, le modele ne peut pas savoir a
+            # quelle page correspond le fichier qu'il edite, et il pose la valeur d'une page sur
+            # les autres. Voir `_og_fallback_allowed`.
+            out["rewriter_ai_fallback"] = _og_fallback_allowed(_og_pairs)
             out["extra_hint"] += ("\n" + _build_url_pair_hint(_og_pairs)
                                   + "\nNe touche QUE og:url : le canonical est la référence et "
                                     "il est déjà correct.")
