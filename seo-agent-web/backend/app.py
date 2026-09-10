@@ -18635,6 +18635,30 @@ _META_DESC_VALUE_RE = re.compile(
     r'(<meta\b[^>]*name\s*=\s*["\']description["\'][^>]*content\s*=\s*)(["\'])(.*?)(\2)',
     re.I | re.S)
 _FRONTMATTER_VALUE_RE = re.compile(r"(?m)^(\s*(title|description)\s*:\s*)(.+?)\s*$")
+# Une entree d'objet JavaScript, et rien d'autre : la valeur est ENTRE GUILLEMETS et la ligne
+# s'arrete apres. Une ligne de prose `title: quelque chose` n'a pas de guillemets et n'est donc
+# pas concernee ; un attribut JSX s'ecrit `nom="valeur"` avec un `=`, pas un `:`.
+_JS_VALUE_LINE_RE = re.compile(
+    r"""(?m)^(\s*(title|description)\s*:\s*)(['"])((?:\\.|(?!\3)[^\\\n])*)(\3)(\s*[,;]?\s*)$""")
+
+
+def _js_unescape(value: str) -> str:
+    """La valeur telle qu'elle sera LUE : `\\'` redevient une apostrophe, `\\\\` un antislash."""
+    out: list[str] = []
+    i = 0
+    while i < len(value):
+        if value[i] == "\\" and i + 1 < len(value):
+            out.append(value[i + 1])
+            i += 2
+        else:
+            out.append(value[i])
+            i += 1
+    return "".join(out)
+
+
+def _js_escape(value: str, quote: str) -> str:
+    """L'inverse. L'antislash d'abord, sinon on echapperait ceux qu'on vient d'ajouter."""
+    return value.replace("\\", "\\\\").replace(quote, "\\" + quote)
 # Front matter is the LEADING `---` block, and nothing else in the file. The line shape above is
 # equally how a JavaScript object literal writes a property — `export const metadata = { title:
 # '...', }` IS Next.js App Router, Astro and Nuxt — and there the value group runs to the end of
@@ -19065,6 +19089,30 @@ def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, l
             return match.group(0).replace(value, fixed, 1)
 
         out = regex.sub(_one, out)
+
+    # Objets JavaScript : `title: '…'` dans un `export const metadata`, un `useHead()` ou un
+    # composant. C'est l'ecriture ou vivent les valeurs de la majorite des clients modernes, et
+    # elle est restee SANS FILET depuis que le front matter a ete borne le 09/09.
+    #
+    # Ce qui rend la reprise sure : les guillemets et la virgule sont HORS du groupe remplace,
+    # donc la coupe ne peut plus les emporter — c'etait tout le defaut d'origine. Et la longueur
+    # se mesure sur la valeur DESECHAPPEE : depuis le garde-fou d'echappement une valeur peut
+    # contenir `\'`, qui fait un caractere a l'ecran et deux dans le fichier. Couper sur la
+    # source couperait trop tot, et parfois au milieu d'une echappee — laissant un antislash
+    # orphelin qui ouvre une echappee sur le guillemet fermant.
+    old_js = [(m.group(2), m.group(4)) for m in _JS_VALUE_LINE_RE.finditer(old_content)]
+
+    def _one_js(match: "re.Match[str]") -> str:
+        head, field, quote, value, close, tail = match.groups()
+        if (field, value) in old_js:
+            return match.group(0)          # pas ecrite par ce patch
+        plain = _js_unescape(value)
+        fixed = _trim(plain, "title" if field == "title" else "description")
+        if fixed == plain:
+            return match.group(0)
+        return head + quote + _js_escape(fixed, quote) + close + tail
+
+    out = _JS_VALUE_LINE_RE.sub(_one_js, out)
 
     # Front matter (MDX, Markdown, Jekyll): the same values, written as YAML — inside the leading
     # `---` block ONLY. Everywhere else that line shape belongs to somebody else's syntax; see
