@@ -117,3 +117,37 @@ def test_the_guard_runs_before_the_commit() -> None:
     src = inspect.getsource(app_module._deep_patch_issue_files)
     assert "_add_missing_object_commas(new_content)" in src
     assert src.index("_add_missing_object_commas") < src.index("put_body")
+
+
+def test_the_nuxt_case_an_array_of_objects() -> None:
+    """Deuxieme forme, mesuree sur nuxt en installation A FROID.
+
+    La virgule manque entre deux ELEMENTS D'UN TABLEAU, pas entre deux proprietes :
+
+        { property: 'og:image', content: '.../og.png' }
+        { name: 'twitter:card', content: 'summary_large_image' },
+
+    La premiere version du garde-fou ne voyait que les lignes commencant par une cle, donc elle
+    passait a cote. C'est l'ecriture de `useHead({ meta: [...] })`, celle de toute la stack Nuxt.
+    """
+    broken = _join(
+        "useHead({",
+        "  meta: [",
+        "    { property: 'og:image', content: 'https://s.fr/og.png' }",
+        "    { name: 'twitter:card', content: 'summary' },",
+        "  ],",
+        "});")
+    out, notes = app_module._add_missing_object_commas(broken)
+    assert "content: 'https://s.fr/og.png' }," in out
+    assert notes
+
+
+def test_the_last_element_of_an_array_is_left_alone() -> None:
+    ok = _join(
+        "useHead({",
+        "  meta: [",
+        "    { name: 'twitter:card', content: 'summary' }",
+        "  ],",
+        "});")
+    out, notes = app_module._add_missing_object_commas(ok)
+    assert out == ok and notes == []

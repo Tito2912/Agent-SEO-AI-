@@ -18899,25 +18899,38 @@ def _add_missing_object_commas(content: str) -> tuple[str, list[str]]:
     out = list(lines)
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if _OBJECT_OPEN_RE.match(line):
+        # On suit l'imbrication LARGEMENT — toute ligne qui ouvre par `{` ou `[` — parce que
+        # `useHead({ meta: [...] })` n'ouvre ni un litteral d'objet ni rien que
+        # `_OBJECT_OPEN_RE` reconnaisse : c'est un appel de fonction, puis un tableau. Avec la
+        # detection etroite, la profondeur ne montait jamais et toute la stack Nuxt passait a
+        # travers. Ce sont les conditions d'ACTION plus bas qui protegent, pas ce comptage.
+        if stripped.endswith(("{", "[")):
             depth += 1
             continue
-        if stripped.startswith("}"):
+        if stripped.startswith(("}", "]")):
             depth = max(0, depth - 1)
             continue
-        if depth <= 0 or not _OBJECT_KEY_RE.match(line):
+        if depth <= 0:
             continue
-        # La ligne porte-t-elle une chaine complete, non fermee par une virgule ?
-        if not (stripped.endswith("'") or stripped.endswith('"')):
+        # DEUX formes, mesurees chacune sur une stack. Une PROPRIETE d'objet, finissant par une
+        # chaine complete (next-app) — et un ELEMENT DE TABLEAU, objet complet sur une ligne
+        # (nuxt, l'ecriture `useHead({ meta: [...] })`). La premiere version ne connaissait que
+        # la premiere forme et laissait passer toute la stack Nuxt.
+        is_prop = bool(_OBJECT_KEY_RE.match(line)) and stripped.endswith(("'", '"'))
+        is_item = stripped.startswith("{") and stripped.endswith("}")
+        if not (is_prop or is_item):
             continue
         nxt = next((lines[j] for j in range(i + 1, len(lines)) if lines[j].strip()), "")
-        if not _OBJECT_KEY_RE.match(nxt):
+        nxt_stripped = nxt.strip()
+        follows = (_OBJECT_KEY_RE.match(nxt) if is_prop else nxt_stripped.startswith("{"))
+        if not follows:
             continue
         indent = len(line) - len(line.lstrip())
         if indent != len(nxt) - len(nxt.lstrip()):
             continue        # une autre profondeur : la virgule manquante n'est pas ici
         out[i] = line + ","
-        notes.append(f"virgule manquante ajoutee apres `{stripped.split(':', 1)[0].strip()}`")
+        quoi = stripped.split(':', 1)[0].strip() if is_prop else 'un element de tableau'
+        notes.append(f"virgule manquante ajoutee apres `{quoi}`")
     if not notes:
         return content, []
     joined = "\n".join(out)
