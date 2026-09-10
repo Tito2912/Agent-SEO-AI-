@@ -18691,7 +18691,128 @@ def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, li
 # non gourmand s'arrete a la premiere fermeture ainsi qualifiee, ce qui laisse intactes les
 # valeurs voisines de la meme ligne, et une apostrophe interieure — suivie d'une lettre, jamais
 # d'un terminateur — ne peut pas fermer la chaine par erreur.
-_QUOTED_VALUE_RE = re.compile(r"""([:=]\s*)(['"])(.*?)(\2)(?=\s*[,;}\)\]]|\s*$)""")
+# Le separateur est `:` — une ENTREE D'OBJET. Pas `=` : un attribut JSX s'ecrit `nom="valeur"`,
+# et la version qui acceptait `=` escaladait de `type="application/ld+json"` jusqu'a un guillemet
+# bien plus loin sur la ligne, echappant au passage des guillemets qui sont de la SYNTAXE. Trouve
+# en appliquant le garde-fou aux VRAIS fichiers d'une branche avant de rebatir — le fichier ne
+# compilait plus.
+_QUOTED_VALUE_RE = re.compile(r"""(:\s*)(['"])(.*?)(\2)(?=\s*[,;}\)\]]|\s*$)""")
+# Les declarations, ou `=` est legitime : SvelteKit, Gatsby et Nuxt ecrivent `const title = '…'`.
+_DECL_VALUE_RE = re.compile(
+    r"""^(\s*(?:export\s+)?(?:const|let|var)\s+[\w$]+\s*=\s*)(['"])(.*?)(\2)(?=\s*;?\s*$)""")
+
+
+# Une ligne qui OUVRE un litteral d'objet, et rien d'autre : `cle: {` ou `const x = {`. On ne
+# compte surtout pas les accolades en general — le JSX en est plein (`{enfant}`,
+# `style={{...}}`) et aucune n'ouvre un objet dont les cles nous concernent.
+_OBJECT_OPEN_RE = re.compile(
+    r"""^\s*(?:(?:export\s+)?(?:const|let|var)\s+[\w$]+\s*=|['"]?[\w$:-]+['"]?\s*:)\s*\{\s*$""")
+_OBJECT_KEY_RE = re.compile(r"""^\s*(['"]?)([\w$:-]+)\1\s*:""")
+
+
+def _drop_duplicate_object_keys(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Retirer une cle que CE patch a ajoutee alors que l'objet l'avait deja.
+
+    Mesure sur le passage des neuf stacks, reproduite en local :
+
+        Type error: An object literal cannot have multiple properties with the same name.
+
+    Le correcteur, charge d'ajouter une description, l'a ajoutee a l'objet `openGraph` qui en
+    avait deja une. En JS pur c'est legal — la derniere gagne — mais TypeScript le refuse et le
+    site ne se construit plus. `node --check` ne peut pas l'attraper : c'est une erreur de TYPE,
+    pas de syntaxe. Seul un vrai build la voit, et c'est Netlify qui l'a dite.
+
+    On garde la DERNIERE occurrence, comme le ferait un moteur JS, pour que la valeur servie ne
+    change pas ; et on ne supprime que les doublons absents de l'ancien fichier — deux cles deja
+    en double avant ce patch appartiennent au fichier, pas a nous.
+    """
+    lines = new_content.splitlines()
+    # Pile des blocs ouverts : chaque entree associe une cle a la liste des lignes qui la posent.
+    stack: list[dict[str, list[int]]] = []
+    seen: list[tuple[str, list[int]]] = []
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if _OBJECT_OPEN_RE.match(line):
+            # La cle qui OUVRE le bloc compte comme une cle de l'objet parent : `twitter: {`
+            # ecrit deux fois dans le meme objet est la meme erreur de type. On l'enregistre
+            # avant d'empiler, mais on ne la collapse pas — supprimer une ligne emporterait le
+            # bloc et laisserait une accolade orpheline. Elle sert au refus, plus bas.
+            key_match = _OBJECT_KEY_RE.match(line)
+            if key_match and stack:
+                stack[-1].setdefault("{" + key_match.group(2), []).append(i)
+            stack.append({})
+            continue
+        if stripped.startswith("}") and stack:
+            for key, idxs in stack.pop().items():
+                if len(idxs) > 1 and not key.startswith("{"):
+                    seen.append((key, idxs))
+            continue
+        if stack:
+            key_match = _OBJECT_KEY_RE.match(line)
+            if key_match and not stripped.endswith("{"):
+                stack[-1].setdefault(key_match.group(2), []).append(i)
+
+    drop: set[int] = set()
+    notes: list[str] = []
+    for key, idxs in seen:
+        # On collapse TOUJOURS, sans se demander qui a ecrit quoi — et c'est une exception
+        # assumee a la regle des autres garde-fous.
+        #
+        # D'abord parce que la question n'est pas decidable ici : mesure sur
+        # `missing-title/page.tsx`, le patch avait RECOPIE une ligne existante a l'identique, si
+        # bien que les deux occurrences paraissaient preexistantes et le doublon survivait.
+        #
+        # Ensuite parce qu'elle n'a pas d'interet : une cle en double est du TypeScript invalide.
+        # Si le fichier l'avait deja, il ne compilait pas davantage avant nous. Garder la
+        # DERNIERE reproduit exactement ce que ferait un moteur JS, donc la valeur servie ne
+        # change pas — on repare la compilation sans rien decider a la place du client.
+        for i in idxs[:-1]:
+            drop.add(i)
+            notes.append(f"cle `{key}` en double dans un objet : occurrence anterieure retiree")
+    if not drop:
+        return new_content, []
+    kept = [ln for i, ln in enumerate(lines) if i not in drop]
+    joined = "\n".join(kept)
+    if new_content.endswith("\n"):
+        joined += "\n"
+    return joined, notes
+
+
+def _object_key_conflicts(content: str) -> list[str]:
+    """Les cles encore en double dans un litteral d'objet apres passage des garde-fous.
+
+    `_drop_duplicate_object_keys` collapse ce qu'il peut : une cle simple se supprime sans
+    dommage. Une cle qui OUVRE un bloc, non — supprimer sa ligne emporterait l'objet et
+    laisserait une accolade orpheline. Mesure sur `missing-title/page.tsx`, ou le modele avait
+    ecrit `twitter: { … }` DEUX FOIS dans le meme `openGraph`, blocs entiers dupliques.
+
+    Ce qui reste ici ne se repare pas mecaniquement : le fichier est refuse. Un refus est
+    visible et sans dommage ; un build casse n'est ni l'un ni l'autre.
+    """
+    stack: list[dict[str, int]] = []
+    conflicts: list[str] = []
+    for line in content.splitlines():
+        stripped = line.strip()
+        if _OBJECT_OPEN_RE.match(line):
+            key_match = _OBJECT_KEY_RE.match(line)
+            if key_match and stack:
+                key = key_match.group(2)
+                stack[-1][key] = stack[-1].get(key, 0) + 1
+                if stack[-1][key] > 1 and key not in conflicts:
+                    conflicts.append(key)
+            stack.append({})
+            continue
+        if stripped.startswith("}") and stack:
+            stack.pop()
+            continue
+        if stack:
+            key_match = _OBJECT_KEY_RE.match(line)
+            if key_match and not stripped.endswith("{"):
+                key = key_match.group(2)
+                stack[-1][key] = stack[-1].get(key, 0) + 1
+                if stack[-1][key] > 1 and key not in conflicts:
+                    conflicts.append(key)
+    return conflicts
 
 
 def _escape_quotes_in_written_values(new_content: str, old_content: str) -> tuple[str, list[str]]:
@@ -18721,7 +18842,9 @@ def _escape_quotes_in_written_values(new_content: str, old_content: str) -> tupl
     notes: list[str] = []
     out: list[str] = []
     for line in new_content.splitlines():
-        if line in old_lines:
+        # Un litteral de gabarit peut contenir n'importe quels guillemets, qui sont alors du
+        # contenu et non des delimiteurs. Y toucher casse la ligne ; on passe la ligne entiere.
+        if line in old_lines or "`" in line:
             out.append(line)
             continue
 
@@ -18735,7 +18858,10 @@ def _escape_quotes_in_written_values(new_content: str, old_content: str) -> tupl
             notes.append(f"{quote} echappe dans une valeur ecrite : {value[:60]}")
             return head + quote + fixed + close
 
-        out.append(_QUOTED_VALUE_RE.sub(_one, line))
+        fixed_line = _QUOTED_VALUE_RE.sub(_one, line)
+        if fixed_line == line:
+            fixed_line = _DECL_VALUE_RE.sub(_one, line)
+        out.append(fixed_line)
     joined = "\n".join(out)
     if new_content.endswith("\n"):
         joined += "\n"
@@ -20112,13 +20238,26 @@ def _deep_patch_issue_files(
         # raccourcie peut se terminer sur une apostrophe tout comme celle d'origine. Echapper
         # avant eux laisserait passer ce qu'ils viennent d'ecrire.
         new_content, _quote_notes = _escape_quotes_in_written_values(new_content, raw)
-        for _n in _len_notes + _scheme_notes + _quote_notes:
+        # Apres l'echappement : une ligne encore mal fermee ferait mal compter les cles.
+        new_content, _dup_notes = _drop_duplicate_object_keys(new_content, raw)
+        for _n in _len_notes + _scheme_notes + _quote_notes + _dup_notes:
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
         if _github_patched_content_error(new_content):
             skipped.append(path)
             continue
+        # Un litteral d'objet qui garde une cle en double est du TypeScript invalide : le site
+        # ne se construit plus. Mesure sur next-app — trois deploiements Netlify en echec alors
+        # que le journal du correcteur affichait « zero erreur ». On refuse le fichier plutot
+        # que de livrer un build casse ; le refus, lui, se voit.
+        if path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".vue", ".svelte", ".astro")):
+            _conflicts = _object_key_conflicts(new_content)
+            if _conflicts:
+                logger.warning("[correction] %s: %s refuse — cle(s) en double dans un objet : %s",
+                               issue_key, path, ", ".join(_conflicts[:5]))
+                skipped.append(path)
+                continue
         try:
             put_body: dict[str, Any] = {
                 "message": f"fix(seo): {issue_key} — {path}\n\nGenerated by SEO Agent",

@@ -121,3 +121,35 @@ def test_the_other_values_on_the_same_line_are_preserved() -> None:
     new = NUXT_OLD.replace("Ancienne.", "Le parcours d'obstacles")
     out, _ = app_module._escape_quotes_in_written_values(new, NUXT_OLD)
     assert "name: 'description'" in out
+
+
+JSX_LINE = ('      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
+            '`{"@context":"https://schema.org","@type":"SoftwareApplication"}` }} />\n')
+
+
+def test_a_jsx_attribute_is_never_touched() -> None:
+    """Trouve en appliquant le garde-fou aux VRAIS fichiers d'une branche, avant de rebatir.
+
+    La version elargie escaladait de `type="..."` jusqu'a un guillemet bien plus loin sur la
+    ligne, et echappait au passage des guillemets qui sont de la SYNTAXE : attribut JSX,
+    gabarit `${...}`, litteral de gabarit. Le fichier ne compilait plus. Un attribut JSX
+    s'ecrit `nom="valeur"` sans espace autour du `=` ; une entree d'objet s'ecrit `cle: valeur`.
+    """
+    out, notes = app_module._escape_quotes_in_written_values(JSX_LINE, "")
+    assert out == JSX_LINE, f"ligne JSX modifiee : {out!r}"
+    assert notes == []
+
+
+def test_a_template_literal_value_is_never_touched() -> None:
+    """Un litteral de gabarit peut contenir tout ce qu'il veut ; y coller un antislash le casse."""
+    line = "  const html = `{\"a\": \"b\"}`;\n"
+    out, notes = app_module._escape_quotes_in_written_values(line, "")
+    assert out == line and notes == []
+
+
+def test_a_const_declaration_is_still_handled() -> None:
+    """SvelteKit, Gatsby et Nuxt ecrivent leurs valeurs ainsi : le `=` reste couvert la."""
+    old = "  const title = 'Ancien';\n"
+    new = "  const title = 'Le parcours d'obstacles';\n"
+    out, notes = app_module._escape_quotes_in_written_values(new, old)
+    assert "d\\'obstacles" in out and notes
