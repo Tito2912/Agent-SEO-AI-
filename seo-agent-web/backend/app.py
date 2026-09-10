@@ -18778,6 +18778,58 @@ def _drop_duplicate_object_keys(new_content: str, old_content: str) -> tuple[str
     return joined, notes
 
 
+def _dominant_site_lang(pages: list[dict[str, Any]] | None) -> str:
+    """La langue que le SITE declare, lue sur les pages crawlees. '' si elle n'est pas nette.
+
+    Le crawl porte ce fait par page depuis toujours. Sur next-app il disait 34 pages en `fr`
+    contre 2 en `en` — les deux `en` etant le defaut injecte — pendant que le correcteur
+    retournait la racine partagee en anglais.
+
+    On exige une majorite FRANCHE et assez de pages : un site vraiment bilingue n'a pas de
+    langue a defendre, et deux pages ne font pas une mesure. Sans certitude, on rend '' et le
+    garde-fou qui s'appuie dessus reste inerte — c'est ce qui le rend compatible avec un rapport
+    qui ne porte aucune page.
+    """
+    langs = [str((p or {}).get("lang") or "").strip().lower().split("-")[0]
+             for p in (pages or []) if isinstance(p, dict)]
+    langs = [x for x in langs if x]
+    if len(langs) < 3:
+        return ""
+    top = max(set(langs), key=langs.count)
+    return top if langs.count(top) >= len(langs) * 0.6 else ""
+
+
+def _keep_site_lang(new_content: str, old_content: str, site_lang: str) -> tuple[str, list[str]]:
+    """Empecher un fichier PARTAGE de declarer une langue que le site ne parle pas.
+
+    Appelee uniquement sur un chemin partage, et uniquement quand le crawl a su dire la langue
+    du site. Elle laisse donc passer la correction legitime — un gabarit qui a tort face a un
+    site qui a raison, le cas Jekyll — et n'arrete que l'inverse : un site qui bascule pour
+    satisfaire une page.
+
+    Une variante regionale de la meme langue (`fr` -> `fr-FR`) precise sans contredire.
+    """
+    if not site_lang:
+        return new_content, []
+    tag = _HTML_OPEN_TAG_RE.search(new_content or "")
+    if not tag:
+        return new_content, []
+    attr = _HTML_LANG_ATTR_RE.search(tag.group(0))
+    if not attr:
+        return new_content, []
+    now = attr.group(1).strip()
+    if now.lower().split("-")[0] == site_lang.lower().split("-")[0]:
+        return new_content, []
+    old_tag = _HTML_OPEN_TAG_RE.search(old_content or "")
+    old_attr = _HTML_LANG_ATTR_RE.search(old_tag.group(0)) if old_tag else None
+    was = old_attr.group(1).strip() if old_attr else site_lang
+    if was.strip().lower() == now.strip().lower():
+        return new_content, []          # deja ainsi avant ce patch : pas notre fait
+    restored = _HTML_LANG_ATTR_RE.sub(f'lang="{was}"', tag.group(0), count=1)
+    return (new_content.replace(tag.group(0), restored, 1),
+            [f"lang partage {now} refuse : le crawl mesure un site en {site_lang}"])
+
+
 def _object_key_conflicts(content: str) -> list[str]:
     """Les cles encore en double dans un litteral d'objet apres passage des garde-fous.
 
@@ -20095,6 +20147,9 @@ def _deep_patch_issue_files(
     rewriter_is_ai: bool = False,
     targets_override: list[str] | None = None,
     index: dict[str, Any] | None = None,
+    # La langue que le crawl mesure sur le SITE. Un fichier partage ne peut pas la contredire :
+    # voir `_keep_site_lang`. Vide = le crawl n'a pas su la dire, et le garde-fou reste inerte.
+    site_lang: str = "",
 ) -> tuple[list[str], list[str], list[str], bool]:
     """Resolve the source files for one issue and commit patches into fix_branch.
 
@@ -20240,7 +20295,13 @@ def _deep_patch_issue_files(
         new_content, _quote_notes = _escape_quotes_in_written_values(new_content, raw)
         # Apres l'echappement : une ligne encore mal fermee ferait mal compter les cles.
         new_content, _dup_notes = _drop_duplicate_object_keys(new_content, raw)
-        for _n in _len_notes + _scheme_notes + _quote_notes + _dup_notes:
+        # Uniquement sur un fichier PARTAGE : sur une page, changer sa propre langue est
+        # exactement ce qu'on attend du correcteur. C'est la portee qui distingue les deux, et
+        # la langue du site est un fait que le crawl mesure page par page.
+        _lang_notes: list[str] = []
+        if site_lang and index and repo_index.is_shared_path(index, path):
+            new_content, _lang_notes = _keep_site_lang(new_content, raw, site_lang)
+        for _n in _len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes:
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
@@ -20433,6 +20494,10 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback,
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
             targets_override=_prep.get("targets_override"),
+            # La langue que le crawl mesure sur le SITE, page par page. Un fichier partage ne
+            # peut pas la contredire : voir `_keep_site_lang`.
+            site_lang=_dominant_site_lang(
+                _report_pages if isinstance(_report_pages, list) else None),
         )
     # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
     # The served-lang fixer above lands in the same two lists: both are deterministic repairs

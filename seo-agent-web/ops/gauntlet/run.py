@@ -94,7 +94,10 @@ for key in ordered:
             extra_hint=prep["extra_hint"], model_override="",
             link_rewriter=prep["link_rewriter"], rewriter_ai_fallback=prep["rewriter_ai_fallback"],
             rewriter_is_ai=bool(prep["rewriter_is_ai"]), index=idx,
-            targets_override=prep.get("targets_override"))
+            targets_override=prep.get("targets_override"),
+            # Le meme fait que l'endpoint passe : la langue mesuree sur le site. Sans elle, le
+            # banc ne testerait pas ce que le produit fait.
+            site_lang=m._dominant_site_lang(report.get("pages")))
     except Exception as exc:
         results.append((key, "ERREUR patch", str(exc)[:80], 0, 0))
         continue
