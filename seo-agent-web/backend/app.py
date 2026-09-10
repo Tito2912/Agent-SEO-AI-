@@ -18778,6 +18778,51 @@ def _drop_duplicate_object_keys(new_content: str, old_content: str) -> tuple[str
     return joined, notes
 
 
+# Les extensions dont le front matter est une DONNEE : TOML apres `+++`, YAML apres `---`.
+# `.astro` est volontairement absent — un fichier Astro commence lui aussi par `---` mais ce
+# qu'il contient est du JAVASCRIPT, et le lire comme du YAML le ferait refuser a tort.
+_FRONT_MATTER_EXT = (".md", ".markdown", ".mdx", ".html", ".htm")
+
+
+def _front_matter_parse_error(content: str, path: str) -> str:
+    """'' si le front matter se lit, sinon la raison — avec le VRAI analyseur du format.
+
+    Mesure sur le cycle complet : le deploiement Hugo echouait, trois fichiers portant
+
+        title = 'Page de test du parcours d'obstacles Noyaru'
+
+    ou l'apostrophe termine la chaine litterale TOML. Meme cause qu'en JavaScript, mais le
+    remede JS serait un poison ici : une chaine litterale TOML n'accepte AUCUN echappement,
+    `\\'` s'y retrouverait tel quel dans le titre servi.
+
+    C'est la quatrieme facon dont le modele casse un fichier, trouvee en un jour. Plutot qu'un
+    quatrieme garde-fou qui devine, on demande au format lui-meme : `tomllib` est dans la
+    bibliotheque standard, `pyyaml` est une dependance declaree. Ce qui ne parse pas n'est pas
+    commite.
+    """
+    if not content or not path.lower().endswith(_FRONT_MATTER_EXT):
+        return ""
+    head = content.lstrip("﻿")
+    for marker, kind in (("+++", "TOML"), ("---", "YAML")):
+        if not head.startswith(marker + "\n") and not head.startswith(marker + "\r\n"):
+            continue
+        rest = head.split("\n", 1)[1]
+        end = rest.find("\n" + marker)
+        if end < 0:
+            return f"front matter {kind} non ferme"
+        block = rest[:end]
+        try:
+            if kind == "TOML":
+                import tomllib
+                tomllib.loads(block)
+            else:
+                yaml.safe_load(block)
+        except Exception as exc:
+            return f"front matter {kind} illisible : {type(exc).__name__}: {str(exc)[:120]}"
+        return ""
+    return ""
+
+
 def _dominant_site_lang(pages: list[dict[str, Any]] | None) -> str:
     """La langue que le SITE declare, lue sur les pages crawlees. '' si elle n'est pas nette.
 
@@ -20312,6 +20357,14 @@ def _deep_patch_issue_files(
         # ne se construit plus. Mesure sur next-app — trois deploiements Netlify en echec alors
         # que le journal du correcteur affichait « zero erreur ». On refuse le fichier plutot
         # que de livrer un build casse ; le refus, lui, se voit.
+        # Le format lui-meme a le dernier mot : ce qui ne se lit pas ne se commite pas. Mesure
+        # sur Hugo — trois fichiers au front matter TOML invalide ont fait echouer le
+        # deploiement, alors que le journal du correcteur affichait « zero erreur ».
+        _fm_error = _front_matter_parse_error(new_content, path)
+        if _fm_error:
+            logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _fm_error)
+            skipped.append(path)
+            continue
         if path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".vue", ".svelte", ".astro")):
             _conflicts = _object_key_conflicts(new_content)
             if _conflicts:
