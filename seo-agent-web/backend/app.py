@@ -18875,6 +18875,57 @@ def _keep_site_lang(new_content: str, old_content: str, site_lang: str) -> tuple
             [f"lang partage {now} refuse : le crawl mesure un site en {site_lang}"])
 
 
+def _add_missing_object_commas(content: str) -> tuple[str, list[str]]:
+    """Poser la virgule qu'une propriete inseree a oubliee, et rien d'autre.
+
+    Mesure sur le cycle complet, reproduite en local sur next-app :
+
+        Expected ',', got 'title'
+          description: 'Decouvrez le parcours d'obstacles Noyaru...'
+          title: 'Page de test du parcours d'obstacles Noyaru',
+
+    Contrairement aux trois autres garde-fous JS de la journee, celui-ci est SUR : ajouter une
+    virgule entre deux proprietes ne peut changer aucune semantique, c'est la seule lecture
+    possible du texte. Aucune regle de style, aucune valeur reecrite.
+
+    On n'agit donc que sur un cas parfaitement lisible : la ligne finit par une CHAINE COMPLETE
+    et la ligne suivante, a la MEME indentation, commence une nouvelle cle. Une valeur qui
+    s'etale sur plusieurs lignes, une expression, la derniere propriete avant l'accolade : on
+    s'abstient, parce qu'on ne saurait pas.
+    """
+    lines = content.splitlines()
+    notes: list[str] = []
+    depth = 0
+    out = list(lines)
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if _OBJECT_OPEN_RE.match(line):
+            depth += 1
+            continue
+        if stripped.startswith("}"):
+            depth = max(0, depth - 1)
+            continue
+        if depth <= 0 or not _OBJECT_KEY_RE.match(line):
+            continue
+        # La ligne porte-t-elle une chaine complete, non fermee par une virgule ?
+        if not (stripped.endswith("'") or stripped.endswith('"')):
+            continue
+        nxt = next((lines[j] for j in range(i + 1, len(lines)) if lines[j].strip()), "")
+        if not _OBJECT_KEY_RE.match(nxt):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent != len(nxt) - len(nxt.lstrip()):
+            continue        # une autre profondeur : la virgule manquante n'est pas ici
+        out[i] = line + ","
+        notes.append(f"virgule manquante ajoutee apres `{stripped.split(':', 1)[0].strip()}`")
+    if not notes:
+        return content, []
+    joined = "\n".join(out)
+    if content.endswith("\n"):
+        joined += "\n"
+    return joined, notes
+
+
 def _object_key_conflicts(content: str) -> list[str]:
     """Les cles encore en double dans un litteral d'objet apres passage des garde-fous.
 
@@ -20340,6 +20391,10 @@ def _deep_patch_issue_files(
         new_content, _quote_notes = _escape_quotes_in_written_values(new_content, raw)
         # Apres l'echappement : une ligne encore mal fermee ferait mal compter les cles.
         new_content, _dup_notes = _drop_duplicate_object_keys(new_content, raw)
+        # Apres la deduplication : retirer une ligne change la ligne SUIVANTE, donc l'endroit ou
+        # une virgule manque. Poser la virgule avant aurait vise la mauvaise.
+        new_content, _comma_notes = _add_missing_object_commas(new_content)
+        _dup_notes += _comma_notes
         # Uniquement sur un fichier PARTAGE : sur une page, changer sa propre langue est
         # exactement ce qu'on attend du correcteur. C'est la portee qui distingue les deux, et
         # la langue du site est un fait que le crawl mesure page par page.
