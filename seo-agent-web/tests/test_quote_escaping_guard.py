@@ -91,3 +91,33 @@ def test_the_guard_runs_on_every_patch() -> None:
     src = inspect.getsource(app_module._deep_patch_issue_files)
     assert "_escape_quotes_in_written_values(new_content, raw)" in src
     assert src.index("_escape_quotes_in_written_values") < src.index('patch.get("no_change")')
+
+
+NUXT_OLD = ("useHead({\n"
+            "  meta: [\n"
+            "    { name: 'description', content: 'Ancienne.' },\n"
+            "  ],\n"
+            "});\n")
+
+
+def test_a_value_inside_an_inline_object_is_escaped_too() -> None:
+    """Le trou de la premiere version, mesure sur nuxt.
+
+    Le garde-fou exigeait que la valeur occupe TOUTE la ligne (`key: 'value',`). Chez Nuxt les
+    valeurs vivent dans `{ name: 'description', content: '...' }`, et il les laissait passer —
+    le build a echoue. Mon scan de verification avait le MEME filtre, donc il annoncait zero
+    fichier casse : deux instruments avec le meme angle mort se confirmaient l'un l'autre.
+    """
+    new = NUXT_OLD.replace("Ancienne.", "Le parcours d'obstacles Noyaru")
+    out, notes = app_module._escape_quotes_in_written_values(new, NUXT_OLD)
+    line = next(ln for ln in out.splitlines() if "content:" in ln)
+    assert "d\\'obstacles" in line, f"apostrophe non echappee : {line!r}"
+    assert line.count("'") == 5, f"les deux chaines ne sont plus refermees : {line!r}"
+    assert notes
+
+
+def test_the_other_values_on_the_same_line_are_preserved() -> None:
+    """`name: 'description'` ne doit pas fusionner avec la valeur voisine."""
+    new = NUXT_OLD.replace("Ancienne.", "Le parcours d'obstacles")
+    out, _ = app_module._escape_quotes_in_written_values(new, NUXT_OLD)
+    assert "name: 'description'" in out

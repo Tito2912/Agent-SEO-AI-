@@ -18680,8 +18680,18 @@ def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, li
     return _HTTPS_DOWNGRADE_RE.sub(_one, new_content), notes
 
 
-_QUOTED_VALUE_LINE_RE = re.compile(
-    r"""^(\s*(?:const\s+|let\s+|var\s+)?[A-Za-z_$][\w$]*\s*[:=]\s*)(['"])(.*)(\2)(\s*[,;]?\s*)$""")
+# La valeur n'occupe PAS forcement toute la ligne. La premiere version de ce garde-fou exigeait
+# `cle: 'valeur',` seul sur sa ligne, et laissait donc passer l'ecriture de Nuxt —
+# `{ name: 'description', content: '...' }` — dont le build a echoue. Le scan de verification
+# avait le meme filtre, si bien que deux instruments aveugles au meme endroit se confirmaient
+# l'un l'autre.
+#
+# On reconnait donc une valeur PARTOUT sur la ligne : apres `:` ou `=`, une chaine dont la
+# fermeture est suivie d'un vrai terminateur (`,` `;` `}` `)` `]` ou fin de ligne). Le `.*?`
+# non gourmand s'arrete a la premiere fermeture ainsi qualifiee, ce qui laisse intactes les
+# valeurs voisines de la meme ligne, et une apostrophe interieure — suivie d'une lettre, jamais
+# d'un terminateur — ne peut pas fermer la chaine par erreur.
+_QUOTED_VALUE_RE = re.compile(r"""([:=]\s*)(['"])(.*?)(\2)(?=\s*[,;}\)\]]|\s*$)""")
 
 
 def _escape_quotes_in_written_values(new_content: str, old_content: str) -> tuple[str, list[str]]:
@@ -18711,20 +18721,21 @@ def _escape_quotes_in_written_values(new_content: str, old_content: str) -> tupl
     notes: list[str] = []
     out: list[str] = []
     for line in new_content.splitlines():
-        match = _QUOTED_VALUE_LINE_RE.match(line)
-        if not match or line in old_lines:
+        if line in old_lines:
             out.append(line)
             continue
-        head, quote, value, close, tail = match.groups()
-        if " + " in value or "${" in value:
-            out.append(line)
-            continue
-        fixed = re.sub(r"(?<!\\)" + re.escape(quote), "\\\\" + quote, value)
-        if fixed == value:
-            out.append(line)
-            continue
-        notes.append(f"{quote} echappe dans une valeur ecrite : {value[:60]}")
-        out.append(head + quote + fixed + close + tail)
+
+        def _one(match: "re.Match[str]") -> str:
+            head, quote, value, close = match.groups()
+            if " + " in value or "${" in value:
+                return match.group(0)
+            fixed = re.sub(r"(?<!\\)" + re.escape(quote), "\\\\" + quote, value)
+            if fixed == value:
+                return match.group(0)
+            notes.append(f"{quote} echappe dans une valeur ecrite : {value[:60]}")
+            return head + quote + fixed + close
+
+        out.append(_QUOTED_VALUE_RE.sub(_one, line))
     joined = "\n".join(out)
     if new_content.endswith("\n"):
         joined += "\n"
