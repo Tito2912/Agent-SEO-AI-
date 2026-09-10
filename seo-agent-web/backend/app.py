@@ -18963,6 +18963,61 @@ def _add_missing_object_commas(content: str) -> tuple[str, list[str]]:
     return joined, notes
 
 
+_DELIMITER_PAIRS = {"}": "{", "]": "[", ")": "("}
+
+
+def _unbalanced_delimiters(content: str) -> str:
+    """'' si les delimiteurs se referment, sinon lequel manque — hors chaines et commentaires.
+
+    CINQUIEME facon dont le modele casse un fichier JS, mesuree sur nuxt : il a insere un
+    `meta: [` neuf et ne l'a jamais referme, enchainant sur la cle suivante. Ni le garde-fou de
+    cles dupliquees ni celui de virgules ne pouvaient le voir — tous deux ne suivent que les
+    litteraux d'OBJET, et c'est un tableau.
+
+    On ne REPARE pas : refermer demanderait de deviner ou. On REFUSE, ce qui ne demande rien.
+    Compter des delimiteurs est deterministe, contrairement aux regex qui reconnaissent une
+    forme — et c'est ce genre de controle qui n'a pas eu a etre revise aujourd'hui.
+
+    Les faux refus sont le vrai risque, puisqu'un refus coute une correction. D'ou les trois
+    zones ignorees : l'interieur des chaines (le JSON-LD est plein d'accolades), les gabarits
+    entre accents graves, et les commentaires.
+    """
+    depth: dict[str, int] = {"{": 0, "[": 0, "(": 0}
+    quote: str | None = None
+    escaped = False
+    comment = ""          # "" | "//" | "/*"
+    i = 0
+    while i < len(content):
+        ch = content[i]
+        nxt = content[i + 1] if i + 1 < len(content) else ""
+        if comment == "//":
+            if ch == "\n":
+                comment = ""
+        elif comment == "/*":
+            if ch == "*" and nxt == "/":
+                comment = ""
+                i += 1
+        elif escaped:
+            escaped = False
+        elif quote:
+            if ch == "\\":
+                escaped = True
+            elif ch == quote:
+                quote = None
+        elif ch == "/" and nxt in ("/", "*"):
+            comment = "//" if nxt == "/" else "/*"
+            i += 1
+        elif ch in ("'", '"', "`"):
+            quote = ch
+        elif ch in depth:
+            depth[ch] += 1
+        elif ch in _DELIMITER_PAIRS:
+            depth[_DELIMITER_PAIRS[ch]] -= 1
+        i += 1
+    missing = [f"{k} non referme ({v:+d})" for k, v in depth.items() if v]
+    return ", ".join(missing)
+
+
 def _object_key_conflicts(content: str) -> list[str]:
     """Les cles encore en double dans un litteral d'objet apres passage des garde-fous.
 
@@ -20482,6 +20537,12 @@ def _deep_patch_issue_files(
             skipped.append(path)
             continue
         if path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".vue", ".svelte", ".astro")):
+            _unbalanced = _unbalanced_delimiters(new_content)
+            if _unbalanced:
+                logger.warning("[correction] %s: %s refuse — delimiteurs : %s",
+                               issue_key, path, _unbalanced)
+                skipped.append(path)
+                continue
             _conflicts = _object_key_conflicts(new_content)
             if _conflicts:
                 logger.warning("[correction] %s: %s refuse — cle(s) en double dans un objet : %s",
