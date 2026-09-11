@@ -149,6 +149,25 @@ def test_evidence_hits_stay_ahead_of_every_heuristic() -> None:
     assert targets[0] == "components/Header.tsx"
 
 
+def test_missing_alt_still_reaches_the_flagged_page_itself() -> None:
+    """Le pendant du test precedent, et il a coute cher.
+
+    Le src d'une image sans alt est souvent l'image Open Graph du site, citee par TOUTES les
+    pages : la recherche de preuve remplit alors le plafond de fichiers qui n'ont rien a voir.
+    Mesure du 11/09/2026 sur le banc — le correcteur visait `a-propos.html` et `blog.html`, qui
+    ne portent aucune image, pendant que l'image fautive restait intacte. Le banc comptait
+    pourtant « ok, 6 patches ». La page flaguee doit donc figurer dans les cibles, APRES les
+    fichiers trouves par la preuve, jamais avant.
+    """
+    targets, _ = _resolve(
+        "missing_alt_text", ["/en/avis-bitpanda"],
+        located=["components/Header.tsx", "a-propos.html", "blog.html"],
+    )
+
+    assert targets[0] == "components/Header.tsx"
+    assert any("avis-bitpanda" in t for t in targets), targets
+
+
 def test_head_tag_families_drop_files_that_merely_mention_the_url() -> None:
     # Regression from PR#4 on elevenlabs-avis.com: fixing the hreflang of 3 legal pages also
     # rewrote sitemap.xml -- including a <loc>, which would have made the sitemap point at a

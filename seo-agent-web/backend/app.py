@@ -17670,6 +17670,10 @@ def _issue_hreflang_pairs(issue_block: Any) -> list[dict[str, str]]:
             out.append({
                 "page": str(it["page"]), "code": str(it["code"]),
                 "from": str(it["from"]), "to": str(it["to"]),
+                # `where` dit OU vit le conflit — "page" (la tete se contredit) ou "sitemap".
+                # Le laisser tomber ici envoyait toute la famille sur sitemap.xml, ou il n'y
+                # avait rien a changer dans le premier cas.
+                "where": str(it.get("where") or ""),
             })
     return out[:40]
 
@@ -17757,34 +17761,60 @@ def _drop_duplicate_hreflang(content: str, pairs: list[dict[str, str]]) -> tuple
     `sitemap.xml`, ou il n'y avait rien a changer. Resultat mesure sur le banc : « aucun patch »
     sur huit stacks sur neuf, pour une anomalie pourtant affichee au client.
     """
-    removed = 0
-    variants: set[tuple[str, str]] = set()
+    # On raisonne sur le CODE et sur l'annotation a GARDER, jamais sur celle a retirer. Mesure
+    # du 11/09/2026 : une famille passee avant dans le meme passage (`hreflang_to_non_canonical`)
+    # avait deja reecrit l'URL en trop, si bien que le `from` de la preuve ne correspondait plus
+    # a rien et que le retrait ne trouvait pas sa cible. Le `to`, lui, est stable : c'est
+    # l'auto-reference de la page.
+    keepers: dict[str, set[str]] = {}
     for pair in pairs or []:
         code = str(pair.get("code") or "").strip().lower()
-        if not code:
+        to = str(pair.get("to") or "").strip()
+        if not code or not to:
             continue
-        for frm, _to in _url_value_variants(pair) or []:
-            variants.add((code, frm))
-        frm_raw = str(pair.get("from") or "").strip()
-        if frm_raw:
-            variants.add((code, frm_raw))
-    if not variants:
+        vals = keepers.setdefault(code, set())
+        vals.add(to)
+        vals.add(_link_path(to))
+    if not keepers:
         return content, 0
+
+    def _code_of(tag: str) -> str:
+        m = re.search(r'hreflang\s*=\s*["\']?([A-Za-z0-9_-]+)', tag, re.I)
+        return (m.group(1) if m else "").strip().lower()
+
+    def _href_of(tag: str) -> str:
+        m = _HREF_ATTR_RE.search(tag)
+        return (m.group(3) if m else "").strip()
+
+    # Pre-lecture : l'annotation a garder figure-t-elle vraiment dans la page ? Si non — parce
+    # qu'un autre correctif l'a deplacee — on garde la PREMIERE du code plutot que de toutes les
+    # retirer : une page sans auto-reference serait un second defaut, pire que le premier.
+    presents: dict[str, list[str]] = {}
+    for m in _LINK_LINE_RE.finditer(content):
+        code = _code_of(m.group(0))
+        if code in keepers:
+            presents.setdefault(code, []).append(_href_of(m.group(0)))
+    garde: dict[str, str] = {}
+    for code, hrefs in presents.items():
+        vals = keepers[code]
+        choisi = next((h for h in hrefs if h in vals or _link_path(h) in vals), "")
+        garde[code] = choisi or (hrefs[0] if hrefs else "")
+
+    vus: set[str] = set()
+    removed = 0
 
     def _drop(match: "re.Match[str]") -> str:
         nonlocal removed
         tag = match.group(0)
-        href = _HREF_ATTR_RE.search(tag)
-        if not href:
+        code = _code_of(tag)
+        if code not in garde:
             return tag
-        value = href.group(3).strip()
-        for code, frm in variants:
-            if value != frm:
-                continue
-            if re.search(r'hreflang\s*=\s*["\']?' + re.escape(code) + r'\b', tag, re.I):
-                removed += 1
-                return ""
-        return tag
+        href = _href_of(tag)
+        if href == garde[code] and code not in vus:
+            vus.add(code)
+            return tag
+        removed += 1
+        return ""
 
     return _LINK_LINE_RE.sub(_drop, content), removed
 
@@ -20113,6 +20143,15 @@ def _deep_fix_redirect_config_loops(
 # reasoning that keeps the sitemap and asset families out of page targeting.
 _SHARED_RENDER_FIX_KEYS = _with_indexability_variants({"served_html_lang_mismatch"})
 
+# `missing_alt_text` est la SEULE famille d'image dont la page flaguee soit aussi le fichier a
+# corriger : le crawler nomme la page ET le src fautif (`alt_samples` est un dictionnaire
+# page -> srcs). Sans ciblage par page, la famille ne vivait que du grep de preuve — or le src
+# d'une image sans alt est souvent l'image Open Graph du site, citee par TOUTES les pages. Mesure
+# du 11/09/2026 : le correcteur visait `a-propos.html` et `blog.html`, qui ne portent aucune
+# image, et la page fautive n'entrait jamais dans le plafond. Le banc affichait pourtant « ok,
+# 6 patches » — six fichiers modifies par le modele pour rien, et l'image sans alt intacte.
+_PAGE_TARGETED_ASSET_KEYS = _with_indexability_variants({"missing_alt_text"})
+
 
 def _resolve_issue_targets(
     *, all_paths: list[str], index: dict[str, Any] | None, issue_key: str, issue_label: str,
@@ -20153,6 +20192,7 @@ def _resolve_issue_targets(
         wants_page_targeting
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
         or issue_key in _PER_PAGE_CONTENT_KEYS
+        or issue_key in _PAGE_TARGETED_ASSET_KEYS
         or _length_family_name(issue_key) is not None
         or page_side
     ) and issue_key not in _ASSET_REWRITE_KEYS         and (page_side or issue_key not in _SITEMAP_FAMILY_KEYS) \
@@ -20200,6 +20240,18 @@ def _resolve_issue_targets(
             # http:// references ARE the fix and legitimately live outside the flagged pages.
             if issue_key in _URL_PAIR_KEYS and index_resolved_all:
                 targets = priority
+            elif issue_key in _PAGE_TARGETED_ASSET_KEYS:
+                # L'image peut vivre dans un COMPOSANT partage, que seule la preuve trouve : ce
+                # fichier-la doit rester en tete, sinon le plafond l'evince et la famille ne
+                # corrige rien sur un vrai site (c'est ce que garantit
+                # `test_evidence_hits_stay_ahead_of_every_heuristic`). La page flaguee est
+                # ajoutee APRES, pour le cas — celui du banc — ou l'image est ecrite dans la page
+                # elle-meme et ou la preuve, trop commune, ne la designe pas.
+                # La page peut DEJA figurer dans `targets` — mais en douzieme position, donc
+                # hors du plafond. Il faut la promouvoir, pas seulement l'ajouter.
+                _reserve = priority[:2]
+                targets = ([t for t in targets if t not in _reserve][:max(0, max_files - len(_reserve))]
+                           + _reserve)
             else:
                 targets = priority + [t for t in targets if t not in priority]
     # Hardcoded candidate filenames for this issue type (this is what puts app/sitemap.ts in
