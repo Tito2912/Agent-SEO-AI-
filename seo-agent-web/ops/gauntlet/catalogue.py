@@ -140,6 +140,12 @@ CATALOGUE: list[Spec] = [
     Spec("hreflang-to-non-canonical", "hreflang_to_non_canonical",
          "hreflang pointant vers une page dont le canonical est ailleurs.",
          hreflang=(("fr", "hreflang-to-non-canonical"), ("en", "canonical-other"))),
+    # Le controle du crawler fusionne les hreflang de la TETE de page et ceux du sitemap, puis
+    # regarde si un meme code mene a plus d'une URL (`_code_to_urls[code]`). Deux annotations
+    # `fr` vers deux pages differentes suffisent donc, sans rien demander au sitemap.
+    Spec("hreflang-same-language", "more_than_one_page_for_same_language_in_hreflang",
+         "deux annotations hreflang pour le meme code, vers deux pages differentes.",
+         hreflang=(("fr", "hreflang-same-language"), ("fr", "canonical-other"))),
 
     # ── D. Open Graph / Twitter ───────────────────────────────────────────────────────────
     Spec("og-missing", "open_graph_tags_missing", "aucune balise Open Graph.", og="none"),
@@ -191,6 +197,13 @@ CATALOGUE: list[Spec] = [
          "attribut lang syntaxiquement invalide.", lang="francais"),
 
     # ── I. longueurs, sur une page non indexable ──────────────────────────────────────────
+    # `missing_meta_description` ne tire QUE sur une page non indexable — parite Ahrefs, ecrite
+    # dans seo_audit.py : `not _non_empty(p.meta_description) and not _is_indexable(p)`. Le cas
+    # indexable se replie dans `meta_description_too_short_indexable`, que porte deja la page
+    # `missing-meta-description`. Il faut donc une SECONDE page : sans description ET noindex.
+    Spec("noindex-no-description", "missing_meta_description",
+         "page noindex ne declarant aucune meta description.",
+         desc=None, robots="noindex, follow"),
     Spec("noindex-long", "title_too_long_not_indexable + meta_description_too_long_not_indexable",
          "page noindex portant un titre et une description hors plafond.",
          title=LONG_T, desc=LONG_D, robots="noindex, follow"),

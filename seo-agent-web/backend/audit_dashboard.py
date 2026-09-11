@@ -56,6 +56,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 NON_ISSUE_KEYS: set[str] = {
     "internal_pages",
     "bad_status",
+    # Parité Ahrefs, vérifiée sur le catalogue des 173 types : Ahrefs n'a AUCUNE anomalie
+    # « canonical manquant ». L'absence de canonical n'est pas un défaut en soi ; le cas nuisible
+    # est « Duplicate pages without canonical », que nous levons séparément. Consequence assumée :
+    # le correcteur garde un gestionnaire pour cette clé (elle reste corrigeable si elle remonte
+    # un jour) mais ne recevra jamais de tâche — ce n'est donc pas un trou du banc d'essai.
     "missing_canonical",
     # CWV helper issues (used for drilldowns from the CWV card).
     "cwv_lcp_pages_to_fix",
@@ -849,6 +854,26 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "https_page_links_to_http_javascript", "Page HTTPS → JavaScript HTTP", "JavaScript", "warning"
     ),
     "https_page_links_to_http_css": IssueMeta("https_page_links_to_http_css", "Page HTTPS → CSS HTTP", "CSS", "warning"),
+    # Ressources qui REDIRIGENT. Ahrefs a les six (Images : « Image redirects », « Page has
+    # redirected image » ; JavaScript et CSS de même). Le crawler les levait déjà et le
+    # correcteur les revendique dans `_ASSET_REWRITE_KEYS`, mais elles n'étaient pas ici : sans
+    # entrée de catalogue, l'écran ne les montre jamais et aucune tâche de correction ne naît.
+    # Mesuré le 11/09/2026 sur la preview #16 — les six se déclenchent, une chacune, sur leur
+    # page et leur ressource. Warning et non error : la ressource répond, elle coûte un saut.
+    "image_redirects": IssueMeta("image_redirects", "Image qui redirige", "Images", "warning"),
+    "page_has_redirected_image": IssueMeta(
+        "page_has_redirected_image", "Page avec image qui redirige", "Images", "warning"
+    ),
+    "javascript_redirects": IssueMeta(
+        "javascript_redirects", "JavaScript qui redirige", "JavaScript", "warning"
+    ),
+    "page_has_redirected_javascript": IssueMeta(
+        "page_has_redirected_javascript", "Page avec JavaScript qui redirige", "JavaScript", "warning"
+    ),
+    "css_redirects": IssueMeta("css_redirects", "CSS qui redirige", "CSS", "warning"),
+    "page_has_redirected_css": IssueMeta(
+        "page_has_redirected_css", "Page avec CSS qui redirige", "CSS", "warning"
+    ),
     # Sitemaps
     "sitemap_3xx_redirect": IssueMeta("sitemap_3xx_redirect", "Sitemap : URL en 3XX", "Sitemaps", "error"),
     "sitemap_4xx_page": IssueMeta("sitemap_4xx_page", "Sitemap : URL en 4XX", "Sitemaps", "error"),

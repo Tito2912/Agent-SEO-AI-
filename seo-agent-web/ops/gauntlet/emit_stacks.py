@@ -79,6 +79,12 @@ CANNOT: dict[str, dict[str, str]] = {
             "`width=device-width, initial-scale=1` sur TOUTES les pages, y compris celle qui "
             "exporte `viewport = {}`. Next.js pose sa viewport par defaut et rien dans l'API "
             "d'une page ne l'enleve — la famille ne peut donc pas se produire sur cette stack.",
+        "more_than_one_page_for_same_language_in_hreflang":
+            "`metadata.alternates.languages` est un OBJET indexe par le code de langue, pas une "
+            "liste de balises. Deux annotations `fr` y deviennent deux proprietes de meme nom : "
+            "TypeScript les refuse (TS1117) et, si le build passait, la seconde ecraserait la "
+            "premiere — une seule URL pour `fr`, donc la famille ne peut pas se produire. "
+            "L'emettre quand meme casserait la construction du site.",
     },
     "next-pages": {
         "html_lang_attribute_missing":
