@@ -4395,7 +4395,10 @@ _EVIDENCE_FIELDS: dict[str, tuple[str, ...]] = {
     # Same swap as url_pairs but keyed on the hreflang CODE too: inside one <url> block the same
     # URL legitimately serves several codes (fr and x-default both pointing at the French home),
     # so a value-only pair would rewrite a correct alternate while fixing the wrong one.
-    "hreflang_pairs": ("page", "code", "from", "to"),
+    # `where` dit OU vit le conflit : "sitemap" (le sitemap contredit la page) ou "page" (la page
+    # se contredit elle-meme). Sans lui, le correcteur envoyait toute la famille sur sitemap.xml
+    # et ne trouvait rien a changer quand le doublon etait dans la tete de la page.
+    "hreflang_pairs": ("page", "code", "from", "to", "where"),
 }
 _EVIDENCE_REQUIRED: dict[str, tuple[str, ...]] = {
     "url_pairs": ("from", "to"),
@@ -6610,11 +6613,16 @@ def _score_issues(
         _code_to_urls: dict[str, set[str]] = defaultdict(set)
         _src_by_code: dict[str, str] = {}
         _sm_by_code: dict[str, str] = {}
+        # Ordered and deduped, SOURCE only: this is what says whether the page contradicts
+        # itself, as opposed to contradicting its sitemap.
+        _src_urls_by_code: dict[str, list[str]] = defaultdict(list)
         # 1) page source-code hreflang (raw duplicates + deduped dict)
         for code, href in _source_hreflang_pairs(p):
             _norm = _norm_self(href) or href
             _code_to_urls[code].add(_norm)
             _src_by_code.setdefault(code, _norm)
+            if _norm not in _src_urls_by_code[code]:
+                _src_urls_by_code[code].append(_norm)
         # 2) XML sitemap hreflang for this same page URL
         for code, href in (_sitemap_hreflang_only(p) or {}).items():
             code = str(code or "").strip().lower()
@@ -6629,8 +6637,27 @@ def _score_issues(
                 src_url = _src_by_code.get(code)
                 if src_url and src_url != sm_url:
                     hreflang_sitemap_conflict_pairs.append(
-                        {"page": _final_url(p), "code": code, "from": sm_url, "to": src_url}
+                        {"page": _final_url(p), "code": code,
+                         "from": sm_url, "to": src_url, "where": "sitemap"}
                     )
+            # The OTHER half, which had no evidence at all until 2026-09-11 and therefore no
+            # fix: the page's own <head> declares the SAME code twice, pointing at two URLs.
+            # Nothing downstream could act on that — the corrector routed the whole family to
+            # sitemap.xml, where there was nothing to change, and reported "no patch" on every
+            # stack. The pair says which annotation to DROP and which to keep; the self-
+            # referencing one wins, because a hreflang group without a self-reference is a
+            # second defect.
+            _self = _norm_self(_final_url(p)) or _final_url(p)
+            for code, urls in _src_urls_by_code.items():
+                if len(urls) < 2:
+                    continue
+                keep = _self if _self in urls else urls[0]
+                for url in urls:
+                    if url != keep:
+                        hreflang_sitemap_conflict_pairs.append(
+                            {"page": _final_url(p), "code": code,
+                             "from": url, "to": keep, "where": "page"}
+                        )
     more_than_one_page_for_same_language_in_hreflang = sorted(set(filter(None, _more_than_one_lang)))
 
     # Ahrefs flags EVERY member of a conflicting hreflang group. A page whose own source

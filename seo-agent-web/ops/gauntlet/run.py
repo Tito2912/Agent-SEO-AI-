@@ -95,6 +95,7 @@ for key in ordered:
             link_rewriter=prep["link_rewriter"], rewriter_ai_fallback=prep["rewriter_ai_fallback"],
             rewriter_is_ai=bool(prep["rewriter_is_ai"]), index=idx,
             targets_override=prep.get("targets_override"),
+            page_side=bool(prep.get("page_side")),
             # Le meme fait que l'endpoint passe : la langue mesuree sur le site. Sans elle, le
             # banc ne testerait pas ce que le produit fait.
             site_lang=m._dominant_site_lang(report.get("pages")))

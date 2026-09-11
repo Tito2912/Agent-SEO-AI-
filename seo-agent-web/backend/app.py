@@ -16958,6 +16958,31 @@ def _evidence_needles(terms: list[str]) -> list[str]:
     return out
 
 
+def _rank_by_needle_rarity(paths: list[str], hits: dict[str, list[str]]) -> list[str]:
+    """Classer les fichiers trouves par la RARETE de l'aiguille qui les a trouves.
+
+    Une aiguille qui figure partout ne renseigne rien ; celle qui ne figure que dans un fichier
+    dit tout. `_evidence_needles` en produit deux par terme — le chemin `/og.png` et le nom nu
+    `og.png` — et le nom nu d'une image Open Graph apparait sur TOUTES les pages du site.
+
+    Mesure du 11/09/2026 sur le banc : `image_redirects` remplissait ainsi son plafond de six
+    fichiers avec des pages quelconques (a-propos, blog…) et n'atteignait jamais celle qui charge
+    l'image qui redirige — la famille rendait « aucun patch » sur les neuf stacks, alors que le
+    reecriveur, lui, fonctionne. Le CSS y echappait par pur hasard, `style.css` etant plus rare
+    que `og.png`. Le classement est deterministe et ne fait que COMPTER : a rarete egale, l'ordre
+    de decouverte est conserve.
+    """
+    if not hits:
+        return list(paths)
+    freq: Counter[str] = Counter()
+    for found in hits.values():
+        for needle in set(found):
+            freq[needle] += 1
+    rang = {path: i for i, path in enumerate(paths)}  # fige l'ordre d'origine avant le tri
+    return sorted(paths, key=lambda p: (min((freq[n] for n in hits.get(p) or []), default=10**9),
+                                        rang[p]))
+
+
 def _github_tarball_grep(
     owner: str, repo: str, branch: str, token: str, terms: list[str],
     *, limit: int = 8, max_bytes: int = 60_000_000, max_file: int = 600_000,
@@ -16996,6 +17021,7 @@ def _github_tarball_grep(
     _img_tokens = ("<img", "<image", "next/image")
     exact: list[str] = []
     imgish: list[str] = []
+    hits: dict[str, list[str]] = {}   # chemin -> aiguilles qui l'ont trouve, pour le classement
     try:
         with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tf:
             for m in tf.getmembers():
@@ -17018,12 +17044,23 @@ def _github_tarball_grep(
                 except Exception:
                     continue
                 cl = content.lower()
-                if any(n in content for n in needles):
+                matched = [n for n in needles if n in content]
+                if matched:
                     exact.append(rel)
+                    hits[rel] = matched
                 elif any(tok in cl for tok in _img_tokens) and (not dirs or any(d in cl for d in dirs)):
                     imgish.append(rel)
     except Exception:
         return []
+    # Une aiguille qui figure PARTOUT ne renseigne rien ; celle qui ne figure que dans un fichier
+    # dit tout. `_evidence_needles` en produit deux par terme — le chemin `/og.png` et le nom nu
+    # `og.png` — et le nom nu d'une image Open Graph apparait sur TOUTES les pages du site.
+    # Mesure du 11/09/2026 : `image_redirects` remplissait ainsi son plafond de six fichiers avec
+    # des pages quelconques (a-propos, blog…) et n'atteignait jamais celle qui charge l'image qui
+    # redirige ; la famille rendait « aucun patch » sur les neuf stacks. Le CSS y echappait par
+    # pur hasard, `style.css` etant plus rare que `og.png`. On classe donc par RARETE de
+    # l'aiguille avant de tronquer : compter bat deviner, et le classement est deterministe.
+    exact = _rank_by_needle_rarity(exact, hits)
     out: list[str] = []
     for p in exact + imgish:
         if p not in out:
@@ -17702,6 +17739,54 @@ _SITEMAP_URL_BLOCK_RE = re.compile(r"<url\b.*?</url>", re.I | re.S)
 _SITEMAP_ALT_TAG_RE = re.compile(r"<xhtml:link\b[^>]*>", re.I)
 _SITEMAP_ALT_CODE_RE = re.compile(r'hreflang\s*=\s*"([^"]*)"', re.I)
 _SITEMAP_ALT_HREF_RE = re.compile(r'(href\s*=\s*")([^"]*)(")', re.I)
+
+
+_LINK_LINE_RE = re.compile(r"[ \t]*<link\b[^>]*>[ \t]*\r?\n?", re.I)
+
+
+def _drop_duplicate_hreflang(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+    """Retirer d'une PAGE les annotations hreflang en trop : meme code, deux URL differentes.
+
+    On SUPPRIME, on ne reecrit pas. Reecrire `from` en `to` produirait deux annotations
+    identiques, que le controle compte toujours comme un defaut — la famille reviendrait au
+    crawl suivant. La paire dit laquelle garder : celle qui se designe elle-meme, parce qu'un
+    groupe hreflang sans auto-reference est un second defaut.
+
+    Jusqu'au 11/09/2026 cette moitie de la famille n'avait AUCUNE preuve : le crawler ne
+    decrivait que le conflit page-contre-sitemap, et le correcteur envoyait tout sur
+    `sitemap.xml`, ou il n'y avait rien a changer. Resultat mesure sur le banc : « aucun patch »
+    sur huit stacks sur neuf, pour une anomalie pourtant affichee au client.
+    """
+    removed = 0
+    variants: set[tuple[str, str]] = set()
+    for pair in pairs or []:
+        code = str(pair.get("code") or "").strip().lower()
+        if not code:
+            continue
+        for frm, _to in _url_value_variants(pair) or []:
+            variants.add((code, frm))
+        frm_raw = str(pair.get("from") or "").strip()
+        if frm_raw:
+            variants.add((code, frm_raw))
+    if not variants:
+        return content, 0
+
+    def _drop(match: "re.Match[str]") -> str:
+        nonlocal removed
+        tag = match.group(0)
+        href = _HREF_ATTR_RE.search(tag)
+        if not href:
+            return tag
+        value = href.group(3).strip()
+        for code, frm in variants:
+            if value != frm:
+                continue
+            if re.search(r'hreflang\s*=\s*["\']?' + re.escape(code) + r'\b', tag, re.I):
+                removed += 1
+                return ""
+        return tag
+
+    return _LINK_LINE_RE.sub(_drop, content), removed
 
 
 def _rewrite_sitemap_alternates(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
@@ -20033,6 +20118,7 @@ def _resolve_issue_targets(
     *, all_paths: list[str], index: dict[str, Any] | None, issue_key: str, issue_label: str,
     impacted_urls: list[str], located: list[str], max_files: int,
     evidence: list[str] | None = None, wants_page_targeting: bool = False,
+    page_side: bool = False,
     ai_map: "Callable[[], list[str]] | None" = None,
     ai_pick: "Callable[[], list[str]] | None" = None,
 ) -> list[str]:
@@ -20068,7 +20154,8 @@ def _resolve_issue_targets(
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
         or issue_key in _PER_PAGE_CONTENT_KEYS
         or _length_family_name(issue_key) is not None
-    ) and issue_key not in _ASSET_REWRITE_KEYS and issue_key not in _SITEMAP_FAMILY_KEYS \
+        or page_side
+    ) and issue_key not in _ASSET_REWRITE_KEYS         and (page_side or issue_key not in _SITEMAP_FAMILY_KEYS) \
         and not (issue_key in _SHARED_RENDER_FIX_KEYS
                  # …except where the attribute lives in the page itself: on a hand-written site
                  # the flagged pages ARE the files to fix, and excluding them would leave the
@@ -20165,7 +20252,7 @@ def _resolve_issue_targets(
     # A sitemap issue is fixed in the sitemap, full stop. The flagged URL also appears in every
     # page that links to it, so the evidence grep drags those in — the same trap that had a
     # hreflang fix rewriting sitemap.xml, mirrored.
-    if issue_key in _SITEMAP_FAMILY_KEYS:
+    if issue_key in _SITEMAP_FAMILY_KEYS and not page_side:
         # A committed sitemap always wins. Only when the repository holds none is the fix in the
         # config that generates it — reaching for the config while a real sitemap.xml sits next
         # to it would edit a rule instead of the data it produced.
@@ -20326,6 +20413,8 @@ def _prepare_issue_fix(
         "link_rewriter": None,
         "rewriter_ai_fallback": False,
         "side_effects": "",
+        # Le conflit vit-il dans la PAGE plutot que dans le sitemap ? Voir la branche hreflang.
+        "page_side": False,
         "targets_override": None,
         # A bounded rewriter is not necessarily a model-free one. See `_deep_patch_issue_files`.
         "rewriter_is_ai": False,
@@ -20518,7 +20607,19 @@ def _prepare_issue_fix(
                     "erreur TypeScript, donc un build casse chez le client :\n" + _types)
                 break
     elif url_pairs and issue_key in _SITEMAP_ALTERNATE_KEYS:
-        out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_alternates(raw, _p)  # noqa: E731
+        # Deux conflits portent le meme nom de famille et ne se corrigent pas au meme endroit.
+        # `where=page` : la tete de la page declare DEUX fois le meme code — on retire l'annotation
+        # en trop, dans la page. `where=sitemap` : le sitemap contredit la page — on reecrit le
+        # sitemap. Router sur la clef seule envoyait tout sur sitemap.xml, ou il n'y avait rien
+        # a changer dans le premier cas.
+        _page_pairs = [p for p in url_pairs if str(p.get("where") or "") == "page"]
+        if _page_pairs:
+            out["link_rewriter"] = lambda raw, _p=_page_pairs: _drop_duplicate_hreflang(raw, _p)  # noqa: E731
+            out["page_side"] = True
+            # Ce que la recherche de fichiers doit trouver : l'URL de l'annotation a retirer.
+            out["evidence"] = [p["from"] for p in _page_pairs if p.get("from")]
+        else:
+            out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_alternates(raw, _p)  # noqa: E731
     elif url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
         # Targets are restricted to the sitemap file, so an AI fallback can only ever see the
         # right file — useful when the sitemap is GENERATED and holds no literal <loc>.
@@ -20552,6 +20653,7 @@ def _deep_patch_issue_files(
     rewriter_ai_fallback: bool = False,
     rewriter_is_ai: bool = False,
     targets_override: list[str] | None = None,
+    page_side: bool = False,
     index: dict[str, Any] | None = None,
     # La langue que le crawl mesure sur le SITE. Un fichier partage ne peut pas la contredire :
     # voir `_keep_site_lang`. Vide = le crawl n'a pas su la dire, et le garde-fou reste inerte.
@@ -20614,7 +20716,7 @@ def _deep_patch_issue_files(
         targets = _resolve_issue_targets(
             all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
             impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
-            wants_page_targeting=link_rewriter is not None,
+            wants_page_targeting=link_rewriter is not None, page_side=page_side,
         )
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     _idiom = repo_index.stack_idiom_hint(index) if index else ""
@@ -20926,6 +21028,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback,
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
             targets_override=_prep.get("targets_override"),
+            page_side=bool(_prep.get("page_side")),
             # La langue que le crawl mesure sur le SITE, page par page. Un fichier partage ne
             # peut pas la contredire : voir `_keep_site_lang`.
             site_lang=_dominant_site_lang(
