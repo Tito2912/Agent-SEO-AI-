@@ -202,7 +202,12 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
                               "href": site.replace("https://", "http://") + "/style.css"}))
     if spec.redirected_css:
         # `/ancienne.css` redirige vers `/style.css` — la regle est posee par l'echafaudage.
-        tags.append(("link", {"rel": "stylesheet", "href": site + "/ancienne.css"}))
+        # RELATIF, et c'est une mesure : ecrit en absolu vers `site`, le chemin designe l'hote de
+        # PRODUCTION. Sur une preview il devient cross-host, le crawler le classe ressource
+        # externe et ne le suit pas — les trois familles de redirection tombaient a zero alors
+        # que la regle 301 etait bien en vigueur. Seules les URL dont le SCHEMA est l'anomalie
+        # (http_css, http_js, http_image) doivent rester absolues.
+        tags.append(("link", {"rel": "stylesheet", "href": "/ancienne.css"}))
     if spec.jsonld_bad_price:
         # `SoftwareApplication` et pas `Product` : MESURE sur le banc deploye — le
         # controle `offer_price_is_string` du crawler est conditionne a ce type-la, donc
@@ -231,9 +236,9 @@ def body_bits(spec: Spec, site: str) -> list[str]:
     if spec.img_no_alt:
         # Pas d'attribut alt du tout : c'est l'anomalie visee. L'image doit EXISTER, sinon on
         # mesurerait un 404 au lieu d'un alt manquant.
-        out.append(f'<img src="{site}/og.png" />')
+        out.append('<img src="/og.png" />')
     if spec.redirected_image:
-        out.append(f'<img src="{site}/img/ancienne.png" alt="Illustration de test" />')
+        out.append('<img src="/img/ancienne.png" alt="Illustration de test" />')
     if spec.http_link:
         out.append(f'<p><a href="{http}/{spec.http_link}">A propos</a></p>')
     if spec.double_slash_link:
@@ -244,7 +249,7 @@ def body_bits(spec: Spec, site: str) -> list[str]:
     if spec.http_js:
         out.append(f'<script src="{http}/app.js"></script>')
     if spec.redirected_js:
-        out.append(f'<script src="{site}/ancien.js"></script>')
+        out.append('<script src="/ancien.js"></script>')
     return out
 
 
@@ -450,7 +455,7 @@ def emit_nuxt(spec: Spec, site: str) -> tuple[str, str]:
     if links:
         head_obj.append("    link: [\n" + ",\n".join(links) + "\n    ],")
     if spec.redirected_js:
-        scripts.append("      { src: " + _js_str(site + "/ancien.js") + " }")
+        scripts.append("      { src: " + _js_str("/ancien.js") + " }")
     if spec.http_js:
         # Le script passe par useHead, PAS par le template. Mesure sur le site deploye : ecrit
         # dans le template, il figurait bien dans le HTML servi mais avait disparu du DOM une
@@ -520,7 +525,7 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
     body = "\n".join("      " + b for b in body_bits(spec, site))
     extra = ""
     if spec.redirected_css:
-        extra += '\n      <link rel="stylesheet" href="' + site + '/ancienne.css" />'
+        extra += '\n      <link rel="stylesheet" href="/ancienne.css" />'
     if spec.http_css:
         # L'objet `metadata` ne sait pas declarer un <link rel="stylesheet"> : il n'a de cle que
         # pour les balises qu'il connait. Mesure : `https_page_links_to_http_css` etait la SEULE

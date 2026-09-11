@@ -134,6 +134,31 @@ def outside_gauntlet(report: Path, family: str) -> bool:
     return bool(urls) and not any("/gauntlet" in u for u in urls)
 
 
+def _slug(url: str) -> str:
+    """Le slug de parcours porte par une URL, quelle que soit la convention de la stack."""
+    path = str(url or "").split("?", 1)[0].split("#", 1)[0].rstrip("/")
+    return path.rsplit("/", 1)[-1].removesuffix(".html")
+
+
+def crawled_slugs(report: Path) -> set[str]:
+    data = json.loads(report.read_text(encoding="utf-8"))
+    return {_slug(p.get("url") or "") for p in (data.get("pages") or [])
+            if "/gauntlet" in str(p.get("url") or "")}
+
+
+def carriers(stack: str) -> dict[str, set[str]]:
+    """Quelle page du parcours est censee PORTER chaque famille."""
+    out: dict[str, set[str]] = {}
+    for spec in CATALOGUE:
+        if skipped(stack, spec):
+            continue
+        for name in spec.family.split("+"):
+            name = name.strip()
+            if name and name not in NOT_TRIGGERABLE:
+                out.setdefault(name, set()).add(spec.slug)
+    return out
+
+
 def compare(stack: str, report: Path) -> dict:
     want = expected_families(stack)
     got = detected(report)
@@ -142,7 +167,19 @@ def compare(stack: str, report: Path) -> dict:
     def seen(name: str) -> bool:
         return any(k == name or k.startswith(name + "_") for k in got)
 
-    missing = sorted(n for n in want if not seen(n))
+    # La page qui porte la famille a-t-elle seulement ete SERVIE ? Sans cette question, une
+    # famille se declarait detectee parce que la cle existait, sans regarder d'ou. Mesure du
+    # 11/09/2026 : les quatre pages de ressources n'etaient pas deployees, et `image_redirects`
+    # comptait quand meme — sa seule preuve etait la redirection http->https de `og.png`, portee
+    # par la page `mixed-image`, qui n'a rien a voir. L'instrument confirmait une injection qui
+    # n'avait pas eu lieu ; six familles sur sept etaient fausses.
+    porte = carriers(stack)
+    servies = crawled_slugs(report)
+    attendues_pages = {s.slug for s in CATALOGUE if not skipped(stack, s)}
+    absentes = sorted(attendues_pages - servies)
+
+    missing = sorted(n for n in want
+                     if not seen(n) or not (porte.get(n, set()) & servies))
     base = {n.replace("_indexable", "").replace("_not_indexable", "") for n in got}
     extra = sorted(k for k in got
                    if k not in SITE_WIDE
@@ -152,7 +189,8 @@ def compare(stack: str, report: Path) -> dict:
     hors = [k for k in extra if outside_gauntlet(report, k)]
     extra = [k for k in extra if k not in hors]
     return {"stack": stack, "attendues": len(want), "detectees": len(want) - len(missing),
-            "manquantes": missing, "parasites": extra, "hors_parcours": hors}
+            "manquantes": missing, "parasites": extra, "hors_parcours": hors,
+            "pages_absentes": absentes}
 
 
 def main() -> int:
@@ -182,13 +220,16 @@ def main() -> int:
     for r in rows:
         print(f"{r['stack']:<12} {r['attendues']:>9} {r['detectees']:>9}  "
               f"{len(r['manquantes'])} / {len(r['parasites'])}")
+        for slug in r.get("pages_absentes", []):
+            print(f"             PAGE ABSENTE (non servie) {slug}")
         for name in r["manquantes"]:
             print(f"             MANQUE   {name}")
         for name in r["parasites"]:
             print(f"             PARASITE {name}")
         for name in r.get("hors_parcours", []):
             print(f"             (hors parcours, defaut propre a la fixture) {name}")
-        ok = ok and not r["manquantes"] and not r["parasites"]
+        ok = (ok and not r["manquantes"] and not r["parasites"]
+              and not r.get("pages_absentes"))
     (workdir / "injection.json").write_text(
         json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
     print("\nInjection conforme." if ok else

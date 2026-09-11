@@ -24,7 +24,7 @@ export default function Page() {
       <h1>Parcours d'obstacles</h1>
       <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
       <p><a href="/">Retour a l accueil</a></p>
-      <img src="https://noyaru-stack-next-pages.netlify.app/img/ancienne.png" alt="Illustration de test" />
+      <img src="/img/ancienne.png" alt="Illustration de test" />
     </main>
   );
 }

@@ -22,4 +22,4 @@
 <h1>Parcours d'obstacles</h1>
 <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
 <p><a href="/">Retour a l accueil</a></p>
-{@html '<script src="https://noyaru-stack-sveltekit.netlify.app/ancien.js"></script>'}
+{@html '<script src="/ancien.js"></script>'}

@@ -48,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -321,6 +322,18 @@ def cmd_publish(args) -> int:
                 f"{' '.join(a[:3])} a echoue (code {exc.returncode}) :\n"
                 f"{exc.stderr or exc.stdout or ''}")) from None
 
+    # MARQUEUR DE FRAICHEUR. La seule question qu'on savait poser a un site deploye etait
+    # « reponds-tu ? » — vraie aussi d'un deploiement vieux d'un mois. Le 11/09/2026 les neuf
+    # sites servaient l'etat du cycle PRECEDENT et tout un cycle a ete conduit dessus : injection
+    # declaree conforme, 291 pages corrigees, neuf previews vertes, le tout mesure sur un contenu
+    # qui n'etait pas celui qu'on venait de pousser. `await` compare ce jeton a ce qui est servi.
+    # Il va la ou l'echafaudage a pose `_redirects`, c'est-a-dire dans la source publiee de la
+    # stack : a la racine du build, il ne serait pas servi sur les stacks a dossier `static/`.
+    marker_dir = next((tree / d for d in (".", "static", "public")
+                       if (tree / d / "_redirects").exists()), tree)
+    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    (marker_dir / "_cycle.txt").write_text(stamp + "\n", encoding="utf-8", newline="")
+
     if not (tree / ".git").exists():
         run("git", "init", "-b", "main")
         run("git", "add", "-A")
@@ -352,6 +365,7 @@ def cmd_publish(args) -> int:
         cred.unlink(missing_ok=True)
         shutil.rmtree(cred_dir, ignore_errors=True)
     print(f"{args.stack:<12} poussé sur https://github.com/{args.repo}")
+    print(f"   cycle={stamp}")
     # ASCII on purpose: this runs on a Windows console in cp1252, where a printed arrow raises
     # UnicodeEncodeError and makes a successful push look like a crash.
     print("   -> connecte-le maintenant a un site Netlify (Add new site -> Import from Git)")
@@ -359,6 +373,38 @@ def cmd_publish(args) -> int:
 
 
 # ── run ───────────────────────────────────────────────────────────────────────────────────────
+
+def _served_cycle(site: str, timeout: float = 15.0) -> str:
+    """Le marqueur de cycle REELLEMENT servi par le site, ou "" s'il n'y en a pas."""
+    url = site.rstrip("/") + "/_cycle.txt"
+    req = urllib.request.Request(url, headers={"User-Agent": "noyaru-stack-loop",
+                                               "Cache-Control": "no-cache"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read(64).decode("utf-8", "replace").strip()
+    except Exception:
+        return ""
+
+
+def cmd_await(args) -> int:
+    """Attendre que la PRODUCTION serve le cycle qu'on vient de pousser — et le dire si non.
+
+    Repondre 200 ne prouve rien : un site fige sur un vieux deploiement repond parfaitement.
+    Cette commande echoue plutot que de laisser un cycle entier mesurer un contenu perime.
+    """
+    deadline = time.monotonic() + args.timeout
+    seen = ""
+    while True:
+        seen = _served_cycle(args.site)
+        if seen == args.cycle:
+            print(f"{args.stack:<12} production a jour (cycle={seen})")
+            return 0
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(args.every)
+    print(f"{args.stack:<12} PERIME — attendu {args.cycle}, servi {seen or '(aucun marqueur)'}")
+    return 1
+
 
 def _slug_for_site(site: str) -> str:
     from urllib.parse import urlparse
@@ -538,6 +584,13 @@ def main(argv: list[str]) -> int:
     p = sub.add_parser("publish"); p.add_argument("stack")
     p.add_argument("--out", required=True); p.add_argument("--repo", required=True)
     p.set_defaults(func=cmd_publish)
+
+    p = sub.add_parser("await"); p.add_argument("stack")
+    p.add_argument("--site", required=True)
+    p.add_argument("--cycle", required=True, help="le jeton imprime par `publish`")
+    p.add_argument("--timeout", type=float, default=600.0)
+    p.add_argument("--every", type=float, default=20.0)
+    p.set_defaults(func=cmd_await)
 
     p = sub.add_parser("run"); p.add_argument("stack")
     p.add_argument("--site", required=True); p.add_argument("--repo", required=True)

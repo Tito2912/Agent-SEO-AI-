@@ -21,7 +21,7 @@ useHead({
       { rel: 'canonical', href: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/redirected-js' }
     ],
     script: [
-      { src: 'https://noyaru-stack-nuxt.netlify.app/ancien.js' }
+      { src: '/ancien.js' }
     ],
 });
 </script>
