@@ -83,8 +83,12 @@ def expected_families(stack: str) -> set[str]:
 def crawl(stack: str, workdir: Path, max_pages: int, workers: int) -> Path:
     out = workdir / stack
     out.mkdir(parents=True, exist_ok=True)
+    # `--check-resources` est OBLIGATOIRE depuis que le parcours porte des pages a ressources.
+    # Sans lui, tout le bloc `_score_resource_issues` est saute et 26 cles n'existent meme pas
+    # dans le rapport — les familles d'alt et de redirection d'assets seraient declarees
+    # manquantes alors que c'est le crawl qui ne les a pas cherchees.
     cmd = [sys.executable, str(AUDIT), SITES[stack] + "/",
-           "--max-pages", str(max_pages), "--workers", str(workers),
+           "--max-pages", str(max_pages), "--workers", str(workers), "--check-resources",
            "--output-dir", str(out)]
     log = out / "crawl.log"
     with open(log, "w", encoding="utf-8") as fh:

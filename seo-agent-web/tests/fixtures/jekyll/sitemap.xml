@@ -34,6 +34,10 @@ permalink: /sitemap.xml
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/link-http</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/double-slash</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/link-to-redirect</loc></url>
+  <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/missing-alt</loc></url>
+  <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/redirected-image</loc></url>
+  <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/redirected-css</loc></url>
+  <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/redirected-js</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/schema-invalid</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/html-lang-missing</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/html-lang-invalid</loc></url>

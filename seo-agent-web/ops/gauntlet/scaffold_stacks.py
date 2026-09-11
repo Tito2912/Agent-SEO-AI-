@@ -190,7 +190,15 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
     io.open(static / "_redirects", "w", encoding="utf-8", newline="\n").write(
         "# /gauntlet/ancienne-page n'existe pas : elle redirige, pour que la page\n"
         "# link-to-redirect porte bien la famille page_has_links_to_redirect.\n"
-        f"/gauntlet/ancienne-page   {index_path(stack)}   301\n")
+        f"/gauntlet/ancienne-page   {index_path(stack)}   301\n"
+        "\n"
+        "# Les trois ressources qui REDIRIGENT, pour les familles css_redirects,\n"
+        "# image_redirects, javascript_redirects et leurs jumelles page_has_redirected_*.\n"
+        "# Chaque cible EXISTE : une redirection vers un 404 ferait mesurer une ressource\n"
+        "# cassee au lieu d'une ressource qui redirige.\n"
+        "/img/ancienne.png   /og.png      301\n"
+        "/ancienne.css       /style.css   301\n"
+        "/ancien.js          /app.js      301\n")
     done.append("_redirects")
 
     # ── le sitemap : sans entree, les pages du parcours ne sont pas crawlees ──────────────

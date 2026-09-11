@@ -77,6 +77,15 @@ class Spec:
     double_slash_link: str = ""
     link_to_redirect: bool = False
 
+    # Les RESSOURCES. Sept familles revendiquees par le correcteur n'avaient aucune page pour
+    # les porter — le parcours ne chargeait que des assets sains et directs. Elles exigent aussi
+    # `--check-resources` au crawl, faute de quoi 26 cles n'existent meme pas dans le rapport
+    # (voir crawler-detection-gaps en memoire).
+    img_no_alt: bool = False        # missing_alt_text
+    redirected_image: bool = False  # image_redirects + page_has_redirected_image
+    redirected_css: bool = False    # css_redirects + page_has_redirected_css
+    redirected_js: bool = False     # javascript_redirects + page_has_redirected_javascript
+
     # Renseigne par l'emetteur quand la stack ne peut pas exprimer la spec (voir le module
     # emetteur) — jamais ecrit a la main ici.
     tags: tuple[str, ...] = field(default_factory=tuple)
@@ -152,6 +161,19 @@ CATALOGUE: list[Spec] = [
          double_slash_link="a-propos"),
     Spec("link-to-redirect", "page_has_links_to_redirect",
          "lien vers une URL qui redirige (declaree cote hote).", link_to_redirect=True),
+
+    # ── F. ressources : alt manquant et assets qui redirigent ─────────────────────────────
+    # Quatre pages pour SEPT familles. Chaque famille de redirection en produit deux — une sur
+    # la ressource (`image_redirects`), une sur la page qui la charge
+    # (`page_has_redirected_image`) — et le crawler les leve ensemble.
+    Spec("missing-alt", "missing_alt_text",
+         "image sans attribut alt.", img_no_alt=True),
+    Spec("redirected-image", "image_redirects + page_has_redirected_image",
+         "image chargee depuis une URL qui redirige.", redirected_image=True),
+    Spec("redirected-css", "css_redirects + page_has_redirected_css",
+         "feuille de style chargee depuis une URL qui redirige.", redirected_css=True),
+    Spec("redirected-js", "javascript_redirects + page_has_redirected_javascript",
+         "script charge depuis une URL qui redirige.", redirected_js=True),
 
     # ── G. donnees structurees ────────────────────────────────────────────────────────────
     # `SCHEMA_ORG_HARD_ERRORS` ne contient que `invalid_json` et `missing_type` ; un prix en
