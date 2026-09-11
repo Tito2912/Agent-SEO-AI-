@@ -19018,6 +19018,200 @@ def _unbalanced_delimiters(content: str) -> str:
     return ", ".join(missing)
 
 
+# Les entrees ou vivent les valeurs de tete. C'est LA region ou les six formes d'erreur du
+# 10/09/2026 se sont produites, et elle ne contient que des donnees : ni type TypeScript, ni
+# JSX. Un analyseur strict y suffit, sans dependance.
+_HEAD_LITERAL_STARTS = (
+    "export const metadata",
+    "const metadata",
+    "export const viewport",
+    "useHead(",
+    "useSeoMeta(",
+)
+_JS_LIKE_EXT = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".vue", ".svelte", ".astro")
+
+
+class _Doubt(Exception):
+    """Ce que l'analyseur ne sait pas lire. On accepte : un faux refus coute une correction."""
+
+
+def _tokens(text: str, start: int) -> "list[tuple[str, str, int]]":
+    """(genre, texte, position). Leve _Doubt sur tout ce qui n'est pas une donnee."""
+    out: list[tuple[str, str, int]] = []
+    i, n = start, len(text)
+    depth = 0
+    while i < n:
+        ch = text[i]
+        if ch in " \t\r\n":
+            i += 1
+            continue
+        if ch == "/" and i + 1 < n and text[i + 1] in "/*":
+            if text[i + 1] == "/":
+                j = text.find("\n", i)
+                i = n if j < 0 else j + 1
+            else:
+                j = text.find("*/", i)
+                if j < 0:
+                    raise _Doubt()
+                i = j + 2
+            continue
+        if ch in "{}[]:,":
+            out.append((ch, ch, i))
+            i += 1
+            # S'ARRETER a la fermeture du litteral. Sans cela le balayage continue sur le reste
+            # du fichier — le `;` qui suit `};`, du JSX, un import — et le premier caractere
+            # hors grammaire leve un doute qui fait ACCEPTER un fichier deja reconnu casse.
+            if ch in "{[":
+                depth += 1
+            elif ch in "}]":
+                depth -= 1
+                if depth <= 0:
+                    break
+            continue
+        if ch in "\"'":
+            quote, j = ch, i + 1
+            while j < n:
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if text[j] == quote:
+                    break
+                if text[j] == "\n":
+                    return out + [("BAD", "chaine non terminee", i)]
+                j += 1
+            if j >= n:
+                return out + [("BAD", "chaine non terminee", i)]
+            out.append(("VAL", text[i:j + 1], i))
+            i = j + 1
+            continue
+        if ch.isdigit() or (ch == "-" and i + 1 < n and text[i + 1].isdigit()):
+            j = i + 1
+            while j < n and (text[j].isdigit() or text[j] in ".eE+-"):
+                j += 1
+            out.append(("VAL", text[i:j], i))
+            i = j
+            continue
+        if ch.isalpha() or ch in "_$":
+            j = i
+            while j < n and (text[j].isalnum() or text[j] in "_$"):
+                j += 1
+            word = text[i:j]
+            k = j
+            while k < n and text[k] in " \t":
+                k += 1
+            # Un mot suivi de `:` est une CLE. Suivi d'autre chose, c'est une expression
+            # (identifiant, appel) : on ne sait pas la lire, donc on accepte le fichier.
+            if k < n and text[k] == ":":
+                out.append(("KEY", word, i))
+            elif word in ("true", "false", "null", "undefined"):
+                out.append(("VAL", word, i))
+            else:
+                out.append(("UNK", word, i))
+            i = j
+            continue
+        # Backtick, operateur, etalement : hors de notre grammaire. On emet, et c'est
+        # l'analyseur qui dira si c'est un doute (en position de valeur) ou une erreur
+        # certaine (la ou un separateur est attendu).
+        j = i + 1
+        while j < n and text[j] not in " \t\r\n{}[]:,\"'":
+            j += 1
+        out.append(("UNK", text[i:j], i))
+        i = j
+    return out
+
+
+def _parse_literal(toks: "list[tuple[str, str, int]]", pos: int) -> "tuple[int, str]":
+    """Analyser un objet ou un tableau a partir de `pos`. Rend (position suivante, erreur)."""
+    kind, text, _ = toks[pos]
+    close = "}" if kind == "{" else "]"
+    pos += 1
+    seen: set[str] = set()
+    expect_sep = False
+    while True:
+        if pos >= len(toks):
+            return pos, f"conteneur `{kind}` non referme"
+        k, t, _ = toks[pos]
+        if k == "BAD":
+            return pos, t
+        if k == close:
+            return pos + 1, ""
+        if k == ",":
+            if not expect_sep:
+                return pos, "virgule en trop"
+            expect_sep = False
+            pos += 1
+            continue
+        if expect_sep:
+            # Meme un jeton inconnu est ici une erreur CERTAINE : quoi qu'il soit, il manque un
+            # separateur avant lui.
+            return pos, f"separateur manquant avant `{t[:28]}`"
+        if kind == "{":
+            if k == "UNK":
+                raise _Doubt()  # etalement, cle calculee : hors grammaire, on accepte
+            if k != "KEY" and not (k == "VAL" and t[:1] in "\"'"):
+                return pos, f"cle attendue, trouve `{t[:28]}`"
+            name = t.strip("\"'")
+            if name in seen:
+                return pos, f"cle `{name}` en double"
+            seen.add(name)
+            pos += 1
+            if pos >= len(toks) or toks[pos][0] != ":":
+                return pos, f"`:` manquant apres `{name}`"
+            pos += 1
+            if pos >= len(toks):
+                return pos, "valeur manquante"
+            k, t, _ = toks[pos]
+        if k in ("{", "["):
+            pos, err = _parse_literal(toks, pos)
+            if err:
+                return pos, err
+        elif k == "VAL":
+            pos += 1
+        elif k == "BAD":
+            return pos, t
+        elif k == "UNK":
+            raise _Doubt()      # une expression en position de valeur : on n'en sait rien
+        else:
+            return pos, f"valeur attendue, trouve `{t[:28]}`"
+        expect_sep = True
+
+
+def _object_literal_error(content: str, path: str) -> str:
+    """'' si le litteral de valeurs de tete se lit, sinon la raison. En cas de DOUTE : ''.
+
+    Six formes d'erreur distinctes en une journee, toutes dans cette region, chacune ayant
+    demande son garde-fou — et cinq des sept ecrits ce jour-la ont du etre revises. Analyser
+    plutot que reconnaitre les attrape toutes d'un coup : chaine non terminee, cle en double,
+    separateur manquant entre proprietes ou entre elements, conteneur non referme, valeur
+    orpheline.
+
+    Ce qui sort de la grammaire des donnees — gabarit, appel, etalement, identifiant — leve un
+    doute et fait ACCEPTER le fichier sans controle. Un faux refus coute une correction reelle,
+    et 73 % des corrections des stacks JS passent par ce chemin.
+    """
+    if not content or not path.lower().endswith(_JS_LIKE_EXT):
+        return ""
+    for marker in _HEAD_LITERAL_STARTS:
+        at = content.find(marker)
+        while at >= 0:
+            brace = content.find("{", at + len(marker))
+            if brace < 0:
+                break
+            try:
+                toks = _tokens(content, brace)
+            except _Doubt:
+                break
+            if toks and toks[0][0] == "{":
+                try:
+                    _, err = _parse_literal(toks, 0)
+                except _Doubt:
+                    err = ""
+                if err:
+                    return f"litteral de valeurs de tete illisible : {err}"
+            at = content.find(marker, at + 1)
+    return ""
+
+
 def _object_key_conflicts(content: str) -> list[str]:
     """Les cles encore en double dans un litteral d'objet apres passage des garde-fous.
 
@@ -20537,6 +20731,14 @@ def _deep_patch_issue_files(
             skipped.append(path)
             continue
         if path.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".vue", ".svelte", ".astro")):
+            # L'analyseur du litteral de valeurs de tete passe en PREMIER : il nomme la cause
+            # precise (separateur manquant, cle en double, conteneur non referme) la ou le
+            # comptage de delimiteurs ne dit que « ca ne se referme pas ».
+            _lit_error = _object_literal_error(new_content, path)
+            if _lit_error:
+                logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _lit_error)
+                skipped.append(path)
+                continue
             _unbalanced = _unbalanced_delimiters(new_content)
             if _unbalanced:
                 logger.warning("[correction] %s: %s refuse — delimiteurs : %s",
