@@ -1,16 +1,16 @@
-// FAMILLE VISEE : non_canonical_page_specified_as_canonical_one
-// canonical vers une page qui porte elle-meme un autre canonical.
+// FAMILLE VISEE : sitemap_non_canonical_page
+// page non canonique listee au sitemap : son canonical vise une autre page, en https.
 export const metadata = {
   title: 'Page de test du parcours d\'obstacles Noyaru',
   description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
   alternates: {
-    canonical: 'https://noyaru-stack-next-app.netlify.app/gauntlet/canonical-relay',
+    canonical: 'https://noyaru-stack-next-app.netlify.app/gauntlet/missing-h1',
   },
   openGraph: {
     type: 'article',
     title: 'Page de test du parcours d\'obstacles Noyaru',
     description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
-    url: 'https://noyaru-stack-next-app.netlify.app/gauntlet/canonical-other',
+    url: 'https://noyaru-stack-next-app.netlify.app/gauntlet/canonical-relay',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
   twitter: {

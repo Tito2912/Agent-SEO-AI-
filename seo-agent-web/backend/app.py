@@ -18026,15 +18026,66 @@ def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]]) -> tuple[st
         return content, 0
     count = 0
 
+    def _final(url: str) -> str:
+        """Le BOUT de la chaine, pas le maillon suivant.
+
+        Les paires arrivent independantes les unes des autres, et elles s'enchainent des qu'une
+        page non canonique en designe une autre qui l'est tout autant : `a -> b` et `b -> c`
+        tombent dans le meme lot. Les appliquer chacune une fois laissait `a` sur `b`, c'est-a-dire
+        sur une URL que la meme correction venait de declarer non canonique. Mesure du 11/09/2026
+        sur le banc : le sitemap corrige listait encore `canonical-relay`, que la paire suivante
+        renvoyait ailleurs.
+        """
+        vus = {url}
+        courant = url
+        while courant in mapping:
+            suivant = mapping[courant]
+            if suivant in vus:      # boucle declarée : on s'arrete sur le dernier maillon sain
+                break
+            vus.add(suivant)
+            courant = suivant
+        return courant
+
+    ecrits: set[str] = set()
+
     def _one(m: "re.Match[str]") -> str:
         nonlocal count
         value = m.group(2).strip()
         if value in mapping:
             count += 1
-            return m.group(1) + mapping[value] + m.group(3)
+            final = _final(value)
+            ecrits.add(_norm_url_for_match(final))
+            return m.group(1) + final + m.group(3)
         return m.group(0)
 
-    return _SITEMAP_LOC_RE.sub(_one, content), count
+    out = _SITEMAP_LOC_RE.sub(_one, content)
+
+    # Deux `<loc>` differentes peuvent se resoudre sur la MEME URL canonique — c'est meme le cas
+    # normal, puisque canonicaliser, c'est faire converger. Un sitemap qui liste deux fois la meme
+    # page est alors un defaut que la correction vient de CREER. On ne deduplique que les valeurs
+    # que cette reecriture a ecrites : un doublon preexistant ne la regarde pas.
+    if ecrits:
+        vus_locs: set[str] = set()
+
+        def _bloc(m: "re.Match[str]") -> str:
+            loc = _SITEMAP_LOC_RE.search(m.group(0))
+            if not loc:
+                return m.group(0)
+            cle = _norm_url_for_match(loc.group(2).strip())
+            if cle not in ecrits:
+                return m.group(0)
+            if cle in vus_locs:
+                return ""
+            vus_locs.add(cle)
+            return m.group(0)
+
+        avant_dedup = out
+        out = _SITEMAP_URL_BLOCK_RE.sub(_bloc, out)
+        if out != avant_dedup:
+            # Meme soin que pour la suppression d'entrees : le diff doit se lire « cette entree a
+            # disparu », pas « le fichier a ete reformate ».
+            out = "\n".join(line for line in out.split("\n") if line.strip())
+    return out, count
 
 
 # Issues whose fix = repoint an asset reference at the URL it already resolves to.
@@ -18785,7 +18836,14 @@ _FRONTMATTER_BLOCK_RE = re.compile(
     r"\A\ufeff?---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.S)
 
 
-_HTTPS_DOWNGRADE_RE = re.compile(r'(["\'(])http://([^"\'\s)]+)')
+# Le delimiteur d'ouverture ne peut PAS se limiter aux guillemets et aux parentheses : dans un
+# sitemap l'URL vit entre `<loc>` et `</loc>`, donc precedee de `>` et suivie de `<`. Mesure du
+# 11/09/2026 — le correcteur a ecrit `<loc>http://…</loc>` dans le sitemap d'une fixture, soit
+# exactement la retrogradation que ce garde-fou existe pour interdire, et il ne l'a pas vue parce
+# qu'il decrivait une FORME (une valeur entre guillemets) au lieu de decrire la chose (une URL
+# qui etait en https avant ce patch). Elargir ne cree pas de faux positif : la restauration reste
+# conditionnee a ce que la forme https ait existe AVANT, donc un tiers http-only reste intact.
+_HTTPS_DOWNGRADE_RE = re.compile(r'(["\'(>]|^|\s)http://([^"\'\s)<>]+)', re.M)
 
 
 def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, list[str]]:

@@ -1,6 +1,6 @@
 <script setup>
-// FAMILLE VISEE : non_canonical_page_specified_as_canonical_one
-// canonical vers une page qui porte elle-meme un autre canonical.
+// FAMILLE VISEE : sitemap_non_canonical_page
+// page non canonique listee au sitemap : son canonical vise une autre page, en https.
 useHead({
     title: 'Page de test du parcours d\'obstacles Noyaru',
     htmlAttrs: { lang: 'fr' },
@@ -10,7 +10,7 @@ useHead({
       { property: 'og:type', content: 'article' },
       { property: 'og:title', content: 'Page de test du parcours d\'obstacles Noyaru' },
       { property: 'og:description', content: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.' },
-      { property: 'og:url', content: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/canonical-other' },
+      { property: 'og:url', content: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/canonical-relay' },
       { property: 'og:image', content: 'https://noyaru-stack-nuxt.netlify.app/og.png' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Page de test du parcours d\'obstacles Noyaru' },
@@ -18,7 +18,7 @@ useHead({
       { name: 'twitter:image', content: 'https://noyaru-stack-nuxt.netlify.app/og.png' }
     ],
     link: [
-      { rel: 'canonical', href: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/canonical-relay' }
+      { rel: 'canonical', href: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/missing-h1' }
     ],
 });
 </script>

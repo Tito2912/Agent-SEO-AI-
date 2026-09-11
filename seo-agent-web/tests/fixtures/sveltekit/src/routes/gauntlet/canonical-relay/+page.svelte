@@ -1,17 +1,17 @@
 <script>
-  // FAMILLE VISEE : non_canonical_page_specified_as_canonical_one
-  // canonical vers une page qui porte elle-meme un autre canonical.
+  // FAMILLE VISEE : sitemap_non_canonical_page
+  // page non canonique listee au sitemap : son canonical vise une autre page, en https.
 </script>
 
 <svelte:head>
   <meta name="viewport" content="width=device-width" />
   <title>Page de test du parcours d'obstacles Noyaru</title>
   <meta name="description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
-  <link rel="canonical" href="https://noyaru-stack-sveltekit.netlify.app/gauntlet/canonical-relay" />
+  <link rel="canonical" href="https://noyaru-stack-sveltekit.netlify.app/gauntlet/missing-h1" />
   <meta property="og:type" content="article" />
   <meta property="og:title" content="Page de test du parcours d'obstacles Noyaru" />
   <meta property="og:description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
-  <meta property="og:url" content="https://noyaru-stack-sveltekit.netlify.app/gauntlet/canonical-other" />
+  <meta property="og:url" content="https://noyaru-stack-sveltekit.netlify.app/gauntlet/canonical-relay" />
   <meta property="og:image" content="https://noyaru-stack-sveltekit.netlify.app/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Page de test du parcours d'obstacles Noyaru" />

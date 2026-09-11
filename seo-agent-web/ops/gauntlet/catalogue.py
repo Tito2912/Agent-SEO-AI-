@@ -117,9 +117,18 @@ CATALOGUE: list[Spec] = [
     # ── B. canonical ──────────────────────────────────────────────────────────────────────
     Spec("canonical-http", "canonical_from_https_to_http",
          "page servie en https, canonical en http.", canonical="!http:canonical-http"),
+    # Le maillon PROPRE de la chaine canonique, et il a fallu le mesurer pour comprendre qu'il
+    # manquait. `canonical-other` a besoin d'une cible qui declare elle-meme un canonical
+    # DIFFERENT et en https. Tant que cette cible etait `canonical-http`, dont le canonical est
+    # en http par construction, suivre la chaine revenait a ecrire une URL http — ce que le
+    # garde-fou anti-retrogradation refuse a juste titre. La famille etait donc structurellement
+    # inexercable : le correcteur avait raison, c'est le parcours qui enchainait deux defauts.
+    Spec("canonical-relay", "sitemap_non_canonical_page",
+         "page non canonique listee au sitemap : son canonical vise une autre page, en https.",
+         canonical="missing-h1"),
     Spec("canonical-other", "non_canonical_page_specified_as_canonical_one",
          "canonical vers une page qui porte elle-meme un autre canonical.",
-         canonical="canonical-http"),
+         canonical="canonical-relay"),
     Spec("no-canonical-a", "duplicate_pages_without_canonical",
          "jumelle de no-canonical-b, aucune des deux ne declare de canonical.",
          canonical="", title="Deux pages jumelles sans canonical declare", desc=DUP_D),
