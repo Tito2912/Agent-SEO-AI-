@@ -116,6 +116,12 @@ CANNOT: dict[str, dict[str, str]] = {
         "viewport_not_set": _VIEWPORT_SHELL,
         "multiple_title_tags": _HEAD_API_DEDUPES,
         "multiple_meta_description_tags": _HEAD_API_DEDUPES,
+        "more_than_one_page_for_same_language_in_hreflang":
+            "MESURE sur le site deploye : la page declare DEUX `link` alternate en `fr` et n'en "
+            "sert qu'UN — le second. `useHead` indexe ses entrees, et deux `alternate` de meme "
+            "hreflang partagent la meme clef, donc le dernier ecrase le premier. C'est le meme "
+            "phenomene que pour le titre et la description sur cette stack ; la famille ne peut "
+            "pas s'y produire.",
     },
 }
 
