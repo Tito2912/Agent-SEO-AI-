@@ -9,4 +9,6 @@ exclude: [README.md, Gemfile, Gemfile.lock, vendor, '*.log']
 # redirections de l'hote. Mesure en ligne : `/gauntlet/ancienne-page` renvoyait 404 sur cette
 # stack contre 301 sur toutes les autres, ce qui privait le parcours de la famille
 # `page_has_links_to_redirect` ET lui ajoutait un « lien vers page cassee » parasite.
-include: ['_redirects']
+# `_cycle.txt` tombe dans le meme piege : c'est le marqueur de fraicheur ecrit par
+# `stack_loop.py publish`, et la porte `await` le lisait en 404 sur cette seule stack.
+include: ['_redirects', '_cycle.txt']

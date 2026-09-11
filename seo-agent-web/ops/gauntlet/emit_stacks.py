@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 from pathlib import Path
 
 try:
@@ -225,6 +226,11 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
                      'test","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}'),
         }))
     return tags
+
+
+def _vue_bind_src(bit: str) -> str:
+    """`<img src="/x">` devient `<img :src="'/x'">` — voir la note dans l'emetteur Nuxt."""
+    return re.sub(r'<img src="(/[^"]*)"', lambda m: "<img :src=\"'" + m.group(1) + "'\"", bit)
 
 
 def body_bits(spec: Spec, site: str) -> list[str]:
@@ -471,7 +477,14 @@ def emit_nuxt(spec: Spec, site: str) -> tuple[str, str]:
                        + _js_str(site.replace("https://", "http://") + "/app.js") + " }")
     if scripts:
         head_obj.append("    script: [\n" + ",\n".join(scripts) + "\n    ],")
-    body = "\n".join("    " + b for b in body_bits(spec, site)
+    # Vue resout les URL d'assets d'un template a la CONSTRUCTION (`transformAssetUrls` est actif
+    # par defaut) : un `<img src="/img/ancienne.png">` devient un import que Rollup cherche sur le
+    # disque. Or ce fichier ne doit PAS exister — c'est une cible de redirection posee par
+    # `_redirects`. Mesure : « Rollup failed to resolve import "/img/ancienne.png" », build casse,
+    # donc production figee sur le deploiement precedent. Lier la valeur (`:src="'...'"`) la rend
+    # dynamique aux yeux du compilateur, qui n'y touche plus ; le HTML servi porte le meme
+    # `src="/img/ancienne.png"`, et c'est le DOM rendu que le crawler mesure.
+    body = "\n".join("    " + _vue_bind_src(b) for b in body_bits(spec, site)
                      if not b.startswith("<script"))
     doc = ("<script setup>\n"
            f"// FAMILLE VISEE : {spec.family}\n// {spec.note}\n"
