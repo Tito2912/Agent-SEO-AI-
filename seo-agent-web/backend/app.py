@@ -17502,6 +17502,13 @@ def _rewrite_double_slash(content: str) -> tuple[str, int]:
         if "://" in val:
             scheme, rest = val.split("://", 1)
             newval = scheme + "://" + re.sub(r"/{2,}", "/", rest)
+        elif val.startswith("//"):
+            # URL PROTOCOLE-RELATIVE : les deux barres de tete sont le marqueur de schema, pas
+            # une double barre de chemin. Les collapser transforme l'hote en segment de chemin
+            # — `//hote//page` devenait `/hote/page`, c'est-a-dire un lien casse. Mesure du
+            # 12/09/2026 : c'est exactement la forme que porte la page `double-slash` du
+            # parcours, et ce correcteur n'avait jamais tourne sur une seule entree reelle.
+            newval = "//" + re.sub(r"/{2,}", "/", val[2:])
         else:
             newval = re.sub(r"/{2,}", "/", val)
         if newval != val:
@@ -20751,6 +20758,13 @@ def _prepare_issue_fix(
             out["evidence"] = [f"http://{h}" for h in hosts]
     elif issue_key in _DOUBLE_SLASH_KEYS:
         out["link_rewriter"] = _rewrite_double_slash
+        # L'URL signalee est la CIBLE du lien ; le fichier a corriger est la page qui l'ECRIT.
+        # Sans cette preuve, le correcteur visait la cible — `a-propos.html` — et ne trouvait
+        # evidemment rien a y changer. Les paires portent la page ET la valeur ecrite, dont
+        # `_evidence_needles` tire `//a-propos` : une aiguille rare, donc bien classee.
+        _ds_pairs = _issue_url_pairs(block) if issues else []
+        if _ds_pairs:
+            out["evidence"] = [p["from"] for p in _ds_pairs if p.get("from")]
     return out
 
 

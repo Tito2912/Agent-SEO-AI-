@@ -4676,6 +4676,19 @@ def _score_resource_issues(
         if _has_double_slash(u)
     })
     issues["double_slash_in_url"] = issue("double_slash_in_url", _double_slash_urls)
+    # L'URL signalee est la CIBLE du lien ; le fichier a corriger est la page qui l'ECRIT. Sans
+    # cette paire, le correcteur visait la cible et ne trouvait rien a y changer — mesure du
+    # 12/09/2026, « aucun patch » sur les neuf stacks des le premier passage ou la famille s'est
+    # enfin declenchee.
+    _attach_issue_evidence(
+        issues, ("double_slash_in_url",), "url_pairs",
+        [
+            {"page": str(p.url or ""), "from": ref,
+             "to": _normalize_url(ref, base=ref) or ref}
+            for p in pages
+            for ref in (getattr(p, "double_slash_refs", None) or [])
+        ],
+    )
 
     issues["image_broken"] = issue("image_broken", broken_images)
     issues["page_has_broken_image"] = issue("page_has_broken_image", sorted(set(pages_with_broken_image)))
