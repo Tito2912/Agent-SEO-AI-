@@ -55,15 +55,19 @@ SITE_WIDE = {
 # Les laisser dans les attendues ferait echouer chaque verification pour une raison qui n'a rien
 # a voir avec l'injection.
 NOT_TRIGGERABLE: dict[str, str] = {
-    "double_slash_in_url":
-        "le crawler NORMALISE l'URL avant de l'enregistrer — `_normalize_url` fait "
-        "`re.sub(r'/{2,}', '/', path)` — donc il ecrase le motif que le controle cherche "
-        "ensuite. Aucune page ne peut declencher cette famille, et `_rewrite_double_slash` "
-        "cote correcteur n'a par consequent jamais de quoi s'executer.",
-    "twitter_card_missing":
-        "choix de parite Ahrefs deja documente : la famille ne tire que sur une page SANS "
-        "aucun Open Graph. Une telle page porterait alors deux anomalies, ce que le parcours "
-        "s'interdit.",
+    # `double_slash_in_url` et `twitter_card_missing` etaient ici. Les deux raisons etaient
+    # fausses, mesure du 12/09/2026 :
+    #   - la double barre survivait bien quelque part — dans la reference TELLE QU'ELLE EST
+    #     ECRITE, avant `_normalize_url`. Le crawler la releve desormais (`double_slash_refs`) ;
+    #   - le controle twitter a DEUX branches, et la note n'en lisait qu'une. Une balise twitter
+    #     sans `twitter:card` suffit, Open Graph intact.
+    # Ne rien mettre ici sans avoir mesure que la famille est impossible, pas seulement absente.
+    "canonical_from_http_to_https":
+        "il faut une page SERVIE en http, et l'hote n'en sert aucune : mesure du 12/09/2026, "
+        "`http://…/gauntlet/missing-h1` renvoie 301 vers https. Une page redirigee n'entre pas "
+        "dans `ok_html_pages`, donc `page_scheme == 'http'` ne peut jamais etre vrai. C'est une "
+        "propriete de l'hebergeur, pas du parcours — la famille redeviendra exercable le jour "
+        "ou le banc servira une fixture en http.",
 }
 
 

@@ -1,6 +1,6 @@
 <script setup>
-// FAMILLE VISEE : twitter_card_missing
-// balises twitter presentes mais twitter:card absente.
+// FAMILLE VISEE : structured_data_schema_org_validation_error
+// objet schema.org sans @type declare.
 useHead({
     title: 'Page de test du parcours d\'obstacles Noyaru',
     htmlAttrs: { lang: 'fr' },
@@ -10,13 +10,18 @@ useHead({
       { property: 'og:type', content: 'article' },
       { property: 'og:title', content: 'Page de test du parcours d\'obstacles Noyaru' },
       { property: 'og:description', content: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.' },
-      { property: 'og:url', content: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/twitter-missing' },
+      { property: 'og:url', content: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/schema-no-type' },
       { property: 'og:image', content: 'https://noyaru-stack-nuxt.netlify.app/og.png' },
+      { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'Page de test du parcours d\'obstacles Noyaru' },
+      { name: 'twitter:description', content: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.' },
       { name: 'twitter:image', content: 'https://noyaru-stack-nuxt.netlify.app/og.png' }
     ],
     link: [
-      { rel: 'canonical', href: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/twitter-missing' }
+      { rel: 'canonical', href: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/schema-no-type' }
+    ],
+    script: [
+      { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","name":"Objet sans type declare"}' }
     ],
 });
 </script>

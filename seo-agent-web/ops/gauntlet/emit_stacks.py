@@ -209,6 +209,15 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
         tags.append(("meta", {"name": "twitter:image", "content": site + OG_IMAGE}))
     elif spec.tw == "partial":
         tags.append(("meta", {"name": "twitter:card", "content": "summary"}))
+    elif spec.tw == "no-card":
+        # La carte MANQUE, mais les autres balises twitter sont la. Le controle du crawler est
+        # `if not twitter_card: if has_any_twitter or not og_any_present` — il suffit donc d'UNE
+        # balise twitter sans `twitter:card`, l'Open Graph pouvant rester complet. La note qui
+        # disait cette famille inexercable « sauf a retirer tout l'Open Graph » lisait la seconde
+        # branche en ignorant la premiere.
+        if title is not None:
+            tags.append(("meta", {"name": "twitter:title", "content": title}))
+        tags.append(("meta", {"name": "twitter:image", "content": site + OG_IMAGE}))
 
     if spec.http_css:
         tags.append(("link", {"rel": "stylesheet",
@@ -230,6 +239,14 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
             "type": "application/ld+json",
             "text": ('{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de '
                      'test","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}'),
+        }))
+    if spec.jsonld_no_type:
+        # `SCHEMA_ORG_HARD_ERRORS` ne contient que `invalid_json` et `missing_type`. Le contexte
+        # DOIT rester schema.org, sinon le controle ignore l'objet et ne voit rien ; c'est
+        # l'absence de `@type` qui est l'anomalie.
+        tags.append(("script", {
+            "type": "application/ld+json",
+            "text": '{"@context":"https://schema.org","name":"Objet sans type declare"}',
         }))
     return tags
 
@@ -562,6 +579,9 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
         extra += ('\n      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
                  '`{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de test",'
                  '"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}` }} />')
+    if spec.jsonld_no_type:
+        extra += ('\n      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
+                  '`{"@context":"https://schema.org","name":"Objet sans type declare"}` }} />')
     doc = (f"// FAMILLE VISEE : {spec.family}\n// {spec.note}\n"
            + "\n".join(lines) + "\n" + viewport +
            f"\nexport default function Page() {{\n  return (\n    <main>\n{body}{extra}\n"

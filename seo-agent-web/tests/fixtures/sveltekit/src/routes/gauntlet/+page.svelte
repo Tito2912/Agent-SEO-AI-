@@ -47,6 +47,7 @@
   <li><a href="/gauntlet/redirected-css">redirected-css</a></li>
   <li><a href="/gauntlet/redirected-js">redirected-js</a></li>
   <li><a href="/gauntlet/schema-invalid">schema-invalid</a></li>
+  <li><a href="/gauntlet/schema-no-type">schema-no-type</a></li>
   <li><a href="/gauntlet/noindex-no-description">noindex-no-description</a></li>
   <li><a href="/gauntlet/noindex-long">noindex-long</a></li>
 </ul>

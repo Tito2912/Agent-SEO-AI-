@@ -68,6 +68,9 @@ class Spec:
     # (code de langue, cible) — cible = slug du parcours ou URL absolue.
     hreflang: tuple[tuple[str, str], ...] = ()
     jsonld_bad_price: bool = False
+    # Un objet schema.org SANS `@type` : la seule des deux erreurs « dures » du crawler
+    # (`invalid_json`, `missing_type`) qu'une page puisse porter sans casser sa propre syntaxe.
+    jsonld_no_type: bool = False
 
     # Ressources et liens du corps, tous exprimes en intention plutot qu'en balisage.
     http_image: bool = False
@@ -160,7 +163,13 @@ CATALOGUE: list[Spec] = [
     Spec("og-missing", "open_graph_tags_missing", "aucune balise Open Graph.", og="none"),
     Spec("og-incomplete", "open_graph_tags_incomplete",
          "og:title seul, sans description ni image ni url.", og="partial"),
-    Spec("twitter-missing", "twitter_card_missing", "aucune balise twitter.", tw="none"),
+    # `tw="none"` ne suffit PAS : le controle est
+    # `if not twitter_card: if has_any_twitter or not og_any_present`, et cette page garde son
+    # Open Graph complet. C'est la PREMIERE branche qu'il faut viser — une balise twitter
+    # presente sans la carte. La note qui declarait la famille inexercable ne lisait que la
+    # seconde. Mesure du 12/09/2026.
+    Spec("twitter-missing", "twitter_card_missing",
+         "balises twitter presentes mais twitter:card absente.", tw="no-card"),
     Spec("twitter-incomplete", "twitter_card_incomplete", "twitter:card seul.", tw="partial"),
 
     # ── E. http / https et doubles barres ─────────────────────────────────────────────────
@@ -198,6 +207,8 @@ CATALOGUE: list[Spec] = [
     # une page a ajouter au parcours, pas une correction de celle-ci.
     Spec("schema-invalid", "structured_data_google_rich_results_validation_error",
          "Offer dont le prix est une chaine.", jsonld_bad_price=True),
+    Spec("schema-no-type", "structured_data_schema_org_validation_error",
+         "objet schema.org sans @type declare.", jsonld_no_type=True),
 
     # ── H. attribut lang ──────────────────────────────────────────────────────────────────
     Spec("html-lang-missing", "html_lang_attribute_missing",

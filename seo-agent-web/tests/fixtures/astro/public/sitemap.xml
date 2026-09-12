@@ -40,6 +40,7 @@
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/redirected-css</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/redirected-js</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/schema-invalid</loc></url>
+  <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/schema-no-type</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/html-lang-missing</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/html-lang-invalid</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/noindex-no-description</loc></url>

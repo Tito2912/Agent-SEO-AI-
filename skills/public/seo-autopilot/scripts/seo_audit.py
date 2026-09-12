@@ -475,6 +475,12 @@ class PageData:
     image_urls: list[str] = dataclasses.field(default_factory=list)
     script_urls: list[str] = dataclasses.field(default_factory=list)
     css_urls: list[str] = dataclasses.field(default_factory=list)
+    # Les references de cette page dont le CHEMIN porte une double barre, telles qu'elles sont
+    # ECRITES. `_normalize_url` ecrase `/{2,}` en `/` avant tout le reste — c'est ce qu'il faut
+    # pour ne pas crawler deux fois la meme page, mais cela effacait aussi la seule trace de
+    # l'anomalie : `double_slash_in_url` ne pouvait se declencher sur aucun site, alors qu'Ahrefs
+    # la rapporte. Mesure du 12/09/2026 sur le parcours d'obstacles.
+    double_slash_refs: list[str] = dataclasses.field(default_factory=list)
 
     internal_links: list[str] = dataclasses.field(default_factory=list)
     external_links: list[str] = dataclasses.field(default_factory=list)
@@ -2764,6 +2770,30 @@ def _intern_url(value: str) -> str:
     return _URL_POOL.setdefault(value, value)
 
 
+def _written_double_slash(raw: str, base: str) -> str:
+    """L'URL absolue d'une reference dont le chemin ECRIT porte une double barre, sinon "".
+
+    Doit se lire AVANT `_normalize_url`, qui collapse `/{2,}` en `/` et fait donc disparaitre la
+    seule trace de l'anomalie. Ce collapse est VOULU — sans lui le crawler visiterait deux fois
+    la meme page — mais il rendait `double_slash_in_url` indetectable sur tout site, alors
+    qu'Ahrefs la rapporte. On renvoie la forme absolue NON collapsee : c'est l'URL qu'Ahrefs
+    affiche, et celle que le correcteur doit reecrire dans la page.
+
+    Le `//` de tete d'une URL protocole-relative n'est PAS une anomalie : `urljoin` le resout en
+    scheme + hote, et seul le CHEMIN du resultat est examine.
+    """
+    texte = str(raw or "").strip()
+    if not texte or texte.startswith(("#", "mailto:", "tel:", "javascript:", "data:")):
+        return ""
+    try:
+        absolue = urljoin(base, texte)
+        if urlsplit(absolue).scheme not in {"http", "https"}:
+            return ""
+        return absolue if re.search(r"/{2,}", urlsplit(absolue).path or "") else ""
+    except Exception:
+        return ""
+
+
 def _normalize_url(url: str, base: str) -> str | None:
     if not url:
         return None
@@ -3899,9 +3929,17 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.twitter_description = meta_any("twitter:description")
     page.twitter_image = meta_any("twitter:image") or meta_any("twitter:image:src")
 
+    _double_slash_seen: list[str] = []
+
+    def _note_double_slash(raw: str) -> None:
+        absolue = _written_double_slash(raw, base_for_urls)
+        if absolue and absolue not in _double_slash_seen:
+            _double_slash_seen.append(absolue)
+
     def norm_many(values: list[str]) -> list[str]:
         out: list[str] = []
         for v in values:
+            _note_double_slash(v)
             n = _normalize_url(str(v or "").strip(), base=base_for_urls)
             if n:
                 out.append(n)
@@ -3925,6 +3963,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
         # in-page CTA anchors, e.g. #konto-eroeffnen).
         if (raw_href or "").strip().startswith("#"):
             continue
+        _note_double_slash(raw_href)
         norm = _normalize_url(raw_href, base=base_for_urls)
         if not norm:
             continue
@@ -3947,6 +3986,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
                 external_nf.append(norm)
             else:
                 external_df.append(norm)
+    page.double_slash_refs = list(_double_slash_seen)
     page.internal_links = sorted(set(internal))
     page.external_links = sorted(set(external))
     page.internal_links_dofollow = sorted(set(internal_df))
@@ -4621,11 +4661,17 @@ def _score_resource_issues(
             return "//" in (urlsplit(u).path or "")
         except Exception:
             return False
+    # Les URL CRAWLEES ne portent plus de double barre : `_normalize_url` les collapse avant
+    # d'enregistrer quoi que ce soit, et c'est voulu — sans cela on crawlerait deux fois la meme
+    # page. La seule trace de l'anomalie est donc la reference TELLE QU'ELLE EST ECRITE, relevee
+    # a la lecture de la page (`double_slash_refs`). Sans elle, cette famille ne pouvait se
+    # declencher sur aucun site, alors qu'Ahrefs la rapporte — mesure du 12/09/2026.
     _double_slash_urls = sorted({
         u
         for u in (
             [str(p.url) for p in pages if getattr(p, "url", None)]
             + [str(r.get("url")) for r in resources if isinstance(r, dict) and r.get("url")]
+            + [str(ref) for p in pages for ref in (getattr(p, "double_slash_refs", None) or [])]
         )
         if _has_double_slash(u)
     })
