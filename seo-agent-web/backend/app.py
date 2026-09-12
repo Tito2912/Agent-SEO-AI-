@@ -18853,6 +18853,62 @@ _FRONTMATTER_BLOCK_RE = re.compile(
 _HTTPS_DOWNGRADE_RE = re.compile(r'(["\'(>]|^|\s)http://([^"\'\s)<>]+)', re.M)
 
 
+_META_TAG_RE = re.compile(r"<meta\b[^>]*>", re.I)
+_META_KEY_RE = re.compile(r"""\b(name|property)\s*=\s*["']?([A-Za-z0-9:_.-]+)""", re.I)
+# `robots` est la seule balise dont le RETRAIT peut etre la correction demandee (une page
+# noindex qu'on veut faire indexer). Tout le reste, une correction ne fait que l'ajouter ou en
+# changer la valeur — jamais le supprimer.
+_META_KEYS_REMOVABLES = {"robots"}
+
+
+def _keep_head_meta_tags(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Rendre a la page toute balise meta que ce patch lui a PRISE sans qu'on le demande.
+
+    Mesure du 12/09/2026, sur les neuf stacks : la reparation de `missing_title` — une reecriture
+    complete du fichier par le modele — a emporte `twitter:card` et `og:url`, et duplique
+    `og:description`. Une anomalie reparee, trois creees : le recrawl des previews a vu
+    `twitter_card_missing` remonter sur quatre stacks et `twitter_card_incomplete` passer de 3 a
+    5 sur next-app. Le verdict par famille, lui, annoncait « ok » partout.
+
+    On ne devine rien : la balise rendue est celle que l'ancien contenu portait, a l'octet pres.
+    Elle est reposee a cote de la derniere meta survivante, ou a defaut avant `</head>` — les
+    deux endroits ou une meta est chez elle, en balisage comme en JSX.
+    """
+    anciennes: dict[tuple[str, str], str] = {}
+    for tag in _META_TAG_RE.findall(old_content):
+        cle = _META_KEY_RE.search(tag)
+        if cle:
+            nom = cle.group(2).strip().lower()
+            if nom not in _META_KEYS_REMOVABLES:
+                anciennes.setdefault((cle.group(1).lower(), nom), tag)
+    if not anciennes:
+        return new_content, []
+    presentes = set()
+    for tag in _META_TAG_RE.findall(new_content):
+        cle = _META_KEY_RE.search(tag)
+        if cle:
+            presentes.add((cle.group(1).lower(), cle.group(2).strip().lower()))
+    perdues = [tag for cle, tag in anciennes.items() if cle not in presentes]
+    if not perdues:
+        return new_content, []
+
+    dernieres = list(_META_TAG_RE.finditer(new_content))
+    if dernieres:
+        pos = dernieres[-1].end()
+    else:
+        fin = re.search(r"</head\s*>", new_content, re.I)
+        if not fin:
+            # Aucun endroit sur ou reposer la balise : on ne bricole pas, on le DIT. Le patch
+            # part quand meme, mais la note le signale a la relecture humaine.
+            return new_content, [f"{len(perdues)} balise(s) meta perdue(s) et non restituee(s)"]
+        pos = fin.start()
+    indent = "\n    "
+    rendu = indent.join([""] + perdues)
+    notes = [("meta rendue : " + (_META_KEY_RE.search(t).group(2) if _META_KEY_RE.search(t) else "?"))
+             for t in perdues]
+    return new_content[:pos] + rendu + new_content[pos:], notes
+
+
 def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, list[str]]:
     """Restore https on any URL this patch turned from https into http.
 
@@ -20931,6 +20987,10 @@ def _deep_patch_issue_files(
         # une virgule manque. Poser la virgule avant aurait vise la mauvaise.
         new_content, _comma_notes = _add_missing_object_commas(new_content)
         _dup_notes += _comma_notes
+        # APRES les garde-fous qui reecrivent des valeurs, et avant les refus : une balise rendue
+        # ici doit passer les memes controles de forme que celles que le patch a ecrites.
+        new_content, _meta_notes = _keep_head_meta_tags(new_content, raw)
+        _dup_notes += _meta_notes
         # Uniquement sur un fichier PARTAGE : sur une page, changer sa propre langue est
         # exactement ce qu'on attend du correcteur. C'est la portee qui distingue les deux, et
         # la langue du site est un fait que le crawl mesure page par page.
