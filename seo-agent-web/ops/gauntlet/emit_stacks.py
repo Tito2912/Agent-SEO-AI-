@@ -80,6 +80,13 @@ CANNOT: dict[str, dict[str, str]] = {
             "`width=device-width, initial-scale=1` sur TOUTES les pages, y compris celle qui "
             "exporte `viewport = {}`. Next.js pose sa viewport par defaut et rien dans l'API "
             "d'une page ne l'enleve — la famille ne peut donc pas se produire sur cette stack.",
+        "twitter_card_missing":
+            "MESURE en deux temps sur le site deploye, pas deduit de la documentation. Une page "
+            "qui ne declare AUCUNE metadonnee twitter se voit servir une carte complete, que "
+            "Next derive de l'Open Graph. Et une page qui declare un bloc `twitter` EXPLICITE "
+            "sans `card` — titre et image seulement — se voit servir `twitter:card` quand meme, "
+            "plus une description derivee. Rien dans l'API d'une page ne retire cette carte : la "
+            "famille ne peut pas s'y produire.",
         "more_than_one_page_for_same_language_in_hreflang":
             "`metadata.alternates.languages` est un OBJET indexe par le code de langue, pas une "
             "liste de balises. Deux annotations `fr` y deviennent deux proprietes de meme nom : "
@@ -560,6 +567,15 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
         lines += [f"    images: [{_js_str(site + OG_IMAGE)}],", "  },"]
     elif spec.tw == "partial":
         lines += ["  twitter: { card: 'summary' },"]
+    elif spec.tw == "no-card":
+        # On DECLARE le bloc twitter sans `card`. Mesure prealable : une page qui ne declare
+        # aucune metadonnee twitter se voit quand meme servir une carte complete, que Next
+        # derive de l'Open Graph. Reste a savoir si un bloc explicite mais incomplet la
+        # supprime — c'est ce que ce rendu sert a mesurer, pas a supposer.
+        lines += ["  twitter: {"]
+        if spec.title is not None:
+            lines.append(f"    title: {_js_str(spec.title)},")
+        lines += [f"    images: [{_js_str(site + OG_IMAGE)}],", "  },"]
     lines.append("};")
     viewport = ("" if spec.viewport else
                 "\n// Aucune viewport exportee : c'est l'anomalie visee sur cette page.\n"
