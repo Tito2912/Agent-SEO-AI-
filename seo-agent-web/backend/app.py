@@ -18909,6 +18909,120 @@ def _keep_head_meta_tags(new_content: str, old_content: str) -> tuple[str, list[
     return new_content[:pos] + rendu + new_content[pos:], notes
 
 
+_SOCIAL_BLOCK_OPEN_RE = re.compile(r"^\s*(openGraph|twitter)\s*:\s*\{")
+# `images` et `url` : les deux clefs qu'AUCUNE famille ne demande jamais de RETIRER. Une
+# description peut legitimement disparaitre d'un bloc (doublon collapse), un titre peut changer —
+# mais rien ne justifie qu'une page perde son image sociale ou son URL canonique OG.
+_SOCIAL_KEEP_KEYS = ("images", "url")
+_SOCIAL_KEY_RE = re.compile(r"^\s*(images|url)\s*:")
+
+
+def _social_object_keys(content: str) -> dict[tuple[str, str], str]:
+    """Les lignes `images:` / `url:` posees DANS un bloc `openGraph:` ou `twitter:`.
+
+    Lecture ligne a ligne avec une profondeur d'accolades, comme `_drop_duplicate_object_keys` :
+    le fichier n'est pas toujours analysable (JSX, front matter), et compter les accolades est ce
+    qui marche partout sans rien supposer de la syntaxe alentour.
+    """
+    out: dict[tuple[str, str], str] = {}
+    bloc = ""
+    profondeur = 0
+    for ligne in content.splitlines():
+        if not bloc:
+            ouverture = _SOCIAL_BLOCK_OPEN_RE.match(ligne)
+            if ouverture:
+                bloc, profondeur = ouverture.group(1), 1
+            continue
+        cle = _SOCIAL_KEY_RE.match(ligne)
+        if cle and profondeur == 1:
+            out.setdefault((bloc, cle.group(1)), ligne)
+        profondeur += ligne.count("{") - ligne.count("}")
+        if profondeur <= 0:
+            bloc = ""
+    return out
+
+
+def _keep_social_object_keys(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Rendre a un objet `metadata` l'image sociale que ce patch lui a prise.
+
+    Mesure du 12/09/2026, next-app : corriger un canonical a fait disparaitre `og:image` et
+    `twitter:image` de pages qui allaient tres bien — `/a-propos`, `/blog`, les trois pages
+    canoniques. Le recrawl a vu `twitter_card_incomplete` passer de 3 a 5 et
+    `open_graph_tags_incomplete` de 4 a 5. `_keep_head_meta_tags` n'y pouvait rien : sur cette
+    stack la tete vit dans un OBJET TypeScript, sans la moindre balise `<meta>` dans la source.
+
+    Meme regle que pour le balisage : on repose la ligne d'origine a l'octet pres, juste apres
+    l'ouverture de son bloc, et on ne devine jamais une valeur.
+    """
+    anciennes = _social_object_keys(old_content)
+    if not anciennes:
+        return new_content, []
+    presentes = set(_social_object_keys(new_content))
+    perdues = {cle: ligne for cle, ligne in anciennes.items() if cle not in presentes}
+    if not perdues:
+        return new_content, []
+    lignes = new_content.splitlines(keepends=True)
+    sortie: list[str] = []
+    notes: list[str] = []
+    for ligne in lignes:
+        sortie.append(ligne)
+        ouverture = _SOCIAL_BLOCK_OPEN_RE.match(ligne)
+        if not ouverture:
+            continue
+        for nom in _SOCIAL_KEEP_KEYS:
+            rendue = perdues.pop((ouverture.group(1), nom), None)
+            if rendue is not None:
+                fin = "\n" if not rendue.endswith("\n") else ""
+                sortie.append(rendue + fin)
+                notes.append(f"{ouverture.group(1)}.{nom} rendue")
+    if not notes:
+        return new_content, []
+    return "".join(sortie), notes
+
+
+_SOCIAL_IMAGE_SRC_RE = re.compile(r"(?<![\w-])src(\s*:)")
+
+
+def _repair_social_image_key(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Dans un `images:` d'objet social, la clef de l'URL est `url`, jamais `src`.
+
+    Mesure du 12/09/2026, next-app. Chargee d'ajouter un texte alternatif, la correction a
+    transforme `images: ['…/og.png']` en `images: [{ src: '…/og.png', alt: '…' }]`. L'intention
+    est bonne — un alt est un vrai progres — mais l'API de metadonnees de Next attend `url`.
+    Avec `src`, elle ne resout pas l'image et n'emet AUCUN `og:image` ni `twitter:image` : le
+    site se construit, la page est servie, et les images sociales ont disparu. Le recrawl a vu
+    `twitter_card_incomplete` passer de 3 a 5 et `open_graph_tags_incomplete` de 4 a 5 sur des
+    pages qui allaient tres bien avant la correction.
+
+    On corrige le NOM de la clef plutot que de restaurer l'ancienne valeur : cela garde le alt
+    que le modele a ajoute. Et on ne touche qu'aux lignes `images:` d'un bloc social — `src`
+    ailleurs est parfaitement legitime.
+    """
+    if "src" not in new_content:
+        return new_content, []
+    lignes = new_content.splitlines(keepends=True)
+    bloc = ""
+    profondeur = 0
+    notes: list[str] = []
+    for i, ligne in enumerate(lignes):
+        if not bloc:
+            ouverture = _SOCIAL_BLOCK_OPEN_RE.match(ligne)
+            if ouverture:
+                bloc, profondeur = ouverture.group(1), 1
+            continue
+        if profondeur == 1 and re.match(r"^\s*images\s*:", ligne) and _SOCIAL_IMAGE_SRC_RE.search(ligne):
+            corrigee, n = _SOCIAL_IMAGE_SRC_RE.subn(r"url\1", ligne)
+            if n:
+                lignes[i] = corrigee
+                notes.append(f"{bloc}.images : `src` renomme en `url` ({n})")
+        profondeur += ligne.count("{") - ligne.count("}")
+        if profondeur <= 0:
+            bloc = ""
+    if not notes:
+        return new_content, []
+    return "".join(lignes), notes
+
+
 def _forbid_https_downgrade(new_content: str, old_content: str) -> tuple[str, list[str]]:
     """Restore https on any URL this patch turned from https into http.
 
@@ -20991,6 +21105,12 @@ def _deep_patch_issue_files(
         # ici doit passer les memes controles de forme que celles que le patch a ecrites.
         new_content, _meta_notes = _keep_head_meta_tags(new_content, raw)
         _dup_notes += _meta_notes
+        # Le pendant du precedent pour les stacks dont la tete vit dans un OBJET et non dans des
+        # balises : `metadata` de Next App Router, et tout idiome de meme forme.
+        new_content, _social_notes = _keep_social_object_keys(new_content, raw)
+        _dup_notes += _social_notes
+        new_content, _img_notes = _repair_social_image_key(new_content, raw)
+        _dup_notes += _img_notes
         # Uniquement sur un fichier PARTAGE : sur une page, changer sa propre langue est
         # exactement ce qu'on attend du correcteur. C'est la portee qui distingue les deux, et
         # la langue du site est un fait que le crawl mesure page par page.
