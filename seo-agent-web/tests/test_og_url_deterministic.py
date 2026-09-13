@@ -57,8 +57,26 @@ def test_pairs_come_from_the_crawl_not_from_a_guess() -> None:
 
 
 def test_a_page_whose_tags_already_agree_yields_nothing() -> None:
-    pages = [{"url": "https://x.fr/ok", "og_url": "https://x.fr/ok/", "canonical": "https://x.fr/ok"}]
+    pages = [{"url": "https://x.fr/ok", "og_url": "https://x.fr/ok", "canonical": "https://x.fr/ok"}]
     assert app_module._og_url_pairs_from_pages(["https://x.fr/ok"], pages) == []
+
+
+def test_a_trailing_slash_is_a_difference__the_crawler_says_so() -> None:
+    """This test used to assert the opposite, and it was wrong — measured 13/09/2026.
+
+    It read a trailing-slash difference as "already agree", because the comparison went through
+    `_norm_url_for_match`, which strips the trailing slash. But the crawler compares the values
+    as written, so it FLAGS such a page: on next-app `/blog` (og:url) against `/blog/`
+    (canonical) was one of four flagged pages, and the corrector answered that nothing differed.
+    Two of those four pages could never be corrected, and nothing said so.
+
+    A page only reaches this function once the crawl has flagged it. Answering "no difference"
+    about a page the crawl just called different is how a family becomes unfixable in silence.
+    """
+    pages = [{"url": "https://x.fr/blog", "og_url": "https://x.fr/blog",
+              "canonical": "https://x.fr/blog/"}]
+    pairs = app_module._og_url_pairs_from_pages(["https://x.fr/blog"], pages)
+    assert [p["to"] for p in pairs] == ["https://x.fr/blog/"]
 
 
 def test_the_family_now_has_a_deterministic_rewriter() -> None:

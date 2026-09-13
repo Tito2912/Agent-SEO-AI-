@@ -18742,6 +18742,23 @@ _OG_URL_KEYS = _with_indexability_variants({"open_graph_url_not_matching_canonic
 _OG_URL_TAG_RE = re.compile(
     r'<meta\b[^>]*property\s*=\s*["\']og:url["\'][^>]*>', re.I)
 _CONTENT_ATTR_RE = re.compile(r'(content\s*=\s*)(["\'])(.*?)(\2)', re.I | re.S)
+# TROIS ecritures pour une meme balise. Mesure du 13/09/2026 sur les neuf stacks : la famille
+# n'etait corrigee que sur les cinq idiomes qui posent une vraie balise. next-app ecrit la valeur
+# comme une clef d'objet TypeScript (`openGraph: { url: ... }`), nuxt comme un objet litteral du
+# tableau `meta:` de `useHead()`. Aucun des deux ne contient `<meta`, donc le reecriveur rendait
+# 0 ; et au-dela d'une paire le repli IA est interdit (voir `_og_fallback_allowed`). Resultat :
+# rien ne se passait — ni patch, ni refus, ni trace. Le banc affichait « AUCUN PATCH », un
+# verdict qu'on ne pouvait pas distinguer d'une famille deja corrigee par une autre.
+_OG_URL_OBJECT_RE = re.compile(
+    r"""\{[^{}]*?(?:property|name)\s*:\s*(['"])og:url\1[^{}]*\}""", re.S)
+_OG_URL_CONTENT_KEY_RE = re.compile(r"""(content\s*:\s*)(['"])(.*?)(\2)""", re.S)
+# `openGraph` seulement : `twitter: { url: ... }` reste hors de portee, comme la balise
+# `twitter:url`. Cette famille parle d'UNE balise en desaccord avec le canonical, et elargir le
+# rayon d'action est exactement la facon dont une correction bornee cesse de l'etre.
+_OG_BLOCK_INLINE_RE = re.compile(r"openGraph\s*:\s*\{[^{}]*\}", re.S)
+_OG_BLOCK_OPEN_RE = re.compile(r"^\s*openGraph\s*:\s*\{")
+_OG_URL_KEY_RE = re.compile(r"""^(\s*url\s*:\s*)(['"])(.*?)(\2)(.*)$""")
+_OG_URL_INLINE_KEY_RE = re.compile(r"""(\burl\s*:\s*)(['"])(.*?)(\2)""", re.S)
 
 
 def _og_url_pairs_from_pages(
@@ -18756,15 +18773,37 @@ def _og_url_pairs_from_pages(
         return []
     wanted = {_norm_url_for_match(u) for u in (impacted or [])}
     out: list[dict[str, str]] = []
+    vus: set[tuple[str, str]] = set()
     for page in pages:
         if not isinstance(page, dict):
             continue
+        # Ici `_norm_url_for_match` est a sa place : RECONNAITRE la page signalee, qu'un rapport
+        # l'ecrive avec ou sans slash final. Une page est listee plusieurs fois (variante http,
+        # variante avec slash), d'ou la deduplication plus bas.
         if wanted and _norm_url_for_match(str(page.get("url") or "")) not in wanted:
             continue
         og = str(page.get("og_url") or "").strip()
         canonical = str(page.get("canonical") or "").strip()
-        if og and canonical and _norm_url_for_match(og) != _norm_url_for_match(canonical):
-            out.append({"page": str(page.get("url") or ""), "from": og, "to": canonical})
+        if not og or not canonical or og == canonical:
+            continue
+        # Comparer avec `_norm_url_for_match` etait le defaut : elle retire le schema et le slash
+        # final, c'est-a-dire EXACTEMENT les deux differences que le crawler signale ici. Le
+        # correcteur repondait donc « ces deux valeurs sont identiques » a propos de pages que le
+        # crawl venait de declarer differentes, et n'emettait aucune paire.
+        #
+        # Mesure du 13/09/2026, next-app : sur QUATRE pages signalees, deux ne produisaient
+        # aucune paire — `/blog` face a `/blog/`, et `https://` face a `http://`. Aucune
+        # correction possible pour elles, et rien nulle part ne le disait.
+        if og.lower().startswith("https://") and canonical.lower().startswith("http://"):
+            # Le seul alignement qu'on refuse : recopier un canonical en clair dans og:url
+            # ecrirait une URL non securisee sur la page. Le defaut de cette page est son
+            # canonical, pas son og:url ; `canonical_from_https_to_http` le corrige, et la
+            # famille se resout alors d'elle-meme.
+            continue
+        if (og, canonical) in vus:
+            continue
+        vus.add((og, canonical))
+        out.append({"page": str(page.get("url") or ""), "from": og, "to": canonical})
     return out
 
 
@@ -19779,23 +19818,76 @@ def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int
                for p in (pairs or []) if p.get("from") and p.get("to")}
     if not mapping:
         return content, 0
-    count = 0
 
-    def _one_tag(match: "re.Match[str]") -> str:
-        nonlocal count
+    # Chaque strategie REPERE des emplacements dans le contenu D'ORIGINE ; aucune ne reecrit.
+    # La reecriture se fait a la fin, en une seule passe.
+    #
+    # Mesure du 13/09/2026, next-app, recrawl de la preview #17 : en enchainant les passes, la
+    # page `canonical-other` avait recu `.../missing-h1`. La passe « bloc en ligne » y avait
+    # ecrit la bonne valeur (`.../canonical-relay`), puis la passe « bloc etale » avait relu
+    # cette valeur toute fraiche, l'avait retrouvee dans la table — c'est le og:url fautif d'une
+    # AUTRE page — et l'avait reecrite a son tour. Une correction qui pose sur une page l'URL
+    # d'une page sans rapport. Reperer d'abord, ecrire ensuite rend l'enchainement impossible.
+    reperes: list[tuple[int, int, str]] = []
 
-        def _one_attr(attr: "re.Match[str]") -> str:
-            nonlocal count
-            value = attr.group(3).strip()
-            target = mapping.get(_norm_url_for_match(value))
-            if target and target != value:
-                count += 1
-                return attr.group(1) + attr.group(2) + target + attr.group(4)
-            return attr.group(0)
+    def _noter(debut: int, fin: int, valeur: str) -> None:
+        """La valeur ecrite est-elle une de celles que le crawl a signalees ?
 
-        return _CONTENT_ATTR_RE.sub(_one_attr, match.group(0))
+        Rien n'est reecrit sur la foi de l'emplacement seul : c'est ce qui empeche de toucher la
+        clef `url` d'une page qui, elle, n'etait pas signalee.
+        """
+        voulu = mapping.get(_norm_url_for_match(valeur.strip()))
+        if voulu and voulu != valeur:
+            reperes.append((debut, fin, voulu))
 
-    return _OG_URL_TAG_RE.sub(_one_tag, content), count
+    def _dans(bloc: "re.Match[str]", champ: "re.Pattern[str]") -> None:
+        for attr in champ.finditer(bloc.group(0)):
+            _noter(bloc.start() + attr.start(3), bloc.start() + attr.end(3), attr.group(3))
+
+    # La balise elle-meme, en HTML comme en JSX.
+    for _tag in _OG_URL_TAG_RE.finditer(content):
+        _dans(_tag, _CONTENT_ATTR_RE)
+    # Forme nuxt : un objet litteral qui NOMME la balise (`{ property: 'og:url', content: ... }`).
+    for _obj in _OG_URL_OBJECT_RE.finditer(content):
+        _dans(_obj, _OG_URL_CONTENT_KEY_RE)
+    # Forme next-app sans accolade imbriquee : `openGraph: { ..., url: '...' }`.
+    for _bloc in _OG_BLOCK_INLINE_RE.finditer(content):
+        _dans(_bloc, _OG_URL_INLINE_KEY_RE)
+    # Forme next-app avec accolades imbriquees (`images: [{ url, alt }]`), que la precedente ne
+    # peut pas delimiter : meme lecture par profondeur d'accolades que `_social_object_keys`,
+    # parce qu'un fichier de metadonnees n'est pas toujours analysable et que compter les
+    # accolades marche sans rien supposer de la syntaxe alentour.
+    debut_ligne, profondeur, dans_og = 0, 0, False
+    for ligne in content.split("\n"):
+        if not dans_og:
+            if _OG_BLOCK_OPEN_RE.match(ligne):
+                solde = ligne.count("{") - ligne.count("}")
+                # Un bloc referme sur sa propre ligne est deja repere par la passe precedente.
+                # Le suivre ici laisserait le scanner ouvert sur tout le reste du fichier —
+                # `twitter:` compris, qui est precisement ce qu'on s'interdit de toucher.
+                if solde > 0:
+                    dans_og, profondeur = True, solde
+            debut_ligne += len(ligne) + 1
+            continue
+        cle = _OG_URL_KEY_RE.match(ligne)
+        if cle and profondeur == 1:
+            _noter(debut_ligne + cle.start(3), debut_ligne + cle.end(3), cle.group(3))
+        profondeur += ligne.count("{") - ligne.count("}")
+        if profondeur <= 0:
+            dans_og = False
+        debut_ligne += len(ligne) + 1
+
+    morceaux: list[str] = []
+    pos, count, fin_precedente = 0, 0, -1
+    for debut, fin, voulu in sorted(reperes):
+        # Un meme emplacement repere par deux strategies ne se reecrit qu'UNE fois.
+        if debut < fin_precedente:
+            continue
+        morceaux.append(content[pos:debut])
+        morceaux.append(voulu)
+        pos, fin_precedente, count = fin, fin, count + 1
+    morceaux.append(content[pos:])
+    return "".join(morceaux), count
 
 
 def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:

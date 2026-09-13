@@ -6,6 +6,7 @@ families whose targeting or hint is wrong — which is where seven of today's ei
 Each family is prepared and patched exactly as the endpoint does it; the branch accumulates, so
 a later family sees the earlier fixes (that is also what a real multi-issue run does).
 """
+import base64
 import datetime as dt
 import json
 import os
@@ -43,6 +44,13 @@ shown = lambda k: (k in dash.ISSUE_CATALOG and k not in dash.NON_ISSUE_KEYS  # n
                    and not dash.is_delta_issue_key(k))
 families = [k for k, v in issues.items()
             if isinstance(v, dict) and v.get("count") and shown(k) and k in handled]
+# Une famille peut en MASQUER une autre : la branche accumule, donc `css_redirects` passe avant
+# `page_has_redirected_css` et la seconde ne trouve plus rien a reecrire. Elle s'affiche alors
+# « AUCUN PATCH » — verdict indistinguable d'un vrai trou de correction. `GAUNTLET_ONLY` isole
+# une famille pour trancher la question par la mesure plutot que par la lecture du code.
+only = [k.strip() for k in os.environ.get("GAUNTLET_ONLY", "").split(",") if k.strip()]
+if only:
+    families = [k for k in families if k in only]
 # One representative per length/indexability family: the endpoint groups them itself.
 seen_group: set[str] = set()
 ordered: list[str] = []
@@ -64,6 +72,53 @@ fix_branch = f"gauntlet-{STACK}-{dt.datetime.now(dt.UTC).strftime('%Y%m%d-%H%M%S
 m._github_api_post(m._github_api_path("repos", OWNER, REPO, "git", "refs"), token=TOKEN,
                    json_body={"ref": f"refs/heads/{fix_branch}", "sha": base})
 print("branche :", fix_branch)
+
+_origines: dict[str, str] = {}
+
+
+def _contenu_origine(path: str) -> str:
+    """Le fichier tel que la branche de DEPART le porte, avant qu'aucune famille n'y touche."""
+    if path not in _origines:
+        try:
+            fd = m._github_api_get(m._github_content_api_path(OWNER, REPO, path),
+                                   token=TOKEN, params={"ref": BRANCH})
+            _origines[path] = base64.b64decode(
+                fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+        except Exception:
+            _origines[path] = ""
+    return _origines[path]
+
+
+def _mordait_a_l_origine(rewriter, targets: list[str]) -> bool:
+    """« Aucun patch » veut dire deux choses opposees, et le banc les confondait.
+
+    La branche accumule : `css_redirects` passe avant `page_has_redirected_css` et a deja
+    reecrit la reference, si bien que la seconde ne trouve plus rien. Elle s'affichait alors
+    « AUCUN PATCH », strictement comme une famille que le correcteur ne sait pas traiter.
+    Mesure du 13/09/2026 : SEPT familles sur dix ainsi accusees a tort — et le recrawl des
+    previews les montrait a zero sur les neuf stacks.
+
+    On tranche par la mesure, pas par une supposition sur l'ordre : la reecriture de cette
+    famille mordait-elle sur le contenu D'ORIGINE de ses cibles ? Si oui, le defaut y etait et
+    quelqu'un l'a retire pendant ce passage. Sinon, c'est un vrai trou.
+
+    Une famille sans reecriveur deterministe (celles que le modele ecrit) n'est pas jugeable
+    ainsi : on n'affirme rien et elle reste « AUCUN PATCH ».
+    """
+    if rewriter is None:
+        return False
+    for path in targets or []:
+        raw = _contenu_origine(path)
+        if not raw:
+            continue
+        try:
+            _, n = rewriter(raw)
+        except Exception:
+            continue
+        if n > 0:
+            return True
+    return False
+
 
 file_state: dict[str, dict[str, str]] = {}
 results = []
@@ -103,16 +158,19 @@ for key in ordered:
         results.append((key, "ERREUR patch", str(exc)[:80], 0, 0))
         continue
     verdict = "ok" if patched else ("AUCUN PATCH" if targets else "AUCUNE CIBLE")
+    if verdict == "AUCUN PATCH" and _mordait_a_l_origine(prep["link_rewriter"], targets):
+        verdict = "DEJA CORRIGE"
     results.append((key, verdict, ",".join(targets[:2])[:70], len(patched), len(ai)))
     print(f"  {verdict:<12} {key:<46} cibles={len(targets)} patches={len(patched)} ia={len(ai)}")
 
 json.dump({"branch": fix_branch, "results": results},
           open(os.path.join(SD, "gauntlet_run.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("\n--- bilan ---")
-for v in ("ok", "AUCUN PATCH", "AUCUNE CIBLE", "refus", "ERREUR prepare", "ERREUR patch"):
+for v in ("ok", "DEJA CORRIGE", "AUCUN PATCH", "AUCUNE CIBLE", "refus",
+          "ERREUR prepare", "ERREUR patch"):
     n = [r for r in results if r[1] == v]
     if n:
         print(f"{len(n):>3}  {v}")
-        if v != "ok":
+        if v not in ("ok", "DEJA CORRIGE"):
             for r in n:
                 print(f"       {r[0]} — {r[2]}")
