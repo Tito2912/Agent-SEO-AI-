@@ -17135,6 +17135,38 @@ _LENGTH_CEILINGS: dict[str, int] = {"title": 70, "description": 160}
 # rewriting it would churn a value no crawl complains about.
 _LENGTH_FLOORS: dict[str, int] = {"title": 15, "description": 100}
 
+# Les familles de LONGUEUR recoivent ces bornes ; celles qui ECRIVENT une valeur neuve ne les
+# recevaient pas. On repare une anomalie en en creant une autre.
+_WRITE_A_VALUE_KEYS: dict[str, str] = {
+    "duplicate_titles": "title",
+    "duplicate_meta_descriptions": "description",
+}
+
+
+def _build_write_bounds_hint(kind: str) -> str:
+    """Les bornes de longueur, pour une famille qui fait ECRIRE une valeur neuve.
+
+    Mesure du 13/09/2026, next-app, cycle complet puis recrawl des previews :
+    `duplicate_meta_descriptions` est tombee de 25 a 0 — vrai succes — mais SEPT pages sont
+    ressorties avec une description trop courte, 83 a 96 caracteres pour un plancher a 100. Le
+    modele avait pour seule consigne de les rendre uniques ; personne ne lui avait dit jusqu'ou.
+
+    Rien ici n'est devine : les deux nombres sortent des memes tables que les familles de
+    longueur, elles-memes alignees sur les seuils du crawler. Une seule source, sinon les deux
+    moities du produit finissent par ne plus parler de la meme chose — c'est deja arrive avec
+    la comparaison d'URL de `og:url`.
+    """
+    k = _length_kind(kind)
+    low, high = _LENGTH_WINDOWS[k]
+    plancher, plafond = _LENGTH_FLOORS[k], _LENGTH_CEILINGS[k]
+    label = "titre" if k == "title" else "meta description"
+    return (
+        f"\nChaque {label} que tu ecris doit faire entre {low} et {high} caracteres UNE FOIS "
+        f"RENDUE. Bornes dures, au-dela desquelles le crawl leve une anomalie : strictement "
+        f"plus de {plancher} et au plus {plafond} caracteres. Une valeur unique mais trop "
+        f"courte remplace une anomalie par une autre."
+    )
+
 
 def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str) -> str:
     """Build a corrector hint from the crawler's `length_samples` (rendered value + length per
@@ -20876,6 +20908,10 @@ def _prepare_issue_fix(
                 "est assemblée. Ne touche pas aux pages ni aux fichiers de contenu.")
     if issue_key in _HEAD_HINTS:
         out["extra_hint"] = _HEAD_HINTS[issue_key]
+    _kind_ecrit = _WRITE_A_VALUE_KEYS.get(
+        issue_key.removesuffix("_not_indexable").removesuffix("_indexable"))
+    if _kind_ecrit:
+        out["extra_hint"] = (out["extra_hint"] or "") + _build_write_bounds_hint(_kind_ecrit)
     # OG url≠canonical: reuse the layout's inherited og:image, since Next replaces openGraph
     # per-segment and a bare per-page {url} would drop it.
     if issue_key == "open_graph_url_not_matching_canonical":
