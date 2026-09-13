@@ -141,6 +141,19 @@ for key in ordered:
     if prep["refusal"]:
         results.append((key, "refus", prep["refusal"][:70], 0, 0))
         continue
+    # Une famille purement mecanique remplace un litteral et n'appelle JAMAIS le modele. Mesure
+    # du 13/09/2026 sur un cycle complet : 171 fichiers sur 567 sont dans ce cas, et ils ne
+    # coutent rien. Les 396 autres sont ecrits par le modele — environ dix dollars le passage,
+    # dont 43 % pour quatre familles seulement (`duplicate_titles`, `duplicate_meta_descriptions`,
+    # `open_graph_tags_incomplete`, `x_default_hreflang_missing`).
+    #
+    # `GAUNTLET_FREE=1` ne garde que les mecaniques : un passage de non-regression sur les neuf
+    # stacks a cout nul, qu'on peut donc lancer aussi souvent qu'on veut. C'est exactement la
+    # part qui attrape les defauts de CIBLAGE et d'IDIOME — les trois de ce jour en etaient.
+    mecanique = prep["link_rewriter"] is not None and not prep["rewriter_ai_fallback"]
+    if os.environ.get("GAUNTLET_FREE") and not mecanique:
+        results.append((key, "IGNOREE (payante)", "", 0, 0))
+        continue
     try:
         patched, skipped, targets, ai = m._deep_patch_issue_files(
             owner=OWNER, repo_name=REPO, branch=BRANCH, token=TOKEN, fix_branch=fix_branch,
@@ -166,11 +179,11 @@ for key in ordered:
 json.dump({"branch": fix_branch, "results": results},
           open(os.path.join(SD, "gauntlet_run.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("\n--- bilan ---")
-for v in ("ok", "DEJA CORRIGE", "AUCUN PATCH", "AUCUNE CIBLE", "refus",
-          "ERREUR prepare", "ERREUR patch"):
+for v in ("ok", "DEJA CORRIGE", "IGNOREE (payante)", "AUCUN PATCH", "AUCUNE CIBLE",
+          "refus", "ERREUR prepare", "ERREUR patch"):
     n = [r for r in results if r[1] == v]
     if n:
         print(f"{len(n):>3}  {v}")
-        if v not in ("ok", "DEJA CORRIGE"):
+        if v not in ("ok", "DEJA CORRIGE", "IGNOREE (payante)"):
             for r in n:
                 print(f"       {r[0]} — {r[2]}")
