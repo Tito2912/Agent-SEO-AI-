@@ -19289,6 +19289,112 @@ def _dominant_site_lang(pages: list[dict[str, Any]] | None) -> str:
     return top if langs.count(top) >= len(langs) * 0.6 else ""
 
 
+# Un gabarit qui COLLE une expression au nom de balise : `<html{{ page.html_attrs }}>` en Liquid,
+# `<html{{ .Params.html_attrs }}>` en Go. La valeur injectee doit alors commencer par une espace,
+# sinon le nom de la balise absorbe l'attribut.
+_GLUED_INJECTION_RE = re.compile(r"<[A-Za-z][\w:-]*(?:\{\{(.*?)\}\}|\{%(.*?)%\})", re.S)
+_IDENTIFIANT_RE = re.compile(r"[A-Za-z_][\w-]*")
+_LAYOUT_DIR_RE = re.compile(r"(^|/)(_layouts|layouts|_includes|includes|templates|partials)/", re.I)
+# Une valeur de front matter qui est un BLOC D'ATTRIBUTS : `lang="fr"`, `data-x='y'`.
+_ATTR_BLOB_RE = re.compile(r"""^[A-Za-z_:][\w:.-]*\s*=\s*["']""")
+_FRONT_MATTER_SCALAR_RE = re.compile(r"""^([A-Za-z_][\w-]*)\s*:\s*(['"])(.*)(\2)\s*$""")
+_GLUED_KEYS_CACHE: dict[tuple[str, str, str], set[str]] = {}
+
+
+def _glued_template_keys(textes: list[str]) -> set[str]:
+    """Les noms injectes COLLES a un nom de balise, lus dans les gabarits du depot.
+
+    On ne devine pas qu'une valeur est un bloc d'attributs : on constate que le depot l'injecte
+    a un endroit ou l'absence d'espace soude l'attribut au nom de la balise.
+    """
+    out: set[str] = set()
+    for texte in textes:
+        for m in _GLUED_INJECTION_RE.finditer(texte or ""):
+            out.update(_IDENTIFIANT_RE.findall(m.group(1) or m.group(2) or ""))
+    return out
+
+
+def _repo_glued_keys(*, owner: str, repo_name: str, branch: str, token: str,
+                     all_paths: list[str]) -> set[str]:
+    """Les clefs collees du depot, lues une fois par depot et par branche."""
+    import base64 as _b64
+    cle = (owner, repo_name, branch)
+    if cle in _GLUED_KEYS_CACHE:
+        return _GLUED_KEYS_CACHE[cle]
+    textes: list[str] = []
+    for chemin in [p for p in (all_paths or []) if _LAYOUT_DIR_RE.search(p)][:8]:
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
+                                 token=token, params={"ref": branch})
+            textes.append(_b64.b64decode(
+                fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace"))
+        except Exception:
+            continue
+    _GLUED_KEYS_CACHE[cle] = _glued_template_keys(textes)
+    return _GLUED_KEYS_CACHE[cle]
+
+
+def _space_glued_front_matter(new_content: str, old_content: str,
+                              glued: set[str]) -> tuple[str, list[str]]:
+    """Rendre son espace initiale a un bloc d'attributs injecte colle au nom de la balise.
+
+    Mesure du 13/09/2026, jekyll, cycle complet puis lecture de la PAGE SERVIE. Charge d'ajouter
+    l'attribut lang manquant, le correcteur a ecrit dans le front matter :
+
+        html_attrs: 'lang="fr"'
+
+    Le gabarit du depot fait `<html{{ page.html_attrs }}>`, sans espace. La page servie portait
+    donc `<htmllang="fr">` : la balise s'appelle desormais `htmllang`, le document n'a plus
+    d'element `<html>`, et l'anomalie visee n'a pas bouge — 2 avant, 2 apres, pour un verdict
+    « ok ». Une correction qui ABIME le balisage servi est pire qu'une anomalie laissee en place.
+
+    La page voisine, elle, avait ete corrigee juste : son ancienne valeur portait deja l'espace
+    (`' lang="francais"'`) et le modele l'a conservee. Seule l'AJOUT partait de rien.
+
+    On ne touche qu'une valeur que CE patch a ecrite, et seulement pour une clef que les gabarits
+    du depot injectent collee. Une espace de trop dans un gabarit qui en a deja une est sans
+    consequence ; une espace manquante casse la page.
+    """
+    if not glued:
+        return new_content, []
+    anciennes = dict(_front_matter_scalars(old_content))
+    notes: list[str] = []
+    lignes = new_content.split("\n")
+    for i in _front_matter_span(lignes):
+        m = _FRONT_MATTER_SCALAR_RE.match(lignes[i])
+        if not m:
+            continue
+        clef, guillemet, valeur = m.group(1), m.group(2), m.group(3)
+        if clef not in glued or not valeur or valeur[:1].isspace():
+            continue
+        if not _ATTR_BLOB_RE.match(valeur) or anciennes.get(clef) == valeur:
+            continue
+        lignes[i] = f"{clef}: {guillemet} {valeur}{guillemet}"
+        notes.append(f"espace rendue a `{clef}` : le gabarit colle la valeur au nom de la balise")
+    return "\n".join(lignes), notes
+
+
+def _front_matter_span(lignes: list[str]) -> list[int]:
+    """Les indices des lignes DANS le front matter, vide s'il n'y en a pas."""
+    if not lignes or lignes[0].strip() not in ("---", "+++"):
+        return []
+    borne = lignes[0].strip()
+    for i in range(1, len(lignes)):
+        if lignes[i].strip() == borne:
+            return list(range(1, i))
+    return []
+
+
+def _front_matter_scalars(content: str) -> list[tuple[str, str]]:
+    lignes = content.split("\n")
+    out: list[tuple[str, str]] = []
+    for i in _front_matter_span(lignes):
+        m = _FRONT_MATTER_SCALAR_RE.match(lignes[i])
+        if m:
+            out.append((m.group(1), m.group(3)))
+    return out
+
+
 def _keep_site_lang(new_content: str, old_content: str, site_lang: str) -> tuple[str, list[str]]:
     """Empecher un fichier PARTAGE de declarer une langue que le site ne parle pas.
 
@@ -21239,6 +21345,14 @@ def _deep_patch_issue_files(
         _dup_notes += _social_notes
         new_content, _img_notes = _repair_social_image_key(new_content, raw)
         _dup_notes += _img_notes
+        # Front matter : une valeur que le depot injecte COLLEE au nom d'une balise doit garder
+        # son espace initiale. Voir `_space_glued_front_matter` — sans elle, `<htmllang="fr">`.
+        if new_content[:4].strip() in ("---", "+++"):
+            new_content, _fm_notes = _space_glued_front_matter(
+                new_content, raw,
+                _repo_glued_keys(owner=owner, repo_name=repo_name, branch=branch, token=token,
+                                 all_paths=all_paths))
+            _dup_notes += _fm_notes
         # Uniquement sur un fichier PARTAGE : sur une page, changer sa propre langue est
         # exactement ce qu'on attend du correcteur. C'est la portee qui distingue les deux, et
         # la langue du site est un fait que le crawl mesure page par page.
