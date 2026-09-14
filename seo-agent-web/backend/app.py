@@ -21309,6 +21309,16 @@ def _deep_patch_issue_files(
     if extra_hint:
         occ_hint += " " + extra_hint
     primary_url = impacted_urls[0] if impacted_urls else ""
+    # Chaque fichier doit s'entendre nommer SA page. Mesure du 14/09/2026, next-app : six
+    # fichiers de pages differentes recevaient tous `url_affectee = impacted_urls[0]`, donc cinq
+    # prompts sur six nommaient une autre page que celle qu'ils editaient. Pour une famille
+    # per-page — un doublon de description, un titre — c'est le seul element qui distingue deux
+    # appels par ailleurs identiques, et il etait constant.
+    _url_par_fichier: dict[str, str] = {}
+    if index:
+        for _u in impacted_urls or []:
+            for _f in repo_index.route_files(index, _u) or []:
+                _url_par_fichier.setdefault(_f, _u)
     patched: list[str] = []
     skipped: list[str] = []
     ai_files: list[str] = []   # the subset the MODEL wrote — the only ones that cost tokens
@@ -21361,7 +21371,8 @@ def _deep_patch_issue_files(
         try:
             patch = _openai_generate_file_patch(
                 file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
-                url=primary_url, site_name=site_name, occurrences_hint=_hint, model_override=model_override,
+                url=_url_par_fichier.get(path, primary_url), site_name=site_name,
+                occurrences_hint=_hint, model_override=model_override,
             )
         except Exception:
             patch = None
