@@ -267,11 +267,20 @@ def body_bits(spec: Spec, site: str) -> list[str]:
     """Le corps, en HTML : il est identique sur les neuf stacks (JSX mis a part, gere plus bas)."""
     http = site.replace("https://", "http://")
     out: list[str] = []
+    # Un contenu PROPRE a chaque page. Mesure du 14/09/2026 : `duplicate-a` et `duplicate-b`
+    # etaient identiques octet pour octet a leur URL pres — meme h1, meme paragraphe. Le
+    # correcteur, charge de leur ecrire deux descriptions DIFFERENTES, n'avait donc aucune
+    # matiere pour les distinguer et rendait deux fois la meme phrase ; la moitie du lot finissait
+    # abandonnee par le garde-fou d'unicite. Un vrai site n'a pas deux pages interchangeables :
+    # le banc mesurait une difficulte qu'il avait lui-meme fabriquee.
+    #
+    # Le TITRE et la DESCRIPTION restent partages : ce sont eux, l'anomalie visee.
+    sujet = spec.slug.replace("-", " ")
     if spec.h1 >= 1:
-        out.append("<h1>Parcours d'obstacles</h1>")
+        out.append(f"<h1>Parcours d'obstacles : {sujet}</h1>")
     if spec.h1 >= 2:
         out.append("<h1>Un second titre de niveau 1</h1>")
-    out.append(f"<p>{BODY_TEXT}</p>")
+    out.append(f"<p>Cette page du parcours traite le cas « {sujet} ». {BODY_TEXT}</p>")
     out.append('<p><a href="/">Retour a l accueil</a></p>')
     if spec.http_image:
         out.append(f'<img src="{http}/og.png" alt="Illustration de test" />')

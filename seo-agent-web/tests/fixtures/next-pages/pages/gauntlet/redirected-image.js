@@ -21,8 +21,8 @@ export default function Page() {
         <meta name="twitter:description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
         <meta name="twitter:image" content="https://noyaru-stack-next-pages.netlify.app/og.png" />
       </Head>
-      <h1>Parcours d'obstacles</h1>
-      <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
+      <h1>Parcours d'obstacles : redirected image</h1>
+      <p>Cette page du parcours traite le cas « redirected image ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
       <p><a href="/">Retour a l accueil</a></p>
       <img src="/img/ancienne.png" alt="Illustration de test" />
     </main>

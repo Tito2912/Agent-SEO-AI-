@@ -22,8 +22,8 @@ export default function Page() {
         <meta name="twitter:description" content="Une meta description volontairement tres longue, ecrite pour depasser le plafond de cent soixante caracteres retenu par le crawler, afin de declencher la famille des descriptions trop longues sur une page non indexable." />
         <meta name="twitter:image" content="https://noyaru-stack-next-pages.netlify.app/og.png" />
       </Head>
-      <h1>Parcours d'obstacles</h1>
-      <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
+      <h1>Parcours d'obstacles : noindex long</h1>
+      <p>Cette page du parcours traite le cas « noindex long ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
       <p><a href="/">Retour a l accueil</a></p>
     </main>
   );

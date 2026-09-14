@@ -25,8 +25,8 @@ useHead({
 
 <template>
   <main>
-    <h1>Parcours d'obstacles</h1>
-    <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
+    <h1>Parcours d'obstacles : title too short</h1>
+    <p>Cette page du parcours traite le cas « title too short ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
     <p><a href="/">Retour a l accueil</a></p>
   </main>
 </template>

@@ -24,8 +24,8 @@ export const metadata = {
 export default function Page() {
   return (
     <main>
-      <h1>Parcours d'obstacles</h1>
-      <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
+      <h1>Parcours d'obstacles : double slash</h1>
+      <p>Cette page du parcours traite le cas « double slash ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
       <p><a href="/">Retour a l accueil</a></p>
       <p><a href="//noyaru-stack-next-app.netlify.app//a-propos">A propos</a></p>
     </main>

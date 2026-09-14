@@ -24,8 +24,8 @@ export const metadata = {
 export default function Page() {
   return (
     <main>
-      <h1>Parcours d'obstacles</h1>
-      <p>Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
+      <h1>Parcours d'obstacles : schema invalid</h1>
+      <p>Cette page du parcours traite le cas « schema invalid ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
       <p><a href="/">Retour a l accueil</a></p>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de test","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}` }} />
     </main>
