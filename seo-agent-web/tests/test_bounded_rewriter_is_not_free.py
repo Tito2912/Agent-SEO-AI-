@@ -33,6 +33,10 @@ os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
 from backend import app as app_module  # noqa: E402
 
 LONG = "x" * 300
+# Le remplacement doit rester AU-DESSUS du plancher de titre (15 caracteres) : sous ce
+# seuil le crawl leve `title_too_short`, et `_keep_length_above_floor` rend a juste titre
+# sa valeur d'origine. Ce test parle de facturation, pas de longueur — sa valeur de
+# remplacement doit donc etre realiste pour ne pas declencher un garde-fou etranger.
 SOURCE = f'<title>{LONG}</title>\n'
 
 
@@ -61,7 +65,7 @@ def test_a_rewriter_that_calls_the_model_marks_its_files_as_model_written(monkey
     """`ai_files` is what billing, the PR badge and auto-merge all read."""
     patched, ai_files = _patch(
         monkeypatch,
-        link_rewriter=lambda raw: (raw.replace(LONG, "Un titre court"), 1),
+        link_rewriter=lambda raw: (raw.replace(LONG, "Un titre court mais convenable"), 1),
         rewriter_is_ai=True,
     )
     assert patched == ["page.html"]
@@ -73,7 +77,7 @@ def test_a_regex_rewriter_stays_free_and_mechanical(monkeypatch) -> None:
     that was never spent, which is why the first customer PR was free."""
     patched, ai_files = _patch(
         monkeypatch,
-        link_rewriter=lambda raw: (raw.replace(LONG, "Un titre court"), 1),
+        link_rewriter=lambda raw: (raw.replace(LONG, "Un titre court mais convenable"), 1),
     )
     assert patched == ["page.html"]
     assert ai_files == [], "a rewrite that spends no tokens must cost the customer nothing"

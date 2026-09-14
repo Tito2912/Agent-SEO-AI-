@@ -18215,9 +18215,15 @@ def _braced_block(content: str, open_brace_idx: int) -> tuple[int, int]:
 # those are COPIES of the value, not its declaration, and rewriting a copy leaves the original
 # contradicting it.
 _HEAD_TEXT_FIELDS = ("title", "description")
+# `(?:\\.|(?!\1).)*` et non `.*?` : un litteral se termine au guillemet NON ECHAPPE. Mesure du
+# 14/09/2026 sur le banc — `description: 'Page du parcours d\'obstacles : <110 caracteres>'` etait
+# lue « Page du parcours d\ », 19 caracteres. Le litteral rendu etait tronque de la meme facon,
+# si bien qu'un remplacement ecrivait par-dessus un fragment et laissait le reste de la phrase
+# en vrac dans le fichier. En francais l'apostrophe est partout — `l'entreprise`, `d'obstacles` —
+# donc ce defaut vise d'abord les pages francaises, celles de tous les clients d'aujourd'hui.
 _HEAD_TEXT_QUOTED_RE = {
     field: re.compile(
-        r'(?<![\w:.-])' + field + r'\s*[:=]\s*(["\'])(?P<value>.*?)\1',
+        r'(?<![\w:.-])' + field + r'\s*[:=]\s*(["\'])(?P<value>(?:\\.|(?!\1).)*)\1',
         re.I,
     )
     for field in _HEAD_TEXT_FIELDS
@@ -18311,9 +18317,15 @@ def _rendered_len(value: str) -> int:
     and as five in the file. Measured on a real customer page (elevenlabs-avis.com): a title
     spelled 60 characters renders 56 — a whole clause of margin, on the very number this family
     exists to control. Counting the source would optimise a length nobody ever sees.
+
+    Meme raisonnement pour l'echappement du LANGAGE : dans un litteral JavaScript, `d\'obstacles`
+    s'affiche `d'obstacles`. L'antislash appartient au fichier, pas a la page. En francais
+    l'apostrophe revient plusieurs fois par phrase, donc les compter ferait deriver la mesure
+    justement sur les valeurs les plus longues.
     """
     import html as _html
-    return len(_html.unescape(value or ""))
+    sans_echappement = re.sub(r"\\(.)", r"\1", value or "")
+    return len(_html.unescape(sans_echappement))
 
 
 def _trim_to_ceiling(value: str, ceiling: int) -> str:
@@ -19393,6 +19405,48 @@ def _front_matter_scalars(content: str) -> list[tuple[str, str]]:
         if m:
             out.append((m.group(1), m.group(3)))
     return out
+
+
+def _keep_length_above_floor(new_content: str, old_content: str,
+                             valeur_ancienne_fautive: bool = False) -> tuple[str, list[str]]:
+    """Ne pas faire passer sous le plancher une valeur qui le respectait.
+
+    Le pendant du plafond, et son exact oppose en moyens : trop long se COUPE sans rien inventer,
+    trop court ne se rallonge pas. Un garde-fou ne peut donc pas reparer ici — il peut seulement
+    refuser d'aggraver, en rendant la valeur d'origine.
+
+    Mesure du 14/09/2026, next-app, famille `duplicate_meta_descriptions` jouee seule : sur six
+    descriptions reecrites, une sortait a 74 caracteres pour un plancher a 100, alors que la
+    valeur d'origine en faisait 104. L'anomalie visee etait reparee et une autre creee a sa
+    place — le troc que ce banc existe pour interdire.
+
+    Ne s'applique QUE lorsque l'ancienne valeur respectait le plancher : dans la famille
+    « trop courte », le modele est justement charge de rallonger, et une valeur encore courte
+    mais plus longue qu'avant est un progres qu'on ne doit pas annuler.
+
+    `valeur_ancienne_fautive` eteint le controle quand l'ancienne valeur EST l'anomalie visee —
+    le cas des doublons. Mesure du 14/09/2026 : en restituant leur texte partage, `duplicate-a`
+    et `duplicate-b` repartaient toutes deux avec la meme description, donc toujours en doublon.
+    Un remede qui remet la maladie n'en est pas un ; ces familles obtiennent une relance, pas
+    une restitution.
+    """
+    if valeur_ancienne_fautive:
+        return new_content, []
+    notes: list[str] = []
+    out = new_content
+    for champ in ("title", "description"):
+        plancher = _LENGTH_FLOORS[_length_kind(champ)]
+        avant = _find_head_text_value(old_content, champ)
+        apres = _find_head_text_value(out, champ)
+        if not avant or not apres or not avant[1] or not apres[1]:
+            continue
+        if _rendered_len(apres[1]) >= plancher or _rendered_len(avant[1]) < plancher:
+            continue
+        out = out.replace(apres[0], avant[0], 1)
+        notes.append(
+            "%s rendue a sa valeur d'origine : %d caracteres ecrits pour un plancher de %d"
+            % (champ, _rendered_len(apres[1]), plancher))
+    return out, notes
 
 
 def _keep_site_lang(new_content: str, old_content: str, site_lang: str) -> tuple[str, list[str]]:
@@ -21259,7 +21313,7 @@ def _deep_patch_issue_files(
     skipped: list[str] = []
     ai_files: list[str] = []   # the subset the MODEL wrote — the only ones that cost tokens
 
-    def _prepare(path: str) -> tuple[str, str | None, str, dict[str, Any] | None]:
+    def _prepare(path: str, interdits: tuple[str, ...] = (), rappel: str = "") -> tuple[str, str | None, str, dict[str, Any] | None]:
         """Read a file + generate its patch. Parallel-safe (no shared mutable state)."""
         if path in file_state:
             raw = file_state[path]["content"]
@@ -21297,17 +21351,97 @@ def _deep_patch_issue_files(
                 # page is simply the wrong file — a repository can carry a second, dead one, and
                 # asking the model to "fix" it invites an edit to a file that is not served.
                 return (path, raw, cur_sha, {"no_change": True, "patched_content": raw})
+        _hint = occ_hint
+        if interdits:
+            _hint += (" Valeurs DEJA ecrites sur d'autres pages de ce meme lot, qu'il est "
+                      "interdit de reprendre telles quelles : "
+                      + " | ".join('"%s"' % v for v in interdits[:10]) + ".")
+        if rappel:
+            _hint += " " + rappel
         try:
             patch = _openai_generate_file_patch(
                 file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
-                url=primary_url, site_name=site_name, occurrences_hint=occ_hint, model_override=model_override,
+                url=primary_url, site_name=site_name, occurrences_hint=_hint, model_override=model_override,
             )
         except Exception:
             patch = None
         return (path, raw, cur_sha, patch)
 
-    # Generate patches concurrently (the slow AI calls dominate); preserve target order.
-    if targets:
+    # Une famille de DOUBLONS ne peut pas se corriger en parallele. Mesure du 14/09/2026,
+    # next-app : `duplicate-a` et `duplicate-b` portent la meme description sur `main` ; le
+    # correcteur leur a ecrit, a toutes les deux, EXACTEMENT le meme nouveau texte. Le doublon
+    # restait entier, et au passage les deux valeurs tombaient sous le plancher de longueur.
+    #
+    # La cause n'est pas le modele mais l'architecture : cinq fichiers partent en parallele et
+    # aucun appel ne peut savoir ce qu'un autre ecrit. Deux pages qui portent la meme valeur
+    # recoivent la meme consigne et rendent la meme reponse — c'est attendu, pas accidentel, et
+    # aucun modele ne peut le corriger. On les traite donc en FILE, chacune recevant les valeurs
+    # deja posees. Seules ces familles paient la serialisation.
+    _champ_unique = _WRITE_A_VALUE_KEYS.get(
+        issue_key.removesuffix("_not_indexable").removesuffix("_indexable"))
+    if targets and _champ_unique:
+        prepared = []
+        _interdits: list[str] = []
+        _plancher = _LENGTH_FLOORS[_length_kind(_champ_unique)]
+
+        def _valeur_ecrite(res: tuple[str, str | None, str, dict[str, Any] | None]) -> str:
+            """La valeur telle qu'elle sera COMMITTEE, pas telle que le modele l'a rendue.
+
+            Mesure du 14/09/2026 : le modele ecrit `'Page du parcours d'obstacles : ...'`,
+            apostrophe non echappee. Lu tel quel, le litteral s'arrete a 18 caracteres — on
+            croyait la valeur trop courte, on relancait pour rien, et l'interdiction transmise
+            au fichier suivant n'etait qu'un fragment que le modele pouvait reprendre sans le
+            savoir. La chaine repare cet echappement plus loin ; il faut donc lire APRES elle.
+            """
+            _p = res[3]
+            if not _p or not _p.get("patched_content"):
+                return ""
+            _contenu, _ = _escape_quotes_in_written_values(
+                str(_p["patched_content"]), res[1] or "")
+            _lu = _find_head_text_value(_contenu, _champ_unique)
+            return _lu[1] if _lu else ""
+
+        def _pourquoi_refuser(val: str, deja: list[str]) -> str:
+            if not val:
+                return ""
+            if val in deja:
+                return ("Cette valeur est DEJA posee sur une autre page de ce lot : la reprendre "
+                        "recree exactement le doublon qu'on corrige. Ecris-en une autre, propre "
+                        "a cette page — et ne recopie pas l'Open Graph de la page, qui est "
+                        "generique.")
+            if _rendered_len(val) < _plancher:
+                return ("La valeur que tu viens de proposer fait %d caracteres : c'est TROP "
+                        "COURT, le minimum est %d. Reecris-la plus riche."
+                        % (_rendered_len(val), _plancher))
+            return ""
+
+        for _path in targets:
+            _res = _prepare(_path, tuple(_interdits))
+            _val = _valeur_ecrite(_res)
+            # UNE relance. Ailleurs, `_keep_length_above_floor` rend l'ancienne valeur — remede
+            # impossible ici : l'ancienne valeur EST le doublon qu'on vient de supprimer.
+            _souci = _pourquoi_refuser(_val, _interdits)
+            if _souci:
+                _res2 = _prepare(_path, tuple(_interdits), rappel=_souci)
+                _val2 = _valeur_ecrite(_res2)
+                if not _pourquoi_refuser(_val2, _interdits):
+                    _res, _val = _res2, _val2
+            # GARANTIE DURE, qui ne demande rien a personne : on ne commit jamais une valeur
+            # deja ecrite dans ce passage. Mesure du 14/09/2026, next-app : prevenu que la
+            # valeur etait prise, le modele a recopie sur les SIX pages la description Open
+            # Graph generique du site. Deux doublons etaient entres, six sont sortis. Une
+            # consigne se discute, une verification non : le fichier n'est alors pas patche et
+            # la page garde son texte. Au pire le doublon subsiste — jamais il ne s'aggrave.
+            if _val and _val in _interdits:
+                logger.info("[correction] %s: %s — valeur deja posee sur une autre page de ce "
+                            "lot, fichier laisse tel quel", issue_key, _path)
+                _res = (_res[0], _res[1], _res[2], None)
+                _val = ""
+            prepared.append(_res)
+            if _val and _val not in _interdits:
+                _interdits.append(_val)
+    elif targets:
+        # Generate patches concurrently (the slow AI calls dominate); preserve target order.
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=min(5, len(targets))) as _ex:
             prepared = list(_ex.map(_prepare, targets))
@@ -21329,6 +21463,17 @@ def _deep_patch_issue_files(
         # raccourcie peut se terminer sur une apostrophe tout comme celle d'origine. Echapper
         # avant eux laisserait passer ce qu'ils viennent d'ecrire.
         new_content, _quote_notes = _escape_quotes_in_written_values(new_content, raw)
+        # APRES l'echappement, et c'est tout l'enjeu. Ce controle LIT une valeur pour la mesurer ;
+        # avant l'echappement il lisait des litteraux mal formes. Mesure du 14/09/2026 : le modele
+        # ecrit `'Page du parcours d'obstacles : ...'` — apostrophe NON echappee — et le litteral
+        # s'arrete donc pour de bon a 18 caracteres. Le controle y voyait une valeur sous le
+        # plancher, remplacait ce fragment par l'ancienne valeur complete et laissait la fin de la
+        # phrase pendante : des descriptions de 238 caracteres faites de deux morceaux colles.
+        # Il ne coupe rien et ne reecrit que l'ancien litteral, deja echappe dans le fichier :
+        # rien ne le suit donc, contrairement au plafond.
+        new_content, _floor_notes = _keep_length_above_floor(
+            new_content, raw, valeur_ancienne_fautive=bool(_champ_unique))
+        _len_notes += _floor_notes
         # Apres l'echappement : une ligne encore mal fermee ferait mal compter les cles.
         new_content, _dup_notes = _drop_duplicate_object_keys(new_content, raw)
         # Apres la deduplication : retirer une ligne change la ligne SUIVANTE, donc l'endroit ou
