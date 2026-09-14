@@ -67,3 +67,22 @@ def test_une_famille_de_longueur_garde_sa_propre_consigne():
         all_paths=["index.html"], site_name="x.fr", owner="o", repo_name="r", branch="main",
         token="t", model_override="", pages=[])
     assert "Une valeur unique mais trop" not in (prep["extra_hint"] or "")
+
+
+def test_les_bornes_atteignent_le_MESSAGE_envoye_au_modele():
+    """Ce qui depend de nous s'arrete ici, et se verifie sans depenser un centime.
+
+    Une consigne peut etre construite correctement et ne jamais quitter le processus : elle
+    traverse `_prepare_issue_fix` -> `extra_hint` -> `occurrences_hint` -> le champ `contexte`
+    du message. Ce test suit la chaine jusqu'au bout. Reste hors de portee d'un test, et
+    seulement cela : savoir si le modele OBEIT.
+    """
+    prep = m._prepare_issue_fix(
+        issue_key="duplicate_meta_descriptions", issues={}, impacted=["https://x.fr/a"],
+        all_paths=["index.html"], site_name="x.fr", owner="o", repo_name="r", branch="main",
+        token="t", model_override="", pages=[])
+    message = m._patch_user_msg(
+        "index.html", "<html><head></head></html>", "duplicate_meta_descriptions",
+        "Descriptions dupliquees", "https://x.fr/a", "x.fr", prep["extra_hint"])
+    assert str(m._LENGTH_FLOORS["description"]) in message
+    assert str(m._LENGTH_CEILINGS["description"]) in message
