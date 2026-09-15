@@ -73,6 +73,37 @@ def comptes(path: str) -> dict[str, int]:
     return out
 
 
+def _pages_crawlees(path: str) -> int:
+    with open(path, encoding="utf-8") as fh:
+        return len(json.load(fh).get("pages") or [])
+
+
+# En dessous de cette part des pages de la reference, la preview n'est pas comparable : on ne
+# mesure plus le meme site. Deux tiers laissent passer la variation normale d'un crawl (une page
+# lente, une limite atteinte) et arretent net un deploiement qui n'a rien servi.
+_PART_MINIMALE = 0.66
+
+
+def _preview_comparable(stack: str, ref_json: str, apres_json: str) -> bool:
+    """La preview sert-elle vraiment le site, ou seulement des 404 ?
+
+    Mesure du 15/09/2026, et c'est le defaut le plus grave trouve ce jour-la — dans l'INSTRUMENT,
+    pas dans le correcteur. Le deploiement de next-app avait ECHOUE ; sa preview repondait 404 sur
+    tout, `robots.txt` compris. Le crawl n'a ramene que 4 pages, la famille visee ne pouvait donc
+    pas se declencher, son compteur valait zero — et ce controle a annonce « 1 -> 0 », c'est-a-dire
+    REUSSITE, sur un site qui n'existait pas.
+
+    L'absence d'une anomalie n'est pas sa correction. Un compteur a zero ne veut rien dire tant
+    qu'on n'a pas etabli qu'il y avait quelque chose a compter.
+    """
+    avant, apres = _pages_crawlees(ref_json), _pages_crawlees(apres_json)
+    if apres >= max(2, int(avant * _PART_MINIMALE)):
+        return True
+    print("  %-12s NON COMPARABLE : %d pages servies contre %d a la reference — deploiement "
+          "echoue ou preview incomplete, aucun verdict possible" % (stack, apres, avant))
+    return False
+
+
 def main() -> int:
     prefixe, refs, audit = sys.argv[1], sys.argv[2], sys.argv[3]
     lignes = []
@@ -101,6 +132,8 @@ def main() -> int:
         apres_json = os.path.join(out, "report.json")
         if not os.path.exists(apres_json):
             print("  %-12s preview non crawlable" % stack)
+            continue
+        if not _preview_comparable(stack, ref_json, apres_json):
             continue
         avant, apres = comptes(ref_json), comptes(apres_json)
         corrigees = sorted(k for k in avant if apres.get(k, 0) < avant[k])
