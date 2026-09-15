@@ -103,3 +103,40 @@ def test_le_repli_modele_est_autorise_pour_un_robots_ENGENDRE():
     prep = _prep({}, all_paths=["app/robots.ts"])
     assert prep["rewriter_ai_fallback"] is True
     assert ATTENDU in prep["extra_hint"]
+
+
+# ── Le controle de FORME, paye au premier passage ────────────────────────────────────────────
+# Mesure du 15/09/2026, premier passage de cette famille sur les neuf stacks. Le resolveur a
+# rendu DEUX cibles sur cinq d'entre elles, et la ligne est partie dans le sitemap lui-meme :
+# apres `</urlset>` pour les XML — du XML mal forme, verifie sur la preview de gatsby — et au
+# milieu du TypeScript de `app/sitemap.ts` pour next-app, dont le DEPLOIEMENT A ECHOUE.
+#
+# Une reecriture qui accepte n'importe quel contenu n'est pas bornee, elle est seulement courte.
+
+SITEMAP_XML = ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset>\n'
+               "  <url><loc>https://exemple.fr/</loc></url>\n</urlset>\n")
+SITEMAP_TS = 'export default function sitemap() {\n  return [{ url: "https://exemple.fr/" }];\n}\n'
+
+
+def test_un_sitemap_xml_n_est_JAMAIS_complete():
+    assert m._add_sitemap_to_robots(SITEMAP_XML, ATTENDU) == (SITEMAP_XML, 0)
+
+
+def test_un_generateur_typescript_n_est_JAMAIS_complete():
+    """C'est ce cas precis qui a casse le build de next-app."""
+    assert m._add_sitemap_to_robots(SITEMAP_TS, ATTENDU) == (SITEMAP_TS, 0)
+
+
+def test_la_signature_reconnue_est_le_groupe_user_agent():
+    """Un robots.txt en a un ; ni un XML ni un fichier de code n'en ont."""
+    assert m._add_sitemap_to_robots("User-Agent: Googlebot\nDisallow:\n", ATTENDU)[1] == 1
+
+
+def test_le_ciblage_ne_propose_que_des_fichiers_robots():
+    prep = _prep({}, all_paths=["app/sitemap.ts", "public/robots.txt", "public/sitemap.xml"])
+    assert prep["targets_override"] == ["public/robots.txt"]
+
+
+def test_un_depot_sans_fichier_robots_fait_REFUSER():
+    prep = _prep({}, all_paths=["public/sitemap.xml", "index.html"])
+    assert prep["refusal"] and "robots" in prep["refusal"]

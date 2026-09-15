@@ -17804,6 +17804,10 @@ def _robots_sitemap_url(issues: dict[str, Any] | None, site_name: str) -> str:
 
 
 _ROBOTS_SITEMAP_LINE_RE = re.compile(r"(?mi)^\s*sitemap\s*:")
+# La signature d'un robots.txt : un groupe `User-agent`. Un sitemap XML n'en a pas, un fichier
+# TypeScript non plus. C'est ce controle qui distingue une reecriture BORNEE d'une reecriture
+# simplement courte.
+_ROBOTS_GROUP_RE = re.compile(r"(?mi)^\s*user-agent\s*:")
 
 
 def _add_sitemap_to_robots(content: str, sitemap_url: str) -> tuple[str, int]:
@@ -17813,8 +17817,17 @@ def _add_sitemap_to_robots(content: str, sitemap_url: str) -> tuple[str, int]:
     fichier cible peut avoir change entre le crawl et la correction. Rien d'autre n'est touche :
     les groupes `User-agent` et leurs regles sont la partie du fichier ou une erreur desindexe
     un site entier.
+
+    Le controle de FORME n'est pas une precaution theorique. Mesure du 15/09/2026, premier
+    passage de cette famille sur les neuf stacks : le ciblage a rendu DEUX fichiers sur cinq
+    d'entre elles, et la ligne est partie dans le sitemap lui-meme — apres `</urlset>` pour les
+    XML, au milieu du TypeScript de `app/sitemap.ts` pour next-app, dont le deploiement a
+    echoue. Une reecriture qui accepte n'importe quel contenu n'est pas bornee : elle est
+    seulement courte.
     """
     if not sitemap_url or not content.strip():
+        return content, 0
+    if not _ROBOTS_GROUP_RE.search(content):
         return content, 0
     if _ROBOTS_SITEMAP_LINE_RE.search(content):
         return content, 0
@@ -21174,10 +21187,19 @@ def _prepare_issue_fix(
 
     if issue_key in _ROBOTS_KEYS:
         _sm = _robots_sitemap_url(issues, site_name)
+        # Le fichier a editer s'appelle `robots`. Sans cette restriction le resolveur rendait
+        # DEUX cibles sur cinq stacks — la seconde etant le sitemap, qu'il a fallu refuser au
+        # niveau de la reecriture. Mieux vaut ne pas la proposer du tout : une cible depensee
+        # est une cible de moins pour un fichier qui, lui, compte.
+        _robots_paths = [p for p in (all_paths or [])
+                         if "robots" in p.rsplit("/", 1)[-1].lower()]
         if not _sm:
             out["refusal"] = ("Aucun sitemap lisible a declarer : c'est `sitemap_xml_not_found` "
                               "qu'il faut traiter d'abord.")
+        elif not _robots_paths:
+            out["refusal"] = "Aucun fichier `robots` dans ce depot : rien a completer."
         else:
+            out["targets_override"] = _robots_paths[:2]
             out["link_rewriter"] = lambda raw, _u=_sm: _add_sitemap_to_robots(raw, _u)  # noqa: E731
             # Une ligne a ajouter dans un fichier de quatre lignes : si le litteral n'est pas
             # la, c'est que le fichier est PRODUIT par du code (`app/robots.ts`), et seul le
