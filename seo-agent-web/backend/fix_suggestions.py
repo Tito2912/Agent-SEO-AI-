@@ -781,6 +781,38 @@ def suggest_issue_fix(
         verify = ["Relancer un crawl : ces pages ne doivent plus figurer dans la famille.",
                   "Contrôler la règle appliquée agent par agent, pas seulement `User-agent: *`."]
 
+    elif lk == "slow_server_response_for_ai_crawlers":
+        why = ("Ces pages mettent trop longtemps à répondre pour un robot d'IA. Ces agents "
+               "n'exécutent PAS le JavaScript et attendent moins longtemps qu'un navigateur : "
+               "ce qu'un visiteur trouve simplement lent, eux l'abandonnent. La mesure porte sur "
+               "le temps jusqu'au HTML complet, sans rendu — leur point de vue exact.")
+        fix = [
+            "Mesurer d'abord le temps SERVEUR seul. Au-delà de 600 ms, la cause est "
+            "l'hébergement ou la base de données, et rien dans la page ne la corrigera.",
+            "Servir un HTML déjà complet : ces agents ne verront jamais ce que le JavaScript "
+            "ajoute après coup.",
+            "Mettre en cache les pages qui ne changent pas à chaque visite.",
+        ]
+        verify = ["Comparer avant/après sur les MÊMES URL : cette famille se juge sur un écart "
+                  "chiffré, jamais sur une impression."]
+
+    elif lk == "similar_ai_generated_content":
+        why = ("Ces pages se ressemblent beaucoup — mesuré sur leur texte, par comparaison de "
+               "suites de mots. Des pages quasi identiques se font concurrence entre elles : les "
+               "moteurs en choisissent une et ignorent les autres. À savoir : le caractère "
+               "« généré par une IA » n'est PAS mesuré ici, faute d'un classifieur ; seule la "
+               "ressemblance l'est, parmi des pages longues au format article.")
+        fix = [
+            "Décider pour chaque groupe : fusionner en une page qui fait autorité, ou donner à "
+            "chacune un angle réellement différent.",
+            "Si les pages doivent coexister (variantes locales, par exemple), déclarer un "
+            "canonical vers celle qui fait référence.",
+            "Un plan identique rempli par des synonymes reste du contenu identique aux yeux "
+            "d'un moteur.",
+        ]
+        verify = ["Relancer un crawl : les pages fusionnées ou différenciées doivent sortir de "
+                  "cette famille."]
+
     elif lk == "inconsistent_ai_training_bot_policy":
         why = ("Votre `robots.txt` autorise certains robots d'entraînement et en bloque "
                "d'autres. Ce n'est pas une faute en soi — c'en est une seulement si ce n'est pas "

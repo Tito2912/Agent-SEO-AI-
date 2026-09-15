@@ -202,6 +202,12 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "indexable_page_blocked_from_some_ai_search_bots": IssueMeta(
         "indexable_page_blocked_from_some_ai_search_bots",
         "Page indexable bloquée à certains robots de recherche IA", "AI Discoverability", "warning"),
+    "slow_server_response_for_ai_crawlers": IssueMeta(
+        "slow_server_response_for_ai_crawlers",
+        "Reponse serveur trop lente pour les robots d'IA", "AI Discoverability", "warning"),
+    "similar_ai_generated_content": IssueMeta(
+        "similar_ai_generated_content",
+        "Contenus semblables entre pages", "AI Discoverability", "notice"),
     "inconsistent_ai_training_bot_policy": IssueMeta(
         "inconsistent_ai_training_bot_policy",
         "Politique incohérente envers les robots d'entraînement IA", "AI Discoverability", "notice"),

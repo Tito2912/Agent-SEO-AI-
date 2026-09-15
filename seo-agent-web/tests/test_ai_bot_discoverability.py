@@ -172,3 +172,81 @@ def test_bloquer_l_entrainement_ne_declenche_aucune_famille_de_RECHERCHE():
     tous, certains, incoherent = _comptes(_tout_bloquer(m.AI_TRAINING_BOTS[:3]))
     assert (tous, certains) == (0, 0)
     assert incoherent == 1
+
+
+# ── Les deux dernieres familles de la section : lenteur et ressemblance ──────────────────────
+
+def test_une_page_lente_est_vue_du_point_de_vue_du_ROBOT():
+    """`elapsed_ms` mesure jusqu'au HTML complet, sans rendu JS — ce qu'aucun de ces agents
+    n'execute. C'est ce qui distingue cette famille de `slow_page`, qui parlait d'un visiteur
+    muni d'un navigateur."""
+    m = _audit()
+    lente, rapide = _page(BASE + "/lente"), _page(BASE + "/rapide")
+    lente.elapsed_ms = m._AI_CRAWLER_SLOW_MS + 1
+    rapide.elapsed_ms = m._AI_CRAWLER_SLOW_MS - 1
+    issues = m._score_issues([lente, rapide], base_url=BASE)
+    bloc = issues["slow_server_response_for_ai_crawlers"]
+    assert bloc["count"] == 1
+    assert bloc["examples"] == [BASE + "/lente"]
+
+
+def test_une_page_sans_mesure_de_temps_n_est_pas_accusee():
+    m = _audit()
+    sans = _page(BASE + "/inconnue")
+    sans.elapsed_ms = None
+    assert m._score_issues([sans], base_url=BASE)["slow_server_response_for_ai_crawlers"]["count"] == 0
+
+
+def _esquisse(m, texte: str):
+    p = m.PageHTMLExtractor()
+    p.feed("<html><body><main><p>" + texte + "</p></main></body></html>")
+    return p.get_content_sketch()
+
+
+def test_deux_textes_identiques_ont_la_meme_empreinte():
+    m = _audit()
+    texte = " ".join("mot%d" % i for i in range(120))
+    assert _esquisse(m, texte) == _esquisse(m, texte)
+    assert _esquisse(m, texte), "un texte assez long doit produire une empreinte"
+
+
+def test_deux_textes_differents_ont_des_empreintes_differentes():
+    m = _audit()
+    a = _esquisse(m, " ".join("alpha%d" % i for i in range(120)))
+    b = _esquisse(m, " ".join("beta%d" % i for i in range(120)))
+    assert a and b and a != b
+    commun = len(set(a) & set(b)) / float(len(set(a) | set(b)))
+    assert commun < m._SKETCH_SIMILARITY
+
+
+def test_un_texte_trop_court_n_a_pas_d_empreinte():
+    """Sous cinq mots il n'existe aucune suite a hacher : on ne compare pas ce qu'on n'a pas."""
+    m = _audit()
+    assert _esquisse(m, "trois mots seulement") == ()
+
+
+def test_deux_pages_quasi_identiques_se_ressemblent_au_dessus_du_seuil():
+    """Le cas que la famille vise : meme plan, quelques mots changes."""
+    m = _audit()
+    base = " ".join("phrase%d" % i for i in range(200))
+    variante = base.replace("phrase7 ", "autre7 ").replace("phrase42 ", "autre42 ")
+    a, b = set(_esquisse(m, base)), set(_esquisse(m, variante))
+    assert len(a & b) / float(len(a | b)) >= m._SKETCH_SIMILARITY
+
+
+def test_les_seuils_sont_nommes_donc_revisables():
+    """Trois conventions assumees — taille des suites, taille de l'esquisse, seuil de
+    ressemblance. Nommees pour pouvoir etre revues sur des donnees reelles plutot que
+    disseminees dans le code."""
+    m = _audit()
+    assert m._SKETCH_SHINGLE == 5 and m._SKETCH_SIZE == 64
+    assert 0 < m._SKETCH_SIMILARITY <= 1
+    assert m._AI_CRAWLER_SLOW_MS > 0
+
+
+def test_la_ressemblance_ne_pretend_PAS_reconnaitre_une_IA():
+    """Le libelle montre au client ne doit rien affirmer que le produit ne mesure pas : nous
+    n'avons aucun classifieur de texte genere."""
+    from backend import audit_dashboard as dash
+    libelle = dash.ISSUE_CATALOG["similar_ai_generated_content"].label.lower()
+    assert "ia" not in libelle.split() and "générés" not in libelle

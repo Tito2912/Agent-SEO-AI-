@@ -469,6 +469,8 @@ class PageData:
     twitter_image: str | None = None
 
     text_word_count: int | None = None
+    # Esquisse compacte du texte, pour comparer deux pages sans conserver leur contenu.
+    content_sketch: tuple[int, ...] = ()
     images_total: int = 0
     images_missing_alt: int = 0
     image_srcs_missing_alt: list[str] = dataclasses.field(default_factory=list)
@@ -510,6 +512,20 @@ class LinkItem:
     anchor_text: str
     rel: str
 
+
+# Taille de l'esquisse de contenu et longueur des suites de mots hachees. Voir
+# `get_content_sketch` : cinq mots evitent que la navigation et les mentions legales, communes a
+# tout un site, fassent passer deux pages differentes pour des jumelles.
+_SKETCH_SHINGLE = 5
+_SKETCH_SIZE = 64
+# Au-dela, deux pages disent la meme chose avec d'autres mots-outils. Seuil de CONVENTION, pas
+# de mesure : il est nomme ici pour pouvoir etre revu sur des donnees reelles.
+_SKETCH_SIMILARITY = 0.80
+# Ce qu'un robot d'IA accepte d'attendre avant d'abandonner, en millisecondes jusqu'au
+# `domcontentloaded` — c'est-a-dire sans rendu JavaScript, ce qu'aucun d'eux n'execute. Seuil de
+# CONVENTION lui aussi : ces agents ont des delais plus courts qu'un navigateur, mais aucun
+# editeur ne publie le sien.
+_AI_CRAWLER_SLOW_MS = 1500
 
 _AI_BOTS_NOTE = """Les agents des robots d'IA, en deux familles.
 
@@ -1014,6 +1030,31 @@ class PageHTMLExtractor(HTMLParser):
         text = " ".join(chunks)
         words = re.findall(r"[0-9A-Za-zÀ-ÖØ-öø-ÿ]+", text)
         return len(words)
+
+    def get_content_sketch(self) -> tuple[int, ...]:
+        """Une empreinte COMPACTE du texte, pour comparer deux pages sans stocker leur contenu.
+
+        Esquisse facon MinHash : on hache des suites de cinq mots et on ne garde que les 64 plus
+        petits condensats. Deux pages qui partagent beaucoup de suites partagent beaucoup de ces
+        minima, et la proportion commune estime leur ressemblance. Le tout tient en 64 entiers
+        par page, la ou garder le texte multiplierait la taille d'un rapport par dix.
+
+        Cinq mots plutot que trois : a trois, deux pages d'un meme site partagent deja leur
+        navigation, leurs mentions legales et leurs formules de politesse, et tout se ressemble.
+        """
+        chunks = (self._text_chunks_content
+                  if self._seen_content_container and self._text_chunks_content
+                  else self._text_chunks)
+        mots = re.findall(r"[0-9A-Za-zÀ-ÖØ-öø-ÿ]+", " ".join(chunks).lower())
+        if len(mots) < _SKETCH_SHINGLE:
+            return ()
+        vus = {
+            int.from_bytes(
+                hashlib.blake2b(" ".join(mots[i:i + _SKETCH_SHINGLE]).encode("utf-8"),
+                                digest_size=8).digest(), "big")
+            for i in range(len(mots) - _SKETCH_SHINGLE + 1)
+        }
+        return tuple(sorted(vus)[:_SKETCH_SIZE])
 
     def get_title(self) -> str | None:
         for t in self.title_texts:
@@ -3927,6 +3968,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
         page.article_like = False
     page.schema_org_errors = _schema_org_validation_errors(parser.ld_json_texts, page_url=base_for_urls)
     page.text_word_count = parser.get_text_word_count()
+    page.content_sketch = parser.get_content_sketch()
     page.images_total = parser.images_total
     page.images_missing_alt = parser.images_missing_alt
     page.image_srcs_missing_alt = list(parser.image_srcs_missing_alt)
@@ -7069,6 +7111,39 @@ def _score_issues(
     # ouvrir (le defaut) et tout fermer sont deux positions tenables ; melanger les deux revient
     # a laisser un editeur apprendre de vos pages et a le refuser a son concurrent, le plus
     # souvent sans l'avoir decide.
+    # Reponse trop lente pour un robot d'IA. `elapsed_ms` mesure jusqu'au `domcontentloaded`,
+    # donc SANS rendu JavaScript — ce qu'aucun de ces agents n'execute. C'est exactement leur
+    # point de vue, et c'est pourquoi cette famille se distingue de `slow_page`, qui parlait de
+    # l'experience d'un visiteur muni d'un navigateur.
+    _slow_for_ai = sorted(
+        _final_url(p) for p in indexable_html_pages
+        if isinstance(p.elapsed_ms, int) and p.elapsed_ms >= _AI_CRAWLER_SLOW_MS)
+    issues["slow_server_response_for_ai_crawlers"] = _issue_block(
+        "slow_server_response_for_ai_crawlers", _slow_for_ai)
+
+    # Contenus SEMBLABLES parmi les pages que l'heuristique de contenu IA a deja retenues.
+    #
+    # Il faut etre net sur ce que cette famille mesure et ce qu'elle ne mesure pas. La
+    # RESSEMBLANCE est mesuree : esquisses de contenu, suites de cinq mots, proportion commune.
+    # Le caractere « genere par une IA », lui, ne l'est PAS — nous n'avons aucun classifieur, et
+    # `pages_have_high_ai_content_levels` est une heuristique de longueur et de type de page, pas
+    # un verdict. On se contente donc de croiser une vraie mesure avec ce signal existant, et on
+    # le dit : pretendre reconnaitre un texte ecrit par une machine sans savoir le faire serait
+    # exactement la promesse que ce produit s'interdit.
+    _candidats = [p for p in indexable_html_pages
+                  if _final_url(p) in pages_have_high_ai_content_levels_set and p.content_sketch]
+    _similaires: set[str] = set()
+    for _i, _a in enumerate(_candidats):
+        for _b in _candidats[_i + 1:]:
+            _sa, _sb = set(_a.content_sketch), set(_b.content_sketch)
+            if not _sa or not _sb:
+                continue
+            if len(_sa & _sb) / float(len(_sa | _sb)) >= _SKETCH_SIMILARITY:
+                _similaires.add(_final_url(_a))
+                _similaires.add(_final_url(_b))
+    issues["similar_ai_generated_content"] = _issue_block(
+        "similar_ai_generated_content", sorted(_similaires))
+
     _incoherent = [_robots_url] if (ai_training_blocked and ai_training_allowed) else []
     issues["inconsistent_ai_training_bot_policy"] = _issue_block(
         "inconsistent_ai_training_bot_policy", _incoherent)
