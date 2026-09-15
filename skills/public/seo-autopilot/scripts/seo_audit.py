@@ -511,6 +511,26 @@ class LinkItem:
     rel: str
 
 
+_AI_BOTS_NOTE = """Les agents des robots d'IA, en deux familles.
+
+Ces listes sont une CONVENTION tiree des documentations publiees par chaque editeur, pas une
+mesure : aucun crawl ne peut les deduire. Elles vieilliront — un editeur renomme son agent, un
+autre apparait — et c'est precisement pour cela qu'elles sont ici, nommees et commentees, plutot
+que disseminees dans le code.
+
+RECHERCHE : ces agents vont chercher une page pour repondre a la question de quelqu'un, et citent
+la source. Les bloquer coupe une source de visites — c'est une question de referencement.
+
+ENTRAINEMENT : ces agents collectent un corpus. Les bloquer est une decision de propriete
+intellectuelle, parfaitement legitime. Conseiller de les ouvrir « pour le SEO » serait un
+contresens, et confondre les deux familles ferait dire l'inverse de ce qu'il faut.
+"""
+AI_SEARCH_BOTS = ("OAI-SearchBot", "ChatGPT-User", "PerplexityBot", "Perplexity-User",
+                  "Claude-User", "Claude-SearchBot")
+AI_TRAINING_BOTS = ("GPTBot", "ClaudeBot", "anthropic-ai", "CCBot", "Google-Extended",
+                    "Applebot-Extended", "Bytespider", "meta-externalagent", "Amazonbot")
+
+
 @dataclasses.dataclass(frozen=True)
 class RobotsRule:
     directive: str  # "allow" | "disallow"
@@ -4823,6 +4843,7 @@ def _score_issues(
     output_dir: str | None = None,
     strict_link_counts: bool = False,
     base_url: str | None = None,
+    robots: "RobotsRules | None" = None,
 ) -> dict[str, dict[str, Any]]:
     # A page the HOST refused us (403/429/503 surviving retries) was never audited. Scoring it
     # would report the customer's own healthy pages as broken — and not only under `http_4xx`:
@@ -7013,6 +7034,49 @@ def _score_issues(
     # Ahrefs "Viewport not set": indexable HTML pages with no <meta name="viewport"> tag.
     viewport_not_set = [p.url for p in indexable_html_pages if (p.meta_viewport_tag_count or 0) == 0]
     issues["viewport_not_set"] = _issue_block("viewport_not_set", viewport_not_set)
+
+    # --- AI Discoverability : la section qu'Ahrefs a ajoutee entre juin et septembre 2026 ---
+    # Deux familles de robots, et la distinction n'est pas cosmetique. Un bot de RECHERCHE va
+    # chercher la page pour repondre a quelqu'un et cite sa source : le bloquer coupe une source
+    # de visites. Un bot d'ENTRAINEMENT collecte un corpus : le bloquer est une decision de
+    # propriete intellectuelle, parfaitement legitime. Les confondre ferait conseiller a un
+    # proprietaire l'inverse de ce qu'il veut.
+    _robots_url = urljoin(base_url or "/", "/robots.txt")
+    blocked_all_ai: list[str] = []
+    blocked_some_ai: list[str] = []
+    ai_training_blocked: list[str] = []
+    ai_training_allowed: list[str] = []
+    if robots is not None:
+        for p in indexable_html_pages:
+            eff = _final_url(p)
+            refuses = [b for b in AI_SEARCH_BOTS if not robots.can_fetch(b, eff)]
+            if not refuses:
+                continue
+            if len(refuses) == len(AI_SEARCH_BOTS):
+                blocked_all_ai.append(eff)
+            else:
+                blocked_some_ai.append(eff)
+        ai_training_blocked = sorted(
+            b for b in AI_TRAINING_BOTS if not robots.can_fetch(b, base_url or "/"))
+        ai_training_allowed = sorted(
+            b for b in AI_TRAINING_BOTS if robots.can_fetch(b, base_url or "/"))
+    issues["indexable_page_blocked_from_all_ai_search_bots"] = _issue_block(
+        "indexable_page_blocked_from_all_ai_search_bots", sorted(blocked_all_ai))
+    issues["indexable_page_blocked_from_some_ai_search_bots"] = _issue_block(
+        "indexable_page_blocked_from_some_ai_search_bots", sorted(blocked_some_ai))
+    # La politique d'ENTRAINEMENT se juge sur le site entier : elle vit dans robots.txt.
+    # « Incoherente » a un sens precis — en autoriser une partie et en bloquer une autre. Tout
+    # ouvrir (le defaut) et tout fermer sont deux positions tenables ; melanger les deux revient
+    # a laisser un editeur apprendre de vos pages et a le refuser a son concurrent, le plus
+    # souvent sans l'avoir decide.
+    _incoherent = [_robots_url] if (ai_training_blocked and ai_training_allowed) else []
+    issues["inconsistent_ai_training_bot_policy"] = _issue_block(
+        "inconsistent_ai_training_bot_policy", _incoherent)
+    if _incoherent:
+        _attach_evidence(("inconsistent_ai_training_bot_policy",), "page_values", [
+            {"page": _robots_url, "field": "bloques", "value": ", ".join(ai_training_blocked)},
+            {"page": _robots_url, "field": "autorises", "value": ", ".join(ai_training_allowed)},
+        ])
     # Ahrefs "Document uses plugins": pages embedding deprecated plugins (Flash/Java/Silverlight).
     document_uses_plugins = [p.url for p in ok_html_pages if (p.plugin_tag_count or 0) > 0]
     issues["document_uses_plugins"] = _issue_block("document_uses_plugins", document_uses_plugins)
@@ -9057,6 +9121,7 @@ def main(argv: list[str]) -> int:
             output_dir=config.output_dir,
             strict_link_counts=bool(config.strict_link_counts),
             base_url=config.base_url,
+            robots=None if config.ignore_robots else rp,
         )
 
     # --- Semrush-like robots/sitemap issues (system-level) ---

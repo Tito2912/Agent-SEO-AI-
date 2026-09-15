@@ -192,6 +192,19 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "blocked_by_robots": IssueMeta("blocked_by_robots", "Bloqué par robots.txt", "Other", "warning"),
     "slow_page": IssueMeta("slow_page", "Slow page", "Usability and performance", "warning"),
     "viewport_not_set": IssueMeta("viewport_not_set", "Viewport non défini", "Usability and performance", "warning"),
+    # AI Discoverability : section ajoutee par Ahrefs entre juin et septembre 2026, relevee le
+    # 15/09 sur un export du compte client. Les gravites suivent les siennes — un avertissement
+    # pour les blocages de bots de RECHERCHE (c'est du trafic perdu), une simple remarque pour la
+    # politique d'ENTRAINEMENT, qui releve d'un choix du proprietaire et non d'un defaut.
+    "indexable_page_blocked_from_all_ai_search_bots": IssueMeta(
+        "indexable_page_blocked_from_all_ai_search_bots",
+        "Page indexable bloquée à tous les robots de recherche IA", "AI Discoverability", "warning"),
+    "indexable_page_blocked_from_some_ai_search_bots": IssueMeta(
+        "indexable_page_blocked_from_some_ai_search_bots",
+        "Page indexable bloquée à certains robots de recherche IA", "AI Discoverability", "warning"),
+    "inconsistent_ai_training_bot_policy": IssueMeta(
+        "inconsistent_ai_training_bot_policy",
+        "Politique incohérente envers les robots d'entraînement IA", "AI Discoverability", "notice"),
     "document_uses_plugins": IssueMeta("document_uses_plugins", "Le document utilise des plugins", "Usability and performance", "warning"),
     "pages_with_poor_lcp": IssueMeta(
         "pages_with_poor_lcp", "Pages with poor LCP", "Usability and performance", "warning"

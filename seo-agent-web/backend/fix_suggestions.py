@@ -760,6 +760,43 @@ def suggest_issue_fix(
         verify = ["Ouvrir la page sur un mobile ou en mode responsive : le texte doit être "
                   "lisible sans zoomer."]
 
+    # ── Accès des robots d'IA ─────────────────────────────────────────────────────────────
+    # La distinction RECHERCHE / ENTRAÎNEMENT décide du conseil, et se tromper de famille
+    # reviendrait à pousser quelqu'un à ouvrir ses contenus à l'entraînement « pour le SEO ».
+    elif lk in {"indexable_page_blocked_from_all_ai_search_bots",
+                "indexable_page_blocked_from_some_ai_search_bots"}:
+        why = ("Votre `robots.txt` interdit à des robots de RECHERCHE par IA d'aller lire ces "
+               "pages. Ces robots-là ne collectent pas un corpus : ils vont chercher une page "
+               "pour répondre à la question de quelqu'un, et citent leur source. Les bloquer "
+               "revient à disparaître de ces réponses — et de leurs visites.")
+        fix = [
+            "Ouvrir les agents de recherche : `OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`, "
+            "`Perplexity-User`, `Claude-User`. Un `Disallow: /` sur l'un d'eux suffit à couper "
+            "la citation.",
+            "Vérifier qu'aucune règle large — un `Disallow: /` sous `User-agent: *` — ne les "
+            "attrape par ricochet.",
+            "Décider de l'ENTRAÎNEMENT séparément : bloquer `GPTBot` ou `CCBot` est un choix "
+            "légitime, sans effet sur la recherche. Les deux décisions sont indépendantes.",
+        ]
+        verify = ["Relancer un crawl : ces pages ne doivent plus figurer dans la famille.",
+                  "Contrôler la règle appliquée agent par agent, pas seulement `User-agent: *`."]
+
+    elif lk == "inconsistent_ai_training_bot_policy":
+        why = ("Votre `robots.txt` autorise certains robots d'entraînement et en bloque "
+               "d'autres. Ce n'est pas une faute en soi — c'en est une seulement si ce n'est pas "
+               "voulu, ce qui est le cas le plus fréquent : une règle recopiée d'un modèle, un "
+               "agent ajouté un jour et les suivants oubliés. En pratique, un éditeur apprend "
+               "de vos contenus et son concurrent ne le peut pas.")
+        fix = [
+            "Choisir une position et l'appliquer à tous : tout ouvrir, ou tout fermer.",
+            "Si le mélange est délibéré — un partenariat, une licence — l'écrire en commentaire "
+            "dans le fichier, pour que le prochain qui l'ouvre ne le « corrige » pas.",
+            "Ne pas confondre avec les robots de RECHERCHE : les fermer coûte des visites, "
+            "fermer l'entraînement n'en coûte aucune.",
+        ]
+        verify = ["Relire `robots.txt` agent par agent et vérifier que la liste correspond à la "
+                  "décision prise, pas à son historique."]
+
     else:
         why = f"Issue détectée: {label}. Elle peut impacter SEO/UX selon le contexte."
         fix = [
