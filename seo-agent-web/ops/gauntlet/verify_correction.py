@@ -46,9 +46,32 @@ def base(key: str) -> str:
     return _REPLIS.get(nu, nu)
 
 
+def _jeton() -> str:
+    """Le jeton du banc : d'abord l'environnement, le fichier seulement en second.
+
+    Il etait lu UNIQUEMENT dans `~/.noyaru-token`. Le 15/09/2026 ce fichier a ete supprime et le
+    jeton revoque — a juste titre, il dormait en clair sur un disque et ouvrait les neuf depots —
+    et ce controle s'est mis a tomber sur une pile d'appels illisible au lieu de dire ce qui
+    manquait. L'environnement d'abord, c'est aussi ce que `run.py` et `stack_loop.py` font deja
+    (`FIXTURE_TOKEN`, `GITHUB_TOKEN`) : un jeton qui ne touche pas le disque ne s'y oublie pas.
+    """
+    for nom in ("FIXTURE_TOKEN", "GITHUB_TOKEN"):
+        valeur = (os.environ.get(nom) or "").strip()
+        if valeur:
+            return valeur
+    chemin = os.path.expanduser("~/.noyaru-token")
+    if os.path.exists(chemin):
+        with open(chemin, encoding="utf-8") as fh:
+            return fh.read().strip()
+    raise SystemExit(
+        "Aucun jeton GitHub : renseigne FIXTURE_TOKEN (ou GITHUB_TOKEN) dans l'environnement.\n"
+        "Le fichier ~/.noyaru-token n'existe plus — il a ete supprime le 15/09/2026 et son jeton "
+        "revoque.")
+
+
 def _pr_de_branche(stack: str, branche: str) -> str:
     import urllib.request
-    tok = open(os.path.expanduser("~/.noyaru-token"), encoding="utf-8").read().strip()
+    tok = _jeton()
     url = ("https://api.github.com/repos/pployeraffiliation-a11y/noyaru-stack-%s/pulls"
            "?head=pployeraffiliation-a11y:%s&state=all" % (stack, branche))
     req = urllib.request.Request(url)
