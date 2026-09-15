@@ -18,5 +18,10 @@ export default function sitemap() {
     // reel de cette stack, et la raison d'etre du repli IA des familles de sitemap : il n'y a
     // aucun <loc> a remplacer sur place, seulement du code qui les produit.
     { url: base.replace("https://", "http://") + "/gauntlet/" },
+    // FAMILLE VISEE : sitemap_4xx_page — le sitemap propose aux moteurs une page qui n'existe
+    // pas. C'est la cible du canonical de `gauntlet/canonical-404`, et la seule stack ou cette
+    // entree vit dans du CODE : la reparation y passe donc par le repli modele, pas par la
+    // suppression d'un `<loc>` litteral. C'est exactement le chemin qu'il faut eprouver.
+    { url: base + "/page-absente" },
   ];
 }
