@@ -44,6 +44,9 @@ SITE_WIDE = {
     "page_has_only_one_dofollow_incoming_internal_link_not_indexable",
     "canonical_url_has_no_incoming_internal_links", "sitemap_non_canonical_page",
     "sitemap_noindex_page", "noindex_page", "noindex_follow_page",
+    # Comme ses soeurs de sitemap : elle porte sur le FICHIER du site, pas sur une page du
+    # parcours. L'echafaudage y pose une entree en clair (voir `scaffold_stacks.py`).
+    "sitemap_http_urls_for_https",
     "redirect_3xx", "http_to_https_redirect", "missing_canonical",
     "meta_description_too_short", "meta_description_too_short_indexable",
     "meta_description_too_short_not_indexable",

@@ -3391,6 +3391,7 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
+        _SITEMAP_HTTPS_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
@@ -17766,8 +17767,37 @@ _SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
 # URLs are the pages the sitemap TALKS ABOUT, not the file to edit.
 # Removal, not rewriting: there is no replacement URL for a page that should not be listed.
 _SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page"}
+# Le sitemap d'un site en https qui liste des URL en http. La destination ne se DEVINE pas : la
+# regle du crawler ne se declenche que lorsque le site est servi en https, donc son hote repond
+# en https par definition. On s'y limite strictement — une URL http vers un hote TIERS reste
+# intacte, personne ne sait si ce tiers sert le https.
+_SITEMAP_HTTPS_KEYS = {"sitemap_http_urls_for_https"}
 _SITEMAP_FAMILY_KEYS = (_SITEMAP_ADD_KEYS | _SITEMAP_REWRITE_KEYS | _SITEMAP_ALTERNATE_KEYS
-                        | _SITEMAP_REMOVE_KEYS)
+                        | _SITEMAP_REMOVE_KEYS | _SITEMAP_HTTPS_KEYS)
+
+
+def _sitemap_https_pairs(issue_block: Any, site_name: str) -> list[dict[str, str]]:
+    """(URL http listee dans le sitemap → la meme en https), pour le seul hote du site.
+
+    Le crawler donne la liste des `<loc>` en clair ; il ne fournit pas de destination parce
+    qu'il n'y a rien a mesurer — passer `http://` a `https://` sur l'hote qui sert deja le site
+    en https est une reecriture de schema, pas un choix. La restriction a cet hote est ce qui
+    empeche la regle de deborder sur un domaine tiers.
+    """
+    hote = (site_name or "").strip().lower().split("//")[-1].split("/")[0]
+    if not hote or not isinstance(issue_block, dict):
+        return []
+    out: list[dict[str, str]] = []
+    vus: set[str] = set()
+    for brut in (issue_block.get("examples") or [])[:200]:
+        url = str(brut or "").strip()
+        if not url.lower().startswith("http://") or url in vus:
+            continue
+        if urlsplit(url).netloc.lower() != hote:
+            continue
+        vus.add(url)
+        out.append({"from": url, "to": "https://" + url[len("http://"):]})
+    return out
 
 
 def _is_sitemap_path(path: str) -> bool:
@@ -21090,7 +21120,13 @@ def _prepare_issue_fix(
                 break
 
     url_pairs: list[dict[str, str]] = []
-    if issues and issue_key in _SITEMAP_ALTERNATE_KEYS:
+    if issues and issue_key in _SITEMAP_HTTPS_KEYS:
+        url_pairs = _sitemap_https_pairs(block, site_name)
+        if url_pairs:
+            hint = _build_url_pair_hint(url_pairs)
+            out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
+            out["evidence"] = [p["from"] for p in url_pairs]
+    elif issues and issue_key in _SITEMAP_ALTERNATE_KEYS:
         url_pairs = _issue_hreflang_pairs(block)
     elif issues and (issue_key in _URL_PAIR_KEYS or issue_key in _ASSET_REWRITE_KEYS
                      or issue_key in _SITEMAP_REWRITE_KEYS):
@@ -21195,7 +21231,7 @@ def _prepare_issue_fix(
             out["evidence"] = [p["from"] for p in _page_pairs if p.get("from")]
         else:
             out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_alternates(raw, _p)  # noqa: E731
-    elif url_pairs and issue_key in _SITEMAP_REWRITE_KEYS:
+    elif url_pairs and (issue_key in _SITEMAP_REWRITE_KEYS or issue_key in _SITEMAP_HTTPS_KEYS):
         # Targets are restricted to the sitemap file, so an AI fallback can only ever see the
         # right file — useful when the sitemap is GENERATED and holds no literal <loc>.
         out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_locs(raw, _p)  # noqa: E731

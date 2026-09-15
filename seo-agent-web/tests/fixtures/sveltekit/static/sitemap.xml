@@ -38,4 +38,5 @@
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet/schema-no-type</loc></url>
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet/noindex-no-description</loc></url>
   <url><loc>https://noyaru-stack-sveltekit.netlify.app/gauntlet/noindex-long</loc></url>
+  <url><loc>http://noyaru-stack-sveltekit.netlify.app/gauntlet</loc></url>
 </urlset>

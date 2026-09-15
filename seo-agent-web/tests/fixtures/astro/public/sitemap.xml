@@ -45,4 +45,5 @@
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/html-lang-invalid</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/noindex-no-description</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/noindex-long</loc></url>
+  <url><loc>http://noyaru-stack-astro.netlify.app/gauntlet/</loc></url>
 </urlset>

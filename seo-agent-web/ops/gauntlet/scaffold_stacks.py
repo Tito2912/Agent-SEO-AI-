@@ -212,6 +212,14 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
         extra = [f"  <url><loc>{site}{index_path(stack)}</loc></url>"]
         extra += [f"  <url><loc>{site}/gauntlet/{s}{suffix}</loc></url>"
                   for s in slugs_for(stack)]
+        # FAMILLE VISEE : sitemap_http_urls_for_https. Une entree en clair dans le sitemap d'un
+        # site servi en https. Elle vise une page qui EXISTE, pour que la reecriture ait une
+        # destination reelle — la meme adresse en https. L'hote redirigeant http vers https,
+        # cette entree alimente aussi `sitemap_3xx_redirect` : c'est exactement ce qu'un vrai
+        # site presente, et les deux familles se corrigent au meme endroit.
+        extra.append("  <url><loc>"
+                     + site.replace("https://", "http://") + index_path(stack)
+                     + "</loc></url>")
         if "</urlset>" in text:
             text = text.replace("</urlset>", "\n".join(extra) + "\n</urlset>")
             io.open(sm, "w", encoding="utf-8", newline="\n").write(text)

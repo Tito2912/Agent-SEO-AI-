@@ -12,5 +12,11 @@ export default function sitemap() {
     { url: base + "/" },
     { url: base + "/blog" },
     { url: base + "/a-propos" },
+    // FAMILLE VISEE : sitemap_http_urls_for_https — une entree en clair dans le sitemap d'un
+    // site servi en https. Elle est DERIVEE, pas litterale : l'hote est reecrit au moment de
+    // la publication, donc un `http://` ecrit en dur ne survivrait pas. C'est aussi le cas
+    // reel de cette stack, et la raison d'etre du repli IA des familles de sitemap : il n'y a
+    // aucun <loc> a remplacer sur place, seulement du code qui les produit.
+    { url: base.replace("https://", "http://") + "/gauntlet/" },
   ];
 }
