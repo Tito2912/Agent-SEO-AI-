@@ -3246,6 +3246,7 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     # Next-centric list the hreflang family carries. Subtracted from `hreflang` below for the same
     # reason the others are: no key may resolve differently depending on table order.
     served_lang = set(_SERVED_LANG_FIX_KEYS)
+    robots = set(_ROBOTS_KEYS)
     sitemap = set(_SITEMAP_FAMILY_KEYS)
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
     links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
@@ -3260,7 +3261,11 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
         "multiple_title_tags", "multiple_meta_description_tags", "multiple_h1",
     }) - head - canonical
     return [
-        ("sitemap", sitemap, _SITEMAP_FILE_CANDIDATES),
+        # AVANT la famille sitemap : `sitemap_not_in_robots` porte « sitemap » dans son nom mais
+        # se repare dans `robots.txt`. Ranger une cle sur son libelle plutot que sur le fichier
+        # qu'elle edite, c'est exactement l'erreur que ce tableau existe pour empecher.
+        ("robots", robots, _ROBOTS_FILE_CANDIDATES),
+        ("sitemap", sitemap - robots, _SITEMAP_FILE_CANDIDATES),
         ("redirect-config", redirect_config, _REDIRECT_CONFIG_FILE_CANDIDATES),
         ("links", links, _PAGE_CONTENT_FILE_CANDIDATES),
         ("assets", assets, _ASSET_FILE_CANDIDATES),
@@ -3391,7 +3396,7 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
-        _SITEMAP_HTTPS_KEYS,
+        _SITEMAP_HTTPS_KEYS, _ROBOTS_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
@@ -17767,6 +17772,54 @@ _SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
 # URLs are the pages the sitemap TALKS ABOUT, not the file to edit.
 # Removal, not rewriting: there is no replacement URL for a page that should not be listed.
 _SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page"}
+# `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
+# dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
+_ROBOTS_KEYS = {"sitemap_not_in_robots"}
+# Ou chaque generateur ecrit son `robots.txt`, dans l'ordre d'essai. Mesure sur les neuf
+# fixtures : `static/` pour Hugo, SvelteKit et Gatsby, `public/` pour Astro, Nuxt et Next Pages,
+# la racine pour le HTML statique et Jekyll. Next App Router le PRODUIT depuis `app/robots.ts`.
+_ROBOTS_FILE_CANDIDATES = [
+    "static/robots.txt", "public/robots.txt", "robots.txt", "assets/robots.txt",
+    "app/robots.ts", "app/robots.js", "src/app/robots.ts", "src/app/robots.js",
+]
+
+
+def _robots_sitemap_url(issues: dict[str, Any] | None, site_name: str) -> str:
+    """L'URL de sitemap a declarer dans `robots.txt`, ou "" quand on ne la sait pas.
+
+    Le crawler ne leve cette famille que si un sitemap a bien ete LU. Or, sans directive dans
+    robots.txt, il n'a pas d'autre source que son repli `/sitemap.xml` : c'est donc ce
+    fichier-la qu'il a lu, et celui-la qu'il faut declarer. On ne devine rien.
+
+    Le seul cas ambigu est ecarte : si `sitemap_xml_not_found` figure au rapport, le fichier
+    n'a pas repondu et il n'y a rien a declarer — c'est l'autre famille qu'il faut traiter.
+    """
+    hote = (site_name or "").strip().lower().split("//")[-1].split("/")[0]
+    if not hote:
+        return ""
+    bloc = (issues or {}).get("sitemap_xml_not_found")
+    if isinstance(bloc, dict) and int(bloc.get("count") or 0) > 0:
+        return ""
+    return "https://%s/sitemap.xml" % hote
+
+
+_ROBOTS_SITEMAP_LINE_RE = re.compile(r"(?mi)^\s*sitemap\s*:")
+
+
+def _add_sitemap_to_robots(content: str, sitemap_url: str) -> tuple[str, int]:
+    """DETERMINISTE : ajouter la directive `Sitemap:` a un `robots.txt` qui n'en a pas.
+
+    N'ecrit rien si une directive existe deja — la famille ne se leve pas dans ce cas, mais le
+    fichier cible peut avoir change entre le crawl et la correction. Rien d'autre n'est touche :
+    les groupes `User-agent` et leurs regles sont la partie du fichier ou une erreur desindexe
+    un site entier.
+    """
+    if not sitemap_url or not content.strip():
+        return content, 0
+    if _ROBOTS_SITEMAP_LINE_RE.search(content):
+        return content, 0
+    base = content.rstrip("\n")
+    return base + "\n\nSitemap: " + sitemap_url + "\n", 1
 # Le sitemap d'un site en https qui liste des URL en http. La destination ne se DEVINE pas : la
 # regle du crawler ne se declenche que lorsque le site est servi en https, donc son hote repond
 # en https par definition. On s'y limite strictement — une URL http vers un hote TIERS reste
@@ -21118,6 +21171,23 @@ def _prepare_issue_fix(
             if og_imgs:
                 out["extra_hint"] += "\nImages OG héritées du layout à RÉUTILISER dans le openGraph de chaque page (copie ce `images:` tel quel) : images: " + og_imgs
                 break
+
+    if issue_key in _ROBOTS_KEYS:
+        _sm = _robots_sitemap_url(issues, site_name)
+        if not _sm:
+            out["refusal"] = ("Aucun sitemap lisible a declarer : c'est `sitemap_xml_not_found` "
+                              "qu'il faut traiter d'abord.")
+        else:
+            out["link_rewriter"] = lambda raw, _u=_sm: _add_sitemap_to_robots(raw, _u)  # noqa: E731
+            # Une ligne a ajouter dans un fichier de quatre lignes : si le litteral n'est pas
+            # la, c'est que le fichier est PRODUIT par du code (`app/robots.ts`), et seul le
+            # modele peut alors ajouter l'entree au bon endroit de la structure.
+            out["rewriter_ai_fallback"] = True
+            out["extra_hint"] = (
+                "Ce `robots.txt` ne declare aucun sitemap. Ajoute la ligne "
+                "`Sitemap: %s` — rien d'autre. Ne touche a AUCUN groupe `User-agent` ni a "
+                "aucune regle `Allow`/`Disallow` : une erreur a cet endroit desindexe le site "
+                "entier." % _sm)
 
     url_pairs: list[dict[str, str]] = []
     if issues and issue_key in _SITEMAP_HTTPS_KEYS:

@@ -1,4 +1,2 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://noyaru-stack-next-app.netlify.app/sitemap.xml

@@ -180,10 +180,24 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
     # huit autres en servaient un. Deux familles se declenchent la-dessus
     # (`robots_txt_not_found`, `sitemap_not_in_robots`), donc cette absence aurait compte comme
     # deux anomalies parasites sur cette stack et faussé la comparaison entre les neuf.
+    # FAMILLE VISEE : sitemap_not_in_robots. Le fichier existe et se lit, mais ne declare AUCUN
+    # sitemap. Le crawler retombe alors sur son chemin par defaut `/sitemap.xml` — les pages du
+    # parcours restent donc decouvertes, ce qui etait la seule chose a verifier avant d'injecter
+    # ici : une injection qui empeche le crawl ne mesure plus rien.
+    #
+    # On RETIRE la ligne plutot que de reecrire le fichier : celui de Jekyll en porte sept, et
+    # les ecraser ferait disparaitre des regles qui n'ont rien a voir avec cette famille.
     robots = static / "robots.txt"
-    if not robots.exists():
+    if robots.exists():
+        texte = io.open(robots, encoding="utf-8").read()
+        sans = "\n".join(ligne for ligne in texte.split("\n")
+                         if not re.match(r"\s*sitemap\s*:", ligne, re.I))
+        if sans != texte:
+            io.open(robots, "w", encoding="utf-8", newline="\n").write(sans.rstrip("\n") + "\n")
+            done.append("robots.txt")
+    else:
         io.open(robots, "w", encoding="utf-8", newline="\n").write(
-            f"User-agent: *\nAllow: /\n\nSitemap: {site}/sitemap.xml\n")
+            "User-agent: *\nAllow: /\n")
         done.append("robots.txt")
 
     # ── la redirection dont `link-to-redirect` a besoin ───────────────────────────────────
