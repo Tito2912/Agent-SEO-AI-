@@ -19,6 +19,7 @@ Chaque page ci-dessous porte une anomalie et une seule.
 - [canonical-http](/gauntlet/canonical-http/)
 - [canonical-relay](/gauntlet/canonical-relay/)
 - [canonical-other](/gauntlet/canonical-other/)
+- [canonical-404](/gauntlet/canonical-404/)
 - [no-canonical-a](/gauntlet/no-canonical-a/)
 - [no-canonical-b](/gauntlet/no-canonical-b/)
 - [hreflang-invalid](/gauntlet/hreflang-invalid/)

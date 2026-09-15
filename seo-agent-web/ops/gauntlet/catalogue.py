@@ -132,6 +132,15 @@ CATALOGUE: list[Spec] = [
     Spec("canonical-other", "non_canonical_page_specified_as_canonical_one",
          "canonical vers une page qui porte elle-meme un autre canonical.",
          canonical="canonical-relay"),
+    # La cible est HORS parcours, et volontairement : elle n'existe pas, donc les familles de
+    # lien casse (`http_404`, `links_to_404_page`) vont la compter. En la placant a la racine,
+    # aucune de leurs URL ne touche `/gauntlet` et le verificateur d'injection les tient pour
+    # hors parcours au lieu d'y voir des parasites. L'echafaudage la liste dans le sitemap :
+    # sans cela le crawl ne la visiterait jamais, et la regle du crawler exige d'avoir MESURE
+    # le statut de la cible.
+    Spec("canonical-404", "canonical_points_to_4xx",
+         "canonical vers une page absente, listee au sitemap pour que le crawl constate le 404.",
+         canonical="/page-absente"),
     Spec("no-canonical-a", "duplicate_pages_without_canonical",
          "jumelle de no-canonical-b, aucune des deux ne declare de canonical.",
          canonical="", title="Deux pages jumelles sans canonical declare", desc=DUP_D),

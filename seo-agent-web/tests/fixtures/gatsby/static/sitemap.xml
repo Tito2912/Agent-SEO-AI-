@@ -16,6 +16,7 @@
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/canonical-http/</loc></url>
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/canonical-relay/</loc></url>
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/canonical-other/</loc></url>
+  <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/canonical-404/</loc></url>
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/no-canonical-a/</loc></url>
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/no-canonical-b/</loc></url>
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/hreflang-invalid/</loc></url>
@@ -40,4 +41,5 @@
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/noindex-no-description/</loc></url>
   <url><loc>https://noyaru-stack-gatsby.netlify.app/gauntlet/noindex-long/</loc></url>
   <url><loc>http://noyaru-stack-gatsby.netlify.app/gauntlet/</loc></url>
+  <url><loc>https://noyaru-stack-gatsby.netlify.app/page-absente</loc></url>
 </urlset>

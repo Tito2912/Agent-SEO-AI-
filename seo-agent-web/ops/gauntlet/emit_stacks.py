@@ -148,6 +148,11 @@ def _target(site: str, value: str) -> str:
         return url_for(site, value[len("!http:"):]).replace("https://", "http://", 1)
     if value.startswith("http"):
         return value
+    # Un chemin absolu vise la RACINE du site, hors du parcours. Utile pour designer une page
+    # qui n'existe pas sans que les familles de lien casse se mettent a compter des URL du
+    # parcours — le verificateur d'injection les tiendrait alors pour des parasites.
+    if value.startswith("/"):
+        return site.rstrip("/") + value
     return url_for(site, value)
 
 

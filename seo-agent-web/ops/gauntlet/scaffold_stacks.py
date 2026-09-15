@@ -259,6 +259,11 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
         extra.append("  <url><loc>"
                      + site.replace("https://", "http://") + index_path(stack)
                      + "</loc></url>")
+        # La cible du canonical de `canonical-404`. Elle n'existe pas : c'est le sitemap qui la
+        # fait VISITER, faute de quoi le crawl ne la rencontrerait jamais et la regle du crawler
+        # — qui exige d'avoir mesure le statut de la cible — ne pourrait pas se declencher.
+        # Placee a la racine, les familles de lien casse qu'elle provoque restent hors parcours.
+        extra.append("  <url><loc>" + site + "/page-absente</loc></url>")
         if "</urlset>" in text:
             text = text.replace("</urlset>", "\n".join(extra) + "\n</urlset>")
             io.open(sm, "w", encoding="utf-8", newline="\n").write(text)

@@ -3252,7 +3252,8 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
     assets = set(_ASSET_REWRITE_KEYS) | {"missing_alt_text"}
     hreflang = set(_HREFLANG_HINTS) - served_lang        # a hreflang tag, whatever its name says
-    canonical = ({k for k in _URL_PAIR_KEYS if "canonical" in k}
+    canonical = (set(_CANONICAL_BROKEN_KEYS)
+                 | {k for k in _URL_PAIR_KEYS if "canonical" in k}
                  | {"missing_canonical", "duplicate_pages_without_canonical"}) - hreflang
     head = set(_HEAD_HINTS) - canonical - hreflang       # the rest of the <head>: OG, twitter, viewport
     content = (length_keys | {
@@ -3396,7 +3397,7 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
-        _SITEMAP_HTTPS_KEYS, _ROBOTS_KEYS,
+        _SITEMAP_HTTPS_KEYS, _ROBOTS_KEYS, _CANONICAL_BROKEN_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
@@ -17775,6 +17776,57 @@ _SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
 _ROBOTS_KEYS = {"sitemap_not_in_robots"}
+# Le canonical d'une page designe une cible qui repond en erreur. Le crawler donne les exemples
+# sous la forme « <page> -> <canonical> » ; le statut de la cible, lui, se lit dans `pages`.
+_CANONICAL_BROKEN_KEYS = {"canonical_points_to_4xx", "canonical_points_to_5xx"}
+# SEULS ces deux statuts disent que la cible n'existe plus. 401 et 403 signalent un acces refuse
+# au robot, 429 une limitation, 5xx une panne : dans tous ces cas la page peut exister
+# parfaitement, et reecrire le canonical detruirait une intention volontaire. On corrige une
+# absence etablie, jamais une indisponibilite.
+_STATUTS_ABSENCE_DEFINITIVE = {404, 410}
+_EXEMPLE_FLECHE_RE = re.compile(r"^\s*(\S+)\s+->\s+(\S+)\s*$")
+
+
+def _canonical_self_pairs(issue_block: Any, pages: list[dict[str, Any]] | None,
+                          ) -> tuple[list[dict[str, str]], list[str]]:
+    """(canonical casse → l'URL de la page elle-meme), et ce qu'on a refuse de toucher.
+
+    Pointer un canonical vers une page qui n'existe plus revient a n'en declarer aucun : le
+    signal part dans le vide. La seule valeur qu'on puisse ecrire sans rien deviner est l'URL de
+    la page elle-meme — un canonical auto-referent, qui est aussi la recommandation par defaut.
+    On ne cherche PAS a retrouver la cible voulue : elle n'est pas mesurable.
+
+    Le tri par statut est l'essentiel. Une cible en 404 ou 410 a disparu, c'est etabli. Une cible
+    en 403 est peut-etre protegee, une cible en 500 peut etre debout dans dix minutes : leur
+    canonical est vraisemblablement JUSTE, et le reecrire serait casser ce qui marche.
+    """
+    statuts: dict[str, int] = {}
+    for page in pages or []:
+        if not isinstance(page, dict):
+            continue
+        code = page.get("status_code")
+        if isinstance(code, int):
+            for champ in ("url", "final_url"):
+                cle = _norm_url_for_match(str(page.get(champ) or ""))
+                if cle:
+                    statuts.setdefault(cle, code)
+    paires: list[dict[str, str]] = []
+    refuses: list[str] = []
+    vus: set[str] = set()
+    for brut in (issue_block.get("examples") if isinstance(issue_block, dict) else None) or []:
+        m = _EXEMPLE_FLECHE_RE.match(str(brut or ""))
+        if not m:
+            continue
+        page_url, canon = m.group(1), m.group(2)
+        if not page_url.startswith("http") or canon in vus:
+            continue
+        code = statuts.get(_norm_url_for_match(canon))
+        if code not in _STATUTS_ABSENCE_DEFINITIVE:
+            refuses.append("%s (statut %s)" % (canon, code if code is not None else "inconnu"))
+            continue
+        vus.add(canon)
+        paires.append({"page": page_url, "from": canon, "to": page_url})
+    return paires, refuses
 # Ou chaque generateur ecrit son `robots.txt`, dans l'ordre d'essai. Mesure sur les neuf
 # fixtures : `static/` pour Hugo, SvelteKit et Gatsby, `public/` pour Astro, Nuxt et Next Pages,
 # la racine pour le HTML statique et Jekyll. Next App Router le PRODUIT depuis `app/robots.ts`.
@@ -21244,6 +21296,28 @@ def _prepare_issue_fix(
             "offerCount) doivent etre des NOMBRES, pas des chaines : `\"price\": \"0\"` devient "
             "`\"price\": 0`. Ne touche pas a priceCurrency (c'est du texte), ne change aucune "
             "valeur, et laisse une chaine qui n'est pas un nombre pur (\"29.99 USD\") telle quelle.")
+
+    if issue_key in _CANONICAL_BROKEN_KEYS:
+        _cp, _refuses = _canonical_self_pairs(block, pages)
+        if _cp:
+            out["url_pairs"] = list(_cp)
+            out["evidence"] = [p["from"] for p in _cp]
+            out["link_rewriter"] = lambda raw, _p=_cp: _rewrite_head_url_values(raw, _p)  # noqa: E731
+            # Un canonical construit par du code (`getSiteUrl(path)`) n'a aucun litteral a
+            # remplacer. Les valeurs exactes sont dans la consigne.
+            out["rewriter_ai_fallback"] = True
+            out["extra_hint"] = (
+                (out["extra_hint"] + "\n" if out["extra_hint"] else "")
+                + "Le canonical de ces pages designe une adresse qui n'existe plus (404/410) : "
+                "le signal part dans le vide. Remplace-le par l'URL de la page ELLE-MEME. "
+                "Ne touche a aucune autre balise, et n'invente pas d'autre destination — "
+                "la cible voulue n'est pas connaissable.\n"
+                + _build_url_pair_hint(_cp))
+        else:
+            out["refusal"] = (
+                "Aucune cible DEFINITIVEMENT absente : " + (", ".join(_refuses[:4]) or "aucun "
+                "exemple exploitable") + ". Un 401/403 peut etre protege, un 5xx peut revenir — "
+                "reecrire leur canonical casserait une intention probablement juste.")
 
     if issue_key in _OG_URL_KEYS:
         _og_pairs = _og_url_pairs_from_pages(list(impacted), pages)

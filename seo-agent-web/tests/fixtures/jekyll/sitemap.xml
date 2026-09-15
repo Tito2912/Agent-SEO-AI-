@@ -20,6 +20,7 @@ permalink: /sitemap.xml
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/canonical-http</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/canonical-relay</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/canonical-other</loc></url>
+  <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/canonical-404</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/no-canonical-a</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/no-canonical-b</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/hreflang-invalid</loc></url>
@@ -47,4 +48,5 @@ permalink: /sitemap.xml
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/noindex-no-description</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/noindex-long</loc></url>
   <url><loc>http://noyaru-stack-jekyll.netlify.app/gauntlet/</loc></url>
+  <url><loc>https://noyaru-stack-jekyll.netlify.app/page-absente</loc></url>
 </urlset>
