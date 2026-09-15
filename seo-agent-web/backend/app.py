@@ -18314,6 +18314,13 @@ def _rewrite_asset_srcs(content: str, pairs: list[dict[str, str]]) -> tuple[str,
 _LINK_TAG_RE = re.compile(r"<link\b[^>]*>", re.I)
 _HREF_ATTR_RE = re.compile(r'(href\s*=\s*)(["\'])(.*?)\2', re.I | re.S)
 _REL_CANONICAL_RE = re.compile(r'rel\s*=\s*["\']?(canonical|alternate)\b', re.I)
+# Une QUATRIEME ecriture, mesuree le 15/09/2026 : Nuxt declare ses balises de tete comme des
+# objets, `{ rel: 'canonical', href: '…' }` dans le tableau `link` de `useHead()`. Aucun `<link`
+# a trouver, et `rel:` porte ici « canonical » comme VALEUR, pas comme clef — les deux motifs
+# ci-dessus passent donc a cote. La famille `canonical_points_to_4xx` ne patchait rien sur nuxt,
+# et c'etait vrai de toute famille canonical dont le repli IA est interdit.
+_CANONICAL_OBJECT_RE = re.compile(r"""\{[^{}]*?\brel\s*:\s*(['"])canonical\1[^{}]*\}""", re.S)
+_HREF_KEY_RE = re.compile(r"""(\bhref\s*:\s*)(['"])(.*?)(\2)""", re.S)
 # A canonical URL is written three ways in a component: as an object property
 # (`canonical: "…"`), as a binding (`const canonical = "…"`), and as a literal prop
 # (`<Base canonical="…">`). Only the first was matched, so on Astro — where the <link> lives in
@@ -20280,6 +20287,12 @@ def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple
         return m.group(0)
 
     new = _JS_CANONICAL_RE.sub(_one_prop, new)
+
+    def _one_object(m: "re.Match[str]") -> str:
+        """La forme objet de Nuxt : `{ rel: 'canonical', href: '…' }`."""
+        return _HREF_KEY_RE.sub(_one_prop, m.group(0))
+
+    new = _CANONICAL_OBJECT_RE.sub(_one_object, new)
 
     # `languages: { 'en': '/en', ... }` — scoped to the block so a short key elsewhere
     # (`to:`, `id:`) whose value happens to match can never be rewritten.

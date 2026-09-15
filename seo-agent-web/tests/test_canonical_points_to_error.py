@@ -149,3 +149,38 @@ def test_un_canonical_construit_par_du_code_reste_non_corrige():
     paires, _ = m._canonical_self_pairs(_bloc("https://x.fr/disparue"), PAGES)
     code = 'export const metadata = { alternates: { canonical: getSiteUrl(path) } };\n'
     assert m._rewrite_head_url_values(code, paires) == (code, 0)
+
+
+# ── La quatrieme ecriture d'un canonical : l'objet de Nuxt ───────────────────────────────────
+# Mesure du 15/09/2026 : huit stacks corrigees, nuxt AUCUN PATCH. Nuxt declare ses balises de
+# tete comme des objets — `{ rel: 'canonical', href: '…' }` dans le tableau `link` de
+# `useHead()`. Il n'y a aucun `<link` a trouver, et `rel:` y porte « canonical » comme VALEUR et
+# non comme clef : les motifs existants passaient a cote. Sans repli IA — interdit ici a juste
+# titre — la famille ne pouvait rien faire sur cette stack.
+
+APOSTROPHE = chr(39)
+NUXT = ("useHead({\n  link: [\n"
+        "      { rel: %scanonical%s, href: %shttps://x.fr/disparue%s },\n"
+        "      { rel: %salternate%s, hreflang: %sen%s, href: %shttps://x.fr/en%s }\n"
+        "  ],\n});\n" % ((APOSTROPHE,) * 10))
+
+
+def test_la_forme_objet_de_nuxt_est_reecrite():
+    paires, _ = m._canonical_self_pairs(_bloc("https://x.fr/disparue"), PAGES)
+    rendu, n = m._rewrite_head_url_values(NUXT, paires)
+    assert n == 1
+    assert "href: %s%s%s }" % (APOSTROPHE, PAGE, APOSTROPHE) in rendu
+
+
+def test_l_alternate_voisin_n_est_pas_touche():
+    """Un `alternate` est une autre famille, et il vit dans le meme tableau."""
+    paires, _ = m._canonical_self_pairs(_bloc("https://x.fr/disparue"), PAGES)
+    rendu, _n = m._rewrite_head_url_values(NUXT, paires)
+    assert "hreflang: %sen%s, href: %shttps://x.fr/en%s" % ((APOSTROPHE,) * 4) in rendu
+
+
+def test_un_lien_de_navigation_portant_la_meme_url_reste_intact():
+    """La regle de ce reecriveur : un menu qui pointe vers la meme adresse n'est pas un canonical."""
+    paires, _ = m._canonical_self_pairs(_bloc("https://x.fr/disparue"), PAGES)
+    nav = "<nav><a href=%shttps://x.fr/disparue%s>lien</a></nav>" % (APOSTROPHE, APOSTROPHE)
+    assert m._rewrite_head_url_values(nav, paires) == (nav, 0)
