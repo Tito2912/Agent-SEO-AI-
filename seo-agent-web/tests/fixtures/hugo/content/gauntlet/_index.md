@@ -1,0 +1,47 @@
++++
+title = "Parcours d'obstacles du correcteur — pages de test"
+description = "Index des pages de test du parcours d'obstacles : chacune porte une anomalie et une seule, pour exercer une famille du correcteur."
+canonical = "https://noyaru-stack-hugo.netlify.app/gauntlet/"
++++
+
+Chaque page ci-dessous porte une anomalie et une seule.
+
+- [missing-title](/gauntlet/missing-title/)
+- [missing-meta-description](/gauntlet/missing-meta-description/)
+- [missing-h1](/gauntlet/missing-h1/)
+- [multiple-h1](/gauntlet/multiple-h1/)
+- [multiple-title-tags](/gauntlet/multiple-title-tags/)
+- [multiple-meta-description-tags](/gauntlet/multiple-meta-description-tags/)
+- [title-too-short](/gauntlet/title-too-short/)
+- [viewport-not-set](/gauntlet/viewport-not-set/)
+- [duplicate-a](/gauntlet/duplicate-a/)
+- [duplicate-b](/gauntlet/duplicate-b/)
+- [canonical-http](/gauntlet/canonical-http/)
+- [canonical-relay](/gauntlet/canonical-relay/)
+- [canonical-other](/gauntlet/canonical-other/)
+- [no-canonical-a](/gauntlet/no-canonical-a/)
+- [no-canonical-b](/gauntlet/no-canonical-b/)
+- [hreflang-invalid](/gauntlet/hreflang-invalid/)
+- [hreflang-no-html-lang](/gauntlet/hreflang-no-html-lang/)
+- [hreflang-to-non-canonical](/gauntlet/hreflang-to-non-canonical/)
+- [hreflang-same-language](/gauntlet/hreflang-same-language/)
+- [og-missing](/gauntlet/og-missing/)
+- [og-incomplete](/gauntlet/og-incomplete/)
+- [twitter-missing](/gauntlet/twitter-missing/)
+- [twitter-incomplete](/gauntlet/twitter-incomplete/)
+- [mixed-image](/gauntlet/mixed-image/)
+- [mixed-css](/gauntlet/mixed-css/)
+- [mixed-js](/gauntlet/mixed-js/)
+- [link-http](/gauntlet/link-http/)
+- [double-slash](/gauntlet/double-slash/)
+- [link-to-redirect](/gauntlet/link-to-redirect/)
+- [missing-alt](/gauntlet/missing-alt/)
+- [redirected-image](/gauntlet/redirected-image/)
+- [redirected-css](/gauntlet/redirected-css/)
+- [redirected-js](/gauntlet/redirected-js/)
+- [schema-invalid](/gauntlet/schema-invalid/)
+- [schema-no-type](/gauntlet/schema-no-type/)
+- [html-lang-missing](/gauntlet/html-lang-missing/)
+- [html-lang-invalid](/gauntlet/html-lang-invalid/)
+- [noindex-no-description](/gauntlet/noindex-no-description/)
+- [noindex-long](/gauntlet/noindex-long/)

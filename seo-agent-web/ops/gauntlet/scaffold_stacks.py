@@ -164,6 +164,31 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
         io.open(static / rel, "w", encoding="utf-8", newline="\n").write(doc)
         done.append(str(Path(STATIC_DIR[stack]) / rel))
 
+    if stack == "hugo":
+        # Hugo ENGENDRE `/gauntlet/` depuis sa section de contenu, et cette page masque le
+        # fichier statique qu'on vient d'ecrire. Sans `_index.md` elle ne liste RIEN : les pages
+        # du parcours ne sont alors decouvrables que par le sitemap.
+        #
+        # Mesure du 15/09/2026, et elle invalide des resultats : sur une PREVIEW, dont le
+        # sitemap pointe vers la production, le crawl ne ramenait que 7 pages sur 51. Trois
+        # cycles de verification ont rendu sur hugo des verdicts FLATTEURS — moins de pages
+        # crawlees, donc moins d'anomalies comptees, donc « en baisse ».
+        #
+        # Liens en markdown et non en HTML brut : goldmark filtre le HTML d'un fichier de
+        # contenu par defaut, et la liste aurait disparu sans que rien ne le signale.
+        liens = "\n".join("- [%s](/gauntlet/%s/)" % (s, s) for s in slugs_for(stack))
+        idx = base / "content" / "gauntlet" / "_index.md"
+        os.makedirs(idx.parent, exist_ok=True)
+        io.open(idx, "w", encoding="utf-8", newline="\n").write(
+            "+++\n"
+            'title = "%s"\n' % INDEX_TITLE
+            + 'description = "%s"\n' % INDEX_DESC
+            + 'canonical = "%s/gauntlet/"\n' % site
+            + "+++\n\n"
+            "Chaque page ci-dessous porte une anomalie et une seule.\n\n"
+            + liens + "\n")
+        done.append("content/gauntlet/_index.md")
+
     # ── les ressources que les pages referencent ──────────────────────────────────────────
     if not (static / "og.png").exists():
         io.open(static / "og.png", "wb").write(PNG)
