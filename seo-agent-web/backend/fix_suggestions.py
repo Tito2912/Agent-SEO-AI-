@@ -188,7 +188,11 @@ def suggest_issue_fix(
     fix: list[str] = []
     verify: list[str] = []
 
-    lk = key.lower()
+    # La variante d'indexabilite ne change pas le CONSEIL : `missing_h1_indexable` et
+    # `missing_h1` se reparent de la meme facon, seule la gravite differe. Sans cette
+    # normalisation, seule la forme nue trouvait sa branche et chaque variante tombait dans le
+    # repli generique — mesure du 15/09/2026 : 28 familles dans ce cas, dont trois `error`.
+    lk = key.lower().removesuffix("_not_indexable").removesuffix("_indexable")
 
     if lk.startswith("page_has_only_one_dofollow_incoming_internal_link"):
         rows = _under_linked_context(report, key)
@@ -526,6 +530,235 @@ def suggest_issue_fix(
         verify = [
             "Tester le rendu via les validateurs (Facebook Sharing Debugger, X Card Validator).",
         ]
+
+    # ── Ressources et liens internes cassés ────────────────────────────────────────────────
+    # Mesure du 15/09/2026 : 63 des 157 familles montrées au client tombaient dans le repli
+    # générique ci-dessous — « Issue détectée … peut impacter SEO/UX selon le contexte », qui
+    # n'apprend rien. Onze d'entre elles étaient classées `error`. Ne pas corriger une anomalie
+    # est défendable ; ne rien savoir en dire ne l'est pas.
+    elif lk in {"broken_internal_links", "links_to_404_page",
+                "page_has_links_to_broken_page", "page_has_links_to_broken_page_links",
+                "broken_internal_javascript_and_css_files", "page_has_broken_image",
+                "page_has_broken_javascript", "page_has_broken_javascript_links"}:
+        why = ("Ces pages pointent vers une ressource interne qui ne répond plus. Le coût est "
+               "double : le visiteur tombe sur une erreur, et le budget de crawl part dans une "
+               "impasse au lieu d'alimenter les pages qui comptent. L'agent ne le corrige pas "
+               "seul : choisir la cible de remplacement est une décision éditoriale, et "
+               "supprimer un lien n'est jamais anodin.")
+        fix = [
+            "Retrouver la cible d'origine : une URL renommée se retrouve presque toujours dans "
+            "l'historique du dépôt ou dans un ancien sitemap.",
+            "Repointer le lien vers l'URL FINALE, pas vers une redirection qui y mène.",
+            "Si la cible n'existe plus, retirer le lien plutôt que de le laisser mort : un lien "
+            "vers une page supprimée ne transmet rien.",
+        ]
+        verify = ["Relancer un crawl : le compteur doit tomber à zéro sans qu'une redirection "
+                  "apparaisse à la place."]
+
+    elif lk in {"broken_external_images", "broken_external_js_css",
+                "disallowed_external_resources"}:
+        why = ("La ressource est hébergée par un tiers et ne répond plus, ou son hôte interdit "
+               "son chargement. Vous ne contrôlez pas cette adresse : personne ne peut garantir "
+               "qu'elle revienne, c'est pourquoi l'agent n'y touche pas.")
+        fix = [
+            "Rapatrier la ressource sur votre domaine quand la licence le permet : c'est la "
+            "seule façon d'en maîtriser la disponibilité.",
+            "Sinon, retirer la référence ou la remplacer par un équivalent que vous hébergez.",
+        ]
+        verify = ["Recharger la page et vérifier qu'aucune requête ne part plus vers l'hôte "
+                  "fautif (onglet Réseau du navigateur)."]
+
+    elif lk in {"broken_redirect", "meta_refresh_redirect", "redirect_3xx_links",
+                "page_has_links_to_redirect_links", "permanent_redirects", "redirect_302"}:
+        why = ("Une redirection s'intercale entre le lien et sa destination. Chaque saut retarde "
+               "l'affichage, dilue le signal transmis par le lien, et une redirection cassée ne "
+               "mène nulle part du tout. Une 302 annonce un déplacement TEMPORAIRE : Google "
+               "conserve alors l'ancienne URL dans son index.")
+        fix = [
+            "Faire pointer les liens du site directement sur la destination finale : une "
+            "redirection sert aux visiteurs venus d'ailleurs, pas à votre propre maillage.",
+            "Remplacer une 302 par une 301 dès que le déplacement est définitif.",
+            "Une redirection par meta refresh n'est comprise ni par tous les robots ni par les "
+            "lecteurs d'écran : la remplacer par une vraie redirection HTTP.",
+        ]
+        verify = ["Suivre chaque lien avec `curl -I` : la première réponse doit être un 200."]
+
+    # ── Sitemap et robots.txt ──────────────────────────────────────────────────────────────
+    elif lk in {"sitemap_xml_not_found", "sitemap_invalid_format", "sitemap_file_too_large",
+                "sitemap_http_urls_for_https", "sitemap_not_in_robots",
+                "incorrect_pages_found_in_sitemap_xml", "orphaned_sitemap_pages",
+                "page_in_multiple_sitemaps", "sitemap_page_timed_out"}:
+        why = ("Le sitemap est la liste que vous SOUMETTEZ aux moteurs : absent, illisible ou "
+               "peuplé d'URL que le site ne sert pas, il devient au mieux inutile, au pire une "
+               "source de contradictions avec ce que le crawl découvre.")
+        fix = [
+            "Servir un `sitemap.xml` valide à la racine et le déclarer dans `robots.txt` "
+            "(ligne `Sitemap: https://…/sitemap.xml`).",
+            "N'y lister que des URL indexables, en https, sans redirection ni 4xx, et chacune "
+            "dans un seul fichier.",
+            "Au-delà de 50 000 URL ou 50 Mo, découper en plusieurs fichiers reliés par un index.",
+        ]
+        verify = ["Soumettre le sitemap dans la Search Console : elle doit annoncer zéro erreur "
+                  "de lecture et un nombre d'URL découvertes cohérent avec le crawl."]
+
+    elif lk in {"robots_txt_not_found", "robots_invalid_format"}:
+        why = ("Sans `robots.txt` lisible, chaque robot applique ses propres règles par défaut. "
+               "Un fichier mal formé est pire qu'absent : une directive inattendue peut "
+               "désindexer tout un site, et c'est arrivé à des sites bien plus gros que le vôtre.")
+        fix = [
+            "Servir un `robots.txt` à la racine, en 200, avec au minimum un groupe "
+            "`User-agent: *` et la ligne `Sitemap:`.",
+            "Vérifier qu'aucun `Disallow: /` ne traîne — il bloque l'intégralité du site.",
+        ]
+        verify = ["Ouvrir `https://" + (domain or "votre-domaine") + "/robots.txt` : la réponse "
+                  "doit être 200, en text/plain, et le testeur de la Search Console sans erreur."]
+
+    # ── Serveur et transport : hors du dépôt, donc hors de portée d'un patch ───────────────
+    elif lk in {"certificate_name_mismatch", "insecure_cipher", "old_tls_version", "no_hsts",
+                "dns_resolution_issue"}:
+        why = ("Ces réglages vivent chez votre hébergeur ou votre CDN, pas dans le dépôt : "
+               "aucun changement de code ne peut les corriger. Ils comptent malgré tout — un "
+               "certificat au mauvais nom déclenche un avertissement de sécurité en pleine page, "
+               "et une résolution DNS qui échoue rend le site invisible.")
+        fix = [
+            "Certificat au mauvais nom : le réémettre en couvrant le domaine RÉELLEMENT servi, "
+            "variante www comprise.",
+            "TLS ancien ou suite de chiffrement faible : n'accepter que TLS 1.2 et 1.3 dans la "
+            "configuration de l'hôte.",
+            "HSTS : ajouter l'en-tête `Strict-Transport-Security` une fois le https stable "
+            "partout — jamais avant, sa durée de vie le rend difficile à reprendre.",
+        ]
+        verify = ["Relancer un test SSL Labs sur le domaine : viser A, sans avertissement de nom."]
+
+    # ── Performance et volume de contenu : mesures, pas anomalies de code ──────────────────
+    elif lk in {"slow_page", "timed_out", "timed_out_links", "sitemap_page_timed_out",
+                "low_text_to_html_ratio", "low_word_count", "document_uses_plugins",
+                "pages_have_high_ai_content_levels"} or lk.startswith("pages_with_poor_"):
+        why = ("Ce sont des MESURES, pas des défauts localisables dans un fichier : un temps de "
+               "réponse, un volume de texte, un score d'expérience. Aucun patch mécanique ne les "
+               "déplace — leur cause est un hébergement, un poids d'image, une architecture de "
+               "page ou un contenu à écrire.")
+        fix = [
+            "Temps de réponse et délais d'attente : mesurer d'abord le temps SERVEUR seul. "
+            "Au-delà de 600 ms, le problème est l'hébergement ou la base, pas le front.",
+            "Core Web Vitals : traiter la plus grosse image de la page (LCP), réserver les "
+            "dimensions des médias (CLS), alléger le JavaScript au chargement (INP, TBT).",
+            "Trop peu de texte : la question n'est pas le nombre de mots mais ce que la page "
+            "apporte qu'une autre n'apporte pas. Si la réponse est « rien », la fusionner.",
+        ]
+        verify = ["Reprendre la mesure sur les MÊMES URL après correction : ces familles se "
+                  "jugent sur un avant/après chiffré, jamais sur une impression."]
+
+    # ── Rapports Search Console / Bing : ce qu'un tiers OBSERVE de votre site ──────────────
+    elif lk.startswith("gsc_") or lk.startswith("bing_") or lk == "pages_to_submit_to_indexnow":
+        why = ("Ces lignes ne viennent pas du crawl de votre site mais de ce que Google ou Bing "
+               "en RAPPORTENT. Elles n'ont donc pas de correctif dans le dépôt : ce sont des "
+               "signaux à lire, parfois le symptôme d'une anomalie listée ailleurs dans ce "
+               "rapport.")
+        fix = [
+            "Confronter chaque URL signalée au reste du rapport : une page « découverte, non "
+            "indexée » est souvent déjà listée comme orpheline, en noindex ou hors sitemap.",
+            "Traiter la cause dans le dépôt, puis demander une réindexation — jamais l'inverse.",
+            "Pages à soumettre à IndexNow : c'est une opportunité de rapidité, pas un défaut.",
+        ]
+        verify = ["Revenir à la Search Console une à deux semaines après la correction : c'est "
+                  "son propre délai de réexploration qui fait foi, pas un nouveau crawl."]
+
+    # ── Sémantique des liens ──────────────────────────────────────────────────────────────
+    elif lk in {"links_with_no_anchor_text", "page_has_no_outgoing_links",
+                "page_has_nofollow_outgoing_internal_links",
+                "http_page_has_internal_links_to_https", "more_than_three_parameters_in_url",
+                "page_and_serp_titles_do_not_match", "llms_txt_not_found"}:
+        why = ("Le maillage interne dit aux moteurs ce qui compte sur le site et de quoi chaque "
+               "page traite. Une ancre vide ne transmet aucun sujet, un `nofollow` interne coupe "
+               "volontairement la transmission, et une page sans lien sortant est un cul-de-sac.")
+        fix = [
+            "Ancre vide : donner au lien un texte qui décrit la page d'arrivée — une image "
+            "seule comme lien doit porter un `alt` qui joue ce rôle.",
+            "`nofollow` sur un lien INTERNE : le retirer, sauf raison explicite. Il n'économise "
+            "pas de budget de crawl, c'est une idée reçue de longue date.",
+            "URL à plus de trois paramètres : préférer une URL lisible et stable, et déclarer "
+            "un canonical vers elle depuis les variantes paramétrées.",
+            "`llms.txt` : fichier encore facultatif, qui décrit le site aux agents "
+            "conversationnels. À considérer, pas à traiter comme un défaut.",
+        ]
+        verify = ["Relancer un crawl : chaque page visée doit avoir au moins un lien entrant en "
+                  "dofollow et un lien sortant interne."]
+
+    # ── Familles que l'agent CORRIGE : dire quand meme ce qu'il fait ──────────────────────
+    # Un correctif automatique n'exempte pas d'explication. Le proprietaire relit une PR : il
+    # doit pouvoir juger le changement, pas seulement l'accepter.
+    elif lk in {"https_page_has_internal_links_to_http", "https_page_links_to_http_css",
+                "https_page_links_to_http_image", "https_page_links_to_http_javascript"}:
+        why = ("Une page servie en https appelle une ressource ou un lien en http. Le navigateur "
+               "bloque ou signale ce contenu mixte, et l'internaute voit un avertissement de "
+               "sécurité sur une page qui, elle, est parfaitement sécurisée.")
+        fix = ["Réécrire ces URL en https quand l'hôte le sert déjà — c'est le cas ici, "
+               "puisque la même adresse répond en https.",
+               "L'agent applique cette réécriture mécaniquement : elle ne change que le schéma, "
+               "jamais la destination."]
+        verify = ["Recharger la page : plus aucun avertissement de contenu mixte dans la console."]
+
+    elif lk in {"page_has_redirected_css", "page_has_redirected_image",
+                "page_has_redirected_javascript"}:
+        why = ("La page référence une ressource qui répond par une redirection. Chaque image, "
+               "script ou feuille de style ainsi appelée coûte un aller-retour de plus avant de "
+               "s'afficher — sur une page qui en compte plusieurs, cela se voit.")
+        fix = ["Remplacer l'adresse par sa destination FINALE, celle que la redirection désigne.",
+               "L'agent connaît cette destination : elle est mesurée pendant le crawl, il n'y a "
+               "donc rien à deviner."]
+        verify = ["`curl -I` sur chaque ressource : la première réponse doit être un 200."]
+
+    elif lk == "page_has_links_to_redirect":
+        why = ("Les liens de la page passent par une redirection avant d'atteindre leur "
+               "destination. Une redirection sert aux visiteurs venus d'ailleurs ; à l'intérieur "
+               "du site, elle ne fait qu'ajouter un saut et diluer le signal du lien.")
+        fix = ["Faire pointer chaque lien interne directement sur l'URL finale."]
+        verify = ["Relancer un crawl : aucun lien interne ne doit plus figurer dans cette famille."]
+
+    elif lk == "double_slash_in_url":
+        why = ("Une URL du site contient une double barre (`/blog//article`). Le serveur la sert "
+               "souvent malgré tout, mais les moteurs y voient une adresse DIFFÉRENTE de la "
+               "version propre : deux URL pour une page, et le signal se partage entre elles.")
+        fix = ["Corriger le lien à la source — c'est presque toujours une concaténation où un "
+               "segment porte déjà sa barre finale."]
+        verify = ["Relancer un crawl : la variante à double barre ne doit plus être découverte."]
+
+    elif lk == "missing_alt_text":
+        why = ("Des images n'ont pas d'attribut `alt`. Il sert d'abord aux personnes qui "
+               "naviguent au lecteur d'écran, et accessoirement aux moteurs, qui n'ont que ce "
+               "texte pour savoir ce que l'image montre.")
+        fix = ["Décrire ce que l'image APPORTE à la page, en une courte phrase.",
+               "Une image purement décorative prend un `alt` VIDE (`alt=\"\"`) : c'est la façon "
+               "correcte de dire au lecteur d'écran de l'ignorer."]
+        verify = ["Relancer un crawl : plus aucune image sans attribut `alt` sur les pages visées."]
+
+    elif lk in {"multiple_title_tags", "multiple_meta_description_tags"}:
+        why = ("La page déclare plusieurs fois la même balise. Les moteurs n'en retiennent "
+               "qu'une, et rien ne garantit que ce soit celle que vous vouliez : c'est un choix "
+               "que vous laissez faire à leur place.")
+        fix = ["Ne garder qu'une seule occurrence, celle qui décrit vraiment la page.",
+               "Chercher la cause : le plus souvent un gabarit partagé qui pose déjà la balise "
+               "que la page repose ensuite."]
+        verify = ["Afficher le source de la page servie : une seule occurrence de la balise."]
+
+    elif lk == "sitemap_noindex_page":
+        why = ("Le sitemap propose aux moteurs une page qui leur interdit ensuite de l'indexer. "
+               "Les deux signaux se contredisent : vous demandez l'exploration d'une page que "
+               "vous refusez de voir indexée.")
+        fix = ["Trancher : soit la page mérite d'être indexée et le `noindex` part, soit elle "
+               "ne le mérite pas et elle sort du sitemap.",
+               "Dans le doute, la sortir du sitemap : c'est le geste réversible des deux."]
+        verify = ["Relancer un crawl : aucune URL du sitemap ne doit porter de `noindex`."]
+
+    elif lk == "viewport_not_set":
+        why = ("Sans balise `viewport`, un mobile affiche la page comme un écran de bureau "
+               "réduit : texte minuscule, zoom obligatoire. Google indexe d'abord la version "
+               "mobile, donc c'est cette version-là qu'il juge.")
+        fix = ["Ajouter `<meta name=\"viewport\" content=\"width=device-width, "
+               "initial-scale=1\">` dans le `<head>`, idéalement dans le gabarit partagé."]
+        verify = ["Ouvrir la page sur un mobile ou en mode responsive : le texte doit être "
+                  "lisible sans zoomer."]
 
     else:
         why = f"Issue détectée: {label}. Elle peut impacter SEO/UX selon le contexte."
