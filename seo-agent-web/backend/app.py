@@ -17779,7 +17779,11 @@ _SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
 # Every family repaired inside the sitemap file. They must never page-target: their impacted
 # URLs are the pages the sitemap TALKS ABOUT, not the file to edit.
 # Removal, not rewriting: there is no replacement URL for a page that should not be listed.
-_SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page"}
+# Deux raisons de retirer une entree, un seul geste. Le sitemap est ce qu'on SOUMET aux moteurs :
+# une URL qui repond 4xx y est une promesse vide, exactement comme une page en noindex. Mesure du
+# 15/09/2026 : sur les 100 familles en attente d'un correcteur, NEUF seulement se declenchent sur
+# le parcours, et celle-ci etait la seule a la fois vue et mecaniquement reparable.
+_SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page", "sitemap_4xx_page"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
 _ROBOTS_KEYS = {"sitemap_not_in_robots"}
@@ -21379,9 +21383,13 @@ def _prepare_issue_fix(
         # A generated sitemap holds no literal <loc> to delete; there the fix is an exclusion
         # rule in the generator's config, which only the model can write.
         out["rewriter_ai_fallback"] = True
+        _motif = ("repondent en ERREUR (4xx) : le sitemap promet aux moteurs des pages qui "
+                  "n'existent pas"
+                  if issue_key.startswith("sitemap_4xx")
+                  else "portent noindex : le sitemap les propose et la page les refuse")
         out["extra_hint"] = (
-            "Ces URL sont listees dans le sitemap alors que les pages elles-memes portent "
-            "noindex. Retire EXACTEMENT ces entrees, aucune autre.\n"
+            "Ces URL sont listees dans le sitemap alors qu'elles " + _motif + ". "
+            "Retire EXACTEMENT ces entrees, aucune autre.\n"
             "Si le sitemap est GENERE (app/sitemap.ts, astro.config, next-sitemap.config, "
             "nuxt.config, gatsby-config, plugin Jekyll/Hugo), ajoute-y une regle d'exclusion "
             "plutot que d'editer un fichier XML. Cette regle doit filtrer sur le signal que la "
@@ -21389,8 +21397,9 @@ def _prepare_issue_fix(
             "que le generateur lit deja) et surtout PAS sur un motif d'URL : un motif attrape "
             "aussi les pages indexables qui partagent le meme prefixe, et les retirer du sitemap "
             "serait une nouvelle anomalie. N'ajoute pas de liste d'URL en dur si le champ existe. "
-            "Ne retire jamais le noindex des pages : c'est l'autre moitie de la contradiction, "
-            "et ce n'est pas celle qu'on corrige ici.\n"
+            "Ne retire jamais le noindex des pages, et ne cherche pas a CREER celles qui "
+            "manquent : c'est l'autre moitie du probleme, et ce n'est pas celle qu'on corrige "
+            "ici.\n"
             + "\n".join(f"- {u}" for u in list(impacted)[:20])
         )
         # The generator maps over a type declared in ANOTHER file. Without it the model can only
