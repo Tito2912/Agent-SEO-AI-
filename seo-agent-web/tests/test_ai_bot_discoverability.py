@@ -176,24 +176,41 @@ def test_bloquer_l_entrainement_ne_declenche_aucune_famille_de_RECHERCHE():
 
 # ── Les deux dernieres familles de la section : lenteur et ressemblance ──────────────────────
 
-def test_une_page_lente_est_vue_du_point_de_vue_du_ROBOT():
-    """`elapsed_ms` mesure jusqu'au HTML complet, sans rendu JS — ce qu'aucun de ces agents
-    n'execute. C'est ce qui distingue cette famille de `slow_page`, qui parlait d'un visiteur
-    muni d'un navigateur."""
+def test_une_page_lente_est_jugee_sur_son_TEMPS_AU_PREMIER_OCTET():
     m = _audit()
     lente, rapide = _page(BASE + "/lente"), _page(BASE + "/rapide")
-    lente.elapsed_ms = m._AI_CRAWLER_SLOW_MS + 1
-    rapide.elapsed_ms = m._AI_CRAWLER_SLOW_MS - 1
-    issues = m._score_issues([lente, rapide], base_url=BASE)
-    bloc = issues["slow_server_response_for_ai_crawlers"]
+    lente.ttfb_ms = m._AI_CRAWLER_SLOW_MS + 1
+    rapide.ttfb_ms = m._AI_CRAWLER_SLOW_MS - 1
+    bloc = m._score_issues([lente, rapide], base_url=BASE)["slow_server_response_for_ai_crawlers"]
     assert bloc["count"] == 1
     assert bloc["examples"] == [BASE + "/lente"]
 
 
-def test_une_page_sans_mesure_de_temps_n_est_pas_accusee():
+def test_le_temps_de_goto_ne_suffit_PAS_a_accuser_une_page():
+    """Le defaut mesure le 15/09/2026, avant livraison.
+
+    `elapsed_ms` entoure l'appel `goto` de Playwright : il inclut le demarrage du NAVIGATEUR,
+    paye une fois par ouvrier de crawl. Sur un site statique servi par un CDN, il rendait
+    3238 ms pour la page d'accueil quand `curl` la servait en 160 ms — et les trois valeurs
+    aberrantes du rapport correspondaient exactement aux trois ouvriers.
+
+    Facturer ce demarrage au serveur du client aurait signale la page d'ACCUEIL de chaque site
+    comme trop lente pour les robots d'IA. Apres correction, sur le meme site : ttfb median
+    124 ms, maximum 207 ms, famille a zero.
+    """
+    m = _audit()
+    p = _page(BASE + "/accueil")
+    p.elapsed_ms = m._AI_CRAWLER_SLOW_MS * 3
+    p.ttfb_ms = 160
+    assert m._score_issues([p], base_url=BASE)["slow_server_response_for_ai_crawlers"]["count"] == 0
+
+
+def test_une_page_sans_mesure_au_premier_octet_n_est_pas_accusee():
+    """Pas de mesure, pas de verdict."""
     m = _audit()
     sans = _page(BASE + "/inconnue")
-    sans.elapsed_ms = None
+    sans.ttfb_ms = None
+    sans.elapsed_ms = m._AI_CRAWLER_SLOW_MS * 5
     assert m._score_issues([sans], base_url=BASE)["slow_server_response_for_ai_crawlers"]["count"] == 0
 
 

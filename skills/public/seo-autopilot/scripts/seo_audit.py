@@ -469,6 +469,9 @@ class PageData:
     twitter_image: str | None = None
 
     text_word_count: int | None = None
+    # Temps au PREMIER OCTET, lu dans la chronologie du navigateur : il exclut le
+    # demarrage de celui-ci, que `elapsed_ms` inclut et qui ne doit rien au serveur.
+    ttfb_ms: int | None = None
     # Esquisse compacte du texte, pour comparer deux pages sans conserver leur contenu.
     content_sketch: tuple[int, ...] = ()
     images_total: int = 0
@@ -3772,6 +3775,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     status_holder: list[int] = []
     final_url_holder: list[str] = []
     elapsed_holder: list[int] = []
+    ttfb_holder: list[int] = []
     html_holder: list[str] = []
 
     async def _fetch_async(browser) -> None:
@@ -3802,6 +3806,27 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             elapsed_holder.append(int(round((_time.monotonic() - t0) * 1000)))
 
             if response is not None:
+                # Le vrai temps au PREMIER OCTET, lu dans la chronologie de Playwright plutot
+                # que mesure autour de `goto`. Mesure du 15/09/2026 : sur un site statique servi
+                # par un CDN, `goto` rendait 3238 ms pour la page d'accueil quand `curl` la
+                # servait en 160 ms — la difference etant le demarrage du navigateur, paye une
+                # fois par ouvrier de crawl. Les trois valeurs aberrantes du rapport
+                # correspondaient exactement aux trois ouvriers. Facturer ce demarrage au serveur
+                # du client aurait signale la page d'accueil de CHAQUE site comme trop lente.
+                try:
+                    # `timing` est une PROPRIETE dans l'API Python, pas une coroutine. L'appeler
+                    # avec `await` levait une exception que le `except` avalait sans bruit : la
+                    # mesure etait donc toujours absente, et seule une verification sur un crawl
+                    # reel l'a montre — les tests unitaires, eux, n'en savent rien.
+                    _t = response.request.timing
+                    if callable(_t):
+                        _t = _t()
+                    _rs = float((_t or {}).get("responseStart") or -1)
+                    _ss = float((_t or {}).get("requestStart") or 0)
+                    if _rs >= 0:
+                        ttfb_holder.append(int(round(max(0.0, _rs - max(0.0, _ss)))))
+                except Exception:
+                    pass
                 status_holder.append(response.status)
                 final_url_holder.append(pw_page.url)
                 headers = await response.all_headers()
@@ -3892,6 +3917,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     page.status_code = status_holder[0] if status_holder else None
     page.final_url = final_url_holder[0] if final_url_holder else url
     page.elapsed_ms = elapsed_holder[0] if elapsed_holder else None
+    page.ttfb_ms = ttfb_holder[0] if ttfb_holder else None
     page.redirect_chain = redirect_chain
     page.redirect_statuses = redirect_statuses
     # Fallback: infer a redirect from a URL change ONLY when the navigation did NOT
@@ -7117,7 +7143,7 @@ def _score_issues(
     # l'experience d'un visiteur muni d'un navigateur.
     _slow_for_ai = sorted(
         _final_url(p) for p in indexable_html_pages
-        if isinstance(p.elapsed_ms, int) and p.elapsed_ms >= _AI_CRAWLER_SLOW_MS)
+        if isinstance(p.ttfb_ms, int) and p.ttfb_ms >= _AI_CRAWLER_SLOW_MS)
     issues["slow_server_response_for_ai_crawlers"] = _issue_block(
         "slow_server_response_for_ai_crawlers", _slow_for_ai)
 
