@@ -49,6 +49,10 @@ SITE_WIDE = {
     "sitemap_http_urls_for_https",
     # Meme nature : l'echafaudage retire la directive `Sitemap:` de robots.txt.
     "sitemap_not_in_robots",
+    # Meme fichier, meme portee : l'echafaudage y ferme un bot de recherche et un bot
+    # d'entrainement. Ces familles parlent du SITE, pas d'une page du parcours.
+    "indexable_page_blocked_from_some_ai_search_bots",
+    "inconsistent_ai_training_bot_policy",
     "redirect_3xx", "http_to_https_redirect", "missing_canonical",
     "meta_description_too_short", "meta_description_too_short_indexable",
     "meta_description_too_short_not_indexable",

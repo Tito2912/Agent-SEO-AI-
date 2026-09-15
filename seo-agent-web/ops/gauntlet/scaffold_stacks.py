@@ -212,17 +212,31 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
     #
     # On RETIRE la ligne plutot que de reecrire le fichier : celui de Jekyll en porte sept, et
     # les ecraser ferait disparaitre des regles qui n'ont rien a voir avec cette famille.
+    # FAMILLES VISEES (en plus de `sitemap_not_in_robots`) :
+    #   indexable_page_blocked_from_some_ai_search_bots — UN bot de recherche est ferme, les
+    #       autres restent ouverts. « Certains » et non « tous » : c'est le cas frequent, celui
+    #       d'une regle recopiee quelque part sans vue d'ensemble.
+    #   inconsistent_ai_training_bot_policy — UN bot d'entrainement est ferme, les autres
+    #       ouverts. Tout fermer serait une position coherente et ne leverait rien : c'est
+    #       precisement le melange qu'on veut voir signale.
+    #
+    # Ces regles ne genent pas notre propre crawl : il s'annonce sous son agent a lui.
+    _regles_ia = ("\n# FAMILLE VISEE : indexable_page_blocked_from_some_ai_search_bots\n"
+                  "User-agent: PerplexityBot\nDisallow: /\n"
+                  "\n# FAMILLE VISEE : inconsistent_ai_training_bot_policy\n"
+                  "User-agent: GPTBot\nDisallow: /\n")
     robots = static / "robots.txt"
     if robots.exists():
         texte = io.open(robots, encoding="utf-8").read()
         sans = "\n".join(ligne for ligne in texte.split("\n")
                          if not re.match(r"\s*sitemap\s*:", ligne, re.I))
-        if sans != texte:
-            io.open(robots, "w", encoding="utf-8", newline="\n").write(sans.rstrip("\n") + "\n")
-            done.append("robots.txt")
     else:
-        io.open(robots, "w", encoding="utf-8", newline="\n").write(
-            "User-agent: *\nAllow: /\n")
+        sans = "User-agent: *\nAllow: /\n"
+    if "PerplexityBot" not in sans:
+        sans = sans.rstrip("\n") + "\n" + _regles_ia
+    voulu = sans.rstrip("\n") + "\n"
+    if not robots.exists() or io.open(robots, encoding="utf-8").read() != voulu:
+        io.open(robots, "w", encoding="utf-8", newline="\n").write(voulu)
         done.append("robots.txt")
 
     # ── la redirection dont `link-to-redirect` a besoin ───────────────────────────────────

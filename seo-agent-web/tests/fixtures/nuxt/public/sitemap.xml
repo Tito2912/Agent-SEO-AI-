@@ -3,6 +3,7 @@
 <url><loc>http://127.0.0.1:8746/</loc></url>
 <url><loc>http://127.0.0.1:8746/blog</loc></url>
 <url><loc>http://127.0.0.1:8746/a-propos</loc></url>
+  <url><loc>https://noyaru-stack-nuxt.netlify.app/page-absente</loc></url>
   <url><loc>https://noyaru-stack-nuxt.netlify.app/gauntlet/</loc></url>
   <url><loc>https://noyaru-stack-nuxt.netlify.app/gauntlet/missing-title/</loc></url>
   <url><loc>https://noyaru-stack-nuxt.netlify.app/gauntlet/missing-meta-description/</loc></url>

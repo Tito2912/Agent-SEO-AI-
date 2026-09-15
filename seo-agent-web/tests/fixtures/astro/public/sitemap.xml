@@ -5,6 +5,7 @@
 <url><loc>http://127.0.0.1:8741/a-propos</loc></url>
 <url><loc>http://127.0.0.1:8741/liens/</loc></url>
 <url><loc>http://127.0.0.1:8741/en</loc></url>
+  <url><loc>https://noyaru-stack-astro.netlify.app/page-absente</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/missing-title</loc></url>
   <url><loc>https://noyaru-stack-astro.netlify.app/gauntlet/missing-meta-description</loc></url>
