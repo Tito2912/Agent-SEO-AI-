@@ -119,3 +119,33 @@ def test_la_consigne_dit_de_ne_pas_inventer_de_destination():
     prep = _prep("canonical_points_to_4xx", "https://x.fr/disparue")
     assert "elle-meme" in prep["extra_hint"].lower().replace("ê", "e")
     assert PAGE in prep["extra_hint"]
+
+
+# ── Le ciblage, paye au premier passage ──────────────────────────────────────────────────────
+# Mesure du 15/09/2026, premier passage sur les neuf stacks. Pour UNE page signalee, le
+# resolveur a rendu CINQ fichiers, et le repli IA a fait le reste : le modele a pris l'unique
+# paire qu'on lui montrait et a ecrit l'URL de cette page sur le canonical de TROIS PAGES SAINES.
+# Elles se seraient desindexees a son profit. Le sitemap y est passe aussi.
+#
+# C'est le mode d'echec que `_og_fallback_allowed` documente depuis le 10/09 : la bonne valeur
+# est PAR PAGE, et rien dans un fichier ne dit au modele a quelle page ce fichier correspond.
+
+
+def test_la_famille_cible_la_page_signalee_et_pas_le_site():
+    assert "canonical_points_to_4xx" in m._PER_PAGE_CONTENT_KEYS
+    assert "canonical_points_to_5xx" in m._PER_PAGE_CONTENT_KEYS
+
+
+def test_AUCUN_repli_modele_meme_avec_une_seule_paire():
+    """Montrer une valeur PAR PAGE a un modele qui edite un autre fichier, c'est lui demander
+    d'y poser le canonical d'une page voisine."""
+    prep = _prep("canonical_points_to_4xx", "https://x.fr/disparue")
+    assert prep["rewriter_ai_fallback"] is False
+    assert prep["link_rewriter"] is not None
+
+
+def test_un_canonical_construit_par_du_code_reste_non_corrige():
+    """Le prix assume du refus de repli : sans litteral, on ne touche a rien."""
+    paires, _ = m._canonical_self_pairs(_bloc("https://x.fr/disparue"), PAGES)
+    code = 'export const metadata = { alternates: { canonical: getSiteUrl(path) } };\n'
+    assert m._rewrite_head_url_values(code, paires) == (code, 0)

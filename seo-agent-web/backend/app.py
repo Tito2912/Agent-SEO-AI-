@@ -17433,8 +17433,15 @@ _PER_PAGE_ONLY_KEYS = _with_indexability_variants({
 # `missing_canonical` is here too (the page must be reached) but deliberately NOT in the
 # per-page-only set above: a shared layout that computes the canonical from the route is a
 # perfectly good fix, unlike a shared literal title.
+# `canonical_points_to_4xx/5xx` : la bonne valeur est l'URL de la page ELLE-MEME, donc elle
+# differe pour chaque fichier. Mesure du 15/09/2026 : sans ciblage par page, le resolveur a
+# rendu CINQ fichiers pour UNE page signalee, et le modele a ecrit l'URL de cette page sur le
+# canonical de trois pages saines — elles se seraient desindexees a son profit.
 _PER_PAGE_CONTENT_KEYS = _PER_PAGE_ONLY_KEYS | _with_indexability_variants({
     "multiple_meta_description_tags", "missing_canonical", "duplicate_pages_without_canonical",
+    # Les deux clefs de `_CANONICAL_BROKEN_KEYS`, nommees ici parce que ce tableau est
+    # evalue avant leur declaration.
+    "canonical_points_to_4xx", "canonical_points_to_5xx",
 })
 
 
@@ -21303,9 +21310,12 @@ def _prepare_issue_fix(
             out["url_pairs"] = list(_cp)
             out["evidence"] = [p["from"] for p in _cp]
             out["link_rewriter"] = lambda raw, _p=_cp: _rewrite_head_url_values(raw, _p)  # noqa: E731
-            # Un canonical construit par du code (`getSiteUrl(path)`) n'a aucun litteral a
-            # remplacer. Les valeurs exactes sont dans la consigne.
-            out["rewriter_ai_fallback"] = True
+            # AUCUN repli IA, meme avec une seule paire. La bonne valeur est l'URL de la page
+            # elle-meme : montrer cette valeur a un modele qui edite un AUTRE fichier revient a
+            # lui demander d'y poser le canonical d'une page voisine, et c'est exactement ce
+            # qu'il a fait le 15/09/2026 sur trois pages saines. Un canonical construit par du
+            # code restera donc non corrige — c'est un prix tres inferieur a celui-la.
+            out["rewriter_ai_fallback"] = False
             out["extra_hint"] = (
                 (out["extra_hint"] + "\n" if out["extra_hint"] else "")
                 + "Le canonical de ces pages designe une adresse qui n'existe plus (404/410) : "
