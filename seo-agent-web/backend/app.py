@@ -19460,6 +19460,59 @@ def _drop_duplicate_object_keys(new_content: str, old_content: str) -> tuple[str
 _FRONT_MATTER_EXT = (".md", ".markdown", ".mdx", ".html", ".htm")
 
 
+_TOML_LIGNE_LITTERALE_RE = re.compile(r"^(\s*[A-Za-z0-9_.-]+\s*=\s*)'(.*)'(\s*)$")
+
+
+def _requote_toml_apostrophes(content: str, path: str) -> tuple[str, list[str]]:
+    """Requoter une chaine TOML litterale qui contient une apostrophe. Le parseur a le dernier mot.
+
+    En TOML, `'…'` est une chaine LITTERALE : elle n'accepte aucun echappement, donc l'apostrophe
+    la termine et la suite du titre devient de la syntaxe invalide. `_escape_quotes_in_written_values`
+    ne peut pas aider — son `\\'` resterait tel quel dans le titre servi. C'est pourquoi
+    `_front_matter_parse_error` REFUSAIT ces fichiers, faute de remede sur.
+
+    Il en existe pourtant un, et il ne devine rien : une chaine BASIQUE `"…"` accepte l'apostrophe.
+    Requoter est une transformation mecanique, et surtout VERIFIABLE — on ne garde le resultat que
+    si `tomllib` lit desormais le bloc. Le format reste le juge ; on lui soumet simplement une
+    seconde version avant de renoncer.
+
+    Mesure du 16/09/2026, hugo, deux cycles complets : CINQ refus, tous la meme erreur
+    (« Expected newline or end of document after a statement », ligne 2), tous cette cause. Ils
+    plafonnaient hugo a 85 % la ou les autres stacks depassaient 95 %, et laissaient quatre
+    familles non corrigees — `multiple_h1`, `title_too_long`, `html_lang_attribute_missing`,
+    `hreflang_defined_but_html_lang_missing`.
+
+    Ne fait rien quand le front matter se lit deja : on ne reecrit pas ce qui va bien.
+    """
+    if not content or not path.lower().endswith(_FRONT_MATTER_EXT):
+        return content, []
+    if not _front_matter_parse_error(content, path):
+        return content, []
+    lignes = content.split("\n")
+    if not lignes or lignes[0].strip().lstrip("﻿") != "+++":
+        return content, []
+    fin = next((i for i in range(1, len(lignes)) if lignes[i].strip() == "+++"), -1)
+    if fin < 0:
+        return content, []
+    sortie, notes = list(lignes), []
+    for i in range(1, fin):
+        trouve = _TOML_LIGNE_LITTERALE_RE.match(lignes[i])
+        if not trouve or "'" not in trouve.group(2):
+            continue
+        valeur = trouve.group(2).replace("\\", "\\\\").replace('"', '\\"')
+        sortie[i] = '%s"%s"%s' % (trouve.group(1), valeur, trouve.group(3))
+        notes.append("front matter TOML : %s requote en guillemets doubles (apostrophe dans une "
+                     "chaine litterale)" % trouve.group(1).split("=")[0].strip())
+    if not notes:
+        return content, []
+    candidat = "\n".join(sortie)
+    if _front_matter_parse_error(candidat, path):
+        # La requote n'a pas suffi : la cassure est ailleurs. On rend l'original et le refus
+        # ordinaire s'applique — mieux vaut un fichier non corrige qu'un fichier a moitie repare.
+        return content, []
+    return candidat, notes
+
+
 def _front_matter_parse_error(content: str, path: str) -> str:
     """'' si le front matter se lit, sinon la raison — avec le VRAI analyseur du format.
 
@@ -20259,6 +20312,58 @@ def _canonical_ecrit_dans(content: str) -> str:
     valeurs = {v for v in trouvees
                if v.lower().startswith(("http://", "https://")) and not _VALEUR_ASSEMBLEE_RE.search(v)}
     return valeurs.pop() if len(valeurs) == 1 else ""
+
+
+def _og_url_ecrit_dans(content: str) -> str:
+    """L'og:url que le fichier porte, ou "" si on ne peut pas trancher. Pendant exact de
+    `_canonical_ecrit_dans`, memes passes que `_rewrite_og_url` pour couvrir les neuf idiomes."""
+    trouvees: list[str] = []
+    for tag in _OG_URL_TAG_RE.finditer(content):
+        attr = _CONTENT_ATTR_RE.search(tag.group(0))
+        if attr:
+            trouvees.append(attr.group(3).strip())
+    for obj in _OG_URL_OBJECT_RE.finditer(content):
+        cle = _OG_URL_CONTENT_KEY_RE.search(obj.group(0))
+        if cle:
+            trouvees.append(cle.group(3).strip())
+    for bloc in _OG_BLOCK_INLINE_RE.finditer(content):
+        cle = _OG_URL_INLINE_KEY_RE.search(bloc.group(0))
+        if cle:
+            trouvees.append(cle.group(3).strip())
+    valeurs = {v for v in trouvees
+               if v.lower().startswith(("http://", "https://")) and not _VALEUR_ASSEMBLEE_RE.search(v)}
+    return valeurs.pop() if len(valeurs) == 1 else ""
+
+
+def _align_og_url_with_added_canonical(new_content: str, old_content: str) -> tuple[str, list[str]]:
+    """Une famille qui AJOUTE un canonical doit garder og:url au pas.
+
+    Le troisieme chemin de la meme cause, et le seul que relire le canonical sur la branche ne
+    pouvait pas fermer. Mesure du 16/09/2026, page `no-canonical-b` :
+
+        avant   (aucun canonical)            og:url -> lui-meme
+        apres   canonical -> la maitresse    og:url -> lui-meme, donc DESORMAIS en desaccord
+
+    `duplicate_pages_without_canonical` a raison de designer la page maitresse. Mais la page
+    n'apparait dans AUCUNE liste de la famille og:url : sans canonical au crawl, il n'y a pas de
+    desaccord a signaler, donc pas de paire, donc rien a reecrire. L'anomalie n'existe qu'APRES
+    la correction — c'est donc a la correction qui la cree de la refermer.
+
+    Ne se declenche que si le canonical etait ABSENT avant et present apres : quand il existait
+    deja, le cas appartient a la famille og:url, qui le traite avec les paires du crawl.
+    """
+    if _canonical_ecrit_dans(old_content):
+        return new_content, []
+    canonical = _canonical_ecrit_dans(new_content)
+    if not canonical:
+        return new_content, []
+    og = _og_url_ecrit_dans(new_content)
+    if not og or _norm_url_for_match(og) == _norm_url_for_match(canonical):
+        return new_content, []
+    out, n = _rewrite_og_url(new_content, [{"page": "", "from": og, "to": canonical}])
+    if not n:
+        return new_content, []
+    return out, ["og:url aligne sur le canonical que ce correctif vient d'ajouter : %s" % canonical]
 
 
 def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
@@ -21884,7 +21989,11 @@ def _deep_patch_issue_files(
         _lang_notes: list[str] = []
         if site_lang and index and repo_index.is_shared_path(index, path):
             new_content, _lang_notes = _keep_site_lang(new_content, raw, site_lang)
-        for _n in _len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes:
+        # APRES les garde-fous qui reparent la FORME : celui-ci LIT deux valeurs dans le fichier
+        # patche, et lire un litteral mal echappe ou une accolade en trop donnerait une valeur
+        # fausse. Meme regle que le plafond de longueur, pour la meme raison.
+        new_content, _og_notes = _align_og_url_with_added_canonical(new_content, raw)
+        for _n in _len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes + _og_notes:
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
@@ -21898,6 +22007,12 @@ def _deep_patch_issue_files(
         # Le format lui-meme a le dernier mot : ce qui ne se lit pas ne se commite pas. Mesure
         # sur Hugo — trois fichiers au front matter TOML invalide ont fait echouer le
         # deploiement, alors que le journal du correcteur affichait « zero erreur ».
+        # Une derniere chance AVANT le refus, et une seule : requoter une chaine litterale TOML
+        # que l'apostrophe a coupee. Ce n'est pas un garde-fou de plus qui devine — la version
+        # requotee n'est gardee que si `tomllib` la lit.
+        new_content, _toml_notes = _requote_toml_apostrophes(new_content, path)
+        for _n in _toml_notes:
+            logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         _fm_error = _front_matter_parse_error(new_content, path)
         if _fm_error:
             logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _fm_error)
