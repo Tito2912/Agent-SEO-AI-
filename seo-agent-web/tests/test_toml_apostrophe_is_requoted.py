@@ -46,9 +46,26 @@ TITRE = "Parcours d'obstacles : pages de test"
 
 
 def _fichier(ligne_titre: str) -> str:
+    """Le front matter d'une page hugo du banc, avec ses chaines MULTILIGNES.
+
+    Ma premiere fixture n'en portait pas, et elle validait une reparation qui detruisait les
+    vrais fichiers : le motif d'une ligne voit `raw_head = '''` comme une chaine litterale dont
+    la valeur serait une apostrophe, et la requotait en `raw_head = "'"`. Chaque page hugo porte
+    `raw_head` et `raw_body` — donc la reparation ne pouvait JAMAIS servir sur cette stack, la
+    seule pour laquelle elle a ete ecrite.
+
+    Une fixture plus simple que la realite ne prouve rien sur la realite.
+    """
     return ("+++\n"
             'url = "/gauntlet/missing-title/"\n'
             f"{ligne_titre}\n"
+            "html_attrs = ' lang=\"fr\"'\n"
+            "raw_head = '''\n"
+            "  <meta name=\"viewport\" content=\"width=device-width\" />\n"
+            "'''\n"
+            "raw_body = '''\n"
+            "  <p>Le corps de la page.</p>\n"
+            "'''\n"
             "+++\n\n"
             "Le corps de la page.\n")
 
@@ -91,6 +108,25 @@ def test_une_valeur_contenant_un_guillemet_double_est_echappee() -> None:
     assert notes, "la reparation aurait du s'appliquer"
     bloc = repare.split("+++")[1]
     assert tomllib.loads(bloc)["title"] == titre, repare
+
+
+def test_les_chaines_multilignes_ne_sont_JAMAIS_touchees() -> None:
+    """`raw_head = '''` n'est pas une chaine litterale d'une ligne, et la requoter detruit tout.
+
+    Mesure du 16/09/2026 : la premiere version de la reparation corrompait `raw_head` et
+    `raw_body`, `tomllib` refusait toujours, la fonction rendait donc l'original — et hugo
+    continuait de refuser ses fichiers. Le controle final a evite le degat, mais la reparation
+    ne servait jamais sur la seule stack pour laquelle elle existe.
+    """
+    repare, notes = app_module._requote_toml_apostrophes(_fichier(f"title = '{TITRE}'"), CHEMIN)
+    assert notes, "la reparation aurait du s'appliquer"
+    bloc = repare.split("+++")[1]
+    lu = tomllib.loads(bloc)
+    assert lu["title"] == TITRE
+    assert "viewport" in lu["raw_head"], lu["raw_head"]
+    assert "<p>" in lu["raw_body"], lu["raw_body"]
+    assert lu["html_attrs"] == ' lang="fr"', lu["html_attrs"]
+    assert "raw_head = '''" in repare, "l'ouverture multiligne a ete reecrite"
 
 
 def test_un_fichier_qui_n_est_pas_du_front_matter_est_ignore() -> None:

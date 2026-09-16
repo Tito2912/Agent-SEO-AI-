@@ -19495,8 +19495,24 @@ def _requote_toml_apostrophes(content: str, path: str) -> tuple[str, list[str]]:
     if fin < 0:
         return content, []
     sortie, notes = list(lignes), []
+    dans_multiligne = False
     for i in range(1, fin):
-        trouve = _TOML_LIGNE_LITTERALE_RE.match(lignes[i])
+        ligne = lignes[i]
+        # Les chaines MULTILIGNES `'''…'''` sont hors sujet, et les toucher detruit le fichier :
+        # le motif d'une ligne voit `raw_head = '''` comme une chaine litterale dont la valeur
+        # serait une apostrophe, et la requoterait en `raw_head = "'"`. Mesure du 16/09/2026 sur
+        # hugo — dont chaque page porte `raw_head` et `raw_body` en multiligne : la reparation
+        # corrompait le bloc, `tomllib` refusait toujours, et la fonction rendait l'original.
+        # Le controle final a donc evite le degat, mais la reparation ne servait jamais.
+        if dans_multiligne:
+            if "'''" in ligne:
+                dans_multiligne = False
+            continue
+        if "'''" in ligne:
+            if ligne.count("'''") % 2 == 1:
+                dans_multiligne = True
+            continue
+        trouve = _TOML_LIGNE_LITTERALE_RE.match(ligne)
         if not trouve or "'" not in trouve.group(2):
             continue
         valeur = trouve.group(2).replace("\\", "\\\\").replace('"', '\\"')
