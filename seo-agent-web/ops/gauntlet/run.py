@@ -12,6 +12,16 @@ import json
 import os
 import sys
 
+# La console Windows est en cp1252 : le bilan porte des fleches et des tirets cadratins, et le
+# script mourait en UnicodeEncodeError APRES avoir fait tout son travail — donc apres avoir
+# pousse ses commits, en n'affichant pas les verdicts qui motivent les refus. Invisible sur la
+# CI Linux, qui est en UTF-8.
+for _flux in (sys.stdout, sys.stderr):
+    try:
+        _flux.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 sys.path.insert(0, "seo-agent-web")
 for line in open("seo-agent-web.env", encoding="utf-8", errors="replace"):
     line = line.strip()
@@ -151,7 +161,8 @@ for key in ordered:
     # stacks a cout nul, qu'on peut donc lancer aussi souvent qu'on veut. C'est exactement la
     # part qui attrape les defauts de CIBLAGE et d'IDIOME — les trois de ce jour en etaient.
     mecanique = prep["link_rewriter"] is not None and not prep["rewriter_ai_fallback"]
-    if os.environ.get("GAUNTLET_FREE") and not mecanique:
+    gratuit = bool(os.environ.get("GAUNTLET_FREE"))
+    if gratuit and not mecanique:
         results.append((key, "IGNOREE (payante)", "", 0, 0))
         continue
     try:
@@ -164,6 +175,14 @@ for key in ordered:
             rewriter_is_ai=bool(prep["rewriter_is_ai"]), index=idx,
             targets_override=prep.get("targets_override"),
             page_side=bool(prep.get("page_side")),
+            # Une famille mecanique ECRIT sans modele, mais le CHOIX du fichier en appelait un
+            # quand meme : `_resolve_issue_targets` finit par deux selecteurs IA, et pour les
+            # familles d'actifs `want_page_targeting` est faux, donc ils partaient a chaque fois.
+            # Mesure du 16/09/2026 sur static-html : sept appels dans une passe annoncee gratuite,
+            # tous repris par le repli OpenAI donc factures. En mode gratuit, on s'en tient au
+            # ciblage deterministe — et une famille qui n'a plus de cible sans le modele le dit,
+            # ce qui est le renseignement qu'on veut.
+            allow_ai_targeting=not gratuit,
             # Le meme fait que l'endpoint passe : la langue mesuree sur le site. Sans elle, le
             # banc ne testerait pas ce que le produit fait.
             site_lang=m._dominant_site_lang(report.get("pages")))

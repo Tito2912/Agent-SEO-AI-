@@ -18978,10 +18978,23 @@ def _og_url_pairs_from_pages(
 
     The correct value is not a matter of taste: og:url must name the URL the page declares as
     canonical. Both are already measured, so the fix needs no model at all.
+
+    Deux alignements sont pourtant REFUSES, et pour une seule et meme raison : le canonical ne
+    fait autorite que s'il designe une adresse tenable. S'il est en clair, ou s'il pointe une page
+    definitivement absente, c'est LUI l'anomalie — sa propre famille la corrige, et og:url doit
+    etre laisse tranquille. Recopier un canonical casse, c'est propager le defaut sur une balise
+    qui allait bien.
     """
     if not pages:
         return []
     wanted = {_norm_url_for_match(u) for u in (impacted or [])}
+    # Les adresses que le crawl a vues DEFINITIVEMENT absentes. Un canonical qui en designe une
+    # n'est pas une autorite dont on recopie la valeur : c'est l'anomalie d'a cote.
+    absentes = {
+        _norm_url_for_match(str(p.get("url") or ""))
+        for p in pages
+        if isinstance(p, dict) and p.get("status_code") in _STATUTS_ABSENCE_DEFINITIVE
+    }
     out: list[dict[str, str]] = []
     vus: set[tuple[str, str]] = set()
     for page in pages:
@@ -19005,10 +19018,24 @@ def _og_url_pairs_from_pages(
         # aucune paire — `/blog` face a `/blog/`, et `https://` face a `http://`. Aucune
         # correction possible pour elles, et rien nulle part ne le disait.
         if og.lower().startswith("https://") and canonical.lower().startswith("http://"):
-            # Le seul alignement qu'on refuse : recopier un canonical en clair dans og:url
-            # ecrirait une URL non securisee sur la page. Le defaut de cette page est son
-            # canonical, pas son og:url ; `canonical_from_https_to_http` le corrige, et la
-            # famille se resout alors d'elle-meme.
+            # Premier alignement refuse : recopier un canonical en clair dans og:url ecrirait une
+            # URL non securisee sur la page. Le defaut de cette page est son canonical, pas son
+            # og:url ; `canonical_from_https_to_http` le corrige, et la famille se resout alors
+            # d'elle-meme.
+            continue
+        if absentes and _norm_url_for_match(canonical) in absentes:
+            # SECOND alignement refuse, et c'est le meme raisonnement : une destination qui
+            # n'existe plus. Le canonical fait autorite tant qu'il designe quelque chose ; quand
+            # il pointe une 404, c'est LUI l'anomalie (`canonical_points_to_4xx`), et recopier sa
+            # valeur dans og:url ne repare rien — cela propage le defaut sur une balise qui etait
+            # juste.
+            #
+            # Mesure du 16/09/2026, static-html, `/gauntlet/canonical-404` : canonical vers
+            # `/page-absente` (404), og:url correct. Apres un passage du correcteur les deux
+            # valeurs avaient ETE ECHANGEES — canonical repare par sa propre famille, og:url
+            # desormais pointe sur la 404. Sur un site client c'est une regression livree en PR,
+            # et elle est invisible au bilan : la famille tombe de 5 a 1 et ressemble a un
+            # succes partiel.
             continue
         if (og, canonical) in vus:
             continue
@@ -20849,11 +20876,17 @@ def _resolve_issue_targets(
     impacted_urls: list[str], located: list[str], max_files: int,
     evidence: list[str] | None = None, wants_page_targeting: bool = False,
     page_side: bool = False,
+    allow_ai: bool = True,
     ai_map: "Callable[[], list[str]] | None" = None,
     ai_pick: "Callable[[], list[str]] | None" = None,
 ) -> list[str]:
     """Decide WHICH repo files to patch for one issue. Pure and deterministic apart from the
     two optional AI fallbacks, so the whole ordering can be tested without network.
+
+    `allow_ai=False` drops those two fallbacks entirely, so the answer is reached without a
+    single model call. A caller that must not spend anything says so HERE, because the cost of
+    an issue is not only the value written: choosing the file is a call of its own, and it runs
+    even for a family whose rewrite is purely mechanical.
 
     Priority: evidence hits (`located`, already resolved by the caller) → per-page sources from
     the repo route map → conventional-path guesses for URLs the map missed → hardcoded candidates
@@ -20961,7 +20994,7 @@ def _resolve_issue_targets(
                     break
     # AI mapping of impacted URLs → source files. Skipped when the repo map already resolved
     # EVERY impacted URL: the AI could only add noise there (and costs a call).
-    if impacted_urls and not index_resolved_all:
+    if allow_ai and impacted_urls and not index_resolved_all:
         _mapper = ai_map or (lambda: _ai_map_urls_to_files(
             issue_key=issue_key, issue_label=issue_label, urls=impacted_urls,
             all_paths=all_paths, limit=max_files, evidence=evidence,
@@ -20970,7 +21003,7 @@ def _resolve_issue_targets(
             if f not in targets:
                 targets.append(f)
     # Last resort: let the AI pick from the tree.
-    if not targets:
+    if allow_ai and not targets:
         _picker = ai_pick or (lambda: _ai_pick_repo_files(issue_key, issue_label, all_paths, limit=2))
         for f in _picker():
             if f not in targets:
@@ -21470,6 +21503,11 @@ def _deep_patch_issue_files(
     rewriter_is_ai: bool = False,
     targets_override: list[str] | None = None,
     page_side: bool = False,
+    # False interdit TOUT appel au modele pour choisir les fichiers. Un appelant qui ne doit
+    # rien depenser doit le dire ici : le garde-fou de cout du banc ne regardait que l'ECRITURE
+    # de la valeur, et laissait passer un appel de ciblage par famille — mesure du 16/09/2026,
+    # sept appels sur une passe `GAUNTLET_FREE=1` annoncee a cout nul.
+    allow_ai_targeting: bool = True,
     index: dict[str, Any] | None = None,
     # La langue que le crawl mesure sur le SITE. Un fichier partage ne peut pas la contredire :
     # voir `_keep_site_lang`. Vide = le crawl n'a pas su la dire, et le garde-fou reste inerte.
@@ -21533,6 +21571,7 @@ def _deep_patch_issue_files(
             all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
             impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
             wants_page_targeting=link_rewriter is not None, page_side=page_side,
+            allow_ai=allow_ai_targeting,
         )
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     _idiom = repo_index.stack_idiom_hint(index) if index else ""
