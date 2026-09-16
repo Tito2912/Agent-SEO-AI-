@@ -57,3 +57,4 @@ tools/
 Thumbs.db
 .idea/
 .vscode/
+.venv-wsl/

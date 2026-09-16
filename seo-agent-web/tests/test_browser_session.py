@@ -146,14 +146,23 @@ def test_the_failing_page_still_reports_its_own_error(tracker: _Tracker) -> None
 def test_each_thread_gets_its_own_browser(tracker: _Tracker) -> None:
     # Playwright objects are bound to the loop that created them, so a browser shared across
     # threads would be a use-after-loop crash rather than an optimisation.
-    seen: list[int] = []
+    # On garde les OBJETS, pas leurs `id()`. CPython ne garantit l'unicite d'un `id()` qu'entre
+    # objets VIVANTS EN MEME TEMPS : ici chaque fil relachait sa session (`close()` puis la
+    # variable de fil remise a None) avant que le suivant ne cree la sienne, donc l'allocateur
+    # pouvait rendre la meme adresse. Le test comparait alors des adresses RECYCLEES.
+    #
+    # Vu en CI le 16/09/2026 : `set([…509056, …502576, …509056])` — le premier et le troisieme
+    # fil portaient la meme adresse, et le test criait au partage de session sur trois sessions
+    # bel et bien distinctes. Il ne mesurait pas ce qu'il affirmait, et clignotait au hasard des
+    # allocations, sans lien avec le commit qui le declenchait.
+    seen: list[object] = []
     lock = threading.Lock()
 
     def _work() -> None:
         seo_audit._run_in_browser(_noop, timeout_s=5)
         session = seo_audit._browser_session()
         with lock:
-            seen.append(id(session))
+            seen.append(session)  # la liste tient la reference jusqu'a l'assertion
         session.close()
         seo_audit._BROWSER_TLS.session = None
 
@@ -162,7 +171,9 @@ def test_each_thread_gets_its_own_browser(tracker: _Tracker) -> None:
         t.start()
     for t in threads:
         t.join()
-    assert len(set(seen)) == 3, "threads shared a browser session"
+    # Les trois objets sont encore vivants ici : leurs `id()` sont donc forcement distincts s'il
+    # s'agit bien de trois sessions.
+    assert len({id(s) for s in seen}) == 3, "threads shared a browser session"
 
 
 def test_recycling_can_be_disabled(tracker: _Tracker, monkeypatch: pytest.MonkeyPatch) -> None:
