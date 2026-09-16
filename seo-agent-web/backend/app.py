@@ -18440,6 +18440,15 @@ def _find_head_text_in_markup(content: str, field: str) -> tuple[str, str] | Non
     return (match.group(0), value) if value else None
 
 
+# Forme Nuxt/Vue : la valeur ne vit pas dans une cle `description:` mais dans un OBJET qui la
+# NOMME — `useHead({ meta: [{ name: 'description', content: '…' }] })`. `property: 'og:description'`
+# ne matche pas : la cle demandee est `name`, et la valeur exactement `description`.
+_META_NOMME_RE: dict[str, "re.Pattern[str]"] = {
+    "description": re.compile(r"""\{[^{}]*?\bname\s*:\s*(['"])description\1[^{}]*?\}""", re.S | re.I),
+}
+_META_CONTENU_RE = re.compile(r"""(\bcontent\s*:\s*)(['"])(?P<value>(?:\\.|(?!\2).)*)(\2)""", re.S)
+
+
 def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
     """The page's own `title` or `description` as WRITTEN in the file.
 
@@ -18447,6 +18456,16 @@ def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
     rewrite is a bounded swap rather than a regeneration of the file. None when the value is
     assembled rather than written — a template suffix, a function call, an interpolation — in
     which case the caller must not guess at it.
+
+    Mesure du 16/09/2026, nuxt, cycle des neuf idiomes : cette fonction rendait `None` sur
+    `useHead({ meta: [{ name: 'description', content: '…' }] })`. Or TOUT le bloc sequentiel des
+    familles de doublons lit la valeur ecrite a travers elle. Sur cette stack il devenait donc
+    inerte — ni relance, ni plancher, ni meme la garantie anti-doublon qui existait deja : cinq
+    pages sont sorties entre 76 et 92 caracteres pour un minimum de 100, sans qu'aucun controle
+    ne dise quoi que ce soit. `_keep_length_above_floor` etait aveugle de la meme facon.
+
+    UN CONTROLE QUI NE SAIT PAS LIRE NE DIT PAS « JE NE SAIS PAS » : il dit « rien a signaler ».
+    C'est la meme forme que le `except Exception: pass` du 15/09 qui masquait une mesure absente.
     """
     key = (field or "").strip().lower()
     if key not in _HEAD_TEXT_QUOTED_RE:
@@ -18459,6 +18478,13 @@ def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
     quoted = _HEAD_TEXT_QUOTED_RE[key].search(content or "")
     if quoted:
         return quoted.group(0), quoted.group("value")
+    objet = _META_NOMME_RE.get(key)
+    if objet:
+        trouve = objet.search(content or "")
+        if trouve:
+            contenu = _META_CONTENU_RE.search(trouve.group(0))
+            if contenu:
+                return contenu.group(0), contenu.group("value")
     bare = _HEAD_TEXT_BARE_YAML_RE[key].search(content or "")
     if bare:
         return bare.group(0), bare.group("value")
