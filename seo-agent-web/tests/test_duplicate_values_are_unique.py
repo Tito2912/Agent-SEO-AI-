@@ -49,6 +49,7 @@ class _Faux:
     def __init__(self, reponses: list[str]):
         self.reponses = reponses
         self.consignes: list[str] = []
+        self.commits: list[dict] = []
 
     def __call__(self, **kw):
         self.consignes.append(kw.get("occurrences_hint") or "")
@@ -67,7 +68,15 @@ def _jouer(monkeypatch, reponses: list[str], cle: str = "duplicate_meta_descript
                         lambda **kw: ["a/page.tsx", "b/page.tsx", "c/page.tsx"][:combien])
     monkeypatch.setattr(m, "_github_api_get", lambda *a, **k: {
         "content": __import__("base64").b64encode(PAGE.encode()).decode(), "sha": "s"})
-    monkeypatch.setattr(m, "_github_api_put", lambda *a, **k: {"content": {"sha": "n"}})
+
+    # Ce que le correcteur ECRIT vraiment. Compter les consignes dit combien de fois le modele a
+    # ete sollicite ; seul ce compteur dit ce qui a fini dans le depot — et c'est la seule
+    # question qui compte pour un garde-fou de dernier recours.
+    def _put(*a, **k):
+        faux.commits.append(k.get("json_body") or {})
+        return {"content": {"sha": "n"}}
+
+    monkeypatch.setattr(m, "_github_api_put", _put)
     m._deep_patch_issue_files(
         owner="o", repo_name="r", branch="main", token="t", fix_branch="f",
         all_paths=["a/page.tsx", "b/page.tsx", "c/page.tsx"], issue_key=cle,
@@ -115,10 +124,38 @@ def test_une_valeur_trop_courte_declenche_UNE_relance(monkeypatch):
 
 
 def test_on_ne_relance_pas_indefiniment(monkeypatch):
-    """Si la relance echoue aussi, on garde le premier essai et on passe au suivant."""
+    """UNE relance, pas deux — puis on passe au fichier suivant sans s'acharner."""
     court = "Trop court."
     faux = _jouer(monkeypatch, [court, court, _v("Valeur du fichier suivant")], fichiers=2)
     assert len(faux.consignes) == 3, "essai + relance sur le premier, puis le second fichier"
+
+
+def test_une_valeur_sous_le_plancher_n_est_JAMAIS_committee(monkeypatch):
+    """La garantie dure du PLANCHER, jumelle de celle du doublon.
+
+    Mesure du 16/09/2026, cycle des neuf idiomes, nuxt : apres la relance, le modele a rendu 94
+    caracteres pour un plancher de 100, et cette valeur a ete committee. `duplicate_meta_descriptions`
+    tombait bien de 29 a 0 — vrai succes — pendant que trois pages ressortaient trop courtes.
+
+    C'est le meme troc qu'en 13/09, ou la reponse avait ete d'ANNONCER les bornes au modele.
+    Annoncees, elles ont ete ignorees. Une consigne se discute, une verification non.
+    """
+    court = "Trop court."
+    bon = _v("Valeur du fichier suivant")
+    faux = _jouer(monkeypatch, [court, court, bon], fichiers=2)
+    assert len(faux.commits) == 1, (
+        "le fichier trop court a ete committe : %d commit(s)" % len(faux.commits))
+    # Et c'est bien le SECOND fichier qui passe, pas le fautif.
+    contenu = str(faux.commits[0].get("content") or "")
+    import base64 as _b64
+    assert "Valeur du fichier suivant" in _b64.b64decode(contenu).decode(), contenu
+
+
+def test_le_plancher_refuse_sans_empecher_le_reste_du_lot(monkeypatch):
+    """Un fichier abandonne pour longueur ne doit pas emporter ceux qui vont bien."""
+    court = "Trop court."
+    faux = _jouer(monkeypatch, [_v("Premiere"), court, court, _v("Troisieme")], fichiers=3)
+    assert len(faux.commits) == 2, len(faux.commits)
 
 
 def test_une_valeur_conforme_ne_declenche_aucune_relance(monkeypatch):

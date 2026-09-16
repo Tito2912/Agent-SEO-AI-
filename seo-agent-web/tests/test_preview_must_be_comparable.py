@@ -19,6 +19,7 @@ forme plus sournoise : une preview qui repond 404 partout repond quand meme.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import types
 from pathlib import Path
@@ -27,11 +28,18 @@ SCRIPT = (Path(__file__).resolve().parents[1] / "ops" / "gauntlet" / "verify_cor
 
 
 def _module() -> types.ModuleType:
-    """Charge le script sans executer son `main()`."""
-    src = SCRIPT.read_text(encoding="utf-8").replace("raise SystemExit(main())", "")
-    mod = types.ModuleType("verif_correction")
-    mod.__dict__["__file__"] = str(SCRIPT)
-    exec(compile(src, str(SCRIPT), "exec"), mod.__dict__)  # noqa: S102
+    """Charge le script sans executer son `main()`.
+
+    Il a longtemps fallu RETIRER la ligne `raise SystemExit(main())` du source avant de
+    l'executer, parce que le script la lancait au niveau module. Le 16/09/2026 il a recu une
+    garde `if __name__ == "__main__":` — et cette chirurgie de chaine est alors devenue un piege :
+    oter la ligne laissait un `if` suivi de ses seuls commentaires, donc une `IndentationError`.
+    Un chargement ordinaire ne peut pas se casser de cette facon.
+    """
+    spec = importlib.util.spec_from_file_location("verif_correction", SCRIPT)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
     return mod
 
 

@@ -86,14 +86,35 @@ def _pr_de_branche(stack: str, branche: str) -> str:
 
 
 def comptes(path: str) -> dict[str, int]:
+    """Le compte par famille, SANS compter deux fois la meme page.
+
+    Le crawler emet, pour une meme page, la famille generique ET sa variante d'indexabilite —
+    `meta_description_too_short` vaut 1 et `meta_description_too_short_indexable` vaut 1 pour
+    l'unique page concernee. Les additionner doublait le compte.
+
+    Mesure du 16/09/2026, nuxt : ce controle annoncait une regression de 5 a 9 sur la famille
+    des descriptions. En pages distinctes, elle allait de 3 a 5. La regression etait reelle —
+    l'instrument l'affichait deux fois trop grande, et c'est le genre d'ecart qui fait chercher
+    un defaut la ou il n'y en a pas.
+
+    Donc DEUX niveaux de repli, qui ne se traitent pas pareil :
+      - les variantes d'indexabilite d'une meme famille parlent des MEMES pages -> on prend le
+        MAXIMUM, jamais la somme ;
+      - les familles differentes regroupees sous un meme nom (`missing`, `too_short`, `too_long`
+        -> « description ») parlent de pages DISTINCTES -> on somme leurs maximums.
+    """
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
-    out: dict[str, int] = {}
+    # famille repliee -> famille reelle (indexabilite otee) -> plus grand compte vu
+    par_famille: dict[str, dict[str, int]] = {}
     for key, value in (data.get("issues") or {}).items():
         n = value.get("count") if isinstance(value, dict) else len(value or [])
-        if n:
-            out[base(key)] = out.get(base(key), 0) + int(n)
-    return out
+        if not n:
+            continue
+        reelle = key.removesuffix("_not_indexable").removesuffix("_indexable")
+        seau = par_famille.setdefault(base(key), {})
+        seau[reelle] = max(seau.get(reelle, 0), int(n))
+    return {nom: sum(v.values()) for nom, v in par_famille.items()}
 
 
 def _pages_crawlees(path: str) -> int:
@@ -171,4 +192,8 @@ def main() -> int:
     return 0
 
 
-raise SystemExit(main())
+if __name__ == "__main__":
+    # Sans cette garde, `main()` s'executait a l'IMPORT et lisait `sys.argv` : le module etait
+    # inutilisable depuis un test, et `comptes()` — qui rend les verdicts du banc — n'en avait
+    # donc aucun. C'est l'instrument de mesure qui etait le moins mesure de tout le projet.
+    raise SystemExit(main())

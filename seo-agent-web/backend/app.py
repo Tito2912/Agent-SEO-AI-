@@ -20192,12 +20192,58 @@ def _rewrite_jsonld_numeric_strings(content: str) -> tuple[str, int]:
     return _JSONLD_BLOCK_RE.sub(_one_block, content), count
 
 
+_REL_CANONICAL_SEUL_RE = re.compile(r'rel\s*=\s*["\']?canonical\b', re.I)
+# Une valeur ASSEMBLEE ne se lit pas : `${base}/x`, `{slug}`, une concatenation. On ne compare
+# que des URL absolues ecrites en toutes lettres.
+_VALEUR_ASSEMBLEE_RE = re.compile(r"[{}$`]|<%")
+
+
+def _canonical_ecrit_dans(content: str) -> str:
+    """Le canonical tel que le FICHIER le porte a cet instant, ou "" si on ne peut pas trancher.
+
+    Pourquoi relire le fichier plutot que le rapport de crawl : les familles sont corrigees une
+    par une mais la branche ACCUMULE. Quand `canonical_points_to_4xx`, `canonical_points_to_redirect`
+    ou `duplicate_pages_without_canonical` sont passees avant, le canonical du fichier n'est plus
+    celui que le crawl avait mesure — et aligner og:url sur la valeur du crawl ecrit alors une
+    adresse perimee sur une balise qui allait bien.
+
+    Mesure du 16/09/2026, cycle complet sur les neuf idiomes : `open_graph_url_not_matching_canonical`
+    resistait sur les NEUF, seule famille dans ce cas. Trois formes, une seule cause :
+
+        canonical-404    canonical repare vers la page meme  -> og:url ecrit l'ancienne 404
+        canonical-other  chaine suivie jusqu'a son terme     -> og:url ecrit le maillon du milieu
+        no-canonical-b   canonical AJOUTE vers la maitresse  -> og:url laisse sur lui-meme
+
+    On exige UNE seule valeur litterale. Zero (fichier partage, valeur calculee) ou plusieurs
+    (fichier de donnees qui porte plusieurs pages) : on ne sait pas de quelle page on parle, donc
+    on s'abstient et on garde ce que le crawl disait. Refuser de deviner vaut mieux que deviner.
+    """
+    trouvees: list[str] = []
+    for tag in _LINK_TAG_RE.finditer(content):
+        if _REL_CANONICAL_SEUL_RE.search(tag.group(0)):
+            attr = _HREF_ATTR_RE.search(tag.group(0))
+            if attr:
+                trouvees.append(attr.group(3).strip())
+    for m in _JS_CANONICAL_RE.finditer(content):
+        trouvees.append(m.group(3).strip())
+    for obj in _CANONICAL_OBJECT_RE.finditer(content):
+        href = _HREF_KEY_RE.search(obj.group(0))
+        if href:
+            trouvees.append(href.group(3).strip())
+    valeurs = {v for v in trouvees
+               if v.lower().startswith(("http://", "https://")) and not _VALEUR_ASSEMBLEE_RE.search(v)}
+    return valeurs.pop() if len(valeurs) == 1 else ""
+
+
 def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTIC og:url repair (no AI). Touches ONLY the `og:url` meta tag.
 
     `twitter:url` and the canonical link are deliberately left alone: this family is about one
     tag disagreeing with the canonical, and widening the blast radius is how a bounded fix stops
     being bounded.
+
+    La destination est lue DANS LE FICHIER quand il porte un canonical litteral unique — voir
+    `_canonical_ecrit_dans`. Le rapport de crawl ne sert plus que de repli.
     """
     mapping = {_norm_url_for_match(p["from"]): p["to"]
                for p in (pairs or []) if p.get("from") and p.get("to")}
@@ -20215,14 +20261,23 @@ def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int
     # d'une page sans rapport. Reperer d'abord, ecrire ensuite rend l'enchainement impossible.
     reperes: list[tuple[int, int, str]] = []
 
+    # Lu UNE fois, sur le contenu d'origine, comme les reperes : ce que la branche porte
+    # vraiment a cet instant, et non ce que le crawl avait mesure avant les autres familles.
+    canonical_du_fichier = _canonical_ecrit_dans(content)
+
     def _noter(debut: int, fin: int, valeur: str) -> None:
         """La valeur ecrite est-elle une de celles que le crawl a signalees ?
 
         Rien n'est reecrit sur la foi de l'emplacement seul : c'est ce qui empeche de toucher la
-        clef `url` d'une page qui, elle, n'etait pas signalee.
+        clef `url` d'une page qui, elle, n'etait pas signalee. Le crawl decide donc toujours QUOI
+        reecrire — il ne decide plus AVEC QUOI des que le fichier sait le dire lui-meme.
         """
         voulu = mapping.get(_norm_url_for_match(valeur.strip()))
-        if voulu and voulu != valeur:
+        if not voulu:
+            return
+        if canonical_du_fichier:
+            voulu = canonical_du_fichier
+        if voulu != valeur:
             reperes.append((debut, fin, voulu))
 
     def _dans(bloc: "re.Match[str]", champ: "re.Pattern[str]") -> None:
@@ -21716,9 +21771,24 @@ def _deep_patch_issue_files(
             # Graph generique du site. Deux doublons etaient entres, six sont sortis. Une
             # consigne se discute, une verification non : le fichier n'est alors pas patche et
             # la page garde son texte. Au pire le doublon subsiste — jamais il ne s'aggrave.
+            # Le plancher obtient la MEME garantie que le doublon, et pour la meme raison.
+            # Mesure du 16/09/2026, cycle des neuf idiomes, nuxt : apres la relance, le modele a
+            # rendu 94 caracteres pour un plancher de 100, et cette valeur a ete committee. La
+            # famille des doublons tombait bien a zero — et trois pages ressortaient trop
+            # courtes. Le meme troc qu'en 13/09, ou la reponse avait ete d'ANNONCER les bornes
+            # au modele ; annoncees, elles ont ete ignorees.
+            #
+            # `_keep_length_above_floor` ne peut pas servir ici : il rend l'ancienne valeur, qui
+            # EST le doublon qu'on vient de retirer. La seule issue est de ne rien ecrire.
+            _bloquant = ""
             if _val and _val in _interdits:
-                logger.info("[correction] %s: %s — valeur deja posee sur une autre page de ce "
-                            "lot, fichier laisse tel quel", issue_key, _path)
+                _bloquant = "valeur deja posee sur une autre page de ce lot"
+            elif _val and _rendered_len(_val) < _plancher:
+                _bloquant = ("valeur de %d caracteres pour un plancher de %d, apres relance"
+                             % (_rendered_len(_val), _plancher))
+            if _bloquant:
+                logger.info("[correction] %s: %s — %s, fichier laisse tel quel",
+                            issue_key, _path, _bloquant)
                 _res = (_res[0], _res[1], _res[2], None)
                 _val = ""
             prepared.append(_res)
