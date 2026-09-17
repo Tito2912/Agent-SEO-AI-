@@ -175,6 +175,7 @@ for key in ordered:
             rewriter_is_ai=bool(prep["rewriter_is_ai"]), index=idx,
             targets_override=prep.get("targets_override"),
             page_side=bool(prep.get("page_side")),
+            canonical_masters=prep.get("canonical_masters"),
             # Une famille mecanique ECRIT sans modele, mais le CHOIX du fichier en appelait un
             # quand meme : `_resolve_issue_targets` finit par deux selecteurs IA, et pour les
             # familles d'actifs `want_page_targeting` est faux, donc ils partaient a chaque fois.

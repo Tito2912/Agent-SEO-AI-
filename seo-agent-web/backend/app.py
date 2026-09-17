@@ -16761,6 +16761,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             index=idx, link_rewriter=_prep["link_rewriter"],
             rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]),
+            canonical_masters=_prep.get("canonical_masters"),
         )
         any_ai_written = any_ai_written or bool(_ai_files)
         ai_billable += len(_ai_files)
@@ -20330,6 +20331,66 @@ def _canonical_ecrit_dans(content: str) -> str:
     return valeurs.pop() if len(valeurs) == 1 else ""
 
 
+def _duplicate_canonical_masters(
+    impacted: list[str], pages: list[dict[str, Any]] | None,
+) -> dict[str, str]:
+    """Pour chaque page jumelle, l'URL que son canonical DOIT designer.
+
+    Mesure du 16/09/2026, branche hugo : `duplicate_pages_without_canonical` avait ecrit
+    `no-canonical-a -> no-canonical-b` ET `no-canonical-b -> no-canonical-a`. Chacune designe
+    l'autre — une BOUCLE canonique, pire que pas de canonical du tout. Et aucune famille du
+    crawler ne la signale : le defaut est muet.
+
+    Cause architecturale, la meme que pour les valeurs dupliquees : les fichiers partent EN
+    PARALLELE et aucun appel ne sait ce qu'un autre ecrit. Deux pages jumelles recoivent la meme
+    consigne et repondent « l'autre », chacune de son cote. Aucun modele ne peut corriger cela ;
+    c'est au code de trancher AVANT de demander.
+
+    Les GROUPES ne sont pas dans le rapport — la famille n'y est qu'une liste plate d'URL — mais
+    ils sont reconstituables : le crawler groupe par TITRE ou DESCRIPTION partages
+    (`title_counts`, `description_counts`), et le rapport porte ces deux champs page par page. On
+    applique donc la meme regle plutot que de demander au crawler de la publier.
+
+    Choisir une maitresse par groupe, et jamais une pour TOUT : fusionner deux groupes distincts
+    sur un meme canonical desindexerait des pages sans rapport.
+
+    La maitresse est l'URL la plus COURTE du groupe, a egalite la premiere dans l'ordre
+    alphabetique. C'est une CONVENTION — la page la plus proche de la racine est le choix usuel —
+    et elle vaut surtout parce qu'elle est stable : rejouee sur le meme groupe elle rend la meme
+    reponse, ce qu'aucune reponse de modele ne garantit. Le choix reste discutable par le
+    proprietaire, et la PR le dit (voir `_FIX_PREMISE_NOTES`).
+    """
+    if not impacted or not pages:
+        return {}
+    vises = {_norm_url_for_match(u) for u in impacted}
+    groupes: dict[tuple[str, str], list[str]] = {}
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        url = str(page.get("url") or "")
+        if _norm_url_for_match(url) not in vises:
+            continue
+        titre = str(page.get("title") or "").strip()
+        description = str(page.get("meta_description") or "").strip()
+        # Le titre d'abord : c'est le premier critere du crawler, et deux pages qui partagent un
+        # titre partagent presque toujours la description. Une page sans titre se groupe sur sa
+        # description ; sans les deux, elle n'a pas de jumelle identifiable et on l'ecarte.
+        cle = ("titre", titre) if titre else (("description", description) if description else None)
+        if cle is None:
+            continue
+        groupes.setdefault(cle, []).append(url)
+    out: dict[str, str] = {}
+    for membres in groupes.values():
+        if len(membres) < 2:
+            # Seule de son groupe dans ce lot : rien ne dit qui serait la maitresse, et se
+            # designer soi-meme n'apprend rien. On s'abstient.
+            continue
+        maitresse = sorted(membres, key=lambda u: (len(u), u))[0]
+        for u in membres:
+            out[u] = maitresse
+    return out
+
+
 def _og_url_ecrit_dans(content: str) -> str:
     """L'og:url que le fichier porte, ou "" si on ne peut pas trancher. Pendant exact de
     `_canonical_ecrit_dans`, memes passes que `_rewrite_og_url` pour couvrir les neuf idiomes."""
@@ -20349,6 +20410,28 @@ def _og_url_ecrit_dans(content: str) -> str:
     valeurs = {v for v in trouvees
                if v.lower().startswith(("http://", "https://")) and not _VALEUR_ASSEMBLEE_RE.search(v)}
     return valeurs.pop() if len(valeurs) == 1 else ""
+
+
+def _keep_canonical_master(new_content: str, maitresse: str) -> tuple[str, list[str]]:
+    """Le canonical ecrit designe-t-il la maitresse du groupe ? Sinon, on le redirige.
+
+    La consigne nomme deja la maitresse ; ceci la VERIFIE. Une consigne se discute — et sur cette
+    famille elle l'a ete : prevenues chacune de son cote, deux jumelles se sont designees
+    mutuellement. Le code connait la bonne valeur, donc il n'y a rien a deviner : on l'ecrit.
+
+    Ne touche rien quand aucune maitresse n'est connue pour ce fichier, ni quand le canonical est
+    deja le bon — y compris pour la maitresse elle-meme, qui se designe legitimement.
+    """
+    if not maitresse:
+        return new_content, []
+    ecrit = _canonical_ecrit_dans(new_content)
+    if not ecrit or _norm_url_for_match(ecrit) == _norm_url_for_match(maitresse):
+        return new_content, []
+    out, n = _rewrite_head_url_values(new_content, [{"from": ecrit, "to": maitresse}])
+    if not n:
+        return new_content, []
+    return out, ["canonical redirige vers la maitresse du groupe : %s (le modele avait ecrit %s)"
+                 % (maitresse, ecrit)]
 
 
 def _align_og_url_with_added_canonical(new_content: str, old_content: str) -> tuple[str, list[str]]:
@@ -21244,6 +21327,13 @@ def _resolve_issue_targets(
 # decision belongs to the site owner, not to us. A predictable diff is not the same thing as an
 # uncontroversial one, and these must never auto-merge however deterministic the rewrite is.
 _FIX_PREMISE_NOTES: dict[str, str] = {
+    "duplicate_pages_without_canonical": (
+        "Ce correctif designe **une** page maitresse par groupe de jumelles — la plus proche de "
+        "la racine — et fait pointer les autres vers elle. C'est une CONVENTION, pas une mesure : "
+        "si c'est une autre page qui doit etre indexee, il faut inverser le canonical. Le choix "
+        "est deterministe et stable, de sorte qu'aucune boucle ne peut se former ; il reste le "
+        "tien a trancher."
+    ),
     "sitemap_noindex_page": (
         "Ce correctif retire ces pages du **sitemap**, en tenant leur `noindex` pour "
         "intentionnel. Si ces pages doivent au contraire etre indexees, c'est le `noindex` "
@@ -21581,6 +21671,21 @@ def _prepare_issue_fix(
                 "exemple exploitable") + ". Un 401/403 peut etre protege, un 5xx peut revenir — "
                 "reecrire leur canonical casserait une intention probablement juste.")
 
+    if issue_key.removesuffix("_not_indexable").removesuffix("_indexable") == \
+            "duplicate_pages_without_canonical":
+        _maitres = _duplicate_canonical_masters(list(impacted), pages)
+        if _maitres:
+            out["canonical_masters"] = dict(_maitres)
+            _lignes = "\n".join("  %s  ->  %s" % (u, m) for u, m in sorted(_maitres.items()))
+            out["extra_hint"] = (
+                (out["extra_hint"] + "\n" if out["extra_hint"] else "")
+                + "Ces pages sont des JUMELLES : elles partagent leur titre ou leur description. "
+                  "Chacune doit declarer un canonical vers LA MEME page maitresse — la maitresse "
+                  "comprise, qui se designe elle-meme. Ne fais JAMAIS pointer deux jumelles l'une "
+                  "vers l'autre : ce serait une boucle, et une boucle vaut moins que pas de "
+                  "canonical du tout. La maitresse de chaque page est donnee ici, ne la choisis "
+                  "pas toi-meme :\n" + _lignes)
+
     if issue_key in _OG_URL_KEYS:
         _og_pairs = _og_url_pairs_from_pages(list(impacted), pages)
         if _og_pairs:
@@ -21710,6 +21815,10 @@ def _deep_patch_issue_files(
     # de la valeur, et laissait passer un appel de ciblage par famille — mesure du 16/09/2026,
     # sept appels sur une passe `GAUNTLET_FREE=1` annoncee a cout nul.
     allow_ai_targeting: bool = True,
+    # url de page -> url de la maitresse de son groupe de jumelles. Le code ayant tranche, la
+    # valeur ecrite est VERIFIEE et non pas seulement suggeree au modele : voir
+    # `_duplicate_canonical_masters` et la boucle canonique du 16/09/2026.
+    canonical_masters: dict[str, str] | None = None,
     index: dict[str, Any] | None = None,
     # La langue que le crawl mesure sur le SITE. Un fichier partage ne peut pas la contredire :
     # voir `_keep_site_lang`. Vide = le crawl n'a pas su la dire, et le garde-fou reste inerte.
@@ -22008,8 +22117,13 @@ def _deep_patch_issue_files(
         # APRES les garde-fous qui reparent la FORME : celui-ci LIT deux valeurs dans le fichier
         # patche, et lire un litteral mal echappe ou une accolade en trop donnerait une valeur
         # fausse. Meme regle que le plafond de longueur, pour la meme raison.
+        # AVANT l'alignement d'og:url, qui recopie le canonical : si celui-ci doit etre redirige
+        # vers la maitresse, og:url doit suivre la valeur CORRIGEE, pas celle du modele.
+        _maitresse = (canonical_masters or {}).get(_url_par_fichier.get(path, ""), "")
+        new_content, _master_notes = _keep_canonical_master(new_content, _maitresse)
         new_content, _og_notes = _align_og_url_with_added_canonical(new_content, raw)
-        for _n in _len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes + _og_notes:
+        for _n in (_len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes
+                   + _master_notes + _og_notes):
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
@@ -22231,6 +22345,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
             targets_override=_prep.get("targets_override"),
             page_side=bool(_prep.get("page_side")),
+            canonical_masters=_prep.get("canonical_masters"),
             # La langue que le crawl mesure sur le SITE, page par page. Un fichier partage ne
             # peut pas la contredire : voir `_keep_site_lang`.
             site_lang=_dominant_site_lang(
