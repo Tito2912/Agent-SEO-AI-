@@ -96,6 +96,11 @@ class CrawlConfig:
     discover_canonicals: bool = True
     discover_hreflang: bool = True
     strict_link_counts: bool = False  # when True, count "* - links" per occurrence (Ahrefs-like)
+    # Un hote que ce site DECLARE comme le sien sans qu'on le crawle : le cas d'une
+    # preproduction dont les canonical et hreflang pointent la production. Sans lui, la cible
+    # d'un canonical y est toujours introuvable, et TOUTE famille qui doit la resoudre se tait.
+    # N'ouvre aucune visite : l'alias n'entre que dans l'index des pages DEJA vues.
+    canonical_host_alias: str = ""
     profile: str = "default"
 
 
@@ -4912,6 +4917,7 @@ def _score_issues(
     strict_link_counts: bool = False,
     base_url: str | None = None,
     robots: "RobotsRules | None" = None,
+    canonical_host_alias: str = "",
 ) -> dict[str, dict[str, Any]]:
     # A page the HOST refused us (403/429/503 surviving retries) was never audited. Scoring it
     # would report the customer's own healthy pages as broken — and not only under `http_4xx`:
@@ -5070,6 +5076,23 @@ def _score_issues(
 
     requested_html_pages = [p for p in pages if _is_html(p)]
 
+    def _avec_hote(url: str | None, hote: str) -> str:
+        """La meme URL, vue depuis l'hote que le site declare comme le sien."""
+        if not url or not hote:
+            return ""
+        try:
+            parts = urlsplit(str(url))
+        except Exception:
+            return ""
+        if not parts.netloc:
+            return ""
+        return urlunsplit((parts.scheme or "https", hote, parts.path, parts.query, ""))
+
+    _alias_hote = (canonical_host_alias or "").strip().lower()
+    if _alias_hote:
+        # On accepte aussi bien `exemple.fr` qu'une URL complete : c'est l'hote qui compte.
+        _alias_hote = (urlsplit(_alias_hote).netloc or _alias_hote).strip("/")
+
     # Index pages by any known URL (requested + final). Normalize keys so comparisons are stable.
     page_by_requested: dict[str, PageData] = {}
     page_by_any: dict[str, PageData] = {}
@@ -5079,7 +5102,14 @@ def _score_issues(
         req = _norm_self(p.url)
         if req and req not in page_by_requested:
             page_by_requested[req] = p
-        for u in [p.url, p.final_url]:
+        _connues = [p.url, p.final_url]
+        if _alias_hote:
+            # La MEME page, telle que le site la nomme dans ses canonical et hreflang. Indexer
+            # cet alias ne fait visiter personne : on n'ajoute qu'une clef vers une page deja
+            # crawlee. Sans elle, `page_by_any.get(canon)` ne trouve jamais rien sur une
+            # preproduction, et cinq familles se taisent au lieu de se prononcer.
+            _connues += [_avec_hote(u, _alias_hote) for u in (p.url, p.final_url)]
+        for u in _connues:
             u_norm = _norm_self(u)
             if not u_norm:
                 continue
@@ -8678,6 +8708,13 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
         action="store_true",
         help="Count '* - links' issues per occurrence (Ahrefs-like).",
     )
+    parser.add_argument(
+        "--canonical-host-alias",
+        default="",
+        help=("Hote que le site declare comme le sien sans qu'on le crawle (preproduction dont "
+              "les canonical/hreflang pointent la production). Sert UNIQUEMENT a resoudre ces "
+              "cibles parmi les pages deja vues ; aucune page de cet hote n'est visitee."),
+    )
     parser.add_argument("--include", help="Regex: only include URLs matching this pattern.")
     parser.add_argument("--exclude", help="Regex: exclude URLs matching this pattern.")
     parser.add_argument("--output-dir", help="Output directory (default: seo-audit-<host>-<timestamp>).")
@@ -8873,6 +8910,7 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
         discover_canonicals=bool(discover_canonicals),
         discover_hreflang=bool(discover_hreflang),
         strict_link_counts=bool(strict_link_counts),
+        canonical_host_alias=str(getattr(args, "canonical_host_alias", "") or "").strip(),
         profile=profile,
         pagespeed_enabled=bool(args.pagespeed),
         pagespeed_strategy=str(args.pagespeed_strategy or "mobile").strip().lower(),
@@ -9223,6 +9261,7 @@ def main(argv: list[str]) -> int:
             strict_link_counts=bool(config.strict_link_counts),
             base_url=config.base_url,
             robots=None if config.ignore_robots else rp,
+            canonical_host_alias=config.canonical_host_alias,
         )
 
     # --- Semrush-like robots/sitemap issues (system-level) ---

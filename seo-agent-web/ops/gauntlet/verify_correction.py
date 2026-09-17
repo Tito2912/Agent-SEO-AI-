@@ -46,21 +46,22 @@ def base(key: str) -> str:
     return _REPLIS.get(nu, nu)
 
 
-# Familles dont la detection exige de RESOUDRE une cible — le canonical ou le hreflang d'une page
-# doit designer une page que le crawl a vue — et qui sont donc MUETTES sur une preview : ces
-# valeurs restent en absolu vers l'hote de PRODUCTION (c'est voulu, changer un canonical de
-# reference changerait l'anomalie), donc `page_by_any.get(canon)` ne trouve jamais rien.
+# Familles dont la detection exige de RESOUDRE une cible : le canonical ou le hreflang d'une page
+# doit designer une page que le crawl a vue. Sur une preview, ces valeurs restent en absolu vers
+# l'hote de PRODUCTION — c'est voulu, les rendre relatives desaccorderait `og:url`, qui doit rester
+# absolu, et `open_graph_url_not_matching_canonical` se declencherait alors sur TOUTES les pages.
 #
 # Mesure du 17/09/2026 sur les neuf stacks : 53 occurrences en production, ZERO sur les previews.
-# Pas une seule survivante. Le controle lisait ce zero comme une correction et creditait ces
-# familles a chaque cycle.
+# Pas une seule survivante. Le controle lisait ce zero comme une correction.
 #
-# C'est le defaut du 15/09 sous une autre forme — l'absence d'une anomalie n'est pas sa
-# correction — et il est plus sournois, parce qu'ici la preview est parfaitement SAINE : elle sert
-# toutes ses pages, elle passe le garde-fou de comparabilite, et elle ment quand meme sur ces
-# familles-la. Un site qui repond, qui est a jour, et qui reste aveugle sur un point precis.
+# C'etait le defaut du 15/09 sous une forme plus sournoise. Alors, la preview repondait 404 partout
+# et le garde-fou de comparabilite pouvait l'attraper ; ICI LA PREVIEW EST SAINE — elle sert toutes
+# ses pages, elle passe la comparabilite — et elle ment quand meme, sur ces familles-la seulement.
 #
-# Les prouver demande la PRODUCTION, comme les familles d'indexabilite.
+# RESOLU par `--canonical-host-alias`, que la commande de crawl ci-dessous passe systematiquement :
+# chaque page crawlee est aussi indexee sous le nom que le site lui donne. Ces familles sont donc
+# JUGEES comme les autres, et cette liste n'est plus une exclusion mais une ALARME : l'une d'elles
+# qui tombe pile a zero merite qu'on verifie d'abord que l'alias a pris.
 _FAMILLES_A_CIBLE_RESOLUE = {
     "canonical_points_to_4xx",
     "canonical_points_to_5xx",
@@ -195,8 +196,13 @@ def main() -> int:
         url = "https://deploy-preview-%s--noyaru-stack-%s.netlify.app/" % (pr, stack)
         out = os.path.join(prefixe + stack, "apres")
         os.makedirs(out, exist_ok=True)
+        # L'alias est OBLIGATOIRE ici, pas un confort : les canonical et hreflang du parcours
+        # nomment l'hote de PRODUCTION — c'est voulu, les rendre relatifs desaccorderait og:url,
+        # qui doit rester absolu. Sans cet alias, la cible n'est jamais parmi les pages crawlees
+        # et cinq familles tombent a zero sans rien prouver.
         cmd = [sys.executable, audit, url, "--max-pages", "90", "--workers", "3",
-               "--check-resources", "--output-dir", out]
+               "--check-resources", "--canonical-host-alias",
+               "noyaru-stack-%s.netlify.app" % stack, "--output-dir", out]
         with open(os.path.join(out, "crawl.log"), "w", encoding="utf-8") as fh:
             subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, check=False)
         apres_json = os.path.join(out, "report.json")
@@ -209,18 +215,22 @@ def main() -> int:
         # Les familles muettes sortent des DEUX colonnes : les compter « en baisse » etait un faux
         # succes, les compter « inchangees » serait une fausse alerte. On ne sait pas, et c'est ce
         # qu'il faut dire.
-        muettes = sorted(k for k in avant if k in _FAMILLES_A_CIBLE_RESOLUE)
-        mesurables = {k: n for k, n in avant.items() if k not in _FAMILLES_A_CIBLE_RESOLUE}
+        # Elles ne sont plus ecartees : l'alias d'hote les rend mesurables, donc on les juge.
+        # La liste reste, et sert d'ALARME : si l'une d'elles tombe a zero pile-poil, c'est
+        # peut-etre l'alias qui n'a pas pris, et non la correction qui a marche.
+        muettes = sorted(k for k in avant if k in _FAMILLES_A_CIBLE_RESOLUE
+                         and apres.get(k, 0) == 0 and avant[k] > 0)
+        mesurables = dict(avant)
         corrigees = sorted(k for k in mesurables if apres.get(k, 0) < mesurables[k])
         tenaces = sorted(k for k in mesurables if apres.get(k, 0) >= mesurables[k])
         lignes.append((stack, len(mesurables), len(corrigees), tenaces, muettes))
-        print("  %-12s familles avant=%-3d en baisse=%-3d inchangees=%-3d non mesurables=%d"
+        print("  %-12s familles avant=%-3d en baisse=%-3d inchangees=%-3d a confirmer=%d"
               % (stack, len(mesurables), len(corrigees), len(tenaces), len(muettes)))
     print()
     for stack, _n, _c, _t, muettes in lignes:
         for key in muettes:
-            print("    %-12s NON MESURABLE SUR PREVIEW %s — la cible du canonical/hreflang est "
-                  "hors hote, aucun verdict possible ici" % (stack, key))
+            print("    %-12s A CONFIRMER %s — famille a cible resolue tombee pile a zero : "
+                  "verifier que l'alias d'hote a bien pris avant d'y croire" % (stack, key))
     print()
     for stack, _n, _c, tenaces, _m in lignes:
         for key in tenaces:

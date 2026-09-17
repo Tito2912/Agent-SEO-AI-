@@ -82,15 +82,15 @@ def test_le_repli_d_indexabilite_ne_fait_pas_echapper_une_famille_muette() -> No
     assert verif.base("hreflang_to_non_canonical_not_indexable") in verif._FAMILLES_A_CIBLE_RESOLUE
 
 
-def test_le_compte_ne_credite_plus_une_famille_muette(tmp_path: Path) -> None:
-    """Le cas mesure : 1 en production, 0 sur la preview, et ce n'est PAS une correction."""
-    avant = verif.comptes(_rapport(tmp_path, {
-        "canonical_points_to_4xx": 1, "missing_alt_text": 2,
-    }))
-    apres = verif.comptes(_rapport(tmp_path, {"missing_alt_text": 0}))
-    muettes = [k for k in avant if k in verif._FAMILLES_A_CIBLE_RESOLUE]
-    mesurables = {k: n for k, n in avant.items() if k not in verif._FAMILLES_A_CIBLE_RESOLUE}
-    corrigees = [k for k in mesurables if apres.get(k, 0) < mesurables[k]]
-    assert muettes == ["canonical_points_to_4xx"], muettes
-    assert corrigees == ["missing_alt_text"], corrigees
-    assert "canonical_points_to_4xx" not in corrigees, "faux succes : la famille etait muette"
+def test_le_crawl_de_verification_passe_TOUJOURS_l_alias_d_hote() -> None:
+    """C'est ce qui rend ces familles jugeables — sans lui, le faux succes revient.
+
+    L'alias est lu dans le source plutot que par un appel : la commande de crawl lance un
+    sous-processus, et ce qui compte ici est qu'elle NE PUISSE PAS etre construite sans lui.
+    """
+    source = SCRIPT.read_text(encoding="utf-8")
+    debut = source.index("cmd = [sys.executable")
+    commande = source[debut:source.index("]", debut) + 1]
+    assert "--canonical-host-alias" in commande, commande
+    assert "noyaru-stack-%s.netlify.app" in commande, (
+        "l'alias doit nommer l'hote de production de la stack crawlee")
