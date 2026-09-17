@@ -17152,6 +17152,14 @@ _LENGTH_FLOORS: dict[str, int] = {"title": 15, "description": 100}
 _WRITE_A_VALUE_KEYS: dict[str, str] = {
     "duplicate_titles": "title",
     "duplicate_meta_descriptions": "description",
+    # Ecrire une valeur DEPUIS RIEN est le meme exercice qu'en reecrire une : le modele a besoin
+    # des memes bornes, et merite la meme relance. Mesure du 17/09/2026 : `noindex-no-description`
+    # ressortait TROP COURTE sur les SEPT stacks qui la portent — la page n'avait aucune
+    # description, en recevait une de moins de cent caracteres, et rien ne le voyait. Le plancher
+    # ordinaire est inerte ici par construction : il ne mord que si l'ANCIENNE valeur le
+    # respectait, et il n'y en avait pas.
+    "missing_meta_description": "description",
+    "missing_title": "title",
 }
 
 
@@ -22184,10 +22192,16 @@ def _deep_patch_issue_files(
             #
             # `_keep_length_above_floor` ne peut pas servir ici : il rend l'ancienne valeur, qui
             # EST le doublon qu'on vient de retirer. La seule issue est de ne rien ecrire.
+            # Le refus du plancher ne vaut que si la page AVAIT une valeur a preserver. Quand
+            # elle n'en avait aucune, ne rien commiter la laisse sans description : on garde donc
+            # la meilleure tentative, meme courte. « Ne jamais aggraver » n'est pas « ne jamais
+            # ecrire » — la relance a eu lieu, et un texte court vaut mieux qu'un vide.
+            _avait_une_valeur = bool((_find_head_text_value(_res[1] or "", _champ_unique)
+                                      or ("", ""))[1])
             _bloquant = ""
             if _val and _val in _interdits:
                 _bloquant = "valeur deja posee sur une autre page de ce lot"
-            elif _val and _rendered_len(_val) < _plancher:
+            elif _val and _avait_une_valeur and _rendered_len(_val) < _plancher:
                 _bloquant = ("valeur de %d caracteres pour un plancher de %d, apres relance"
                              % (_rendered_len(_val), _plancher))
             if _bloquant:

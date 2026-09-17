@@ -108,8 +108,15 @@ def test_une_valeur_repetee_n_est_listee_qu_une_fois(monkeypatch):
 
 
 def test_une_famille_ordinaire_reste_en_parallele(monkeypatch):
-    """La serialisation a un cout : elle ne doit toucher que les familles de doublons."""
-    faux = _jouer(monkeypatch, [_v("Une"), _v("Deux")], cle="missing_meta_description")
+    """La serialisation a un cout : elle ne doit toucher que les familles qui ECRIVENT une valeur.
+
+    Cette liste s'est elargie le 17/09/2026 : `missing_meta_description` et `missing_title` en
+    font desormais partie. Ecrire une valeur DEPUIS RIEN est le meme exercice qu'en reecrire une,
+    et demande les memes bornes — la page `noindex-no-description` ressortait trop courte sur les
+    SEPT stacks qui la portent. Ce test prend donc pour temoin une famille qui n'ecrit aucune
+    valeur de tete.
+    """
+    faux = _jouer(monkeypatch, [_v("Une"), _v("Deux")], cle="missing_h1")
     assert all("DEJA ecrites" not in c for c in faux.consignes)
 
 
@@ -186,3 +193,39 @@ def test_le_refus_n_empeche_pas_le_fichier_suivant(monkeypatch):
     autre = _v("Bien distincte")
     faux = _jouer(monkeypatch, [partagee, partagee, partagee, autre], fichiers=3)
     assert len(faux.consignes) == 4, "1 pour le premier, 2 pour le refuse, 1 pour le dernier"
+
+
+PAGE_SANS_VALEUR = "export const metadata = {\n  title: 'Un titre',\n};\n"
+
+
+def test_une_page_SANS_valeur_prealable_garde_sa_meilleure_tentative(monkeypatch):
+    """« Ne jamais aggraver » n'est pas « ne jamais ecrire ».
+
+    Mesure du 17/09/2026 : `noindex-no-description` n'a AUCUNE description et en recoit une trop
+    courte sur les sept stacks qui la portent. La relance vaut d'etre tentee — mais refuser le
+    commit laisserait la page sans description du tout, ce qui n'est pas mieux. La garantie dure
+    du plancher ne mord donc que si la page avait une valeur A PRESERVER.
+    """
+    faux = _Faux(["Trop court.", "Trop court encore."])
+    monkeypatch.setattr(m, "_openai_generate_file_patch", faux)
+    monkeypatch.setattr(m, "_resolve_issue_targets", lambda **kw: ["a/page.tsx"])
+    monkeypatch.setattr(m, "_github_api_get", lambda *a, **k: {
+        "content": __import__("base64").b64encode(PAGE_SANS_VALEUR.encode()).decode(), "sha": "s"})
+
+    def _put(*a, **k):
+        faux.commits.append(k.get("json_body") or {})
+        return {"content": {"sha": "n"}}
+
+    monkeypatch.setattr(m, "_github_api_put", _put)
+    # Le faux modele ECRIT la description dans une page qui n'en avait pas.
+    faux.__class__.__call__ = lambda self, **kw: (
+        self.consignes.append(kw.get("occurrences_hint") or "")
+        or {"patched_content": PAGE_SANS_VALEUR.replace(
+            "};", "  description: '%s',\n};" % self.reponses[len(self.consignes) - 1])})
+    m._deep_patch_issue_files(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="f",
+        all_paths=["a/page.tsx"], issue_key="missing_meta_description",
+        issue_label="Description manquante", impacted_urls=["https://x.fr/a"],
+        site_name="x.fr", file_state={}, max_files=6)
+    assert len(faux.consignes) == 2, "la relance doit quand meme avoir lieu"
+    assert len(faux.commits) == 1, "une description courte vaut mieux qu'aucune"
