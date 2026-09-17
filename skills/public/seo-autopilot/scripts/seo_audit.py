@@ -9596,6 +9596,25 @@ def main(argv: list[str]) -> int:
         "issues": issues,
         "pages": [dataclasses.asdict(p) for p in page_list],
     }
+    if config.canonical_host_alias:
+        # CONTROLE POSITIF de l'alias d'hote, et il repond a une question que rien d'autre ne
+        # pouvait trancher : quand une famille a cible resolue lit zero, est-ce parce qu'elle est
+        # corrigee, ou parce que l'alias n'a pas pris ? Les deux se ressemblent exactement.
+        #
+        # Trois fois en deux jours cet alias a ete pose a moitie — cible non resoluble, puis page
+        # non comparee a elle-meme, puis second index oublie — et chaque fois le symptome etait un
+        # zero d'apparence normale. Un instrument doit pouvoir dire QUE ses moyens ont servi, pas
+        # seulement ce qu'il a trouve.
+        _hote = (urlsplit(config.canonical_host_alias).netloc
+                 or config.canonical_host_alias).strip("/").lower()
+        report["canonical_host_alias"] = {
+            "hote": _hote,
+            # Combien de pages nomment cet hote dans leur canonical. Zero ici veut dire que
+            # l'alias n'avait rien a faire ; un nombre non nul veut dire qu'il a ete sollicite.
+            "pages_au_canonical_alias": sum(
+                1 for p in page_list
+                if (p.canonical or "") and urlsplit(p.canonical).netloc.lower() == _hote),
+        }
     if system_fetches:
         report["system_fetches"] = system_fetches
     if resources:

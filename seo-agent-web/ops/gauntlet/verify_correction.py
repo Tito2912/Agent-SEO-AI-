@@ -144,6 +144,22 @@ def comptes(path: str) -> dict[str, int]:
     return {nom: sum(v.values()) for nom, v in par_famille.items()}
 
 
+def _alias_sollicite(path: str) -> bool:
+    """Le crawl a-t-il eu l'occasion d'utiliser l'alias d'hote ?
+
+    Le crawler ecrit `canonical_host_alias.pages_au_canonical_alias` dans son rapport des qu'un
+    alias lui est passe. Un nombre non nul prouve que des pages nomment bien cet hote dans leur
+    canonical — donc que l'alias a ete sollicite. Zero veut dire qu'il n'a rien eu a faire, et
+    alors un « 0 » sur une famille a cible resolue ne prouve rien du tout.
+
+    C'est le controle qui manquait : trois fois en deux jours l'alias a ete pose a moitie, et
+    chaque fois le symptome etait un zero d'apparence parfaitement normale.
+    """
+    with open(path, encoding="utf-8") as fh:
+        bloc = (json.load(fh).get("canonical_host_alias") or {})
+    return int(bloc.get("pages_au_canonical_alias") or 0) > 0
+
+
 def _pages_crawlees(path: str) -> int:
     with open(path, encoding="utf-8") as fh:
         return len(json.load(fh).get("pages") or [])
@@ -218,8 +234,16 @@ def main() -> int:
         # Elles ne sont plus ecartees : l'alias d'hote les rend mesurables, donc on les juge.
         # La liste reste, et sert d'ALARME : si l'une d'elles tombe a zero pile-poil, c'est
         # peut-etre l'alias qui n'a pas pris, et non la correction qui a marche.
+        # Le CONTROLE POSITIF : le crawl dit lui-meme si l'alias a ete sollicite. Sans lui, un
+        # zero « corrige » et un zero « aveugle » sont indistinguables — et l'alias a ete pose a
+        # moitie trois fois en deux jours, chaque fois avec ce meme zero d'apparence normale.
+        _alias_a_servi = _alias_sollicite(apres_json)
         muettes = sorted(k for k in avant if k in _FAMILLES_A_CIBLE_RESOLUE
-                         and apres.get(k, 0) == 0 and avant[k] > 0)
+                         and apres.get(k, 0) == 0 and avant[k] > 0) if not _alias_a_servi else []
+        if not _alias_a_servi:
+            print("  %-12s ALIAS D'HOTE SANS EFFET : aucune page ne declare un canonical sur "
+                  "l'hote alias — les familles a cible resolue ci-dessous ne prouvent rien"
+                  % stack)
         mesurables = dict(avant)
         corrigees = sorted(k for k in mesurables if apres.get(k, 0) < mesurables[k])
         tenaces = sorted(k for k in mesurables if apres.get(k, 0) >= mesurables[k])

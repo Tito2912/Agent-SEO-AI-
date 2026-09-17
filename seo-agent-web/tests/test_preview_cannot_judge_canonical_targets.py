@@ -94,3 +94,35 @@ def test_le_crawl_de_verification_passe_TOUJOURS_l_alias_d_hote() -> None:
     assert "--canonical-host-alias" in commande, commande
     assert "noyaru-stack-%s.netlify.app" in commande, (
         "l'alias doit nommer l'hote de production de la stack crawlee")
+
+
+def test_le_controle_positif_lit_le_rapport_du_crawl(tmp_path: Path) -> None:
+    """Le crawler ecrit combien de pages nomment l'hote alias dans leur canonical."""
+    p = tmp_path / "avec.json"
+    p.write_text(json.dumps({"pages": [], "issues": {},
+                             "canonical_host_alias": {"hote": "exemple.fr",
+                                                      "pages_au_canonical_alias": 39}}),
+                 encoding="utf-8")
+    assert verif._alias_sollicite(str(p)) is True
+
+
+def test_un_rapport_SANS_alias_ne_prouve_rien(tmp_path: Path) -> None:
+    """Un crawl lance sans alias : ses zeros sur les familles a cible resolue sont suspects."""
+    p = tmp_path / "sans.json"
+    p.write_text(json.dumps({"pages": [], "issues": {}}), encoding="utf-8")
+    assert verif._alias_sollicite(str(p)) is False
+
+
+def test_un_alias_pose_mais_SANS_TRAVAIL_ne_prouve_rien_non_plus(tmp_path: Path) -> None:
+    """Zero page ne nomme l'hote alias : il n'a rien eu a resoudre, donc rien n'est prouve.
+
+    C'est la LIMITE de ce controle, et elle est volontaire : il etablit que l'alias avait du
+    travail, pas que chaque chemin de code l'a utilise. Mes trois demi-alias auraient passe ce
+    test — ils ont ete trouves en regardant ce qui restait NON NUL, pas en lisant un verdict.
+    """
+    p = tmp_path / "vide.json"
+    p.write_text(json.dumps({"pages": [], "issues": {},
+                             "canonical_host_alias": {"hote": "exemple.fr",
+                                                      "pages_au_canonical_alias": 0}}),
+                 encoding="utf-8")
+    assert verif._alias_sollicite(str(p)) is False
