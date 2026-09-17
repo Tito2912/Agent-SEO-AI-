@@ -19636,7 +19636,11 @@ _IDENTIFIANT_RE = re.compile(r"[A-Za-z_][\w-]*")
 _LAYOUT_DIR_RE = re.compile(r"(^|/)(_layouts|layouts|_includes|includes|templates|partials)/", re.I)
 # Une valeur de front matter qui est un BLOC D'ATTRIBUTS : `lang="fr"`, `data-x='y'`.
 _ATTR_BLOB_RE = re.compile(r"""^[A-Za-z_:][\w:.-]*\s*=\s*["']""")
-_FRONT_MATTER_SCALAR_RE = re.compile(r"""^([A-Za-z_][\w-]*)\s*:\s*(['"])(.*)(\2)\s*$""")
+# Le separateur differe selon le format : `cle: valeur` en YAML (jekyll, astro),
+# `cle = valeur` en TOML (hugo). Il est CAPTURE pour etre rendu tel quel — reecrire un TOML
+# en YAML le casserait, et la version qui ne connaissait que le `:` se taisait simplement.
+_FRONT_MATTER_SCALAR_RE = re.compile(
+    r"""^([A-Za-z_][\w-]*)\s*([:=])\s*(['"])(.*)(\3)\s*$""")
 _GLUED_KEYS_CACHE: dict[tuple[str, str, str], set[str]] = {}
 
 
@@ -19703,12 +19707,17 @@ def _space_glued_front_matter(new_content: str, old_content: str,
         m = _FRONT_MATTER_SCALAR_RE.match(lignes[i])
         if not m:
             continue
-        clef, guillemet, valeur = m.group(1), m.group(2), m.group(3)
+        clef, sep, guillemet, valeur = m.group(1), m.group(2), m.group(3), m.group(4)
         if clef not in glued or not valeur or valeur[:1].isspace():
             continue
         if not _ATTR_BLOB_RE.match(valeur) or anciennes.get(clef) == valeur:
             continue
-        lignes[i] = f"{clef}: {guillemet} {valeur}{guillemet}"
+        # Le separateur d'origine est rendu tel quel : `=` reste `=`. Mesure du 17/09/2026 sur
+        # hugo — ce controle etait ecrit pour jekyll et ne connaissait que le `:` du YAML, donc
+        # il se taisait sur le TOML et `<htmllang="fr">` partait en production. L'ecrire en YAML
+        # aurait ete pire encore : un front matter TOML casse ne se construit plus.
+        _sep = " = " if sep == "=" else ": "
+        lignes[i] = f"{clef}{_sep}{guillemet} {valeur}{guillemet}"
         notes.append(f"espace rendue a `{clef}` : le gabarit colle la valeur au nom de la balise")
     return "\n".join(lignes), notes
 
@@ -19730,7 +19739,7 @@ def _front_matter_scalars(content: str) -> list[tuple[str, str]]:
     for i in _front_matter_span(lignes):
         m = _FRONT_MATTER_SCALAR_RE.match(lignes[i])
         if m:
-            out.append((m.group(1), m.group(3)))
+            out.append((m.group(1), m.group(4)))
     return out
 
 
