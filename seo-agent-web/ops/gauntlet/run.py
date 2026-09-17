@@ -176,6 +176,7 @@ for key in ordered:
             targets_override=prep.get("targets_override"),
             page_side=bool(prep.get("page_side")),
             canonical_masters=prep.get("canonical_masters"),
+            site_og_image=m._dominant_site_og_image(report.get("pages")),
             # Une famille mecanique ECRIT sans modele, mais le CHOIX du fichier en appelait un
             # quand meme : `_resolve_issue_targets` finit par deux selecteurs IA, et pour les
             # familles d'actifs `want_page_targeting` est faux, donc ils partaient a chaque fois.

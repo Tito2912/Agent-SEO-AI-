@@ -16762,6 +16762,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
             rewriter_is_ai=bool(_prep["rewriter_is_ai"]),
             canonical_masters=_prep.get("canonical_masters"),
+            # Pas de `site_og_image` ici : cet endpoint n'a pas les pages du crawl, donc l'image
+            # du site ne se MESURE pas. La completion Open Graph ajoutera les quatre balises
+            # deduites de la page et sautera og:image — un bloc incomplet plutot qu'une image
+            # inventee, qui serait fausse sur chaque partage social sans que rien ne le dise.
         )
         any_ai_written = any_ai_written or bool(_ai_files)
         ai_billable += len(_ai_files)
@@ -19628,6 +19632,100 @@ def _dominant_site_lang(pages: list[dict[str, Any]] | None) -> str:
     return top if langs.count(top) >= len(langs) * 0.6 else ""
 
 
+def _dominant_site_og_image(pages: list[dict[str, Any]] | None) -> str:
+    """L'image sociale que le SITE utilise, lue sur les pages crawlees. '' si elle n'est pas nette.
+
+    `og:image` est la seule des cinq balises Open Graph exigees qui ne se DEDUIT pas de la page :
+    un titre, une description et une URL canonique y sont ecrits, une image ne l'est pas. Mais le
+    site en declare une sur ses autres pages, et la reprendre est une MESURE — pas une invention.
+    Meme raisonnement, et meme prudence, que `_dominant_site_lang`.
+    """
+    images = [str((p or {}).get("og_image") or "").strip()
+              for p in (pages or []) if isinstance(p, dict)]
+    images = [x for x in images if x]
+    if len(images) < 3:
+        return ""
+    top = max(set(images), key=images.count)
+    return top if images.count(top) >= len(images) * 0.6 else ""
+
+
+# Une balise Open Graph ECRITE EN BALISAGE, sous la forme que le modele vient de produire. On ne
+# clone que cette forme-la : les formes OBJET (nuxt `{ property: …, content: … }`, next-app
+# `openGraph: {…}`) demandent de savoir ou s'inserer dans une structure, et se tromper y casse la
+# construction. On s'abstient plutot que de deviner.
+_OG_META_LIGNE_RE = re.compile(
+    r"""^([ \t]*)<meta\s+property\s*=\s*(['"])og:([a-z]+)\2\s+content\s*=\s*(['"])(.*?)\4\s*/?>\s*$""",
+    re.I | re.M)
+_OG_EXIGEES = ("og:title", "og:description", "og:image", "og:url", "og:type")
+
+
+def _complete_open_graph(new_content: str, old_content: str,
+                         site_og_image: str = "") -> tuple[str, list[str]]:
+    """Completer un bloc Open Graph que CE patch vient d'introduire a moitie.
+
+    Mesure du 17/09/2026, trois stacks a la fois (static-html, hugo, gatsby), page `og-missing` :
+    chargee d'ajouter les balises Open Graph absentes, la correction n'a ecrit que `og:title`. La
+    page est passee de `open_graph_tags_missing` a `open_graph_tags_incomplete` — UNE ANOMALIE
+    TROQUEE CONTRE UNE AUTRE, et le bilan affichait `ok`.
+
+    La consigne LISTE pourtant les cinq balises depuis toujours. Une consigne se discute ; c'est
+    donc une verification qu'il fallait.
+
+    On ne devine pas l'idiome : le modele vient d'ecrire une balise dans ce fichier, et on CLONE
+    la ligne qu'il a produite — indentation, guillemets et style de fermeture compris — en n'y
+    changeant que la propriete et la valeur. Les valeurs se lisent dans la page (titre,
+    description, canonical) sauf `og:image`, que le site declare ailleurs.
+
+    Ne s'applique QUE si le patch a introduit l'Open Graph : quand la page en portait deja, le cas
+    appartient a `open_graph_tags_incomplete` et a ses propres preuves. Une balise dont la valeur
+    reste inconnue est SAUTEE — mieux vaut un bloc incomplet qu'un `og:image` invente.
+    """
+    if _OG_META_LIGNE_RE.search(old_content or ""):
+        return new_content, []
+    modele = _OG_META_LIGNE_RE.search(new_content or "")
+    if not modele:
+        return new_content, []
+    presentes = {"og:" + m.group(3).lower() for m in _OG_META_LIGNE_RE.finditer(new_content)}
+    manquantes = [t for t in _OG_EXIGEES if t not in presentes]
+    if not manquantes:
+        return new_content, []
+
+    _titre = _find_head_text_value(new_content, "title")
+    _desc = _find_head_text_value(new_content, "description")
+    valeurs = {
+        "og:title": (_titre[1] if _titre else ""),
+        "og:description": (_desc[1] if _desc else ""),
+        "og:url": _canonical_ecrit_dans(new_content),
+        # Convention, et la seule des cinq qui en soit une : une page du site n'est ni plus ni
+        # moins qu'un document. `article` serait une affirmation sur sa nature.
+        "og:type": "website",
+        "og:image": (site_og_image or "").strip(),
+    }
+    indent, guillemet_prop, _, guillemet_val = (
+        modele.group(1), modele.group(2), modele.group(3), modele.group(4))
+    # L'espace avant `/>` fait partie de l'usage ; avant un `>` simple elle est parasite. On
+    # clone donc la fermeture ENTIERE, espace comprise, plutot que de la reconstruire.
+    fermeture = " />" if modele.group(0).rstrip().endswith("/>") else ">"
+    ajouts, notes = [], []
+    for tag in manquantes:
+        val = valeurs.get(tag) or ""
+        if not val:
+            continue
+        ajouts.append('%s<meta property=%s%s%s content=%s%s%s%s'
+                      % (indent, guillemet_prop, tag, guillemet_prop,
+                         guillemet_val, _echappe_pour(val, guillemet_val), guillemet_val, fermeture))
+        notes.append("%s ajoutee : le patch avait introduit l'Open Graph sans elle" % tag)
+    if not ajouts:
+        return new_content, []
+    fin = modele.end()
+    return new_content[:fin] + "\n" + "\n".join(ajouts) + new_content[fin:], notes
+
+
+def _echappe_pour(valeur: str, guillemet: str) -> str:
+    """La valeur telle qu'elle peut vivre entre CE guillemet, sans le refermer par accident."""
+    return valeur.replace("\\", "\\\\").replace(guillemet, "\\" + guillemet)
+
+
 # Un gabarit qui COLLE une expression au nom de balise : `<html{{ page.html_attrs }}>` en Liquid,
 # `<html{{ .Params.html_attrs }}>` en Go. La valeur injectee doit alors commencer par une espace,
 # sinon le nom de la balise absorbe l'attribut.
@@ -21866,6 +21964,9 @@ def _deep_patch_issue_files(
     # valeur ecrite est VERIFIEE et non pas seulement suggeree au modele : voir
     # `_duplicate_canonical_masters` et la boucle canonique du 16/09/2026.
     canonical_masters: dict[str, str] | None = None,
+    # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
+    # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
+    site_og_image: str = "",
     index: dict[str, Any] | None = None,
     # La langue que le crawl mesure sur le SITE. Un fichier partage ne peut pas la contredire :
     # voir `_keep_site_lang`. Vide = le crawl n'a pas su la dire, et le garde-fou reste inerte.
@@ -22169,6 +22270,10 @@ def _deep_patch_issue_files(
         _maitresse = (canonical_masters or {}).get(_url_par_fichier.get(path, ""), "")
         new_content, _master_notes = _keep_canonical_master(new_content, _maitresse)
         new_content, _og_notes = _align_og_url_with_added_canonical(new_content, raw)
+        # APRES l'alignement : il pose og:url quand le canonical vient d'etre ajoute, et la
+        # completion ci-dessous doit voir ce qui EXISTE une fois tout le reste ecrit.
+        new_content, _ogc_notes = _complete_open_graph(new_content, raw, site_og_image)
+        _og_notes = _og_notes + _ogc_notes
         for _n in (_len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes
                    + _master_notes + _og_notes):
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
@@ -22398,6 +22503,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
             targets_override=_prep.get("targets_override"),
             page_side=bool(_prep.get("page_side")),
             canonical_masters=_prep.get("canonical_masters"),
+            site_og_image=_dominant_site_og_image(
+                _report_pages if isinstance(_report_pages, list) else None),
             # La langue que le crawl mesure sur le SITE, page par page. Un fichier partage ne
             # peut pas la contredire : voir `_keep_site_lang`.
             site_lang=_dominant_site_lang(
