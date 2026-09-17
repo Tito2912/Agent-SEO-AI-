@@ -5024,12 +5024,30 @@ def _score_issues(
             return False
         return True
 
+    def _sous_notre_hote(url: str | None) -> str:
+        """L'URL vue depuis le site CRAWLE : l'hote que le site declare sien vaut l'hote servi.
+
+        Sans cela, l'alias ne ferait que la moitie du chemin. Mesure du 17/09/2026 : la cible d'un
+        canonical devenait resoluble, mais chaque page continuait d'etre comparee a son propre
+        `final_url` — or sur une preprod toute page declare un canonical different de l'URL
+        servie. `non_canonical_page_specified_as_canonical_one` est alors passee a 36-46 pages par
+        stack, c'est-a-dire PRESQUE TOUTES. Un demi-alias est pire que pas d'alias : il remplace un
+        silence par un tapage.
+        """
+        n = _norm_self(url) or ""
+        if not n or not _alias_hote:
+            return n
+        parts = urlsplit(n)
+        if parts.netloc.lower() != _alias_hote or not _hote_crawle:
+            return n
+        return _norm_self(urlunsplit((parts.scheme, _hote_crawle, parts.path, parts.query, ""))) or n
+
     def _is_non_canonical(p: PageData) -> bool:
         if not _is_html(p):
             return False
         if not p.canonical:
             return False
-        return _norm_self(p.canonical) != _final_url(p)
+        return _sous_notre_hote(p.canonical) != _sous_notre_hote(_final_url(p))
 
     def _issue_block(issue_key: str, rows: list[Any], *, limit: int = ISSUE_EXAMPLES_LIMIT) -> dict[str, Any]:
         _write_issue_rows(issues_dir, issue_key, rows)
@@ -5092,6 +5110,16 @@ def _score_issues(
     if _alias_hote:
         # On accepte aussi bien `exemple.fr` qu'une URL complete : c'est l'hote qui compte.
         _alias_hote = (urlsplit(_alias_hote).netloc or _alias_hote).strip("/")
+    # L'hote REELLEMENT servi, celui auquel l'alias doit etre ramene. On le prend sur la premiere
+    # page crawlee plutot que sur `base_url` : c'est l'hote apres redirections, donc celui que
+    # portent les `final_url` auxquels on compare.
+    _hote_crawle = ""
+    if _alias_hote:
+        for p in pages:
+            _h = urlsplit(_final_url(p) or "").netloc
+            if _h:
+                _hote_crawle = _h.lower()
+                break
 
     # Index pages by any known URL (requested + final). Normalize keys so comparisons are stable.
     page_by_requested: dict[str, PageData] = {}

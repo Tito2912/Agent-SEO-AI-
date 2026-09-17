@@ -102,3 +102,30 @@ def test_un_hote_ETRANGER_n_est_pas_resolu_pour_autant() -> None:
     ]
     bloc = _issues(pages, alias=PROD).get("canonical_points_to_4xx") or {}
     assert bloc.get("count", 0) == 0, bloc
+
+
+def test_un_demi_alias_serait_PIRE_que_pas_d_alias() -> None:
+    """Chaque page d'une preprod declare un canonical different de l'URL servie. C'est NORMAL.
+
+    Mesure du 17/09/2026, et le banc l'a attrape avant livraison : apres avoir rendu la CIBLE
+    resoluble, j'avais laisse la comparaison d'une page avec elle-meme sur son `final_url` brut.
+    `non_canonical_page_specified_as_canonical_one` est passee a 36-46 pages par stack — presque
+    toutes. Un client aurait vu quarante fausses alertes sur sa preproduction.
+
+    Un demi-alias remplace un silence par un tapage, et le tapage coute plus cher : un zero se
+    verifie, quarante alertes fausses se croient.
+    """
+    pages = [_page("/a", canonical=f"https://{PROD}/a"),
+             _page("/b", canonical=f"https://{PROD}/b"),
+             _page("/c", canonical=f"https://{PROD}/c")]
+    bloc = _issues(pages, alias=PROD).get("non_canonical_page_specified_as_canonical_one") or {}
+    assert bloc.get("count", 0) == 0, bloc
+
+
+def test_une_VRAIE_chaine_non_canonique_reste_signalee_sous_l_alias() -> None:
+    """Le garde-fou ne doit pas rendre la famille muette : a -> b, et b se declare canonique de c."""
+    pages = [_page("/a", canonical=f"https://{PROD}/b"),
+             _page("/b", canonical=f"https://{PROD}/c"),
+             _page("/c", canonical=f"https://{PROD}/c")]
+    bloc = _issues(pages, alias=PROD).get("non_canonical_page_specified_as_canonical_one") or {}
+    assert bloc.get("count", 0) == 1, bloc

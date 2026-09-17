@@ -19461,6 +19461,44 @@ def _drop_duplicate_object_keys(new_content: str, old_content: str) -> tuple[str
 _FRONT_MATTER_EXT = (".md", ".markdown", ".mdx", ".html", ".htm")
 
 
+# Fichiers ou `<script>` est un VRAI module compile : du balisage nu y est toujours une erreur de
+# syntaxe. En JSX, au contraire, du balisage dans une fonction est la norme — d'ou la restriction.
+_EXT_SCRIPT_COMPILE = (".svelte", ".vue")
+_BLOC_SCRIPT_RE = re.compile(r"<script\b[^>]*>(.*?)</script\s*>", re.S | re.I)
+# Une balise de tete posee EN DEBUT DE LIGNE, c'est-a-dire en position d'instruction. Une balise
+# citee dans une chaine (`document.write('<meta …>')`) ne commence pas une ligne ainsi.
+_BALISE_NUE_EN_SCRIPT_RE = re.compile(
+    r"^[ \t]*<(?:meta|link|title|style|svelte:head|script)\b", re.I | re.M)
+
+
+def _markup_in_script_error(content: str, path: str) -> str:
+    """'' si rien d'anormal, sinon la raison — du balisage nu au milieu du JavaScript.
+
+    SIXIEME forme de cassure du modele, mesuree le 17/09/2026 sur sveltekit, page `og-missing` :
+    charge d'ajouter les balises Open Graph manquantes, il les a posees DANS le bloc `<script>`
+    au lieu de `<svelte:head>`. Un `<meta …/>` au milieu d'un module JavaScript est une erreur de
+    syntaxe : le deploiement Netlify a echoue, preview en 404 sur tout.
+
+    AUCUN garde-fou ne pouvait le voir. Les delimiteurs restent equilibres — le modele n'a ajoute
+    ni accolade ni parenthese —, ce n'est pas du front matter, et rien ici n'analyse le
+    JavaScript. C'est le premier deploiement rouge en cinq cycles, et il est passe par le seul
+    trou que les controles existants laissaient.
+
+    On REFUSE plutot que de deplacer les balises : savoir ou elles devraient aller — `<svelte:head>`
+    ici, mais ailleurs ? — serait deviner, et deviner est precisement ce qui a produit la panne.
+    Un refus coute une correction et se voit ; un build casse coute le site et ne se voit pas.
+    """
+    if not content or not path.lower().endswith(_EXT_SCRIPT_COMPILE):
+        return ""
+    for bloc in _BLOC_SCRIPT_RE.finditer(content):
+        trouve = _BALISE_NUE_EN_SCRIPT_RE.search(bloc.group(1))
+        if trouve:
+            ligne = trouve.group(0).strip()
+            return ("balisage dans le bloc <script> : %s — un module JavaScript n'accepte pas de "
+                    "balise, la construction echouerait" % ligne)
+    return ""
+
+
 _TOML_LIGNE_LITTERALE_RE = re.compile(r"^(\s*[A-Za-z0-9_.-]+\s*=\s*)'(.*)'(\s*)$")
 
 
@@ -22143,6 +22181,11 @@ def _deep_patch_issue_files(
         new_content, _toml_notes = _requote_toml_apostrophes(new_content, path)
         for _n in _toml_notes:
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
+        _script_error = _markup_in_script_error(new_content, path)
+        if _script_error:
+            logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _script_error)
+            skipped.append(path)
+            continue
         _fm_error = _front_matter_parse_error(new_content, path)
         if _fm_error:
             logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _fm_error)
