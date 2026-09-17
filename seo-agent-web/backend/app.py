@@ -3399,7 +3399,8 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
-        _SITEMAP_HTTPS_KEYS, _ROBOTS_KEYS, _AI_POLICY_KEYS, _CANONICAL_BROKEN_KEYS,
+        _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _ROBOTS_KEYS, _AI_POLICY_KEYS,
+        _CANONICAL_BROKEN_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
@@ -17799,6 +17800,9 @@ _SITEMAP_ALTERNATE_KEYS = {"more_than_one_page_for_same_language_in_hreflang"}
 # 15/09/2026 : sur les 100 familles en attente d'un correcteur, NEUF seulement se declenchent sur
 # le parcours, et celle-ci etait la seule a la fois vue et mecaniquement reparable.
 _SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page", "sitemap_4xx_page"}
+# La meme URL listee plusieurs fois. Retrait, mais pas le meme : on ne supprime pas
+# l'entree, on supprime les COPIES. Voir `_dedupe_sitemap_locs` pour le cas qu'on refuse.
+_SITEMAP_DEDUPE_KEYS = {"page_in_multiple_sitemaps"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
 _ROBOTS_KEYS = {"sitemap_not_in_robots"}
@@ -17960,7 +17964,7 @@ def _add_sitemap_to_robots(content: str, sitemap_url: str) -> tuple[str, int]:
 # intacte, personne ne sait si ce tiers sert le https.
 _SITEMAP_HTTPS_KEYS = {"sitemap_http_urls_for_https"}
 _SITEMAP_FAMILY_KEYS = (_SITEMAP_ADD_KEYS | _SITEMAP_REWRITE_KEYS | _SITEMAP_ALTERNATE_KEYS
-                        | _SITEMAP_REMOVE_KEYS | _SITEMAP_HTTPS_KEYS)
+                        | _SITEMAP_REMOVE_KEYS | _SITEMAP_HTTPS_KEYS | _SITEMAP_DEDUPE_KEYS)
 
 
 def _sitemap_https_pairs(issue_block: Any, site_name: str) -> list[dict[str, str]]:
@@ -18261,6 +18265,51 @@ def _remove_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
         out = "\n".join(line for line in out.split("\n") if line.strip())
         # Removing a block leaves the blank line it sat on; a sitemap diff should read as
         # "these entries are gone", not "the whole file was reflowed".
+        out = re.sub(r"\n[ \t]*\n[ \t]*\n+", "\n\n", out)
+    return out, count
+
+
+def _dedupe_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
+    """DETERMINISTE : ne garder qu'UNE entree par URL listee plusieurs fois dans CE fichier.
+
+    La famille `page_in_multiple_sitemaps` couvre deux cas que rien ne distingue dans son nom :
+
+      - la meme URL dans DEUX sitemaps differents. Lequel garde l'entree ? La mesure ne le dit
+        pas, et se tromper retire une page d'un plan de site qui la portait a bon droit. On
+        s'abstient : ce fichier-ci ne contient qu'une occurrence, donc il n'y a rien a y faire.
+      - la meme URL DEUX FOIS dans le meme fichier. Aucune direction a choisir : un doublon
+        n'apporte rien et la premiere occurrence fait foi.
+
+    Ce correctif ne traite que le second. C'est ce qui lui permet d'etre deterministe, et c'est
+    aussi pourquoi il ne suffit pas toujours — le rapport continuera de signaler les URL
+    reparties entre deux fichiers, avec leur explication.
+
+    On garde la PREMIERE occurrence : elle porte souvent les `<lastmod>` et `<priority>` d'origine,
+    et l'ordre du fichier est celui que son auteur a voulu.
+    """
+    vises = {_norm_url_for_match(u) for u in (urls or []) if str(u or "").strip()}
+    if not vises:
+        return content, 0
+    vus: set[str] = set()
+    count = 0
+
+    def _un(m: "re.Match[str]") -> str:
+        nonlocal count
+        loc = _SITEMAP_LOC_RE.search(m.group(0))
+        if not loc:
+            return m.group(0)
+        cle = _norm_url_for_match(loc.group(2).strip())
+        if cle not in vises:
+            return m.group(0)
+        if cle in vus:
+            count += 1
+            return ""
+        vus.add(cle)
+        return m.group(0)
+
+    out = _SITEMAP_URL_BLOCK_RE.sub(_un, content)
+    if count:
+        out = "\n".join(ligne for ligne in out.split("\n") if ligne.strip())
         out = re.sub(r"\n[ \t]*\n[ \t]*\n+", "\n\n", out)
     return out, count
 
@@ -21934,6 +21983,19 @@ def _prepare_issue_fix(
                                     "il est déjà correct.")
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
+    if issue_key in _SITEMAP_DEDUPE_KEYS and impacted:
+        out["evidence"] = list(impacted)
+        out["link_rewriter"] = lambda raw, _u=list(impacted): _dedupe_sitemap_locs(raw, _u)  # noqa: E731
+        # Aucun repli modele. Un sitemap ENGENDRE ne produit pas de doublon par accident : s'il
+        # en sort, c'est que sa source de donnees en contient, et c'est elle qu'il faut corriger.
+        # Demander au modele de filtrer la sortie masquerait le defaut au lieu de le montrer.
+        out["rewriter_ai_fallback"] = False
+        out["extra_hint"] = (
+            "Ces URL sont listees PLUSIEURS FOIS. Ne garde que la premiere occurrence de chacune "
+            "et supprime les copies ; ne retire aucune autre entree, et ne touche ni aux "
+            "`<lastmod>` ni aux `<priority>` de celle que tu gardes.\n"
+            + "\n".join(f"- {u}" for u in list(impacted)[:20]))
+
     if issue_key in _SITEMAP_REMOVE_KEYS and impacted:
         # The flagged pages ARE the entries to drop — this family needs no url pairs, because
         # there is nothing to point them at.
