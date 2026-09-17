@@ -131,10 +131,17 @@ def test_une_valeur_trop_courte_declenche_UNE_relance(monkeypatch):
 
 
 def test_on_ne_relance_pas_indefiniment(monkeypatch):
-    """UNE relance, pas deux — puis on passe au fichier suivant sans s'acharner."""
+    """DEUX relances, pas trois — puis on passe au fichier suivant sans s'acharner.
+
+    C'etait UNE seule le 16/09. Mesure du 17/09 : `missing-meta-description` sur next-pages est
+    ressortie a 88 caracteres pour un plancher de 100 APRES l'unique relance, et une seconde
+    tentative n'avait jamais ete offerte — alors que le chemin des familles de longueur en accorde
+    deux depuis toujours. Deux chemins qui font le meme travail ne doivent pas avoir deux
+    patiences differentes.
+    """
     court = "Trop court."
-    faux = _jouer(monkeypatch, [court, court, _v("Valeur du fichier suivant")], fichiers=2)
-    assert len(faux.consignes) == 3, "essai + relance sur le premier, puis le second fichier"
+    faux = _jouer(monkeypatch, [court, court, court, _v("Fichier suivant")], fichiers=2)
+    assert len(faux.consignes) == 4, "essai + DEUX relances sur le premier, puis le second"
 
 
 def test_une_valeur_sous_le_plancher_n_est_JAMAIS_committee(monkeypatch):
@@ -149,7 +156,7 @@ def test_une_valeur_sous_le_plancher_n_est_JAMAIS_committee(monkeypatch):
     """
     court = "Trop court."
     bon = _v("Valeur du fichier suivant")
-    faux = _jouer(monkeypatch, [court, court, bon], fichiers=2)
+    faux = _jouer(monkeypatch, [court, court, court, bon], fichiers=2)
     assert len(faux.commits) == 1, (
         "le fichier trop court a ete committe : %d commit(s)" % len(faux.commits))
     # Et c'est bien le SECOND fichier qui passe, pas le fautif.
@@ -181,9 +188,9 @@ def test_une_valeur_deja_posee_n_est_JAMAIS_committee(monkeypatch):
     patche et la page garde son texte. Au pire le doublon subsiste — jamais il ne s'aggrave.
     """
     partagee = _v("La meme pour tout le monde")
-    faux = _jouer(monkeypatch, [partagee, partagee, partagee], fichiers=2)
-    # Le premier fichier passe ; le second relance puis renonce.
-    assert len(faux.consignes) == 3
+    faux = _jouer(monkeypatch, [partagee] * 4, fichiers=2)
+    # Le premier fichier passe ; le second relance DEUX fois puis renonce.
+    assert len(faux.consignes) == 4
     assert "DEJA posee" in faux.consignes[2]
 
 
@@ -191,8 +198,8 @@ def test_le_refus_n_empeche_pas_le_fichier_suivant(monkeypatch):
     """Un fichier abandonne ne doit pas interrompre le lot."""
     partagee = _v("Partagee")
     autre = _v("Bien distincte")
-    faux = _jouer(monkeypatch, [partagee, partagee, partagee, autre], fichiers=3)
-    assert len(faux.consignes) == 4, "1 pour le premier, 2 pour le refuse, 1 pour le dernier"
+    faux = _jouer(monkeypatch, [partagee] * 4 + [autre], fichiers=3)
+    assert len(faux.consignes) == 5, "1 pour le premier, 3 pour le refuse, 1 pour le dernier"
 
 
 PAGE_SANS_VALEUR = "export const metadata = {\n  title: 'Un titre',\n};\n"
@@ -206,7 +213,7 @@ def test_une_page_SANS_valeur_prealable_garde_sa_meilleure_tentative(monkeypatch
     commit laisserait la page sans description du tout, ce qui n'est pas mieux. La garantie dure
     du plancher ne mord donc que si la page avait une valeur A PRESERVER.
     """
-    faux = _Faux(["Trop court.", "Trop court encore."])
+    faux = _Faux(["Trop court.", "Trop court encore.", "Toujours trop court."])
     monkeypatch.setattr(m, "_openai_generate_file_patch", faux)
     monkeypatch.setattr(m, "_resolve_issue_targets", lambda **kw: ["a/page.tsx"])
     monkeypatch.setattr(m, "_github_api_get", lambda *a, **k: {
@@ -227,5 +234,5 @@ def test_une_page_SANS_valeur_prealable_garde_sa_meilleure_tentative(monkeypatch
         all_paths=["a/page.tsx"], issue_key="missing_meta_description",
         issue_label="Description manquante", impacted_urls=["https://x.fr/a"],
         site_name="x.fr", file_state={}, max_files=6)
-    assert len(faux.consignes) == 2, "la relance doit quand meme avoir lieu"
+    assert len(faux.consignes) == 3, "les deux relances doivent quand meme avoir lieu"
     assert len(faux.commits) == 1, "une description courte vaut mieux qu'aucune"

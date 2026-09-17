@@ -22161,9 +22161,14 @@ def _deep_patch_issue_files(
                         "a cette page — et ne recopie pas l'Open Graph de la page, qui est "
                         "generique.")
             if _rendered_len(val) < _plancher:
+                # On dit ce qui MANQUE, pas seulement le seuil. Mesure du 17/09/2026 : prevenu
+                # que le minimum etait 100, le modele a rendu 88 caracteres deux fois de suite —
+                # « le minimum est 100 » se lit comme un ordre de grandeur, « il manque 12
+                # caracteres » comme une quantite.
                 return ("La valeur que tu viens de proposer fait %d caracteres : c'est TROP "
-                        "COURT, le minimum est %d. Reecris-la plus riche."
-                        % (_rendered_len(val), _plancher))
+                        "COURT, le minimum est %d — il manque au moins %d caracteres. Reecris-la "
+                        "plus riche, en ajoutant du contenu propre a CETTE page."
+                        % (_rendered_len(val), _plancher, _plancher - _rendered_len(val)))
             return ""
 
         for _path in targets:
@@ -22171,11 +22176,20 @@ def _deep_patch_issue_files(
             _val = _valeur_ecrite(_res)
             # UNE relance. Ailleurs, `_keep_length_above_floor` rend l'ancienne valeur — remede
             # impossible ici : l'ancienne valeur EST le doublon qu'on vient de supprimer.
-            _souci = _pourquoi_refuser(_val, _interdits)
-            if _souci:
+            # DEUX relances, comme le chemin des familles de longueur — qui en accorde deux
+            # depuis toujours pendant que celui-ci n'en donnait qu'une. Mesure du 17/09/2026 :
+            # `missing-meta-description` sur next-pages est ressortie a 88 caracteres apres
+            # l'unique relance, et une seconde tentative n'avait jamais ete offerte. Deux chemins
+            # qui font le meme travail ne doivent pas avoir deux patiences differentes.
+            for _essai in range(2):
+                _souci = _pourquoi_refuser(_val, _interdits)
+                if not _souci:
+                    break
                 _res2 = _prepare(_path, tuple(_interdits), rappel=_souci)
                 _val2 = _valeur_ecrite(_res2)
-                if not _pourquoi_refuser(_val2, _interdits):
+                # On garde la meilleure tentative, pas la derniere : un modele qui s'eloigne
+                # ne doit pas faire perdre ce qu'il avait deja approche.
+                if _val2 and _rendered_len(_val2) > _rendered_len(_val or ""):
                     _res, _val = _res2, _val2
             # GARANTIE DURE, qui ne demande rien a personne : on ne commit jamais une valeur
             # deja ecrite dans ce passage. Mesure du 14/09/2026, next-app : prevenu que la
