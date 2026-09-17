@@ -87,16 +87,39 @@ def test_la_politique_d_entrainement_est_une_REMARQUE_pas_un_defaut():
         "indexable_page_blocked_from_all_ai_search_bots"].severity == "warning"
 
 
-def test_aucune_de_ces_familles_n_est_declaree_corrigeable_automatiquement():
-    """Editer le robots.txt d'un client pour ouvrir des robots d'IA est une decision qui lui
-    appartient. On la lui EXPLIQUE, on ne la prend pas a sa place."""
+def test_OUVRIR_des_robots_d_IA_reste_une_decision_du_client():
+    """On n'OUVRE jamais un robot que le client a ferme : cela ne se reprend pas.
+
+    Regle d'origine, du 15/09/2026 : « editer le robots.txt d'un client pour ouvrir des robots
+    d'IA est une decision qui lui appartient ; on la lui EXPLIQUE, on ne la prend pas a sa
+    place. » Elle vaut toujours pour `indexable_page_blocked_from_all_ai_search_bots` : tout
+    fermer est une position coherente, et la defaire serait decider a la place du proprietaire.
+    """
     import os
     os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
     os.environ.setdefault("SEO_AGENT_SECRET_KEY", "x" * 20)
     from backend import app as m
-    for cle in ("indexable_page_blocked_from_all_ai_search_bots",
-                "inconsistent_ai_training_bot_policy"):
-        assert not m._github_issue_auto_fixable(cle)
+    assert not m._github_issue_auto_fixable("indexable_page_blocked_from_all_ai_search_bots")
+
+
+def test_une_politique_INCOHERENTE_est_desormais_corrigee():
+    """Le 17/09/2026, cette famille a change de statut, et il faut dire pourquoi.
+
+    Elle ne demande pas d'ouvrir quoi que ce soit : elle ETEND aux autres robots d'entrainement
+    le refus deja pose sur certains. L'anomalie est l'INCOHERENCE, pas le sens — mais corriger
+    demande de choisir une direction que la mesure ne dicte pas, et le choix retenu est celui qui
+    se defait le plus facilement : un blocage ajoute se retire en une ligne, un blocage supprime
+    laisse un robot apprendre du site entre-temps.
+
+    La PR l'annonce (`_FIX_PREMISE_NOTES`) et la famille ne fusionne jamais toute seule, comme
+    `sitemap_noindex_page` dont la premisse est discutable de la meme facon.
+    """
+    import os
+    os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
+    os.environ.setdefault("SEO_AGENT_SECRET_KEY", "x" * 20)
+    from backend import app as m
+    assert "inconsistent_ai_training_bot_policy" in set(m._handled_issue_keys())
+    assert m._fix_premise_note("inconsistent_ai_training_bot_policy")
 
 
 # ── Le comportement, sur de vrais robots.txt ─────────────────────────────────────────────────

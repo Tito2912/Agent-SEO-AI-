@@ -3246,7 +3246,9 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     # Next-centric list the hreflang family carries. Subtracted from `hreflang` below for the same
     # reason the others are: no key may resolve differently depending on table order.
     served_lang = set(_SERVED_LANG_FIX_KEYS)
-    robots = set(_ROBOTS_KEYS)
+    # `inconsistent_ai_training_bot_policy` se repare dans `robots.txt` elle aussi : on la range
+    # sur le fichier qu'elle EDITE, pas sur ce que son nom evoque. Meme regle que ci-dessous.
+    robots = set(_ROBOTS_KEYS) | set(_AI_POLICY_KEYS)
     sitemap = set(_SITEMAP_FAMILY_KEYS)
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
     links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
@@ -3397,7 +3399,7 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
-        _SITEMAP_HTTPS_KEYS, _ROBOTS_KEYS, _CANONICAL_BROKEN_KEYS,
+        _SITEMAP_HTTPS_KEYS, _ROBOTS_KEYS, _AI_POLICY_KEYS, _CANONICAL_BROKEN_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
         _REDIRECT_CONFIG_KEYS,
@@ -17886,6 +17888,49 @@ _ROBOTS_SITEMAP_LINE_RE = re.compile(r"(?mi)^\s*sitemap\s*:")
 _ROBOTS_GROUP_RE = re.compile(r"(?mi)^\s*user-agent\s*:")
 
 
+_AI_POLICY_KEYS = {"inconsistent_ai_training_bot_policy"}
+# Un groupe `User-agent: X` et tout ce qui le suit jusqu'au prochain groupe ou la fin.
+_ROBOTS_BLOC_RE = re.compile(
+    r"(?mi)^[ \t]*user-agent[ \t]*:[ \t]*(?P<agent>[^\r\n]+)[\r\n]+"
+    r"(?P<regles>(?:[ \t]*(?!user-agent[ \t]*:)[^\r\n]*[\r\n]*)*)")
+_ROBOTS_DISALLOW_TOUT_RE = re.compile(r"(?mi)^[ \t]*disallow[ \t]*:[ \t]*/[ \t]*$")
+
+
+def _align_ai_training_policy(content: str, a_bloquer: list[str]) -> tuple[str, int]:
+    """DETERMINISTE : etendre a TOUS les robots d'entrainement la regle deja posee sur certains.
+
+    La famille se leve quand un site bloque une partie des robots d'entrainement et en laisse
+    passer d'autres — le plus souvent sans l'avoir decide : une regle recopiee d'un article de
+    blog nomme trois agents, et les six autres apprennent librement.
+
+    CE QUE CE CORRECTIF SUPPOSE, et il faut le dire : que l'intention exprimee est de BLOQUER.
+    Le site a ecrit des regles de refus ; on les etend aux agents qui manquaient. La lecture
+    inverse existe — vouloir tout ouvrir et avoir bloque par accident — et c'est pourquoi la PR
+    l'annonce (`_FIX_PREMISE_NOTES`). Le correctif ne RETIRE jamais une regle : ajouter un refus
+    se defait en une ligne, retirer un refus laisse un robot apprendre du site entre-temps.
+
+    On n'ecrit que dans un fichier qui a deja la FORME d'un robots.txt : au moins un groupe
+    `User-agent`. Meme precaution qu'`_add_sitemap_to_robots`, et pour la meme raison — une ligne
+    partie dans le mauvais fichier a fait echouer cinq deploiements le 15/09/2026.
+    """
+    if not a_bloquer or not content.strip() or not _ROBOTS_GROUP_RE.search(content):
+        return content, 0
+    deja = set()
+    for m in _ROBOTS_BLOC_RE.finditer(content):
+        if _ROBOTS_DISALLOW_TOUT_RE.search(m.group("regles") or ""):
+            deja.add(m.group("agent").strip().lower())
+    manquants = [a for a in a_bloquer if a.strip().lower() not in deja]
+    if not manquants:
+        return content, 0
+    # Une ligne vide entre les groupes : c'est l'usage, et cela evite toute ambiguite avec
+    # la regle du format qui FUSIONNE des `User-agent` consecutifs non separes par une regle.
+    ajout = "\n\n".join("User-agent: %s\nDisallow: /" % a.strip() for a in manquants)
+    return content.rstrip("\n") + "\n\n" + ajout + "\n", len(manquants)
+
+
+
+
+
 def _add_sitemap_to_robots(content: str, sitemap_url: str) -> tuple[str, int]:
     """DETERMINISTE : ajouter la directive `Sitemap:` a un `robots.txt` qui n'en a pas.
 
@@ -21480,6 +21525,13 @@ def _resolve_issue_targets(
 # decision belongs to the site owner, not to us. A predictable diff is not the same thing as an
 # uncontroversial one, and these must never auto-merge however deterministic the rewrite is.
 _FIX_PREMISE_NOTES: dict[str, str] = {
+    "inconsistent_ai_training_bot_policy": (
+        "Ce correctif ETEND aux autres robots d'entrainement le refus que tu as deja pose sur "
+        "certains — il tient donc ton intention pour « bloquer ». Si tu voulais au contraire les "
+        "laisser apprendre de ton site, c'est l'inverse qu'il faut faire : retirer les refus "
+        "existants. Le correctif n'en retire jamais aucun, parce qu'un refus ajoute se defait en "
+        "une ligne quand un refus retire laisse un robot apprendre entre-temps."
+    ),
     "duplicate_pages_without_canonical": (
         "Ce correctif designe **une** page maitresse par groupe de jumelles — la plus proche de "
         "la racine — et fait pointer les autres vers elle. C'est une CONVENTION, pas une mesure : "
@@ -21738,6 +21790,33 @@ def _prepare_issue_fix(
             if og_imgs:
                 out["extra_hint"] += "\nImages OG héritées du layout à RÉUTILISER dans le openGraph de chaque page (copie ce `images:` tel quel) : images: " + og_imgs
                 break
+
+    if issue_key in _AI_POLICY_KEYS:
+        _autorises: list[str] = []
+        _bloc = (issues or {}).get(issue_key) or {}
+        for _item in ((_bloc.get("evidence") or {}).get("items") or []):
+            if str(_item.get("field") or "") == "autorises":
+                _autorises = [x.strip() for x in str(_item.get("value") or "").split(",") if x.strip()]
+        _robots_paths = [p for p in (all_paths or [])
+                         if "robots" in p.rsplit("/", 1)[-1].lower()]
+        if not _autorises:
+            out["refusal"] = ("Le rapport ne dit pas quels robots d'entrainement sont autorises : "
+                              "sans cette liste, etendre la regle reviendrait a deviner.")
+        elif not _robots_paths:
+            out["refusal"] = "Aucun fichier `robots` dans ce depot : rien a aligner."
+        else:
+            out["targets_override"] = _robots_paths[:2]
+            out["link_rewriter"] = (  # noqa: E731
+                lambda raw, _a=_autorises: _align_ai_training_policy(raw, _a))
+            # Aucun repli IA : la liste des agents et la regle a ecrire sont toutes deux connues,
+            # il n'y a rien a formuler. Un `app/robots.ts` engendre restera non corrige — c'est
+            # un prix plus bas que celui d'un modele qui reecrit un fichier de politique.
+            out["rewriter_ai_fallback"] = False
+            out["extra_hint"] = (
+                "Politique incoherente envers les robots d'entrainement : certains sont refuses, "
+                "d'autres passent. Ajoute un groupe `User-agent` avec `Disallow: /` pour chacun "
+                "de ceux qui passent encore : " + ", ".join(_autorises) + ". Ne retire aucune "
+                "regle existante.")
 
     if issue_key in _ROBOTS_KEYS:
         _sm = _robots_sitemap_url(issues, site_name)
