@@ -46,6 +46,32 @@ def base(key: str) -> str:
     return _REPLIS.get(nu, nu)
 
 
+# Familles dont la detection exige de RESOUDRE une cible — le canonical ou le hreflang d'une page
+# doit designer une page que le crawl a vue — et qui sont donc MUETTES sur une preview : ces
+# valeurs restent en absolu vers l'hote de PRODUCTION (c'est voulu, changer un canonical de
+# reference changerait l'anomalie), donc `page_by_any.get(canon)` ne trouve jamais rien.
+#
+# Mesure du 17/09/2026 sur les neuf stacks : 53 occurrences en production, ZERO sur les previews.
+# Pas une seule survivante. Le controle lisait ce zero comme une correction et creditait ces
+# familles a chaque cycle.
+#
+# C'est le defaut du 15/09 sous une autre forme — l'absence d'une anomalie n'est pas sa
+# correction — et il est plus sournois, parce qu'ici la preview est parfaitement SAINE : elle sert
+# toutes ses pages, elle passe le garde-fou de comparabilite, et elle ment quand meme sur ces
+# familles-la. Un site qui repond, qui est a jour, et qui reste aveugle sur un point precis.
+#
+# Les prouver demande la PRODUCTION, comme les familles d'indexabilite.
+_FAMILLES_A_CIBLE_RESOLUE = {
+    "canonical_points_to_4xx",
+    "canonical_points_to_5xx",
+    "canonical_points_to_redirect",
+    "non_canonical_page_specified_as_canonical_one",
+    "hreflang_to_non_canonical",
+    "hreflang_to_redirect_or_broken_page",
+    "canonical_url_has_no_incoming_internal_links",
+}
+
+
 def _jeton() -> str:
     """Le jeton du banc : d'abord l'environnement, le fichier seulement en second.
 
@@ -180,13 +206,23 @@ def main() -> int:
         if not _preview_comparable(stack, ref_json, apres_json):
             continue
         avant, apres = comptes(ref_json), comptes(apres_json)
-        corrigees = sorted(k for k in avant if apres.get(k, 0) < avant[k])
-        tenaces = sorted(k for k in avant if apres.get(k, 0) >= avant[k])
-        lignes.append((stack, len(avant), len(corrigees), tenaces))
-        print("  %-12s familles avant=%-3d en baisse=%-3d inchangees=%d"
-              % (stack, len(avant), len(corrigees), len(tenaces)))
+        # Les familles muettes sortent des DEUX colonnes : les compter « en baisse » etait un faux
+        # succes, les compter « inchangees » serait une fausse alerte. On ne sait pas, et c'est ce
+        # qu'il faut dire.
+        muettes = sorted(k for k in avant if k in _FAMILLES_A_CIBLE_RESOLUE)
+        mesurables = {k: n for k, n in avant.items() if k not in _FAMILLES_A_CIBLE_RESOLUE}
+        corrigees = sorted(k for k in mesurables if apres.get(k, 0) < mesurables[k])
+        tenaces = sorted(k for k in mesurables if apres.get(k, 0) >= mesurables[k])
+        lignes.append((stack, len(mesurables), len(corrigees), tenaces, muettes))
+        print("  %-12s familles avant=%-3d en baisse=%-3d inchangees=%-3d non mesurables=%d"
+              % (stack, len(mesurables), len(corrigees), len(tenaces), len(muettes)))
     print()
-    for stack, _n, _c, tenaces in lignes:
+    for stack, _n, _c, _t, muettes in lignes:
+        for key in muettes:
+            print("    %-12s NON MESURABLE SUR PREVIEW %s — la cible du canonical/hreflang est "
+                  "hors hote, aucun verdict possible ici" % (stack, key))
+    print()
+    for stack, _n, _c, tenaces, _m in lignes:
         for key in tenaces:
             print("    %-12s INCHANGEE %s" % (stack, key))
     return 0
