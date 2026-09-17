@@ -5130,6 +5130,16 @@ def _score_issues(
         req = _norm_self(p.url)
         if req and req not in page_by_requested:
             page_by_requested[req] = p
+        if _alias_hote:
+            # `page_by_requested` a besoin du MEME alias que `page_by_any` : la detection d'un
+            # canonical vers une REDIRECTION passe par lui (`target_req`), pas par l'autre index.
+            # Trouve le 17/09/2026 en preparant le temoin du banc : sans cette ligne,
+            # `canonical_points_to_redirect` restait aveugle sur une preview alors que je venais
+            # d'annoncer les cinq familles « reellement mesurees ». Un alias a moitie pose se
+            # rattrape mal : il faut suivre CHAQUE index qui resout une cible.
+            _req_alias = _norm_self(_avec_hote(p.url, _alias_hote))
+            if _req_alias and _req_alias not in page_by_requested:
+                page_by_requested[_req_alias] = p
         _connues = [p.url, p.final_url]
         if _alias_hote:
             # La MEME page, telle que le site la nomme dans ses canonical et hreflang. Indexer

@@ -129,3 +129,39 @@ def test_une_VRAIE_chaine_non_canonique_reste_signalee_sous_l_alias() -> None:
              _page("/c", canonical=f"https://{PROD}/c")]
     bloc = _issues(pages, alias=PROD).get("non_canonical_page_specified_as_canonical_one") or {}
     assert bloc.get("count", 0) == 1, bloc
+
+
+def test_le_canonical_vers_une_REDIRECTION_est_vu_sous_l_alias() -> None:
+    """La detection passe par `page_by_requested`, un index different de `page_by_any`.
+
+    Trouve le 17/09/2026 en preparant le temoin du banc, APRES avoir annonce les cinq familles
+    « reellement mesurees » : `canonical_points_to_redirect` etait restee aveugle, parce que mon
+    alias n'avait enrichi qu'un des deux index. Un alias a moitie pose se rattrape mal — il faut
+    suivre CHAQUE index qui resout une cible.
+    """
+    cible = _page("/nouvelle")
+    vieille = audit.PageData(url=f"{PREVIEW}/ancienne")
+    vieille.final_url = f"{PREVIEW}/nouvelle"
+    vieille.status_code = 200
+    vieille.content_type = "text/html; charset=utf-8"
+    # Une page REDIRIGEE se reconnait a la chaine de statuts qu'elle a traversee, pas a son
+    # statut final : `_is_redirect` lit `redirect_statuses`.
+    vieille.redirect_statuses = [301]
+    page = _page("/a", canonical=f"https://{PROD}/ancienne")
+    bloc = _issues([page, vieille, cible], alias=PROD).get("canonical_points_to_redirect") or {}
+    assert bloc.get("count", 0) == 1, bloc
+
+
+def test_sans_alias_le_canonical_vers_une_redirection_se_TAIT() -> None:
+    """Le defaut mesure, fixe pour qu'on voie ce que l'alias change sur CET index-la."""
+    cible = _page("/nouvelle")
+    vieille = audit.PageData(url=f"{PREVIEW}/ancienne")
+    vieille.final_url = f"{PREVIEW}/nouvelle"
+    vieille.status_code = 200
+    vieille.content_type = "text/html; charset=utf-8"
+    # Une page REDIRIGEE se reconnait a la chaine de statuts qu'elle a traversee, pas a son
+    # statut final : `_is_redirect` lit `redirect_statuses`.
+    vieille.redirect_statuses = [301]
+    page = _page("/a", canonical=f"https://{PROD}/ancienne")
+    bloc = _issues([page, vieille, cible]).get("canonical_points_to_redirect") or {}
+    assert bloc.get("count", 0) == 0, bloc
