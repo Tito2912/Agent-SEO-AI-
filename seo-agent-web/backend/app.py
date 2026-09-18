@@ -3256,7 +3256,7 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     # `missing_reciprocal_hreflang` rejoint le groupe hreflang : la balise qui manque est une
     # annotation de tete, et elle vit dans le fichier de la page CIBLE — pas dans un sitemap,
     # malgre la moitie de la famille qui parle d'appartenance au sitemap et qu'on ne corrige pas.
-    hreflang = ((set(_HREFLANG_HINTS) | set(_HREFLANG_RETURN_KEYS))
+    hreflang = ((set(_HREFLANG_HINTS) | set(_HREFLANG_RETURN_KEYS) | set(_HREFLANG_DROP_KEYS))
                 - served_lang)        # a hreflang tag, whatever its name says
     canonical = (set(_CANONICAL_BROKEN_KEYS)
                  | {k for k in _URL_PAIR_KEYS if "canonical" in k}
@@ -3403,7 +3403,8 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
-        _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _HREFLANG_RETURN_KEYS, _ROBOTS_KEYS,
+        _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _HREFLANG_RETURN_KEYS,
+        _HREFLANG_DROP_KEYS, _ROBOTS_KEYS,
         _AI_POLICY_KEYS,
         _CANONICAL_BROKEN_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
@@ -17812,6 +17813,10 @@ _SITEMAP_DEDUPE_KEYS = {"page_in_multiple_sitemaps"}
 # sont pas les fichiers a editer — ce sont les CIBLES qui ne renvoient pas. Voir
 # `_add_reciprocal_hreflang`, et le ciblage par page qui doit etre desactive pour elle.
 _HREFLANG_RETURN_KEYS = {"missing_reciprocal_hreflang"}
+# Le retrait d'annotations en trop. Comme la precedente, la preuve dit QUOI retirer et de
+# QUELLE page ; le nom de la famille ne dit ni l'un ni l'autre. Difference avec elle : ici
+# la page signalee EST le fichier a editer, donc le ciblage par page reste le bienvenu.
+_HREFLANG_DROP_KEYS = {"page_referenced_for_more_than_one_language_in_hreflang"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
 _ROBOTS_KEYS = {"sitemap_not_in_robots"}
@@ -20730,6 +20735,49 @@ _HREFLANG_LIEN_RE = re.compile(
     re.I | re.M)
 
 
+def _drop_hreflang_annotations(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTE : retirer d'une page les annotations hreflang en trop.
+
+    `page_referenced_for_more_than_one_language_in_hreflang` se leve quand une page designe la
+    MEME URL sous plusieurs langues primaires — `fr` et `en` pointant tous deux vers /en. Une des
+    deux a raison et la CIBLE le dit, par la langue qu'elle declare. La preuve du crawl porte donc
+    les codes a RETIRER, jamais celui a garder : le correcteur n'arbitre rien, il applique.
+
+    On ne retire QUE la ligne dont le code ET l'URL correspondent a la preuve. Les deux sont
+    necessaires : un meme code sert souvent plusieurs URL dans la meme page, et une meme URL est
+    legitimement designee par `fr` et par `x-default`.
+
+    Le fichier dit lui-meme quelle page il est, par son canonical — le reecriveur ne recoit que du
+    contenu, jamais un chemin. Sans canonical litteral unique, on s'abstient : retirer une
+    annotation de la mauvaise page en casserait une saine.
+    """
+    moi = _canonical_ecrit_dans(content)
+    if not moi or not items:
+        return content, 0
+    _moi = _norm_url_for_match(moi)
+    a_retirer = {(str(i.get("field") or "").strip().lower(),
+                  _norm_url_for_match(str(i.get("value") or "")))
+                 for i in items
+                 if _norm_url_for_match(str(i.get("page") or "")) == _moi
+                 and str(i.get("field") or "").strip() and str(i.get("value") or "").strip()}
+    if not a_retirer:
+        return content, 0
+    # Ligne par ligne, pas par `sub` : une substitution vide laisserait une ligne blanche, et un
+    # diff doit se lire « cette annotation a disparu », pas « le fichier a ete reformate ».
+    gardees: list[str] = []
+    count = 0
+    for ligne in content.split("\n"):
+        m = _HREFLANG_LIEN_RE.match(ligne)
+        if m is not None and (m.group("code").strip().lower(),
+                              _norm_url_for_match(m.group("href").strip())) in a_retirer:
+            count += 1
+            continue
+        gardees.append(ligne)
+    if not count:
+        return content, 0
+    return "\n".join(gardees), count
+
+
 def _add_reciprocal_hreflang(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTE : poser sur la page CIBLE la balise de retour qui lui manque.
 
@@ -21517,6 +21565,7 @@ def _resolve_issue_targets(
         wants_page_targeting
         or issue_key in _HEAD_HINTS or issue_key in _HREFLANG_HINTS or issue_key in _PAGE_VALUE_KEYS
         or issue_key in _PER_PAGE_CONTENT_KEYS
+        or issue_key in _HREFLANG_DROP_KEYS
         or issue_key in _PAGE_TARGETED_ASSET_KEYS
         or _length_family_name(issue_key) is not None
         or page_side
@@ -22053,6 +22102,28 @@ def _prepare_issue_fix(
                                     "il est déjà correct.")
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
+    if issue_key in _HREFLANG_DROP_KEYS:
+        _items = _issue_page_values(block)
+        if not _items:
+            out["refusal"] = (
+                "Le rapport ne dit pas quelle annotation retirer : la cible n'a pas ete crawlee, "
+                "ou ne declare aucune langue, donc rien ne designe celle qui a raison.")
+        else:
+            out["evidence"] = [str(i.get("page") or "") for i in _items
+                               if str(i.get("page") or "")]
+            out["link_rewriter"] = (  # noqa: E731
+                lambda raw, _i=list(_items): _drop_hreflang_annotations(raw, _i))
+            # Aucun repli modele : les deux valeurs sont connues, et « enleve le hreflang en
+            # trop » sans dire lequel est exactement la question que le modele ne peut trancher.
+            out["rewriter_ai_fallback"] = False
+            out["extra_hint"] = (
+                "Ces pages designent la MEME URL sous plusieurs langues. Retire EXACTEMENT les "
+                "annotations listees, aucune autre : celle qui reste est celle dont le code "
+                "correspond a la langue que la page cible declare.\n"
+                + "\n".join("- %s : retirer hreflang=%s vers %s"
+                             % (i.get("page"), i.get("field"), i.get("value"))
+                             for i in _items[:20]))
+
     if issue_key in _HREFLANG_RETURN_KEYS:
         _items = _issue_page_values(block)
         _cibles = [str(i.get("page") or "") for i in _items if str(i.get("page") or "")]
