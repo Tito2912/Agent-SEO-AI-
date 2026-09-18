@@ -93,10 +93,15 @@ def _avec_preuve(arbre: ast.AST) -> set[str]:
     return out
 
 
-def main() -> None:
+def mesurer() -> dict[str, object]:
+    """Les trois mesures, sans rien imprimer.
+
+    Extraite de `main()` le 18/09/2026 pour que `reparabilite.py` reparte de la MEME liste de
+    vivantes. Recopier le calcul aurait laisse les deux mesures diverger en silence : c'est
+    exactement le genre d'ecart qui fait classer une famille deja corrigee.
+    """
     arbre = ast.parse(CRAWLER.read_text(encoding="utf-8"))
     emissions = _emissions(arbre)
-    preuves = _avec_preuve(arbre)
 
     montrees = {k for k in dash.ISSUE_CATALOG
                 if k not in dash.NON_ISSUE_KEYS and not dash.is_delta_issue_key(k)}
@@ -104,19 +109,12 @@ def main() -> None:
     montrees_r = {racine_cle(k) for k in montrees}
     gerees_r = {racine_cle(k) for k in gerees}
 
-    print("familles montrees au client : %d brut, %d racines"
-          % (len(montrees), len(montrees_r)))
-    print("  dont un correcteur les revendique : %d brut, %d racines"
-          % (len(montrees & gerees), len(montrees_r & gerees_r)))
-
     consultatives, attente = [], []
     for k in sorted(montrees_r - gerees_r):
         if k in m._ADVISORY_ISSUE_KEYS or any(t in k for t in m._ADVISORY_ISSUE_TOKENS):
             consultatives.append(k)
         else:
             attente.append(k)
-    print("  CONSULTATIVES declarees          : %d" % len(consultatives))
-    print("  sans correcteur ET non declarees : %d" % len(attente))
 
     groupes: dict[str, list[str]] = {"MUETTE": [], "ABSENTE": [], "VIVANTE": []}
     for k in attente:
@@ -127,6 +125,27 @@ def main() -> None:
             groupes["MUETTE"].append(k)
         else:
             groupes["VIVANTE"].append(k)
+
+    return {
+        "montrees": montrees, "gerees": gerees,
+        "montrees_r": montrees_r, "gerees_r": gerees_r,
+        "consultatives": consultatives, "attente": attente,
+        "groupes": groupes, "preuves": _avec_preuve(arbre),
+    }
+
+
+def main() -> None:
+    mes = mesurer()
+    montrees, gerees = mes["montrees"], mes["gerees"]
+    montrees_r, gerees_r = mes["montrees_r"], mes["gerees_r"]
+    groupes, preuves = mes["groupes"], mes["preuves"]
+
+    print("familles montrees au client : %d brut, %d racines"
+          % (len(montrees), len(montrees_r)))
+    print("  dont un correcteur les revendique : %d brut, %d racines"
+          % (len(montrees & gerees), len(montrees_r & gerees_r)))
+    print("  CONSULTATIVES declarees          : %d" % len(mes["consultatives"]))
+    print("  sans correcteur ET non declarees : %d" % len(mes["attente"]))
 
     for nom, aide in (("MUETTE", "emise vide en dur : ne se levera jamais"),
                       ("ABSENTE", "jamais emise par le crawler"),
