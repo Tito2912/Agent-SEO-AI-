@@ -3253,7 +3253,11 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
     links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
     assets = set(_ASSET_REWRITE_KEYS) | {"missing_alt_text"}
-    hreflang = set(_HREFLANG_HINTS) - served_lang        # a hreflang tag, whatever its name says
+    # `missing_reciprocal_hreflang` rejoint le groupe hreflang : la balise qui manque est une
+    # annotation de tete, et elle vit dans le fichier de la page CIBLE — pas dans un sitemap,
+    # malgre la moitie de la famille qui parle d'appartenance au sitemap et qu'on ne corrige pas.
+    hreflang = ((set(_HREFLANG_HINTS) | set(_HREFLANG_RETURN_KEYS))
+                - served_lang)        # a hreflang tag, whatever its name says
     canonical = (set(_CANONICAL_BROKEN_KEYS)
                  | {k for k in _URL_PAIR_KEYS if "canonical" in k}
                  | {"missing_canonical", "duplicate_pages_without_canonical"}) - hreflang
@@ -3399,7 +3403,8 @@ def _handled_issue_keys() -> set[str]:
         handled |= set(table)
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
-        _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _ROBOTS_KEYS, _AI_POLICY_KEYS,
+        _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _HREFLANG_RETURN_KEYS, _ROBOTS_KEYS,
+        _AI_POLICY_KEYS,
         _CANONICAL_BROKEN_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
         _REDIRECT_LINK_KEYS, _MIXED_CONTENT_KEYS, _DOUBLE_SLASH_KEYS, _PAGE_VALUE_KEYS,
@@ -17803,6 +17808,10 @@ _SITEMAP_REMOVE_KEYS = {"sitemap_noindex_page", "sitemap_4xx_page"}
 # La meme URL listee plusieurs fois. Retrait, mais pas le meme : on ne supprime pas
 # l'entree, on supprime les COPIES. Voir `_dedupe_sitemap_locs` pour le cas qu'on refuse.
 _SITEMAP_DEDUPE_KEYS = {"page_in_multiple_sitemaps"}
+# La balise de retour manquante. Famille a part parmi les hreflang : les pages SIGNALEES ne
+# sont pas les fichiers a editer — ce sont les CIBLES qui ne renvoient pas. Voir
+# `_add_reciprocal_hreflang`, et le ciblage par page qui doit etre desactive pour elle.
+_HREFLANG_RETURN_KEYS = {"missing_reciprocal_hreflang"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
 _ROBOTS_KEYS = {"sitemap_not_in_robots"}
@@ -20712,6 +20721,66 @@ def _align_og_url_with_added_canonical(new_content: str, old_content: str) -> tu
     return out, ["og:url aligne sur le canonical que ce correctif vient d'ajouter : %s" % canonical]
 
 
+# Une annotation hreflang ECRITE EN BALISAGE, sous la forme qu'on saura cloner. Les formes objet
+# (next `alternates.languages`, nuxt `useHead({link})`) demandent de savoir ou s'inserer dans une
+# structure ; on s'y abstient, comme pour l'Open Graph.
+_HREFLANG_LIEN_RE = re.compile(
+    r"""^([ \t]*)<link\s+rel\s*=\s*(['"])alternate\2\s+hreflang\s*=\s*(['"])(?P<code>[^'"]+)\3"""
+    r"""\s+href\s*=\s*(['"])(?P<href>[^'"]*)\5\s*/?>[ \t]*$""",
+    re.I | re.M)
+
+
+def _add_reciprocal_hreflang(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTE : poser sur la page CIBLE la balise de retour qui lui manque.
+
+    La famille `missing_reciprocal_hreflang` signale la page SOURCE, mais le fichier a corriger
+    est la cible — celle qui ne renvoie pas. La preuve du crawl porte les trois choses que le nom
+    de l'anomalie ne dit pas : quelle page editer, quel code employer, vers quelle URL.
+
+    LE FICHIER DIT LUI-MEME QUELLE PAGE IL EST, par son canonical. C'est necessaire parce que le
+    reecriveur ne recoit que du contenu, jamais un chemin — et parce que l'autre discriminant
+    possible ne tient pas : « le fichier contient une alternative vers P » est vrai de TOUTES les
+    pages du groupe, pas seulement de P. Sans canonical litteral unique, on s'abstient.
+
+    La balise ajoutee CLONE une annotation existante du fichier — indentation, guillemets, style
+    de fermeture — pour ne rien supposer de l'idiome. Un fichier qui n'en porte aucune n'offre
+    rien a cloner : on s'abstient plutot que d'inventer une forme, et la famille reste signalee.
+    """
+    moi = _canonical_ecrit_dans(content)
+    if not moi or not items:
+        return content, 0
+    _moi = _norm_url_for_match(moi)
+    a_poser = [it for it in items
+               if _norm_url_for_match(str(it.get("page") or "")) == _moi
+               and str(it.get("field") or "").strip() and str(it.get("value") or "").strip()]
+    if not a_poser:
+        return content, 0
+    modele = None
+    presents = set()
+    for m in _HREFLANG_LIEN_RE.finditer(content):
+        modele = modele or m
+        presents.add(m.group("code").strip().lower())
+    if modele is None:
+        return content, 0
+    indent, q_rel, q_code, q_href = (modele.group(1), modele.group(2),
+                                     modele.group(3), modele.group(5))
+    fermeture = " />" if modele.group(0).rstrip().endswith("/>") else ">"
+    ajouts, n = [], 0
+    for it in a_poser:
+        code = str(it["field"]).strip()
+        if code.lower() in presents:
+            continue
+        presents.add(code.lower())
+        ajouts.append('%s<link rel=%salternate%s hreflang=%s%s%s href=%s%s%s%s'
+                      % (indent, q_rel, q_rel, q_code, code, q_code,
+                         q_href, str(it["value"]).strip(), q_href, fermeture))
+        n += 1
+    if not ajouts:
+        return content, 0
+    fin = modele.end()
+    return content[:fin] + "\n" + "\n".join(ajouts) + content[fin:], n
+
+
 def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTIC og:url repair (no AI). Touches ONLY the `og:url` meta tag.
 
@@ -21451,7 +21520,8 @@ def _resolve_issue_targets(
         or issue_key in _PAGE_TARGETED_ASSET_KEYS
         or _length_family_name(issue_key) is not None
         or page_side
-    ) and issue_key not in _ASSET_REWRITE_KEYS         and (page_side or issue_key not in _SITEMAP_FAMILY_KEYS) \
+    ) and issue_key not in _ASSET_REWRITE_KEYS and issue_key not in _HREFLANG_RETURN_KEYS \
+        and (page_side or issue_key not in _SITEMAP_FAMILY_KEYS) \
         and not (issue_key in _SHARED_RENDER_FIX_KEYS
                  # …except where the attribute lives in the page itself: on a hand-written site
                  # the flagged pages ARE the files to fix, and excluding them would leave the
@@ -21983,6 +22053,30 @@ def _prepare_issue_fix(
                                     "il est déjà correct.")
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
+    if issue_key in _HREFLANG_RETURN_KEYS:
+        _items = _issue_page_values(block)
+        _cibles = [str(i.get("page") or "") for i in _items if str(i.get("page") or "")]
+        if not _items:
+            out["refusal"] = (
+                "Le rapport ne dit pas quelle page doit renvoyer la balise : sans cette preuve, "
+                "le correcteur editerait la page SIGNALEE, celle qui n'a rien a se reprocher.")
+        else:
+            # La preuve nomme les pages CIBLES : on cherche les fichiers qui les portent. Un
+            # fichier qui les MENTIONNE sans etre elles sera ecarte par le reecriveur lui-meme,
+            # qui verifie le canonical avant d'ecrire.
+            out["evidence"] = _cibles
+            out["link_rewriter"] = (  # noqa: E731
+                lambda raw, _i=list(_items): _add_reciprocal_hreflang(raw, _i))
+            # Aucun repli modele : les trois valeurs sont connues, et un modele qui « ajoute un
+            # hreflang » sans savoir quelle page il edite est exactement ce qui a pose le
+            # canonical d'une page sur trois pages saines le 15/09/2026.
+            out["rewriter_ai_fallback"] = False
+            out["extra_hint"] = (
+                "Ces pages sont designees par une autre page de leur groupe sans la nommer en "
+                "retour. Ajoute a CHACUNE l'annotation qui manque, sans toucher aux autres :\n"
+                + "\n".join("- %s : hreflang=%s vers %s"
+                            % (i.get("page"), i.get("field"), i.get("value")) for i in _items[:20]))
+
     if issue_key in _SITEMAP_DEDUPE_KEYS and impacted:
         out["evidence"] = list(impacted)
         out["link_rewriter"] = lambda raw, _u=list(impacted): _dedupe_sitemap_locs(raw, _u)  # noqa: E731
