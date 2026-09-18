@@ -20863,9 +20863,6 @@ _BALISE_A_RE = re.compile(r"<a\b([^>]*)>(.*?)</a\s*>", re.IGNORECASE | re.DOTALL
 # `test_aucun_nom_de_module_n_est_defini_deux_fois`, ecrit ce jour-la.
 _A_HREF_ATTR_RE = re.compile(r"\bhref\s*=\s*([\"'])(.*?)\1", re.IGNORECASE | re.DOTALL)
 _A_DEJA_NOMME_RE = re.compile(r"\b(aria-label|title)\s*=", re.IGNORECASE)
-# Un texte visible qui n'est qu'une URL nue ne nomme pas la cible : Ahrefs le compte comme
-# absence d'ancre, et le crawler aussi.
-_TEXTE_URL_NUE_RE = re.compile(r"^(https?://|www\.)\S*$", re.IGNORECASE)
 
 
 def _poser_aria_label_sur_liens_sans_ancre(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
@@ -20885,10 +20882,12 @@ def _poser_aria_label_sur_liens_sans_ancre(content: str, items: list[dict[str, s
         URL, on ne devine aucun chemin : deux liens differents ne sont jamais confondus ;
       - un <a> qui porte deja `aria-label` ou `title` n'est pas touche. C'est aussi ce qui rend
         l'operation idempotente : repasser sur un fichier deja corrige n'ecrit rien ;
-      - ce que le <a> ENTOURE doit etre muet — rien, ou une URL nue. Du texte reel signifie que
-        le fichier n'est pas celui que le crawl a vu, ou qu'il a ete corrige entre-temps, et on
-        s'abstient. Un `{label}` de gabarit compte comme du texte reel : on ne sait pas ce qu'il
-        rend, donc on n'y touche pas.
+      - ce que le <a> ENTOURE doit etre VIDE. Le moindre texte signifie que le fichier n'est pas
+        celui que le crawl a vu, ou qu'il a ete corrige entre-temps, et on s'abstient. Un
+        `{label}` de gabarit compte comme du texte : on ne sait pas ce qu'il rend, donc on n'y
+        touche pas. Une URL visible aussi — Ahrefs la compte comme une ancre valide (voir
+        `_nomme_la_cible` dans le crawler), et le correcteur n'a pas a etre plus severe que la
+        detection qui l'alimente.
 
     Le guillemet et la valeur sont CLONES du href voisin, que le fichier vient d'ecrire, plutot
     que supposes. Le nom, lui, est echappe : un h1 qui contient une apostrophe ou un & ne doit pas
@@ -20924,7 +20923,7 @@ def _poser_aria_label_sur_liens_sans_ancre(content: str, items: list[dict[str, s
             return m.group(0)
         texte = re.sub(r"<[^>]*>", " ", interieur)
         texte = html.unescape(texte).strip()
-        if texte and not _TEXTE_URL_NUE_RE.match(texte):
+        if texte:
             return m.group(0)
         q = href_m.group(1)
         pose = ' aria-label=%s%s%s' % (q, html.escape(nom, quote=True), q)

@@ -19,15 +19,18 @@ traverse `_lignes_sans_ancre`, sortie de `_extract_page` pour qu'un test puisse 
 `_extract_page` pilote Playwright, et le maillon parseur -> ligne serait autrement reste le seul
 non prouve de la chaine.
 
-LA DETECTION N'A BOUGE QUE SUR UN POINT, ET PLUS TARD. Elle est reglee pour la parite Ahrefs
-(liens internes seulement, 7d88ff7), et le correcteur n'avait aucune raison de la deplacer. Le
-motif qui reconnait une adresse nue etait faux — voir
-`test_une_adresse_en_www_ne_NOMME_pas_la_cible` — et il a d'abord ete laisse tel quel, le
-proprietaire tranchant, parce que le reparer fait MONTER le compte. Repare le meme jour une fois
-sa portee bornee : le motif ne sert qu'a cette famille, aucune occurrence n'existe dans tout le
-depot, et l'effet est MONOTONE — la mesure ne peut que monter, jamais baisser. La parite reste a
-reverifier au prochain crawl des six references ; c'est la seule chose que ces tests ne peuvent
-pas etablir.
+LA DETECTION A BOUGE UNE FOIS, ET DANS L'AUTRE SENS QUE PREVU. Elle est reglee pour la parite
+Ahrefs (liens internes seulement, 7d88ff7). Une regle heritee de Semrush y restait : un texte
+visible ressemblant a une URL comptait comme une absence d'ancre. Son motif etait faux — il
+exigeait un antislash litteral derriere `www` — et je l'ai d'abord REPARE, ce qui elargissait une
+regle qu'Ahrefs n'applique pas. La note qui tranche dormait depuis le 31/05/2026 sous le commit
+7d88ff7 : « Ahrefs counts a URL as valid anchor text », divergence laissee latente faute de site
+qui la declenche. Le proprietaire a tranche pour la parite, et la regle a disparu, motif compris.
+
+Ce que ces tests ne peuvent PAS etablir : le compte reel sur les sites de reference. Le retrait
+ne peut que faire BAISSER — c'est prouve ici — mais de combien, seul un crawl le dira.
+creativeai-tools.com, vidforges.com et easyshopbuilder.com sont les trois qui ont une histoire
+avec cette famille, et elle y vaut 0 : tout compte non nul serait une regression.
 """
 
 from __future__ import annotations
@@ -197,48 +200,51 @@ def test_un_title_ou_un_aria_label_suffit_deja_comme_ancre() -> None:
     assert _lignes([{"href": "/b", "text": "", "title": "", "aria_label": "Vers B", "rel": ""}]) == []
 
 
-# --- le texte qui n'est qu'une adresse : defaut repare le 18/09/2026 -------------------------
+# --- une URL visible EST une ancre : regle d'Ahrefs, adoptee le 18/09/2026 -------------------
 
-def test_une_adresse_en_www_ne_NOMME_pas_la_cible() -> None:
-    r"""Le motif s'ecrivait `www\\.` dans une chaine brute, ou `\\` designe un antislash LITTERAL.
+def test_une_adresse_visible_COMPTE_comme_ancre() -> None:
+    """La regle d'Ahrefs, et l'aller-retour qu'elle a coute.
 
-    Il fallait donc lire un antislash apres `www` pour reconnaitre une adresse, et
-    `www.exemple.fr` n'en etait jamais une. Le lien passait pour correctement libelle alors qu'il
-    n'annonce rien d'autre que l'adresse ou il mene — ce qu'Ahrefs compte comme une absence
-    d'ancre.
+    Noyaru portait l'inverse, herite de Semrush : un texte visible ressemblant a une URL etait
+    compte comme une absence d'ancre. Le motif qui le reconnaissait etait faux — il exigeait un
+    antislash litteral derriere `www` — et le reparer d'abord revenait a ELARGIR une regle
+    qu'Ahrefs n'applique pas. La note qui tranche existait depuis le 31/05/2026, sous 7d88ff7 :
+    « Ahrefs counts a URL as valid anchor text ».
     """
-    lignes = _lignes([{"href": "/contact", "text": "www.exemple.fr/contact",
-                       "title": "", "aria_label": "", "rel": ""}])
-    assert len(lignes) == 1, lignes
-    assert lignes[0]["href"] == "/contact"
-
-
-def test_une_adresse_avec_protocole_etait_deja_reconnue() -> None:
-    """La moitie du motif qui marchait doit continuer de marcher."""
-    assert len(_lignes([{"href": "/a", "text": "https://exemple.fr/a",
-                         "title": "", "aria_label": "", "rel": ""}])) == 1
-
-
-def test_un_texte_qui_COMMENCE_par_www_sans_etre_une_adresse_reste_une_ancre() -> None:
-    """`wwwsomething` n'est pas une adresse : le point compte."""
-    assert _lignes([{"href": "/a", "text": "wwwatson, notre client",
+    assert _lignes([{"href": "/contact", "text": "www.exemple.fr/contact",
+                     "title": "", "aria_label": "", "rel": ""}]) == []
+    assert _lignes([{"href": "/a", "text": "https://exemple.fr/a",
                      "title": "", "aria_label": "", "rel": ""}]) == []
 
 
-def test_reparer_ce_motif_ne_peut_que_faire_MONTER_le_compte() -> None:
+def test_seul_le_lien_REELLEMENT_muet_reste_signale() -> None:
+    """Ce que la famille mesure apres l'alignement : aucun texte, aucun attribut, aucun alt."""
+    assert len(_lignes([{"href": "/a", "text": "", "title": "", "aria_label": "", "rel": ""}])) == 1
+
+
+def test_une_adresse_visible_DISCULPE_les_liens_vides_vers_la_meme_cible() -> None:
+    """Le second effet du retrait, et celui qui fait baisser le compte le plus.
+
+    Un lien correctement libelle rend sa cible « nommee quelque part sur la page », ce qui absout
+    l'overlay vide qui la vise aussi. Tant qu'une URL n'etait pas une ancre, elle n'absolvait
+    personne.
+    """
+    assert _lignes([
+        {"href": "/a", "text": "", "title": "", "aria_label": "", "rel": ""},
+        {"href": "/a", "text": "https://exemple.fr/a", "title": "", "aria_label": "", "rel": ""},
+    ]) == []
+
+
+def test_retirer_la_regle_ne_peut_que_faire_BAISSER_le_compte() -> None:
     """La propriete qui borne le risque, et la seule verifiable sans recrawler les references.
 
-    Une adresse en `www.` cesse d'etre prise pour une ancre, et cela joue DEUX FOIS : le lien
-    devient signalable, et il cesse de disculper les liens vides qui visent la meme cible. Aucune
-    de ces deux voies ne peut retirer une ligne ; la mesure ne peut donc pas baisser.
+    Le sens a change avec la decision : la regle Semrush ACCUSAIT des liens qu'Ahrefs ne compte
+    pas. La retirer ne peut donc rien ajouter — elle retire des lignes, et en absout d'autres par
+    l'effet ci-dessus. Aucune des deux voies ne peut creer un signalement.
     """
-    vide_seul = _lignes([{"href": "/a", "text": "", "title": "", "aria_label": "", "rel": ""}])
-    avec_adresse = _lignes([
-        {"href": "/a", "text": "", "title": "", "aria_label": "", "rel": ""},
-        {"href": "/a", "text": "www.exemple.fr/a", "title": "", "aria_label": "", "rel": ""},
-    ])
-    assert len(vide_seul) == 1
-    assert len(avec_adresse) >= len(vide_seul), avec_adresse
+    for texte in ("https://exemple.fr/a", "www.exemple.fr/a", "un vrai libelle"):
+        ligne = [{"href": "/a", "text": texte, "title": "", "aria_label": "", "rel": ""}]
+        assert _lignes(ligne) == [], texte
 
 
 def test_la_regle_n_est_ecrite_qu_UNE_fois() -> None:

@@ -59,11 +59,27 @@ def test_le_lien_muet_recoit_le_nom_que_la_cible_se_donne() -> None:
     assert '<a href="/contact" aria-label="Contactez-nous">' in sortie, sortie
 
 
-def test_le_texte_visible_et_le_href_ne_bougent_pas() -> None:
-    """La correction est invisible pour l'humain : c'est la condition qui l'a fait accepter."""
-    sortie, _ = _poser('<a href="/contact">https://exemple.fr/contact</a>')
-    assert ">https://exemple.fr/contact</a>" in sortie, sortie
+def test_ce_que_le_lien_ENTOURE_et_son_href_ne_bougent_pas() -> None:
+    """La correction est invisible pour l'humain : c'est la condition qui l'a fait accepter.
+
+    Mesure sur un lien que le correcteur TOUCHE vraiment. Une premiere version l'exercait sur un
+    lien libelle par une URL ; depuis que ces liens-la ne sont plus corriges, elle passait parce
+    que rien n'etait fait — un test vert qui ne prouvait plus rien, et dont le nom continuait de
+    promettre le contraire.
+    """
+    sortie, n = _poser(MUET)
+    assert n == 1
+    assert '<svg class="i" />' in sortie, sortie
     assert 'href="/contact"' in sortie
+
+
+def test_un_lien_libelle_par_une_URL_n_est_PLUS_touche() -> None:
+    """Ahrefs compte une URL visible comme une ancre valide, et le crawler l'a suivi le
+    18/09/2026. Le correcteur ne doit pas rester plus severe que la detection qui l'alimente :
+    poser un aria-label la ou aucune anomalie n'est signalee serait agir hors mandat."""
+    libelle = '<a href="/contact">https://exemple.fr/contact</a>'
+    sortie, n = _poser(libelle)
+    assert n == 0 and sortie == libelle
 
 
 def test_le_guillemet_est_CLONE_de_celui_du_href() -> None:

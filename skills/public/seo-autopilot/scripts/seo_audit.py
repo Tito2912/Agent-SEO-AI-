@@ -3768,26 +3768,27 @@ def _served_html_lang(url: str, config: "CrawlConfig") -> str | None:
     return (match.group(1).strip().lower() or None) if match else None
 
 
-# Un texte visible qui n'est qu'une adresse ne NOMME pas la cible : Ahrefs le compte comme une
-# absence d'ancre, au meme titre qu'un lien vide.
-#
-# Le motif s'ecrivait `www\\.` dans une chaine brute, ou `\\` designe un antislash LITTERAL : il
-# fallait donc lire `www\x` pour reconnaitre une adresse, et `www.exemple.fr` n'en etait jamais
-# une. Le defaut etait ECRIT DEUX FOIS, a huit lignes d'intervalle, ce qui est la raison d'etre de
-# cette fonction : une regle recopiee est une regle qui derive.
-#
-# Reparer ne peut que faire MONTER le compte, jamais baisser, et de deux facons : le lien ainsi
-# libelle devient signalable, et il cesse de DISCULPER les liens vides qui visent la meme cible.
-# Aucune occurrence dans tout le depot, fixtures comprises — ce qui ne dit rien des sites reels,
-# ou la parite de cette famille (7d88ff7) reste a reverifier au prochain crawl de reference.
-_TEXTE_QUI_EST_UNE_ADRESSE = re.compile(r"^(https?://|www\.)", re.IGNORECASE)
-
-
 def _nomme_la_cible(text: str, title: str, aria_label: str) -> bool:
-    """Le lien offre-t-il une ancre exploitable ? `title` et `aria-label` en sont une."""
-    if title or aria_label:
-        return True
-    return bool(text) and not _TEXTE_QUI_EST_UNE_ADRESSE.match(text)
+    """Le lien offre-t-il une ancre ? Un texte visible suffit, MEME s'il n'est qu'une adresse.
+
+    Cette derniere precision est la regle d'Ahrefs, et elle a coute un aller-retour le
+    18/09/2026. Noyaru portait l'inverse, herite de Semrush : un texte visible qui ressemblait a
+    une URL etait compte comme une absence d'ancre. Le motif qui le reconnaissait etait d'ailleurs
+    faux — il exigeait un antislash litteral derriere `www` — et j'ai commence par le REPARER, ce
+    qui elargissait une regle qu'Ahrefs n'applique pas.
+
+    La note qui tranche etait ecrite depuis le 31/05/2026, sous le commit 7d88ff7 : « Ahrefs
+    counts a URL as valid anchor text », divergence laissee latente faute de site qui la
+    declenche. Le proprietaire a tranche pour la parite. La regle Semrush disparait donc, motif
+    compris : ce qui reste signale est le lien reellement muet — rien, pas de titre, pas
+    d'aria-label, pas d'alt sur l'image qu'il entoure.
+
+    Retirer cette regle ne peut que faire BAISSER le compte, jamais inventer : un lien cesse
+    d'etre accuse, et il redevient capable de disculper les liens vides qui visent la meme cible.
+    Aucun des dix-huit sites de reference ne la declenchait, ce qui explique qu'elle ait pu rester
+    fausse puis discutable sans jamais se voir.
+    """
+    return bool(title or aria_label or text)
 
 
 def _lignes_sans_ancre(
