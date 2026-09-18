@@ -6567,6 +6567,8 @@ def _score_issues(
     hreflang_url_to_redirect_or_broken: list[str] = []
     hreflang_to_non_canonical: list[str] = []
     hreflang_referenced_multi_lang: list[str] = []
+    # Preuve du retrait : la page a editer, le code a retirer, l'URL qu'il designe.
+    hreflang_multi_lang_values: list[dict[str, str]] = []
     hreflang_html_lang_mismatch: list[str] = []
     # Same comparison, on the document the SERVER sent. It is a separate issue rather than a
     # replacement: the rendered value is the truth about the page a browser ends up with, and
@@ -6658,6 +6660,28 @@ def _score_issues(
                 url_to_primary_langs[href_norm].add(primary)
         if any(len(codes) > 1 for codes in url_to_primary_langs.values()):
             hreflang_referenced_multi_lang.append(p.url)
+            # Preuve : QUEL code retirer, et de quelle URL. La cible le dit elle-meme — sa langue
+            # declaree designe le code qui a raison, les autres sont a retirer. C'est une MESURE,
+            # pas un arbitrage : si la cible n'est pas crawlee ou ne declare aucune langue, on ne
+            # produit rien et la famille reste expliquee sans etre corrigee.
+            for _href_norm, _primaires in url_to_primary_langs.items():
+                if len(_primaires) < 2:
+                    continue
+                _cible = page_by_any.get(_href_norm)
+                _lang_cible = ((getattr(_cible, "lang", "") or "").strip().lower().split("-", 1)[0]
+                               if _cible is not None else "")
+                if not _lang_cible or _lang_cible not in _primaires:
+                    continue
+                for _code, _href in hreflang.items():
+                    _cn = str(_code or "").strip().lower()
+                    if _cn == "x-default" or not _cn:
+                        continue
+                    if (_norm_self(_href) or str(_href or "").strip()) != _href_norm:
+                        continue
+                    if _cn.split("-", 1)[0] == _lang_cible:
+                        continue
+                    hreflang_multi_lang_values.append(
+                        {"page": _final_url(p), "field": _cn, "value": str(_href or "").strip()})
 
         invalid = False
         invalid_codes: list[str] = []
@@ -8046,6 +8070,8 @@ def _score_issues(
     issues["page_referenced_for_more_than_one_language_in_hreflang"] = _issue_block(
         "page_referenced_for_more_than_one_language_in_hreflang", hreflang_referenced_multi_lang
     )
+    _attach_evidence(("page_referenced_for_more_than_one_language_in_hreflang",), "page_values",
+                     hreflang_multi_lang_values)
     issues["hreflang_to_redirect_or_broken_page"] = _issue_block(
         "hreflang_to_redirect_or_broken_page", hreflang_url_to_redirect_or_broken
     )
