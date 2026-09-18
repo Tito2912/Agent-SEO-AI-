@@ -23985,6 +23985,28 @@ def _norm_csv_header(value: str) -> str:
 
 
 def _decode_csv_bytes(data: bytes) -> str:
+    """Decoder un CSV televerse, quel que soit ce que le tableur du client a produit.
+
+    LE BOM UTF-16 SE TESTE AVANT LA BOUCLE, et c'est tout l'enjeu : `latin-1` ne leve JAMAIS
+    d'UnicodeDecodeError — tout octet y est valide — donc il attrape n'importe quoi et rend du
+    charabia au lieu d'echouer. Un fichier « Texte Unicode » d'Excel, encode en UTF-16, en
+    ressortait avec un octet nul entre chaque lettre ; le lecteur CSV n'y reconnaissait aucune
+    colonne, et le client recevait « CSV non reconnu (colonnes: ␀S␀o␀u␀r␀c␀e…) » — un message qui
+    accuse ses en-tetes alors que le defaut est l'encodage, et qui ne lui dit pas quoi faire.
+
+    Le BOM est un signal sur : aucun CSV ne commence par ces octets par accident. UTF-32 porte le
+    meme prefixe que UTF-16 LE, d'ou l'ordre — le plus long d'abord.
+    """
+    if data[:4] in (b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff"):
+        try:
+            return data.decode("utf-32")
+        except UnicodeDecodeError:
+            pass
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        try:
+            return data.decode("utf-16")
+        except UnicodeDecodeError:
+            pass
     for enc in ("utf-8-sig", "utf-8", "latin-1"):
         try:
             return data.decode(enc)
