@@ -7482,10 +7482,23 @@ def _score_issues(
         "page_has_only_one_dofollow_incoming_internal_link_not_indexable", one_df_not_indexable
     )
 
-    # Suppressed for Ahrefs parity: Ahrefs Site Audit has no "nofollow incoming internal links"
-    # issue type (it only surfaces dofollow-incoming issues like "only one dofollow incoming
-    # internal link"). These Semrush-heritage keys are Noyaru-only — emission zeroed, detection
-    # (nofollow_incoming_only / nofollow_and_dofollow_incoming) retained.
+    # Suppressed for Ahrefs parity — mais PAS pour la raison qui etait ecrite ici.
+    #
+    # Ce commentaire affirmait qu'Ahrefs n'a pas de type « nofollow incoming internal links ». Le
+    # releve complet de sa taxonomie (14/06/2026, « All tracked 173 ») dit le contraire : les DEUX
+    # types y figurent, sous Links. La suppression tenait donc sur un motif faux, et qui menait au
+    # mauvais geste — croire qu'une famille n'existe pas chez Ahrefs invite a la retirer du
+    # catalogue, alors qu'ici elle doit y rester.
+    #
+    # La vraie raison est une divergence de GRAPHE, pas de taxonomie : notre lecture des liens
+    # entrants sur-reporte face a celle d'Ahrefs. Mesure sur videocaptionstudio — Noyaru afficherait
+    # 2, Ahrefs 0, parce que nous voyons tous les liens entrants vers `/go/capcut` comme nofollow
+    # la ou Ahrefs en voit un dofollow. Corriger demanderait de reprendre la classification des
+    # liens entrants, ce qui touche `page_has_only_one_dofollow_incoming_internal_link` juste
+    # au-dessus, validee sur les dix-huit sites de reference.
+    #
+    # Emission zeroee, detection (nofollow_incoming_only / nofollow_and_dofollow_incoming) retenue
+    # pour le jour ou cette classification sera reprise.
     issues["page_has_nofollow_incoming_internal_links_only_indexable"] = _issue_block(
         "page_has_nofollow_incoming_internal_links_only_indexable", []
     )
