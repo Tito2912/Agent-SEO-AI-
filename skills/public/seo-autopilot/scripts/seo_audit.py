@@ -3768,6 +3768,28 @@ def _served_html_lang(url: str, config: "CrawlConfig") -> str | None:
     return (match.group(1).strip().lower() or None) if match else None
 
 
+# Un texte visible qui n'est qu'une adresse ne NOMME pas la cible : Ahrefs le compte comme une
+# absence d'ancre, au meme titre qu'un lien vide.
+#
+# Le motif s'ecrivait `www\\.` dans une chaine brute, ou `\\` designe un antislash LITTERAL : il
+# fallait donc lire `www\x` pour reconnaitre une adresse, et `www.exemple.fr` n'en etait jamais
+# une. Le defaut etait ECRIT DEUX FOIS, a huit lignes d'intervalle, ce qui est la raison d'etre de
+# cette fonction : une regle recopiee est une regle qui derive.
+#
+# Reparer ne peut que faire MONTER le compte, jamais baisser, et de deux facons : le lien ainsi
+# libelle devient signalable, et il cesse de DISCULPER les liens vides qui visent la meme cible.
+# Aucune occurrence dans tout le depot, fixtures comprises — ce qui ne dit rien des sites reels,
+# ou la parite de cette famille (7d88ff7) reste a reverifier au prochain crawl de reference.
+_TEXTE_QUI_EST_UNE_ADRESSE = re.compile(r"^(https?://|www\.)", re.IGNORECASE)
+
+
+def _nomme_la_cible(text: str, title: str, aria_label: str) -> bool:
+    """Le lien offre-t-il une ancre exploitable ? `title` et `aria-label` en sont une."""
+    if title or aria_label:
+        return True
+    return bool(text) and not _TEXTE_QUI_EST_UNE_ADRESSE.match(text)
+
+
 def _lignes_sans_ancre(
     link_items: "list[dict[str, str]]",
     *,
@@ -3810,14 +3832,12 @@ def _lignes_sans_ancre(
             continue
         rel = str(it.get("rel") or "").strip()
         normalized_links.append((norm, rel, text, title, aria_label, href))
-        is_urlish = bool(re.match(r"^(https?://|www\\.)", text.lower())) if text else False
-        if (text and not is_urlish) or title or aria_label:
+        if _nomme_la_cible(text, title, aria_label):
             target_has_anchor_text.add(norm)
 
     no_anchor_rows: list[dict[str, Any]] = []
     for norm, rel, text, title, aria_label, href in normalized_links:
-        is_urlish = bool(re.match(r"^(https?://|www\\.)", text.lower())) if text else False
-        if (text and not is_urlish) or title or aria_label:
+        if _nomme_la_cible(text, title, aria_label):
             continue
         if norm in target_has_anchor_text:
             continue

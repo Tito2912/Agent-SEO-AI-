@@ -19,12 +19,15 @@ traverse `_lignes_sans_ancre`, sortie de `_extract_page` pour qu'un test puisse 
 `_extract_page` pilote Playwright, et le maillon parseur -> ligne serait autrement reste le seul
 non prouve de la chaine.
 
-La detection elle-meme n'est pas touchee. Elle est reglee pour la parite Ahrefs (liens internes
-seulement, 7d88ff7) et un correcteur n'a aucune raison de la deplacer. Un defaut y est CONNU et
-laisse tel quel le 18/09/2026, le proprietaire tranchant : le motif `www\\.` de la ligne url-ish
-matche un antislash litteral, donc un texte d'ancre `www.exemple.fr` n'est jamais reconnu comme
-une URL nue et le lien passe pour ancre. Le corriger ferait MONTER le compte et demande d'etre
-mesure sur les six sites de reference avant tout.
+LA DETECTION N'A BOUGE QUE SUR UN POINT, ET PLUS TARD. Elle est reglee pour la parite Ahrefs
+(liens internes seulement, 7d88ff7), et le correcteur n'avait aucune raison de la deplacer. Le
+motif qui reconnait une adresse nue etait faux — voir
+`test_une_adresse_en_www_ne_NOMME_pas_la_cible` — et il a d'abord ete laisse tel quel, le
+proprietaire tranchant, parce que le reparer fait MONTER le compte. Repare le meme jour une fois
+sa portee bornee : le motif ne sert qu'a cette famille, aucune occurrence n'existe dans tout le
+depot, et l'effet est MONOTONE — la mesure ne peut que monter, jamais baisser. La parite reste a
+reverifier au prochain crawl des six references ; c'est la seule chose que ces tests ne peuvent
+pas etablir.
 """
 
 from __future__ import annotations
@@ -192,3 +195,56 @@ def test_une_ancre_reelle_ailleurs_sur_la_page_disculpe_le_lien_vide() -> None:
 def test_un_title_ou_un_aria_label_suffit_deja_comme_ancre() -> None:
     assert _lignes([{"href": "/a", "text": "", "title": "Vers A", "aria_label": "", "rel": ""}]) == []
     assert _lignes([{"href": "/b", "text": "", "title": "", "aria_label": "Vers B", "rel": ""}]) == []
+
+
+# --- le texte qui n'est qu'une adresse : defaut repare le 18/09/2026 -------------------------
+
+def test_une_adresse_en_www_ne_NOMME_pas_la_cible() -> None:
+    r"""Le motif s'ecrivait `www\\.` dans une chaine brute, ou `\\` designe un antislash LITTERAL.
+
+    Il fallait donc lire un antislash apres `www` pour reconnaitre une adresse, et
+    `www.exemple.fr` n'en etait jamais une. Le lien passait pour correctement libelle alors qu'il
+    n'annonce rien d'autre que l'adresse ou il mene — ce qu'Ahrefs compte comme une absence
+    d'ancre.
+    """
+    lignes = _lignes([{"href": "/contact", "text": "www.exemple.fr/contact",
+                       "title": "", "aria_label": "", "rel": ""}])
+    assert len(lignes) == 1, lignes
+    assert lignes[0]["href"] == "/contact"
+
+
+def test_une_adresse_avec_protocole_etait_deja_reconnue() -> None:
+    """La moitie du motif qui marchait doit continuer de marcher."""
+    assert len(_lignes([{"href": "/a", "text": "https://exemple.fr/a",
+                         "title": "", "aria_label": "", "rel": ""}])) == 1
+
+
+def test_un_texte_qui_COMMENCE_par_www_sans_etre_une_adresse_reste_une_ancre() -> None:
+    """`wwwsomething` n'est pas une adresse : le point compte."""
+    assert _lignes([{"href": "/a", "text": "wwwatson, notre client",
+                     "title": "", "aria_label": "", "rel": ""}]) == []
+
+
+def test_reparer_ce_motif_ne_peut_que_faire_MONTER_le_compte() -> None:
+    """La propriete qui borne le risque, et la seule verifiable sans recrawler les references.
+
+    Une adresse en `www.` cesse d'etre prise pour une ancre, et cela joue DEUX FOIS : le lien
+    devient signalable, et il cesse de disculper les liens vides qui visent la meme cible. Aucune
+    de ces deux voies ne peut retirer une ligne ; la mesure ne peut donc pas baisser.
+    """
+    vide_seul = _lignes([{"href": "/a", "text": "", "title": "", "aria_label": "", "rel": ""}])
+    avec_adresse = _lignes([
+        {"href": "/a", "text": "", "title": "", "aria_label": "", "rel": ""},
+        {"href": "/a", "text": "www.exemple.fr/a", "title": "", "aria_label": "", "rel": ""},
+    ])
+    assert len(vide_seul) == 1
+    assert len(avec_adresse) >= len(vide_seul), avec_adresse
+
+
+def test_la_regle_n_est_ecrite_qu_UNE_fois() -> None:
+    """Le defaut vivait en DEUX exemplaires, a huit lignes d'intervalle, et l'un aurait pu etre
+    repare sans l'autre. Une regle recopiee est une regle qui derive."""
+    import inspect
+    source = inspect.getsource(audit._lignes_sans_ancre)
+    assert "is_urlish" not in source
+    assert source.count("_nomme_la_cible(") == 2
