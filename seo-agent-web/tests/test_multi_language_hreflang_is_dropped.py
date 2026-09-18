@@ -113,6 +113,46 @@ def test_une_preuve_qui_ne_nomme_aucune_ligne_ne_touche_rien() -> None:
     assert n == 0 and sortie == deja
 
 
+def _bloc(items: list[dict[str, str]]) -> dict[str, object]:
+    return {"count": 1, "examples": [S + "/fr"],
+            "evidence": {"kind": "page_values", "items": list(items)}}
+
+
+def _prepare(items: list[dict[str, str]]) -> dict[str, object]:
+    return app_module._prepare_issue_fix(
+        issue_key="page_referenced_for_more_than_one_language_in_hreflang",
+        issues={"page_referenced_for_more_than_one_language_in_hreflang": _bloc(items)},
+        impacted=[S + "/fr"], all_paths=["src/pages/fr.astro", "src/pages/en.astro"],
+        site_name="exemple.fr", owner="o", repo_name="r", branch="b", token="")
+
+
+def test_le_BRANCHEMENT_fournit_vraiment_le_reecriveur() -> None:
+    """Trou trouve en verifiant, pas en ecrivant : les deux moities etaient prouvees SEPAREMENT.
+
+    Les tests ci-dessus appellent `_drop_hreflang_annotations` en direct, et ceux du crawler
+    verifient la forme de la preuve. Aucun ne montrait que `_prepare_issue_fix` relie les deux —
+    une famille declaree, rangee, testee, et pourtant muette en production aurait passe tout
+    le reste de ce fichier.
+    """
+    out = _prepare(ITEMS)
+    assert out.get("refusal") in (None, ""), out.get("refusal")
+    assert out.get("evidence") == [S + "/fr"], out.get("evidence")
+    # Aucun repli modele : les deux valeurs sont connues.
+    assert out.get("rewriter_ai_fallback") is False
+    rw = out.get("link_rewriter")
+    assert callable(rw), out
+    sortie, n = rw(COUPABLE)
+    assert n == 1, sortie
+    assert _annotations(sortie) == [("en", S + "/en"), ("de", S + "/de")], _annotations(sortie)
+
+
+def test_le_BRANCHEMENT_refuse_quand_la_preuve_manque() -> None:
+    """Sans preuve, la famille doit se taire avec un motif — pas offrir un reecriveur aveugle."""
+    out = _prepare([])
+    assert out.get("refusal"), out
+    assert out.get("link_rewriter") is None, out
+
+
 def test_la_famille_est_declaree_corrigeable() -> None:
     assert ("page_referenced_for_more_than_one_language_in_hreflang"
             in set(app_module._handled_issue_keys()))
