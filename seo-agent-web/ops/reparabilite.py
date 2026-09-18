@@ -79,7 +79,6 @@ VERDICTS: dict[str, tuple[str, str]] = {
     "page_has_links_to_broken_page": ("DEVINER", "un lien mene a une page cassee ; choisir entre reparer la cible et retirer le lien n'est pas mesure"),
     "broken_redirect": ("DEVINER", "une redirection aboutit a une erreur ; la bonne destination n'est pas connue"),
     "redirect_loop": ("DEVINER", "boucle de redirections ; rien ne dit lequel des sauts est celui de trop"),
-    "orphan_page": ("DEVINER", "aucun lien interne entrant ; il faudrait choisir DEPUIS QUELLE page lier"),
     "orphaned_sitemap_pages": ("DEVINER", "URL du sitemap sans lien entrant - meme page source a choisir"),
     "canonical_url_has_no_incoming_internal_links": ("DEVINER", "la cible d'un canonical n'a aucun lien entrant : meme page source a choisir"),
     "redirected_page_has_no_incoming_internal_links": ("DEVINER", "meme absence de lien entrant sur une page redirigee"),

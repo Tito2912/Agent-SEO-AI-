@@ -51,3 +51,30 @@ def test_chaque_verdict_dit_POURQUOI() -> None:
     """Une raison vide rend la table illisible et la decision non rejouable."""
     muets = sorted(k for k, (_, raison) in reparabilite.VERDICTS.items() if len(raison) < 20)
     assert muets == [], "verdicts sans raison utilisable : %s" % muets
+
+
+def test_une_cle_morte_du_catalogue_ne_masque_pas_une_decision() -> None:
+    """Une famille dont toutes les variantes EMISES sont consultatives est tranchee, point.
+
+    Le catalogue montre parfois une cle nue a cote de ses variantes d'indexabilite — `orphan_page`
+    a cote de `orphan_page_indexable` et `orphan_page_not_indexable`. Cette cle nue n'est emise
+    par personne : elle ne decide de rien, mais elle suffisait a faire ressortir la famille parmi
+    les chantiers a ouvrir, alors que ses deux variantes vivantes sont declarees consultatives
+    depuis longtemps. On aurait rouvert une decision deja prise en croyant combler un trou.
+
+    Le test tient la propriete, pas le nom : aucune famille classee VIVANTE ne doit avoir toutes
+    ses variantes emises declarees consultatives.
+    """
+    from backend import app as m
+    from ops import couverture
+
+    mes = couverture.mesurer()
+    emises = mes["emises"]
+
+    def consultative(cle: str) -> bool:
+        return cle in m._ADVISORY_ISSUE_KEYS or any(t in cle for t in m._ADVISORY_ISSUE_TOKENS)
+
+    fautives = [k for k in mes["groupes"]["VIVANTE"]
+                if emises.get(k) and all(consultative(v) for v in emises[k])]
+    assert fautives == [], (
+        "familles deja tranchees, remontees comme chantiers a ouvrir : %s" % fautives)

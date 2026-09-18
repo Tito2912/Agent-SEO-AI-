@@ -109,9 +109,28 @@ def mesurer() -> dict[str, object]:
     montrees_r = {racine_cle(k) for k in montrees}
     gerees_r = {racine_cle(k) for k in gerees}
 
+    # La declaration CONSULTATIVE porte sur la cle brute, la couverture se compte en racines :
+    # il faut redescendre aux variantes pour la lire, et ne regarder que celles que le crawler
+    # EMET vraiment. `orphan_page` l'a montre le 18/09/2026 : ses deux variantes emises sont
+    # declarees consultatives, mais le catalogue porte en plus une cle nue `orphan_page` que rien
+    # n'emet, et cette cle morte suffisait a faire ressortir la famille en attente. Une famille
+    # tranchee ressortait donc comme un chantier a ouvrir.
+    #
+    # Toutes les variantes emises doivent l'etre : un choix assume sur une moitie seulement
+    # laisserait l'autre sans correcteur ET sans decision, ce qui est precisement le trou qu'on
+    # cherche. Une cle jamais emise, elle, ne decide de rien.
+    def _consultative(cle: str) -> bool:
+        return (cle in m._ADVISORY_ISSUE_KEYS
+                or any(t in cle for t in m._ADVISORY_ISSUE_TOKENS))
+
+    emises: dict[str, set[str]] = {}
+    for cle in emissions:
+        emises.setdefault(racine_cle(cle), set()).add(cle)
+
     consultatives, attente = [], []
     for k in sorted(montrees_r - gerees_r):
-        if k in m._ADVISORY_ISSUE_KEYS or any(t in k for t in m._ADVISORY_ISSUE_TOKENS):
+        variantes = emises.get(k) or {k}
+        if _consultative(k) or all(_consultative(v) for v in variantes):
             consultatives.append(k)
         else:
             attente.append(k)
@@ -131,6 +150,9 @@ def mesurer() -> dict[str, object]:
         "montrees_r": montrees_r, "gerees_r": gerees_r,
         "consultatives": consultatives, "attente": attente,
         "groupes": groupes, "preuves": _avec_preuve(arbre),
+        # `emises` sort d'ici pour qu'un test puisse rejouer la regle du classement consultatif
+        # sur les variantes reelles, au lieu de figer le nom d'une famille du jour.
+        "emises": emises,
     }
 
 
