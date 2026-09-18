@@ -94,12 +94,34 @@ def test_OUVRIR_des_robots_d_IA_reste_une_decision_du_client():
     d'IA est une decision qui lui appartient ; on la lui EXPLIQUE, on ne la prend pas a sa
     place. » Elle vaut toujours pour `indexable_page_blocked_from_all_ai_search_bots` : tout
     fermer est une position coherente, et la defaire serait decider a la place du proprietaire.
+
+    REEXAMINEE ET RECONDUITE LE 18/09/2026, le proprietaire tranchant lui-meme. Un correcteur
+    complet avait ete ecrit puis jete ; les deux echappatoires qu'il explorait sont notees ici
+    pour qu'on ne les reprenne pas :
+
+      - « ne rouvrir qu'un groupe compose UNIQUEMENT de robots de recherche IA, jamais `*`, un
+        moteur classique ou un robot d'entrainement. » La garde est correcte et ne sauve rien :
+        un client qui ferme Perplexity expres ecrit exactement `User-agent: PerplexityBot` puis
+        `Disallow: /`. La forme du refus delibere et celle de l'accident sont la MEME.
+
+      - « etendre le refus aux robots de recherche restants », par symetrie avec
+        `inconsistent_ai_training_bot_policy` (voir le test suivant). La symetrie est fausse :
+        l'entrainement ne coute pas de visites, la recherche si. Faire taire la famille en
+        rendant le site MOINS trouvable tombe sous « une baisse n'est pas une correction ».
+
+    L'asymetrie qui avait autorise la correction de la politique d'entrainement joue ici a
+    l'envers : un blocage AJOUTE se retire en une ligne, un blocage RETIRE ne se reprend pas une
+    fois la page citee. Les deux familles restent donc signalees et expliquees, jamais corrigees.
     """
     import os
     os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
     os.environ.setdefault("SEO_AGENT_SECRET_KEY", "x" * 20)
     from backend import app as m
     assert not m._github_issue_auto_fixable("indexable_page_blocked_from_all_ai_search_bots")
+    # L'autre moitie de la paire, qu'aucun test ne tenait : « bloquee pour CERTAINS » est le cas
+    # ou l'accident est le plus probable, donc celui ou la tentation de corriger est la plus
+    # forte. La decision vaut pour les deux.
+    assert not m._github_issue_auto_fixable("indexable_page_blocked_from_some_ai_search_bots")
 
 
 def test_une_politique_INCOHERENTE_est_desormais_corrigee():
