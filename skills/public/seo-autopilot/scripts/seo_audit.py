@@ -7146,7 +7146,24 @@ def _score_issues(
             # broken sitemap-level return tag. A whole out-of-sitemap group that merely
             # reciprocates (avis /sources) is NOT flagged by Ahrefs → the guard excludes it.
             if _self_norm in sitemap_set_norm:
-                _out = {t for t in _targets if t not in sitemap_set_norm}
+                # Une cible ABSENTE du sitemap parce qu'elle est NOINDEX n'est pas une balise de
+                # retour manquante : sa place n'est pas dans un sitemap, et l'y exiger creerait
+                # `sitemap_noindex_page`, qu'Ahrefs classe en erreur. On echange une anomalie
+                # contre une autre, plus grave.
+                #
+                # Mesure du 18/09/2026, deux sites de reference qui portent la MEME forme
+                # (page in-sitemap -> alternate out-of-sitemap) et que Ahrefs traite a l'oppose :
+                #   elevenlabs /mentions-legales -> /de|/es/legal-notice  en `index, follow`  -> 8
+                #   creativeai /blog/category/... -> /de|/es|/fr/...      en `noindex, follow` -> 0
+                # L'appartenance au sitemap ne suffisait donc pas a trancher : c'est
+                # l'INDEXABILITE de la cible qui separe les deux cas.
+                #
+                # Une cible jamais crawlee reste signalee : on ne sait pas ce qu'elle vaut, et
+                # c'est le cas ou une vraie balise de retour manque le plus souvent.
+                _out = {t for t in _targets
+                        if t not in sitemap_set_norm
+                        and not (page_by_any.get(t) is not None
+                                 and not _is_indexable(page_by_any[t]))}
                 if _out:
                     _missing_recip_set.add(p.url or _final_url(p))
                     _out_of_sitemap_targets |= _out
