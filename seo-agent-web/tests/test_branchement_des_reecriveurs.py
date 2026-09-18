@@ -130,7 +130,22 @@ FORMES: "dict[str, tuple[set[str], dict, str]]" = {
         "url_pairs", [{"page": P, "from": P, "to": S + "/absente"}]), ""),
     "_AI_POLICY_KEYS": (m._AI_POLICY_KEYS, _bloc(
         "page_values", [{"page": P, "field": "GPTBot", "value": "autorise"}]), ""),
+    # Elle ne pose PAS le reecriveur elle-meme : elle remplit `content_pairs`, et c'est la
+    # cascade qui fournit `_rewrite_redirect_links`. Une garde qui ne cherchait que les branches
+    # posant `out["link_rewriter"]` ne la voyait donc pas, et la famille — pourtant deterministe
+    # — echappait entierement a ce fichier. Trouvee en instruisant `redirect_chain`, pas en
+    # relisant : c'est la seule famille du lot dont le reecriveur vient d'ailleurs que sa branche.
+    "_REDIRECT_LINK_KEYS": (m._REDIRECT_LINK_KEYS, _bloc(
+        redirect_link_samples=[{"from": S + "/vieille", "to": S + "/nouvelle"}]),
+        "_rewrite_redirect_links"),
     "_OG_URL_KEYS": (m._OG_URL_KEYS, _bloc("url_pairs", _PAIRES), "_rewrite_og_url"),
+    # Guident le patch borne sans reecriveur deterministe : on verifie seulement qu'ils parlent.
+    "_HEAD_HINTS": (set(m._HEAD_HINTS), _bloc("page_values", _VALEURS), ""),
+    "_HREFLANG_HINTS": (set(m._HREFLANG_HINTS), _bloc("page_values", _VALEURS), ""),
+    "_PAGE_VALUE_KEYS": (m._PAGE_VALUE_KEYS, _bloc("page_values", _VALEURS), ""),
+    "_SITEMAP_ADD_KEYS": (m._SITEMAP_ADD_KEYS, _bloc(), ""),
+    # Refuse par decision : voir le motif rendu par la branche elle-meme.
+    "_REDIRECT_CONFIG_KEYS": (m._REDIRECT_CONFIG_KEYS, _bloc(), ""),
     "_X_DEFAULT_KEYS": (m._X_DEFAULT_KEYS, _bloc("page_values", _VALEURS), ""),
     "_SERVED_LANG_FIX_KEYS": (m._SERVED_LANG_FIX_KEYS, _bloc(
         "page_values", [{"page": P, "field": "lang", "value": "fr"}]), ""),
@@ -153,7 +168,9 @@ def _nom_du_reecriveur(rw) -> str:
 # un refus ou une simple consigne selon ce que la preuve contient. On verifie alors qu'ils
 # parlent — refus motive ou consigne — jamais qu'ils reecrivent.
 SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED_LANG_FIX_KEYS",
-                           "_X_DEFAULT_KEYS", "_ROBOTS_KEYS", "_SITEMAP_REMOVE_KEYS"}
+                           "_X_DEFAULT_KEYS", "_ROBOTS_KEYS", "_SITEMAP_REMOVE_KEYS",
+                           "_HEAD_HINTS", "_HREFLANG_HINTS", "_PAGE_VALUE_KEYS",
+                           "_SITEMAP_ADD_KEYS", "_REDIRECT_CONFIG_KEYS"}
 
 
 def _prepare(cle: str, bloc: dict) -> dict:
@@ -225,34 +242,26 @@ def test_un_groupe_sans_reecriveur_garanti_parle_quand_meme(groupe: str) -> None
 
 # --- la garde : aucun groupe a reecriveur ne peut echapper a ce fichier -----------------------
 
-def _groupes_qui_promettent_un_reecriveur() -> "set[str]":
-    """Les groupes dont une branche de `_prepare_issue_fix` affecte `out["link_rewriter"]`.
+def _groupes_sur_lesquels_le_branchement_ROUTE() -> "set[str]":
+    """Tout groupe cite dans une condition de `_prepare_issue_fix`, qu'il pose un reecriveur ou non.
 
-    Lu dans le CODE, pas dans une liste tenue a la main : c'est la seule facon qu'un groupe
-    ajoute demain ne passe pas au travers. La liste ecrite a la main aurait vieilli exactement
-    comme les verdicts de `ops/reparabilite.py`, et au meme moment — juste apres une reussite.
+    La premiere version ne retenait que les branches affectant `out["link_rewriter"]`, et elle a
+    laisse passer `_REDIRECT_LINK_KEYS` : cette branche-la ne pose pas le reecriveur, elle remplit
+    `content_pairs`, et c'est la cascade qui fournit `_rewrite_redirect_links`. Une famille
+    deterministe echappait donc entierement au fichier cense les couvrir toutes — trouvee en
+    instruisant `redirect_chain`, pas en relisant celui-ci.
+
+    La lecon est generale : une garde qui reconnait une FORME (« la branche pose un reecriveur »)
+    rate ce qui prend un autre chemin. Une garde qui ENUMERE (« tout groupe sur lequel on route »)
+    ne peut pas se tromper de la meme facon, quitte a exiger qu'on declare explicitement les
+    groupes sans reecriveur. Compter bat reconnaitre, ici aussi.
     """
     source = (WEB_ROOT / "backend" / "app.py").read_text(encoding="utf-8")
-    arbre = ast.parse(source)
-    fonction = next(n for n in ast.walk(arbre)
+    fonction = next(n for n in ast.walk(ast.parse(source))
                     if isinstance(n, ast.FunctionDef) and n.name == "_prepare_issue_fix")
     trouves: set[str] = set()
     for noeud in ast.walk(fonction):
         if not isinstance(noeud, ast.If):
-            continue
-        pose_un_reecriveur = any(
-            isinstance(a, ast.Subscript) and isinstance(a.value, ast.Name) and a.value.id == "out"
-            and isinstance(a.slice, ast.Constant) and a.slice.value == "link_rewriter"
-            for n2 in noeud.body for a in (n2.targets if isinstance(n2, ast.Assign) else []))
-        if not pose_un_reecriveur:
-            # Le reecriveur peut etre pose dans un `if` imbrique (voir `_SITEMAP_ALTERNATE_KEYS`).
-            pose_un_reecriveur = any(
-                isinstance(a, ast.Subscript) and isinstance(a.value, ast.Name)
-                and a.value.id == "out" and isinstance(a.slice, ast.Constant)
-                and a.slice.value == "link_rewriter"
-                for inner in ast.walk(ast.Module(body=noeud.body, type_ignores=[]))
-                if isinstance(inner, ast.Assign) for a in inner.targets)
-        if not pose_un_reecriveur:
             continue
         for nom in ast.walk(noeud.test):
             if isinstance(nom, ast.Name) and nom.id.isupper() and nom.id.startswith("_"):
@@ -260,10 +269,11 @@ def _groupes_qui_promettent_un_reecriveur() -> "set[str]":
     return trouves
 
 
-def test_aucun_groupe_a_reecriveur_n_echappe_a_ce_fichier() -> None:
-    manquants = sorted(_groupes_qui_promettent_un_reecriveur() - set(FORMES))
+def test_aucun_groupe_du_branchement_n_echappe_a_ce_fichier() -> None:
+    manquants = sorted(_groupes_sur_lesquels_le_branchement_ROUTE() - set(FORMES))
     assert manquants == [], (
-        "groupes qui posent un reecriveur sans test de branchement : %s" % manquants)
+        "groupes sur lesquels `_prepare_issue_fix` route, sans test de branchement : %s"
+        % manquants)
 
 
 def test_chaque_forme_declaree_porte_sur_un_groupe_reel() -> None:
