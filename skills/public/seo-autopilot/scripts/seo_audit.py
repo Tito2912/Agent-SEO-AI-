@@ -3768,6 +3768,77 @@ def _served_html_lang(url: str, config: "CrawlConfig") -> str | None:
     return (match.group(1).strip().lower() or None) if match else None
 
 
+def _lignes_sans_ancre(
+    link_items: "list[dict[str, str]]",
+    *,
+    page_url: str,
+    base_for_urls: str,
+    base_parts,
+    allow_subdomains: bool,
+) -> "list[dict[str, Any]]":
+    """Les <a> sans texte visible ni semantique, avec de quoi les RETROUVER dans le source.
+
+    Flag <a> elements that have no visible/semantic text. Avoid false positives from empty
+    overlay links when the same target is also linked with real text.
+
+    Sortie de `_extract_page` le 18/09/2026, et pas par gout de la decoupe : `_extract_page` pilote
+    Playwright, donc aucun test ne pouvait l'atteindre sans navigateur. Le champ `href` ajoute ce
+    jour-la serait reste le seul maillon non prouve entre le parseur et le correcteur — exactement
+    le trou ou deux moities correctes ne se rejoignent pas.
+
+    Le href BRUT voyage avec la ligne : c'est la seule forme qui se retrouve dans le fichier
+    source. Un correcteur qui chercherait l'URL normalisee ne trouverait rien dans un depot ou le
+    lien s'ecrit href="/contact".
+    """
+    normalized_links: list[tuple[str, str, str, str, str, str]] = []
+    target_has_anchor_text: set[str] = set()
+    for it in link_items:
+        if not isinstance(it, dict):
+            continue
+        href = str(it.get("href") or "").strip()
+        if not href:
+            continue
+        if href.startswith(("javascript:", "mailto:", "tel:")):
+            continue
+        if href.startswith("#"):
+            continue
+        text = str(it.get("text") or "").strip()
+        title = str(it.get("title") or "").strip()
+        aria_label = str(it.get("aria_label") or "").strip()
+        norm = _normalize_url(href, base=base_for_urls)
+        if not norm:
+            continue
+        rel = str(it.get("rel") or "").strip()
+        normalized_links.append((norm, rel, text, title, aria_label, href))
+        is_urlish = bool(re.match(r"^(https?://|www\\.)", text.lower())) if text else False
+        if (text and not is_urlish) or title or aria_label:
+            target_has_anchor_text.add(norm)
+
+    no_anchor_rows: list[dict[str, Any]] = []
+    for norm, rel, text, title, aria_label, href in normalized_links:
+        is_urlish = bool(re.match(r"^(https?://|www\\.)", text.lower())) if text else False
+        if (text and not is_urlish) or title or aria_label:
+            continue
+        if norm in target_has_anchor_text:
+            continue
+        is_internal = _is_allowed_host(norm, base_parts=base_parts, allow_subdomains=allow_subdomains)
+        no_anchor_rows.append(
+            {
+                "source_url": page_url,
+                "target_url": norm,
+                "rel": rel,
+                "internal": bool(is_internal),
+                "anchor_text": text,
+                "title": title,
+                "aria_label": aria_label,
+                "href": href,
+            }
+        )
+        if len(no_anchor_rows) >= 2000:
+            break
+    return no_anchor_rows
+
+
 def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_parts) -> PageData:
     page = PageData(url=url, fetched_at=_now_iso())
     if rp and not config.ignore_robots and not rp.can_fetch(config.user_agent, url):
@@ -4118,54 +4189,13 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             break
     page.internal_link_items = internal_link_items
 
-    # Links with no anchor text (Semrush-like): flag <a> elements that have no visible/semantic text.
-    # Avoid false positives from empty overlay links when the same target is also linked with real text.
-    normalized_links: list[tuple[str, str, str, str, str]] = []
-    target_has_anchor_text: set[str] = set()
-    for it in getattr(parser, "link_items", []) or []:
-        if not isinstance(it, dict):
-            continue
-        href = str(it.get("href") or "").strip()
-        if not href:
-            continue
-        if href.startswith(("javascript:", "mailto:", "tel:")):
-            continue
-        if href.startswith("#"):
-            continue
-        text = str(it.get("text") or "").strip()
-        title = str(it.get("title") or "").strip()
-        aria_label = str(it.get("aria_label") or "").strip()
-        norm = _normalize_url(href, base=base_for_urls)
-        if not norm:
-            continue
-        rel = str(it.get("rel") or "").strip()
-        normalized_links.append((norm, rel, text, title, aria_label))
-        is_urlish = bool(re.match(r"^(https?://|www\\.)", text.lower())) if text else False
-        if (text and not is_urlish) or title or aria_label:
-            target_has_anchor_text.add(norm)
-
-    no_anchor_rows: list[dict[str, Any]] = []
-    for norm, rel, text, title, aria_label in normalized_links:
-        is_urlish = bool(re.match(r"^(https?://|www\\.)", text.lower())) if text else False
-        if (text and not is_urlish) or title or aria_label:
-            continue
-        if norm in target_has_anchor_text:
-            continue
-        is_internal = _is_allowed_host(norm, base_parts=base_parts, allow_subdomains=config.allow_subdomains)
-        no_anchor_rows.append(
-            {
-                "source_url": page.url,
-                "target_url": norm,
-                "rel": rel,
-                "internal": bool(is_internal),
-                "anchor_text": text,
-                "title": title,
-                "aria_label": aria_label,
-            }
-        )
-        if len(no_anchor_rows) >= 2000:
-            break
-    page.links_without_anchor_text = no_anchor_rows
+    page.links_without_anchor_text = _lignes_sans_ancre(
+        getattr(parser, "link_items", []) or [],
+        page_url=page.url,
+        base_for_urls=base_for_urls,
+        base_parts=base_parts,
+        allow_subdomains=config.allow_subdomains,
+    )
     return page
 
 
@@ -7913,6 +7943,44 @@ def _score_issues(
         "count": len(links_no_anchor_pages),
         "examples": [r["url"] for r in links_no_anchor_pages[:ISSUE_EXAMPLES_LIMIT]],
     }
+
+    def _nom_que_la_cible_se_donne(url: str) -> str:
+        """Le nom sous lequel la page CIBLE se presente, ou '' si elle n'en donne aucun.
+
+        La famille dit qu'un lien n'a pas d'ancre ; elle ne dit pas quelle ancre lui donner.
+        Comme pour le hreflang en trop, c'est la CIBLE qui tranche : elle a ete crawlee, et son
+        titre n'a donc pas a etre invente. Deux valeurs seulement, dans cet ordre :
+
+          - son h1, quand elle en a EXACTEMENT un : c'est le nom qu'elle se donne dans son
+            contenu, sans le suffixe de marque que traine un <title> ;
+          - son <title> sinon.
+
+        Plusieurs h1 ne tranchent rien (c'est meme une anomalie a part entiere), et on ne choisit
+        pas entre eux. Une cible jamais crawlee, en erreur ou muette ne rend rien : pas de
+        preuve vaut mieux qu'une mauvaise preuve, et le correcteur refusera de lui-meme.
+        """
+        cible = page_by_any.get(_norm_self(url) or "")
+        if cible is None or cible.error:
+            return ""
+        if not (isinstance(cible.status_code, int) and 200 <= cible.status_code < 300):
+            return ""
+        h1s = [h.strip() for h in (cible.h1 or []) if isinstance(h, str) and h.strip()]
+        if len(h1s) == 1:
+            return h1s[0]
+        return (cible.title or "").strip()
+
+    # Un href illisible ou une cible muette sortent d'eux-memes : `_attach_issue_evidence` exige
+    # `page`, `field` et `value` non vides pour une preuve `page_values`. Refiltrer ici ferait
+    # deux gardiens pour une seule garde, et c'est le second qu'on croirait tester.
+    _preuve_ancres: list[dict[str, str]] = []
+    for _page_url, _rows in sorted(links_no_anchor_by_page.items()):
+        for _r in _rows:
+            _preuve_ancres.append({
+                "page": _page_url,
+                "field": str(_r.get("href") or "").strip(),
+                "value": _nom_que_la_cible_se_donne(str(_r.get("target_url") or "")),
+            })
+    _attach_evidence(["links_with_no_anchor_text"], "page_values", _preuve_ancres)
 
     # Semrush-like: external links marked nofollow (count per affected page, not per link).
     nofollow_external_by_page: dict[str, list[str]] = defaultdict(list)

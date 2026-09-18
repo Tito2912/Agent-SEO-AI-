@@ -44,12 +44,6 @@ from ops import couverture  # noqa: E402
 # (verdict, raison) - la raison dit ce que la DETECTION mesure, puis ce qu'il faudrait ecrire.
 VERDICTS: dict[str, tuple[str, str]] = {
     # --- FICHIER : la valeur a ecrire est deja connue ---------------------------------------
-    "links_with_no_anchor_text": (
-        "FICHIER",
-        "un <a> interne dont le texte visible est vide ou n'est que l'URL, sans title, sans "
-        "aria-label et sans alt d'image (l'alt COMPTE deja comme ancre, seo_audit.py:922) ; la "
-        "cible a ete crawlee, donc son titre est connu et n'a pas a etre invente",
-    ),
     "redirect_chain": (
         "FICHIER",
         "plus d'une redirection avant la page finale ; la destination FINALE est mesuree, donc "

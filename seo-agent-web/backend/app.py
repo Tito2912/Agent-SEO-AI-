@@ -3251,7 +3251,11 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     robots = set(_ROBOTS_KEYS) | set(_AI_POLICY_KEYS)
     sitemap = set(_SITEMAP_FAMILY_KEYS)
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
-    links = set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
+    # `links_with_no_anchor_text` rejoint le groupe des liens : ce qu'elle edite est un <a> dans
+    # le corps d'une page ou d'un en-tete partage, exactement les memes fichiers que les autres
+    # reparations de liens. Son nom parle de texte, mais c'est un attribut de lien qu'on pose.
+    links = (set(_REDIRECT_LINK_KEYS) | set(_MIXED_CONTENT_KEYS) | set(_DOUBLE_SLASH_KEYS)
+             | set(_ANCHOR_TEXT_KEYS))
     assets = set(_ASSET_REWRITE_KEYS) | {"missing_alt_text"}
     # `missing_reciprocal_hreflang` rejoint le groupe hreflang : la balise qui manque est une
     # annotation de tete, et elle vit dans le fichier de la page CIBLE — pas dans un sitemap,
@@ -3404,7 +3408,7 @@ def _handled_issue_keys() -> set[str]:
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
         _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _HREFLANG_RETURN_KEYS,
-        _HREFLANG_DROP_KEYS, _ROBOTS_KEYS,
+        _HREFLANG_DROP_KEYS, _ANCHOR_TEXT_KEYS, _ROBOTS_KEYS,
         _AI_POLICY_KEYS,
         _CANONICAL_BROKEN_KEYS,
         _URL_PAIR_KEYS, _ASSET_REWRITE_KEYS,
@@ -17817,6 +17821,11 @@ _HREFLANG_RETURN_KEYS = {"missing_reciprocal_hreflang"}
 # QUELLE page ; le nom de la famille ne dit ni l'un ni l'autre. Difference avec elle : ici
 # la page signalee EST le fichier a editer, donc le ciblage par page reste le bienvenu.
 _HREFLANG_DROP_KEYS = {"page_referenced_for_more_than_one_language_in_hreflang"}
+# Un lien interne qui n'offre aucune ancre. La preuve dit quel lien (son href, tel que le fichier
+# l'ecrit) et comment la CIBLE se nomme ; ce qu'on pose est un `aria-label`, jamais un texte
+# visible. Le ciblage par page ne s'applique pas : ces liens vivent dans un en-tete partage, qui
+# n'est la page de personne. Voir `_poser_aria_label_sur_liens_sans_ancre`.
+_ANCHOR_TEXT_KEYS = {"links_with_no_anchor_text"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
 _ROBOTS_KEYS = {"sitemap_not_in_robots"}
@@ -20829,6 +20838,92 @@ def _add_reciprocal_hreflang(content: str, items: list[dict[str, str]]) -> tuple
     return content[:fin] + "\n" + "\n".join(ajouts) + content[fin:], n
 
 
+# Une balise ouvrante <a ...> et ce qu'elle entoure, jusqu'a sa fermeture. Les <a> ne s'imbriquent
+# pas en HTML, donc le non-gourmand ne peut pas sauter par-dessus une fermeture.
+_BALISE_A_RE = re.compile(r"<a\b([^>]*)>(.*?)</a\s*>", re.IGNORECASE | re.DOTALL)
+# Le href tel que le FICHIER l'ecrit, avec son guillemet : c'est lui qu'on clone.
+#
+# Distincte de `_HREF_ATTR_RE`, sa voisine, et pas par negligence : cette version-ci exige une
+# FRONTIERE de mot devant `href`. Sans elle, `<a data-href="/x" href="/y">` rend `/x` au premier
+# `search`, et on nommerait le lien d'apres la mauvaise cible. La voisine s'en passe parce qu'elle
+# balaie des balises <link> ou l'attribut est seul.
+#
+# Elle s'est d'abord appelee `_HREF_ATTR_RE`, ce qui ECRASAIT la voisine — meme module, derniere
+# definition gagnante. Les tests de cette famille-ci passaient tous ; 45 autres sont tombes. Voir
+# `test_aucun_nom_de_module_n_est_defini_deux_fois`, ecrit ce jour-la.
+_A_HREF_ATTR_RE = re.compile(r"\bhref\s*=\s*([\"'])(.*?)\1", re.IGNORECASE | re.DOTALL)
+_A_DEJA_NOMME_RE = re.compile(r"\b(aria-label|title)\s*=", re.IGNORECASE)
+# Un texte visible qui n'est qu'une URL nue ne nomme pas la cible : Ahrefs le compte comme
+# absence d'ancre, et le crawler aussi.
+_TEXTE_URL_NUE_RE = re.compile(r"^(https?://|www\.)\S*$", re.IGNORECASE)
+
+
+def _poser_aria_label_sur_liens_sans_ancre(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
+    """DETERMINISTE : nommer un lien interne qui n'offre aucune ancre, sans rien changer de visible.
+
+    La famille `links_with_no_anchor_text` dit quel lien est muet ; elle ne dit pas comment
+    l'appeler. C'est la CIBLE qui tranche, et c'est une MESURE : elle a ete crawlee et se nomme
+    elle-meme (h1 unique, sinon <title>). Rien n'est redige ici — le nom vient du site.
+
+    On pose `aria-label`, pas un texte visible : le rendu de la page du client ne bouge pas, les
+    lecteurs d'ecran gagnent le nom qui leur manquait, et Google lit cet attribut comme ancre. Un
+    texte visible injecte dans un lien vide servant d'overlay casserait la mise en page.
+
+    TROIS GARDES, et chacune couvre un accident different :
+
+      - le href du fichier doit etre LITTERALEMENT celui que le crawl a vu. On ne resout aucune
+        URL, on ne devine aucun chemin : deux liens differents ne sont jamais confondus ;
+      - un <a> qui porte deja `aria-label` ou `title` n'est pas touche. C'est aussi ce qui rend
+        l'operation idempotente : repasser sur un fichier deja corrige n'ecrit rien ;
+      - ce que le <a> ENTOURE doit etre muet — rien, ou une URL nue. Du texte reel signifie que
+        le fichier n'est pas celui que le crawl a vu, ou qu'il a ete corrige entre-temps, et on
+        s'abstient. Un `{label}` de gabarit compte comme du texte reel : on ne sait pas ce qu'il
+        rend, donc on n'y touche pas.
+
+    Le guillemet et la valeur sont CLONES du href voisin, que le fichier vient d'ecrire, plutot
+    que supposes. Le nom, lui, est echappe : un h1 qui contient une apostrophe ou un & ne doit pas
+    pouvoir fermer l'attribut qu'on ouvre.
+
+    ON NE CHERCHE PAS QUELLE PAGE EST LE FICHIER, contrairement a `_add_reciprocal_hreflang`, et
+    c'est delibere. Son geste a lui ne vaut que sur une page precise, d'ou la lecture du canonical.
+    Ici le lien muet vit presque toujours dans un en-tete ou un pied PARTAGE — le fichier n'a alors
+    aucun canonical, et exiger qu'il se nomme reviendrait a ne jamais corriger le cas le plus
+    courant. Le href suffit a viser : nommer partout le meme lien muet est exactement ce qu'il
+    faut, puisque le crawl l'a signale sur chacune des pages qui l'affichent.
+    """
+    voulus: dict[str, str] = {}
+    for it in (items or []):
+        href = str(it.get("field") or "").strip()
+        nom = str(it.get("value") or "").strip()
+        if href and nom:
+            voulus.setdefault(href, nom)
+    if not voulus:
+        return content, 0
+
+    compteur = {"n": 0}
+
+    def _nommer(m: "re.Match[str]") -> str:
+        attrs, interieur = m.group(1), m.group(2)
+        href_m = _A_HREF_ATTR_RE.search(attrs)
+        if not href_m:
+            return m.group(0)
+        nom = voulus.get(href_m.group(2).strip())
+        if not nom:
+            return m.group(0)
+        if _A_DEJA_NOMME_RE.search(attrs):
+            return m.group(0)
+        texte = re.sub(r"<[^>]*>", " ", interieur)
+        texte = html.unescape(texte).strip()
+        if texte and not _TEXTE_URL_NUE_RE.match(texte):
+            return m.group(0)
+        q = href_m.group(1)
+        pose = ' aria-label=%s%s%s' % (q, html.escape(nom, quote=True), q)
+        compteur["n"] += 1
+        return "<a" + attrs[:href_m.end()] + pose + attrs[href_m.end():] + ">" + interieur + "</a>"
+
+    return _BALISE_A_RE.sub(_nommer, content), compteur["n"]
+
+
 def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
     """DETERMINISTIC og:url repair (no AI). Touches ONLY the `og:url` meta tag.
 
@@ -22123,6 +22218,32 @@ def _prepare_issue_fix(
                 + "\n".join("- %s : retirer hreflang=%s vers %s"
                              % (i.get("page"), i.get("field"), i.get("value"))
                              for i in _items[:20]))
+
+    if issue_key in _ANCHOR_TEXT_KEYS:
+        _items = _issue_page_values(block)
+        if not _items:
+            out["refusal"] = (
+                "Le rapport ne dit pas comment nommer ces liens : les pages qu'ils visent n'ont "
+                "pas ete crawlees, ou ne portent ni h1 unique ni titre. Inventer un texte "
+                "d'ancre serait ecrire a la place du site.")
+        else:
+            # La preuve nomme les pages SOURCES : ce sont bien elles qui portent le lien muet.
+            # Le reecriveur, lui, vise par le href et se moque du fichier ou il tombe — un
+            # en-tete partage n'est la page de personne.
+            out["evidence"] = [str(i.get("page") or "") for i in _items
+                               if str(i.get("page") or "")]
+            out["link_rewriter"] = (  # noqa: E731
+                lambda raw, _i=list(_items): _poser_aria_label_sur_liens_sans_ancre(raw, _i))
+            # Aucun repli modele : le nom vient de la cible, qui a ete crawlee. « Donne une ancre
+            # a ce lien » sans dire laquelle est precisement l'invitation a rediger, et rediger
+            # a la place du client est ce qu'on a refuse en ouvrant ce chantier.
+            out["rewriter_ai_fallback"] = False
+            out["extra_hint"] = (
+                "Ces liens internes n'offrent aucune ancre. Pose sur CHACUN l'attribut "
+                "aria-label indique, sans toucher au texte visible ni au href :\n"
+                + "\n".join("- %s : href=%s -> aria-label=%s"
+                            % (i.get("page"), i.get("field"), i.get("value"))
+                            for i in _items[:20]))
 
     if issue_key in _HREFLANG_RETURN_KEYS:
         _items = _issue_page_values(block)
