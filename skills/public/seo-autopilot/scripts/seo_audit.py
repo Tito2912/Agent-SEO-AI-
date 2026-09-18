@@ -7085,11 +7085,28 @@ def _score_issues(
         # target is a different issue (hreflang_to_redirect / out-of-sitemap), so it is skipped
         # here — this is what keeps self-redirect sites like make-avis at 0. Validated:
         # tradingview 2 (de/es guide pages have incomplete hreflang), elevenlabs 8, others 0.
+        # La page a EDITER est la CIBLE, pas celle que la famille signale. Rien dans le nom de
+        # l'anomalie ne le dit, et un correcteur sans cette preuve irait modifier la page source —
+        # celle qui n'a rien a se reprocher. On ne recueille que pour la cause (B) : la cause (A)
+        # est une question d'appartenance au sitemap, qu'aucune balise de retour ne resout.
+        _missing_recip_values: list[dict[str, str]] = []
+        _recip_page_par_norm = {_sn: _pp for _pp, _sn, _ in _recip_candidates}
         for p, _self_norm, _targets in _recip_candidates:
             for t in _targets:
                 t_hf = _recip_hf_by_norm.get(t)
                 if t_hf is not None and _self_norm not in t_hf:
                     _missing_recip_set.add(p.url or _final_url(p))
+                    _cible = _recip_page_par_norm.get(t)
+                    # Le code sous lequel la source se designe ELLE-MEME : c'est celui que la
+                    # cible doit employer pour la nommer en retour. A defaut, la langue declaree.
+                    _code = next(
+                        (c for c, h in (_hreflang_map_for(p) or {}).items()
+                         if (_norm_self(h) or h) == _self_norm), "")
+                    if not _code:
+                        _code = (getattr(p, "lang", "") or "").strip().lower()
+                    if _cible is not None and _code:
+                        _missing_recip_values.append({
+                            "page": _final_url(_cible), "field": _code, "value": _final_url(p)})
                     break
     _missing_reciprocal_hreflang_v2 = sorted(_missing_recip_set)
 
@@ -8018,6 +8035,8 @@ def _score_issues(
     issues["missing_reciprocal_hreflang"] = _issue_block(
         "missing_reciprocal_hreflang", _missing_reciprocal_hreflang_v2
     )
+    _attach_evidence(("missing_reciprocal_hreflang",), "page_values",
+                     locals().get("_missing_recip_values") or [])
     issues["structured_data_schema_org_validation_error"] = _issue_block(
         "structured_data_schema_org_validation_error", structured_data_schema_org_errors
     )
