@@ -3768,6 +3768,34 @@ def _served_html_lang(url: str, config: "CrawlConfig") -> str | None:
     return (match.group(1).strip().lower() or None) if match else None
 
 
+def _seuil_alerte_certificat(validity_days: "int | None") -> int:
+    """A combien de jours restants un certificat merite-t-il d'etre signale ?
+
+    Le seuil etait fixe a 30 jours, et c'etait un faux positif SYSTEMATIQUE. Let's Encrypt emet
+    des certificats de 90 jours et les renouvelle automatiquement quand il en reste une trentaine :
+    tout site qui en depend franchit donc ce seuil A CHAQUE CYCLE, sans que rien n'aille mal.
+    Mesure du 18/09/2026 : easyshopbuilder.com a 30 jours restants declenchait l'alerte, quand
+    Ahrefs n'affichait rien — et noyaru.com lui-meme etait a 33 jours, donc a trois jours de
+    s'accuser tout seul.
+
+    On ne DEVINE pas si le renouvellement est automatique : on lit la DUREE du certificat, qui la
+    dit. Quatre-vingt-dix jours est la signature des autorites qui renouvellent par machine
+    (Let's Encrypt, Google Trust Services, ZeroSSL) ; un an est celle d'un achat que quelqu'un doit
+    refaire a la main.
+
+      - certificat court (<= 100 jours) : alerte a 7 jours. En dessous, le renouvellement
+        automatique a vraiment echoue — il est retente chaque jour depuis trois semaines — et il
+        reste une semaine pour agir ;
+      - certificat long, ou duree inconnue : alerte a 30 jours, parce qu'une personne doit s'en
+        occuper et qu'un mois n'est pas de trop.
+
+    Une duree inconnue retombe sur le seuil prudent : ne rien savoir ne justifie pas de se taire.
+    """
+    if isinstance(validity_days, int) and 0 < validity_days <= 100:
+        return 7
+    return 30
+
+
 def _nomme_la_cible(text: str, title: str, aria_label: str) -> bool:
     """Le lien offre-t-il une ancre ? Un texte visible suffit, MEME s'il n'est qu'une adresse.
 
@@ -9549,10 +9577,18 @@ def main(argv: list[str]) -> int:
                         out["hostname_error"] = f"{type(e).__name__}: {e}"
                     not_after = cert.get("notAfter")
                     out["not_after"] = not_after
+                    not_before = cert.get("notBefore")
+                    out["not_before"] = not_before
                     if isinstance(not_after, str) and not_after.strip():
                         try:
                             dt_na = dt.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
                             out["days_left"] = int((dt_na - dt.datetime.now(dt.timezone.utc)).total_seconds() // 86400)
+                            # La DUREE totale du certificat dit s'il est renouvele par une machine
+                            # ou par une personne, et c'est ce qui rend le seuil d'alerte
+                            # interpretable. Voir `_seuil_alerte_certificat`.
+                            if isinstance(not_before, str) and not_before.strip():
+                                dt_nb = dt.datetime.strptime(not_before, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
+                                out["validity_days"] = int((dt_na - dt_nb).total_seconds() // 86400)
                         except Exception:
                             pass
         except Exception as e:
@@ -9564,8 +9600,11 @@ def main(argv: list[str]) -> int:
         tls = _tls_audit(host)
         system_fetches.append({"type": "tls", **tls})
         issues_dir = Path(str(config.output_dir)).resolve() / "issues"
-        if tls.get("ok") and isinstance(tls.get("days_left"), int) and int(tls["days_left"]) <= 30:
-            row = {"host": host, "not_after": tls.get("not_after"), "days_left": int(tls.get("days_left") or 0)}
+        _seuil = _seuil_alerte_certificat(tls.get("validity_days"))
+        if tls.get("ok") and isinstance(tls.get("days_left"), int) and int(tls["days_left"]) <= _seuil:
+            row = {"host": host, "not_after": tls.get("not_after"),
+                   "days_left": int(tls.get("days_left") or 0),
+                   "validity_days": tls.get("validity_days"), "seuil": _seuil}
             _write_issue_rows(issues_dir, "certificate_expiration", [row])
             issues["certificate_expiration"] = {"count": 1, "examples": [host]}
         if tls.get("ok") and tls.get("hostname_ok") is False:
