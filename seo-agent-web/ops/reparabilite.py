@@ -44,15 +44,19 @@ from ops import couverture  # noqa: E402
 # (verdict, raison) - la raison dit ce que la DETECTION mesure, puis ce qu'il faudrait ecrire.
 VERDICTS: dict[str, tuple[str, str]] = {
     # --- FICHIER : la valeur a ecrire est deja connue ---------------------------------------
+    # --- DECISION : instruite le 18/09/2026, puis refusee ------------------------------------
     "redirect_chain": (
-        "FICHIER",
-        "plus d'une redirection avant la page finale ; la destination FINALE est mesuree, donc "
-        "connue - reste que la regle vit dans un fichier de redirections propre a la stack",
+        "DECISION",
+        "plus d'une redirection avant la page finale ; la destination est bien mesuree, mais "
+        "c'est un SYMPTOME : ses trois portes d'entree sont le lien interne "
+        "(page_has_links_to_redirect, corrige), l'entree de sitemap (sitemap_3xx_redirect, "
+        "corrige) et l'empilement de regles de config (refuse par _REDIRECT_CONFIG_KEYS). Un "
+        "correcteur ouvrirait une SECONDE PR sur les lignes que la premiere vient de changer "
+        "- voir test_redirect_chain_est_un_symptome",
     ),
     "redirect_chain_too_long": (
-        "FICHIER",
-        "meme mesure que redirect_chain, au-dela de 4 sauts : meme destination connue, meme "
-        "dependance au fichier de redirections",
+        "DECISION",
+        "meme mesure au-dela de 4 sauts : memes portes d'entree, meme decision",
     ),
     "no_hsts": (
         "FICHIER",
