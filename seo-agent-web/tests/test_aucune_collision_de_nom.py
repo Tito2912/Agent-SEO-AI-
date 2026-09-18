@@ -30,18 +30,17 @@ MODULES = {
     "seo_audit.py": RACINE / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py",
 }
 
-# Collision PREEXISTANTE, laissee telle quelle le 18/09/2026 et a traiter a part.
+# Aucune tolerance a ce jour, et c'est un etat, pas un acquis.
 #
-# `_QUOTED_VALUE_RE` est defini deux fois dans app.py. La premiere version, sans lookahead, est
-# ecrite juste sous `_JS_LANGUAGES_RE` — le bloc JS qu'elle sert. La seconde, plus restrictive,
-# la remplace avant tout usage. Les deux consommateurs tournent donc avec la restrictive, et
-# celui du bloc hreflang peut manquer des alternates que la premiere aurait pris.
+# La seule qu'il y ait eu concernait `_QUOTED_VALUE_RE`, defini deux fois dans app.py : la version
+# sans lookahead, ecrite pour le bloc d'alternates, etait ecrasee par une version restrictive qui
+# ne voit pas une valeur suivie d'un commentaire. Reparee le jour meme sous le nom
+# `_JS_PROP_VALUE_RE` (voir test_alternates_suivies_d_un_commentaire), et la tolerance est partie
+# avec elle — c'est le second test ci-dessous qui l'a exige, au moment prevu.
 #
-# Elle n'est PAS corrigee ici : la reparer change le comportement d'une famille hreflang dont la
-# parite Ahrefs est validee, et cela se mesure sur les sites de reference avant de se decider.
-# L'exception est nommee pour que le test protege tout le reste des maintenant, et pour que la
-# dette reste visible au lieu de disparaitre avec le test qu'on n'aurait pas ecrit.
-TOLEREES = {("app.py", "_QUOTED_VALUE_RE")}
+# Une entree ajoutee ici doit porter sa raison ET la mesure qui la justifie, sans quoi elle
+# survivra a ce qu'elle tolerait.
+TOLEREES: set[tuple[str, str]] = set()
 
 
 def _definis_au_niveau_superieur(chemin: Path) -> Counter:
@@ -70,11 +69,17 @@ def test_aucun_nom_de_module_n_est_defini_deux_fois() -> None:
 
 
 def test_la_dette_toleree_existe_encore() -> None:
-    """Le jour ou `_QUOTED_VALUE_RE` sera reparee, cette exception doit partir avec elle.
+    """Une tolerance doit disparaitre avec ce qu'elle tolerait.
 
-    Sans ce bord, la liste des tolerances survit a ce qu'elle tolerait et finit par couvrir une
-    collision neuve portant le meme nom. C'est le meme piege que les verdicts perimes de
-    `ops/reparabilite.py`, et il se declenche au meme moment : juste apres une reussite.
+    Sans ce bord, la liste survit a sa raison et finit par couvrir une collision neuve portant le
+    meme nom. Meme piege que les verdicts perimes de `ops/reparabilite.py`, et meme moment de
+    declenchement : juste apres une reussite.
+
+    IL A DEJA SERVI, le jour meme ou il a ete ecrit. `_QUOTED_VALUE_RE` etait la seule tolerance ;
+    sa reparation a fait tomber ce test, qui a exige le retrait de l'exception au lieu de la
+    laisser dormir. La liste est vide aujourd'hui, et le test passe donc a vide — c'est voulu : il
+    n'a rien a dire tant que personne n'ajoute de tolerance, et il redevient exigeant des qu'on en
+    ajoute une.
     """
     for nom_module, nom in TOLEREES:
         assert _definis_au_niveau_superieur(MODULES[nom_module])[nom] > 1, (

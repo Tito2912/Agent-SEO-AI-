@@ -18469,7 +18469,17 @@ _JS_CANONICAL_RE = re.compile(r'(?<![\w-])(canonical\s*[:=]\s*)(["\'])(.*?)\2')
 # such a block is what keeps a plain nav `href:` out of it — the rule of this rewriter is
 # that a menu pointing at the same URL is deliberately left alone.
 _JS_LANGUAGES_RE = re.compile(r"(?:languages|alternates|hreflangs?|alternateLinks)\s*[:=]\s*[{\[]", re.I)
-_QUOTED_VALUE_RE = re.compile(r'(:\s*)(["\'])(.*?)\2')
+# Une valeur citee dans un bloc d'alternates. Elle s'appelait `_QUOTED_VALUE_RE` et une SECONDE
+# definition de ce nom, plus bas dans le module, l'ecrasait avant tout usage : le bloc JS tournait
+# donc avec une regex ecrite pour un autre besoin, qui exige une ponctuation (`,` `}` `]`…) juste
+# apres la valeur. Mesure du 18/09/2026 sur neuf formes reelles d'alternates : les deux regex
+# voient la meme chose partout SAUF quand la valeur est suivie d'un commentaire de fin de ligne,
+#     en: 'https://exemple.fr/en'  // the english one
+# que la version restrictive ne voit pas — l'entree n'etait alors jamais reecrite.
+#
+# Elargir ne peut rien casser ici : `_one_prop` ne remplace que les valeurs presentes dans la
+# preuve du crawl, donc on trouve PLUS d'occurrences des memes URL, jamais d'autres valeurs.
+_JS_PROP_VALUE_RE = re.compile(r'(:\s*)(["\'])(.*?)\2')
 
 
 def _bracketed_block(content: str, open_idx: int, opener: str = "{") -> tuple[int, int]:
@@ -21081,7 +21091,7 @@ def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple
         if start < 0:
             pos = m.end()
             continue
-        patched_block = _QUOTED_VALUE_RE.sub(_one_prop, new[start:end])
+        patched_block = _JS_PROP_VALUE_RE.sub(_one_prop, new[start:end])
         new = new[:start] + patched_block + new[end:]
         pos = start + len(patched_block)
     return new, count
