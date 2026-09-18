@@ -56,15 +56,28 @@ def test_every_paid_plan_names_the_corrector(a_prospect_who_has_no_account: Test
         )
 
 
-def test_the_free_plan_says_the_corrector_is_not_included(
+def test_the_free_plan_advertises_a_taste_of_the_corrector(
     a_prospect_who_has_no_account: TestClient,
 ) -> None:
-    # Free has ai_corrections_month = 0. Staying silent about it reads as "included"; saying it
-    # is what gives the paid plans something to be bought for.
+    """DECISION REVERSED 2026-09-18 by the owner. The previous rule was the opposite.
+
+    It read: "Free has ai_corrections_month = 0. Staying silent about it reads as 'included';
+    saying it is what gives the paid plans something to be bought for." The reasoning was sound
+    and the conclusion was still wrong, for a reason the same catalogue states two lines above
+    about PageSpeed: a taste "is what makes the upgrade worth buying". Free got 5 PageSpeed URLs
+    on exactly that argument while the corrector — the one thing no competitor does — gave
+    nothing at all.
+
+    A prospect who has never seen a Noyaru pull request on their own repository cannot know what
+    the paid plans are selling. Two corrections are enough to show the whole gesture (branch,
+    diff, PR body) and are fifty times less than Solo.
+    """
     catalog = billing.plan_catalog()
-    assert catalog["free"]["limits"]["ai_corrections_month"] == 0
+    assert catalog["free"]["limits"]["ai_corrections_month"] > 0
     features = " · ".join(catalog["free"]["features"]).lower()
-    assert "pull request" in features and "non incluses" in features
+    assert "pull request" in features
+    assert "non incluses" not in features, (
+        "the free plan still denies what it now offers: %s" % catalog["free"]["features"])
 
 
 def test_the_correction_quota_appears_on_the_public_page(
@@ -80,10 +93,31 @@ def test_the_correction_quota_appears_on_the_public_page(
         )
 
 
-def test_the_free_plan_shows_no_correction_quota(a_prospect_who_has_no_account: TestClient) -> None:
-    # Zero must not render as "0 corrections/mois" — an empty allowance is stated in the feature
-    # list, not advertised as a quantity.
+def test_no_plan_advertises_an_empty_correction_allowance(
+    a_prospect_who_has_no_account: TestClient,
+) -> None:
+    """An allowance of zero is stated in words, never advertised as a quantity.
+
+    Anchored on the separator the template emits: a bare "0 corrections/mois" also matches inside
+    "100 corrections/mois", which would make this pass for the wrong reason.
+    """
+    assert "· 0 corrections/mois" not in a_prospect_who_has_no_account.get("/pricing").text
+
+
+def test_the_public_page_lists_only_the_paid_plans(
+    a_prospect_who_has_no_account: TestClient,
+) -> None:
+    """Free is NOT on /pricing — the template hardcodes solo/pro/business — and that is a display
+    choice, not an oversight.
+
+    Written down because it bounds what the free taste can do. A prospect never sees it there; it
+    is discovered inside the app, on /billing, by someone who already has an account. The taste
+    therefore works on CONVERSION, not on acquisition. The day Free joins this page, its quota
+    renders on its own — the template already prints any non-zero allowance — and this test is
+    what will say so out loud instead of letting the change pass unnoticed.
+    """
     body = a_prospect_who_has_no_account.get("/pricing").text
-    # Anchored on the separator the template emits: a bare "0 corrections/mois" also matches
-    # inside "100 corrections/mois", which would make this pass for the wrong reason.
-    assert "· 0 corrections/mois" not in body
+    catalog = billing.plan_catalog()
+    assert "free" in catalog, "the plan exists"
+    assert catalog["free"]["label"] not in body, (
+        "Free is now rendered on /pricing: decide whether its correction quota should be shown")

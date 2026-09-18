@@ -170,10 +170,30 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
         "free": {
             "label": "Free",
             "price_label": "0€",
-            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 0},
-            "correction": {"model": "", "max_files": 0},
+            # DEUX corrections offertes, decidees le 18/09/2026, et il faut DEUX valeurs pour
+            # les donner : `ai_corrections_month` seul ne suffit pas, parce que `_correction_gate`
+            # refuse sur `max_files <= 0` AVANT de regarder le moindre quota. Le plan gratuit
+            # n'etait donc pas « a zero correction », il etait ferme en amont — un quota releve
+            # sans toucher a `max_files` n'aurait strictement rien change, et se serait vu comme
+            # une regression du produit plutot que comme un oubli de configuration.
+            #
+            # POURQUOI DONNER QUELQUE CHOSE. PageSpeed donne deja un avant-gout (5 URLs) parce que
+            # c'est ce qui vend l'abonnement ; le correcteur n'en donnait aucun. Or c'est LUI la
+            # difference du produit face a un Site Audit classique : un client qui n'a jamais vu
+            # une pull request Noyaru sur son propre depot ne peut pas savoir ce qu'il acheterait.
+            #
+            # DEUX, et pas dix : une seule pull request peut porter plusieurs fichiers, donc deux
+            # suffisent a montrer le geste complet — le diff, la branche, le corps de PR — sans
+            # entamer Solo, qui en offre cent. La generosite reelle est ailleurs et elle est
+            # gratuite pour nous : une reecriture DETERMINISTE n'appelle aucun modele et n'est donc
+            # pas facturee au quota (voir `_correction_charge`), si bien qu'un compte gratuit
+            # obtient les corrections mecaniques tant qu'il n'a pas consomme ses deux appels.
+            # C'est exactement ce qu'on veut lui montrer : celles qui se mergent sans relecture.
+            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 2},
+            "correction": {"model": "claude-sonnet-4-6", "max_files": 2},
             "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
-            "features": ["Audit complet", "Suggestions IA (limitées)", "Exports", "Corrections en pull request : non incluses"],
+            "features": ["Audit complet", "Suggestions IA (limitées)", "Exports",
+                         "Corrections du code en pull request GitHub (2/mois, pour essayer)"],
         },
         "solo": {
             "label": "Solo",
