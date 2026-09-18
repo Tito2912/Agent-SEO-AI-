@@ -43,7 +43,12 @@ from ops import couverture  # noqa: E402
 
 # (verdict, raison) - la raison dit ce que la DETECTION mesure, puis ce qu'il faudrait ecrire.
 VERDICTS: dict[str, tuple[str, str]] = {
-    # --- FICHIER : la valeur a ecrire est deja connue ---------------------------------------
+    # --- FICHIER : la valeur a ecrire est deja connue, et rien ne s'y oppose ------------------
+    # VIDE le 18/09/2026. Les quatre candidates de la premiere mesure ont toutes ete instruites :
+    # une est devenue un correcteur (links_with_no_anchor_text), trois ont ete tranchees contre.
+    # Une colonne vide ici ne veut pas dire « tout est corrige » mais « plus rien ne se repare par
+    # une edition de fichier sans decider a la place du client ».
+
     # --- DECISION : instruite le 18/09/2026, puis refusee ------------------------------------
     "redirect_chain": (
         "DECISION",
@@ -59,12 +64,13 @@ VERDICTS: dict[str, tuple[str, str]] = {
         "meme mesure au-dela de 4 sauts : memes portes d'entree, meme decision",
     ),
     "no_hsts": (
-        "FICHIER",
-        "en-tete Strict-Transport-Security absent ; sur un hebergeur statique il s'ecrit dans "
-        "un fichier du depot (_headers, netlify.toml, vercel.json) et sa valeur est fixe - mais "
-        "un HSTS pose avec un long max-age ne se reprend pas : a trancher comme une decision",
+        "DECISION",
+        "en-tete Strict-Transport-Security absent ; il s'ecrit bien dans un fichier du depot sur "
+        "un hebergeur statique, mais la DETECTION ne lit que sa presence : un max-age symbolique "
+        "ferait taire l'anomalie sans proteger, et un max-age reel engage le navigateur du "
+        "visiteur pour des mois sans retour possible. Ici c'est l'AJOUT qui ne se reprend pas "
+        "- voir test_hsts_est_une_decision_du_client",
     ),
-
     # --- DEVINER : il faudrait inventer la valeur --------------------------------------------
     "http_404": ("DEVINER", "une URL crawlee rend 404 ; la reparer, c'est ecrire la page absente"),
     "http_4xx": ("DEVINER", "meme mesure elargie a tout le 4xx, meme page a inventer"),
