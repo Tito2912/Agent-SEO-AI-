@@ -586,7 +586,20 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
 
     plan_key = plan_for_price_id(price_id) or str(meta.get("plan_key") or "").strip().lower()
     if plan_key not in plan_catalog():
-        plan_key = "free"
+        # Prix INCONNU : on ne sait pas ce que le client a, on ne DECIDE pas qu'il n'a plus rien.
+        #
+        # `plan_for_price_id` ne reconnait que les trois identifiants declares en variables
+        # d'environnement. Tout le reste rendait `free`, c'est-a-dire retirait ses droits a un
+        # client payant — sur un tarif migre, un identifiant renomme, ou une variable absente au
+        # passage en live. Aucun de ces cas n'est une intention du client, et le webhook repond
+        # 200 : la degradation ne se voyait nulle part. Meme classe que les `MAIL_*` et
+        # `ANTHROPIC_API_KEY` non declares, ou l'absence d'une variable ETEINT une fonctionnalite
+        # au lieu d'echouer.
+        #
+        # On garde donc ce que l'abonnement portait deja, et on le DIT. Cela ne peut pas accorder
+        # de droits indus : le STATUT reste maitre, et `effective_plan_key` rend `free` des que
+        # l'abonnement n'est plus actif — un abonnement resilie perd ses droits meme ici.
+        plan_key = ""
 
     status = str(stripe_subscription.get("status") or "").strip().lower() or "unknown"
     cancel_at_period_end = bool(stripe_subscription.get("cancel_at_period_end") or False)
@@ -611,7 +624,13 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         existing.user_id = uid
         existing.stripe_customer_id = cid
         existing.stripe_price_id = price_id or existing.stripe_price_id
-        existing.plan_key = plan_key
+        if not plan_key:
+            logger.error(
+                "[STRIPE] prix inconnu %r sur l'abonnement %s : plan %r CONSERVE. "
+                "Verifie STRIPE_PRICE_ID_SOLO/PRO/BUSINESS — un tarif migre ou une variable "
+                "absente laisserait les clients sur un plan perime.",
+                price_id, sid, existing.plan_key)
+        existing.plan_key = plan_key or existing.plan_key or "free"
         existing.status = status
         existing.cancel_at_period_end = cancel_at_period_end
         existing.current_period_start = cps
@@ -627,7 +646,10 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         stripe_customer_id=cid,
         stripe_subscription_id=sid,
         stripe_price_id=price_id or "unknown",
-        plan_key=plan_key,
+        # Abonnement JAMAIS vu : il n'y a rien a conserver, et accorder un plan au hasard
+        # donnerait des droits que personne n'a payes. `free` est ici le choix prudent, pas un
+        # repli par defaut.
+        plan_key=plan_key or "free",
         status=status,
         cancel_at_period_end=cancel_at_period_end,
         current_period_start=cps,
