@@ -215,6 +215,29 @@ def _runs_dir_for_request(request: Request) -> Path:
     return _runs_dir_for_user(str(user.id))
 
 
+def _runs_dir_pour_slug(request: Request, slug: str) -> Path:
+    """Les rapports d'un projet vivent chez son PROPRIETAIRE, pas chez qui les consulte.
+
+    Les crawls sont ranges sur disque par utilisateur (`RUNS_DIR / user_id`). Tant qu'un projet
+    n'avait qu'un seul utilisateur, « le dossier de qui demande » et « le dossier du projet »
+    etaient la meme chose. Des qu'un membre d'equipe ouvre un projet qu'il ne possede pas, les
+    deux divergent : il verrait un dossier vide, et chaque page lisant un rapport lui repondrait
+    « aucun crawl » sur un projet qui en a des dizaines.
+
+    La resolution passe par `_db_project`, deja elargi aux comptes accessibles et deja teste :
+    si le projet est visible pour cet utilisateur, on rend le dossier de son proprietaire. Sinon
+    on retombe sur le dossier de l'appelant — un projet qu'il ne peut pas ouvrir ne doit pas lui
+    ouvrir un dossier, et le controle d'acces de la route dira 404 juste apres de toute facon.
+    """
+    user = getattr(request.state, "user", None)
+    if not user:
+        return DEFAULT_RUNS_DIR
+    proj = _db_project(str(user.id), slug)
+    if proj is None:
+        return _runs_dir_for_user(str(user.id))
+    return _runs_dir_for_user(str(proj.owner_user_id))
+
+
 def _run_tree_candidates(path: Path) -> list[Path]:
     root = DEFAULT_RUNS_DIR.resolve()
     try:
@@ -12427,7 +12450,6 @@ async def stripe_webhook(request: Request) -> JSONResponse:
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def projects(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
-    runs_dir = _runs_dir_for_request(request)
 
     user = getattr(request.state, "user", None)
     if not user:
@@ -12442,22 +12464,38 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
                 canonical_url=_public_url(request, "/"),
             ),
         )
+    # L'ordre des comptes EST la regle de priorite : le sien d'abord, puis celui qui l'accueille.
+    # C'est le meme ordre que `_db_project`, et ce n'est pas un detail cosmetique : si les deux
+    # comptes ont un projet `mon-site`, afficher les deux donnerait deux lignes dont l'une ouvre
+    # l'autre. On garde donc la premiere vue de chaque slug, exactement celle que la resolution
+    # rendra au clic.
+    comptes = _comptes_accessibles(str(getattr(user, "id", "") or "")) if user else []
+    rang = {compte: i for i, compte in enumerate(comptes)}
     try:
         with DB.session() as db:
             db_projects = list(
-                db.scalars(select(Project).where(Project.owner_user_id == str(user.id)).order_by(Project.site_name))
-                if user
+                db.scalars(select(Project).where(Project.owner_user_id.in_(comptes)).order_by(Project.site_name))
+                if comptes
                 else []
             )
     except Exception as _e:
         logger.error("[projects] projects query failed: %s: %s", type(_e).__name__, _e)
         db_projects = []
+    db_projects.sort(key=lambda p: rang.get(str(p.owner_user_id), len(rang)))
 
     projects: list[dict[str, Any]] = []
+    dossiers: dict[str, Path] = {}
+    vus: set[str] = set()
     for p in db_projects:
         slug = str(p.slug or "").strip()
-        if not slug:
+        if not slug or slug in vus:
             continue
+        vus.add(slug)
+        # Les rapports vivent chez le proprietaire du projet, pas chez qui regarde la liste.
+        proprietaire = str(p.owner_user_id or "")
+        runs_dir = dossiers.get(proprietaire)
+        if runs_dir is None:
+            runs_dir = dossiers.setdefault(proprietaire, _runs_dir_for_user(proprietaire))
         summary = dash.project_latest_summary(runs_dir, slug) if runs_dir.exists() else None
         if summary:
             projects.append(summary)
@@ -12487,10 +12525,13 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
         jobs = []
     is_admin = bool(getattr(user, "is_admin", False))
     if not is_admin:
+        # Meme elargissement que la liste : sans lui, un membre verrait « aucun crawl en cours »
+        # pendant qu'un crawl du compte hote tourne, et relancerait par-dessus.
+        _comptes = set(comptes)
         jobs = [
             j
             for j in jobs
-            if isinstance(j.result, dict) and str(j.result.get("user_id") or "") == str(getattr(user, "id", ""))
+            if isinstance(j.result, dict) and str(j.result.get("user_id") or "") in _comptes
         ]
     live_crawls: dict[str, dict[str, Any]] = {}
     recent_crawl_jobs: dict[str, dict[str, Any]] = {}
@@ -15313,7 +15354,7 @@ def project_search_items(
 
     # Fallback: if live returned ok but no items, try stored crawl CSV
     if payload.get("ok") and not payload.get("items"):
-        runs_dir = _runs_dir_for_request(request)
+        runs_dir = _runs_dir_pour_slug(request, slug)
         fallback_items = _crawl_items_fallback(runs_dir, slug, source_key, dimension, requested_limit)
         if fallback_items:
             payload = dict(payload)
@@ -15564,7 +15605,17 @@ def view_file(request: Request, path: str) -> HTMLResponse:
 
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
-    allowed_roots = [DEFAULT_RUNS_DIR.resolve(), DATA_DIR.resolve()] if is_admin else [_runs_dir_for_request(request).resolve()]
+    if is_admin:
+        allowed_roots = [DEFAULT_RUNS_DIR.resolve(), DATA_DIR.resolve()]
+    else:
+        # Cette liste EST la barriere : tout fichier hors de ces racines est refuse. Elle vaut
+        # donc exactement les comptes que cette personne a le droit de lire — le sien, plus celui
+        # qui l'accueille comme membre. Sans utilisateur elle est vide, donc tout est refuse :
+        # l'ancien repli rendait `DEFAULT_RUNS_DIR`, c'est-a-dire la racine de TOUS les clients.
+        # La route n'est pas atteignable sans session aujourd'hui, mais la barriere ne doit pas
+        # dependre d'une liste blanche ecrite ailleurs.
+        allowed_roots = [_runs_dir_for_user(c).resolve()
+                         for c in _comptes_accessibles(str(getattr(user, "id", "") or ""))]
     if not any(raw_path.is_relative_to(root) for root in allowed_roots):
         return HTMLResponse("Path not allowed", status_code=403)
     if not raw_path.exists():
@@ -15949,7 +16000,7 @@ def project_overview(
     request: Request, slug: str, crawl: str | None = None, compare: str | None = None, job: str | None = None
 ) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
 
     live_job: dict[str, Any] | None = None
@@ -16116,7 +16167,7 @@ def project_crawl_settings(
     prefill_bing_days: int | None = None,
 ) -> HTMLResponse:
     proj = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     project = dash.project_overview(runs_dir, slug, timestamp=None, compare_to=None)
     if not project:
         project = {
@@ -16312,7 +16363,7 @@ def project_issues(
     q: str | None = None,
 ) -> HTMLResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
         resp = templates.TemplateResponse(
@@ -16353,7 +16404,7 @@ def project_issues(
 @app.post("/projects/{slug}/fix-suggestions/generate")
 def project_generate_fix_suggestions(request: Request, slug: str, crawl: str | None = Form(default=None)) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -16396,7 +16447,7 @@ def project_issue_detail(
     q: str | None = None,
 ) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.issue_detail(runs_dir, slug, timestamp=crawl, issue_key=issue_key, page=page, per_page=per_page, q=q)
     if not data:
         resp = templates.TemplateResponse(
@@ -16824,7 +16875,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     mode = cfg["mode"]
 
     # Load latest crawl with a report
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     crawls = dash.list_project_crawls(runs_dir, slug)
     ts = next((t for t in reversed(crawls) if dash.load_report_json(runs_dir, slug, t)), None)
     if not ts:
@@ -22999,7 +23050,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     site_name = str(proj.site_name or slug)
 
     # ── Impacted URLs from the crawl report ──
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     ts = (body.crawl_ts or "").strip()
     if not ts:
         crawls = dash.list_project_crawls(runs_dir, slug)
@@ -23426,7 +23477,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         ),
     }
 
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     current_crawl_ts = ""
     fix_candidates: list[dict[str, Any]] = []
     try:
@@ -23484,7 +23535,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
 @app.get("/projects/{slug}/export/report.csv")
 def export_project_report_csv(request: Request, slug: str, crawl: str | None = None, compare: str | None = None) -> Response:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -23523,7 +23574,7 @@ def export_project_report_csv(request: Request, slug: str, crawl: str | None = N
 @app.get("/projects/{slug}/export/report.pdf")
 def export_project_report_pdf(request: Request, slug: str, crawl: str | None = None, compare: str | None = None) -> Response:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -23581,7 +23632,7 @@ def export_project_fix_pack_zip(request: Request, slug: str, crawl: str | None =
             return JSONResponse({"ok": False, "error": msg, "billing_url": "/billing"}, status_code=402)
         return RedirectResponse(url=f"/billing?msg={quote(msg)}", status_code=303)
 
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -23618,7 +23669,7 @@ def export_project_issues_csv(
     q: str | None = None,
 ) -> Response:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -23687,7 +23738,7 @@ def export_project_issues_all_urls_csv(
 ) -> Response:
     """CSV with one row per (issue, affected URL) — all URLs, no sample limit."""
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -23810,7 +23861,7 @@ def export_project_issues_pdf(
     q: str | None = None,
 ) -> Response:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
         raise HTTPException(status_code=404, detail="Projet introuvable")
@@ -23867,7 +23918,7 @@ def export_project_issues_pdf(
 @app.get("/projects/{slug}/export/issues/{issue_key}.csv")
 def export_project_issue_csv(request: Request, slug: str, issue_key: str, crawl: str | None = None) -> Response:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.issue_detail(runs_dir, slug, timestamp=crawl, issue_key=issue_key)
     if not data:
         raise HTTPException(status_code=404, detail="Issue introuvable")
@@ -23960,7 +24011,7 @@ def export_project_issue_csv(request: Request, slug: str, issue_key: str, crawl:
 @app.get("/projects/{slug}/export/issues/{issue_key}.pdf")
 def export_project_issue_pdf(request: Request, slug: str, issue_key: str, crawl: str | None = None) -> Response:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.issue_detail(runs_dir, slug, timestamp=crawl, issue_key=issue_key)
     if not data:
         raise HTTPException(status_code=404, detail="Issue introuvable")
@@ -24030,7 +24081,7 @@ def export_project_issue_pdf(request: Request, slug: str, issue_key: str, crawl:
 @app.get("/projects/{slug}/crawls", response_class=HTMLResponse)
 def project_crawls(request: Request, slug: str) -> HTMLResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     crawls = dash.list_project_crawls(runs_dir, slug)
     timing = _crawl_timing_map(slug)
     resp = templates.TemplateResponse(
@@ -24541,7 +24592,7 @@ def project_keyword_opportunities(request: Request, slug: str, days: int | None 
     one that names the page is something the corrector can be pointed at.
     """
     proj_row = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     project = dash.project_overview(runs_dir, slug, timestamp=None, compare_to=None) or {
         "slug": slug,
         "site_name": str(proj_row.site_name or slug),
@@ -24909,7 +24960,7 @@ def project_competitors(request: Request, slug: str,
     """
     proj_row = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     own_pages, own_crawl_ts = _own_pages_for_project(runs_dir, slug)
 
     with DB.session() as db:
@@ -25125,7 +25176,7 @@ def project_performance(
     page: int = 1,
 ) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     project = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not project:
         project = {
@@ -25247,7 +25298,7 @@ def project_backlinks(
     request: Request, slug: str, crawl: str | None = None, msg: str | None = None, err: str | None = None
 ) -> HTMLResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     project = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=None)
     if not project:
         resp = templates.TemplateResponse(
@@ -25486,7 +25537,7 @@ async def backlinks_import(
     file: UploadFile = File(...),
 ) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     source = (source or "").strip().lower()
     if source not in {"gsc", "bing", "ahrefs"}:
         return RedirectResponse(url=f"/projects/{slug}/backlinks?err={quote('Source invalide')}", status_code=303)
@@ -25577,7 +25628,7 @@ def backlinks_clear(
     kind: str = Form(default="all"),
 ) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     source = (source or "").strip().lower()
     kind = (kind or "").strip().lower()
     if source not in {"gsc", "bing", "ahrefs"}:
@@ -25615,7 +25666,7 @@ def backlinks_ahrefs_sync(
     limit: int = Form(default=1000),
 ) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
-    runs_dir = _runs_dir_for_request(request)
+    runs_dir = _runs_dir_pour_slug(request, slug)
     token, token_key = _ahrefs_env_token()
     if not token:
         return RedirectResponse(
