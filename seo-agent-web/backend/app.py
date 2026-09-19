@@ -199,7 +199,13 @@ _CSRF_COOKIE_NAME = "seo_agent_csrf"
 _CSRF_FORM_FIELD = "_csrf"
 _CSRF_HEADER_NAME = "x-csrf-token"
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot", "/cron/auto-search-backlinks", "/cron/auto-post-backlinks", "/cron/refresh-competitors"}
+# Les deux listes doivent s'accorder : un chemin exempte de CSRF mais absent de la liste
+# blanche du middleware de session est redirige vers la connexion, et un chemin ouvert sans
+# exemption CSRF repond 403. Dans les deux cas l'ordonnanceur echoue en silence. Un test
+# compare les deux listes pour chaque route /cron.
+_CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot",
+                      "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
+                      "/cron/refresh-competitors", "/cron/verify-pull-requests"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -2087,7 +2093,7 @@ def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeou
     except Exception as e:
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
 def _ouvrir_pull_request(*, owner: str, repo: str, token: str, title: str, body: str,
-                         head: str, base: str) -> Any:
+                         head: str, base: str, draft: bool = False) -> Any:
     """Le SEUL endroit d'ou une pull request part chez un client.
 
     Les quatre routes qui corrigent du code — correction unitaire, lot, correction profonde,
@@ -2098,11 +2104,156 @@ def _ouvrir_pull_request(*, owner: str, repo: str, token: str, title: str, body:
 
     Un test enumere les appels a l'API `pulls` et exige qu'ils passent tous par ici.
     """
+    corps: dict[str, Any] = {"title": title, "body": body, "head": head, "base": base}
+    if draft:
+        # Le BROUILLON est ce qui rend la verification possible : il ouvre la branche et le
+        # diff sans demander au client de les relire, et sans permettre de les fusionner. Une
+        # pull request ordinaire serait deja une sollicitation.
+        corps["draft"] = True
     return _github_api_post(
         _github_api_path("repos", owner, repo, "pulls"),
         token=token,
-        json_body={"title": title, "body": body, "head": head, "base": base},
+        json_body=corps,
     )
+
+
+_PR_VERIF_FENETRE_S = 30 * 60      # au-dela, on ne sait pas et on le dit
+_PR_VERIF_DELAI_MIN_S = 45         # laisser aux verifications le temps d'apparaitre
+
+
+def _pr_verif_fenetre_s() -> int:
+    raw = _safe_env("PR_VERIFY_WINDOW_SECONDS")
+    if raw:
+        try:
+            return max(120, min(6 * 3600, int(raw)))
+        except Exception:
+            pass
+    return _PR_VERIF_FENETRE_S
+
+
+def _github_graphql(query: str, variables: dict[str, Any], *, token: str,
+                    timeout_s: float = 20.0) -> Any:
+    """Le seul appel GraphQL du produit, et il est la par necessite.
+
+    Faire passer une pull request de BROUILLON a PRETE n'existe pas dans l'API REST : seule la
+    mutation `markPullRequestReadyForReview` le fait. Ouvrir en brouillon sans pouvoir sortir du
+    brouillon donnerait une correction que le client ne peut pas relire.
+    """
+    resp = requests.post(
+        "https://api.github.com/graphql",
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
+                 "User-Agent": "seo-agent-web"},
+        json={"query": query, "variables": variables},
+        timeout=timeout_s,
+    )
+    if resp.status_code != 200:
+        raise RuntimeError("GraphQL %s: %s" % (resp.status_code, (resp.text or "")[:300]))
+    data = resp.json()
+    if isinstance(data, dict) and data.get("errors"):
+        raise RuntimeError("GraphQL: %s" % str(data["errors"])[:300])
+    return data.get("data") if isinstance(data, dict) else None
+
+
+def _pr_marquer_prete(*, node_id: str, token: str) -> None:
+    _github_graphql(
+        "mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id})"
+        "{pullRequest{isDraft}}}",
+        {"id": str(node_id or "")}, token=token)
+
+
+def _verifications_du_commit(*, owner: str, repo: str, sha: str, token: str) -> dict[str, Any]:
+    """Ce que le depot du client dit LUI-MEME de ce commit.
+
+    Deux sources, et il faut les deux : les « check runs » (GitHub Actions, la plupart des
+    applications de CI) et les « statuses » (l'API plus ancienne, par laquelle passent encore
+    les previews Netlify et Vercel). N'en lire qu'une donnerait « aucune verification » sur des
+    depots parfaitement equipes — et on marquerait pour relecture une correction jamais testee.
+
+    Rend {total, en_cours, echoues (liste de noms), reussis}. Un `total` a zero ne veut pas dire
+    « tout va bien » : il veut dire qu'on ne sait pas, et l'appelant doit le traiter ainsi.
+    """
+    en_cours, echoues, reussis = 0, [], 0
+    try:
+        runs = _github_api_get(
+            _github_api_path("repos", owner, repo, "commits", sha, "check-runs"),
+            token=token, params={"per_page": "100"}) or {}
+        for r in (runs.get("check_runs") or []):
+            if not isinstance(r, dict):
+                continue
+            statut = str(r.get("status") or "").lower()
+            conclusion = str(r.get("conclusion") or "").lower()
+            if statut != "completed":
+                en_cours += 1
+            elif conclusion in ("success", "neutral", "skipped"):
+                reussis += 1
+            elif conclusion in ("cancelled", "stale"):
+                # Ni un succes ni un echec : une execution annulee ne dit rien du code.
+                continue
+            else:
+                echoues.append(str(r.get("name") or "vérification"))
+    except Exception as e:
+        logger.info("[PR] lecture des check-runs impossible (%s): %s", sha[:7], e)
+
+    try:
+        combine = _github_api_get(
+            _github_api_path("repos", owner, repo, "commits", sha, "status"),
+            token=token) or {}
+        for s in (combine.get("statuses") or []):
+            if not isinstance(s, dict):
+                continue
+            etat = str(s.get("state") or "").lower()
+            if etat == "pending":
+                en_cours += 1
+            elif etat == "success":
+                reussis += 1
+            elif etat in ("failure", "error"):
+                echoues.append(str(s.get("context") or "vérification"))
+    except Exception as e:
+        logger.info("[PR] lecture des statuses impossible (%s): %s", sha[:7], e)
+
+    return {"total": en_cours + reussis + len(echoues), "en_cours": en_cours,
+            "echoues": echoues, "reussis": reussis}
+
+
+def _decider_de_la_pr(verifs: dict[str, Any], *, age_s: float) -> tuple[str, str]:
+    """Rend (decision, raison). La decision est l'une de : attendre, promouvoir, refuser, inconnu.
+
+    LE CAS « AUCUNE VERIFICATION » EST LE PLUS DELICAT, et c'est celui ou il serait tentant de
+    mentir. Un depot sans CI ni preview ne rendra jamais rien : attendre eternellement
+    laisserait la correction en brouillon, invisible. On promeut donc, mais en disant qu'on n'a
+    RIEN PU VERIFIER — pas « verifie ». La difference porte toute la valeur de cette etape.
+    """
+    if verifs.get("echoues"):
+        return "refuser", "Échec : %s" % ", ".join(list(verifs["echoues"])[:4])
+    if verifs.get("en_cours"):
+        if age_s < _pr_verif_fenetre_s():
+            return "attendre", "%d vérification(s) en cours" % int(verifs["en_cours"])
+        return "inconnu", "Vérifications toujours en cours après le délai d'attente"
+    if int(verifs.get("reussis") or 0) > 0:
+        return "promouvoir", "%d vérification(s) réussie(s)" % int(verifs["reussis"])
+    if age_s < max(_PR_VERIF_DELAI_MIN_S, min(300, _pr_verif_fenetre_s())):
+        # Rien encore : une CI met quelques dizaines de secondes a s'annoncer.
+        return "attendre", "En attente des vérifications du dépôt"
+    return "inconnu", "Aucune vérification disponible sur ce dépôt"
+
+
+def _bloc_verification(pr_data: Any, *, fusion_auto: bool) -> dict[str, Any]:
+    """Ce qu'on garde d'une pull request pour pouvoir la reprendre plus tard.
+
+    Le SHA et l'identifiant de noeud viennent de la REPONSE de GitHub et non de variables
+    locales : les quatre routes les nomment differemment, et trois d'entre elles ne gardent
+    qu'un SHA tronque a sept caracteres. Lire la reponse donne la meme chose partout.
+    """
+    tete = pr_data.get("head") if isinstance(pr_data, dict) else None
+    sha = str((tete or {}).get("sha") or "") if isinstance(tete, dict) else ""
+    return {
+        "etat": "en_attente",
+        "sha": sha,
+        "node_id": str((pr_data or {}).get("node_id") or ""),
+        "ouvert_le": time.time(),
+        "fusion_auto": bool(fusion_auto),
+        "raison": "",
+    }
 
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
@@ -10422,6 +10573,8 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/stripe/webhook",
         "/cron/check-backlinks",
         "/cron/autopilot",
+        "/cron/verify-pull-requests",
+        "/cron/refresh-competitors",
         "/cron/auto-search-backlinks",
         "/cron/auto-post-backlinks",
     } or path.startswith("/ressources-seo") or path.startswith("/docs"):
@@ -16019,6 +16172,17 @@ def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONR
     token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
     if not token or not hmac.compare_digest(token, cron_secret):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    # FILET DE SECURITE, et il est ici pour une raison precise. Les pull requests de correction
+    # attendent `/cron/verify-pull-requests` pour sortir du brouillon. Si cette entree n'est pas
+    # configuree dans l'ordonnanceur, elles y resteraient pour toujours et les fusions
+    # automatiques ne partiraient jamais — une panne totale du correcteur causee par une ligne
+    # de configuration oubliee. Le balayage tourne donc aussi ici : moins souvent, mais il
+    # tourne. L'oubli ralentit le produit au lieu de l'arreter.
+    try:
+        _balayer_verifications_pr(limit=25)
+    except Exception as e:
+        logger.error("[PR] balayage depuis l'autopilote : %s: %s", type(e).__name__, e)
+
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
     if not config_path:
         return JSONResponse({"ok": False, "error": "yml manquant"}, status_code=500)
@@ -17237,7 +17401,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             pr_data = _ouvrir_pull_request(
                           owner=owner, repo=repo_name, token=token,
                           title=pr_title, body=pr_body,
-                          head=fix_branch, base=branch)
+                          head=fix_branch, base=branch, draft=True)
             pr_url = pr_data.get("html_url", "")
             pr_number = pr_data.get("number", "")
         except Exception as e:
@@ -17245,6 +17409,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         # Auto-record the PR as an IssueTask so the issue detail page shows it
         try:
             _pr_note = json.dumps({
+                "verification": _bloc_verification(pr_data, fusion_auto=False),
                 "pr_url": pr_url, "pr_title": pr_title,
                 "pr_number": int(pr_number) if pr_number else 0,
                 "commit_sha": commit_sha[:7] if commit_sha else "",
@@ -17524,32 +17689,37 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
                       title=pr_title, body=pr_body,
-                      head=fix_branch, base=branch)
+                      head=fix_branch, base=branch, draft=True)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Erreur PR : {e}", "results": results}, status_code=400)
 
-    # Auto-merge if Full Access mode — except when the run touched redirect rules. Routing
-    # changes always go through a human, exactly as the per-issue path already required.
+    # LA FUSION AUTOMATIQUE NE PART PLUS D'ICI. Fusionner avant de savoir si le build passe
+    # est precisement le geste qui peut casser le site d'un client, et c'est celui que cette
+    # etape supprime. Les conditions restent les memes — mode auto, pas de routage, rien
+    # d'ecrit par le modele — mais elles decident desormais d'un DROIT a fusionner, exerce par
+    # `/cron/verify-pull-requests` une fois les verifications du depot connues. Sur un depot
+    # muet, la fusion est suspendue plutot que tentee a l'aveugle.
+    _fusion_auto = bool(mode == "auto" and pr_number and not config_changed
+                        and not any_ai_written and not any_premise_key)
     _merged = False
-    if mode == "auto" and pr_number and not config_changed and not any_ai_written and not any_premise_key:
-        try:
-            _github_api_put(
-                _github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"),
-                token=token,
-                json_body={"merge_method": "squash", "commit_title": pr_title},
-            )
-            _merged = True
-        except Exception:
-            pass
 
     # Save IssueTask records for each successful fix
     final_status = "done" if _merged else "in_progress"
     pr_note_base = {"pr_url": pr_url, "pr_number": int(pr_number), "branch": fix_branch, "bulk": True, "deep": True}
+    # UNE pull request, UNE trace de verification, meme quand elle ferme plusieurs anomalies.
+    # Elle est fabriquee ICI, hors de la boucle, et consommee par la premiere tache : posee sur
+    # chacune, elle ferait reprendre la meme PR autant de fois par le balayage — donc tenter de
+    # la sortir du brouillon et de la fusionner plusieurs fois.
+    _trace_verif: dict[str, Any] | None = {
+        "verification": _bloc_verification(pr_data, fusion_auto=_fusion_auto),
+        "pr_title": pr_title,
+    }
     for r in fixed_results:
         try:
-            _note = json.dumps({**pr_note_base, "files": r.get("files", [])}, ensure_ascii=False)
+            _extra, _trace_verif = (_trace_verif or {}), None
+            _note = json.dumps({**pr_note_base, **_extra, "files": r.get("files", [])}, ensure_ascii=False)
             _meta = dash.issue_meta(r["issue_key"])
             with DB.session() as _db:
                 _ex = _db.scalar(select(IssueTask).where(
@@ -23753,24 +23923,25 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
                       title=pr_title, body=pr_body,
-                      head=fix_branch, base=branch)
+                      head=fix_branch, base=branch, draft=True)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
 
     _merged = False
-    # Auto-merge only what a human doesn't need to read: routing changes are risky, and a value
-    # WRITTEN by the model is an editorial proposal, not a mechanical repair.
-    if mode == "auto" and pr_number and not config_changes and not _ai_files and not _fix_premise_note(issue_key):
-        try:
-            _github_api_put(_github_api_path("repos", owner, repo_name, "pulls", str(int(pr_number)), "merge"), token=token, json_body={"merge_method": "squash", "commit_title": pr_title})
-            _merged = True
-        except Exception:
-            pass
+    # Le DROIT de fusionner, plus la fusion elle-meme. Les conditions sont inchangees — un
+    # changement de routage ou une valeur ecrite par le modele demandent une lecture humaine —
+    # mais meme une reparation mecanique attend desormais que le depot ait dit que son build
+    # passe. C'est le seul automatisme que cette etape retire, et c'est celui qui pouvait
+    # casser un site.
+    _fusion_auto = bool(mode == "auto" and pr_number and not config_changes and not _ai_files
+                        and not _fix_premise_note(issue_key))
 
     try:
-        _note = json.dumps({"pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "config": bool(config_changes)}, ensure_ascii=False)
+        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=_fusion_auto),
+                            "pr_title": pr_title,
+                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "config": bool(config_changes)}, ensure_ascii=False)
         with DB.session() as _db:
             _ex = _db.scalar(select(IssueTask).where(IssueTask.project_id == proj.id, IssueTask.issue_key == issue_key, IssueTask.url == primary_url))
             if _ex:
@@ -25385,7 +25556,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
                       title=pr_title, body=pr_body,
-                      head=fix_branch, base=branch)
+                      head=fix_branch, base=branch, draft=True)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
@@ -25394,7 +25565,9 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
     # Never auto-merged, whatever the project's mode: every value in this diff was written by the
     # model, and a title is the most editorial thing this corrector touches.
     try:
-        _note = json.dumps({"pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
+        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=False),
+                            "pr_title": pr_title,
+                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
                             "branch": fix_branch, "files": patched_files, "query": query,
                             "keyword": True}, ensure_ascii=False)
         with DB.session() as _db:
@@ -27807,3 +27980,166 @@ def team_accept(request: Request, token: str = "") -> RedirectResponse:
     if ok:
         return RedirectResponse(url=_path_with_flash("/", msg=message), status_code=303)
     return RedirectResponse(url=_path_with_flash("/settings/team", err=message), status_code=303)
+
+
+def _reprendre_une_verification(tache: Any) -> str:
+    """Reprend UNE pull request en attente. Rend la decision appliquee.
+
+    Tout est relu a chaque passage — le depot, le jeton, l'etat des verifications. Rien n'est
+    garde entre deux balayages, parce qu'entre deux passages le client a pu changer de depot,
+    revoquer son jeton, ou relancer sa CI.
+    """
+    try:
+        note = json.loads(tache.note) if tache.note else {}
+    except Exception:
+        return "illisible"
+    verif = note.get("verification") if isinstance(note.get("verification"), dict) else None
+    if not verif or str(verif.get("etat") or "") != "en_attente":
+        return "sans_objet"
+
+    with DB.session() as db:
+        projet = db.get(Project, str(tache.project_id))
+        reglages = projet.settings if (projet and isinstance(projet.settings, dict)) else {}
+    depot = str(reglages.get("github_repo") or "").strip()
+    parties = _github_repo_parts(depot)
+    if parties is None:
+        return "depot_inconnu"
+    proprio, nom = parties
+
+    # Le jeton du COMPTE qui possede le projet : `tache.user_id` porte deja ce compte.
+    jeton, _source = _effective_user_connection_value(
+        user_id=str(tache.user_id or ""), key="GITHUB_TOKEN")
+    if not jeton:
+        return "sans_jeton"
+
+    sha = str(verif.get("sha") or "")
+    numero = int(note.get("pr_number") or 0)
+    if not sha or not numero:
+        return "incomplete"
+
+    # Une PR fermee a la main pendant l'attente ne doit pas etre ranimee.
+    if not _github_pr_is_open(proprio, nom, numero, jeton):
+        verif["etat"], verif["raison"] = "abandonnee", "Pull request fermée entre-temps"
+        _ecrire_verification(tache.id, note)
+        return "fermee"
+
+    verifs = _verifications_du_commit(owner=proprio, repo=nom, sha=sha, token=jeton)
+    age = max(0.0, time.time() - float(verif.get("ouvert_le") or 0))
+    decision, raison = _decider_de_la_pr(verifs, age_s=age)
+
+    if decision == "attendre":
+        verif["raison"] = raison
+        _ecrire_verification(tache.id, note)
+        return "attendre"
+
+    if decision == "refuser":
+        # La PR RESTE en brouillon : c'est le seul etat qui dit « ne merge pas ca » sans
+        # detruire le travail. La refermer effacerait le diff que le client peut vouloir lire
+        # pour comprendre ce que la correction tentait.
+        verif["etat"], verif["raison"] = "echouee", raison
+        _ecrire_verification(tache.id, note, statut="blocked")
+        _commenter_la_pr(proprio, nom, numero, jeton,
+                         "Les vérifications de ce dépôt ont échoué sur cette correction :\n\n> %s"
+                         "\n\nElle reste en brouillon et ne sera pas fusionnée." % raison)
+        return "echouee"
+
+    # promouvoir / inconnu : dans les deux cas la PR sort du brouillon, mais on ne raconte pas
+    # la meme chose. « Aucune verification disponible » n'est PAS « verifie ».
+    try:
+        _pr_marquer_prete(node_id=str(verif.get("node_id") or ""), token=jeton)
+    except Exception as e:
+        logger.info("[PR] sortie de brouillon impossible (#%s): %s", numero, e)
+        verif["raison"] = "Sortie de brouillon impossible : %s" % str(e)[:160]
+        _ecrire_verification(tache.id, note)
+        return "erreur"
+
+    verif["etat"] = "verifiee" if decision == "promouvoir" else "non_verifiable"
+    verif["raison"] = raison
+    fusionnee = False
+    if verif.get("fusion_auto") and decision == "promouvoir":
+        try:
+            _github_api_put(
+                _github_api_path("repos", proprio, nom, "pulls", str(numero), "merge"),
+                token=jeton, json_body={"merge_method": "squash",
+                                        "commit_title": str(note.get("pr_title") or "")[:200] or None})
+            fusionnee = True
+        except Exception as e:
+            logger.info("[PR] fusion automatique impossible (#%s): %s", numero, e)
+    elif verif.get("fusion_auto"):
+        # Fusion automatique demandee mais rien n'a pu etre verifie : on N'AVANCE PAS tout seul
+        # sur un depot muet. C'est le seul endroit ou cette etape retire un automatisme, et
+        # c'est voulu — fusionner sans verification est exactement ce qu'on cherche a arreter.
+        verif["raison"] = raison + " — fusion automatique suspendue, à relire"
+    _ecrire_verification(tache.id, note, statut="done" if fusionnee else None)
+    return "fusionnee" if fusionnee else verif["etat"]
+
+
+def _ecrire_verification(task_id: str, note: dict[str, Any], *, statut: str | None = None) -> None:
+    try:
+        with DB.session() as db:
+            ligne = db.get(IssueTask, str(task_id))
+            if ligne is None:
+                return
+            ligne.note = json.dumps(note, ensure_ascii=False)
+            if statut:
+                ligne.status = statut
+            db.commit()
+    except Exception as e:
+        logger.error("[PR] ecriture de la verification impossible (%s): %s", task_id, e)
+
+
+def _commenter_la_pr(owner: str, repo: str, numero: int, token: str, texte: str) -> None:
+    try:
+        _github_api_post(_github_api_path("repos", owner, repo, "issues", str(numero), "comments"),
+                         token=token, json_body={"body": texte})
+    except Exception as e:
+        logger.info("[PR] commentaire impossible (#%s): %s", numero, e)
+
+
+def _balayer_verifications_pr(*, limit: int = 100) -> dict[str, int]:
+    """Reprend toutes les pull requests en attente de verification.
+
+    Passe par un CRON et non par un job de worker, et la raison est materielle : attendre une
+    CI prend des minutes, et les creneaux du worker servent aux crawls sur une machine de deux
+    gigaoctets. Un balayage sans etat, rejoue regulierement, ne retient aucun creneau et se
+    rattrape tout seul apres une panne.
+    """
+    resultats: dict[str, int] = {}
+    try:
+        with DB.session() as db:
+            taches = list(db.scalars(
+                select(IssueTask)
+                .where(IssueTask.note.like('%"etat": "en_attente"%'))
+                .order_by(IssueTask.updated_at)
+                .limit(int(limit))))
+    except Exception as e:
+        logger.error("[PR] balayage impossible : %s: %s", type(e).__name__, e)
+        return {"erreur": 1}
+
+    for tache in taches:
+        try:
+            issue = _reprendre_une_verification(tache)
+        except Exception as e:
+            logger.error("[PR] reprise impossible (%s): %s: %s", tache.id, type(e).__name__, e)
+            issue = "erreur"
+        resultats[issue] = resultats.get(issue, 0) + 1
+    return resultats
+
+
+@app.post("/cron/verify-pull-requests")
+def cron_verify_pull_requests(request: Request) -> JSONResponse:
+    """A APPELER REGULIEREMENT — toutes les deux ou trois minutes.
+
+    SANS CE CRON, les corrections restent en brouillon et les fusions automatiques ne partent
+    jamais. Ce n'est pas une degradation silencieuse : l'ecran des corrections montre l'etat
+    « en attente » et son age. Le balayage est aussi declenche par le cron autopilote, pour que
+    l'oubli de cette entree ralentisse le produit sans le bloquer.
+    """
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    return JSONResponse({"ok": True, "resultats": _balayer_verifications_pr()})
