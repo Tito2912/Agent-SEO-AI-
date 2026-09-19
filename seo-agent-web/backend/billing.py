@@ -189,7 +189,8 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             # pas facturee au quota (voir `_correction_charge`), si bien qu'un compte gratuit
             # obtient les corrections mecaniques tant qu'il n'a pas consomme ses deux appels.
             # C'est exactement ce qu'on veut lui montrer : celles qui se mergent sans relecture.
-            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 2},
+            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 2,
+                       "members": 0},
             "correction": {"model": "claude-sonnet-4-6", "max_files": 2},
             "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
             "features": ["Audit complet", "Suggestions IA (limitées)", "Exports",
@@ -200,6 +201,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "price_label": "49€/mois",
             "limits": {
                 "projects": 3,
+                "members": 0,
                 "pages_crawled_month": 20_000,
                 "assistant_messages_month": 400,
                 "backlink_searches_month": 30,
@@ -215,6 +217,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "price_label": "99€/mois",
             "limits": {
                 "projects": 10,
+                "members": 2,
                 "pages_crawled_month": 100_000,
                 "assistant_messages_month": 2_000,
                 "backlink_searches_month": 200,
@@ -230,6 +233,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             "price_label": "199€/mois",
             "limits": {
                 "projects": 30,
+                "members": 5,
                 "pages_crawled_month": 300_000,
                 "assistant_messages_month": 6_000,
                 "backlink_searches_month": 1_000,

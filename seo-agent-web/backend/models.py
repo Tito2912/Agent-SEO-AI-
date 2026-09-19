@@ -514,3 +514,46 @@ class RateLimitBucket(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+class AccountInvite(Base):
+    """Une invitation en attente : une adresse, un jeton a usage unique, une date limite.
+
+    LIEE A UNE ADRESSE, et ce n'est pas decoratif. Un lien d'invitation circule — il est
+    transfere, colle dans une conversation, retrouve dans une boite partagee. S'il suffisait de
+    le detenir, n'importe qui entrerait dans le compte d'une agence avec acces a ses depots
+    GitHub. L'acceptation verifie donc que la personne connectee porte bien l'adresse invitee.
+
+    Le jeton n'est pas stocke : seule son empreinte l'est, salee avec `SEO_AGENT_SECRET_KEY`,
+    comme pour la verification d'email et la reinitialisation de mot de passe. Une fuite de la
+    base ne rend donc aucune invitation utilisable.
+
+    `used_at` et `expires_at` sont separes a dessein. Une invitation acceptee et une invitation
+    perimee ne se racontent pas pareil a l'ecran, et le proprietaire doit pouvoir distinguer
+    « il n'a jamais repondu » de « il est entre ».
+    """
+
+    # Pas de `__table_args__` : les trois index viennent des `index=True` ci-dessous. En
+    # declarer un second sur `email` produisait le MEME nom et faisait echouer la creation de
+    # la table — en local comme en production.
+    __tablename__ = "account_invites"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Normalisee en minuscules a l'ecriture : l'adresse sert de comparaison, pas d'affichage.
+    email: Mapped[str] = mapped_column(String(320), index=True, nullable=False)
+
+    # sha256 hexadecimal, sale avec SEO_AGENT_SECRET_KEY — le jeton brut n'est jamais stocke.
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Qui a accepte. Peut differer de rien du tout si l'invitation n'a jamais ete utilisee.
+    accepted_by_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # Qui a invite : le proprietaire aujourd'hui, mais la colonne existe pour le jour ou un
+    # membre pourra inviter a son tour, sans redemander une migration.
+    invited_by_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

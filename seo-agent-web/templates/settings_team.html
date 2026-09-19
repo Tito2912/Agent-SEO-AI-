@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+{% block title %}Paramètres - Équipe{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Équipe</h1>
+    <p class="muted">
+      Les membres travaillent sur <strong>tes</strong> projets : ils voient les rapports, lancent
+      des crawls et ouvrent des corrections. Tout est facturé sur ton forfait, et tes connexions
+      (Search Console, Bing, GitHub) leur servent sur tes projets.
+    </p>
+  </div>
+
+  {% if msg %}<div class="alert ok">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="alert error">{{ err }}</div>{% endif %}
+
+  {% if appartenance %}
+    <section class="card">
+      <div class="card-title-row"><h2>Ton rattachement</h2></div>
+      <p>
+        Tu fais partie du compte de <strong>{{ appartenance.owner_email }}</strong>.
+        Ses projets apparaissent dans ta liste à côté des tiens.
+      </p>
+      <p class="muted small">
+        Tes propres projets restent à toi et sont facturés sur ton propre forfait. En quittant ce
+        compte tu perds l'accès à ses projets ; rien n'y est supprimé.
+      </p>
+      <form method="post" action="/settings/team/leave"
+            onsubmit="return confirm('Quitter le compte de {{ appartenance.owner_email }} ?');">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <button class="btn danger" type="submit">Quitter ce compte</button>
+      </form>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Membres de ton compte</h2>
+      <span class="muted small">{{ occupes }} / {{ sieges }} place{{ 's' if sieges > 1 else '' }}</span>
+    </div>
+
+    {% if sieges <= 0 %}
+      <p class="muted">
+        Les comptes d'équipe sont inclus à partir du forfait <strong>Pro</strong> (2 membres) et
+        <strong>Business</strong> (5 membres).
+      </p>
+      <p><a class="btn" href="/billing">Voir les forfaits</a></p>
+    {% else %}
+      {% if not membres and not invitations %}
+        <p class="muted">Personne pour l'instant. Invite un collaborateur ci-dessous.</p>
+      {% endif %}
+
+      {% if membres %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead><tr><th>Adresse</th><th>Depuis</th><th></th></tr></thead>
+            <tbody>
+              {% for m in membres %}
+                <tr>
+                  <td>{{ m.email }}</td>
+                  <td class="muted small">{{ m.depuis }}</td>
+                  <td class="right">
+                    <form method="post" action="/settings/team/member/{{ m.user_id }}/remove"
+                          onsubmit="return confirm('Retirer {{ m.email }} de ton compte ?');">
+                      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                      <button class="btn small danger" type="submit">Retirer</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if invitations %}
+        <div class="card-title-row" style="margin-top:20px;"><h3>Invitations en attente</h3></div>
+        <p class="muted small">
+          Une invitation en attente occupe une place tant qu'elle n'a pas expiré. Annule-la pour
+          la libérer tout de suite.
+        </p>
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead><tr><th>Adresse</th><th>Expire</th><th></th></tr></thead>
+            <tbody>
+              {% for i in invitations %}
+                <tr>
+                  <td>{{ i.email }}</td>
+                  <td class="muted small">{{ i.expire }}</td>
+                  <td class="right">
+                    <form method="post" action="/settings/team/invite/{{ i.id }}/revoke">
+                      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                      <button class="btn small" type="submit">Annuler</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      <div class="card-title-row" style="margin-top:20px;"><h3>Inviter quelqu'un</h3></div>
+      <p class="muted small">
+        Le lien envoyé ne fonctionne qu'avec l'adresse saisie : le transférer ne donne accès à
+        personne d'autre.
+      </p>
+      <form method="post" action="/settings/team/invite" class="row">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <input type="email" name="email" placeholder="consultant@agence.fr" required
+               style="min-width:280px;" {% if occupes >= sieges %}disabled{% endif %} />
+        <button class="btn primary" type="submit" {% if occupes >= sieges %}disabled{% endif %}>
+          Envoyer l'invitation
+        </button>
+      </form>
+      {% if occupes >= sieges %}
+        <p class="muted small">
+          Toutes les places de ton forfait sont prises. Retire un membre, annule une invitation,
+          ou <a href="/billing">passe à un forfait supérieur</a>.
+        </p>
+      {% endif %}
+    {% endif %}
+  </section>
+{% endblock %}

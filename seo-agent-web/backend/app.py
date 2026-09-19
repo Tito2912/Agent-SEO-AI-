@@ -116,6 +116,7 @@ try:
     from .db import Database  # type: ignore
     from .models import (  # type: ignore
         AccountMember,
+        AccountInvite,
         AuditLog,
         BacklinkOpportunity,
         BillingSubscription,
@@ -138,6 +139,7 @@ except ImportError:
     from db import Database  # type: ignore
     from models import (  # type: ignore
         AccountMember,
+        AccountInvite,
         AuditLog,
         BacklinkOpportunity,
         BillingSubscription,
@@ -260,6 +262,288 @@ def _compte_payeur(user_id: str, slug: str) -> str:
     if proj is None:
         return u
     return str(proj.owner_user_id or "") or u
+
+
+_INVITE_TTL_DEFAUT_S = 7 * 24 * 60 * 60
+
+
+def _invite_ttl_s() -> int:
+    raw = _safe_env("ACCOUNT_INVITE_TTL_SECONDS")
+    if raw:
+        try:
+            return max(15 * 60, min(30 * 24 * 60 * 60, int(raw)))
+        except Exception:
+            pass
+    return _INVITE_TTL_DEFAUT_S
+
+
+def _invite_token_hash(token: str) -> str:
+    """Empreinte salee d'un jeton d'invitation ; le jeton brut n'est jamais stocke.
+
+    Le sel porte le mot « invite » en plus du secret, et ce n'est pas un ornement : sans cette
+    separation, la meme chaine donnerait la meme empreinte pour une invitation et pour une
+    reinitialisation de mot de passe. Les deux tables sont distinctes aujourd'hui, mais une
+    empreinte qui ne dit pas a quoi elle sert finit un jour par etre comparee au mauvais endroit.
+    """
+    raw = str(token or "").strip()
+    if not raw:
+        return ""
+    pepper = _safe_env("SEO_AGENT_SECRET_KEY")
+    if not pepper:
+        raise RuntimeError("SEO_AGENT_SECRET_KEY missing")
+    return hashlib.sha256(f"{pepper}:invite:{raw}".encode("utf-8")).hexdigest()
+
+
+def _sieges_du_plan(user_id: str) -> int:
+    """Combien de membres le forfait de ce compte autorise. Zero pour Gratuit et Solo."""
+    uid = str(user_id or "").strip()
+    if not uid:
+        return 0
+    try:
+        with DB.session() as db:
+            limites = billing.plan_limits(db, user_id=uid)
+    except Exception:
+        return 0
+    try:
+        return max(0, int(limites.get("members") or 0))
+    except Exception:
+        return 0
+
+
+def _membres_du_compte(owner_user_id: str) -> list[AccountMember]:
+    uid = str(owner_user_id or "").strip()
+    if not uid:
+        return []
+    try:
+        with DB.session() as db:
+            return list(db.scalars(
+                select(AccountMember)
+                .where(AccountMember.owner_user_id == uid)
+                .order_by(AccountMember.created_at)))
+    except Exception:
+        return []
+
+
+def _invitations_en_attente(owner_user_id: str) -> list[AccountInvite]:
+    """Les invitations qui comptent encore : ni acceptees, ni perimees.
+
+    Une invitation perimee n'occupe plus de siege — sinon un proprietaire qui se trompe
+    d'adresse resterait bloque une semaine sans comprendre pourquoi.
+    """
+    uid = str(owner_user_id or "").strip()
+    if not uid:
+        return []
+    maintenant = _utc_now_naive()
+    try:
+        with DB.session() as db:
+            lignes = list(db.scalars(
+                select(AccountInvite)
+                .where(AccountInvite.owner_user_id == uid, AccountInvite.used_at.is_(None))
+                .order_by(AccountInvite.created_at)))
+    except Exception:
+        return []
+    # Une date illisible est traitee comme perimee : on refuse plutot que de deviner.
+    return [i for i in lignes if (_dt_as_naive_utc(i.expires_at) or maintenant) > maintenant]
+
+
+def _sieges_occupes(owner_user_id: str) -> int:
+    """Membres en place PLUS invitations en attente.
+
+    Compter les seules adhesions laisserait envoyer dix invitations sur deux sieges : les neuf
+    premieres personnes a cliquer entreraient, et le refus tomberait sur celles d'apres — un
+    message d'erreur pour quelqu'un qui n'a rien fait de mal.
+    """
+    return len(_membres_du_compte(owner_user_id)) + len(_invitations_en_attente(owner_user_id))
+
+
+def _creer_invitation(*, owner_user_id: str, email: str, invited_by: str) -> tuple[AccountInvite | None, str, str]:
+    """Rend (invitation, jeton en clair, message d'erreur). Le jeton n'existe qu'ici.
+
+    Tous les refus sont prononces AVANT d'ecrire quoi que ce soit, et chacun dit ce qui bloque :
+    une invitation qui echoue en silence pousse a recommencer, ce qui empile des jetons valides.
+    """
+    hote = str(owner_user_id or "").strip()
+    adresse = _normalize_email(email)
+    if not hote:
+        return None, "", "Compte introuvable."
+    if not adresse or "@" not in adresse:
+        return None, "", "Adresse email invalide."
+
+    sieges = _sieges_du_plan(hote)
+    if sieges <= 0:
+        return None, "", ("Les comptes d'équipe ne sont pas inclus dans ton forfait. "
+                          "Passe à Pro ou Business pour inviter des collaborateurs.")
+
+    with DB.session() as db:
+        proprio = db.get(User, hote)
+        if proprio is not None and _normalize_email(getattr(proprio, "email", "")) == adresse:
+            return None, "", "C'est ta propre adresse : tu es déjà propriétaire du compte."
+
+        invite = db.scalar(select(User).where(User.email == adresse))
+        if invite is not None:
+            # Le schema refuse une seconde adhesion. Le dire ICI evite un lien qui ne pourra
+            # jamais aboutir et une erreur de base jetee a la figure de la personne invitee.
+            deja = db.scalar(select(AccountMember).where(AccountMember.member_user_id == str(invite.id)))
+            if deja is not None:
+                if str(deja.owner_user_id) == hote:
+                    return None, "", "Cette personne fait déjà partie de ton compte."
+                return None, "", ("Cette personne appartient déjà à un autre compte d'équipe. "
+                                  "Elle doit le quitter avant de rejoindre le tien.")
+
+    if _sieges_occupes(hote) >= sieges:
+        return None, "", ("Tu as utilisé les %d places de ton forfait (membres et invitations en "
+                          "attente comprises)." % sieges)
+
+    for existante in _invitations_en_attente(hote):
+        if _normalize_email(existante.email) == adresse:
+            return None, "", "Une invitation est déjà en attente pour cette adresse."
+
+    jeton = secrets.token_urlsafe(32)
+    ligne = AccountInvite(
+        owner_user_id=hote,
+        email=adresse,
+        token_hash=_invite_token_hash(jeton),
+        expires_at=_utc_now_naive() + timedelta(seconds=_invite_ttl_s()),
+        invited_by_user_id=str(invited_by or "").strip() or hote,
+    )
+    with DB.session() as db:
+        db.add(ligne)
+        db.commit()
+        db.refresh(ligne)
+        db.expunge(ligne)
+    return ligne, jeton, ""
+
+
+def _accepter_invitation(*, token: str, user: Any) -> tuple[bool, str]:
+    """Rend (acceptee, message). Toutes les verifications sont refaites ICI.
+
+    Le lien a pu etre emis il y a une semaine : entre-temps le forfait de l'agence a pu baisser,
+    d'autres invitations ont pu etre acceptees, et la personne a pu rejoindre un autre compte.
+    Verifier seulement a l'emission laisserait passer tout ce qui s'est produit depuis.
+    """
+    empreinte = _invite_token_hash(token)
+    if not empreinte:
+        return False, "Lien d'invitation invalide."
+    uid = str(getattr(user, "id", "") or "").strip()
+    if not uid:
+        return False, "Connecte-toi pour accepter cette invitation."
+
+    with DB.session() as db:
+        ligne = db.scalar(select(AccountInvite).where(AccountInvite.token_hash == empreinte))
+        if ligne is None:
+            return False, "Lien d'invitation invalide."
+        if ligne.used_at is not None:
+            return False, "Cette invitation a déjà été utilisée."
+        limite = _dt_as_naive_utc(ligne.expires_at)
+        if limite is None or limite <= _utc_now_naive():
+            return False, "Cette invitation a expiré. Demande-en une nouvelle."
+
+        # LIEE A L'ADRESSE, et c'est la garde qui empeche un lien transfere d'ouvrir le compte
+        # d'une agence — avec ses depots GitHub — a qui le detient.
+        moi = db.get(User, uid)
+        if moi is None or _normalize_email(getattr(moi, "email", "")) != _normalize_email(ligne.email):
+            return False, ("Cette invitation a été envoyée à %s. Connecte-toi avec cette adresse "
+                           "pour l'accepter." % ligne.email)
+
+        if str(ligne.owner_user_id) == uid:
+            return False, "Tu ne peux pas rejoindre ton propre compte."
+
+        deja = db.scalar(select(AccountMember).where(AccountMember.member_user_id == uid))
+        if deja is not None:
+            if str(deja.owner_user_id) == str(ligne.owner_user_id):
+                return False, "Tu fais déjà partie de ce compte."
+            return False, ("Tu appartiens déjà à un autre compte d'équipe. Quitte-le avant de "
+                           "rejoindre celui-ci.")
+
+        hote = str(ligne.owner_user_id)
+        sieges = _sieges_du_plan(hote)
+        if len(_membres_du_compte(hote)) >= sieges:
+            return False, ("Ce compte n'a plus de place disponible. Préviens la personne qui "
+                           "t'a invité.")
+
+        db.add(AccountMember(owner_user_id=hote, member_user_id=uid))
+        ligne.used_at = _utc_now_naive()
+        ligne.accepted_by_user_id = uid
+        db.commit()
+    return True, "Tu as rejoint le compte."
+
+
+def _retirer_membre(*, owner_user_id: str, member_user_id: str) -> tuple[bool, str]:
+    """Retire une adhesion. Les projets et leurs rapports restent chez le proprietaire."""
+    hote, membre = str(owner_user_id or "").strip(), str(member_user_id or "").strip()
+    if not hote or not membre:
+        return False, "Membre introuvable."
+    with DB.session() as db:
+        ligne = db.scalar(select(AccountMember).where(
+            AccountMember.owner_user_id == hote, AccountMember.member_user_id == membre))
+        if ligne is None:
+            return False, "Cette personne ne fait pas partie de ton compte."
+        db.delete(ligne)
+        db.commit()
+    return True, "Membre retiré."
+
+
+def _revoquer_invitation(*, owner_user_id: str, invite_id: str) -> tuple[bool, str]:
+    """Supprime une invitation en attente, ce qui LIBERE son siege immediatement."""
+    hote, ident = str(owner_user_id or "").strip(), str(invite_id or "").strip()
+    if not hote or not ident:
+        return False, "Invitation introuvable."
+    with DB.session() as db:
+        ligne = db.scalar(select(AccountInvite).where(
+            AccountInvite.id == ident, AccountInvite.owner_user_id == hote,
+            AccountInvite.used_at.is_(None)))
+        if ligne is None:
+            return False, "Invitation introuvable."
+        db.delete(ligne)
+        db.commit()
+    return True, "Invitation annulée."
+
+
+def _send_account_invite_email(*, to_email: str, accept_url: str, owner_email: str,
+                               expires_at: datetime) -> None:
+    ttl_s = _seconds_until(expires_at)
+    ttl_jours = max(1, int(math.ceil(float(ttl_s) / 86400.0)))
+    app_name = _safe_env("APP_NAME") or "SEO Agent"
+    subject = "%s t'invite à rejoindre son compte %s" % (owner_email or "Un utilisateur", app_name)
+
+    body = "\n".join([
+        "Bonjour,",
+        "",
+        "%s t'invite à travailler sur ses projets %s." % (owner_email or "Un utilisateur", app_name),
+        "",
+        "Pour accepter, clique sur ce lien :",
+        str(accept_url).strip(),
+        "",
+        "Ce lien est valable %d jours et ne fonctionne qu'avec l'adresse %s." % (ttl_jours, to_email),
+        "",
+        "Si tu ne connais pas l'expéditeur, ignore cet email : rien ne se passera.",
+        "",
+    ])
+    safe_url = html.escape(str(accept_url).strip(), quote=True)
+    html_body = (
+        '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">'
+        '<title>%s</title></head><body style="margin:0;padding:0;background:#f4f4f7;'
+        'font-family:Arial,sans-serif;">'
+        '<table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">'
+        '<tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" '
+        'style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">'
+        '<tr><td style="background:#111;padding:24px 32px;">'
+        '<span style="color:#fff;font-size:18px;font-weight:700;">%s</span></td></tr>'
+        '<tr><td style="padding:32px;color:#222;font-size:15px;line-height:1.6;">'
+        '<p>Bonjour,</p><p><strong>%s</strong> t\'invite à travailler sur ses projets %s.</p>'
+        '<p style="text-align:center;margin:28px 0;">'
+        '<a href="%s" style="background:#111;color:#fff;text-decoration:none;padding:12px 24px;'
+        'border-radius:6px;display:inline-block;">Rejoindre le compte</a></p>'
+        '<p style="color:#666;font-size:13px;">Ce lien est valable %d jours et ne fonctionne '
+        'qu\'avec l\'adresse %s.</p>'
+        '<p style="color:#666;font-size:13px;">Si tu ne connais pas l\'expéditeur, ignore cet '
+        'email : rien ne se passera.</p>'
+        '</td></tr></table></td></tr></table></body></html>'
+        % (html.escape(subject), html.escape(app_name),
+           html.escape(owner_email or "Un utilisateur"), html.escape(app_name),
+           safe_url, ttl_jours, html.escape(to_email))
+    )
+    _send_email(to_addr=to_email, subject=subject, body=body, html_body=html_body)
 
 
 def _run_tree_candidates(path: Path) -> list[Path]:
@@ -27182,3 +27466,180 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> HTMLR
         return JSONResponse({"ok": False, "error": "internal_server_error"}, status_code=500)
     ctx = _error_ctx(request, 500, "")
     return templates.TemplateResponse("error.html", ctx, status_code=500)
+
+
+def _jour_lisible(valeur: datetime | None) -> str:
+    """Une date pour un humain, jamais une exception pour une colonne vide."""
+    d = _dt_as_naive_utc(valeur)
+    if d is None:
+        return "—"
+    try:
+        return d.strftime("%d/%m/%Y")
+    except Exception:
+        return "—"
+
+
+@app.get("/settings/team", response_class=HTMLResponse)
+def settings_team(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
+    """L'ecran d'equipe, et le premier endroit d'ou une adhesion peut naitre.
+
+    Il montre DEUX choses a la meme personne, parce qu'elles sont independantes : le compte
+    qu'elle possede (ses membres, ses invitations) et celui qu'elle a rejoint, s'il existe. Un
+    consultant peut etre client chez lui et membre chez une agence — c'est la decision « le
+    projet decide » prise pour la facturation, et l'ecran doit la rendre lisible plutot que de
+    laisser croire qu'un compte en efface un autre.
+    """
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    uid = str(user.id)
+
+    membres: list[dict[str, Any]] = []
+    with DB.session() as db:
+        for ligne in _membres_du_compte(uid):
+            personne = db.get(User, str(ligne.member_user_id))
+            membres.append({
+                "user_id": str(ligne.member_user_id),
+                "email": str(getattr(personne, "email", "") or "compte supprimé"),
+                "depuis": _jour_lisible(ligne.created_at),
+            })
+
+        appartenance = None
+        adhesion = db.scalar(select(AccountMember).where(AccountMember.member_user_id == uid))
+        if adhesion is not None:
+            hote = db.get(User, str(adhesion.owner_user_id))
+            appartenance = {
+                "owner_user_id": str(adhesion.owner_user_id),
+                "owner_email": str(getattr(hote, "email", "") or "compte supprimé"),
+            }
+
+    invitations = [{"id": str(i.id), "email": str(i.email),
+                    "expire": _jour_lisible(i.expires_at)}
+                   for i in _invitations_en_attente(uid)]
+
+    sieges = _sieges_du_plan(uid)
+    return templates.TemplateResponse(
+        "settings_team.html",
+        {
+            "request": request,
+            "msg": msg,
+            "err": err,
+            "membres": membres,
+            "invitations": invitations,
+            "appartenance": appartenance,
+            "sieges": sieges,
+            "occupes": len(membres) + len(invitations),
+        },
+    )
+
+
+@app.post("/settings/team/invite")
+def settings_team_invite(request: Request, email: str = Form(default="")) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+
+    invitation, jeton, erreur = _creer_invitation(
+        owner_user_id=str(user.id), email=email, invited_by=str(user.id))
+    if invitation is None:
+        _audit_log(request, action="team.invite", status="refused", user=user,
+                   target_type="email", target_id=_normalize_email(email),
+                   meta={"reason": erreur})
+        return RedirectResponse(url=_path_with_flash("/settings/team", err=erreur), status_code=303)
+
+    lien = _public_url(request, "/team/accept?token=%s" % quote(jeton))
+    try:
+        _send_account_invite_email(to_email=str(invitation.email), accept_url=lien,
+                                   owner_email=str(getattr(user, "email", "") or ""),
+                                   expires_at=invitation.expires_at)
+    except Exception as e:
+        # L'invitation EXISTE deja en base. La supprimer ici serait le bon reflexe si l'email
+        # etait le seul chemin — il ne l'est pas : le proprietaire peut annuler la ligne depuis
+        # l'ecran, et la garder evite qu'une place soit comptee comme libre alors qu'un jeton
+        # valide est peut-etre parti quand meme.
+        logger.error("[TEAM] envoi de l'invitation echoue : %s: %s", type(e).__name__, e)
+        _audit_log(request, action="team.invite", status="email_failed", user=user,
+                   target_type="invite", target_id=str(invitation.id))
+        return RedirectResponse(
+            url=_path_with_flash("/settings/team",
+                                 err="Invitation créée, mais l'email n'a pas pu être envoyé. "
+                                     "Annule-la et réessaie."),
+            status_code=303)
+
+    _audit_log(request, action="team.invite", status="ok", user=user,
+               target_type="invite", target_id=str(invitation.id))
+    return RedirectResponse(
+        url=_path_with_flash("/settings/team", msg="Invitation envoyée à %s." % invitation.email),
+        status_code=303)
+
+
+@app.post("/settings/team/invite/{invite_id}/revoke")
+def settings_team_invite_revoke(request: Request, invite_id: str) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    # La requete filtre sur le proprietaire : un identifiant d'invitation devine ne suffit pas
+    # a annuler celle d'un autre compte.
+    ok, message = _revoquer_invitation(owner_user_id=str(user.id), invite_id=invite_id)
+    _audit_log(request, action="team.invite.revoke", status="ok" if ok else "refused",
+               user=user, target_type="invite", target_id=str(invite_id))
+    cle = "msg" if ok else "err"
+    return RedirectResponse(url=_path_with_flash("/settings/team", **{cle: message}), status_code=303)
+
+
+@app.post("/settings/team/member/{member_id}/remove")
+def settings_team_member_remove(request: Request, member_id: str) -> RedirectResponse:
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    ok, message = _retirer_membre(owner_user_id=str(user.id), member_user_id=member_id)
+    _audit_log(request, action="team.member.remove", status="ok" if ok else "refused",
+               user=user, target_type="user", target_id=str(member_id))
+    cle = "msg" if ok else "err"
+    return RedirectResponse(url=_path_with_flash("/settings/team", **{cle: message}), status_code=303)
+
+
+@app.post("/settings/team/leave")
+def settings_team_leave(request: Request) -> RedirectResponse:
+    """Un membre part de lui-meme, sans avoir a demander au proprietaire.
+
+    Necessaire et pas seulement courtois : une seule adhesion par personne est autorisee, donc
+    quelqu'un qui ne peut pas partir ne peut jamais rejoindre un autre compte.
+    """
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    uid = str(user.id)
+    with DB.session() as db:
+        adhesion = db.scalar(select(AccountMember).where(AccountMember.member_user_id == uid))
+        hote = str(adhesion.owner_user_id) if adhesion is not None else ""
+    if not hote:
+        return RedirectResponse(
+            url=_path_with_flash("/settings/team", err="Tu ne fais partie d'aucun compte."),
+            status_code=303)
+    ok, _m = _retirer_membre(owner_user_id=hote, member_user_id=uid)
+    _audit_log(request, action="team.leave", status="ok" if ok else "refused", user=user,
+               target_type="user", target_id=hote)
+    return RedirectResponse(
+        url=_path_with_flash("/settings/team", msg="Tu as quitté ce compte."), status_code=303)
+
+
+@app.get("/team/accept", response_class=HTMLResponse)
+def team_accept(request: Request, token: str = "") -> RedirectResponse:
+    """Le lien d'invitation.
+
+    La route n'est PAS dans la liste blanche publique, donc une personne non connectee est
+    d'abord renvoyee vers la connexion avec `next` — elle revient ici une fois identifiee, et le
+    lien continue de fonctionner. C'est ce qui permet a une invitation d'aboutir pour quelqu'un
+    qui n'a pas encore de compte : il s'inscrit, puis le lien reprend son cours.
+    """
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="auth_required")
+    ok, message = _accepter_invitation(token=token, user=user)
+    _audit_log(request, action="team.invite.accept", status="ok" if ok else "refused", user=user,
+               target_type="user", target_id=str(user.id),
+               meta=None if ok else {"reason": message})
+    if ok:
+        return RedirectResponse(url=_path_with_flash("/", msg=message), status_code=303)
+    return RedirectResponse(url=_path_with_flash("/settings/team", err=message), status_code=303)

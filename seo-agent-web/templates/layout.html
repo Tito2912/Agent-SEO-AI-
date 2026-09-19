@@ -67,6 +67,11 @@
             Comptes &amp; connexions
           </a>
 
+          <a class="nav-item {% if request.url.path.startswith('/settings/team') %}active{% endif %}" href="/settings/team">
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.8"/><path d="M16 14.3c3 .3 5.5 2.6 5.5 5.7"/></svg>
+            Équipe
+          </a>
+
           {% if request.state.can_access_system_settings %}
             <a class="nav-item {% if request.url.path.startswith('/settings/operations') %}active{% endif %}" href="/settings/operations">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>
