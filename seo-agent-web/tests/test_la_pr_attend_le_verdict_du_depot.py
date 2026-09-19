@@ -560,3 +560,91 @@ def test_l_ecran_DISTINGUE_le_brouillon_de_la_pr_prete() -> None:
     assert "function statutCorrection" in page, "l'écran n'a plus de message dédié au brouillon"
     assert "d.verification" in page, "l'écran ne lit pas l'état de vérification"
     assert "brouillon" in page, "le mot « brouillon » a disparu du message"
+
+
+# --- le balayage tourne SANS ordonnanceur externe -----------------------------------------
+
+def test_le_balayage_est_LANCE_au_demarrage_du_service() -> None:
+    """Sans ce demarrage, rien ne sort jamais du brouillon.
+
+    Le balayage a d'abord ete confie a un workflow GitHub planifie. Mesure le 19/09/2026 : une
+    cadence de cinq minutes n'avait produit AUCUNE execution apres vingt minutes — GitHub
+    deprioritise les cadences courtes, et le documente. Pour une tache quotidienne c'est sans
+    consequence ; pour un client qui attend sa correction, c'est le mauvais outil.
+
+    Le produit avait deja le bon mecanisme : un fil demon periodique dans le service web, comme
+    `_start_retention`. Ce test verifie que le demarrage l'appelle — un fil qu'on oublie de
+    lancer ne se signale par rien.
+    """
+    import ast as _ast
+
+    arbre = _ast.parse(Path(m.__file__).read_text(encoding="utf-8"))
+    for n in _ast.walk(arbre):
+        if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and n.name == "_startup":
+            appels = {_ast.unparse(c.func) for c in _ast.walk(n) if isinstance(c, _ast.Call)}
+            assert "_start_verification_pr" in appels, (
+                "le démarrage ne lance pas le balayage : les corrections resteraient en "
+                "brouillon indéfiniment")
+            return
+    raise AssertionError("`_startup` introuvable : le test ne mesure plus rien")
+
+
+def test_une_ERREUR_ne_tue_pas_la_boucle(monkeypatch) -> None:
+    """La protection que `_retention_loop` n'a pas, et qui compte ici.
+
+    Dans `_retention_loop`, une exception d'un nettoyage arrete le fil pour de bon, en silence,
+    jusqu'au redemarrage. Le balayage tourne toutes les deux minutes et appelle un service
+    externe : GitHub sera indisponible tot ou tard. Si la premiere panne arretait le fil, une
+    coupure de trente secondes chez GitHub gelerait toutes les corrections jusqu'au prochain
+    deploiement — et personne ne verrait pourquoi.
+    """
+    passages = {"n": 0}
+
+    def _capricieux(**kwargs):
+        passages["n"] += 1
+        if passages["n"] == 1:
+            raise RuntimeError("GitHub indisponible")
+        m._WORKER_STOP.set()          # on arrete la boucle au second passage
+        return {"verifiee": 1}
+
+    monkeypatch.setattr(m, "_balayer_verifications_pr", _capricieux)
+    monkeypatch.setattr(m, "_pr_verif_interval_s", lambda: 30)
+    monkeypatch.setattr(m._WORKER_STOP, "wait", lambda _s: None)
+    try:
+        m._boucle_verification_pr()
+    finally:
+        m._WORKER_STOP.clear()
+    assert passages["n"] == 2, (
+        "la boucle s'est arrêtée à la première erreur : une coupure passagère de GitHub "
+        "gèlerait toutes les corrections jusqu'au prochain déploiement")
+
+
+def test_la_cadence_est_BORNEE_des_deux_cotes(monkeypatch) -> None:
+    """Une cadence mal reglee est soit un martelage de l'API GitHub, soit un gel."""
+    monkeypatch.delenv("PR_VERIFY_EVERY_SECONDS", raising=False)
+    assert m._pr_verif_interval_s() == 120
+    monkeypatch.setenv("PR_VERIFY_EVERY_SECONDS", "1")
+    assert m._pr_verif_interval_s() == 30, "une cadence d'une seconde martèlerait l'API GitHub"
+    monkeypatch.setenv("PR_VERIFY_EVERY_SECONDS", "999999")
+    assert m._pr_verif_interval_s() == 3600
+    monkeypatch.setenv("PR_VERIFY_EVERY_SECONDS", "pas-un-nombre")
+    assert m._pr_verif_interval_s() == 120, "une valeur illisible doit retomber sur le défaut"
+
+
+def test_le_fil_n_est_lance_QU_UNE_FOIS(monkeypatch) -> None:
+    """Deux fils balaieraient les memes taches et tenteraient deux fois chaque fusion."""
+    lances = {"n": 0}
+
+    class _FauxFil:
+        def __init__(self, **kwargs) -> None:
+            lances["n"] += 1
+
+        def start(self) -> None:
+            pass
+
+    monkeypatch.setattr(m.threading, "Thread", _FauxFil)
+    monkeypatch.setattr(m, "_PR_VERIF_STARTED", False)
+    m._start_verification_pr()
+    m._start_verification_pr()
+    m._start_verification_pr()
+    assert lances["n"] == 1, "%d fils lancés" % lances["n"]

@@ -9188,6 +9188,7 @@ def _startup() -> None:
         pass
     _start_job_worker()
     _start_retention()
+    _start_verification_pr()
 
 
 def _shutdown() -> None:
@@ -16172,14 +16173,10 @@ def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONR
     token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
     if not token or not hmac.compare_digest(token, cron_secret):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
-    # FILET DE SECURITE, AUJOURD'HUI INERTE, et c'est la nuance qui compte. Les pull requests
-    # de correction attendent `/cron/verify-pull-requests` pour sortir du brouillon ; si cette
-    # entree disparait de l'ordonnanceur, elles y resteraient pour toujours. Le balayage tourne
-    # donc aussi ici.
-    # MAIS : verifie le 19/09/2026 dans le tableau de bord Render, AUCUN ordonnanceur n'appelle
-    # `/cron/autopilot`. Ce repli ne protege donc rien pour l'instant — il attend qu'une entree
-    # autopilote existe. Le seul ordonnanceur reel de la verification est le workflow
-    # `.github/workflows/verify-pull-requests.yml`. Ne pas lire ces lignes comme une garantie.
+    # Un passage de balayage en passant, pendant qu'on est la. Le chemin principal est
+    # `_boucle_verification_pr`, qui tourne en continu dans ce service ; ceci n'est qu'une
+    # occasion de plus, sans consequence si elle disparait. Le doublon est sans danger : une
+    # pull request deja sortie du brouillon n'est plus en attente et n'est donc pas reprise.
     try:
         _balayer_verifications_pr(limit=25)
     except Exception as e:
@@ -28129,19 +28126,75 @@ def _balayer_verifications_pr(*, limit: int = 100) -> dict[str, int]:
     return resultats
 
 
+_PR_VERIF_STARTED_GUARD = threading.Lock()
+_PR_VERIF_STARTED = False
+
+
+def _pr_verif_interval_s() -> int:
+    raw = _safe_env("PR_VERIFY_EVERY_SECONDS")
+    if raw:
+        try:
+            return max(30, min(3600, int(raw)))
+        except Exception:
+            pass
+    return 120
+
+
+def _boucle_verification_pr() -> None:
+    """Reprend les pull requests en attente, toutes les deux minutes, dans le service web.
+
+    POURQUOI PAS UN ORDONNANCEUR EXTERNE — et c'est une correction de ma part. J'avais d'abord
+    branche ce balayage sur un workflow GitHub planifie. GitHub documente que les executions
+    planifiees sont retardees en periode de charge et deprioritise les cadences courtes :
+    verifie le 19/09/2026, une cadence de cinq minutes n'avait toujours pas produit une seule
+    execution apres vingt minutes. Pour une tache quotidienne c'est sans consequence ; pour un
+    balayage qui fait attendre un client devant une correction, c'est le mauvais outil.
+
+    Le produit avait deja le bon mecanisme sous la main : `_start_retention` fait tourner un fil
+    demon periodique dans ce meme service. Pas d'ordonnanceur, pas de secret partage, pas de
+    retard.
+
+    UNE EXCEPTION NE DOIT PAS TUER LA BOUCLE. `_retention_loop` n'a pas cette protection : une
+    erreur dans un nettoyage arrete definitivement le fil, en silence, jusqu'au redemarrage
+    suivant. Ici une panne d'un passage — GitHub indisponible, base momentanement injoignable —
+    est journalisee et le passage suivant a lieu quand meme.
+
+    UNE SEULE INSTANCE WEB AUJOURD'HUI. Si ce service est mis a l'echelle horizontalement, deux
+    instances balaieraient les memes taches. Les consequences restent bornees : la sortie de
+    brouillon et la fusion sont refusees par GitHub la seconde fois, et l'erreur est attrapee.
+    Mais le jour ou le web tournera a plusieurs, il faudra reserver la tache avant de la
+    traiter, pas seulement encaisser le doublon.
+    """
+    while not _WORKER_STOP.is_set():
+        try:
+            resultats = _balayer_verifications_pr(limit=100)
+            if resultats:
+                logger.info("[PR] balayage : %s", resultats)
+        except Exception as e:
+            logger.error("[PR] balayage interrompu : %s: %s", type(e).__name__, e)
+        _WORKER_STOP.wait(float(_pr_verif_interval_s()))
+
+
+def _start_verification_pr() -> None:
+    global _PR_VERIF_STARTED
+    with _PR_VERIF_STARTED_GUARD:
+        if _PR_VERIF_STARTED:
+            return
+        _PR_VERIF_STARTED = True
+        threading.Thread(target=_boucle_verification_pr, daemon=True).start()
+
+
 @app.post("/cron/verify-pull-requests")
 def cron_verify_pull_requests(request: Request) -> JSONResponse:
     """A APPELER REGULIEREMENT — toutes les deux ou trois minutes.
 
-    SANS CE CRON, les corrections restent en brouillon et les fusions automatiques ne partent
-    jamais. Ce n'est pas une degradation silencieuse : l'ecran des corrections montre l'etat
-    « en attente » et son age.
+    CETTE ROUTE N'EST PLUS LE CHEMIN PRINCIPAL. Le balayage tourne dans le service web lui-meme,
+    toutes les deux minutes, via `_boucle_verification_pr` — sans ordonnanceur, sans secret
+    partage et sans le retard que GitHub impose aux executions planifiees.
 
-    UN REPLI EXISTE DANS `cron_autopilot`, MAIS IL EST INERTE AUJOURD'HUI, et il vaut mieux
-    l'ecrire que le laisser croire : verification faite le 19/09/2026 dans le tableau de bord
-    Render, aucun ordonnanceur n'appelle `/cron/autopilot`. Le repli se reveillera le jour ou
-    cette entree existera ; d'ici la, l'ordonnanceur de CETTE route est le seul, et c'est
-    `.github/workflows/verify-pull-requests.yml` qui le porte.
+    Elle reste utile pour deux choses : declencher un passage a la main pendant une
+    verification, et servir de porte a un ordonnanceur externe si le balayage interne devait un
+    jour etre coupe. Elle ne conditionne plus rien.
     """
     cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
     if not cron_secret:
