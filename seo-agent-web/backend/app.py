@@ -17453,7 +17453,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             "commit_sha": commit_sha[:7] if commit_sha else "",
             "commit_url": commit_url,
             "file": file_path,
-            "merged": _merged,
+            "merged": _merged, "verification": "en_attente",
         })
 
     # ── Step 1: Find file + generate patch (preview) ─────────────────────
@@ -17749,7 +17749,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     return JSONResponse({
         "ok": True,
         "pr_url": pr_url, "pr_number": pr_number,
-        "branch": fix_branch, "merged": _merged,
+        "branch": fix_branch, "merged": _merged, "verification": "en_attente",
         "fixed_count": len(fixed_results),
         "total_count": len(results),
         "results": results,
@@ -23966,7 +23966,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
-        "merged": _merged, "files": all_changed, "files_count": len(all_changed),
+        "merged": _merged, "verification": "en_attente", "files": all_changed, "files_count": len(all_changed),
         "config_fixed": config_notes, "pages_count": len(impacted), "skipped": skipped,
     })
 
@@ -25594,6 +25594,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
+        "verification": "en_attente",
         "files": patched_files, "files_count": len(patched_files), "query": query,
     })
 

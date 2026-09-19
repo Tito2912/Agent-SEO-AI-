@@ -243,6 +243,16 @@
   /* PR creation can take 30-60s (tarball + several AI patches); a slow request may drop
      client-side even though the server created the PR. Poll the server and reload when the
      PR shows up, so the user never has to refresh manually. */
+  // La correction part en BROUILLON et attend les vérifications du dépôt (GitHub Actions,
+  // preview Netlify ou Vercel). Annoncer « Pull Request créée » laisserait croire qu'il y a
+  // quelque chose à relire tout de suite, et « Correction mergée » ne serait plus jamais vrai
+  // à cet instant : la fusion attend désormais le verdict.
+  function statutCorrection(d) {
+    if (d.merged) return 'Correction mergée.';
+    if (d.verification) return 'Correction ouverte en brouillon — en attente des vérifications de ton dépôt.';
+    return 'Pull Request créée.';
+  }
+
   function noteHasPr(note) {
     if (!note) return false;
     try { return !!JSON.parse(note).pr_url; } catch (e) { return false; }
@@ -344,9 +354,9 @@
           setTimeout(function() { btn.textContent = original; }, 1600);
           return;
         }
-        btn.textContent = d.merged ? 'Mergé' : 'PR créée';
+        btn.textContent = d.merged ? 'Mergé' : (d.verification ? 'En vérification' : 'PR créée');
         var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-        showFlowStatus((d.merged ? 'Correction mergée.' : 'Pull Request créée.') + link, 'ok');
+        showFlowStatus(statutCorrection(d) + link, 'ok');
         setTimeout(function() { window.location.reload(); }, 1800);
       })
       .catch(function() {
@@ -381,9 +391,9 @@
           return;
         }
         stopPoll();
-        btn.textContent = d.merged ? 'Mergé' : 'PR créée';
+        btn.textContent = d.merged ? 'Mergé' : (d.verification ? 'En vérification' : 'PR créée');
         var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-        showFlowStatus((d.merged ? 'Correction mergée' : 'PR créée') + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link, 'ok');
+        showFlowStatus(statutCorrection(d) + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link, 'ok');
         setTimeout(function () { window.location.reload(); }, 2400);
       })
       .catch(function () {

@@ -515,3 +515,48 @@ def test_le_balayage_ne_va_PAS_CHERCHER_les_taches_deja_closes(monkeypatch) -> N
     assert "sans_objet" not in resultats, (
         "le balayage charge des tâches déjà tranchées : %r" % resultats)
     assert resultats.get("verifiee", 0) >= 1, resultats
+
+
+def test_les_QUATRE_routes_annoncent_que_la_verification_est_EN_COURS() -> None:
+    """Une interface qui dit « Pull Request créée » sur un brouillon ment au client.
+
+    Avant ce changement, « PR créée » et « Correction mergée » etaient exacts. Ils ne le sont
+    plus : la correction part en brouillon et la fusion attend le verdict. Le drapeau
+    `verification` dans la reponse est ce qui permet a l'ecran de le dire — sans lui, le
+    message redeviendrait faux sans qu'aucun test ne bronche, parce que rien de casse ne se
+    produirait.
+    """
+    import ast as _ast
+
+    source = Path(m.__file__).read_text(encoding="utf-8")
+    arbre = _ast.parse(source)
+    portees = [(n.lineno, n.end_lineno or n.lineno, n.name)
+               for n in _ast.walk(arbre)
+               if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef))]
+    routes_pr = set()
+    for n in _ast.walk(arbre):
+        if isinstance(n, _ast.Call) and _ast.unparse(n.func) == "_ouvrir_pull_request":
+            englobantes = [p for p in portees if p[0] <= n.lineno <= p[1]]
+            if englobantes:
+                routes_pr.add(max(englobantes, key=lambda p: p[0])[2])
+    assert len(routes_pr) == 4, routes_pr
+
+    muettes = []
+    for debut, fin, nom in portees:
+        if nom not in routes_pr:
+            continue
+        corps = "\n".join(source.splitlines()[debut - 1:fin])
+        if '"verification": "en_attente"' not in corps:
+            muettes.append(nom)
+    assert not muettes, (
+        "ces routes n'annoncent pas que la vérification est en cours, donc l'écran dira "
+        "« Pull Request créée » sur un brouillon : %s" % ", ".join(sorted(muettes)))
+
+
+def test_l_ecran_DISTINGUE_le_brouillon_de_la_pr_prete() -> None:
+    """Le drapeau ne sert a rien si l'ecran ne le lit pas."""
+    page = (Path(m.__file__).resolve().parents[1] / "templates" / "corrections.html").read_text(
+        encoding="utf-8")
+    assert "function statutCorrection" in page, "l'écran n'a plus de message dédié au brouillon"
+    assert "d.verification" in page, "l'écran ne lit pas l'état de vérification"
+    assert "brouillon" in page, "le mot « brouillon » a disparu du message"
