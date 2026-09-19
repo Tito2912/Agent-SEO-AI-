@@ -267,6 +267,12 @@ class BacklinkOpportunity(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
 
+    # `user_id` dit chez QUEL COMPTE la ligne vit ; `created_by` dit QUI l'a posee. Les deux
+    # etaient la meme personne avant les comptes d'equipe, et le second aurait ete perdu sans
+    # cette colonne. Nullable : les lignes d'avant ont ete creees par leur `user_id`, et
+    # recopier cette valeur ferait passer une deduction pour un fait constate.
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
     source: Mapped[str] = mapped_column(String(32), nullable=False)
     title: Mapped[str] = mapped_column(String(1024), nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
@@ -311,6 +317,12 @@ class TrackedKeyword(Base):
     user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
+
+    # `user_id` dit chez QUEL COMPTE la ligne vit ; `created_by` dit QUI l'a posee. Les deux
+    # etaient la meme personne avant les comptes d'equipe, et le second aurait ete perdu sans
+    # cette colonne. Nullable : les lignes d'avant ont ete creees par leur `user_id`, et
+    # recopier cette valeur ferait passer une deduction pour un fait constate.
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     query: Mapped[str] = mapped_column(String(512), nullable=False)
     target_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
@@ -389,6 +401,12 @@ class CompetitorSite(Base):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
 
+    # `user_id` dit chez QUEL COMPTE la ligne vit ; `created_by` dit QUI l'a posee. Les deux
+    # etaient la meme personne avant les comptes d'equipe, et le second aurait ete perdu sans
+    # cette colonne. Nullable : les lignes d'avant ont ete creees par leur `user_id`, et
+    # recopier cette valeur ferait passer une deduction pour un fait constate.
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
     domain: Mapped[str] = mapped_column(String(255), nullable=False)
     base_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     # "new" until a crawl has run, then "crawling" / "ready" / "failed". The UI shows all four
@@ -422,6 +440,12 @@ class IssueTask(Base):
     user_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
+
+    # `user_id` dit chez QUEL COMPTE la ligne vit ; `created_by` dit QUI l'a posee. Les deux
+    # etaient la meme personne avant les comptes d'equipe, et le second aurait ete perdu sans
+    # cette colonne. Nullable : les lignes d'avant ont ete creees par leur `user_id`, et
+    # recopier cette valeur ferait passer une deduction pour un fait constate.
+    created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     issue_key: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     issue_label: Mapped[str] = mapped_column(String(512), nullable=False, default="")

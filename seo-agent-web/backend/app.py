@@ -14292,11 +14292,11 @@ def project_gsc_oauth_disconnect(
 ) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
-    token = _gsc_oauth_refresh_token(str(getattr(user, "id", "")), slug)
+    token = _gsc_oauth_refresh_token(_compte_payeur(str(getattr(user, "id", "")), slug), slug)
     return_to = _safe_next_path(next or f"/projects/{slug}/settings/crawl#gsc")
     if token:
         _google_oauth_revoke_token(token)
-    _gsc_oauth_clear(str(getattr(user, "id", "")), slug)
+    _gsc_oauth_clear(_compte_payeur(str(getattr(user, "id", "")), slug), slug)
     _audit_log(
         request,
         action="oauth.google.disconnect",
@@ -14784,8 +14784,8 @@ def bing_oauth_disconnect(request: Request, next: str = Form(default="/settings/
 def gsc_properties_for_project(request: Request, slug: str) -> JSONResponse:
     proj = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
-    user_id = str(getattr(user, "id", "") or "")
-    token = _gsc_oauth_refresh_token(str(getattr(user, "id", "")), slug)
+    user_id = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
+    token = _gsc_oauth_refresh_token(_compte_payeur(str(getattr(user, "id", "")), slug), slug)
     if not token:
         return JSONResponse({"ok": False, "error": "Google OAuth non connecté pour ce projet."}, status_code=400)
 
@@ -14907,7 +14907,7 @@ def bing_sites_for_project(request: Request, slug: str) -> JSONResponse:
     if not user:
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
 
-    user_id = str(getattr(user, "id", "") or "")
+    user_id = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
     auth = _effective_bing_connection(user_id=user_id)
     if not auth.get("token"):
         return JSONResponse({"ok": False, "error": "Bing non connecté pour ce compte."}, status_code=400)
@@ -15300,7 +15300,7 @@ def project_search_series(request: Request, slug: str, source: str, days: int | 
 
     if source_key == "gsc":
         payload = _fetch_gsc_live_series(
-            user_id=str(getattr(user, "id", "")),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
             slug=slug,
             base_url=str(proj.base_url or ""),
             gsc_cfg=gsc_cfg,
@@ -15309,7 +15309,7 @@ def project_search_series(request: Request, slug: str, source: str, days: int | 
         status_code = 200 if payload.get("ok") else 400
     elif source_key == "bing":
         payload = _fetch_bing_live_series(
-            user_id=str(getattr(user, "id", "")),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
             base_url=str(proj.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
@@ -15377,7 +15377,7 @@ def project_search_items(
     user = getattr(request.state, "user", None)
     if source_key == "gsc":
         payload = _fetch_gsc_live_items(
-            user_id=str(getattr(user, "id", "")),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
             slug=slug,
             base_url=str(proj.base_url or ""),
             gsc_cfg=gsc_cfg,
@@ -15387,7 +15387,7 @@ def project_search_items(
         )
     elif source_key == "bing":
         payload = _fetch_bing_live_items(
-            user_id=str(getattr(user, "id", "")),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
             base_url=str(proj.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
@@ -16133,7 +16133,7 @@ def project_overview(
         config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
         project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
     )
-    gsc_status = _gsc_live_credentials_status(user_id=str(getattr(user, "id", "")), slug=slug)
+    gsc_status = _gsc_live_credentials_status(user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug)
     live_series = {
         "gsc": {
             "enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
@@ -16145,7 +16145,7 @@ def project_overview(
         "bing": {
             "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
             "days": int(effective_bing.get("days") or 28),
-            "credentials_ready": bool(_effective_bing_connection(user_id=str(getattr(user, "id", ""))).get("token")),
+            "credentials_ready": bool(_effective_bing_connection(user_id=_compte_payeur(str(getattr(user, "id", "")), slug)).get("token")),
         },
     }
     plan_key = "free"
@@ -16257,13 +16257,13 @@ def project_crawl_settings(
     user = getattr(request.state, "user", None)
     gsc_oauth = {
         "configured": bool(client_id and client_secret and _safe_env("SEO_AGENT_SECRET_KEY")),
-        "connected": _gsc_oauth_connected(str(getattr(user, "id", "")), slug),
+        "connected": _gsc_oauth_connected(_compte_payeur(str(getattr(user, "id", "")), slug), slug),
         "redirect_uri": _google_oauth_redirect_uri(request) if (client_id and client_secret) else "",
         "scope": _GOOGLE_OAUTH_SCOPE,
         "settings_url": "/settings/accounts#gsc-oauth-card",
         "system_url": "/settings/system#gsc-oauth-system",
     }
-    bing_auth = _effective_bing_connection(user_id=str(getattr(user, "id", "")))
+    bing_auth = _effective_bing_connection(user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
     bing_api_ready = bool(bing_auth.get("token"))
     # Show the plan's real per-crawl ceiling in the form. Offering 200 000 to everyone meant
     # the limit was only ever discovered by a crawl that ran for hours and then died.
@@ -16654,7 +16654,7 @@ class _GithubFixBody(BaseModel):
 def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) -> JSONResponse:
     proj = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté. Va dans Comptes & connexions pour connecter GitHub."}, status_code=400)
     repo = (body.repo or "").strip()
@@ -16700,7 +16700,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     cfg = _project_github_cfg(proj)
     if not cfg["repo"]:
         return JSONResponse({"ok": False, "needs_setup": True, "slug": slug, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
     retry_after = _rate_limit_retry_after(
@@ -16822,7 +16822,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
                 else:
                     _db2.add(IssueTask(
                         project_id=str(proj.id),
-                        user_id=str(getattr(user, "id", "") or ""),
+                        user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
                         issue_key=issue_key, issue_label=issue_label,
                         crawl_ts=str(body.crawl_ts or ""), url=url,
                         status="in_progress", severity=str(
@@ -16910,7 +16910,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     cfg = _project_github_cfg(proj)
     if not cfg["repo"]:
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
     retry_after = _rate_limit_retry_after(
@@ -17121,7 +17121,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
                 else:
                     _db.add(IssueTask(
                         project_id=str(proj.id),
-                        user_id=str(getattr(user, "id", "") or ""),
+                        user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
                         issue_key=r["issue_key"], issue_label=r["issue_label"],
                         crawl_ts=ts, url=r["url"], status=final_status,
                         severity=str((_meta.severity if _meta else None) or "notice"),
@@ -23092,7 +23092,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     cfg = _project_github_cfg(proj)
     if not cfg["repo"]:
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
     retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
@@ -23333,7 +23333,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
                 _ex.note = _note
             else:
                 _db.add(IssueTask(
-                    project_id=str(proj.id), user_id=str(getattr(user, "id", "") or ""),
+                    project_id=str(proj.id), user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
                     issue_key=issue_key, issue_label=issue_label, crawl_ts=ts, url=primary_url,
                     status="done" if _merged else "in_progress",
                     severity=str((meta.severity if meta else None) or "notice"), note=_note,
@@ -23387,7 +23387,7 @@ def api_issue_task_upsert(request: Request, slug: str, issue_key: str, body: _Is
         else:
             task = IssueTask(
                 project_id=str(proj_row.id),
-                user_id=str(getattr(user, "id", "") or ""),
+                user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
                 issue_key=issue_key,
                 issue_label=str(body.issue_label or issue_key),
                 crawl_ts=str(body.crawl_ts or ""),
@@ -23553,7 +23553,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             gh_token = ""
             if user is not None and github_cfg.get("repo"):
                 gh_token, _src = _effective_user_connection_value(
-                    user_id=str(getattr(user, "id", "") or ""), key="GITHUB_TOKEN"
+                    user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), key="GITHUB_TOKEN"
                 )
             repo_parts = _github_repo_parts(github_cfg.get("repo") or "")
             merged_cache: dict[int, bool] = {}
@@ -24672,7 +24672,7 @@ def project_keyword_opportunities(request: Request, slug: str, days: int | None 
     requested_days = max(1, min(int(days or int(gsc_cfg.get("days") or 28)), 365))
 
     payload = _fetch_gsc_live_items(
-        user_id=str(getattr(user, "id", "")),
+        user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
         slug=slug,
         base_url=str(proj_row.base_url or ""),
         gsc_cfg=gsc_cfg,
@@ -24751,7 +24751,7 @@ def project_keyword_track(
                 db.commit()
             else:
                 db.add(TrackedKeyword(
-                    project_id=str(proj.id), user_id=str(user.id), query=text[:512],
+                    project_id=str(proj.id), user_id=_compte_payeur(str(user.id), slug), created_by=str(user.id), query=text[:512],
                     target_url=(target_url.strip() or None),
                     source=(source or "manual").strip()[:32],
                 ))
@@ -24833,7 +24833,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
     cfg = _project_github_cfg(proj)
     if not cfg["repo"]:
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
     retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
@@ -24959,7 +24959,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
                 _ex.note = _note
             else:
                 _db.add(IssueTask(
-                    project_id=str(proj.id), user_id=str(getattr(user, "id", "") or ""),
+                    project_id=str(proj.id), user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
                     issue_key=_KEYWORD_REWRITE_KEY, issue_label=issue_label, crawl_ts="",
                     url=page_url, status="in_progress", severity="notice", note=_note,
                 ))
@@ -25114,7 +25114,7 @@ def project_competitor_add(request: Request, slug: str, url: str = Form(default=
             return RedirectResponse(url=_path_with_flash(page, err=(
                 f"Maximum {_COMPETITOR_MAX_PER_PROJECT} concurrents par projet : chacun est un "
                 "crawl, et le temps de worker est la ressource rare.")), status_code=303)
-        db.add(CompetitorSite(project_id=str(proj.id), user_id=str(user.id),
+        db.add(CompetitorSite(project_id=str(proj.id), user_id=_compte_payeur(str(user.id), slug), created_by=str(user.id),
                               domain=domain, base_url=raw, status="new"))
         db.commit()
     return RedirectResponse(url=page, status_code=303)
@@ -25278,7 +25278,7 @@ def project_performance(
     live_payload: dict[str, Any]
     if src == "gsc":
         live_payload = _fetch_gsc_live_items(
-            user_id=str(getattr(user, "id", "")),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
             slug=slug,
             base_url=str(proj_row.base_url or ""),
             gsc_cfg=gsc_cfg,
@@ -25288,7 +25288,7 @@ def project_performance(
         )
     else:
         live_payload = _fetch_bing_live_items(
-            user_id=str(getattr(user, "id", "")),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
             base_url=str(proj_row.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
@@ -25989,7 +25989,7 @@ def project_backlinks_opportunities(
                 select(BacklinkOpportunity)
                 .where(
                     BacklinkOpportunity.project_id == str(proj.id),
-                    BacklinkOpportunity.user_id == str(user.id),
+                    BacklinkOpportunity.user_id == payeur,
                 )
             )
             if q:
@@ -26023,7 +26023,7 @@ def project_backlinks_opportunities(
                 select(BacklinkOpportunity)
                 .where(
                     BacklinkOpportunity.project_id == str(proj.id),
-                    BacklinkOpportunity.user_id == str(user.id),
+                    BacklinkOpportunity.user_id == payeur,
                     BacklinkOpportunity.queue_status.in_(["pending", "approved"]),
                 )
                 .order_by(BacklinkOpportunity.opportunity_score.desc(), BacklinkOpportunity.created_at.desc())
@@ -26241,7 +26241,7 @@ async def backlinks_opportunity_save(
         else:
             opp = BacklinkOpportunity(
                 project_id=str(proj.id),
-                user_id=str(user.id),
+                user_id=_compte_payeur(str(user.id), slug), created_by=str(user.id),
                 source=source.strip() or "web",
                 title=title,
                 url=url,
@@ -26273,7 +26273,7 @@ def backlinks_opportunity_delete(request: Request, slug: str, opp_id: str) -> Re
             select(BacklinkOpportunity).where(
                 BacklinkOpportunity.id == opp_id,
                 BacklinkOpportunity.project_id == str(proj.id),
-                BacklinkOpportunity.user_id == str(user.id),
+                BacklinkOpportunity.user_id == _compte_payeur(str(user.id), slug),
             )
         )
         if opp:
@@ -26304,7 +26304,7 @@ def backlinks_opportunity_status(
             select(BacklinkOpportunity).where(
                 BacklinkOpportunity.id == opp_id,
                 BacklinkOpportunity.project_id == str(proj.id),
-                BacklinkOpportunity.user_id == str(user.id),
+                BacklinkOpportunity.user_id == _compte_payeur(str(user.id), slug),
             )
         )
         if opp:
@@ -26388,7 +26388,7 @@ def backlinks_queue_approve(request: Request, slug: str, opp_id: str) -> JSONRes
         opp = db.scalar(select(BacklinkOpportunity).where(
             BacklinkOpportunity.id == opp_id,
             BacklinkOpportunity.project_id == str(proj.id),
-            BacklinkOpportunity.user_id == str(user.id),
+            BacklinkOpportunity.user_id == _compte_payeur(str(user.id), slug),
         ))
         if not opp:
             return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
@@ -26406,7 +26406,7 @@ def backlinks_queue_reject(request: Request, slug: str, opp_id: str) -> JSONResp
         opp = db.scalar(select(BacklinkOpportunity).where(
             BacklinkOpportunity.id == opp_id,
             BacklinkOpportunity.project_id == str(proj.id),
-            BacklinkOpportunity.user_id == str(user.id),
+            BacklinkOpportunity.user_id == _compte_payeur(str(user.id), slug),
         ))
         if not opp:
             return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
@@ -26425,7 +26425,7 @@ def backlinks_queue_mark_sent(request: Request, slug: str, opp_id: str) -> JSONR
         opp = db.scalar(select(BacklinkOpportunity).where(
             BacklinkOpportunity.id == opp_id,
             BacklinkOpportunity.project_id == str(proj.id),
-            BacklinkOpportunity.user_id == str(user.id),
+            BacklinkOpportunity.user_id == _compte_payeur(str(user.id), slug),
         ))
         if not opp:
             return JSONResponse({"ok": False, "error": "Introuvable"}, status_code=404)
