@@ -21648,6 +21648,180 @@ def _align_og_url_with_added_canonical(new_content: str, old_content: str) -> tu
     return out, ["og:url aligne sur le canonical que ce correctif vient d'ajouter : %s" % canonical]
 
 
+# Les cles openGraph qu'une page doit REPRENDRE de sa mise en page quand elle en declare une.
+#   type, images : exigees par `open_graph_tags_incomplete` du crawler. Les perdre echangerait
+#                  une anomalie contre une autre — mesure du 19/09/2026.
+#   siteName     : pas exigee, mais sa perte serait gratuite et la recopie coute une ligne.
+# NI title NI description : sans elles, Next retombe sur celles de la PAGE. C'est meilleur que
+# l'etat herite, ou toutes les pages partagent le titre de la racine.
+_OG_CLES_A_REPORTER = ("type", "siteName", "images")
+
+
+def _bloc_accolades_equilibrees(texte: str, depuis: int) -> tuple[int, int] | None:
+    """(debut, fin) du litteral objet ouvert apres `depuis`, accolades equilibrees.
+
+    Une expression reguliere ne peut pas faire ceci : `images: [{ url: ... }]` imbrique. Le
+    scanner saute ce qui est dans une chaine, sinon une accolade ecrite dans un texte fermerait
+    le bloc trop tot — et on recopierait un fragment.
+    """
+    try:
+        i = texte.index("{", depuis)
+    except ValueError:
+        return None
+    profondeur, guillemet, j = 0, "", i
+    while j < len(texte):
+        c = texte[j]
+        if guillemet:
+            if c == "\\":
+                j += 2
+                continue
+            if c == guillemet:
+                guillemet = ""
+        elif c in "\"'`":
+            guillemet = c
+        elif c == "{":
+            profondeur += 1
+        elif c == "}":
+            profondeur -= 1
+            if profondeur == 0:
+                return (i, j + 1)
+        j += 1
+    return None
+
+
+def _valeur_de_cle_objet(bloc: str, cle: str) -> str:
+    """La valeur brute de `cle` au PREMIER niveau du bloc, telle qu'elle est ecrite.
+
+    On recopie le texte source plutot que de le reserialiser : `images` porte des nombres, des
+    chaines et une structure imbriquee. La reecrire reviendrait a reinventer un formateur — avec
+    ses bugs — et produirait un diff que le formateur du client reecrirait au commit suivant.
+    """
+    corps = bloc[1:-1]
+    i, profondeur, guillemet, debut = 0, 0, "", 0
+    items: list[str] = []
+    while i < len(corps):
+        c = corps[i]
+        if guillemet:
+            if c == "\\":
+                i += 2
+                continue
+            if c == guillemet:
+                guillemet = ""
+        elif c in "\"'`":
+            guillemet = c
+        elif c in "{[(":
+            profondeur += 1
+        elif c in "}])":
+            profondeur -= 1
+        elif c == "," and profondeur == 0:
+            items.append(corps[debut:i])
+            debut = i + 1
+        i += 1
+    items.append(corps[debut:])
+
+    for item in items:
+        m = re.match(r"^\s*([A-Za-z_$][\w$]*)\s*:\s*(.+)$", item, re.S)
+        if m and m.group(1) == cle:
+            return m.group(2).strip()
+    return ""
+
+
+def _og_a_reporter_depuis_layout(contenu_layout: str) -> dict[str, str]:
+    """Les champs openGraph d'une mise en page qu'une page perdrait en declarant les siens."""
+    m = re.search(r"\bopenGraph\s*:", contenu_layout or "")
+    if not m:
+        return {}
+    bornes = _bloc_accolades_equilibrees(contenu_layout, m.end())
+    if bornes is None:
+        return {}
+    bloc = contenu_layout[bornes[0]:bornes[1]]
+    out: dict[str, str] = {}
+    for cle in _OG_CLES_A_REPORTER:
+        valeur = _valeur_de_cle_objet(bloc, cle)
+        if valeur and "\n" not in valeur:
+            # Une valeur repartie sur plusieurs lignes se recopierait avec l'indentation de
+            # SON fichier, pas de celui d'arrivee. On s'abstient plutot que de produire un
+            # bloc mal aligne dans le code du client.
+            out[cle] = valeur
+    return out
+
+
+def _layouts_au_dessus(path: str) -> list[str]:
+    """Les mises en page qui couvrent cette page, de la PLUS PROCHE a la racine.
+
+    Next applique les mises en page par segment : `app/blog/layout.tsx` l'emporte sur
+    `app/layout.tsx` pour une page sous `app/blog/`. Prendre la racine sans regarder serait
+    recopier les champs d'une mise en page qui ne s'applique pas a cette page.
+    """
+    morceaux = str(path or "").split("/")[:-1]
+    sorties: list[str] = []
+    while morceaux:
+        base = "/".join(morceaux)
+        for ext in ("tsx", "jsx", "ts", "js"):
+            sorties.append("%s/layout.%s" % (base, ext))
+        morceaux.pop()
+    return sorties
+
+
+_OG_ALT_CANONICAL_RE = re.compile(
+    r"""^(?P<ind>[ \t]*)alternates[ \t]*:[ \t]*\{[ \t]*canonical[ \t]*:[ \t]*"""
+    r"""(?P<q>['"])(?P<val>[^'"\n]+)(?P=q)[ \t]*,?[ \t]*\}[ \t]*,?[ \t]*$""",
+    re.M)
+
+
+def _inserer_og_complet(content: str, reporte: dict[str, str]) -> tuple[str, list[str]]:
+    """Pose sur une page un openGraph COMPLET, a partir de ce que sa mise en page portait.
+
+    LE CAS. En Next.js App Router, la mise en page racine declare un openGraph et les pages
+    n'en declarent aucun : elles en HERITENT. Quand cet openGraph porte une `url` fixe, toutes
+    les pages annoncent l'adresse de la racine alors que leur canonical differe — c'est
+    `open_graph_url_not_matching_canonical`, et la valeur fautive n'est ecrite dans aucun
+    fichier de page. Il n'y a donc rien a remplacer : il faut POSER.
+
+    POURQUOI LE BLOC EST COMPLET, et c'est toute l'histoire de cette famille. Une premiere
+    version ne posait que `url`. Mesure sur une reproduction Next.js : les metadonnees sont
+    fusionnees SUPERFICIELLEMENT, donc un openGraph de page REMPLACE celui de la mise en page.
+    La page perdait `og:image`, `og:site_name` et `og:type` — et le crawler l'aurait signalee
+    en `open_graph_tags_incomplete` au passage suivant. On avait echange une anomalie contre
+    une autre, en detruisant l'apercu de partage au passage.
+
+    Mesure du rendu avec le bloc complet, meme reproduction : neuf balises avant, NEUF APRES —
+    `og:image`, `og:site_name` et `og:type` conserves, et `og:title`, `og:description` et
+    `og:url` devenus propres a la page au lieu d'etre ceux de la racine.
+
+    `title` et `description` sont volontairement ABSENTS du bloc pose : Next retombe alors sur
+    celles de la page, ce qui vaut mieux que l'heritage.
+    """
+    if not reporte or "images" not in reporte or "type" not in reporte:
+        # Sans image ni type, le bloc pose declencherait `open_graph_tags_incomplete`. Mieux
+        # vaut laisser l'anomalie d'origine qu'en installer une seconde.
+        return content, []
+    if re.search(r"\bopenGraph\s*:", content):
+        # On POSE une propriete absente ; on ne s'insere pas dans une structure deja ecrite.
+        return content, []
+    trouvees = list(_OG_ALT_CANONICAL_RE.finditer(content))
+    if len(trouvees) != 1:
+        # Zero : rien a recopier. Plusieurs : le fichier porte plusieurs pages et on ne sait
+        # pas de laquelle on parle.
+        return content, []
+    m = trouvees[0]
+    valeur = m.group("val").strip()
+    if not valeur or _VALEUR_ASSEMBLEE_RE.search(valeur):
+        return content, []
+
+    ind, q = m.group("ind"), m.group("q")
+    lignes = ["%sopenGraph: {" % ind]
+    for cle in _OG_CLES_A_REPORTER:
+        if cle in reporte:
+            lignes.append("%s  %s: %s," % (ind, cle, reporte[cle]))
+    lignes.append("%s  url: %s%s%s," % (ind, q, valeur, q))
+    lignes.append("%s}," % ind)
+    fin = m.end()
+    return (content[:fin] + "\n" + "\n".join(lignes) + content[fin:],
+            ["openGraph posé depuis la mise en page ; og:url aligné sur le canonical : %s"
+             % valeur])
+
+
 # Une annotation hreflang ECRITE EN BALISAGE, sous la forme qu'on saura cloner. Les formes objet
 # (next `alternates.languages`, nuxt `useHead({link})`) demandent de savoir ou s'inserer dans une
 # structure ; on s'y abstient, comme pour l'Open Graph.
@@ -23414,6 +23588,44 @@ def _deep_patch_issue_files(
         for _u in impacted_urls or []:
             for _f in repo_index.route_files(index, _u) or []:
                 _url_par_fichier.setdefault(_f, _u)
+    # Ce qu'une page devra REPRENDRE de sa mise en page si elle declare un openGraph. Calcule
+    # a la demande et memoise : un projet a une ou deux mises en page pour vingt pages, et les
+    # relire a chaque fichier ferait vingt appels pour deux reponses.
+    _og_layouts: dict[str, dict[str, str]] = {}
+
+    def _og_reporte_pour(path: str) -> dict[str, str]:
+        """Les champs openGraph de la mise en page LA PLUS PROCHE de cette page.
+
+        Next applique les mises en page par segment : `app/blog/layout.tsx` l'emporte sur
+        `app/layout.tsx` pour une page sous `app/blog/`. Prendre la racine sans regarder
+        recopierait les champs d'une mise en page qui ne couvre pas cette page.
+        """
+        connus = set(all_paths or [])
+        for candidat in _layouts_au_dessus(path):
+            if candidat not in connus:
+                continue
+            if candidat in _og_layouts:
+                if _og_layouts[candidat]:
+                    return _og_layouts[candidat]
+                continue
+            contenu = ""
+            if candidat in file_state:
+                contenu = file_state[candidat]["content"]
+            else:
+                try:
+                    fd = _github_api_get(_github_content_api_path(owner, repo_name, candidat),
+                                         token=token, params={"ref": fix_branch})
+                    contenu = _b64.b64decode(
+                        fd.get("content", "").replace("\n", "")).decode("utf-8", errors="replace")
+                except Exception as e:
+                    logger.info("[correction] mise en page illisible (%s): %s", candidat, e)
+                    _og_layouts[candidat] = {}
+                    continue
+            _og_layouts[candidat] = _og_a_reporter_depuis_layout(contenu)
+            if _og_layouts[candidat]:
+                return _og_layouts[candidat]
+        return {}
+
     patched: list[str] = []
     skipped: list[str] = []
     ai_files: list[str] = []   # the subset the MODEL wrote — the only ones that cost tokens
@@ -23653,6 +23865,16 @@ def _deep_patch_issue_files(
         _maitresse = (canonical_masters or {}).get(_url_par_fichier.get(path, ""), "")
         new_content, _master_notes = _keep_canonical_master(new_content, _maitresse)
         new_content, _og_notes = _align_og_url_with_added_canonical(new_content, raw)
+        # LE SECOND GESTE DE LA FAMILLE og:url : POSER la valeur quand elle n'est ecrite nulle
+        # part. Le reecriveur sait REMPLACER ; il ne trouve rien quand l'openGraph est herite
+        # d'une mise en page, ce qui est le defaut de Next.js App Router. Le bloc pose reprend
+        # de cette mise en page ce que la page perdrait — sans quoi on echangerait une anomalie
+        # contre `open_graph_tags_incomplete`, en detruisant l'apercu de partage.
+        # RESTREINT A CETTE FAMILLE : poser un openGraph dans la pull request d'une AUTRE
+        # anomalie elargirait un diff que le client a accepte de relire pour autre chose.
+        if issue_key in _OG_URL_KEYS:
+            new_content, _ogi_notes = _inserer_og_complet(new_content, _og_reporte_pour(path))
+            _og_notes = _og_notes + _ogi_notes
         # APRES l'alignement : il pose og:url quand le canonical vient d'etre ajoute, et la
         # completion ci-dessous doit voir ce qui EXISTE une fois tout le reste ecrit.
         new_content, _ogc_notes = _complete_open_graph(new_content, raw, site_og_image)
