@@ -115,6 +115,7 @@ except ImportError:
 try:
     from .db import Database  # type: ignore
     from .models import (  # type: ignore
+        AccountMember,
         AuditLog,
         BacklinkOpportunity,
         BillingSubscription,
@@ -136,6 +137,7 @@ try:
 except ImportError:
     from db import Database  # type: ignore
     from models import (  # type: ignore
+        AccountMember,
         AuditLog,
         BacklinkOpportunity,
         BillingSubscription,
@@ -6076,13 +6078,48 @@ class CompatJinja2Templates(Jinja2Templates):
 templates = CompatJinja2Templates(directory=str(REPO_ROOT / "seo-agent-web" / "templates"))
 
 
+def _comptes_accessibles(user_id: str) -> list[str]:
+    """Les comptes dont cet utilisateur peut ouvrir les projets : le sien, plus celui qui l'accueille.
+
+    Point d'entree UNIQUE du partage. Les cinquante-six routes qui manipulent un projet passent
+    toutes par `_db_project_or_404` -> `_db_project`, si bien qu'elargir l'acces se fait ici et
+    nulle part ailleurs. C'est ce qui rend les comptes d'equipe abordables : la question « ce
+    projet est-il a moi ? » n'est posee qu'a un seul endroit.
+
+    L'ordre compte : son propre compte d'abord. Un utilisateur qui possede un projet `mon-site`
+    ET travaille chez quelqu'un qui en possede un autre du meme nom voit le SIEN — c'est le seul
+    choix qui ne surprend personne. `AccountMember` interdit d'ailleurs la seconde adhesion, donc
+    l'ambiguite se limite a cette paire-la.
+    """
+    u = (user_id or "").strip()
+    if not u:
+        return []
+    comptes = [u]
+    try:
+        with DB.session() as db:
+            for ligne in db.scalars(select(AccountMember).where(AccountMember.member_user_id == u)):
+                hote = str(getattr(ligne, "owner_user_id", "") or "").strip()
+                if hote and hote not in comptes:
+                    comptes.append(hote)
+    except Exception:
+        # Une table absente ou illisible ne doit pas fermer l'acces a ses PROPRES projets.
+        return [u]
+    return comptes
+
+
 def _db_project(user_id: str, slug: str) -> Project | None:
     s = (slug or "").strip()
     u = (user_id or "").strip()
     if not s or not u:
         return None
+    comptes = _comptes_accessibles(u)
     with DB.session() as db:
-        return db.scalar(select(Project).where(Project.owner_user_id == u, Project.slug == s))
+        for compte in comptes:
+            trouve = db.scalar(select(Project).where(Project.owner_user_id == compte,
+                                                     Project.slug == s))
+            if trouve is not None:
+                return trouve
+    return None
 
 
 def _db_project_lookup_by_base_url(user_id: str) -> dict[str, str]:

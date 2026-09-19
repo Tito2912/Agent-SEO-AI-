@@ -438,6 +438,48 @@ class IssueTask(Base):
     )
 
 
+class AccountMember(Base):
+    """Un utilisateur qui travaille sur les projets d'un AUTRE compte.
+
+    Le produit n'a pas d'objet « organisation » : le compte qui paie EST un utilisateur, et cette
+    table dit simplement qui d'autre a le droit d'y travailler. Une agence de trois consultants
+    est donc un compte proprietaire et deux lignes ici. Le proprietaire garde pour lui la
+    facturation et la gestion des membres ; tout le reste est commun.
+
+    UNE SEULE ADHESION PAR PERSONNE, et ce n'est pas une simplification gratuite : les slugs de
+    projet sont uniques PAR PROPRIETAIRE (`uq_projects_owner_slug`), pas globalement. Un membre
+    de deux comptes qui possedent chacun un projet `mon-site` rendrait `/projects/mon-site`
+    ambigu, et la resolution devrait DEVINER lequel montrer. La contrainte d'unicite refuse la
+    seconde adhesion avec un message clair, au lieu de laisser une ambiguite s'installer en base.
+    Le jour ou plusieurs adherences seront necessaires, il faudra d'abord rendre les slugs
+    uniques globalement — c'est cette migration-la le vrai prix, pas la table.
+
+    `role` n'a qu'une valeur aujourd'hui. Elle existe quand meme pour qu'ajouter un lecteur plus
+    tard ne demande pas de migration.
+    """
+
+    __tablename__ = "account_members"
+    __table_args__ = (
+        UniqueConstraint("member_user_id", name="uq_account_member_unique_membership"),
+        Index("ix_account_member_owner", "owner_user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    # Le compte dont les projets sont partages : celui qui paie, et dont les quotas sont debites.
+    owner_user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    member_user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True, nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="member")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class RateLimitBucket(Base):
     __tablename__ = "rate_limit_buckets"
 
