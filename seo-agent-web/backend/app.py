@@ -5827,6 +5827,31 @@ def _timeseries_totals(points: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _gsc_echec_lisible(essayes: list[str], last_error: str) -> str:
+    """Le message d'echec quand AUCUNE propriete Search Console n'a repondu.
+
+    MESURE DU 19/09/2026, projet homegearwise.com. L'ecran affichait :
+
+        User does not have sufficient permission for site 'http://homegearwise.com/'
+
+    Le `http://` faisait accuser un defaut de schema dans le produit. En realite
+    `_gsc_property_candidates` essaie quatre formes — `sc-domain:`, https, https+www, puis
+    http en dernier recours — et `last_error` ne gardait que la DERNIERE. Le message nommait
+    donc le candidat le moins probable, et taisait les trois vrais essais.
+
+    Une erreur qui ne dit pas ce qui a ete tente envoie chercher au mauvais endroit : ici,
+    un bug de code au lieu d'une propriete a selectionner. On liste donc tout, dans l'ordre,
+    pour que la personne compare avec ce qu'elle possede vraiment dans Search Console.
+    """
+    if not essayes:
+        return last_error or "gsc_request_failed"
+    return (
+        "Aucune de ces propriétés Search Console n'a répondu : %s. "
+        "Vérifie laquelle tu possèdes et sélectionne-la dans les paramètres de crawl du "
+        "projet. Dernière erreur — %s" % (", ".join(essayes), last_error or "inconnue")
+    )
+
+
 def _gsc_property_candidates(base_url: str, configured: str | None) -> list[str]:
     candidates: list[str] = []
     if isinstance(configured, str) and configured.strip():
@@ -6035,7 +6060,12 @@ def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: d
         search_type = str(gsc_cfg.get("search_type") or "web").strip() or "web"
 
         last_error = ""
+        # Ce qu'on a REELLEMENT demande a Google, dans l'ordre. Sans cette liste le
+        # message d'echec ne nomme que le dernier candidat — le moins probable des
+        # quatre — et fait chercher un bug la ou il faut choisir une propriete.
+        essayes: list[str] = []
         for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
+            essayes.append(property_url)
             try:
                 rows = gsc_fetch.fetch_gsc(
                     credentials_path=credentials_path.resolve(),
@@ -6076,7 +6106,7 @@ def _fetch_gsc_live_series(*, user_id: str, slug: str, base_url: str, gsc_cfg: d
             "enabled": True,
             "source": "gsc",
             "reason": "request_failed",
-            "error": last_error or "gsc_request_failed",
+            "error": _gsc_echec_lisible(essayes, last_error),
         }
 
 
@@ -6491,9 +6521,14 @@ def _fetch_gsc_live_items(
 
         fetch_limit = min(25000, max(500, int(limit or 200) * 10))
         last_error = ""
+        # Ce qu'on a REELLEMENT demande a Google, dans l'ordre. Sans cette liste le
+        # message d'echec ne nomme que le dernier candidat — le moins probable des
+        # quatre — et fait chercher un bug la ou il faut choisir une propriete.
+        essayes: list[str] = []
         best_empty: dict[str, Any] | None = None
 
         for property_url in _gsc_property_candidates(base_url, str(gsc_cfg.get("property_url") or "").strip()):
+            essayes.append(property_url)
             try:
                 rows = gsc_fetch.fetch_gsc(
                     credentials_path=credentials_path.resolve(),
@@ -6549,7 +6584,7 @@ def _fetch_gsc_live_items(
             "enabled": True,
             "source": "gsc",
             "reason": "request_failed",
-            "error": last_error or "gsc_request_failed",
+            "error": _gsc_echec_lisible(essayes, last_error),
         }
 
 

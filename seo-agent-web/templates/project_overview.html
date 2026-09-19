@@ -493,7 +493,11 @@
                 </p>
               {% endif %}
             {% elif gsc and gsc.enabled %}
-              <p class="muted">GSC activé mais indisponible: <span class="mono">{{ gsc.reason }}</span></p>
+              {# DATÉ, et ça n'est pas cosmétique. Cette valeur vient du RAPPORT du dernier
+                 crawl, pas du live : un projet connecté après ce crawl affichait « indisponible »
+                 juste au-dessus d'un graphique qui fonctionnait. Deux mesures de deux moments
+                 présentées comme une seule, et le client doute alors de tout l'écran. #}
+              <p class="muted">Au dernier crawl, GSC était indisponible : <span class="mono">{{ gsc.reason }}</span></p>
               <p class="muted small">{% if gsc.reason == "missing_credentials" %}<a href="/settings/accounts#gsc-oauth-card">Connecter Google</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
             {% else %}
               <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
@@ -574,7 +578,9 @@
                 </p>
               {% endif %}
             {% elif bing and bing.enabled %}
-              <p class="muted">Bing activé mais indisponible: <span class="mono">{{ bing.reason }}</span></p>
+              {# Daté pour la même raison que la carte GSC juste au-dessus : cette valeur vient
+                 du rapport du dernier crawl, le graphique en dessous est live. #}
+              <p class="muted">Au dernier crawl, Bing était indisponible : <span class="mono">{{ bing.reason }}</span></p>
               <p class="muted small">{% if bing.reason in ["missing_api_key", "missing_credentials"] %}<a href="/settings/accounts#bing-connect-card">Connecter Bing</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
             {% else %}
               <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
