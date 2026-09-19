@@ -6765,6 +6765,23 @@ def _comptes_accessibles(user_id: str) -> list[str]:
     return comptes
 
 
+def _comptes_visibles(user: Any) -> set[str]:
+    """Les comptes dont cette personne voit les TRAVAUX : le sien, plus celui qui l'accueille.
+
+    Pendant de `_comptes_accessibles` cote travaux, et il a fallu les deux. Un travail porte
+    l'identifiant du PAYEUR — `_compte_payeur`, c'est-a-dire le proprietaire du projet — depuis
+    que la facturation suit le compte hote. Un membre qui lance un crawl chez son hote produit
+    donc un travail qui NE PORTE PAS son identifiant : le comparer au sien le rendait invisible
+    a celui-la meme qui venait de le lancer. La page projet n'affichait aucune carte « en
+    attente », et le bouton semblait ne rien faire.
+
+    Rendre un ensemble plutot qu'une reponse : quatre des sept appelants posent la question une
+    fois, mais trois la posent dans une boucle sur cent travaux. Une requete par tour ferait
+    cent requetes pour une seule page.
+    """
+    return set(_comptes_accessibles(str(getattr(user, "id", "") or "")))
+
+
 def _db_project(user_id: str, slug: str) -> Project | None:
     s = (slug or "").strip()
     u = (user_id or "").strip()
@@ -16227,11 +16244,12 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
     jobs_view: list[dict[str, Any]] = []
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
+    visibles = _comptes_visibles(user)
     for j in raw_jobs:
         result = j.result if isinstance(j.result, dict) else None
         if not is_admin:
             owner_id = str(result.get("user_id") or "").strip() if result else ""
-            if not owner_id or owner_id != str(getattr(user, "id", "")):
+            if not owner_id or owner_id not in visibles:
                 continue
         kind = _job_kind_from_command(j.command) or "unknown"
         slug = str(result.get("slug") or "").strip() if result else ""
@@ -16709,7 +16727,7 @@ def project_overview(
             if not is_admin:
                 result = j.result if isinstance(j.result, dict) else {}
                 owner_id = str(result.get("user_id") or "").strip()
-                if owner_id != str(getattr(user, "id", "")):
+                if owner_id not in _comptes_visibles(user):
                     j = None
 
         if j:
@@ -16728,13 +16746,14 @@ def project_overview(
     if not live_job:
         user = getattr(request.state, "user", None)
         is_admin = bool(getattr(user, "is_admin", False))
+        visibles = _comptes_visibles(user)
         for candidate in _list_jobs(limit=100):
             result = candidate.result if isinstance(candidate.result, dict) else {}
             if result.get("type") != "crawl":
                 continue
             if str(result.get("slug") or "").strip() != slug:
                 continue
-            if not is_admin and str(result.get("user_id") or "").strip() != str(getattr(user, "id", "")):
+            if not is_admin and str(result.get("user_id") or "").strip() not in visibles:
                 continue
             live_job = {
                 "id": candidate.id,
@@ -27626,7 +27645,7 @@ def job_detail(request: Request, job_id: str) -> HTMLResponse:
     if not is_admin:
         result = job.result if isinstance(job.result, dict) else {}
         owner_id = str(result.get("user_id") or "").strip()
-        if owner_id != str(getattr(user, "id", "")):
+        if owner_id not in _comptes_visibles(user):
             resp = templates.TemplateResponse("job.html", {"request": request, "job": None}, status_code=404)
             resp.headers["Cache-Control"] = "no-store"
             return resp
@@ -27723,7 +27742,7 @@ def job_cancel(request: Request, job_id: str) -> RedirectResponse:
     is_admin = bool(getattr(user, "is_admin", False))
     result = job.result if isinstance(job.result, dict) else {}
     owner_id = str(result.get("user_id") or "").strip()
-    if (not is_admin) and owner_id != str(getattr(user, "id", "")):
+    if (not is_admin) and owner_id not in _comptes_visibles(user):
         raise HTTPException(status_code=404, detail="Job not found")
 
     if job.status in {"done", "failed", "canceled"}:
@@ -27750,7 +27769,7 @@ def job_retry(request: Request, job_id: str) -> RedirectResponse:
     is_admin = bool(getattr(user, "is_admin", False))
     result = job.result if isinstance(job.result, dict) else {}
     owner_id = str(result.get("user_id") or "").strip()
-    if (not is_admin) and owner_id != str(getattr(user, "id", "")):
+    if (not is_admin) and owner_id not in _comptes_visibles(user):
         raise HTTPException(status_code=404, detail="Job not found")
 
     if job.status not in {"failed", "canceled"}:
@@ -27798,7 +27817,7 @@ def job_api(request: Request, job_id: str, tail: int = 20_000) -> JSONResponse:
     if not is_admin:
         result = job.result if isinstance(job.result, dict) else {}
         owner_id = str(result.get("user_id") or "").strip()
-        if owner_id != str(getattr(user, "id", "")):
+        if owner_id not in _comptes_visibles(user):
             raise HTTPException(status_code=404, detail="Job not found")
 
     # Auto-finalize orphaned jobs (e.g. cancel_requested whose worker died, or stale
