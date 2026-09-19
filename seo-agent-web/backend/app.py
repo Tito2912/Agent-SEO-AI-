@@ -13147,24 +13147,29 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
         if runs_dir is None:
             runs_dir = dossiers.setdefault(proprietaire, _runs_dir_for_user(proprietaire))
         summary = dash.project_latest_summary(runs_dir, slug) if runs_dir.exists() else None
-        if summary:
-            projects.append(summary)
-            continue
-        projects.append(
-            {
-                "slug": slug,
-                "site_name": p.site_name or slug,
-                "base_url": p.base_url or "",
-                "timestamp": "",
-                "timestamp_label": "—",
-                "pages_crawled": 0,
-                "urls_crawled": 0,
-                "health_score": 0,
-                "urls_with_errors": 0,
-                "issues_distribution": {"error": 0, "warning": 0, "notice": 0},
-                "is_registry_only": True,
-            }
-        )
+        ligne = summary or {
+            "slug": slug,
+            "site_name": p.site_name or slug,
+            "base_url": p.base_url or "",
+            "timestamp": "",
+            "timestamp_label": "—",
+            "pages_crawled": 0,
+            "urls_crawled": 0,
+            "health_score": 0,
+            "urls_with_errors": 0,
+            "issues_distribution": {"error": 0, "warning": 0, "notice": 0},
+            "is_registry_only": True,
+        }
+        # Le depot lie, sur CHAQUE ligne — qu'elle vienne du rapport de crawl ou du repli.
+        # C'est sur cet ecran qu'on decide quoi corriger, et une correction sans depot n'existe
+        # pas : afficher l'etat ailleurs obligeait a ouvrir chaque projet pour le decouvrir.
+        # La valeur est lue sur le PROJET, pas sur le rapport : elle n'a rien a voir avec un
+        # crawl et doit s'afficher meme sur un projet jamais crawle.
+        reglages_p = p.settings if isinstance(p.settings, dict) else {}
+        ligne["github_repo"] = str(reglages_p.get("github_repo") or "").strip()
+        ligne["github_branch"] = str(reglages_p.get("github_branch") or "").strip()
+        ligne["github_mode"] = str(reglages_p.get("github_mode") or "").strip()
+        projects.append(ligne)
 
     projects.sort(key=lambda p: (p.get("site_name") or p.get("slug") or "").lower())
 
@@ -15052,11 +15057,24 @@ def github_oauth_disconnect(request: Request, next: str = Form(default="/setting
 
 
 @app.get("/api/github/repos")
-def github_repos(request: Request) -> JSONResponse:
+def github_repos(request: Request, slug: str = "") -> JSONResponse:
+    """Les depots parmi lesquels choisir. `slug` dit POUR QUEL PROJET, et ce n'est pas optionnel
+    au sens de « sans importance ».
+
+    Sans lui, cette route liste les depots de la personne connectee. Depuis que les projets
+    d'equipe font porter le plan, les quotas et les connexions au compte PROPRIETAIRE, un membre
+    se verrait proposer SES depots pendant que `api_github_connect` valide avec le jeton de
+    l'agence : il choisirait un depot que la validation declare introuvable, sans comprendre
+    pourquoi. Les deux bouts doivent regarder le meme compte.
+
+    Le parametre reste facultatif parce que la route sert aussi hors projet ; dans ce cas c'est
+    bien son propre compte qu'on liste.
+    """
     user = getattr(request.state, "user", None)
     if not user:
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
-    token, source = _effective_user_connection_value(user_id=str(user.id), key="GITHUB_TOKEN")
+    compte = _compte_payeur(str(user.id), slug) if str(slug or "").strip() else str(user.id)
+    token, source = _effective_user_connection_value(user_id=compte, key="GITHUB_TOKEN")
     if not token:
         return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
     if source != "user":

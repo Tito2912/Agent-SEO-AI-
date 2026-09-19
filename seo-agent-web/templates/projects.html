@@ -209,6 +209,21 @@
 	                      {% endif %}
 	                      </div>
 	                      <div class="muted small">{{ p.base_url }}</div>
+                      {# L'etat du depot vit ICI, sous l'URL, et pas dans une colonne : c'est
+                         l'identite du projet, pas une mesure. Une colonne de plus aurait
+                         elargi un tableau qui en compte deja six. #}
+                      <div class="muted small gh-etat" data-project-slug="{{ p.slug }}">
+                        {% if p.github_repo %}
+                          <a href="https://github.com/{{ p.github_repo }}" target="_blank"
+                             rel="noreferrer noopener" title="Dépôt lié à ce projet">⎇ {{ p.github_repo }}</a>{% if p.github_branch %}<span class="muted"> · {{ p.github_branch }}</span>{% endif %}
+                        {% else %}
+                          <button type="button" class="gh-lier" data-slug="{{ p.slug }}"
+                                  title="Lier un dépôt GitHub pour pouvoir corriger ce projet">
+                            Connecter GitHub
+                          </button>
+                        {% endif %}
+                      </div>
+                      <div class="gh-panneau" data-project-slug="{{ p.slug }}" hidden></div>
 	                    </div>
 	                  </td>
                 <td>
@@ -894,6 +909,116 @@
 
 	      setInterval(pollAll, pollMs);
 	      pollAll();
+	    })();
+	  </script>
+
+	  <script>
+	    /* ── Lier un depot GitHub depuis la liste des projets ──────────────────────────
+	       Reutilise les deux memes routes que l'ecran des corrections : `/api/github/repos`
+	       pour proposer un choix plutot qu'un champ libre, et `/api/projects/<slug>/github/connect`
+	       pour lier. Aucune route nouvelle : le chemin de connexion reste unique.
+
+	       LE `slug` EST PASSE A LA LISTE DES DEPOTS, et ce n'est pas decoratif. Sur un projet
+	       d'equipe, la connexion valide avec le jeton du compte PROPRIETAIRE ; sans le slug, la
+	       liste montrerait les depots du membre, qui choisirait alors un depot que la validation
+	       declare introuvable. Les deux bouts doivent regarder le meme compte.
+
+	       La liste est chargee A LA DEMANDE, au premier clic : un compte de vingt projets ne doit
+	       pas declencher vingt appels a GitHub au chargement de la page. */
+	    (function () {
+	      function esc(s) {
+	        return String(s === undefined || s === null ? '' : s)
+	          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+	          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+	      }
+	      var champ = 'font-size:12px;padding:6px 9px;background:var(--bg-2,#18181b);'
+	        + 'border:1px solid var(--border);border-radius:5px;color:inherit;';
+
+	      document.addEventListener('click', function (ev) {
+	        var bouton = ev.target.closest ? ev.target.closest('.gh-lier') : null;
+	        if (!bouton) return;
+	        ev.preventDefault();
+	        var slug = bouton.getAttribute('data-slug') || '';
+	        var panneau = document.querySelector('.gh-panneau[data-project-slug="' + slug + '"]');
+	        if (!panneau) return;
+	        if (!panneau.hidden) { panneau.hidden = true; return; }
+	        panneau.hidden = false;
+	        panneau.innerHTML = '<span class="muted small">Chargement des dépôts…</span>';
+
+	        fetch('/api/github/repos?slug=' + encodeURIComponent(slug), { cache: 'no-store' })
+	          .then(function (r) { return r.json(); })
+	          .then(function (d) {
+	            if (!d.ok) {
+	              /* Compte GitHub non connecte : on ne fait pas semblant de proposer un choix,
+	                 on envoie la ou le probleme se regle, et on revient ici ensuite. */
+	              panneau.innerHTML = '<div class="muted small" style="margin:6px 0;">'
+	                + esc(d.error || 'GitHub non connecté.') + '</div>'
+	                + '<a class="btn small primary" href="/oauth/github/connect?next='
+	                + encodeURIComponent('/') + '">Connecter mon compte GitHub</a>';
+	              return;
+	            }
+	            var opts = '<option value="">— Choisir un dépôt —</option>';
+	            (d.repos || []).forEach(function (repo) {
+	              opts += '<option value="' + esc(repo.full_name) + '|'
+	                + esc(repo.default_branch || 'main') + '">' + esc(repo.full_name)
+	                + (repo.private ? ' [privé]' : '') + '</option>';
+	            });
+	            panneau.innerHTML = [
+	              '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;">',
+	              '<select class="gh-depot" style="flex:1;min-width:190px;' + champ + '">' + opts + '</select>',
+	              '<input class="gh-branche" type="text" value="main" placeholder="branche" style="width:88px;' + champ + '">',
+	              '<button type="button" class="btn small primary gh-valider">Lier</button>',
+	              '</div>',
+	              /* Le mode n'est pas demande ici : le serveur retient « PR a verifier », le seul
+	                 qui ne fusionne rien sans relecture. Trois champs dans une ligne de tableau
+	                 auraient alourdi l'ecran pour un reglage qui se change dans le projet. */
+	              '<div class="gh-msg muted small" style="margin-top:6px;">Les corrections arriveront en pull request à relire.</div>'
+	            ].join('');
+
+	            var choix = panneau.querySelector('.gh-depot');
+	            choix.addEventListener('change', function () {
+	              var parts = (choix.value || '').split('|');
+	              if (parts[1]) panneau.querySelector('.gh-branche').value = parts[1];
+	            });
+
+	            panneau.querySelector('.gh-valider').addEventListener('click', function () {
+	              var parts = (choix.value || '').split('|');
+	              var depot = parts[0] || '';
+	              var branche = (panneau.querySelector('.gh-branche').value || '').trim() || 'main';
+	              var msg = panneau.querySelector('.gh-msg');
+	              if (depot.indexOf('/') < 0) {
+	                msg.textContent = 'Sélectionne un dépôt.';
+	                msg.style.color = 'var(--err,#f87171)';
+	                return;
+	              }
+	              var b = panneau.querySelector('.gh-valider');
+	              b.textContent = 'Liaison…'; b.disabled = true;
+	              fetch('/api/projects/' + encodeURIComponent(slug) + '/github/connect', {
+	                method: 'POST', headers: { 'Content-Type': 'application/json' },
+	                body: JSON.stringify({ repo: depot, branch: branche })
+	              }).then(function (r) { return r.json(); }).then(function (d2) {
+	                if (d2.ok) {
+	                  msg.textContent = '✓ Dépôt lié.';
+	                  msg.style.color = 'var(--ok,#34d399)';
+	                  setTimeout(function () { window.location.reload(); }, 700);
+	                } else {
+	                  /* Le serveur explique pourquoi — droits manquants, depot introuvable,
+	                     branche invalide. On montre SA raison, on n'en invente pas une. */
+	                  msg.textContent = '✗ ' + (d2.error || 'Erreur');
+	                  msg.style.color = 'var(--err,#f87171)';
+	                  b.textContent = 'Lier'; b.disabled = false;
+	                }
+	              }).catch(function (e) {
+	                msg.textContent = String(e);
+	                msg.style.color = 'var(--err,#f87171)';
+	                b.textContent = 'Lier'; b.disabled = false;
+	              });
+	            });
+	          })
+	          .catch(function () {
+	            panneau.innerHTML = '<span class="muted small">Impossible de charger les dépôts.</span>';
+	          });
+	      });
 	    })();
 	  </script>
 	{% endblock %}
