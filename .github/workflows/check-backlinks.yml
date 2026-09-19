@@ -1,0 +1,53 @@
+# Verifie chaque jour que les backlinks gagnes pointent toujours vers le site du client.
+#
+# REMPLACE LE CRON RENDER `check-backlinks-daily`, qui echouait depuis toujours. Sa commande
+# etait `curl -s -H "Authorization: Bearer $CRON_SECRET" https://...` — or `curl` n'est PAS
+# installe dans l'image : le Dockerfile part de `python:3.12-slim` et n'ajoute que
+# ca-certificates, wget, gnupg et postgresql-client. La commande ne pouvait pas s'executer.
+#
+# ET `curl -s` SANS `-f` SORT AVEC 0 QUEL QUE SOIT LE CODE HTTP. Meme avec curl installe, un
+# 401 ou un 500 aurait ete compte comme un succes : un cron vert qui ne fait rien. C'est le
+# mode de panne le plus couteux, parce qu'on cesse de le surveiller. `--fail-with-body` le
+# rend impossible ici.
+#
+# POURQUOI GITHUB PLUTOT QUE RENDER : un cron Render demarre l'image complete — celle qui
+# embarque Chromium — pour un appel HTTP de quelques secondes. Le demarrage a lui seul prenait
+# plus d'une minute. Ici, un runner et un `curl` deja present.
+#
+# UNE FOIS CE FICHIER EN PLACE, supprimer ou suspendre le cron Render `check-backlinks-daily` :
+# deux ordonnanceurs pour le meme travail feraient deux passages, et celui de Render echouerait
+# toujours.
+
+name: Verifier les backlinks gagnes
+
+on:
+  schedule:
+    - cron: "0 8 * * *"        # 08:00 UTC, comme le cron Render qu'il remplace
+  workflow_dispatch:
+
+concurrency:
+  group: check-backlinks
+  cancel-in-progress: false
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    # La route interroge chaque page source une par une, avec douze secondes de delai chacune.
+    # Elle n'est pas bornee : sa duree grandit avec le nombre de backlinks gagnes. La marge est
+    # large a dessein, et le jour ou elle ne suffira plus, c'est la ROUTE qu'il faudra borner.
+    timeout-minutes: 20
+    steps:
+      - name: Appeler la verification
+        env:
+          BASE_URL: ${{ vars.NOYARU_BASE_URL || 'https://noyaru.com' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET absent des secrets du depot."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --location \
+               --max-time 900 \
+               -H "Authorization: Bearer $CRON_SECRET" \
+               "$BASE_URL/cron/check-backlinks"
+          echo
