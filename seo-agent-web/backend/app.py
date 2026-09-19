@@ -3599,7 +3599,7 @@ def _correction_gate(user: Any, *, slug: str = "") -> tuple[bool, str, int, str]
     return True, "", p.applique, p.modele
 
 
-def _correction_charge(user: Any, count: int, *, slug: str = "") -> None:
+def _correction_charge(user: Any, count: int, *, slug: str = "", motif: str = "") -> None:
     """Bill `count` AI corrections (files patched / previews) against the monthly quota. No-op for admins.
 
     Le `slug` doit etre celui passe a `_correction_gate` : autoriser sur le solde d'un compte et
@@ -3613,7 +3613,18 @@ def _correction_charge(user: Any, count: int, *, slug: str = "") -> None:
         with DB.session() as _db:
             billing.usage_add(
                 _db, user_id=compte or str(getattr(user, "id", "") or ""),
-                metric="ai_corrections_month", amount=int(count))
+                metric="ai_corrections_month", amount=int(count),
+                # LA PROVENANCE, sans laquelle un remboursement se fait a l'aveugle. Le
+                # 19/09/2026 huit unites ont ete debitees a tort — un defaut d'attribution,
+                # corrige depuis — et les lignes de consommation ne portaient ni projet, ni
+                # anomalie, ni auteur : impossible de dire lesquelles rembourser autrement
+                # qu'en lisant l'heure.
+                #
+                # `par` n'est pas redondant avec l'utilisateur facture : depuis les comptes
+                # d'equipe, le compte qui PAYE est l'hote et la personne qui a CLIQUE peut
+                # etre un membre. Les deux se posent la question un jour.
+                meta={"slug": slug, "motif": motif,
+                      "par": str(getattr(user, "id", "") or "")})
     except Exception:
         pass
 
@@ -17474,7 +17485,7 @@ def api_issue_url_fix(
         else:
             msg = "Correction IA momentanément indisponible. Réessaie dans un instant."
         return JSONResponse({"error": msg}, status_code=503)
-    _correction_charge(user, 1, slug=slug)
+    _correction_charge(user, 1, slug=slug, motif=issue_key)
     return JSONResponse(result)
 
 
@@ -17716,7 +17727,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     content_error = _github_patched_content_error(str(patch.get("patched_content") or ""), str(best.get("path") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
-    _correction_charge(user, 1, slug=slug)
+    _correction_charge(user, 1, slug=slug, motif=issue_key)
 
     # In auto mode: apply immediately without confirm step
     if mode == "auto":
@@ -17979,7 +17990,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             pass
 
     # Bill all files patched across the bulk run (1 per file = 1 AI call).
-    _correction_charge(user, ai_billable, slug=slug)
+    _correction_charge(user, ai_billable, slug=slug, motif="bulk")
 
     return JSONResponse({
         "ok": True,
@@ -24723,7 +24734,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Config-loop file ops (rename + _redirects prune) are deterministic (no AI call) → not billed.
     # Bill the model-written files only. A deterministic rewrite makes no API call, so charging
     # it would sell compute that was never spent.
-    _correction_charge(user, len(_ai_files), slug=slug)
+    _correction_charge(user, len(_ai_files), slug=slug, motif=issue_key)
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
@@ -26355,7 +26366,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 
     # Every file here carries model-written text, so every file costs one correction: the same
     # unit as the anomaly corrector, one file written by the model.
-    _correction_charge(user, len(ai_files), slug=slug)
+    _correction_charge(user, len(ai_files), slug=slug, motif="keyword_rewrite")
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
