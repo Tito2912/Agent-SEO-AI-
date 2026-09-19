@@ -393,7 +393,19 @@
         stopPoll();
         btn.textContent = d.merged ? 'Mergé' : (d.verification ? 'En vérification' : 'PR créée');
         var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-        showFlowStatus(statutCorrection(d) + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link, 'ok');
+        // Le plafond a pu couper avant d'atteindre tous les candidats. Sans cette phrase, la
+        // ligne ci-dessus affiche « 8 fichier(s) pour 9 page(s) » et laisse le client faire la
+        // soustraction — puis se demander si le reste est une abstention, un défaut, ou un
+        // second clic. On nomme la borne : relancer ne sert que si c'est le forfait qui a coupé.
+        var reste = '';
+        if (d.not_attempted_count) {
+          var cap = d.cap || {};
+          reste = ' <strong>' + esc(d.not_attempted_count) + ' fichier(s) non traité(s)</strong> : '
+                + (typeof cap.left === 'number' && cap.left <= cap.files
+                   ? 'il te restait ' + esc(cap.left) + ' correction(s) IA ce mois-ci.'
+                   : 'ton forfait en traite ' + esc(cap.files) + ' par correction — relance pour les suivants.');
+        }
+        showFlowStatus(statutCorrection(d) + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link + reste, 'ok');
         setTimeout(function () { window.location.reload(); }, 2400);
       })
       .catch(function () {

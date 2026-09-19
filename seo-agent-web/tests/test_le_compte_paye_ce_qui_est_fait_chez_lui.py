@@ -67,9 +67,6 @@ PLAFONDS_LOCAUX = {"_opp_has_access", "_competitor_has_access"}
 # chemin. Chacune est couverte par un test de COMPORTEMENT plus haut dans ce fichier : la
 # dispense ne porte que sur la forme de l'appel, jamais sur ce qu'il fait.
 EXCEPTIONS: dict[str, str] = {
-    "_correction_gate":
-        "resout `compte` par `_compte_payeur` juste au-dessus ; teste par "
-        "test_la_porte_et_le_debit_visent_le_MEME_compte",
     "_correction_charge":
         "meme resolution que la porte, volontairement par le meme chemin ; meme test",
     "_run_crawl_job":
@@ -273,7 +270,13 @@ def test_le_job_de_crawl_porte_le_compte_proprietaire() -> None:
 
 # --- la garde qui enumere -------------------------------------------------------------------
 
-def _appels_de_facturation_dans_les_routes_a_slug() -> list[tuple[int, str, str, str]]:
+def _appels_de_facturation_sans_exceptions() -> list[tuple[int, str, str, str]]:
+    """Le meme relevé, dispenses COMPRISES — pour vérifier qu'elles servent encore."""
+    return _appels_de_facturation_dans_les_routes_a_slug(dispenser=False)
+
+
+def _appels_de_facturation_dans_les_routes_a_slug(
+        *, dispenser: bool = True) -> list[tuple[int, str, str, str]]:
     """(ligne, route, fonction de billing, source de l'argument user_id) pour chaque appel."""
     texte = APP_PY.read_text(encoding="utf-8")
     arbre = ast.parse(texte)
@@ -300,7 +303,7 @@ def _appels_de_facturation_dans_les_routes_a_slug() -> list[tuple[int, str, str,
         if not englobantes:
             continue
         _d, _f2, route, a_slug = max(englobantes, key=lambda p: p[0])
-        if not a_slug or route in EXCEPTIONS:
+        if not a_slug or (dispenser and route in EXCEPTIONS):
             continue
         arg = None
         for kw in n.keywords:
@@ -332,3 +335,18 @@ def test_AUCUNE_route_projet_ne_facture_la_personne_connectee() -> None:
                if src not in acceptes and not src.startswith("_compte_payeur(")]
     assert not fautifs, "ces appels facturent la personne connectee sur un projet :\n" + "\n".join(
         "  app.py:%d  %s -> %s(user_id=%s)" % (l, r, fn, src) for l, r, fn, src in fautifs)
+
+
+def test_aucune_dispense_ne_SURVIT_a_ce_qu_elle_dispensait() -> None:
+    """Une dispense morte est pire qu'une dispense de trop : elle se lit comme une permission.
+
+    `_correction_gate` figurait ici parce qu'il appelait `remaining_quota`. Le calcul est parti
+    dans `_plafond_de_correction` le 19/09/2026 et la ligne serait restee — disant a qui la lit
+    que la porte a le droit de facturer la mauvaise personne, alors qu'elle ne facture plus
+    rien. Ce test fait tomber les dispenses en meme temps que leur raison d'etre.
+    """
+    vivantes = {r for (_l, r, _fn, _src) in _appels_de_facturation_sans_exceptions()}
+    mortes = sorted(set(EXCEPTIONS) - vivantes)
+    assert not mortes, (
+        "ces fonctions n'appellent plus rien de facturable : retire leur dispense au lieu de "
+        "la laisser se lire comme une permission :\n  " + "\n  ".join(mortes))

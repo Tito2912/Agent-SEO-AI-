@@ -37,7 +37,7 @@ from email.utils import formataddr
 from functools import lru_cache
 from pathlib import Path
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 import requests
@@ -3501,6 +3501,55 @@ def _plan_correction_cfg(user: Any, *, compte: str = "") -> dict[str, Any]:
     return {"plan": plan, "model": str(base["model"]), "max_files": int(base["max_files"]), "unlimited": False}
 
 
+class _Plafond(NamedTuple):
+    """Combien de fichiers une correction peut traiter, ET ce qui a fixe ce nombre.
+
+    Deux bornes se rencontrent ici et elles ne se disent pas de la meme facon au client :
+    le PLAFOND DU FORFAIT (relancer la correction traite les suivants) et le QUOTA MENSUEL
+    (relancer serait refuse). Un message qui nomme la mauvaise borne envoie quelqu'un cliquer
+    pour rien, ce qui est pire que se taire. D'ou le fait de transporter les deux.
+    """
+
+    applique: int
+    plan: int
+    restant: int | None
+    modele: str
+    illimite: bool
+
+
+def _plafond_de_correction(user: Any, *, slug: str = "") -> _Plafond:
+    """Le calcul UNIQUE du plafond : la porte d'entree et le message en sortent tous deux.
+
+    `_correction_gate` decide d'ouvrir ou non ; `_note_de_troncature` explique la coupe. Les
+    deux lisaient la meme chose, et les laisser la recalculer chacun de leur cote est
+    exactement la forme de bug que ce projet a deja payee trois fois aujourd'hui : deux
+    endroits qui repondent a la meme question et finissent par diverger.
+    """
+    compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
+    cfg = _plan_correction_cfg(user, compte=compte)
+    plan, modele = int(cfg["max_files"]), str(cfg["model"])
+    if cfg["unlimited"]:
+        return _Plafond(plan, plan, None, modele, True)
+    if plan <= 0:
+        return _Plafond(0, plan, None, modele, False)
+    # Nomme, et pas ecrit dans l'appel : la garde qui enumere les facturations des routes a
+    # `slug` lit la SOURCE de `user_id`, et une expression composee lui est opaque. Sortir le
+    # compte payeur sous son nom garde cette fonction sous surveillance au lieu de lui valoir
+    # une dispense — une dispense de plus est une ligne que personne ne relira.
+    payeur = (compte or "").strip() or str(getattr(user, "id", "") or "")
+    try:
+        with DB.session() as _db:
+            restant = billing.remaining_quota(_db, user_id=payeur,
+                                              metric="ai_corrections_month")
+    except Exception:
+        restant = None
+    if not isinstance(restant, int):
+        return _Plafond(plan, plan, None, modele, False)
+    if restant <= 0:
+        return _Plafond(0, plan, restant, modele, False)
+    return _Plafond(max(1, min(plan, restant)), plan, restant, modele, False)
+
+
 def _correction_gate(user: Any, *, slug: str = "") -> tuple[bool, str, int, str]:
     """Check whether the user may run an AI correction now.
 
@@ -3511,25 +3560,14 @@ def _correction_gate(user: Any, *, slug: str = "") -> tuple[bool, str, int, str]
     C'est le slug qui est passe et non le compte deja resolu, pour une raison precise : le plan
     et le reste du quota doivent venir du MEME compte. Laisser l'appelant fournir un compte
     rendrait possible un plafond de fichiers pris chez l'un et un solde pris chez l'autre."""
-    compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
-    cfg = _plan_correction_cfg(user, compte=compte)
-    if cfg["unlimited"]:
-        return True, "", int(cfg["max_files"]), str(cfg["model"])
-    if int(cfg["max_files"]) <= 0:
+    p = _plafond_de_correction(user, slug=slug)
+    if p.illimite:
+        return True, "", p.applique, p.modele
+    if p.plan <= 0:
         return False, "Les corrections IA ne sont pas incluses dans ton forfait. Passe à un plan supérieur.", 0, ""
-    try:
-        with DB.session() as _db:
-            remaining = billing.remaining_quota(
-                _db, user_id=(compte or "").strip() or str(getattr(user, "id", "") or ""),
-                metric="ai_corrections_month")
-    except Exception:
-        remaining = None
-    if isinstance(remaining, int) and remaining <= 0:
+    if isinstance(p.restant, int) and p.restant <= 0:
         return False, "Quota de corrections IA atteint ce mois-ci. Va sur Abonnement pour upgrade.", 0, ""
-    cap = int(cfg["max_files"])
-    if isinstance(remaining, int):
-        cap = max(1, min(cap, remaining))
-    return True, "", cap, str(cfg["model"])
+    return True, "", p.applique, p.modele
 
 
 def _correction_charge(user: Any, count: int, *, slug: str = "") -> None:
@@ -22755,6 +22793,7 @@ def _resolve_issue_targets(
     allow_ai: bool = True,
     ai_map: "Callable[[], list[str]] | None" = None,
     ai_pick: "Callable[[], list[str]] | None" = None,
+    ecartes: list[str] | None = None,
 ) -> list[str]:
     """Decide WHICH repo files to patch for one issue. Pure and deterministic apart from the
     two optional AI fallbacks, so the whole ordering can be tested without network.
@@ -22912,6 +22951,10 @@ def _resolve_issue_targets(
         # to it would edit a rule instead of the data it produced.
         named = [p for p in targets if _is_sitemap_path(p)]
         targets = named or [p for p in targets if p in _SITEMAP_GENERATOR_CONFIGS]
+    # Ce que le plafond jette n'est pas perdu : sans cette liste, une correction qui
+    # traite 8 candidats sur 9 est indiscernable d'une correction complete.
+    if ecartes is not None:
+        ecartes.extend(targets[max_files:])
     return targets[:max_files]
 
 
@@ -22977,6 +23020,33 @@ _SKIPPED_REASONS: dict[str, str] = {
                "C'est le refus attendu sur une page mince (contact, à-propos) : atteindre la "
                "longueur cible y demanderait d'inventer du contenu."),
 }
+
+
+def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None") -> str:
+    """Les fichiers qu'une correction n'a meme pas ESSAYES, faute de place sous le plafond.
+
+    `_skipped_note` couvre les fichiers essayes puis refuses, et sa docstring enonce
+    exactement le risque : « A correction that silently drops two thirds of its targets looks
+    like a complete one. » Mais la troncature arrive UN CRAN PLUS TOT, dans la selection des
+    cibles, donc hors de sa portee. Le garde-fou protegeait la mauvaise moitie du chemin.
+
+    NOMMER LA BONNE BORNE. « Relance la correction » est le bon conseil quand c'est le plafond
+    du forfait qui a coupe, et un mauvais quand c'est le quota du mois : la relance serait
+    refusee a la porte. Les deux messages sont donc distincts, et c'est toute la raison pour
+    laquelle `_plafond_de_correction` transporte les deux nombres au lieu du seul resultat.
+    """
+    rows = [p for p in dict.fromkeys(ecartes or []) if p]
+    if not rows:
+        return ""
+    if plafond is not None and isinstance(plafond.restant, int) and plafond.restant <= plafond.plan:
+        conseil = ("Il te restait %d correction(s) IA ce mois-ci. Relance apres le "
+                   "renouvellement, ou passe a un plan superieur." % plafond.restant)
+    else:
+        conseil = ("Ton forfait traite %d fichier(s) par correction. Relance la correction "
+                   "pour traiter les suivants." % (plafond.plan if plafond else len(rows)))
+    head = (f"\n\n> 📄 **Non traités : {len(rows)} fichier(s)** — le plafond a coupé avant "
+            f"de les atteindre. {conseil} Ces pages resteront signalées au prochain crawl :\n")
+    return head + "\n".join(f"> - `{p}`" for p in rows[:12])
 
 
 def _skipped_note(issue_key: str, skipped: list[str], targets: list[str]) -> str:
@@ -23516,6 +23586,7 @@ def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
     site_name: str, file_state: dict[str, dict[str, str]], max_files: int = 8,
+    ecartes: list[str] | None = None,
     evidence: list[str] | None = None, extra_hint: str = "", model_override: str = "",
     link_rewriter: "Callable[[str], tuple[str, int]] | None" = None,
     rewriter_ai_fallback: bool = False,
@@ -23591,13 +23662,16 @@ def _deep_patch_issue_files(
         # issue (Search Console gives the URL, the repo route map gives its source), where the
         # resolution chain below could only add guesses — and its last two steps are AI file
         # pickers, the step behind every wrong-file patch this corrector has ever shipped.
-        targets = [p for p in targets_override if p in all_paths][:max_files]
+        _nommes = [p for p in targets_override if p in all_paths]
+        if ecartes is not None:
+            ecartes.extend(_nommes[max_files:])
+        targets = _nommes[:max_files]
     else:
         targets = _resolve_issue_targets(
             all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
             impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
             wants_page_targeting=link_rewriter is not None, page_side=page_side,
-            allow_ai=allow_ai_targeting,
+            allow_ai=allow_ai_targeting, ecartes=ecartes,
         )
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     _idiom = repo_index.stack_idiom_hint(index) if index else ""
@@ -24029,6 +24103,13 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    # Le plafond est relu ICI, et non deduit de `gate_max_files`, parce que le message
+    # doit nommer la borne qui a coupe : le forfait (relancer traite les suivants) ou le
+    # quota du mois (relancer serait refuse a la porte). Les deux nombres sortent de la
+    # MEME fonction que le gate, donc ils ne peuvent pas se contredire.
+    _plafond = _plafond_de_correction(user, slug=slug)
+    # Les candidats que le plafond ecarte avant meme un essai ; rempli par la boucle.
+    _ecartes: list[str] = []
     gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user, slug=slug)
     if not gate_ok:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
@@ -24155,6 +24236,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         patched_files, skipped, targets, _ai_files = [], [], [], []
     else:
         patched_files, skipped, targets, _ai_files = _deep_patch_issue_files(
+            ecartes=_ecartes,
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
             site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
@@ -24235,6 +24317,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         + _config_note_block
         + _fix_nature_note(bool(_ai_files), issue_key, _prep.get("url_pairs"))
         + _skipped_note(issue_key, skipped, targets)
+        + _note_de_troncature(_ecartes, _plafond)
         + str(_prep.get("side_effects") or "")
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
@@ -24287,6 +24370,10 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
         "merged": _merged, "verification": "en_attente", "files": all_changed, "files_count": len(all_changed),
         "config_fixed": config_notes, "pages_count": len(impacted), "skipped": skipped,
+        # Ce que le plafond a laisse de cote. Sans ces champs l'interface affiche
+        # « 8 fichier(s) pour 9 page(s) » et laisse le client faire la soustraction.
+        "not_attempted": _ecartes[:12], "not_attempted_count": len(_ecartes),
+        "cap": {"files": _plafond.plan, "left": _plafond.restant},
     })
 
 
