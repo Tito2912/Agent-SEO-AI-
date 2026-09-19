@@ -428,3 +428,108 @@ def test_le_nombre_ANNONCE_est_le_nombre_APPLIQUE() -> None:
         chiffres = re.findall(r"\d+", annonces[0])
         assert chiffres and int(chiffres[0]) == places, (
             "%s annonce %r mais applique %d places" % (cle, annonces[0], places))
+
+
+# --- l'invite qui n'a pas encore de compte -------------------------------------------------
+
+def test_un_INVITE_SANS_COMPTE_peut_s_inscrire_malgre_la_beta_fermee(monkeypatch) -> None:
+    """Le parcours cassait pour exactement les gens qu'on veut faire entrer.
+
+    L'inscription publique est fermee par un code de beta (`SIGNUP_INVITE_CODE`) et, le cas
+    echeant, par une liste blanche d'adresses. Un consultant invite qui n'a pas encore de compte
+    clique sur son lien, arrive sur l'inscription, et se heurte a un code qu'il n'a aucun moyen
+    d'obtenir. L'invitation d'un client payant vaut donc autorisation.
+
+    LES DEUX VERROUS sont leves ensemble. N'en lever qu'un serait pire que rien : l'invite
+    franchirait le code puis buterait sur la liste blanche, avec un refus qui ne lui apprend
+    rien et que personne ne saurait diagnostiquer.
+    """
+    monkeypatch.setenv("SIGNUP_INVITE_CODE", "code-de-la-beta")
+    monkeypatch.setenv("SIGNUP_ALLOWLIST_DOMAINS", "personne-autorisee.fr")
+
+    patron, _ = _utilisateur("agence", plan="pro")
+    adresse = "nouveau-%s@exemple.fr" % uuid.uuid4().hex[:8]
+    invitation, _jeton, erreur = m._creer_invitation(
+        owner_user_id=patron, email=adresse, invited_by=patron)
+    assert invitation is not None, erreur
+
+    client = TestClient(app)
+    page = client.get("/auth/signup")
+    csrf = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
+    rep = client.post("/auth/signup",
+                      data={"email": adresse, "password": "motdepasse-long-1",
+                            "_csrf": csrf.group(1) if csrf else ""},
+                      follow_redirects=False)
+    assert rep.status_code in (302, 303), (rep.status_code, rep.text[:400])
+    with m.DB.session() as db:
+        assert db.scalar(select(User).where(User.email == adresse)) is not None, (
+            "l'invite n'a pas pu creer son compte")
+
+
+def test_une_adresse_NON_invitee_reste_dehors(monkeypatch) -> None:
+    """Le bord sans lequel la correction precedente serait une porte derobee."""
+    monkeypatch.setenv("SIGNUP_INVITE_CODE", "code-de-la-beta")
+    _patron, _ = _utilisateur("agence", plan="pro")
+    adresse = "inconnu-%s@exemple.fr" % uuid.uuid4().hex[:8]
+
+    client = TestClient(app)
+    page = client.get("/auth/signup")
+    csrf = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
+    rep = client.post("/auth/signup",
+                      data={"email": adresse, "password": "motdepasse-long-1",
+                            "_csrf": csrf.group(1) if csrf else ""},
+                      follow_redirects=False)
+    with m.DB.session() as db:
+        cree = db.scalar(select(User).where(User.email == adresse))
+    assert cree is None, "une adresse jamais invitee a pu s'inscrire malgre la beta fermee"
+    assert rep.status_code in (303, 403), rep.status_code
+
+
+def test_une_invitation_UTILISEE_ne_rouvre_pas_l_inscription(monkeypatch) -> None:
+    """L'ouverture se referme : sinon une invitation acceptee laisserait une porte entrouverte."""
+    monkeypatch.setenv("SIGNUP_INVITE_CODE", "code-de-la-beta")
+    patron, _ = _utilisateur("agence", plan="pro")
+    consultant, adresse = _utilisateur("consultant")
+    _inv, jeton, _e = m._creer_invitation(owner_user_id=patron, email=adresse, invited_by=patron)
+
+    class _P:
+        id = consultant
+    assert m._accepter_invitation(token=jeton, user=_P())[0]
+    assert not m._invitation_en_attente_pour_email(adresse), (
+        "l'invitation acceptee autorise encore une inscription")
+
+
+def test_une_invitation_PERIMEE_ne_rouvre_pas_l_inscription(monkeypatch) -> None:
+    """Le trou qu'une mutation a revele : seule l'invitation UTILISEE etait couverte.
+
+    Une invitation oubliee reste en base indefiniment — personne ne la nettoie, elle expire
+    simplement. Si l'expiration ne comptait pas ici, chaque adresse jamais invitee avec succes
+    garderait une autorisation d'inscription permanente, longtemps apres que le proprietaire a
+    cesse d'y penser.
+    """
+    monkeypatch.setenv("SIGNUP_INVITE_CODE", "code-de-la-beta")
+    patron, _ = _utilisateur("agence", plan="pro")
+    adresse = "oublie-%s@exemple.fr" % uuid.uuid4().hex[:8]
+    invitation, _jeton, erreur = m._creer_invitation(
+        owner_user_id=patron, email=adresse, invited_by=patron)
+    assert invitation is not None, erreur
+    assert m._invitation_en_attente_pour_email(adresse), "le temoin est faux"
+
+    with m.DB.session() as db:
+        ligne = db.get(AccountInvite, str(invitation.id))
+        ligne.expires_at = m._utc_now_naive() - timedelta(minutes=1)
+        db.commit()
+
+    assert not m._invitation_en_attente_pour_email(adresse), (
+        "une invitation perimee autorise encore une inscription")
+
+    client = TestClient(app)
+    page = client.get("/auth/signup")
+    csrf = re.search(r'name="_csrf"\s+value="([^"]*)"', page.text)
+    client.post("/auth/signup",
+                data={"email": adresse, "password": "motdepasse-long-1",
+                      "_csrf": csrf.group(1) if csrf else ""},
+                follow_redirects=False)
+    with m.DB.session() as db:
+        assert db.scalar(select(User).where(User.email == adresse)) is None, (
+            "un compte a ete cree sur une invitation perimee")

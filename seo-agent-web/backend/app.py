@@ -499,6 +499,32 @@ def _revoquer_invitation(*, owner_user_id: str, invite_id: str) -> tuple[bool, s
     return True, "Invitation annulée."
 
 
+def _invitation_en_attente_pour_email(email: str) -> bool:
+    """Cette adresse a-t-elle une invitation d'equipe valable ?
+
+    Sert a UNE chose : ouvrir l'inscription a quelqu'un qu'un client payant a nommement invite.
+    Sans cela le parcours casse exactement pour les gens qu'on veut faire entrer — l'invite qui
+    n'a pas encore de compte clique, arrive sur l'inscription, et se heurte au code de la beta
+    fermee qu'il n'a aucun moyen d'obtenir.
+
+    Ce n'est pas une porte derobee : l'ouverture ne vaut que pour une adresse ecrite a la main
+    par un proprietaire, elle est bornee par le nombre de places de son forfait, et elle se
+    referme des que l'invitation est utilisee ou perimee.
+    """
+    adresse = _normalize_email(email)
+    if not adresse:
+        return False
+    maintenant = _utc_now_naive()
+    try:
+        with DB.session() as db:
+            lignes = list(db.scalars(select(AccountInvite).where(
+                AccountInvite.email == adresse, AccountInvite.used_at.is_(None))))
+    except Exception:
+        # Table absente ou illisible : on ne DONNE pas l'acces par accident.
+        return False
+    return any((_dt_as_naive_utc(i.expires_at) or maintenant) > maintenant for i in lignes)
+
+
 def _send_account_invite_email(*, to_email: str, accept_url: str, owner_email: str,
                                expires_at: datetime) -> None:
     ttl_s = _seconds_until(expires_at)
@@ -11977,7 +12003,12 @@ def auth_signup(
     n = _safe_next_path(next)
     if user:
         return RedirectResponse(url=n, status_code=303)
-    invite_required = bool(_safe_env("SIGNUP_INVITE_CODE"))
+    # Le champ de code est cache quand on arrive d'une invitation d'equipe. La decision est
+    # PUREMENT COSMETIQUE et ne porte aucune autorite : c'est le POST qui verifie, et il
+    # n'accepte un code vide que si une invitation existe pour l'adresse soumise. Cacher le
+    # champ ne peut donc rien ouvrir — mais l'afficher demanderait a quelqu'un de remplir une
+    # case dont il ne peut pas connaitre le contenu.
+    invite_required = bool(_safe_env("SIGNUP_INVITE_CODE")) and not n.startswith("/team/accept")
     signup_disabled = _env_bool("SIGNUP_DISABLED")
     e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
@@ -12075,9 +12106,16 @@ def auth_signup_submit(
                 return _signup_error("Inscriptions fermées.", 403)
             if not bootstrap_admin_email or e != bootstrap_admin_email:
                 return _signup_error("Inscriptions fermées.", 403)
-        if invite_required and not hmac.compare_digest(invite_code_clean, invite_expected):
+        # Une invitation d'equipe vaut autorisation d'inscription, et elle leve les DEUX
+        # verrous. N'en lever qu'un serait pire que de n'en lever aucun : l'invite franchirait
+        # le code puis buterait sur la liste blanche, avec un refus qui ne lui apprend rien.
+        # L'ouverture est nominative — une adresse ecrite par un client payant —, bornee par
+        # les places de son forfait, et elle se referme des que l'invitation est utilisee.
+        invite_par_une_equipe = _invitation_en_attente_pour_email(e)
+        if invite_required and not invite_par_une_equipe and not hmac.compare_digest(
+                invite_code_clean, invite_expected):
             return _signup_error("Code d’invitation invalide.", 403)
-        if allowlist_configured:
+        if allowlist_configured and not invite_par_une_equipe:
             domain = e.split("@", 1)[1] if "@" in e else ""
             if (e not in allow_emails) and (domain not in allow_domains):
                 return _signup_error("Accès bêta: email non autorisé.", 403)
