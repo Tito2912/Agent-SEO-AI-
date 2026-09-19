@@ -1,32 +1,38 @@
 # -*- coding: utf-8 -*-
-"""Un garde-fou qui MODIFIE le fichier doit faire partir la correction, meme si le reecriveur
-n'avait rien trouve.
+"""Un garde-fou qui MODIFIE le fichier doit faire partir la correction, et n'est pas le modele.
 
-LE DEFAUT, MESURE LE 19/09/2026 SUR UN SITE CLIENT. Le reecriveur d'og:url ne trouve rien a
-remplacer sur une page Next.js qui herite son openGraph de la mise en page racine. Il rend alors
-`{"no_change": True, "patched_content": raw}`. Les garde-fous s'executent ensuite — et l'un
-d'eux, l'insertion d'og:url, ECRIVAIT bien la ligne manquante. Puis venait :
+Deux defauts de plomberie de la meme boucle, trouves le 19/09/2026 en corrigeant autre chose.
+Le geste qui les avait reveles a depuis ete retire — il etait faux pour une raison sans rapport
+— mais les deux defauts, eux, sont reels et concernent TOUT garde-fou pose apres le reecriveur.
+
+C'est pourquoi ces tests ne passent par AUCUNE famille : ils remplacent un garde-fou quelconque
+par un qui ecrit. La propriete testee appartient a la boucle, pas a une couverture.
+
+DEFAUT 1 — le drapeau du reecriveur jetait le travail des garde-fous.
 
     if patch.get("no_change") or new_content.strip() == raw.strip():
         continue
 
-Le drapeau `no_change` dit ce que le REECRIVEUR a fait. Il ne dit rien de ce que le fichier est
-devenu APRES les garde-fous, qui ecrivent eux aussi. Le tester ici jetait donc le travail d'un
-garde-fou au motif que l'etape d'avant n'avait rien fait. Neuf pages signalees, zero fichier
-patche, et pas une ligne dans les journaux pour l'expliquer — la correction avait bel et bien
-ete calculee, puis oubliee une instruction plus loin.
+`no_change` dit ce que le REECRIVEUR a fait. Il ne dit rien de ce que le fichier est devenu
+APRES les garde-fous, qui ecrivent eux aussi. La correction etait calculee, puis oubliee une
+instruction plus loin, sans une ligne dans les journaux. La seule question valable est « le
+contenu a-t-il change ? », et la comparaison y repondait deja.
 
-LA SEULE QUESTION EST « LE CONTENU A-T-IL CHANGE ? », et la comparaison y repond deja. Le
-drapeau etait redondant : les deux seuls retours qui le posent dans cette boucle portent
-`patched_content: raw`. Les autres `no_change` du produit n'ont pas de `patched_content` et
-sortent plus haut.
+DEFAUT 2 — tout ce qui n'etait pas marque deterministe etait mis au compte du modele.
 
-CE TEST NE VISE PAS QUE og:url. Tout garde-fou pose apres le reecriveur etait concerne — la
-completion Open Graph l'est aussi. C'est la boucle qui est testee, pas une famille.
+    if not patch.get("deterministic"):
+        ai_files.append(path)
+
+`deterministic` ne repond qu'a « le reecriveur a-t-il trouve quelque chose ? ». Son ABSENCE
+etait lue comme « c'est donc le modele qui a ecrit » — vrai tant que seuls ces deux-la
+ecrivaient, faux des qu'un garde-fou pose la correction apres coup. Consequence mesuree : huit
+fichiers factures au quota IA sans un seul appel au modele, et une pull request demandant de
+relire une prose que personne n'avait ecrite.
 """
 
 from __future__ import annotations
 
+import base64
 import os
 import sys
 from pathlib import Path
@@ -41,177 +47,118 @@ os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
 from backend import app as m  # noqa: E402
 
 CHEMIN = "app/about/page.tsx"
-PAGE = """import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
+PAGE = """export const metadata = {
   title: 'About',
-  alternates: { canonical: '/about' },
 };
-
-export default function AboutPage() {
-  return <article><h1>About</h1></article>;
-}
 """
+MARQUE = "// touche par un garde-fou\n"
 
 
-def _lancer(monkeypatch, *, rewriter) -> tuple[list[str], dict[str, str]]:
-    """Fait tourner la boucle sur UN fichier, sans reseau, et rend (fichiers patches, commits).
+def _garde_qui_ecrit(monkeypatch) -> None:
+    """Remplace UN garde-fou par un qui modifie toujours le fichier.
 
-    `file_state` pre-rempli court-circuite la lecture GitHub ; seule l'ECRITURE est interceptee.
-    On mesure donc ce que la boucle a reellement decide de committer.
+    Lequel importe peu — c'est la boucle qu'on teste. Passer par une famille reelle ferait
+    dependre ces tests d'une couverture qui peut changer, alors que la propriete, elle, ne
+    bouge pas : ce qui a ete ecrit doit partir, et n'est pas l'oeuvre du modele.
+    """
+    monkeypatch.setattr(m, "_enforce_length_ceilings",
+                        lambda new, old: (MARQUE + new, ["garde-fou de test"]))
+
+
+def _lancer(monkeypatch, *, rewriter=None, patch_du_modele=None, contenu=PAGE):
+    """Fait tourner la boucle sur UN fichier, sans reseau.
+
+    `file_state` pre-rempli court-circuite la lecture GitHub ; seule l'ECRITURE est interceptee,
+    pour mesurer ce que la boucle a REELLEMENT decide de committer.
+
+    Rend (patched, ai_files, commits). Attention : `_deep_patch_issue_files` rend QUATRE valeurs
+    — (patched, skipped, targets, ai_files) — et confondre `targets` avec `ai_files` fait
+    echouer le test sur un code correct. C'est arrive.
     """
     commits: dict[str, str] = {}
 
     def _faux_put(chemin, *, token, json_body):
-        import base64
         commits[chemin] = base64.b64decode(json_body["content"]).decode("utf-8")
         return {"content": {"sha": "neuf"}, "commit": {"sha": "abc", "html_url": ""}}
 
     monkeypatch.setattr(m, "_github_api_put", _faux_put)
-    monkeypatch.setattr(m, "_github_api_get",
-                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("lecture reseau")))
+    if patch_du_modele is not None:
+        monkeypatch.setattr(m, "_openai_generate_file_patch", lambda **kw: patch_du_modele)
 
-    patches, _skipped, _ai = m._deep_patch_issue_files(
+    patched, _skipped, _targets, ai = m._deep_patch_issue_files(
         owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
         all_paths=[CHEMIN], issue_key="open_graph_url_not_matching_canonical",
-        issue_label="OG URL", impacted_urls=["https://oryvalo.com/about"],
-        site_name="oryvalo", file_state={CHEMIN: {"sha": "vieux", "content": PAGE}},
+        issue_label="OG URL", impacted_urls=["https://exemple.fr/about"],
+        site_name="exemple", file_state={CHEMIN: {"sha": "vieux", "content": contenu}},
         max_files=4, link_rewriter=rewriter, rewriter_ai_fallback=False,
         targets_override=[CHEMIN], allow_ai_targeting=False,
-    )[:3]
-    return patches, commits
+    )
+    return patched, ai, commits
 
+
+# --- defaut 1 : ce qui a ete ecrit doit partir -------------------------------------------
 
 def test_le_fichier_PART_meme_si_le_reecriveur_n_a_rien_trouve(monkeypatch) -> None:
-    """Le defaut exact : la correction etait calculee puis jetee.
-
-    Le reecriveur rend (contenu inchange, 0) — c'est ce qui se produit quand la valeur fautive
-    est heritee et n'est ecrite dans aucun fichier de page. L'insertion prend le relais et pose
-    la ligne. La boucle doit committer.
-    """
-    patches, commits = _lancer(monkeypatch, rewriter=lambda raw: (raw, 0))
-    assert patches == [CHEMIN], "le fichier n'a pas été patché : %r" % patches
-    # La cle est le chemin d'API complet (`/repos/o/r/contents/<fichier>`), pas le chemin nu.
-    ecrits = {k: v for k, v in commits.items() if k.endswith(CHEMIN)}
-    assert ecrits, "rien n'a été commité : %r" % list(commits)
-    contenu = next(iter(ecrits.values()))
-    assert "openGraph: { url: '/about' }," in contenu, contenu
+    """Le reecriveur rend (contenu inchange, 0) ; un garde-fou ecrit ensuite. La boucle doit
+    committer — sinon le travail du garde-fou est perdu en silence."""
+    _garde_qui_ecrit(monkeypatch)
+    patched, _ai, commits = _lancer(monkeypatch, rewriter=lambda raw: (raw, 0))
+    assert patched == [CHEMIN], "le fichier n'a pas été patché : %r" % patched
+    ecrits = [v for k, v in commits.items() if k.endswith(CHEMIN)]
+    assert ecrits and MARQUE in ecrits[0], "le travail du garde-fou n'a pas été commité"
 
 
 def test_un_fichier_reellement_INCHANGE_ne_part_pas(monkeypatch) -> None:
-    """L'autre moitie, sans laquelle la correction precedente serait une regression.
-
-    Quand aucun garde-fou n'a rien a ecrire non plus, la boucle doit toujours s'abstenir : une
-    pull request au diff vide est pire qu'une absence de pull request.
-    """
-    sans_canonical = PAGE.replace("  alternates: { canonical: '/about' },\n", "")
-    commits: dict[str, str] = {}
-
-    def _faux_put(chemin, *, token, json_body):
-        import base64
-        commits[chemin] = base64.b64decode(json_body["content"]).decode("utf-8")
-        return {"content": {"sha": "neuf"}, "commit": {"sha": "abc", "html_url": ""}}
-
-    monkeypatch.setattr(m, "_github_api_put", _faux_put)
-    patches = m._deep_patch_issue_files(
-        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
-        all_paths=[CHEMIN], issue_key="open_graph_url_not_matching_canonical",
-        issue_label="OG URL", impacted_urls=["https://oryvalo.com/about"],
-        site_name="oryvalo", file_state={CHEMIN: {"sha": "vieux", "content": sans_canonical}},
-        max_files=4, link_rewriter=lambda raw: (raw, 0), rewriter_ai_fallback=False,
-        targets_override=[CHEMIN], allow_ai_targeting=False,
-    )[0]
-    assert patches == [], "un fichier sans aucune modification a été commité : %r" % patches
+    """L'autre moitie : sans elle, la correction precedente ouvrirait des pull requests vides."""
+    patched, _ai, commits = _lancer(monkeypatch, rewriter=lambda raw: (raw, 0))
+    assert patched == [], "un fichier sans aucune modification a été commité : %r" % patched
     assert not commits
 
 
-def test_la_decision_de_jeter_ne_consulte_PLUS_le_drapeau() -> None:
+def test_la_decision_de_jeter_ne_consulte_PAS_le_drapeau() -> None:
     """La garde qui empeche le drapeau de revenir.
 
-    Le remettre serait tentant — il a l'air d'un raccourci gratuit — et casserait a nouveau
-    tout garde-fou qui ecrit apres un reecriveur bredouille. Le defaut ne se voit nulle part :
-    le produit repond « aucun fichier patché », ce qui ressemble a une limite du correcteur.
+    Le remettre a l'air d'un raccourci gratuit et casse a nouveau tout garde-fou qui ecrit apres
+    un reecriveur bredouille. Le defaut ne se voit nulle part : le produit repond « aucun
+    fichier patché », ce qui ressemble a une limite du correcteur.
     """
     import inspect
 
     source = inspect.getsource(m._deep_patch_issue_files)
-    ligne = [l.strip() for l in source.splitlines()
-             if "continue" in l or "new_content.strip() == raw.strip()" in l]
-    decision = [l for l in ligne if "new_content.strip() == raw.strip()" in l]
+    decision = [l.strip() for l in source.splitlines()
+                if "new_content.strip() == raw.strip()" in l]
     assert decision, "la comparaison de contenu a disparu de la boucle"
     assert not any("no_change" in l for l in decision), (
         "la décision de jeter consulte à nouveau `no_change` : un garde-fou qui écrit sera "
         "ignoré quand le réécriveur n'a rien trouvé — %s" % decision)
 
 
-# --- qui a ECRIT la correction ------------------------------------------------------------
-
-def _lancer_et_compter(monkeypatch, *, rewriter, contenu=PAGE):
-    """Rend (patches, ai_files) pour un fichier donne."""
-    monkeypatch.setattr(
-        m, "_github_api_put",
-        lambda chemin, *, token, json_body: {"content": {"sha": "neuf"},
-                                             "commit": {"sha": "abc", "html_url": ""}})
-    # QUATRE valeurs : (patched, skipped, targets, ai_files). Un `[:3]` faisait lire
-    # `targets` en croyant lire `ai_files` — le test mesurait la mauvaise liste et echouait
-    # sur un code correct.
-    patches, _skipped, _targets, ai = m._deep_patch_issue_files(
-        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
-        all_paths=[CHEMIN], issue_key="open_graph_url_not_matching_canonical",
-        issue_label="OG URL", impacted_urls=["https://oryvalo.com/about"],
-        site_name="oryvalo", file_state={CHEMIN: {"sha": "vieux", "content": contenu}},
-        max_files=4, link_rewriter=rewriter, rewriter_ai_fallback=False,
-        targets_override=[CHEMIN], allow_ai_targeting=False,
-    )
-    return patches, ai
-
+# --- defaut 2 : qui a ECRIT la correction -------------------------------------------------
 
 def test_une_correction_DETERMINISTE_n_est_pas_mise_au_compte_du_modele(monkeypatch) -> None:
-    """Mesure du 19/09/2026, pull request #12 : huit fichiers factures pour rien.
+    """Mesure du 19/09/2026 : huit fichiers factures sans un seul appel au modele.
 
-    Le repli IA de cette famille est desactive au-dela d'une paire — il y en avait neuf — donc
-    AUCUN appel au modele n'a eu lieu. Les huit fichiers etaient pourtant comptes comme ecrits
-    par lui : factures au quota IA, et annonces dans la pull request comme une prose a relire.
-
-    Deux consequences, et aucune n'est cosmetique. Facturer un travail que le modele n'a pas
-    fait, c'est vendre du calcul qui n'a pas ete depense. Et annoncer « redige par le modele »
-    sur un diff mecanique apprend au client a se mefier de diffs qu'il pourrait merger les yeux
-    fermes.
+    Facturer un travail que le modele n'a pas fait, c'est vendre du calcul qui n'a pas ete
+    depense. Et annoncer « redige par le modele » sur un diff mecanique apprend au client a se
+    mefier de diffs qu'il pourrait merger les yeux fermes.
     """
-    patches, ai = _lancer_et_compter(monkeypatch, rewriter=lambda raw: (raw, 0))
-    assert patches == [CHEMIN], patches
+    _garde_qui_ecrit(monkeypatch)
+    patched, ai, _commits = _lancer(monkeypatch, rewriter=lambda raw: (raw, 0))
+    assert patched == [CHEMIN], patched
     assert ai == [], "un fichier que le modèle n'a pas touché est compté comme écrit par lui"
 
 
-def test_une_correction_REELLEMENT_ecrite_par_le_modele_reste_comptee(monkeypatch) -> None:
+def test_une_ecriture_REELLE_du_modele_reste_comptee(monkeypatch) -> None:
     """Le bord sans lequel la correction precedente cesserait de facturer ce qui doit l'etre.
 
-    MA PREMIERE SIMULATION ETAIT FAUSSE et vaut d'etre notee : je faisais rendre au reecriveur
-    un contenu modifie avec un compte de zero. Or ce contenu est JETE — un compte nul fait
-    prendre la branche « rien trouve », qui renvoie le fichier d'origine. Le modele n'ecrit pas
-    par ce chemin-la.
-
-    Le vrai chemin est `_openai_generate_file_patch`, qui rend un contenu SANS drapeau
-    deterministe. C'est lui qu'on remplace ici, et cette fois le fichier doit bien etre compte
-    comme ecrit par le modele : facture, et annonce comme une prose a relire.
+    MA PREMIERE SIMULATION ETAIT FAUSSE : je faisais rendre au reecriveur un contenu modifie
+    avec un compte de zero. Ce contenu est JETE — un compte nul fait prendre la branche « rien
+    trouve », qui renvoie le fichier d'origine. Le modele n'ecrit pas par ce chemin-la, mais par
+    `_openai_generate_file_patch`.
     """
-    ecrit_par_le_modele = PAGE.replace("title: 'About'", "title: 'A propos de nous'")
-
-    monkeypatch.setattr(
-        m, "_github_api_put",
-        lambda chemin, *, token, json_body: {"content": {"sha": "neuf"},
-                                             "commit": {"sha": "abc", "html_url": ""}})
-    monkeypatch.setattr(
-        m, "_openai_generate_file_patch",
-        lambda **kw: {"patched_content": ecrit_par_le_modele})
-
-    patches, _skipped, _targets, ai = m._deep_patch_issue_files(
-        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
-        all_paths=[CHEMIN], issue_key="open_graph_url_not_matching_canonical",
-        issue_label="OG URL", impacted_urls=["https://oryvalo.com/about"],
-        site_name="oryvalo", file_state={CHEMIN: {"sha": "vieux", "content": PAGE}},
-        max_files=4, link_rewriter=None, rewriter_ai_fallback=False,
-        targets_override=[CHEMIN], allow_ai_targeting=False,
-    )
-    assert patches == [CHEMIN], patches
+    ecrit_par_le_modele = PAGE.replace("'About'", "'A propos'")
+    patched, ai, _commits = _lancer(
+        monkeypatch, rewriter=None,
+        patch_du_modele={"patched_content": ecrit_par_le_modele})
+    assert patched == [CHEMIN], patched
     assert ai == [CHEMIN], "une écriture réelle du modèle n'est plus comptée : %r" % ai

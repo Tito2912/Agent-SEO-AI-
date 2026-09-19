@@ -21648,71 +21648,25 @@ def _align_og_url_with_added_canonical(new_content: str, old_content: str) -> tu
     return out, ["og:url aligne sur le canonical que ce correctif vient d'ajouter : %s" % canonical]
 
 
-# `alternates: { canonical: "<valeur>" }` sur UNE SEULE LIGNE, avec son indentation. La forme
-# multi-ligne et les objets `alternates` qui portent autre chose (`languages`) sont volontairement
-# hors de portee : savoir ou s'inserer dans une structure imbriquee est exactement ce qu'on
-# refuse de deviner.
-# `\s` MATCHE LES RETOURS A LA LIGNE, et l'ecrire ici rendait le motif faux : il acceptait la
-# forme multi-ligne que cette fonction pretend refuser. Chaque separateur est donc `[ \t]`,
-# jamais `\s` — le motif ne decrit pas « quelque chose qui ressemble a ca », il decrit UNE LIGNE.
-_NEXT_ALTERNATES_CANONICAL_RE = re.compile(
-    r"""^(?P<ind>[ \t]*)alternates[ \t]*:[ \t]*\{[ \t]*canonical[ \t]*:[ \t]*"""
-    r"""(?P<q>['"])(?P<val>[^'"\n]+)(?P=q)[ \t]*,?[ \t]*\}[ \t]*,?[ \t]*$""",
-    re.M)
-
-
-def _inserer_og_url_depuis_le_canonical(content: str) -> tuple[str, list[str]]:
-    """Ecrire un og:url la ou il n'est PAS ecrit, en recopiant le canonical de la meme page.
-
-    LE CAS QUE LE REECRIVEUR NE POUVAIT PAS VOIR, mesure le 19/09/2026 sur un site client reel
-    (neuf pages signalees, aucun fichier patche). En Next.js App Router, la mise en page racine
-    porte `openGraph: { url: <racine> }` et chaque page ne declare que son canonical. Next
-    HERITE l'openGraph : toutes les pages emettent donc l'og:url de la racine tandis que leur
-    canonical differe. La valeur fautive n'est ecrite dans aucun fichier de page — le reecriveur
-    cherchait une chaine a remplacer, n'en trouvait aucune, et s'abstenait. Il avait raison de ne
-    rien inventer ; il manquait simplement le second geste, INSERER.
-
-    ON RECOPIE LE LITTERAL, PAS UNE VALEUR CALCULEE. Le canonical de ces pages est relatif
-    (`/about`), et Next le resout contre `metadataBase` — exactement comme il resoudrait un
-    og:url relatif. Recopier la chaine telle quelle rend donc les deux valeurs egales PAR
-    CONSTRUCTION, quelle que soit leur forme, sans avoir a reconstruire une URL absolue ni a
-    connaitre le domaine. C'est aussi pour cela qu'on ne passe pas par le rapport de crawl : la
-    coherence recherchee est interne au fichier.
-
-    QUATRE REFUS, et ils sont le coeur de cette fonction :
-      - un `openGraph` deja present quelque part : on ne s'insere pas dans une structure qui
-        existe, on ne fait que poser une propriete absente ;
-      - plusieurs `alternates` : le fichier porte plusieurs pages, on ne sait pas de laquelle
-        on parle ;
-      - un `alternates` multi-ligne : la forme n'est pas celle qu'on sait cloner ;
-      - aucune correspondance : rien a faire.
-
-    UNE ABSTENTION ANTERIEURE EST LEVEE ICI, sciemment. Le code disait « les formes objet
-    demandent de savoir ou s'inserer dans une structure ; on s'y abstient, comme pour l'Open
-    Graph ». Cette prudence valait tant qu'une insertion ratee partait droit chez le client.
-    Depuis que les corrections attendent le verdict du build avant d'etre proposees, une erreur
-    de structure fait echouer la CI et la pull request reste en brouillon. Le risque a change de
-    nature, donc la reponse aussi.
-    """
-    if re.search(r"\bopenGraph\s*:", content):
-        return content, []
-    trouvees = list(_NEXT_ALTERNATES_CANONICAL_RE.finditer(content))
-    if len(trouvees) != 1:
-        return content, []
-    m = trouvees[0]
-    valeur = m.group("val").strip()
-    if not valeur or _VALEUR_ASSEMBLEE_RE.search(valeur):
-        return content, []
-    guillemet = m.group("q")
-    ligne = "%sopenGraph: { url: %s%s%s }," % (m.group("ind"), guillemet, valeur, guillemet)
-    fin = m.end()
-    sortie = content[:fin] + "\n" + ligne + content[fin:]
-    return sortie, ["og:url ecrit a partir du canonical de cette page : %s" % valeur]
-
-
 # Une annotation hreflang ECRITE EN BALISAGE, sous la forme qu'on saura cloner. Les formes objet
 # (next `alternates.languages`, nuxt `useHead({link})`) demandent de savoir ou s'inserer dans une
 # structure ; on s'y abstient, comme pour l'Open Graph.
+#
+# CETTE ABSTENTION A ETE LEVEE LE 19/09/2026, PUIS RETABLIE LE JOUR MEME, et la raison vaut
+# d'etre gardee. On avait ajoute un geste qui POSE `openGraph: { url: <canonical> }` sur une page
+# Next.js qui n'en a pas. Le diff etait propre, le build du client vert, la pull request ouverte
+# (#12 sur un depot reel). Mesure faite ENSUITE sur une reproduction Next.js minimale :
+#
+#     page SANS openGraph   -> 9 balises og:, toutes heritees de la mise en page racine
+#     page AVEC { url }     -> 2 balises. og:description, og:site_name, og:image et og:type
+#                              DISPARAISSENT.
+#
+# Next fusionne les metadonnees SUPERFICIELLEMENT : un `openGraph` defini sur la page remplace
+# entierement celui du layout. La correction reparait og:url en detruisant l'apercu de partage.
+#
+# Et le garde-fou du build N'A RIEN VU — le TypeScript etait valide. Un build attrape une erreur
+# de syntaxe, pas une regression de sens. C'est la limite exacte de ce filet, et l'argument
+# « on peut oser, le build nous rattrape » est donc faux pour cette classe de changement.
 _HREFLANG_LIEN_RE = re.compile(
     r"""^([ \t]*)<link\s+rel\s*=\s*(['"])alternate\2\s+hreflang\s*=\s*(['"])(?P<code>[^'"]+)\3"""
     r"""\s+href\s*=\s*(['"])(?P<href>[^'"]*)\5\s*/?>[ \t]*$""",
@@ -23699,18 +23653,6 @@ def _deep_patch_issue_files(
         _maitresse = (canonical_masters or {}).get(_url_par_fichier.get(path, ""), "")
         new_content, _master_notes = _keep_canonical_master(new_content, _maitresse)
         new_content, _og_notes = _align_og_url_with_added_canonical(new_content, raw)
-        # LE SECOND GESTE DE LA FAMILLE og:url : poser la valeur quand elle n'est ecrite nulle
-        # part. Le reecriveur sait REMPLACER une chaine ; il ne trouve rien a remplacer quand la
-        # valeur est heritee d'une mise en page racine, ce qui est le cas par defaut en Next.js
-        # App Router. Mesure du 19/09/2026 sur un site client : neuf pages signalees, aucun
-        # fichier patche.
-        # RESTREINT A CETTE FAMILLE, volontairement. Poser un openGraph dans la pull request
-        # d'une AUTRE anomalie elargirait un diff que le client a accepte de relire pour autre
-        # chose. La fonction se protege deja elle-meme, mais la portee est une decision
-        # editoriale, pas seulement technique.
-        if issue_key in _OG_URL_KEYS:
-            new_content, _ogi_notes = _inserer_og_url_depuis_le_canonical(new_content)
-            _og_notes = _og_notes + _ogi_notes
         # APRES l'alignement : il pose og:url quand le canonical vient d'etre ajoute, et la
         # completion ci-dessous doit voir ce qui EXISTE une fois tout le reste ecrit.
         new_content, _ogc_notes = _complete_open_graph(new_content, raw, site_og_image)
