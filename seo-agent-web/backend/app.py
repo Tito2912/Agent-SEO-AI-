@@ -13423,6 +13423,31 @@ def settings_root() -> RedirectResponse:
     return RedirectResponse(url="/settings/accounts", status_code=303)
 
 
+def _compte_hote_de(user_id: str) -> str:
+    """L'adresse du compte qui accueille cette personne, ou "" si elle n'est membre de personne.
+
+    Sert a DIRE, pas a autoriser : l'autorisation passe par `_comptes_accessibles`. Un membre
+    voit « compte connecte » sur sa carte GitHub et en deduit que c'est ce compte-la qui
+    poussera ses corrections. C'est faux sur les projets de son hote — les cinq routes qui
+    poussent lisent le jeton du PAYEUR (`_compte_payeur`), decision prise en connaissance de
+    cause : un client ne doit pas avoir a donner un acces en ecriture a ses depots pour que
+    l'agence travaille.
+
+    La divergence est donc VOULUE, contrairement a celles corrigees le 19/09/2026. Ce n'est
+    pas le comportement qu'il faut changer, c'est ce que la page raconte.
+    """
+    u = (user_id or "").strip()
+    comptes = [c for c in _comptes_accessibles(u) if c and c != u]
+    if not comptes:
+        return ""
+    try:
+        with DB.session() as db:
+            hote = db.get(User, comptes[0])
+            return str(getattr(hote, "email", "") or "")
+    except Exception:
+        return ""
+
+
 @app.get("/settings/accounts", response_class=HTMLResponse)
 def settings_accounts(
     request: Request,
@@ -13497,6 +13522,9 @@ def settings_accounts(
             "can_access_system_settings": _user_can_access_system_settings(user),
             "github_oauth": {
                 **github_oauth,
+                # Renseigne UNIQUEMENT pour un membre : sur les projets de cet hote, c'est
+                # son jeton GitHub qui pousse, pas celui affiche sur cette carte.
+                "compte_hote": _compte_hote_de(str(user.id)),
                 "connect_url": "/oauth/github/connect?next=/settings/accounts#github-connect-card",
                 "disconnect_url": "/oauth/github/disconnect",
                 "repos_url": "/api/github/repos",

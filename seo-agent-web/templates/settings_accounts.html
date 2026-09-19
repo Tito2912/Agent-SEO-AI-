@@ -688,6 +688,15 @@
           <div>
             <h2 class="setting-title">GitHub</h2>
             <div class="muted small">Compte utilisé pour sélectionner les dépôts et préparer les flux de fix/deploy.</div>
+            {% if github_oauth.compte_hote %}
+              {# Sans cette phrase, un membre lit « compte connecté » et en déduit que ses
+                 corrections partiront de CE compte. Sur les projets de son hôte, elles
+                 partent du jeton de l'hôte — décision assumée, mais invisible à l'écran. #}
+              <div class="muted small" style="margin-top:6px;">
+                Sur les projets de <strong>{{ github_oauth.compte_hote }}</strong>, les corrections
+                utilisent le compte GitHub de l'hôte. Cette connexion sert à tes propres projets.
+              </div>
+            {% endif %}
           </div>
           <div class="setting-actions">
             {% if github_oauth.is_oauth %}
