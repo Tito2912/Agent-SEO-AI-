@@ -1,0 +1,78 @@
+# Les taches de fond qui n'avaient AUCUN ordonnanceur.
+#
+# Constat du 19/09/2026 : l'application expose six routes `/cron` et une seule etait planifiee
+# — `check-backlinks`, sur Render, en echec permanent. Les autres n'etaient appelees par
+# personne. Elles ne signalaient rien : une tache de fond qui ne tourne pas ne produit pas
+# d'erreur, elle produit une absence, et une absence ne remonte nulle part.
+#
+# UN SEUL PASSAGE POUR LES TROIS, parce que les trois se limitent elles-memes :
+#   - `autopilot` lance un audit en mode audit-only sur la configuration du produit ;
+#   - `refresh-competitors` ne reprend que les concurrents crawles il y a plus de trente jours
+#     (`_COMPETITOR_REFRESH_DAYS`), les autres sont ignores ;
+#   - `auto-search-backlinks` respecte la frequence choisie par chaque projet (vingt heures
+#     minimum en quotidien, cent soixante en hebdomadaire).
+# Les appeler tous les jours ne declenche donc que ce qui est DU. C'est la route qui decide,
+# pas l'ordonnanceur — et c'est pour ca qu'un seul creneau suffit.
+#
+# `auto-post-backlinks` N'EST PAS ICI, VOLONTAIREMENT. La route existe encore mais elle est
+# depreciee : sa docstring dit « Deprecated — automated Reddit posting removed », et elle rend
+# `posted: 0` sans rien faire. La planifier ajouterait un appel quotidien pour rien.
+#
+# CHAQUE APPEL EST INDEPENDANT. Un echec sur l'un ne doit pas empecher les deux autres : un
+# audit qui tombe ne doit pas priver les concurrents de leur rafraichissement mensuel. Le job
+# echoue a la fin, en nommant ce qui a rate.
+
+name: Taches de fond quotidiennes
+
+on:
+  schedule:
+    - cron: "0 3 * * *"        # 03:00 UTC, loin des 08:00 de la verification des backlinks
+  workflow_dispatch:
+
+concurrency:
+  group: taches-quotidiennes
+  cancel-in-progress: false
+
+jobs:
+  taches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Appeler les taches de fond
+        env:
+          BASE_URL: ${{ vars.NOYARU_BASE_URL || 'https://noyaru.com' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET absent des secrets du depot."
+            exit 1
+          fi
+
+          rates=""
+          appeler() {
+            methode="$1"; chemin="$2"
+            echo "--- $methode $chemin"
+            # --fail-with-body : un 401 ou un 500 doit compter comme un echec. Sans lui, curl
+            # sort avec 0 quel que soit le code HTTP — c'est exactement le defaut qui rendait
+            # l'ancien cron Render vert alors qu'il ne faisait rien.
+            if curl --fail-with-body --silent --show-error --location \
+                    --max-time 300 -X "$methode" \
+                    -H "Authorization: Bearer $CRON_SECRET" \
+                    "$BASE_URL$chemin"; then
+              echo
+            else
+              echo
+              echo "ECHEC sur $chemin"
+              rates="$rates $chemin"
+            fi
+          }
+
+          appeler GET  /cron/autopilot
+          appeler POST /cron/refresh-competitors
+          appeler GET  /cron/auto-search-backlinks
+
+          if [ -n "$rates" ]; then
+            echo "Taches en echec :$rates"
+            exit 1
+          fi
+          echo "Les trois taches ont repondu."
