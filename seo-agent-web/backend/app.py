@@ -7513,6 +7513,23 @@ def _execute_queued_job(job_id: str) -> None:
     _save_job(job)
 
 
+def _resume_de_job(job_id: str) -> str:
+    """« crawl oryvalo-com » — de quoi suivre la file sans ouvrir la base.
+
+    Le type seul ne suffit pas : quand deux crawls occupent les deux fils, savoir LESQUELS
+    est toute la difference entre « un client monopolise la file » et « la plateforme est
+    saturee ». Ces deux diagnostics appellent des decisions opposees.
+    """
+    try:
+        job = _load_job(job_id)
+    except Exception:
+        return "?"
+    result = job.result if job and isinstance(job.result, dict) else {}
+    kind = str(result.get("type") or "").strip() or "?"
+    slug = str(result.get("slug") or "").strip()
+    return "%s %s" % (kind, slug) if slug else kind
+
+
 def _job_worker_loop(worker_id: str) -> None:
     while not _WORKER_STOP.is_set():
         try:
@@ -7527,6 +7544,17 @@ def _job_worker_loop(worker_id: str) -> None:
             _WORKER_STOP.wait(1.0)
             continue
 
+        # UNE LIGNE QUAND ON PREND, UNE QUAND ON REND. Sans elles, un worker occupe et un
+        # worker oisif produisent exactement le meme journal : rien. La sortie d'un crawl part
+        # dans `job.stdout`, pas sur stdout du conteneur. Le 19/09/2026, une file qui stagnait
+        # parce que deux gros crawls tenaient les deux fils a ete prise pour une panne, et le
+        # tableau de bord Render affichait « Live » pendant ce temps.
+        #
+        # Compter les « pris » sans « rendus » donne le nombre de travaux en vol a tout
+        # instant — la seule chose qu'on voulait savoir et qu'on ne pouvait pas deduire.
+        _debut = time.time()
+        _quoi = _resume_de_job(jid)
+        logger.info("[WORKER] %s prend %s (%s)", worker_id, str(jid)[:8], _quoi)
         try:
             _execute_queued_job(jid)
         except Exception as e:
@@ -7541,6 +7569,11 @@ def _job_worker_loop(worker_id: str) -> None:
                     _save_job(job)
             except Exception:
                 pass
+        finally:
+            # Dans un `finally` : un travail qui echoue est rendu lui aussi, sinon le compte
+            # des travaux en vol derive a chaque erreur et le journal ment de plus en plus.
+            logger.info("[WORKER] %s rend %s (%s) apres %ds",
+                        worker_id, str(jid)[:8], _quoi, int(time.time() - _debut))
 
 
 def _start_job_worker() -> None:
