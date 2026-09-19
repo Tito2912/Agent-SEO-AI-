@@ -5019,6 +5019,48 @@ def _score_issues(
     def _non_empty(value: str | None) -> bool:
         return bool(value and value.strip())
 
+    _HOTES_PRIVES = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}
+
+    def _url_non_publique(value: str | None) -> bool:
+        """Une URL qu'aucun robot ni reseau social ne peut atteindre depuis l'exterieur.
+
+        MESURE DU 19/09/2026 sur une reproduction Next.js. Sans `metadataBase`, Next resout
+        les URL relatives des metadonnees contre `http://localhost:3000` et le dit dans un
+        simple avertissement de build :
+
+            og:image = http://localhost:3000/og.png
+
+        Le site part donc en production avec une image de partage qui pointe sur la machine du
+        visiteur. `metadataBase` est optionnel et souvent oublie ; l'avertissement passe
+        inapercu dans un journal de deploiement.
+        """
+        v = (value or "").strip().lower()
+        if not v:
+            return False
+        hote = (urlsplit(v).hostname or "").strip()
+        if not hote:
+            return False
+        # VOLONTAIREMENT ETROIT : les hotes de BOUCLAGE, rien d'autre. Une premiere version
+        # ajoutait les suffixes `.local`, `.test` et `.localhost` — et `.test` capturait
+        # `site.test`, la convention de test de ce depot, qui s'est mise a echouer. La lecon
+        # n'est pas que l'ancre etait mal choisie : c'est qu'un predicat pose une POLITIQUE
+        # sur ce qui est public, et qu'une politique large invalide des balises correctes.
+        # Refuser une image valide serait pire que le defaut qu'on corrige — on ferait
+        # chercher un probleme qui n'existe pas. On s'en tient donc a ce que Next ecrit
+        # reellement, et a ce qui ne peut JAMAIS etre joint depuis l'exterieur.
+        return hote in _HOTES_PRIVES or hote.startswith("127.")
+
+    def _balise_utilisable(value: str | None) -> bool:
+        """Presente ET atteignable. Une balise qu'on ne peut pas chercher ne sert a rien.
+
+        POURQUOI ELARGIR UNE ANOMALIE EXISTANTE PLUTOT QUE D'EN CREER UNE. Le catalogue Ahrefs
+        ne compte que cinq anomalies de balises sociales, et aucune ne parle d'atteignabilite ;
+        inventer une cle sortirait de la parite qui gouverne ce crawler. Or une `og:image` sur
+        localhost EST, pour tout consommateur externe, une `og:image` absente — la compter
+        comme presente est le choix le moins exact des deux.
+        """
+        return _non_empty(value) and not _url_non_publique(value)
+
     def _scheme(url: str | None) -> str:
         return (urlsplit(url or "").scheme or "").lower()
 
@@ -6553,20 +6595,20 @@ def _score_issues(
         eff = _final_url(p)
         # Ahrefs-like: Open Graph is "missing" when no OG tags are present at all.
         og_any = [p.og_title, p.og_description, p.og_image, p.og_url, p.og_type]
-        og_any_present = any(_non_empty(v) for v in og_any)
+        og_any_present = any(_balise_utilisable(v) for v in og_any)
         if not og_any_present:
             open_graph_missing.append(eff)
         else:
             # Ahrefs-like: treat OG as incomplete/invalid when any required attribute is missing.
             # Ahrefs seems to expect og:type in addition to title/description/image/url.
             og_required = [p.og_title, p.og_description, p.og_image, p.og_url, p.og_type]
-            if any(not _non_empty(v) for v in og_required):
+            if any(not _balise_utilisable(v) for v in og_required):
                 open_graph_incomplete.append(eff)
                 _absent = [
                     tag for tag, val in (
                         ("og:title", p.og_title), ("og:description", p.og_description),
                         ("og:image", p.og_image), ("og:url", p.og_url), ("og:type", p.og_type),
-                    ) if not _non_empty(val)
+                    ) if not _balise_utilisable(val)
                 ]
                 og_missing_values.append({"page": eff, "field": "og_manquants", "value": ", ".join(_absent)})
 
@@ -6584,13 +6626,14 @@ def _score_issues(
             tw_title = p.twitter_title or p.og_title or p.title
             tw_desc = p.twitter_description or p.og_description or p.meta_description
             tw_img = p.twitter_image or p.og_image
-            if not (_non_empty(tw_title) and _non_empty(tw_desc) and _non_empty(tw_img)):
+            if not (_balise_utilisable(tw_title) and _balise_utilisable(tw_desc)
+                    and _balise_utilisable(tw_img)):
                 twitter_incomplete.append(eff)
                 _absent = [
                     tag for tag, val in (
                         ("twitter:title", tw_title), ("twitter:description", tw_desc),
                         ("twitter:image", tw_img),
-                    ) if not _non_empty(val)
+                    ) if not _balise_utilisable(val)
                 ]
                 twitter_missing_values.append(
                     {"page": eff, "field": "twitter_manquants", "value": ", ".join(_absent)}
