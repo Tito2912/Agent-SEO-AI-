@@ -23582,6 +23582,145 @@ def _prepare_issue_fix(
     return out
 
 
+def _respecter_les_fins_de_ligne(original: str, nouveau: str) -> str:
+    """Rend `nouveau` avec les fins de ligne DOMINANTES de `original`.
+
+    Mesure du 19/09/2026, `app/contact/page.tsx` d'un client : 16 CRLF avant, 18 LF apres. Le
+    correctif ajoutait UNE ligne et le diff en touchait dix-sept. Un diff illisible est un
+    diff qu'on approuve sans le lire, ce qui annule la revue humaine sur laquelle repose tout
+    le reste — et il salit l'historique du client pour un detail invisible a l'execution.
+
+    On suit la MAJORITE plutot que d'exiger l'uniformite : un fichier melange (c'etait le cas,
+    16 contre 1) se normalise alors dans son propre sens, ce qui produit une ligne de diff au
+    lieu de dix-sept. Un fichier sans aucun saut de ligne est rendu tel quel.
+    """
+    crlf = original.count("\r\n")
+    lf = original.count("\n") - crlf
+    if crlf == 0 and lf == 0:
+        return nouveau
+    plat = nouveau.replace("\r\n", "\n")
+    return plat.replace("\n", "\r\n") if crlf >= lf else plat
+
+
+def _cles_du_bloc_objet(bloc: str) -> set[str]:
+    """Les cles du PREMIER niveau du bloc. `images: [{ url: ... }]` ne doit pas donner `url`."""
+    return {c for c in ("type", "siteName", "images", "url", "title", "description")
+            if _valeur_de_cle_objet(bloc, c)}
+
+
+def _inserer_cles_dans_bloc(bloc: str, ajouts: list[tuple[str, str]]) -> str:
+    """Ajoute des cles a un litteral d'objet en respectant sa mise en forme.
+
+    On CLONE la forme du bloc au lieu d'imposer la notre : un bloc sur une ligne reste sur une
+    ligne, un bloc indente recoit des lignes indentees comme les siennes. Reformater le code du
+    client produirait un diff que son formateur reecrirait au commit suivant.
+    """
+    if not ajouts:
+        return bloc
+    if "\n" not in bloc:
+        corps = bloc[1:-1].strip().rstrip(",")
+        sep = ", " if corps else ""
+        return "{ " + corps + sep + ", ".join("%s: %s" % (k, v) for k, v in ajouts) + " }"
+    lignes = bloc.split("\n")
+    interieures = [l for l in lignes[1:-1] if l.strip()]
+    ind = ""
+    if interieures:
+        ind = interieures[0][:len(interieures[0]) - len(interieures[0].lstrip())]
+    else:
+        ind = lignes[-1][:len(lignes[-1]) - len(lignes[-1].lstrip())] + "  "
+    poses = ["%s%s: %s," % (ind, k, v) for k, v in ajouts]
+    return "\n".join(lignes[:-1] + poses + [lignes[-1]])
+
+
+def _retirer_propriete_objet(content: str, debut_cle: int, fin_bloc: int) -> str:
+    """Retire `cle: { ... }` et sa virgule, ligne comprise quand elle lui appartient."""
+    debut = content.rfind("\n", 0, debut_cle) + 1
+    if content[debut:debut_cle].strip():
+        debut = debut_cle
+    fin = fin_bloc
+    while fin < len(content) and content[fin] in " \t":
+        fin += 1
+    if fin < len(content) and content[fin] == ",":
+        fin += 1
+    reste = content[fin:]
+    if debut < debut_cle:
+        while fin < len(content) and content[fin] in " \t":
+            fin += 1
+        if content[fin:fin + 2] == "\r\n":
+            fin += 2
+        elif fin < len(content) and content[fin] == "\n":
+            fin += 1
+        reste = content[fin:]
+    return content[:debut] + reste
+
+
+def _completer_open_graph_objet(new_content: str, old_content: str,
+                                reporte_fn: "Callable[[], dict[str, str]]",
+                                ) -> tuple[str, list[str]]:
+    """Le pendant de `_complete_open_graph` pour l'idiome JS/TS, et il a manque cher.
+
+    MESURE DU 19/09/2026, pull request reelle sur oryvalo.com. Le modele a pose sur
+    `app/contact/page.tsx` :
+
+        openGraph: { url: 'https://oryvalo.com/contact', images: [{ ... }] },
+
+    Ni `type` ni `siteName`. Les metadonnees Next sont fusionnees SUPERFICIELLEMENT : ce bloc
+    REMPLACE celui de la mise en page, donc la page perdait `og:type` et `og:site_name`. Une
+    anomalie troquee contre `open_graph_tags_incomplete`, et l'apercu de partage avec.
+
+    POURQUOI LES GARDES EXISTANTES N'ONT RIEN VU, et c'est la vraie lecon.
+    `_complete_open_graph` dit ce risque mot pour mot dans sa docstring — mais il ne lit que
+    `<meta property="og:...">`. Le meme defaut, dans l'autre idiome, lui est invisible.
+    `_inserer_og_complet`, lui, s'abstient « quand un openGraph existe deja » : cette
+    abstention a ete ecrite pour un bloc DU CLIENT, delibere, dans lequel on refuse de
+    s'inserer. Elle s'est appliquee a un bloc que le modele venait d'ecrire trois lignes plus
+    tot dans le meme run. **Une abstention qui protege le travail du client protege aussi
+    l'erreur du modele si elle ne sait pas les distinguer** — d'ou le test sur `old_content`.
+
+    POURQUOI RETIRER PLUTOT QUE LAISSER INCOMPLET, contrairement a l'idiome HTML. En HTML les
+    balises sont independantes : une de plus est un gain, meme si les cinq n'y sont pas. Ici le
+    bloc REMPLACE celui de la mise en page, donc un bloc incomplet DETRUIT des balises qui
+    existaient. Quand on ne peut pas le completer, le retirer rend la page a son anomalie
+    d'origine — qui est moins grave que celle qu'on lui donnerait.
+    """
+    if re.search(r"\bopenGraph\s*:", old_content or ""):
+        # La page en portait deja un : c'est un choix du client, pas une production de ce run.
+        return new_content, []
+    m = re.search(r"\bopenGraph\s*:", new_content or "")
+    if not m:
+        return new_content, []
+    bornes = _bloc_accolades_equilibrees(new_content, m.end())
+    if bornes is None:
+        return new_content, []
+    bloc = new_content[bornes[0]:bornes[1]]
+    reporte = reporte_fn() or {}
+    if not reporte:
+        # Aucune mise en page ne declare d'openGraph : le bloc pose n'en masque aucun, donc il
+        # n'y a rien a reparer ici. Le cas revient a l'idiome HTML.
+        return new_content, []
+    # On DECIDE avant de toucher au texte, puis on mute une seule fois : inserer d'abord
+    # rendrait `bornes` perime, et c'est le genre d'index decale qui coupe un fichier en deux.
+    presentes = _cles_du_bloc_objet(bloc)
+    ajouts = [(c, reporte[c]) for c in _OG_CLES_A_REPORTER
+              if c in reporte and c not in presentes]
+    finales = presentes | {c for c, _v in ajouts}
+    # `type` et `images` sont les deux que la regle `open_graph_tags_incomplete` du crawler
+    # exige, et que la fusion superficielle ferait disparaitre. La mise en page peut ne pas
+    # nous les donner — `_og_a_reporter_depuis_layout` refuse les valeurs multi-lignes, dont
+    # `images` est souvent. Quand on ne peut pas les garantir, le bloc detruit plus qu'il ne
+    # repare, et on le retire.
+    manquantes = [c for c in ("type", "images") if c not in finales]
+    if manquantes:
+        return (_retirer_propriete_objet(new_content, m.start(), bornes[1]),
+                ["openGraph retire : sans %s il aurait masque celui de la mise en page et "
+                 "fait disparaitre les balises correspondantes" % " ni ".join(manquantes)])
+    if not ajouts:
+        return new_content, []
+    return (new_content[:bornes[0]] + _inserer_cles_dans_bloc(bloc, ajouts) + new_content[bornes[1]:],
+            ["openGraph complete depuis la mise en page : %s"
+             % ", ".join(c for c, _v in ajouts)])
+
+
 def _deep_patch_issue_files(
     *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
     all_paths: list[str], issue_key: str, issue_label: str, impacted_urls: list[str],
@@ -23983,6 +24122,12 @@ def _deep_patch_issue_files(
         # completion ci-dessous doit voir ce qui EXISTE une fois tout le reste ecrit.
         new_content, _ogc_notes = _complete_open_graph(new_content, raw, site_og_image)
         _og_notes = _og_notes + _ogc_notes
+        # Le MEME controle pour l'idiome JS/TS, que celui du dessus ne voit pas. Non
+        # restreint a une famille : le modele peut poser un openGraph en corrigeant
+        # autre chose, et c'est exactement ce qu'il a fait le 19/09/2026.
+        new_content, _ogj_notes = _completer_open_graph_objet(
+            new_content, raw, lambda: _og_reporte_pour(path))
+        _og_notes = _og_notes + _ogj_notes
         for _n in (_len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes
                    + _master_notes + _og_notes):
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
@@ -24050,7 +24195,12 @@ def _deep_patch_issue_files(
         try:
             put_body: dict[str, Any] = {
                 "message": f"fix(seo): {issue_key} — {path}\n\nGenerated by SEO Agent",
-                "content": _b64.b64encode(new_content.encode("utf-8")).decode("ascii"),
+                # Le fichier garde SES fins de ligne : sans quoi un ajout d'une ligne
+                # produit un diff de tout le fichier, et une revue humaine qu'on
+                # approuve sans la lire ne protege plus rien.
+                "content": _b64.b64encode(
+                    _respecter_les_fins_de_ligne(raw, new_content).encode("utf-8")
+                ).decode("ascii"),
                 "branch": fix_branch,
             }
             if cur_sha:
