@@ -208,7 +208,7 @@ def jekyll_customer(monkeypatch):
                        settings={"github_repo": "client/site.fr", "github_branch": "main",
                                  "github_mode": "review"}))
         db.commit()
-    monkeypatch.setattr(app_module, "_plan_correction_cfg", lambda user: {
+    monkeypatch.setattr(app_module, "_plan_correction_cfg", lambda user, **_: {
         "plan": "pro", "model": "claude-sonnet-4-6", "max_files": 20, "unlimited": False})
     monkeypatch.setattr(app_module, "_effective_user_connection_value",
                         lambda **kw: ("ghp_test", "user"))

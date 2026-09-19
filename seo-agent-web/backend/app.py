@@ -238,6 +238,30 @@ def _runs_dir_pour_slug(request: Request, slug: str) -> Path:
     return _runs_dir_for_user(str(proj.owner_user_id))
 
 
+def _compte_payeur(user_id: str, slug: str) -> str:
+    """Le compte qui porte le PLAN et le QUOTA d'une action faite sur un projet.
+
+    C'est le proprietaire du projet, pas la personne connectee, et la regle vaut dans les deux
+    sens : un consultant au forfait Gratuit qui travaille sur un projet Business obtient le
+    modele et le quota Business — sans quoi le partage d'equipe ne servirait a rien — et le
+    debit tombe sur l'agence, qui est celle qui paie.
+
+    Hors projet (l'assistant, la page facturation), c'est son propre compte qui decide : un
+    consultant qui est aussi client garde son abonnement pour ses propres projets. Ces
+    appels-la n'utilisent donc pas cette fonction.
+
+    Le repli rend l'appelant. Un projet invisible pour cette personne ne doit pas servir de
+    sonde sur le plan des autres, et le controle d'acces de la route refusera juste apres.
+    """
+    u = (user_id or "").strip()
+    if not u:
+        return u
+    proj = _db_project(u, slug)
+    if proj is None:
+        return u
+    return str(proj.owner_user_id or "") or u
+
+
 def _run_tree_candidates(path: Path) -> list[Path]:
     root = DEFAULT_RUNS_DIR.resolve()
     try:
@@ -2864,37 +2888,50 @@ def _correction_ai_model(provider: str) -> str:
     return ""
 
 
-def _plan_correction_cfg(user: Any) -> dict[str, Any]:
+def _plan_correction_cfg(user: Any, *, compte: str = "") -> dict[str, Any]:
     """Resolve the correction engine config (model + max_files/PR) from the user's plan.
 
     Numbers come from billing.plan_catalog (admin-overridable via PLAN_CONFIG_JSON). Admins
-    are unlimited. Free plans have max_files 0 / quota 0 (corrections not included)."""
+    are unlimited. Free plans have max_files 0 / quota 0 (corrections not included).
+
+    `compte` vise un AUTRE compte que la personne connectee : sur un projet d'equipe, c'est le
+    proprietaire qui porte le plan (voir `_compte_payeur`). Le drapeau administrateur reste lu
+    sur la personne, lui : c'est un statut interne, pas un niveau d'abonnement."""
     if bool(getattr(user, "is_admin", False)):
         model = (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
         return {"plan": "admin", "model": model, "max_files": 40, "unlimited": True}
     plan = "free"
     try:
         with DB.session() as _db:
-            plan = billing.effective_plan_key(_db, user_id=str(getattr(user, "id", "") or ""))
+            plan = billing.effective_plan_key(
+                _db, user_id=(compte or "").strip() or str(getattr(user, "id", "") or ""))
     except Exception:
         plan = "free"
     base = billing.correction_config_for_plan(plan)
     return {"plan": plan, "model": str(base["model"]), "max_files": int(base["max_files"]), "unlimited": False}
 
 
-def _correction_gate(user: Any) -> tuple[bool, str, int, str]:
+def _correction_gate(user: Any, *, slug: str = "") -> tuple[bool, str, int, str]:
     """Check whether the user may run an AI correction now.
 
     Returns (allowed, error_message, effective_max_files, model_override).
-    Admins bypass quota. Caps effective_max_files to the remaining monthly quota."""
-    cfg = _plan_correction_cfg(user)
+    Admins bypass quota. Caps effective_max_files to the remaining monthly quota.
+
+    `slug` designe le projet, donc le compte qui porte le plan et le quota (`_compte_payeur`).
+    C'est le slug qui est passe et non le compte deja resolu, pour une raison precise : le plan
+    et le reste du quota doivent venir du MEME compte. Laisser l'appelant fournir un compte
+    rendrait possible un plafond de fichiers pris chez l'un et un solde pris chez l'autre."""
+    compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
+    cfg = _plan_correction_cfg(user, compte=compte)
     if cfg["unlimited"]:
         return True, "", int(cfg["max_files"]), str(cfg["model"])
     if int(cfg["max_files"]) <= 0:
         return False, "Les corrections IA ne sont pas incluses dans ton forfait. Passe à un plan supérieur.", 0, ""
     try:
         with DB.session() as _db:
-            remaining = billing.remaining_quota(_db, user_id=str(getattr(user, "id", "") or ""), metric="ai_corrections_month")
+            remaining = billing.remaining_quota(
+                _db, user_id=(compte or "").strip() or str(getattr(user, "id", "") or ""),
+                metric="ai_corrections_month")
     except Exception:
         remaining = None
     if isinstance(remaining, int) and remaining <= 0:
@@ -2905,13 +2942,21 @@ def _correction_gate(user: Any) -> tuple[bool, str, int, str]:
     return True, "", cap, str(cfg["model"])
 
 
-def _correction_charge(user: Any, count: int) -> None:
-    """Bill `count` AI corrections (files patched / previews) against the monthly quota. No-op for admins."""
+def _correction_charge(user: Any, count: int, *, slug: str = "") -> None:
+    """Bill `count` AI corrections (files patched / previews) against the monthly quota. No-op for admins.
+
+    Le `slug` doit etre celui passe a `_correction_gate` : autoriser sur le solde d'un compte et
+    debiter sur un autre laisserait le second partir en negatif sans qu'aucune porte ne se
+    ferme. Les deux fonctions resolvent le compte par le meme chemin, ce qui rend l'ecart
+    impossible a produire depuis un appelant."""
     if count <= 0 or bool(getattr(user, "is_admin", False)):
         return
+    compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
     try:
         with DB.session() as _db:
-            billing.usage_add(_db, user_id=str(getattr(user, "id", "") or ""), metric="ai_corrections_month", amount=int(count))
+            billing.usage_add(
+                _db, user_id=compte or str(getattr(user, "id", "") or ""),
+                metric="ai_corrections_month", amount=int(count))
     except Exception:
         pass
 
@@ -15760,11 +15805,21 @@ def crawl_project(
     planned_pages = max(0, requested_max_pages)
     override_max_pages: int | None = None
 
+    # Le job porte le compte PROPRIETAIRE, et cette seule ligne decide de quatre choses.
+    # Tout ce qui vient ensuite lit `result["user_id"]` : le dossier ou le crawl s'ECRIT, la
+    # recherche du projet en base dans le worker, la reservation de pages, et son ajustement a
+    # la fin. Les faire diverger serait pire que de ne rien partager : un membre lancerait un
+    # crawl qui s'ecrirait chez lui pendant que les pages seraient lues chez le proprietaire,
+    # et la reservation tomberait sur un compte quand le remboursement tomberait sur l'autre.
+    # `started_by` garde qui a clique — une agence doit pouvoir le savoir, et l'information
+    # serait autrement perdue.
+    payeur = str(getattr(proj, "owner_user_id", "") or "") or str(getattr(user, "id", ""))
     job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
     job.result = {
         "type": "crawl",
         "slug": slug,
-        "user_id": str(getattr(user, "id", "")),
+        "user_id": payeur,
+        "started_by": str(getattr(user, "id", "")),
         "requested_max_pages": requested_max_pages,
     }
     # Pre-fill command so the Jobs UI can categorize immediately.
@@ -15778,7 +15833,7 @@ def crawl_project(
             # it would hold a slot for hours, die, and teach the user nothing except to retry.
             # Clamp the request up front so the crawl that starts is one that can end.
             plan_crawl = billing.crawl_config_for_plan(
-                billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+                billing.effective_plan_key(db, user_id=payeur)
             )
             plan_max_pages = int(plan_crawl.get("max_pages_per_crawl") or 0)
             if plan_max_pages > 0 and planned_pages > plan_max_pages:
@@ -15792,7 +15847,7 @@ def crawl_project(
                 job.result["max_pagespeed_urls"] = plan_ps_urls
 
             ok, remaining = billing.ensure_within_quota(
-                db, user_id=str(getattr(user, "id", "")), metric="pages_crawled_month", planned_amount=planned_pages
+                db, user_id=payeur, metric="pages_crawled_month", planned_amount=planned_pages
             )
             if (not ok) and isinstance(remaining, int) and remaining > 0:
                 planned_pages = int(remaining)
@@ -15814,7 +15869,7 @@ def crawl_project(
 
             billing.usage_add(
                 db,
-                user_id=str(getattr(user, "id", "")),
+                user_id=payeur,
                 metric="pages_crawled_month",
                 amount=int(planned_pages),
                 meta={
@@ -15905,7 +15960,11 @@ def crawl_projects_batch(
     if is_admin:
         for slug in allowed:
             job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(cfg))
-            job.result = {"type": "crawl", "slug": slug, "user_id": str(getattr(user, "id", "")), "skip_billing": True}
+            # Pas facture, mais le dossier d'ecriture se decide la aussi : un administrateur
+            # membre d'un compte ecrirait sinon le crawl chez lui, hors de vue du proprietaire.
+            job.result = {"type": "crawl", "slug": slug,
+                          "user_id": _compte_payeur(str(getattr(user, "id", "")), slug),
+                          "started_by": str(getattr(user, "id", "")), "skip_billing": True}
             script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_audit.py"
             job.command = [sys.executable, "-u", str(script)]
             _save_job(job)
@@ -15915,6 +15974,9 @@ def crawl_projects_batch(
         with DB.session() as db:
             for slug in allowed:
                 proj = _db_project(str(getattr(user, "id", "")), slug)
+                # En lot, le payeur change a chaque tour : la selection peut melanger ses
+                # propres projets et ceux du compte qui l'accueille.
+                payeur = str(getattr(proj, "owner_user_id", "") or "") or str(getattr(user, "id", ""))
                 project_settings = proj.settings if (proj and isinstance(proj.settings, dict)) else {}
                 crawl_cfg, _, _ = _effective_project_crawl_settings(
                     slug, config_path=(cfg if cfg.exists() else None), project_settings=project_settings
@@ -15924,7 +15986,7 @@ def crawl_projects_batch(
                 override_max_pages: int | None = None
 
                 ok, remaining = billing.ensure_within_quota(
-                    db, user_id=str(getattr(user, "id", "")), metric="pages_crawled_month", planned_amount=planned_pages
+                    db, user_id=payeur, metric="pages_crawled_month", planned_amount=planned_pages
                 )
                 if (not ok) and isinstance(remaining, int) and remaining > 0:
                     planned_pages = int(remaining)
@@ -15938,7 +16000,8 @@ def crawl_projects_batch(
                 job.result = {
                     "type": "crawl",
                     "slug": slug,
-                    "user_id": str(getattr(user, "id", "")),
+                    "user_id": payeur,
+                    "started_by": str(getattr(user, "id", "")),
                     "requested_max_pages": requested_max_pages,
                     "quota_reserved_pages": int(planned_pages),
                 }
@@ -15949,7 +16012,7 @@ def crawl_projects_batch(
 
                 billing.usage_add(
                     db,
-                    user_id=str(getattr(user, "id", "")),
+                    user_id=payeur,
                     metric="pages_crawled_month",
                     amount=int(planned_pages),
                     meta={
@@ -16088,7 +16151,7 @@ def project_overview(
     plan_key = "free"
     if user and not is_admin:
         with DB.session() as db:
-            plan_key = billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+            plan_key = billing.effective_plan_key(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
 
     fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
 
@@ -16209,7 +16272,7 @@ def project_crawl_settings(
     else:
         with DB.session() as db:
             plan_crawl = billing.crawl_config_for_plan(
-                billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+                billing.effective_plan_key(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
             )
     resp = templates.TemplateResponse(
         "crawl_settings.html",
@@ -16549,7 +16612,7 @@ def api_issue_url_fix(
     url_error = _validate_settings_url(url)
     if url_error:
         return JSONResponse({"ok": False, "error": url_error}, status_code=400)
-    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user)
+    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user, slug=slug)
     if not gate_ok:
         return JSONResponse({"error": gate_msg, "billing_url": "/billing"}, status_code=402)
     meta = dash.issue_meta(issue_key)
@@ -16569,7 +16632,7 @@ def api_issue_url_fix(
         else:
             msg = "Correction IA momentanément indisponible. Réessaie dans un instant."
         return JSONResponse({"error": msg}, status_code=503)
-    _correction_charge(user, 1)
+    _correction_charge(user, 1, slug=slug)
     return JSONResponse(result)
 
 
@@ -16660,7 +16723,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Branche GitHub invalide."}, status_code=400)
     mode = cfg["mode"]
-    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user)
+    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user, slug=slug)
     if not gate_ok:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     url = (body.url or "").strip()
@@ -16812,7 +16875,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     content_error = _github_patched_content_error(str(patch.get("patched_content") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
-    _correction_charge(user, 1)
+    _correction_charge(user, 1, slug=slug)
 
     # In auto mode: apply immediately without confirm step
     if mode == "auto":
@@ -16862,7 +16925,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             status_code=429,
             headers={"Retry-After": str(retry_after)},
         )
-    gate_ok, gate_msg, gate_budget, gate_model = _correction_gate(user)
+    gate_ok, gate_msg, gate_budget, gate_model = _correction_gate(user, slug=slug)
     if not gate_ok:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     repo_parts = _github_repo_parts(cfg["repo"])
@@ -17069,7 +17132,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             pass
 
     # Bill all files patched across the bulk run (1 per file = 1 AI call).
-    _correction_charge(user, ai_billable)
+    _correction_charge(user, ai_billable, slug=slug)
 
     return JSONResponse({
         "ok": True,
@@ -23035,7 +23098,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
-    gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user)
+    gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user, slug=slug)
     if not gate_ok:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     repo_parts = _github_repo_parts(cfg["repo"])
@@ -23283,7 +23346,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Config-loop file ops (rename + _redirects prune) are deterministic (no AI call) → not billed.
     # Bill the model-written files only. A deterministic rewrite makes no API call, so charging
     # it would sell compute that was never spent.
-    _correction_charge(user, len(_ai_files))
+    _correction_charge(user, len(_ai_files), slug=slug)
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
@@ -23623,7 +23686,7 @@ def export_project_fix_pack_zip(request: Request, slug: str, crawl: str | None =
     plan_key = "free"
     if user and not is_admin:
         with DB.session() as db:
-            plan_key = billing.effective_plan_key(db, user_id=str(getattr(user, "id", "")))
+            plan_key = billing.effective_plan_key(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
 
     fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
     if not fix_pack_unlocked:
@@ -24776,7 +24839,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
     retry_after = _rate_limit_retry_after(bucket="github_fix_user", subject=str(getattr(user, "id", "")), limit=20, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
-    gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user)
+    gate_ok, gate_msg, gate_max_files, gate_model = _correction_gate(user, slug=slug)
     if not gate_ok:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     repo_parts = _github_repo_parts(cfg["repo"])
@@ -24906,7 +24969,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 
     # Every file here carries model-written text, so every file costs one correction: the same
     # unit as the anomaly corrector, one file written by the model.
-    _correction_charge(user, len(ai_files))
+    _correction_charge(user, len(ai_files), slug=slug)
 
     return JSONResponse({
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
@@ -24966,7 +25029,7 @@ def project_competitors(request: Request, slug: str,
     with DB.session() as db:
         has_access = bool(user) and (
             bool(getattr(user, "is_admin", False))
-            or _competitor_has_access(db, user_id=str(getattr(user, "id", "")))
+            or _competitor_has_access(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
         )
         rows = _competitor_rows(db, str(proj_row.id)) if has_access else []
         competitors = [{
@@ -25041,7 +25104,7 @@ def project_competitor_add(request: Request, slug: str, url: str = Form(default=
 
     with DB.session() as db:
         if not (bool(getattr(user, "is_admin", False))
-                or _competitor_has_access(db, user_id=str(user.id))):
+                or _competitor_has_access(db, user_id=_compte_payeur(str(user.id), slug))):
             return RedirectResponse(url=_path_with_flash(page, err="Plan Pro+ requis"), status_code=303)
         rows = _competitor_rows(db, str(proj.id))
         if any(r.domain == domain for r in rows):
@@ -25092,7 +25155,7 @@ def project_competitor_analyze(request: Request, slug: str,
 
     with DB.session() as db:
         if not (bool(getattr(user, "is_admin", False))
-                or _competitor_has_access(db, user_id=str(user.id))):
+                or _competitor_has_access(db, user_id=_compte_payeur(str(user.id), slug))):
             return RedirectResponse(url=_path_with_flash(page, err="Plan Pro+ requis"), status_code=303)
         row = db.get(CompetitorSite, (competitor_id or "").strip())
         if not row or str(row.project_id) != str(proj.id):
@@ -25911,11 +25974,12 @@ def project_backlinks_opportunities(
     page = max(1, page)
     page_size = 20
 
+    payeur = _compte_payeur(str(user.id), slug)
     with DB.session() as db:
-        has_access = _opp_has_access(db, user_id=str(user.id))
-        plan_key = billing.effective_plan_key(db, user_id=str(user.id))
-        search_remaining = billing.remaining_quota(db, user_id=str(user.id), metric="backlink_searches_month")
-        reply_remaining = billing.remaining_quota(db, user_id=str(user.id), metric="backlink_replies_month")
+        has_access = _opp_has_access(db, user_id=payeur)
+        plan_key = billing.effective_plan_key(db, user_id=payeur)
+        search_remaining = billing.remaining_quota(db, user_id=payeur, metric="backlink_searches_month")
+        reply_remaining = billing.remaining_quota(db, user_id=payeur, metric="backlink_replies_month")
 
         opportunities: list[BacklinkOpportunity] = []
         total = 0
@@ -25997,12 +26061,13 @@ async def api_backlinks_search(request: Request, slug: str) -> JSONResponse:
     _db_project_or_404(request, slug)
     user = request.state.user
 
+    payeur = _compte_payeur(str(user.id), slug)
     with DB.session() as db:
-        if not _opp_has_access(db, user_id=str(user.id)):
+        if not _opp_has_access(db, user_id=payeur):
             return JSONResponse({"ok": False, "error": "Fonctionnalité réservée au plan Solo+."}, status_code=403)
 
         allowed, remaining = billing.ensure_within_quota(
-            db, user_id=str(user.id), metric="backlink_searches_month", planned_amount=1
+            db, user_id=payeur, metric="backlink_searches_month", planned_amount=1
         )
         if not allowed:
             return JSONResponse(
@@ -26055,7 +26120,7 @@ async def api_backlinks_search(request: Request, slug: str) -> JSONResponse:
     items.sort(key=lambda x: x["opportunity_score"], reverse=True)
 
     with DB.session() as db:
-        billing.usage_add(db, user_id=str(user.id), metric="backlink_searches_month", amount=1)
+        billing.usage_add(db, user_id=payeur, metric="backlink_searches_month", amount=1)
 
     return JSONResponse({"ok": True, "data": items})
 
@@ -26065,12 +26130,13 @@ async def api_backlinks_generate_reply(request: Request, slug: str) -> JSONRespo
     _db_project_or_404(request, slug)
     user = request.state.user
 
+    payeur = _compte_payeur(str(user.id), slug)
     with DB.session() as db:
-        if not _opp_has_access(db, user_id=str(user.id)):
+        if not _opp_has_access(db, user_id=payeur):
             return JSONResponse({"ok": False, "error": "Fonctionnalité réservée au plan Solo+."}, status_code=403)
 
         allowed, remaining = billing.ensure_within_quota(
-            db, user_id=str(user.id), metric="backlink_replies_month", planned_amount=1
+            db, user_id=payeur, metric="backlink_replies_month", planned_amount=1
         )
         if not allowed:
             return JSONResponse(
@@ -26123,7 +26189,7 @@ async def api_backlinks_generate_reply(request: Request, slug: str) -> JSONRespo
         return JSONResponse({"ok": False, "error": err_msg}, status_code=502)
 
     with DB.session() as db:
-        billing.usage_add(db, user_id=str(user.id), metric="backlink_replies_month", amount=1)
+        billing.usage_add(db, user_id=payeur, metric="backlink_replies_month", amount=1)
 
     return JSONResponse({"ok": True, "reply": reply_text})
 
@@ -26144,7 +26210,7 @@ async def backlinks_opportunity_save(
     user = request.state.user
 
     with DB.session() as db:
-        if not _opp_has_access(db, user_id=str(user.id)):
+        if not _opp_has_access(db, user_id=_compte_payeur(str(user.id), slug)):
             return RedirectResponse(
                 url=f"/projects/{slug}/backlinks/opportunities?err={quote('Plan Solo+ requis')}",
                 status_code=303,
@@ -26275,7 +26341,7 @@ async def backlinks_auto_settings_save(request: Request, slug: str) -> JSONRespo
     user = request.state.user
 
     with DB.session() as db:
-        if not _opp_has_access(db, user_id=str(user.id)):
+        if not _opp_has_access(db, user_id=_compte_payeur(str(user.id), slug)):
             return JSONResponse({"ok": False, "error": "Plan Solo+ requis"}, status_code=403)
 
     try:

@@ -91,7 +91,7 @@ def customer(monkeypatch):
         db.refresh(proj)
         pid = str(proj.id)
     # A Pro subscription: the gate is part of the path, and a free account must not reach GitHub.
-    monkeypatch.setattr(app_module, "_plan_correction_cfg", lambda user: {
+    monkeypatch.setattr(app_module, "_plan_correction_cfg", lambda user, **_: {
         "plan": "pro", "model": "claude-sonnet-4-6", "max_files": 20, "unlimited": False,
     })
     monkeypatch.setattr(app_module, "_effective_user_connection_value",
@@ -258,7 +258,7 @@ def test_a_page_the_route_map_cannot_resolve_gets_no_pr(customer, github, model)
 
 def test_a_free_account_is_sent_to_billing_before_any_repo_call(customer, github, monkeypatch) -> None:
     client, slug, _pid, _uid = customer
-    monkeypatch.setattr(app_module, "_plan_correction_cfg", lambda user: {
+    monkeypatch.setattr(app_module, "_plan_correction_cfg", lambda user, **_: {
         "plan": "free", "model": "", "max_files": 0, "unlimited": False})
     r = _post(client, slug, query=QUERY, url=PAGE)
     assert r.status_code == 402 and r.json()["billing_url"] == "/billing"
