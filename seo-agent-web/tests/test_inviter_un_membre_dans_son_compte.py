@@ -407,3 +407,24 @@ def test_le_jeton_n_est_pas_stocke_en_clair() -> None:
     assert stocke != m._password_reset_token_hash(jeton), (
         "invitation et reinitialisation produisent la meme empreinte : "
         "une empreinte qui ne dit pas a quoi elle sert finit comparee au mauvais endroit")
+
+
+def test_le_nombre_ANNONCE_est_le_nombre_APPLIQUE() -> None:
+    """Une carte tarifaire qui promet deux places quand le code en autorise cinq est un mensonge.
+
+    Les deux nombres vivent a deux endroits du catalogue — `limits.members`, qui est applique,
+    et la liste `features`, qui est lue par le client sur la page des tarifs. Rien ne les relie,
+    donc rien n'empeche l'un de bouger sans l'autre. Ce test les relie.
+    """
+    catalogue = billing.plan_catalog()
+    for cle, plan in catalogue.items():
+        places = int((plan.get("limits") or {}).get("members") or 0)
+        annonces = [f for f in (plan.get("features") or []) if "collaborateur" in f.lower()]
+        if places <= 0:
+            assert not annonces, "%s n'a aucune place mais annonce %r" % (cle, annonces)
+            continue
+        assert annonces, "%s autorise %d places et ne l'annonce nulle part" % (cle, places)
+        assert len(annonces) == 1, "%s annonce les places plusieurs fois : %r" % (cle, annonces)
+        chiffres = re.findall(r"\d+", annonces[0])
+        assert chiffres and int(chiffres[0]) == places, (
+            "%s annonce %r mais applique %d places" % (cle, annonces[0], places))

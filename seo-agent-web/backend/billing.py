@@ -226,7 +226,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
             "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
-            "features": ["Corrections du code en pull request GitHub (300/mois)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (300/mois)", "Comptes d'équipe (2 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
             "label": "Business",
@@ -244,7 +244,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
             "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},
-            "features": ["Corrections du code en pull request GitHub (900/mois)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (900/mois)", "Comptes d'équipe (5 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
     _apply_plan_config_override(defaults)
