@@ -486,7 +486,12 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                       <span class="cs-conn-dot" style="background:rgba(255,255,255,.2);"></span>
                       <span class="cs-conn-label">Compte Bing non connecté</span>
                       <div class="cs-conn-btns">
-                        <a class="btn small primary" href="/settings/accounts#bing-connect-card">Connecter Bing →</a>
+                        {# La connexion est attachée à CE projet, comme pour Search Console : le
+                           propriétaire du site connecte son propre compte Bing sans que l'agence
+                           ait à partager le sien. Sans le slug, elle atterrirait au niveau du
+                           compte et la page projet continuerait d'afficher « non connecté ». #}
+                        <a class="btn small primary"
+                           href="/oauth/bing/connect?slug={{ project.slug | urlencode }}&next={{ ('/projects/' ~ project.slug ~ '/settings/crawl#bing') | urlencode }}">Connecter Bing →</a>
                       </div>
                     {% endif %}
                   </div>

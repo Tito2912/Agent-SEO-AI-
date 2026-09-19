@@ -1268,7 +1268,26 @@ def _rotate_user_connection_secrets() -> dict[str, int]:
     return counts
 
 
-def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
+def _bing_oauth_connection_key(slug: str) -> str:
+    """La cle d'une connexion Bing attachee a UN projet. Copie de `_gsc_oauth_connection_key`.
+
+    POURQUOI PAR PROJET. Bing Webmaster et Google Search Console sont la meme nature de chose :
+    une propriete que possede le proprietaire du SITE, pas l'agence qui l'entretient. GSC est
+    par projet depuis le debut ; Bing etait reste par compte, ce qui marche tant qu'une agence
+    gere tous ses sites depuis un seul compte Bing — et casse des qu'un client apporte le sien.
+
+    La distinction avec GitHub est volontaire : un jeton GitHub est un identifiant D'AGENCE, et
+    il a ete decide qu'un membre pousse avec celui de son hote. Une propriete Webmaster, non.
+    """
+    safe_slug = _safe_storage_segment(slug, "project")
+    prefix = _BING_OAUTH_CONNECTION_KEY + ":"
+    if len(safe_slug) <= 80:
+        return f"{prefix}{safe_slug}"
+    digest = hashlib.sha256(safe_slug.encode("utf-8")).hexdigest()[:8]
+    return f"{prefix}{safe_slug[:80]}:{digest}"
+
+
+def _effective_bing_connection(*, user_id: str, slug: str = "", db=None) -> dict[str, Any]:
     own_session = db is None
     session = db
     try:
@@ -1278,7 +1297,17 @@ def _effective_bing_connection(*, user_id: str, db=None) -> dict[str, Any]:
         else:
             session_ctx = None
 
-        oauth_row = _user_connection_row(user_id=str(user_id), key=_BING_OAUTH_CONNECTION_KEY, db=session)
+        # Le projet d'abord, le compte ensuite. CE REPLI EST LA MIGRATION : les connexions
+        # posees au niveau du compte continuent de servir tous ses projets, donc une agence qui
+        # gere dix sites depuis un seul compte Bing ne se reconnecte nulle part. On ne se
+        # reconnecte par projet QUE lorsque le site vit dans un autre compte Bing.
+        oauth_row = None
+        if str(slug or "").strip():
+            oauth_row = _user_connection_row(
+                user_id=str(user_id), key=_bing_oauth_connection_key(slug), db=session)
+        if oauth_row is None:
+            oauth_row = _user_connection_row(
+                user_id=str(user_id), key=_BING_OAUTH_CONNECTION_KEY, db=session)
         oauth_meta = _connection_meta(oauth_row)
         refresh_token_stored = str(getattr(oauth_row, "secret_value", "") or "").strip() if oauth_row else ""
         refresh_token = ""
@@ -6247,12 +6276,13 @@ def _bing_pick_site_url(
     return best, sites, None
 
 
-def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, Any], days: int) -> dict[str, Any]:
+def _fetch_bing_live_series(*, user_id: str, base_url: str, bing_cfg: dict[str, Any], days: int,
+                            slug: str = "") -> dict[str, Any]:
     enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
     if not enabled:
         return {"ok": False, "enabled": False, "reason": "disabled"}
 
-    auth = _effective_bing_connection(user_id=str(user_id))
+    auth = _effective_bing_connection(user_id=str(user_id), slug=slug)
     token = str(auth.get("token") or "").strip()
     if not token:
         return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_credentials"}
@@ -6531,12 +6561,13 @@ def _fetch_bing_live_items(
     days: int,
     dim: str,
     limit: int,
+    slug: str = "",
 ) -> dict[str, Any]:
     enabled = bool(bing_cfg.get("enabled")) if "enabled" in bing_cfg else False
     if not enabled:
         return {"ok": False, "enabled": False, "source": "bing", "reason": "disabled"}
 
-    auth = _effective_bing_connection(user_id=str(user_id))
+    auth = _effective_bing_connection(user_id=str(user_id), slug=slug)
     token = str(auth.get("token") or "").strip()
     if not token:
         return {"ok": False, "enabled": True, "source": "bing", "reason": "missing_credentials"}
@@ -8961,7 +8992,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     pagespeed_api_key = str(os.environ.get("PAGESPEED_API_KEY") or "").strip()
     if pagespeed_api_key:
         env_extra["PAGESPEED_API_KEY"] = pagespeed_api_key
-    bing_auth = _effective_bing_connection(user_id=str(user_id))
+    bing_auth = _effective_bing_connection(user_id=str(user_id), slug=slug)
     if str(bing_auth.get("token") or "").strip():
         if bing_auth.get("mode") == "oauth":
             env_extra["BING_WEBMASTER_ACCESS_TOKEN"] = str(bing_auth.get("token") or "")
@@ -15357,11 +15388,39 @@ def netlify_sites(request: Request) -> JSONResponse:
     return JSONResponse({"ok": True, "sites": items})
 
 
+def _bing_oauth_cible(user: Any, slug: str) -> tuple[str, str]:
+    """(compte, cle) ou ranger une connexion Bing — le seul endroit qui en decide.
+
+    SOUS LE COMPTE PAYEUR, pas sous la personne qui clique. C'est ce qui repond au besoin :
+    un MEMBRE connecte son propre compte Bing sur un projet de son hote, et la connexion
+    atterrit la ou tout le reste du projet est lu — rapports, travaux, facturation suivent
+    deja le proprietaire. L'ecrire sous le membre la rendrait invisible aux pages projet,
+    exactement le defaut corrige ce matin sur les travaux.
+
+    Consequence assumee, tranchee par le proprietaire du produit le 19/09/2026 : le jeton du
+    client vit sous le compte de l'agence. C'est le pendant de la decision inverse deja prise
+    pour GitHub, ou le membre pousse avec le jeton de l'hote — et c'est ce qui fait que
+    l'agence garde la connexion du site qu'elle gere si le client s'en va.
+
+    Sans projet, on reste au niveau du compte de la personne connectee : c'est la carte
+    « Comptes & connexions », qui sert de repli a tous ses projets.
+    """
+    if str(slug or "").strip():
+        return _compte_payeur(str(getattr(user, "id", "") or ""), slug), _bing_oauth_connection_key(slug)
+    return str(getattr(user, "id", "") or ""), _BING_OAUTH_CONNECTION_KEY
+
+
 @app.get("/oauth/bing/connect")
-def bing_oauth_connect(request: Request, next: str | None = None) -> RedirectResponse:
+def bing_oauth_connect(request: Request, next: str | None = None,
+                       slug: str | None = None) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
+    # 404 si la personne n'a pas acces a ce projet. `_db_project_or_404` passe par
+    # `_comptes_accessibles`, donc un membre de l'hote est accepte et un etranger non.
+    _slug = str(slug or "").strip()
+    if _slug:
+        _db_project_or_404(request, _slug)
     client_id, client_secret = _bing_oauth_client()
     return_to = _safe_next_path(next or "/settings/accounts#bing-connect-card")
     if not client_id or not client_secret:
@@ -15374,6 +15433,7 @@ def bing_oauth_connect(request: Request, next: str | None = None) -> RedirectRes
                 "ts": int(time.time()),
                 "nonce": uuid.uuid4().hex,
                 "next": return_to,
+                "slug": _slug,
             }
         )
     except Exception as e:
@@ -15400,6 +15460,7 @@ def bing_oauth_callback(
     user = getattr(request.state, "user", None)
     payload = _oauth_state_decode(state or "")
     return_to = _safe_next_path(payload.get("next") if isinstance(payload, dict) else "/settings/accounts#bing-connect-card")
+    _slug = str(payload.get("slug") or "").strip() if isinstance(payload, dict) else ""
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
     if not isinstance(payload, dict) or payload.get("provider") != "bing" or str(payload.get("user_id") or "") != str(user.id):
@@ -15435,8 +15496,12 @@ def bing_oauth_callback(
             "token_type": str(token_data.get("token_type") or "Bearer").strip(),
             "connected_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
         }
-        _upsert_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY, value=refresh_token, meta=meta)
-        _delete_user_connection(user_id=str(user.id), key="BING_WEBMASTER_API_KEY")
+        _cible, _cle = _bing_oauth_cible(user, _slug)
+        _upsert_user_connection(user_id=_cible, key=_cle, value=refresh_token, meta=meta)
+        if not _slug:
+            # La cle API manuelle est au niveau du COMPTE : la supprimer depuis un projet
+            # retirerait le repli de tous les autres.
+            _delete_user_connection(user_id=str(user.id), key="BING_WEBMASTER_API_KEY")
     except Exception as e:
         _audit_log(
             request,
@@ -15460,12 +15525,19 @@ def bing_oauth_callback(
 
 
 @app.post("/oauth/bing/disconnect")
-def bing_oauth_disconnect(request: Request, next: str = Form(default="/settings/accounts#bing-connect-card")) -> RedirectResponse:
+def bing_oauth_disconnect(request: Request, next: str = Form(default="/settings/accounts#bing-connect-card"),
+                          slug: str = Form(default="")) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
-    _delete_user_connection(user_id=str(user.id), key=_BING_OAUTH_CONNECTION_KEY)
-    _audit_log(request, action="oauth.bing.disconnect", status="ok", user=user, target_type="connection", target_id=_BING_OAUTH_CONNECTION_KEY)
+    _slug = str(slug or "").strip()
+    if _slug:
+        _db_project_or_404(request, _slug)
+    # Meme fonction que la connexion : deconnecter ailleurs qu'on n'a connecte laisserait
+    # une connexion que plus aucun bouton ne peut retirer.
+    _cible, _cle = _bing_oauth_cible(user, _slug)
+    _delete_user_connection(user_id=_cible, key=_cle)
+    _audit_log(request, action="oauth.bing.disconnect", status="ok", user=user, target_type="connection", target_id=_cle)
     return RedirectResponse(url=_path_with_flash(next, msg="Bing déconnecté."), status_code=303)
 
 
@@ -15597,7 +15669,7 @@ def bing_sites_for_project(request: Request, slug: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": "auth_required"}, status_code=401)
 
     user_id = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
-    auth = _effective_bing_connection(user_id=user_id)
+    auth = _effective_bing_connection(user_id=user_id, slug=slug)
     if not auth.get("token"):
         return JSONResponse({"ok": False, "error": "Bing non connecté pour ce compte."}, status_code=400)
 
@@ -15998,7 +16070,7 @@ def project_search_series(request: Request, slug: str, source: str, days: int | 
         status_code = 200 if payload.get("ok") else 400
     elif source_key == "bing":
         payload = _fetch_bing_live_series(
-            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug,
             base_url=str(proj.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
@@ -16076,7 +16148,7 @@ def project_search_items(
         )
     elif source_key == "bing":
         payload = _fetch_bing_live_items(
-            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug,
             base_url=str(proj.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
@@ -16845,7 +16917,8 @@ def project_overview(
         "bing": {
             "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
             "days": int(effective_bing.get("days") or 28),
-            "credentials_ready": bool(_effective_bing_connection(user_id=_compte_payeur(str(getattr(user, "id", "")), slug)).get("token")),
+            "credentials_ready": bool(_effective_bing_connection(
+                user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug).get("token")),
         },
     }
     plan_key = "free"
@@ -16963,7 +17036,8 @@ def project_crawl_settings(
         "settings_url": "/settings/accounts#gsc-oauth-card",
         "system_url": "/settings/system#gsc-oauth-system",
     }
-    bing_auth = _effective_bing_connection(user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
+    bing_auth = _effective_bing_connection(
+        user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug)
     bing_api_ready = bool(bing_auth.get("token"))
     # Show the plan's real per-crawl ceiling in the form. Offering 200 000 to everyone meant
     # the limit was only ever discovered by a crawl that ran for hours and then died.
@@ -26533,7 +26607,7 @@ def project_performance(
         )
     else:
         live_payload = _fetch_bing_live_items(
-            user_id=_compte_payeur(str(getattr(user, "id", "")), slug),
+            user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug,
             base_url=str(proj_row.base_url or ""),
             bing_cfg=bing_cfg,
             days=requested_days,
