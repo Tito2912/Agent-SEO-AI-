@@ -537,7 +537,15 @@ def _send_account_invite_email(*, to_email: str, accept_url: str, owner_email: s
     ttl_s = _seconds_until(expires_at)
     ttl_jours = max(1, int(math.ceil(float(ttl_s) / 86400.0)))
     app_name = _safe_env("APP_NAME") or "SEO Agent"
-    subject = "%s t'invite à rejoindre son compte %s" % (owner_email or "Un utilisateur", app_name)
+    # L'OBJET NE PORTE PAS D'ADRESSE EMAIL, et ce n'est pas une preference de style. Une adresse
+    # brute dans un objet est un signal de filtrage classique — le premier envoi reel a atterri
+    # dans les indesirables — et elle expose l'adresse de l'invitant dans les notifications et
+    # les apercus, la ou personne n'a demande a la voir. Qui invite se lit dans le CORPS, ou
+    # c'est utile pour decider si on fait confiance.
+    # La forme suit celle des autres messages du produit (« Verifie ton email — Noyaru »,
+    # « Reinitialisation du mot de passe — Noyaru ») : un expediteur qui ecrit toujours de la
+    # meme facon se fait mieux reconnaitre qu'un expediteur qui change de moule a chaque envoi.
+    subject = "Invitation à rejoindre une équipe — %s" % app_name
 
     body = "\n".join([
         "Bonjour,",

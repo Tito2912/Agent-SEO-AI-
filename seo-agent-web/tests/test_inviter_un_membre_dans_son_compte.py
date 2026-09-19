@@ -533,3 +533,67 @@ def test_une_invitation_PERIMEE_ne_rouvre_pas_l_inscription(monkeypatch) -> None
     with m.DB.session() as db:
         assert db.scalar(select(User).where(User.email == adresse)) is None, (
             "un compte a ete cree sur une invitation perimee")
+
+
+# --- ce que l'email doit etre pour arriver -------------------------------------------------
+
+def test_l_objet_ne_porte_AUCUNE_adresse_email(emails) -> None:
+    """Le premier envoi reel a atterri dans les indesirables, et l'objet en etait la cause.
+
+    Il valait « <adresse> t'invite a rejoindre son compte Noyaru ». Une adresse brute dans un
+    objet est un signal de filtrage classique, et elle expose l'adresse de l'invitant dans les
+    notifications et les apercus — la ou personne n'a demande a la voir.
+
+    Qui invite reste lisible dans le CORPS, ou l'information sert a decider si on fait
+    confiance. C'est l'objet qui change, pas le contenu.
+    """
+    patron, mail_patron = _utilisateur("agence", plan="pro")
+    _consultant, mail_consultant = _utilisateur("consultant")
+    client = _client(patron)
+    client.post("/settings/team/invite",
+                data={"email": mail_consultant, "_csrf": _jeton_csrf(client)},
+                follow_redirects=False)
+
+    objet = emails[-1]["subject"]
+    assert "@" not in objet, "l'objet contient une adresse email : %r" % objet
+    assert mail_patron not in objet and mail_consultant not in objet
+    assert "Invitation" in objet, objet
+    # L'information n'est pas perdue : elle a seulement change de place.
+    assert mail_patron in emails[-1]["body"], "on ne sait plus qui invite"
+
+
+def test_aucun_OBJET_d_email_n_interpole_autre_chose_que_le_nom_du_produit() -> None:
+    """La vraie propriete, apres un premier essai qui mesurait de travers.
+
+    J'avais d'abord cherche le MOT « email » dans les objets — ce qui condamnait
+    « Verifie ton email — Noyaru », parfaitement legitime. Ce n'est pas le vocabulaire qui
+    compte, c'est ce qui est INTERPOLE : un objet qui insere une variable porte le risque d'y
+    glisser une adresse, et c'est ce qui a envoye la premiere invitation dans les indesirables.
+
+    La regle est donc exacte : un objet d'email n'interpole QUE le nom du produit. Tout le
+    reste est du texte fixe, et un objet qui inserera autre chose demain sera nomme ici.
+    """
+    import ast as _ast
+
+    arbre = _ast.parse(Path(m.__file__).read_text(encoding="utf-8"))
+    fautifs = []
+    for n in _ast.walk(arbre):
+        if not isinstance(n, _ast.Assign):
+            continue
+        if not any(isinstance(t, _ast.Name) and t.id == "subject" for t in n.targets):
+            continue
+        v = n.value
+        inseres = []
+        if isinstance(v, _ast.JoinedStr):
+            inseres = [_ast.unparse(x.value) for x in v.values
+                       if isinstance(x, _ast.FormattedValue)]
+        elif isinstance(v, _ast.BinOp) and isinstance(v.op, _ast.Mod):
+            droite = v.right
+            elts = droite.elts if isinstance(droite, _ast.Tuple) else [droite]
+            inseres = [_ast.unparse(e) for e in elts]
+        autres = [x for x in inseres if x != "app_name"]
+        if autres:
+            fautifs.append("app.py:%d insère %s" % (n.lineno, ", ".join(autres)))
+    assert not fautifs, (
+        "ces objets d'email insèrent autre chose que le nom du produit — risque d'y glisser "
+        "une adresse, et donc d'être filtrés :\n  " + "\n  ".join(fautifs))
