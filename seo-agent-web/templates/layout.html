@@ -48,6 +48,11 @@
             Abonnement
           </a>
 
+          <a class="nav-item {% if request.url.path.startswith('/docs') %}active{% endif %}" href="/docs">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h9a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 4h-4a3 3 0 00-3 3v13a2.5 2.5 0 012.5-2.5H20z"/></svg>
+            Documentation
+          </a>
+
           {% if request.state.user and request.state.user.is_admin %}
             <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>

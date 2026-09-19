@@ -64,9 +64,10 @@
 
       <nav class="pub-nav-links">
         {% set path = request.url.path %}
-        <a href="/pricing" {% if path == '/pricing' %}class="active"{% endif %}>Pricing</a>
-        <a href="/support" {% if path == '/support' %}class="active"{% endif %}>Support</a>
-        <a href="/status" {% if path == '/status' %}class="active"{% endif %}>Statut</a>
+        {% for item in nav_items if item.primary %}
+          <a href="{{ item.href }}"
+             {% if path == item.href or (item.href != '/' and path.startswith(item.href ~ '/')) %}class="active"{% endif %}>{{ item.label }}</a>
+        {% endfor %}
       </nav>
 
       <div class="pub-nav-actions">
@@ -93,11 +94,9 @@
           &copy; {{ year }} {{ app_name }} &middot; <a href="mailto:{{ support_email }}" style="color:var(--muted);">{{ support_email }}</a>
         </div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
-          <a href="/pricing" style="color:var(--muted);">Pricing</a>
-          <a href="/terms" style="color:var(--muted);">CGU</a>
-          <a href="/privacy" style="color:var(--muted);">Confidentialit&eacute;</a>
-          <a href="/support" style="color:var(--muted);">Support</a>
-          <a href="/status" style="color:var(--muted);">Statut</a>
+          {% for item in nav_items %}
+            <a href="{{ item.href }}" style="color:var(--muted);">{{ item.label }}</a>
+          {% endfor %}
         </div>
       </div>
     </footer>

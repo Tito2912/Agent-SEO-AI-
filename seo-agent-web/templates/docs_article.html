@@ -15,23 +15,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="content-shell{% if not page.headings %} no-aside{% endif %}">
-  {% if page.headings %}
-    <aside class="content-aside" aria-label="Sommaire de l'article">
+<div class="content-shell">
+  <aside class="content-aside" aria-label="Sommaire de la documentation">
+    {% for section in sections %}
       <div class="content-aside-group">
-        <div class="content-aside-title">Sur cette page</div>
-        {% for heading in page.headings %}
-          <a href="#{{ heading.id }}">{{ heading.title }}</a>
+        <div class="content-aside-title">{{ section.name }}</div>
+        {% for item in section.pages %}
+          <a href="{{ item.path }}" {% if item.slug == page.slug %}class="current" aria-current="page"{% endif %}>{{ item.title }}</a>
         {% endfor %}
       </div>
-    </aside>
-  {% endif %}
+    {% endfor %}
+  </aside>
 
   <article>
     <nav class="content-breadcrumb" aria-label="Fil d'Ariane">
       <a href="/">Accueil</a>
       <span>/</span>
-      <a href="/ressources-seo">Guides SEO</a>
+      <a href="/docs">Documentation</a>
       <span>/</span>
       <span>{{ page.title }}</span>
     </nav>
@@ -45,6 +45,9 @@
       </div>
       <h1>{{ page.title }}</h1>
       <p class="content-lead">{{ page.description }}</p>
+      {% if page.app_href and request.state.user %}
+        <a class="btn" href="{{ page.app_href }}">Ouvrir dans l'application &rarr;</a>
+      {% endif %}
     </header>
 
     <div class="content-body">{{ page.body_html | safe }}</div>
@@ -61,21 +64,8 @@
       </section>
     {% endif %}
 
-    {% if page.cta %}
-      <section class="content-cta">
-        <h2>Mettre ce guide en pratique</h2>
-        <p>{{ page.cta }}</p>
-        {% if request.state.user %}
-          <a class="btn primary" href="/">Ouvrir le tableau de bord &rarr;</a>
-        {% else %}
-          <a class="btn primary" href="/auth/signup">Créer un compte gratuit</a>
-          <a class="btn" href="/docs">Voir la documentation</a>
-        {% endif %}
-      </section>
-    {% endif %}
-
     {% if related %}
-      <aside class="content-related" aria-label="À lire ensuite">
+      <aside class="content-related" aria-label="Pages liées">
         <h2>À lire ensuite</h2>
         <div class="content-related-list">
           {% for item in related %}
@@ -86,6 +76,14 @@
           {% endfor %}
         </div>
       </aside>
+    {% endif %}
+
+    {% if not request.state.user %}
+      <section class="content-cta">
+        <h2>Essayer {{ app_name }}</h2>
+        <p>Créez un projet, lancez un crawl et parcourez votre premier rapport. Aucune carte bancaire n'est demandée.</p>
+        <a class="btn primary" href="/auth/signup">Créer un compte gratuit</a>
+      </section>
     {% endif %}
   </article>
 </div>

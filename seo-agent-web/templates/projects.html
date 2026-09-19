@@ -91,7 +91,12 @@
                 {{ step.label }}
                 {% if step.optional %}<span class="muted small">optionnel</span>{% endif %}
               </div>
-              <div class="muted small">{{ step.detail }}</div>
+              <div class="muted small">
+                {{ step.detail }}
+                {% if step.doc_href %}
+                  &middot; <a href="{{ step.doc_href }}" class="muted">Comment faire</a>
+                {% endif %}
+              </div>
             </div>
             {% if not step.done %}
               {% if step.action_dialog %}

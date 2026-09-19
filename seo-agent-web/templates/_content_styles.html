@@ -1,0 +1,186 @@
+<style>
+/* Typography shared by /docs/<slug> and /ressources-seo/<slug>.
+   The body of both is Markdown rendered to plain HTML, so it is styled by element rather
+   than by class — a new heading level or table in a .md file must not require a template. */
+.content-shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  padding: 34px 0 40px;
+}
+.content-shell.no-aside {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 780px;
+  margin: 0 auto;
+}
+.content-breadcrumb {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.content-breadcrumb a { color: var(--muted); }
+.content-breadcrumb a:hover { color: var(--accent-2); }
+.content-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.content-kind {
+  color: var(--accent-2);
+  border: 1px solid rgba(var(--accent-rgb), .24);
+  background: rgba(var(--accent-rgb), .10);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-weight: 800;
+}
+.content-header h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.7rem, 3.6vw, 2.4rem);
+  line-height: 1.15;
+  font-weight: 900;
+}
+.content-lead {
+  margin: 0 0 26px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* ── Markdown body ─────────────────────────────────────────── */
+.content-body { font-size: 15px; line-height: 1.75; }
+.content-body h2 {
+  margin: 38px 0 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 21px;
+  line-height: 1.25;
+  scroll-margin-top: 20px;
+}
+.content-body h3 {
+  margin: 26px 0 8px;
+  font-size: 16px;
+  scroll-margin-top: 20px;
+}
+.content-body p { margin: 0 0 14px; }
+.content-body ul,
+.content-body ol { margin: 0 0 16px; padding-left: 20px; }
+.content-body li { margin-bottom: 7px; }
+.content-body a { color: var(--accent-2); }
+.content-body strong { color: var(--text); font-weight: 700; }
+.content-body code {
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.06);
+  font-size: 13px;
+}
+.content-body pre {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255,255,255,.03);
+}
+.content-body pre code { padding: 0; background: none; font-size: 12.5px; line-height: 1.6; }
+.content-table-wrap { overflow-x: auto; margin: 0 0 20px; }
+.content-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.content-body th,
+.content-body td {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.content-body th { background: rgba(255,255,255,.04); font-weight: 700; }
+
+/* Admonitions: `!!! note "Titre"` / `!!! warning "Titre"` in the Markdown source. */
+.content-body .admonition {
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border: 1px solid rgba(var(--accent-rgb), .22);
+  border-left-width: 3px;
+  border-radius: var(--radius-lg);
+  background: rgba(var(--accent-rgb), .06);
+}
+.content-body .admonition > :last-child { margin-bottom: 0; }
+.content-body .admonition-title {
+  margin: 0 0 6px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--accent-2);
+}
+.content-body .admonition.warning {
+  border-color: rgba(240, 170, 60, .34);
+  background: rgba(240, 170, 60, .08);
+}
+.content-body .admonition.warning .admonition-title { color: #f0aa3c; }
+
+/* ── Aside: table of contents / docs sidebar ───────────────── */
+.content-aside {
+  position: sticky;
+  top: 18px;
+  font-size: 13px;
+}
+.content-aside-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.content-aside-group { margin-bottom: 20px; }
+.content-aside a {
+  display: block;
+  padding: 4px 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.content-aside a:hover { color: var(--accent-2); text-decoration: none; }
+.content-aside a.current { color: var(--accent-2); font-weight: 700; }
+
+/* ── Trailing blocks ───────────────────────────────────────── */
+.content-faq { margin-top: 40px; }
+.content-faq h2 { margin: 0 0 14px; font-size: 20px; }
+.content-faq-item { padding: 16px 18px; margin-bottom: 10px; }
+.content-faq-item h3 { margin: 0 0 6px; font-size: 14.5px; }
+.content-faq-item p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.7; }
+.content-cta {
+  margin-top: 34px;
+  padding: 22px;
+  border: 1px solid rgba(var(--accent-rgb), .2);
+  border-radius: var(--radius-lg);
+  background: rgba(var(--accent-rgb), .07);
+}
+.content-cta h2 { margin: 0 0 8px; font-size: 17px; }
+.content-cta p { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.content-related { margin-top: 34px; }
+.content-related h2 { margin: 0 0 12px; font-size: 16px; }
+.content-related-list { display: grid; gap: 8px; }
+.content-related-link {
+  display: block;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 13.5px;
+}
+.content-related-link:hover { border-color: rgba(var(--accent-rgb), .3); text-decoration: none; }
+.content-related-link span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+@media (max-width: 900px) {
+  .content-shell { grid-template-columns: minmax(0, 1fr); gap: 26px; padding: 24px 0 30px; }
+  .content-aside { position: static; order: 2; }
+}
+</style>

@@ -293,19 +293,22 @@
     <section class="resource-teaser">
       <div class="resource-teaser-head">
         <div>
-          <h2>Guides SEO et tutoriels</h2>
-          <p>Des contenus pratiques pour comprendre l'audit SEO, prioriser les corrections et suivre votre visibilité organique.</p>
+          <h2>Guides SEO et documentation</h2>
+          <p>La méthode d'un côté — prioriser un audit, lire Search Console, rattraper une régression. Le produit de l'autre, écran par écran.</p>
         </div>
-        <a class="btn" href="/ressources-seo">Voir les ressources</a>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a class="btn" href="/ressources-seo">Guides SEO</a>
+          <a class="btn" href="/docs">Documentation</a>
+        </div>
       </div>
 
       <div class="resource-teaser-grid">
         {% for resource in featured_resources %}
           <article class="card home-resource-card">
             <span class="badge ok">{{ resource.kind }} · {{ resource.reading_time }}</span>
-            <h3><a href="/ressources-seo/{{ resource.slug }}">{{ resource.title }}</a></h3>
+            <h3><a href="{{ resource.path }}">{{ resource.title }}</a></h3>
             <p>{{ resource.description }}</p>
-            <a class="small" href="/ressources-seo/{{ resource.slug }}">Lire l'article</a>
+            <a class="small" href="{{ resource.path }}">Lire l'article</a>
           </article>
         {% endfor %}
       </div>
