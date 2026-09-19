@@ -16172,12 +16172,14 @@ def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONR
     token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
     if not token or not hmac.compare_digest(token, cron_secret):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
-    # FILET DE SECURITE, et il est ici pour une raison precise. Les pull requests de correction
-    # attendent `/cron/verify-pull-requests` pour sortir du brouillon. Si cette entree n'est pas
-    # configuree dans l'ordonnanceur, elles y resteraient pour toujours et les fusions
-    # automatiques ne partiraient jamais — une panne totale du correcteur causee par une ligne
-    # de configuration oubliee. Le balayage tourne donc aussi ici : moins souvent, mais il
-    # tourne. L'oubli ralentit le produit au lieu de l'arreter.
+    # FILET DE SECURITE, AUJOURD'HUI INERTE, et c'est la nuance qui compte. Les pull requests
+    # de correction attendent `/cron/verify-pull-requests` pour sortir du brouillon ; si cette
+    # entree disparait de l'ordonnanceur, elles y resteraient pour toujours. Le balayage tourne
+    # donc aussi ici.
+    # MAIS : verifie le 19/09/2026 dans le tableau de bord Render, AUCUN ordonnanceur n'appelle
+    # `/cron/autopilot`. Ce repli ne protege donc rien pour l'instant — il attend qu'une entree
+    # autopilote existe. Le seul ordonnanceur reel de la verification est le workflow
+    # `.github/workflows/verify-pull-requests.yml`. Ne pas lire ces lignes comme une garantie.
     try:
         _balayer_verifications_pr(limit=25)
     except Exception as e:
@@ -28133,8 +28135,13 @@ def cron_verify_pull_requests(request: Request) -> JSONResponse:
 
     SANS CE CRON, les corrections restent en brouillon et les fusions automatiques ne partent
     jamais. Ce n'est pas une degradation silencieuse : l'ecran des corrections montre l'etat
-    « en attente » et son age. Le balayage est aussi declenche par le cron autopilote, pour que
-    l'oubli de cette entree ralentisse le produit sans le bloquer.
+    « en attente » et son age.
+
+    UN REPLI EXISTE DANS `cron_autopilot`, MAIS IL EST INERTE AUJOURD'HUI, et il vaut mieux
+    l'ecrire que le laisser croire : verification faite le 19/09/2026 dans le tableau de bord
+    Render, aucun ordonnanceur n'appelle `/cron/autopilot`. Le repli se reveillera le jour ou
+    cette entree existera ; d'ici la, l'ordonnanceur de CETTE route est le seul, et c'est
+    `.github/workflows/verify-pull-requests.yml` qui le porte.
     """
     cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
     if not cron_secret:
