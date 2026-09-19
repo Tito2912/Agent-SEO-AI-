@@ -41,6 +41,28 @@ def _join(*lines: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _refuse_avant_commit(monkeypatch, chemin: str, contenu: str) -> tuple[list, list, list]:
+    """Fait passer `contenu` par la boucle de correction et rend (patches, refuses, commits).
+
+    MESURE LE RESULTAT, PAS LA FORME DU CODE. La version precedente de ce test cherchait un
+    appel a l'interieur de `_deep_patch_issue_files` : elle interdisait de deplacer cet appel,
+    et a casse sur un refactor qui ne changeait rien au comportement — les refus ont ete
+    regroupes dans `_refus_de_format`, partagee avec la route par URL qui, elle, ne les
+    appliquait pas. Un test qui decrit OU le code appelle quelque chose empeche de reparer
+    ailleurs.
+    """
+    commits: list = []
+    monkeypatch.setattr(app_module, "_github_api_put",
+                        lambda c, **kw: commits.append(c) or {"content": {"sha": "n"}})
+    patched, skipped, _t, _a = app_module._deep_patch_issue_files(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
+        all_paths=[chemin], issue_key="k", issue_label="L", impacted_urls=[], site_name="s",
+        file_state={chemin: {"sha": "v", "content": "x"}},
+        max_files=2, targets_override=[chemin], allow_ai_targeting=False,
+        link_rewriter=lambda _raw: (contenu, 1), rewriter_ai_fallback=False)
+    return patched, skipped, commits
+
+
 def test_the_nuxt_case_an_array_never_closed() -> None:
     broken = _join(
         "useHead({",
@@ -107,8 +129,16 @@ def test_the_message_names_the_delimiter() -> None:
     assert "{" in err
 
 
-def test_the_check_refuses_the_file_before_commit() -> None:
-    import inspect
-    src = inspect.getsource(app_module._deep_patch_issue_files)
-    assert "_unbalanced_delimiters(new_content)" in src
-    assert src.index("_unbalanced_delimiters") < src.index("put_body")
+def test_the_check_refuses_the_file_before_commit(monkeypatch) -> None:
+    """Un fichier aux delimiteurs desequilibres ne part pas chez le client.
+
+    L'analyseur de litteral passe avant et nomme souvent la cause plus precisement ; ce qui
+    est verrouille ici est le RESULTAT — rien n'est commite — et non lequel des deux a parle.
+    """
+    # L'echantillon de ce fichier. Ma premiere version prenait du JSX non ferme — mais ce
+    # controle compte les ACCOLADES, pas les balises, et mon echantillon etait parfaitement
+    # equilibre : le test accusait le code de laisser passer un fichier valide.
+    casse = _join("const x = {", "  a: 1,")
+    patched, skipped, commits = _refuse_avant_commit(monkeypatch, "app/page.tsx", casse)
+    assert patched == [] and skipped == ["app/page.tsx"], (patched, skipped)
+    assert commits == [], commits

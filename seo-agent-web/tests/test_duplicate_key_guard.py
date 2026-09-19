@@ -132,11 +132,50 @@ def test_a_clean_file_reports_no_conflict() -> None:
     assert app_module._object_key_conflicts(clean) == []
 
 
-def test_the_conflict_check_refuses_the_file() -> None:
-    import inspect
-    src = inspect.getsource(app_module._deep_patch_issue_files)
-    assert "_object_key_conflicts(new_content)" in src
-    assert "skipped.append(path)" in src
+def test_the_conflict_check_refuses_the_file(monkeypatch) -> None:
+    """Le fichier est REFUSE, mesure sur la boucle plutot que sur la forme du code.
+
+    CE TEST CHERCHAIT UNE CHAINE DANS LE SOURCE (`_object_key_conflicts(new_content)`), et il
+    a casse le 19/09/2026 sur un refactor qui ne changeait rien a son comportement : les refus
+    de format ont ete regroupes dans `_refus_de_format`, partagee avec la route par URL qui ne
+    les appliquait pas. La propriete testee tenait toujours ; seule l'ecriture avait bouge.
+
+    Un test qui decrit OU le code appelle quelque chose interdit de deplacer ce quelque chose.
+    Celui-ci decrit ce qui arrive au fichier : rien ne part chez le client.
+    """
+    # Exactement l'echantillon de `test_a_nested_duplicate_block_is_reported` : le reparateur
+    # DECLINE ce cas — retirer un bloc imbrique laisserait une accolade orpheline — donc c'est
+    # bien le refus qu'on mesure ici, pas une reparation silencieuse. Ma premiere version
+    # ecrivait les deux `twitter` sur une ligne, le reparateur les fusionnait, et le test
+    # accusait le code de laisser passer ce qu'il avait en fait corrige.
+    doubled = "\n".join([
+        "export const metadata = {",
+        "  openGraph: {",
+        "    twitter: {",
+        "      card: 'a',",
+        "    },",
+        "    twitter: {",
+        "      card: 'b',",
+        "    },",
+        "  },",
+        "};",
+        "",
+    ])
+    commits: list[str] = []
+    monkeypatch.setattr(app_module, "_github_api_put",
+                        lambda chemin, **kw: commits.append(chemin) or {"content": {"sha": "n"}})
+
+    chemin = "app/page.tsx"
+    patched, skipped, _targets, _ai = app_module._deep_patch_issue_files(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
+        all_paths=[chemin], issue_key="k", issue_label="L", impacted_urls=[],
+        site_name="s", file_state={chemin: {"sha": "v", "content": "export const metadata = {};\n"}},
+        max_files=2, targets_override=[chemin], allow_ai_targeting=False,
+        link_rewriter=lambda _raw: (doubled, 1), rewriter_ai_fallback=False)
+
+    assert patched == [], "un fichier aux clés en conflit est parti chez le client"
+    assert skipped == [chemin], skipped
+    assert commits == [], commits
 
 
 def test_a_file_without_object_literals_is_untouched() -> None:

@@ -41,6 +41,28 @@ YAML_OK = "---\nlayout: gauntlet\ntitle: Un titre\n---\n\n<p>Corps.</p>\n"
 YAML_KO = "---\nlayout: gauntlet\ntitle: 'valeur non fermee\n---\n"
 
 
+def _refuse_avant_commit(monkeypatch, chemin: str, contenu: str) -> tuple[list, list, list]:
+    """Fait passer `contenu` par la boucle de correction et rend (patches, refuses, commits).
+
+    MESURE LE RESULTAT, PAS LA FORME DU CODE. La version precedente de ce test cherchait un
+    appel a l'interieur de `_deep_patch_issue_files` : elle interdisait de deplacer cet appel,
+    et a casse sur un refactor qui ne changeait rien au comportement — les refus ont ete
+    regroupes dans `_refus_de_format`, partagee avec la route par URL qui, elle, ne les
+    appliquait pas. Un test qui decrit OU le code appelle quelque chose empeche de reparer
+    ailleurs.
+    """
+    commits: list = []
+    monkeypatch.setattr(app_module, "_github_api_put",
+                        lambda c, **kw: commits.append(c) or {"content": {"sha": "n"}})
+    patched, skipped, _t, _a = app_module._deep_patch_issue_files(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
+        all_paths=[chemin], issue_key="k", issue_label="L", impacted_urls=[], site_name="s",
+        file_state={chemin: {"sha": "v", "content": "x"}},
+        max_files=2, targets_override=[chemin], allow_ai_targeting=False,
+        link_rewriter=lambda _raw: (contenu, 1), rewriter_ai_fallback=False)
+    return patched, skipped, commits
+
+
 def test_valid_toml_passes() -> None:
     assert app_module._front_matter_parse_error(TOML_OK, "content/a.md") == ""
 
@@ -75,8 +97,12 @@ def test_a_javascript_file_is_out_of_scope() -> None:
     assert app_module._front_matter_parse_error("export const metadata = {\n", "app/page.tsx") == ""
 
 
-def test_the_check_refuses_the_file_before_commit() -> None:
-    import inspect
-    src = inspect.getsource(app_module._deep_patch_issue_files)
-    assert "_front_matter_parse_error(new_content, path)" in src
-    assert src.index("_front_matter_parse_error") < src.index("put_body")
+def test_the_check_refuses_the_file_before_commit(monkeypatch) -> None:
+    """Un front matter illisible ne part pas chez le client."""
+    # YAML_KO, pas TOML_KO : ce dernier est le cas de l'apostrophe, que
+    # `_requote_toml_apostrophes` REPARE dans la boucle avant tout refus. Mon premier
+    # echantillon mesurait donc une reparation reussie en l'appelant un defaut.
+    patched, skipped, commits = _refuse_avant_commit(
+        monkeypatch, "gauntlet/a.html", YAML_KO)
+    assert patched == [] and skipped == ["gauntlet/a.html"], (patched, skipped)
+    assert commits == [], commits
