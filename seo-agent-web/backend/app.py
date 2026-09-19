@@ -7440,8 +7440,18 @@ def _job_worker_loop(worker_id: str) -> None:
 
 
 def _start_job_worker() -> None:
+    """Demarre les fils qui consomment la file, et DIT combien il en a demarre.
+
+    Les deux lignes de journal ci-dessous valent leur place. Un worker qui ne consomme rien
+    ne ressemble pas a une panne : le conteneur reste « Live » sur Render, la file se remplit,
+    les crawls restent « en attente », et absolument rien ne s'ecrit nulle part. Chercher la
+    cause a coute une demi-journee le 19/09/2026 — ces deux lignes la reduisent a dix
+    secondes, parce qu'elles distinguent « demarre puis rien reclame » de « jamais demarre ».
+    """
     global _WORKER_STARTED
     if not _worker_enabled():
+        logger.warning("[WORKER] AUCUN fil demarre : SEO_AGENT_DISABLE_WORKER=%r",
+                       os.environ.get("SEO_AGENT_DISABLE_WORKER"))
         return
     with _WORKER_STARTED_GUARD:
         if _WORKER_STARTED:
@@ -7454,6 +7464,7 @@ def _start_job_worker() -> None:
             t = threading.Thread(target=_job_worker_loop, args=(wid,), daemon=True)
             t.start()
             _WORKER_THREADS.append(t)
+        logger.info("[WORKER] %d fil(s) demarre(s), prefixe %s", n, base)
 
 
 _RETENTION_STARTED_GUARD = threading.Lock()
