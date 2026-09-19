@@ -23791,7 +23791,21 @@ def _deep_patch_issue_files(
             new_sha = str((put_resp.get("content") or {}).get("sha") or "")
             file_state[path] = {"sha": new_sha, "content": new_content}
             patched.append(path)
-            if not patch.get("deterministic"):
+            # LE MODELE N'A ECRIT QUE SI SA SORTIE DIFFERE DE L'ORIGINAL. Le drapeau
+            # `deterministic` ne repond qu'a « le reecriveur a-t-il trouve quelque chose ? » ;
+            # son absence etait lue comme « c'est le modele qui a ecrit », ce qui est faux des
+            # qu'un garde-fou deterministe pose la correction apres coup.
+            #
+            # Mesure du 19/09/2026, pull request #12 sur un depot client : huit fichiers, huit
+            # lignes posees par l'insertion d'og:url. Le repli IA de cette famille est DESACTIVE
+            # au-dela d'une paire — il y en avait neuf — donc aucun appel au modele n'a eu lieu.
+            # Ces huit fichiers etaient pourtant factures au quota IA, et la pull request
+            # demandait de relire une prose que personne n'avait ecrite.
+            #
+            # Facturer un travail que le modele n'a pas fait, c'est vendre du calcul qui n'a pas
+            # ete depense ; l'annoncer comme redige par lui fait douter d'un diff mecanique.
+            _modele_a_ecrit = str(patch.get("patched_content") or "").strip() != raw.strip()
+            if not patch.get("deterministic") and _modele_a_ecrit:
                 ai_files.append(path)
         except Exception:
             skipped.append(path)

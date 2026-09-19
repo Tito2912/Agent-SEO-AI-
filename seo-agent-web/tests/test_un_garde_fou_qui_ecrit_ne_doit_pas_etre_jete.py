@@ -142,3 +142,76 @@ def test_la_decision_de_jeter_ne_consulte_PLUS_le_drapeau() -> None:
     assert not any("no_change" in l for l in decision), (
         "la décision de jeter consulte à nouveau `no_change` : un garde-fou qui écrit sera "
         "ignoré quand le réécriveur n'a rien trouvé — %s" % decision)
+
+
+# --- qui a ECRIT la correction ------------------------------------------------------------
+
+def _lancer_et_compter(monkeypatch, *, rewriter, contenu=PAGE):
+    """Rend (patches, ai_files) pour un fichier donne."""
+    monkeypatch.setattr(
+        m, "_github_api_put",
+        lambda chemin, *, token, json_body: {"content": {"sha": "neuf"},
+                                             "commit": {"sha": "abc", "html_url": ""}})
+    # QUATRE valeurs : (patched, skipped, targets, ai_files). Un `[:3]` faisait lire
+    # `targets` en croyant lire `ai_files` — le test mesurait la mauvaise liste et echouait
+    # sur un code correct.
+    patches, _skipped, _targets, ai = m._deep_patch_issue_files(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
+        all_paths=[CHEMIN], issue_key="open_graph_url_not_matching_canonical",
+        issue_label="OG URL", impacted_urls=["https://oryvalo.com/about"],
+        site_name="oryvalo", file_state={CHEMIN: {"sha": "vieux", "content": contenu}},
+        max_files=4, link_rewriter=rewriter, rewriter_ai_fallback=False,
+        targets_override=[CHEMIN], allow_ai_targeting=False,
+    )
+    return patches, ai
+
+
+def test_une_correction_DETERMINISTE_n_est_pas_mise_au_compte_du_modele(monkeypatch) -> None:
+    """Mesure du 19/09/2026, pull request #12 : huit fichiers factures pour rien.
+
+    Le repli IA de cette famille est desactive au-dela d'une paire — il y en avait neuf — donc
+    AUCUN appel au modele n'a eu lieu. Les huit fichiers etaient pourtant comptes comme ecrits
+    par lui : factures au quota IA, et annonces dans la pull request comme une prose a relire.
+
+    Deux consequences, et aucune n'est cosmetique. Facturer un travail que le modele n'a pas
+    fait, c'est vendre du calcul qui n'a pas ete depense. Et annoncer « redige par le modele »
+    sur un diff mecanique apprend au client a se mefier de diffs qu'il pourrait merger les yeux
+    fermes.
+    """
+    patches, ai = _lancer_et_compter(monkeypatch, rewriter=lambda raw: (raw, 0))
+    assert patches == [CHEMIN], patches
+    assert ai == [], "un fichier que le modèle n'a pas touché est compté comme écrit par lui"
+
+
+def test_une_correction_REELLEMENT_ecrite_par_le_modele_reste_comptee(monkeypatch) -> None:
+    """Le bord sans lequel la correction precedente cesserait de facturer ce qui doit l'etre.
+
+    MA PREMIERE SIMULATION ETAIT FAUSSE et vaut d'etre notee : je faisais rendre au reecriveur
+    un contenu modifie avec un compte de zero. Or ce contenu est JETE — un compte nul fait
+    prendre la branche « rien trouve », qui renvoie le fichier d'origine. Le modele n'ecrit pas
+    par ce chemin-la.
+
+    Le vrai chemin est `_openai_generate_file_patch`, qui rend un contenu SANS drapeau
+    deterministe. C'est lui qu'on remplace ici, et cette fois le fichier doit bien etre compte
+    comme ecrit par le modele : facture, et annonce comme une prose a relire.
+    """
+    ecrit_par_le_modele = PAGE.replace("title: 'About'", "title: 'A propos de nous'")
+
+    monkeypatch.setattr(
+        m, "_github_api_put",
+        lambda chemin, *, token, json_body: {"content": {"sha": "neuf"},
+                                             "commit": {"sha": "abc", "html_url": ""}})
+    monkeypatch.setattr(
+        m, "_openai_generate_file_patch",
+        lambda **kw: {"patched_content": ecrit_par_le_modele})
+
+    patches, _skipped, _targets, ai = m._deep_patch_issue_files(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
+        all_paths=[CHEMIN], issue_key="open_graph_url_not_matching_canonical",
+        issue_label="OG URL", impacted_urls=["https://oryvalo.com/about"],
+        site_name="oryvalo", file_state={CHEMIN: {"sha": "vieux", "content": PAGE}},
+        max_files=4, link_rewriter=None, rewriter_ai_fallback=False,
+        targets_override=[CHEMIN], allow_ai_targeting=False,
+    )
+    assert patches == [CHEMIN], patches
+    assert ai == [CHEMIN], "une écriture réelle du modèle n'est plus comptée : %r" % ai
