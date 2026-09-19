@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import re
+import tomllib
 import secrets
 import shutil
 import socket
@@ -1903,11 +1904,114 @@ def _github_file_path_allowed(path: str) -> bool:
     return all(part not in {"", ".", ".."} for part in parts)
 
 
-def _github_patched_content_error(content: str) -> str | None:
+def _github_patched_content_error(content: str, path: str = "") -> str | None:
+    """Le dernier filtre avant qu un contenu parte dans une branche du client.
+
+    Il gardait le vide et la taille. Il garde desormais aussi la SYNTAXE, pour les formats
+    ou un vrai analyseur existe : sans le chemin, on ne savait meme pas quel langage on
+    s apprete a ecrire, et une cle YAML dupliquee est deja partie en production.
+    """
     if not content:
         return "Contenu patché manquant."
     if len(content.encode("utf-8")) > _GITHUB_MAX_PATCHED_CONTENT_BYTES:
         return f"Contenu patché trop volumineux ({_GITHUB_MAX_PATCHED_CONTENT_BYTES // 1000} kB max)."
+    return _verifier_la_syntaxe(path, content)
+
+
+class _YamlSansDoublon(yaml.SafeLoader):
+    """Un chargeur YAML qui REFUSE une cle dupliquee au lieu de garder la derniere.
+
+    `yaml.safe_load` accepte silencieusement `title:` deux fois et conserve la seconde. C'est
+    exactement le defaut qui est arrive : une correction ajoutait une cle deja presente, le
+    fichier restait valide, et le site publiait l'autre valeur. Un verificateur qui utiliserait
+    le chargeur par defaut declarerait ce fichier bon.
+    """
+
+
+def _refuser_les_doublons(loader: yaml.SafeLoader, node: Any, deep: bool = False) -> dict[str, Any]:
+    vues: set[Any] = set()
+    for cle_node, _valeur in node.value:
+        cle = loader.construct_object(cle_node, deep=deep)
+        try:
+            deja = cle in vues
+        except TypeError:          # cle non hachable : YAML l'a deja acceptee, on n'y touche pas
+            continue
+        if deja:
+            raise yaml.constructor.ConstructorError(
+                None, None, "clé dupliquée : %r" % (cle,), cle_node.start_mark)
+        vues.add(cle)
+    return yaml.SafeLoader.construct_mapping(loader, node, deep=deep)
+
+
+_YamlSansDoublon.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _refuser_les_doublons)
+
+
+def _charger_yaml_strict(texte: str) -> None:
+    """Analyse du YAML avec le chargeur qui refuse les cles dupliquees.
+
+    Passe par l'API sous-jacente plutot que par `yaml.load(..., Loader=...)`. Le comportement
+    est identique — c'est exactement ce que `yaml.load` fait — mais l'analyse statique de
+    securite reconnait l'APPEL et non le chargeur : elle signale `yaml.load` meme quand le
+    chargeur derive de `SafeLoader`. Ecrire la chose directement evite une alerte a faire
+    taire, et une alerte qu'on fait taire est une alerte que plus personne ne relit.
+    """
+    chargeur = _YamlSansDoublon(texte)
+    try:
+        chargeur.get_single_data()
+    finally:
+        chargeur.dispose()
+
+
+def _entete_markdown(contenu: str) -> str | None:
+    """L'entete YAML d'un fichier Markdown, ou None s'il n'y en a pas.
+
+    C'est la seule partie d'un Markdown qu'un analyseur peut juger. Le corps est du texte : il
+    n'a pas de syntaxe a violer, et pretendre le verifier reviendrait a inventer une regle.
+    """
+    t = contenu.lstrip("﻿")
+    if not t.startswith("---"):
+        return None
+    reste = t[3:]
+    if reste[:1] not in ("\n", "\r"):
+        return None
+    fin = re.search(r"^---\s*$", reste, flags=re.MULTILINE)
+    return reste[:fin.start()] if fin else None
+
+
+def _verifier_la_syntaxe(path: str, contenu: str) -> str | None:
+    """Le fichier qu'on s'apprete a ecrire se relit-il ? Rend le probleme, ou None.
+
+    NE COUVRE QUE CE QU'UN VRAI ANALYSEUR SAIT JUGER : JSON, TOML, YAML, et l'entete YAML d'un
+    Markdown. HTML, JSX, TypeScript, Vue, Svelte et Astro ne sont PAS couverts, et c'est une
+    decision, pas un oubli. Ecrire un pseudo-verificateur pour ces langages reviendrait a
+    decrire une forme au lieu d'une grammaire : il refuserait du code valide et laisserait
+    passer du code casse. Un verificateur qui se trompe est pire que pas de verificateur, parce
+    qu'on lui fait confiance. C'est le build qui juge ces fichiers-la.
+
+    Ce que cette fonction attrape est etroit mais reel : un JSON tronque, un TOML invalide, une
+    entete Markdown mal fermee, et la cle YAML dupliquee qui est deja arrivee en production.
+    """
+    ext = str(path or "").rsplit(".", 1)[-1].lower() if "." in str(path or "") else ""
+    texte = contenu if isinstance(contenu, str) else ""
+
+    try:
+        if ext == "json":
+            json.loads(texte)
+        elif ext == "toml":
+            tomllib.loads(texte)
+        elif ext in ("yaml", "yml"):
+            _charger_yaml_strict(texte)
+        elif ext in ("md", "mdx"):
+            entete = _entete_markdown(texte)
+            if entete is None:
+                return None
+            _charger_yaml_strict(entete)
+        else:
+            return None
+    except Exception as e:
+        premiere = str(e).strip().splitlines()[0] if str(e).strip() else type(e).__name__
+        return "Le fichier %s ne se relit pas : %s" % (path or "modifié", premiere[:200])
     return None
 
 
@@ -1982,6 +2086,23 @@ def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeou
         return resp.json()
     except Exception as e:
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
+def _ouvrir_pull_request(*, owner: str, repo: str, token: str, title: str, body: str,
+                         head: str, base: str) -> Any:
+    """Le SEUL endroit d'ou une pull request part chez un client.
+
+    Les quatre routes qui corrigent du code — correction unitaire, lot, correction profonde,
+    reecriture de titre — ouvraient chacune leur PR avec le meme appel recopie. Tant qu'il n'y
+    avait rien a verifier avant, la duplication ne coutait rien. Des qu'on veut une porte — un
+    build, un controle, une trace — quatre copies veulent dire quatre endroits a modifier, et
+    la quatrieme est celle qu'on oublie.
+
+    Un test enumere les appels a l'API `pulls` et exige qu'ils passent tous par ici.
+    """
+    return _github_api_post(
+        _github_api_path("repos", owner, repo, "pulls"),
+        token=token,
+        json_body={"title": title, "body": body, "head": head, "base": base},
+    )
 
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
@@ -17064,7 +17185,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         file_path = (body.file_path or "").strip()
         if not _github_file_path_allowed(file_path):
             return JSONResponse({"ok": False, "error": "Chemin de fichier GitHub invalide."}, status_code=400)
-        content_error = _github_patched_content_error(body.patched_content)
+        content_error = _github_patched_content_error(body.patched_content, file_path)
         if content_error:
             return JSONResponse({"ok": False, "error": content_error}, status_code=400)
         try:
@@ -17113,12 +17234,10 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             f"> Vérifie les changements avant de merger."
         )
         try:
-            pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={
-                "title": pr_title,
-                "body": pr_body,
-                "head": fix_branch,
-                "base": branch,
-            })
+            pr_data = _ouvrir_pull_request(
+                          owner=owner, repo=repo_name, token=token,
+                          title=pr_title, body=pr_body,
+                          head=fix_branch, base=branch)
             pr_url = pr_data.get("html_url", "")
             pr_number = pr_data.get("number", "")
         except Exception as e:
@@ -17194,7 +17313,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             {"ok": False, "error": str(patch.get("description") or patch.get("error"))},
             status_code=422,
         )
-    content_error = _github_patched_content_error(str(patch.get("patched_content") or ""))
+    content_error = _github_patched_content_error(str(patch.get("patched_content") or ""), str(best.get("path") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
     _correction_charge(user, 1, slug=slug)
@@ -17402,9 +17521,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     pr_body = "\n".join(pr_lines)
 
     try:
-        pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={
-            "title": pr_title, "body": pr_body, "head": fix_branch, "base": branch,
-        })
+        pr_data = _ouvrir_pull_request(
+                      owner=owner, repo=repo_name, token=token,
+                      title=pr_title, body=pr_body,
+                      head=fix_branch, base=branch)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
@@ -23331,7 +23451,7 @@ def _deep_patch_issue_files(
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
         if patch.get("no_change") or new_content.strip() == raw.strip():
             continue
-        if _github_patched_content_error(new_content):
+        if _github_patched_content_error(new_content, path):
             skipped.append(path)
             continue
         # Un litteral d'objet qui garde une cle en double est du TypeScript invalide : le site
@@ -23630,7 +23750,10 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
-        pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={"title": pr_title, "body": pr_body, "head": fix_branch, "base": branch})
+        pr_data = _ouvrir_pull_request(
+                      owner=owner, repo=repo_name, token=token,
+                      title=pr_title, body=pr_body,
+                      head=fix_branch, base=branch)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
@@ -25259,7 +25382,10 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         + f"\n\nGénéré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     try:
-        pr_data = _github_api_post(_github_api_path("repos", owner, repo_name, "pulls"), token=token, json_body={"title": pr_title, "body": pr_body, "head": fix_branch, "base": branch})
+        pr_data = _ouvrir_pull_request(
+                      owner=owner, repo=repo_name, token=token,
+                      title=pr_title, body=pr_body,
+                      head=fix_branch, base=branch)
         pr_url = pr_data.get("html_url", "")
         pr_number = pr_data.get("number", 0)
     except Exception as e:
