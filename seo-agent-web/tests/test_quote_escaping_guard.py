@@ -90,7 +90,12 @@ def test_the_guard_runs_on_every_patch() -> None:
     import inspect
     src = inspect.getsource(app_module._deep_patch_issue_files)
     assert "_escape_quotes_in_written_values(new_content, raw)" in src
-    assert src.index("_escape_quotes_in_written_values") < src.index('patch.get("no_change")')
+    # Le REPERE de la decision de jeter a change le 19/09/2026, pas la propriete testee.
+    # Elle s'ecrivait `patch.get("no_change") or ...` ; le drapeau a ete retire parce
+    # qu'il jetait le travail d'un garde-fou au motif que le REECRIVEUR, lui, n'avait rien
+    # trouve. La seule question reste « le contenu a-t-il change ? », et c'est cette
+    # comparaison qui borne desormais la zone ou les garde-fous doivent avoir tourne.
+    assert src.index("_escape_quotes_in_written_values") < src.index("new_content.strip() == raw.strip()")
 
 
 NUXT_OLD = ("useHead({\n"

@@ -23718,7 +23718,19 @@ def _deep_patch_issue_files(
         for _n in (_len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes
                    + _master_notes + _og_notes):
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
-        if patch.get("no_change") or new_content.strip() == raw.strip():
+        # LA SEULE QUESTION EST « LE CONTENU A-T-IL CHANGE ? », et le drapeau `no_change` ne
+        # savait pas y repondre. Il dit ce que le REECRIVEUR a fait, pas ce que le fichier est
+        # devenu depuis — or les garde-fous qui suivent ecrivent, eux aussi. Le tester ici
+        # jetait donc le travail d'un garde-fou au motif que l'etape d'AVANT n'avait rien fait.
+        #
+        # Mesure du 19/09/2026 : l'insertion d'og:url sur un site Next.js s'executait
+        # correctement, modifiait le contenu, et etait ecartee une ligne plus loin. Neuf pages,
+        # zero fichier patche, et rien dans les journaux pour le dire.
+        #
+        # Le drapeau est redondant : dans cette boucle, les deux seuls retours qui le posent
+        # portent `patched_content: raw`, donc la comparaison ci-dessous les attrape deja. Les
+        # autres `no_change` du produit n'ont pas de `patched_content` et sortent plus haut.
+        if new_content.strip() == raw.strip():
             continue
         if _github_patched_content_error(new_content, path):
             skipped.append(path)

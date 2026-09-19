@@ -77,7 +77,12 @@ def test_the_guard_runs_on_every_patch_not_just_the_length_family() -> None:
     import inspect
     src = inspect.getsource(app_module._deep_patch_issue_files)
     assert "_enforce_length_ceilings(new_content, raw)" in src
-    assert src.index("_enforce_length_ceilings") < src.index('patch.get("no_change")')
+    # Le REPERE de la decision de jeter a change le 19/09/2026, pas la propriete testee.
+    # Elle s'ecrivait `patch.get("no_change") or ...` ; le drapeau a ete retire parce
+    # qu'il jetait le travail d'un garde-fou au motif que le REECRIVEUR, lui, n'avait rien
+    # trouve. La seule question reste « le contenu a-t-il change ? », et c'est cette
+    # comparaison qui borne desormais la zone ou les garde-fous doivent avoir tourne.
+    assert src.index("_enforce_length_ceilings") < src.index("new_content.strip() == raw.strip()")
 
 
 def test_a_title_written_inside_a_comment_is_not_a_title() -> None:
