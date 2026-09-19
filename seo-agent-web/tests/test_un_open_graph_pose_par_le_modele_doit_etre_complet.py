@@ -94,11 +94,9 @@ def _depuis_le_layout():
 def test_le_bloc_du_modele_est_COMPLETE_au_lieu_d_etre_livre_mutile() -> None:
     """La reproduction exacte de la pull request du 19/09/2026."""
     sortie, notes = m._completer_open_graph_objet(APRES_MODELE, AVANT, _depuis_le_layout)
-    assert notes and "complete" in notes[0], notes
+    assert any("complete" in n for n in notes), notes
     for attendu in ('type: "website"', 'siteName: "Oryvalo"'):
         assert attendu in sortie, "%r manque :\n%s" % (attendu, sortie)
-    # Ce que le modele avait ecrit de juste n'est pas touche.
-    assert "url: 'https://oryvalo.com/contact'" in sortie
     assert sortie.count("openGraph") == 1
 
 
@@ -125,6 +123,117 @@ def test_un_bloc_INDENTE_recoit_des_lignes_indentees() -> None:
         "    images: [{ url: \"/x\" }],\n  },")
     sortie, _n = m._completer_open_graph_objet(multi, AVANT, _depuis_le_layout)
     assert '\n    type: "website",' in sortie, sortie
+
+
+# --- og:url reprend le LITTERAL du canonical -------------------------------------------------
+
+def test_l_url_en_dur_du_modele_devient_le_litteral_du_canonical() -> None:
+    """MESURE DU 19/09/2026 sur une reproduction Next.js, les trois configurations :
+
+        avec metadataBase, litteral relatif   canonical et og:url -> https://exemple.fr/x
+        avec metadataBase, litteral absolu    canonical et og:url -> https://exemple.fr/x
+        SANS metadataBase, litteral relatif   canonical et og:url -> /x
+
+    Next resout les DEUX de la meme facon ou n'en resout AUCUN. Deux litteraux identiques
+    rendent donc deux valeurs identiques PARTOUT — l'anomalie est fermee par construction.
+    L'URL en dur, elle, n'est juste que tant que la base du site ne bouge pas : elle diverge
+    sur un apercu (`NEXT_PUBLIC_SITE_URL` different) et definitivement a un changement de
+    domaine.
+    """
+    sortie, notes = m._completer_open_graph_objet(APRES_MODELE, AVANT, _depuis_le_layout)
+    assert "url: '/contact'" in sortie, sortie
+    assert "https://oryvalo.com/contact" not in sortie, sortie
+    assert any("canonical" in n for n in notes), notes
+
+
+def test_ce_n_est_PAS_une_preference_pour_le_relatif() -> None:
+    """Un canonical absolu donne un og:url absolu. La regle est « le MEME litteral », pas
+    « toujours relatif » — confondre les deux casserait les sites qui ecrivent en absolu."""
+    absolu = AVANT.replace("canonical: '/contact'", "canonical: 'https://oryvalo.com/contact'")
+    pose = absolu.replace(
+        "  alternates: { canonical: 'https://oryvalo.com/contact' },",
+        "  alternates: { canonical: 'https://oryvalo.com/contact' },\n"
+        "  openGraph: { url: '/autre',"
+        " images: [{ url: \"/opengraph-image\" }] },")
+    sortie, _n = m._completer_open_graph_objet(pose, absolu, _depuis_le_layout)
+    assert "url: 'https://oryvalo.com/contact'" in sortie, sortie
+
+
+def test_le_guillemet_du_canonical_est_repris_avec_la_valeur() -> None:
+    """Imposer nos guillemets produirait un diff que le formateur du client reecrirait."""
+    dq = AVANT.replace("canonical: '/contact'", 'canonical: "/contact"')
+    pose = dq.replace(
+        '  alternates: { canonical: "/contact" },',
+        '  alternates: { canonical: "/contact" },\n'
+        "  openGraph: { url: '/faux', images: [{ url: \"/x\" }] },")
+    sortie, _n = m._completer_open_graph_objet(pose, dq, _depuis_le_layout)
+    assert 'url: "/contact"' in sortie, sortie
+
+
+@pytest.mark.parametrize("nom, page", [
+    ("plusieurs pages dans un fichier", AVANT.replace(
+        "  alternates: { canonical: '/contact' },",
+        "  alternates: { canonical: '/contact' },\n  alternates: { canonical: '/x' },")),
+    ("valeur assemblee", AVANT.replace("'/contact'", '"${BASE}/contact"')),
+    ("aucun canonical", AVANT.replace("  alternates: { canonical: '/contact' },\n", "")),
+])
+def test_sans_canonical_LISIBLE_l_url_du_modele_est_laissee(nom, page) -> None:
+    """Memes abstentions que le reste de la famille : on ne devine pas une valeur."""
+    pose = page.replace(
+        "  title: 'Contact',",
+        "  title: 'Contact',\n  openGraph: { url: 'https://oryvalo.com/contact',"
+        " images: [{ url: \"/x\" }], type: \"website\" },")
+    sortie, _n = m._completer_open_graph_objet(pose, page, _depuis_le_layout)
+    assert "url: 'https://oryvalo.com/contact'" in sortie, "%s :\n%s" % (nom, sortie)
+
+
+def test_une_url_DEJA_conforme_ne_produit_aucun_changement() -> None:
+    deja = AVANT.replace(
+        "  alternates: { canonical: '/contact' },",
+        "  alternates: { canonical: '/contact' },\n"
+        "  openGraph: { url: '/contact', type: \"website\","
+        " siteName: \"Oryvalo\","
+        " images: [{ url: \"/opengraph-image\", width: 1200, height: 630, alt: \"Oryvalo\" }] },")
+    sortie, notes = m._completer_open_graph_objet(deja, AVANT, _depuis_le_layout)
+    assert sortie == deja and not notes, notes
+
+
+# --- un seul scanner de litteral d'objet ------------------------------------------------------
+
+def test_les_bornes_et_la_valeur_viennent_du_MEME_scanner() -> None:
+    """Lire une valeur et la remplacer posent la meme question. Deux fonctions qui y repondent
+    chacune de leur cote finissent par diverger — trois defauts de cette forme aujourd'hui."""
+    bloc = '{ type: "website", images: [{ url: "/x", alt: "a, b" }], url: \'/p\' }'
+    spans = m._spans_des_cles_objet(bloc)
+    assert set(spans) == {"type", "images", "url"}
+    for cle, (d, f) in spans.items():
+        assert bloc[d:f].strip() == m._valeur_de_cle_objet(bloc, cle), cle
+
+
+def test_remplacer_la_DERNIERE_cle_ne_mange_pas_l_espace_avant_l_accolade() -> None:
+    """Une mutation a survecu ici : mes blocs de test avaient tous `url` au MILIEU.
+
+    La valeur du dernier element va jusqu'a l'accolade fermante, espace compris. Sans rognage
+    a droite, la remplacer avale cet espace et rend `url: '/contact'}` — le formateur du
+    client le reecrirait au commit suivant, et on aurait produit du bruit dans SON historique
+    pour rien.
+    """
+    # Bloc DEJA complet : rien ne sera ajouté, donc `url` reste le dernier élément et seule
+    # sa valeur change. C'est la seule façon d'isoler ce qu'on mesure ici.
+    pose = AVANT.replace(
+        "  alternates: { canonical: '/contact' },",
+        "  alternates: { canonical: '/contact' },\n"
+        "  openGraph: { type: \"website\", siteName: \"Oryvalo\","
+        " images: [{ url: \"/opengraph-image\", width: 1200, height: 630, alt: \"Oryvalo\" }],"
+        " url: '/faux' },")
+    sortie, _n = m._completer_open_graph_objet(pose, AVANT, _depuis_le_layout)
+    assert "url: '/contact' }" in sortie, "l'espace avant `}` a disparu :\n%s" % sortie
+
+
+def test_une_virgule_DANS_UNE_CHAINE_ne_coupe_pas_une_cle() -> None:
+    """`alt: "a, b"` : une virgule entre guillemets n'est pas un separateur de propriete."""
+    bloc = '{ url: \'/p\', images: [{ alt: "a, b" }] }'
+    assert set(m._spans_des_cles_objet(bloc)) == {"url", "images"}
 
 
 # --- ce qu'on REFUSE de livrer ---------------------------------------------------------------
@@ -242,5 +351,7 @@ def test_la_boucle_commite_un_bloc_complet_ET_les_bonnes_fins_de_ligne(monkeypat
     ecrit = next(iter(commits.values()))
     assert 'type: "website"' in ecrit, "le bloc parti chez GitHub est incomplet :\n%s" % ecrit
     assert 'siteName: "Oryvalo"' in ecrit, ecrit
+    assert "url: '/contact'" in ecrit and "https://oryvalo.com" not in ecrit, (
+        "l'URL en dur du modèle est partie telle quelle :\n%s" % ecrit)
     assert "\r\n" in ecrit and ecrit.count("\n") == ecrit.count("\r\n"), (
         "les fins de ligne du client n'ont pas été respectées : %r" % ecrit[:80])

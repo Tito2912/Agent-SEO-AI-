@@ -21757,16 +21757,20 @@ def _bloc_accolades_equilibrees(texte: str, depuis: int) -> tuple[int, int] | No
     return None
 
 
-def _valeur_de_cle_objet(bloc: str, cle: str) -> str:
-    """La valeur brute de `cle` au PREMIER niveau du bloc, telle qu'elle est ecrite.
+def _spans_des_cles_objet(bloc: str) -> dict[str, tuple[int, int]]:
+    """Pour chaque cle du PREMIER niveau, les bornes de sa VALEUR dans `bloc`.
 
-    On recopie le texte source plutot que de le reserialiser : `images` porte des nombres, des
-    chaines et une structure imbriquee. La reecrire reviendrait a reinventer un formateur — avec
-    ses bugs — et produirait un diff que le formateur du client reecrirait au commit suivant.
+    Le scanner UNIQUE du litteral d'objet : lire une valeur et en remplacer une posent la meme
+    question, et deux fonctions qui y repondent chacune de leur cote finissent par diverger —
+    trois defauts de cette forme le 19/09/2026.
+
+    Ce qui est dans une chaine est saute, et la profondeur est suivie : `images: [{ url: ... }]`
+    imbrique, donc `url` au second niveau ne doit pas se faire passer pour une cle du premier.
+    La premiere occurrence gagne, comme une lecture de propriete en JavaScript.
     """
     corps = bloc[1:-1]
     i, profondeur, guillemet, debut = 0, 0, "", 0
-    items: list[str] = []
+    bornes: list[tuple[int, int]] = []
     while i < len(corps):
         c = corps[i]
         if guillemet:
@@ -21782,16 +21786,62 @@ def _valeur_de_cle_objet(bloc: str, cle: str) -> str:
         elif c in "}])":
             profondeur -= 1
         elif c == "," and profondeur == 0:
-            items.append(corps[debut:i])
+            bornes.append((debut, i))
             debut = i + 1
         i += 1
-    items.append(corps[debut:])
+    bornes.append((debut, len(corps)))
 
-    for item in items:
-        m = re.match(r"^\s*([A-Za-z_$][\w$]*)\s*:\s*(.+)$", item, re.S)
-        if m and m.group(1) == cle:
-            return m.group(2).strip()
-    return ""
+    out: dict[str, tuple[int, int]] = {}
+    for d, f in bornes:
+        m = re.match(r"^\s*([A-Za-z_$][\w$]*)\s*:\s*(.+)$", corps[d:f], re.S)
+        if not m:
+            continue
+        depart = d + m.start(2) + 1  # +1 : l'accolade ouvrante du bloc
+        out.setdefault(m.group(1), (depart, depart + len(m.group(2).rstrip())))
+    return out
+
+
+def _valeur_de_cle_objet(bloc: str, cle: str) -> str:
+    """La valeur brute de `cle` au PREMIER niveau du bloc, telle qu'elle est ecrite.
+
+    On recopie le texte source plutot que de le reserialiser : `images` porte des nombres, des
+    chaines et une structure imbriquee. La reecrire reviendrait a reinventer un formateur — avec
+    ses bugs — et produirait un diff que le formateur du client reecrirait au commit suivant.
+    """
+    span = _spans_des_cles_objet(bloc).get(cle)
+    return bloc[span[0]:span[1]].strip() if span else ""
+
+
+def _og_url_depuis_le_canonical(content: str) -> str:
+    """Le LITTERAL du canonical de la page, guillemets compris — ou rien.
+
+    MESURE DU 19/09/2026 sur une reproduction Next.js, les trois configurations :
+
+        avec metadataBase, litteral relatif   canonical et og:url -> https://exemple.fr/x
+        avec metadataBase, litteral absolu    canonical et og:url -> https://exemple.fr/x
+        SANS metadataBase, litteral relatif   canonical et og:url -> /x
+
+    Next resout les DEUX de la meme facon, ou n'en resout AUCUN. Deux litteraux identiques
+    rendent donc deux valeurs identiques dans toutes les configurations — l'anomalie
+    `open_graph_url_not_matching_canonical` est fermee PAR CONSTRUCTION.
+
+    Une URL ecrite en dur, elle, n'est egale que par coincidence avec la base du site : elle
+    diverge sur un deploiement d'apercu (`NEXT_PUBLIC_SITE_URL` different) et definitivement le
+    jour d'un changement de domaine. Ce n'est pas une preference de style — c'est la difference
+    entre un correctif vrai par construction et un correctif vrai par configuration.
+
+    Memes abstentions qu'ailleurs dans cette famille : plusieurs canonicals dans le fichier
+    (on ne sait pas de quelle page on parle) ou une valeur assemblee (on ne sait pas ce
+    qu'elle vaudra).
+    """
+    trouvees = list(_OG_ALT_CANONICAL_RE.finditer(content or ""))
+    if len(trouvees) != 1:
+        return ""
+    m = trouvees[0]
+    valeur = m.group("val").strip()
+    if not valeur or _VALEUR_ASSEMBLEE_RE.search(valeur):
+        return ""
+    return "%s%s%s" % (m.group("q"), valeur, m.group("q"))
 
 
 def _og_a_reporter_depuis_layout(contenu_layout: str) -> dict[str, str]:
@@ -23714,11 +23764,28 @@ def _completer_open_graph_objet(new_content: str, old_content: str,
         return (_retirer_propriete_objet(new_content, m.start(), bornes[1]),
                 ["openGraph retire : sans %s il aurait masque celui de la mise en page et "
                  "fait disparaitre les balises correspondantes" % " ni ".join(manquantes)])
-    if not ajouts:
+    # ... et `og:url` reprend le LITTERAL du canonical. Ce n'est pas ecraser un choix du
+    # modele : contrairement a un titre, cette valeur est entierement determinee par le
+    # canonical — la definition meme de l'anomalie est leur egalite. Deux litteraux identiques
+    # sont egaux dans toutes les configurations ; une URL en dur ne l'est que tant que la base
+    # du site ne bouge pas. Voir `_og_url_depuis_le_canonical` pour la mesure.
+    nouveau_bloc, notes = bloc, []
+    voulu = _og_url_depuis_le_canonical(new_content)
+    if voulu:
+        span = _spans_des_cles_objet(nouveau_bloc).get("url")
+        if span is None:
+            ajouts = ajouts + [("url", voulu)]
+        elif nouveau_bloc[span[0]:span[1]].strip() != voulu:
+            avant = nouveau_bloc[span[0]:span[1]].strip()
+            nouveau_bloc = nouveau_bloc[:span[0]] + voulu + nouveau_bloc[span[1]:]
+            notes.append("og:url repris du canonical : %s au lieu de %s" % (voulu, avant))
+    if ajouts:
+        nouveau_bloc = _inserer_cles_dans_bloc(nouveau_bloc, ajouts)
+        notes.append("openGraph complete depuis la mise en page : %s"
+                     % ", ".join(c for c, _v in ajouts))
+    if nouveau_bloc == bloc:
         return new_content, []
-    return (new_content[:bornes[0]] + _inserer_cles_dans_bloc(bloc, ajouts) + new_content[bornes[1]:],
-            ["openGraph complete depuis la mise en page : %s"
-             % ", ".join(c for c, _v in ajouts)])
+    return new_content[:bornes[0]] + nouveau_bloc + new_content[bornes[1]:], notes
 
 
 def _deep_patch_issue_files(
