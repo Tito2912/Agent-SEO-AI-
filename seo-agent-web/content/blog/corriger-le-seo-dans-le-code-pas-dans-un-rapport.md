@@ -7,7 +7,7 @@ kind: "Guide"
 updated_at: "2026-09-03"
 published_at: "2026-09-03"
 audience: "Équipes techniques, freelances et agences"
-keywords: ["correction SEO automatique", "pull request", "SEO technique", "audit actionnable"]
+keywords: ["correction SEO automatique", "pull request", "SEO technique", "audit actionnable", "correction côté client", "patch SEO"]
 featured: true
 related: ["audit-seo-technique-checklist-priorites", "regression-seo-apres-mise-en-production", "corriger-title-meta-description-grande-echelle"]
 cta: "C'est exactement ce que fait {{app_name}} : il localise le gabarit responsable, écrit le correctif dans votre dépôt, ouvre une pull request, et vérifie au crawl suivant que l'anomalie a disparu."
@@ -18,6 +18,8 @@ faq:
     answer: "Une suggestion vous donne le texte à écrire ; il reste à trouver le fichier, l'éditer, tester, déployer. La correction fait ces quatre étapes et vous laisse la cinquième : dire oui."
   - question: "Et si mon site n'a pas de dépôt Git ?"
     answer: "L'approche ne s'applique pas telle quelle. Il reste l'export de correctifs prêts à appliquer, avec le mode d'emploi par plateforme — plus lent, mais le même travail de priorisation en amont."
+  - question: "Pourquoi pas un script qui corrige la page à l'affichage ?"
+    answer: "Parce que la correction appartient alors au service : l'abonnement s'arrête, le script ne se charge plus, et la page redevient ce qu'elle était. Votre code source reste faux, donc le prochain développeur reproduit l'anomalie. C'est utile quand le dépôt est inaccessible ; ce n'est pas la même chose qu'une correction qui vous appartient."
 ---
 
 Le problème du SEO technique n'a jamais été de trouver les anomalies. N'importe quel crawler
@@ -96,6 +98,41 @@ parce qu'un texte plausible n'est pas un texte juste.
 La conséquence pratique : une automatisation sérieuse traite ces deux familles différemment.
 Fusionner sans relecture une correction déterministe est défendable ; fusionner sans relecture
 une phrase écrite par un modèle ne l'est pas.
+
+## Corriger dans le code, ou corriger à l'affichage
+
+Il existe une autre façon d'automatiser : ne pas toucher au dépôt du tout. Un script inséré
+dans vos pages, ou un intermédiaire placé devant votre site, réécrit le HTML au moment où il
+part vers le visiteur. Le `title` manquant apparaît, la `canonical` se corrige, et le rapport
+passe au vert.
+
+Il faut dire ce que cette approche règle vraiment, parce que c'est réel : elle ne demande aucun
+accès au code, elle s'installe en quelques minutes, et elle fonctionne quand le site n'a pas de
+dépôt Git ou quand l'équipe technique est indisponible. Pour un site qu'on ne peut pas modifier,
+c'est la seule option.
+
+Trois choses ne suivent pas.
+
+**La correction appartient au service, pas à vous.** L'abonnement s'arrête, le script ne se
+charge plus, la page redevient exactement ce qu'elle était. Vous n'avez rien accumulé : vous
+avez loué un état.
+
+**Votre code reste faux.** Le gabarit qui n'émettait pas de `meta description` ne l'émet
+toujours pas. Le prochain développeur qui l'ouvre reproduira l'anomalie sur les pages
+suivantes, parce que rien dans le dépôt ne lui dit qu'il y a un problème. La couche
+d'affichage masque le défaut au lieu de le retirer.
+
+**Une pièce de plus entre le visiteur et la page.** Ce qui réécrit peut tomber en panne, ralentir,
+ou se tromper — et ce qui passe par le navigateur suppose que le robot qui vous lit exécute
+bien le script.
+
+Le test qui tranche tient en une question : **que reste-t-il si vous arrêtez votre abonnement
+demain ?** Une pull request fusionnée est dans votre dépôt, dans votre historique, relue et
+approuvée par quelqu'un de chez vous. Elle ne s'évapore pas avec le fournisseur qui l'a
+proposée, et elle reste vraie même si vous changez d'outil — ou si vous n'en utilisez plus aucun.
+
+C'est le même critère que pour le reste de cet article : une correction compte quand elle
+survit à ce qui l'a produite.
 
 ## Et la vérification, qui manque partout
 
