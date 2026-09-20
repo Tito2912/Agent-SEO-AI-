@@ -21280,6 +21280,116 @@ def _forme_dune_soeur(contenu: str, chemin: str) -> dict[str, Any]:
     return {"bornes": "", "cles": [], "extrait": ""}
 
 
+_OG_URL_ATTR_RE = re.compile(r'(?:property|name)\s*=\s*["\']og:url["\']', re.I)
+_OG_URL_OBJET_RE = re.compile(
+    r"""\{[^{}]*?\b(?:property|name)\s*:\s*(['"])og:url\1[^{}]*\}""", re.S)
+# `_CONTENT_ATTR_RE` existe deja plus haut, avec les memes groupes : la garde qui enumere les
+# noms definis deux fois l'a dit avant moi. Une seconde definition ecrase la premiere en
+# silence, et le jour ou l'une des deux change, l'autre change avec sans que personne ne l'ait
+# demande.
+_CONTENT_KEY_RE = re.compile(r"""(\bcontent\s*:\s*)(['"])(.*?)(\2)""", re.S)
+
+
+def _spans_url_de_page(contenu: str) -> list[tuple[int, int, str]]:
+    """Les bornes de CHAQUE canonical et og:url litteral du fichier, avec son role.
+
+    UN SEUL SCANNER pour les deux balises et pour les cinq ecritures que ce projet a
+    rencontrees sur les neuf idiomes — balise `<link>`, balise `<meta>`, propriete d'objet
+    (`canonical:`), objet d'un tableau Nuxt (`{ rel: 'canonical', href }`) et cle `url` d'un
+    bloc `openGraph`. Les reenumerer ailleurs est la forme de defaut que ce fichier a deja
+    payee trois fois le 19/09/2026.
+
+    Les bornes portent sur la valeur SANS ses guillemets : l'appelant remplace un texte, il
+    ne reecrit pas la balise.
+    """
+    spans: list[tuple[int, int, str]] = []
+
+    for tag in _LINK_TAG_RE.finditer(contenu):
+        if _REL_CANONICAL_SEUL_RE.search(tag.group(0)):
+            attr = _HREF_ATTR_RE.search(tag.group(0))
+            if attr:
+                spans.append((tag.start() + attr.start(3), tag.start() + attr.end(3), "canonical"))
+    for m in _JS_CANONICAL_RE.finditer(contenu):
+        spans.append((m.start(3), m.end(3), "canonical"))
+    for obj in _CANONICAL_OBJECT_RE.finditer(contenu):
+        href = _HREF_KEY_RE.search(obj.group(0))
+        if href:
+            spans.append((obj.start() + href.start(3), obj.start() + href.end(3), "canonical"))
+
+    for tag in _META_TAG_RE.finditer(contenu):
+        if _OG_URL_ATTR_RE.search(tag.group(0)):
+            attr = _CONTENT_ATTR_RE.search(tag.group(0))
+            if attr:
+                spans.append((tag.start() + attr.start(3), tag.start() + attr.end(3), "og:url"))
+    for obj in _OG_URL_OBJET_RE.finditer(contenu):
+        val = _CONTENT_KEY_RE.search(obj.group(0))
+        if val:
+            spans.append((obj.start() + val.start(3), obj.start() + val.end(3), "og:url"))
+    ouverture = re.search(r"\bopenGraph\s*[:=]\s*", contenu)
+    if ouverture:
+        bornes = _bloc_accolades_equilibrees(contenu, ouverture.end())
+        if bornes:
+            bloc = contenu[bornes[0]:bornes[1]]
+            span = _spans_des_cles_objet(bloc).get("url")
+            if span:
+                brut = bloc[span[0]:span[1]]
+                if len(brut) > 1 and brut[0] in "\"'" and brut[-1] == brut[0]:
+                    depart = bornes[0] + span[0] + 1
+                    spans.append((depart, depart + len(brut) - 2, "og:url"))
+
+    vus: set[tuple[int, int]] = set()
+    out: list[tuple[int, int, str]] = []
+    for debut, fin, role in sorted(spans):
+        if (debut, fin) in vus:
+            continue
+        vus.add((debut, fin))
+        out.append((debut, fin, role))
+    return out
+
+
+def _urls_de_la_page_neuve(contenu: str, *, url_de_la_page: str) -> tuple[str, list[str]]:
+    """Le canonical et og:url de la page neuve, REMIS a l'adresse qu'on a demandee.
+
+    LE SEUL ENDROIT DU PRODUIT OU L'ON CONNAIT LA BONNE REPONSE. Partout ailleurs le correcteur
+    doit deduire quelle page une balise devrait designer, et s'abstient des qu'il hesite — c'est
+    la doctrine de `_canonical_ecrit_dans`. Ici l'adresse a ete CHOISIE quelques lignes plus
+    haut : il n'y a rien a interpreter, et toute autre valeur est fausse.
+
+    MESURE DU 20/09/2026, banc des neuf idiomes. Sur les DEUX pages que le modele a su ecrire,
+    le canonical perdait le segment de section — `/comment-…` la ou la page vit sous
+    `/gauntlet/comment-…`. Deux sur deux, donc pas du bruit : la page soeur clonee etait
+    `canonical-404`, dont le defaut EST un canonical vers une 404, et le modele en a imite le
+    defaut avec la forme. Et les deux builds Netlify etaient VERTS — un build ne voit pas une
+    adresse qui ment, exactement comme pour la regression og:url du 19/09.
+
+    ON NE TOUCHE PAS A UNE VALEUR ASSEMBLEE (`${base}/x`) : elle est juste par construction, et
+    c'est meme la forme que ce projet prefere. Une valeur ecrite en dur n'est egale a la base du
+    site que par coincidence ; une valeur calculee l'est toujours.
+
+    La FORME de chaque valeur est conservee — relative reste relative, absolue reste absolue.
+    Imposer un style reecrirait la convention du client pour un gain nul : les deux resolvent
+    vers la meme adresse.
+    """
+    from urllib.parse import urlparse
+
+    cible = (url_de_la_page or "").strip()
+    if not cible:
+        return contenu, []
+    chemin_cible = urlparse(cible).path or "/"
+    notes: list[str] = []
+    out = contenu
+    for debut, fin, role in reversed(_spans_url_de_page(contenu)):
+        ecrit = contenu[debut:fin]
+        if not ecrit or _VALEUR_ASSEMBLEE_RE.search(ecrit):
+            continue
+        attendu = chemin_cible if ecrit.startswith("/") else cible
+        if ecrit == attendu:
+            continue
+        out = out[:debut] + attendu + out[fin:]
+        notes.append("%s remis à `%s` — le modèle avait écrit `%s`" % (role, attendu, ecrit))
+    return out, list(reversed(notes))
+
+
 _SYSTEME_REDACTION = (
     "Tu rediges UNE page pour le site d'un client, dans le MEME format et la MEME langue que "
     "la page existante qu'on te montre. Tu rends un objet JSON {\"contenu\": \"...\"} "
@@ -21289,7 +21399,8 @@ _SYSTEME_REDACTION = (
 
 def rediger_une_page(
     *, sujet: str, chemin: str, soeur_chemin: str, soeur_contenu: str,
-    site_name: str = "", model_override: str = "",
+    site_name: str = "", url_de_la_page: str = "", model_override: str = "",
+    notes: list[str] | None = None,
 ) -> tuple[str, str]:
     """Le contenu du fichier a creer, ou ("", raison du refus).
 
@@ -21333,6 +21444,14 @@ def rediger_une_page(
     if manquantes:
         return "", ("cles de tete manquantes : %s — le fichier casserait le site"
                     % ", ".join(manquantes[:5]))
+    # LA GARDE EST ICI, PAS CHEZ L'APPELANT. Une adresse inventee est la seule faute que
+    # ce banc ait produite deux fois sur deux, et un garde-fou qu'on peut oublier de
+    # brancher ne protege que les appelants dont on se souvient.
+    contenu, notes_url = _urls_de_la_page_neuve(contenu, url_de_la_page=url_de_la_page)
+    if notes_url:
+        logger.info("[contenu] adresses corrigees : %s", " ; ".join(notes_url))
+        if notes is not None:
+            notes.extend(notes_url)
     refus = _refus_de_format(chemin, contenu)
     if refus:
         return "", refus
@@ -26738,7 +26857,7 @@ _CONTENT_PAGE_KEY = "ai_content_page"
 
 
 def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
-                       sujet: str, route: str,
+                       sujet: str, route: str, base_url: str,
                        owner: str, repo_name: str, branch: str, token: str,
                        motif: str = "content_draft",
                        refuser_si_orpheline: bool = False) -> dict[str, Any]:
@@ -26805,9 +26924,13 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         return {"ok": False, "status": 400, "error": f"Impossible de lire la page sœur {soeur}."}
     soeur_contenu = lu_soeur[0]
 
+    # L'adresse publique de la page : la seule verite dont dispose le garde-fou d'URL, et
+    # elle est certaine puisque c'est nous qui venons de la choisir.
+    url_de_la_page = (str(base_url or "").rstrip("/") + route) if base_url else ""
+    notes_redaction: list[str] = []
     contenu, refus = rediger_une_page(
         sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
-        site_name=site_name)
+        site_name=site_name, url_de_la_page=url_de_la_page, notes=notes_redaction)
     if refus:
         return {"ok": False, "status": 422, "error": refus}
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
@@ -26886,7 +27009,13 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         "fichier qui se construise sur ce dépôt-ci. Les clés manquantes sont vérifiées avant "
         "écriture, pas seulement demandées au modèle.\n\n"
         f"### Lien depuis la section\n\n{note_lien}\n\n"
-        "### À relire avant de fusionner\n\n"
+        + (("### Adresses reprises\n\n"
+            + "\n".join("- %s" % n for n in notes_redaction)
+            + "\n\nLe modèle avait écrit une adresse qui ne mène nulle part. Elle a été "
+              "remise à celle de cette page : un build ne voit pas un canonical qui "
+              "ment.\n\n")
+           if notes_redaction else "")
+        + "### À relire avant de fusionner\n\n"
         "Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, "
         "noms, dates, prix et promesses commerciales sont à contrôler. Cette pull request "
         "reste en **brouillon** et ne sera jamais fusionnée automatiquement.\n\n"
@@ -27006,7 +27135,7 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
 
     out = _proposer_une_page(
         user, project_id=str(proj.id), site_name=str(proj.site_name or slug),
-        slug=slug, sujet=sujet, route=route,
+        slug=slug, sujet=sujet, route=route, base_url=str(proj.base_url or ""),
         owner=owner, repo_name=repo_name, branch=branch, token=token)
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
@@ -27443,7 +27572,7 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
     with DB.session() as db:
         candidats = [
             {"id": str(p.id), "slug": str(p.slug), "owner": str(p.owner_user_id),
-             "site_name": str(p.site_name or ""),
+             "site_name": str(p.site_name or ""), "base_url": str(p.base_url or ""),
              "settings": dict(p.settings or {}) if isinstance(p.settings, dict) else {}}
             for p in db.scalars(select(Project))
         ]
@@ -27515,6 +27644,7 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
             sortie = _proposer_une_page(
                 auteur, project_id=cand["id"], site_name=cand["site_name"] or cand["slug"],
                 slug=cand["slug"], sujet=choisi, route=route,
+                base_url=cand["base_url"],
                 owner=parts[0], repo_name=parts[1], branch=cfg["branch"], token=token,
                 motif="content_auto", refuser_si_orpheline=True)
         except Exception as e:

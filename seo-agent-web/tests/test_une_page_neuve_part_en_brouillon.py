@@ -83,9 +83,15 @@ export default function Blog() {
 }
 """
 
+# LE CANONICAL EST FAUX EXPRES : il perd le segment /blog, exactement comme les deux pages que
+# le banc des neuf idiomes a produites le 20/09/2026. La route doit le remettre avant de
+# commiter, et c'est ce que `test_le_canonical_faux_est_CORRIGE_avant_le_commit` mesure.
 REDIGE = """export const metadata = {
   title: "Choisir un outil de veille SEO",
   description: "Les critères qui comptent vraiment quand on compare des outils de veille SEO.",
+  alternates: {
+    canonical: "https://site.fr/choisir-un-outil-de-veille-seo",
+  },
 };
 
 export default function Page() { return <article>Le comparatif.</article>; }
@@ -228,6 +234,30 @@ def test_la_page_est_ecrite_au_bon_endroit_et_LIEE_depuis_sa_section(customer, p
     assert set(ecrits) == {"app/blog/mon-sujet/page.tsx", "app/blog/page.tsx"}, ecrits
     assert "Choisir un outil de veille SEO" in ecrits["app/blog/mon-sujet/page.tsx"]
     assert data["orpheline"] is False
+
+
+def test_le_canonical_faux_est_CORRIGE_avant_le_commit(customer, plan, github, modele) -> None:
+    """Le bout en bout du garde-fou d'adresse, mesuré sur le fichier réellement commité.
+
+    Un test de structure — « l'appel porte-t-il bien `url_de_la_page=` ? » — ne suffit pas :
+    une mutation qui remplace la VALEUR par une chaîne vide y survit, le mot-clé étant toujours
+    là. C'est ce qui est arrivé le 20/09/2026. Seule la lecture du fichier poussé le prouve.
+    """
+    client, slug, _pid, _uid = customer
+    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
+    ecrit = dict(github["put"])["app/blog/mon-sujet/page.tsx"]
+    assert '"https://site.fr/blog/mon-sujet"' in ecrit, ecrit
+    assert "https://site.fr/choisir-un-outil-de-veille-seo" not in ecrit, ecrit
+
+
+def test_la_pr_DIT_que_l_adresse_a_ete_reprise(customer, plan, github, modele) -> None:
+    """Un diff muet se relit mal : le relecteur doit savoir que le modèle avait écrit autre
+    chose, sinon il croit lire ce que le modèle a produit."""
+    client, slug, _pid, _uid = customer
+    _demander(client, slug, sujet=SUJET, route=ROUTE)
+    corps = [b for p, b in github["post"] if p.endswith("/pulls")][0]["body"]
+    assert "Adresses reprises" in corps, corps
+    assert "canonical" in corps, corps
 
 
 def test_l_entree_d_index_est_CLONEE_sur_celle_d_une_soeur(customer, plan, github, modele) -> None:
