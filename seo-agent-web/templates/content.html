@@ -1,0 +1,202 @@
+{% extends "layout.html" %}
+{% block title %}Contenu - {{ project.site_name if project else slug }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Contenu</h1>
+    <p class="muted">
+      {{ project.site_name }} · faire écrire une page neuve et l'ouvrir en pull request
+    </p>
+  </div>
+
+  {% if not has_access %}
+    <section class="card">
+      <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
+      <p class="muted">
+        Cette page s'alimente de l'écran Concurrents, qui fournit les sujets, et elle est
+        incluse au même niveau : à partir du plan Pro.
+      </p>
+      <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
+    </section>
+  {% elif not (github_cfg and github_cfg.repo) %}
+    <section class="card">
+      <h2 style="margin-top:0;">Connecte d'abord ton dépôt GitHub</h2>
+      <p class="muted">
+        Une page neuve est un fichier ajouté à ton dépôt, proposé en pull request. Sans dépôt
+        connecté, il n'y a nulle part où l'écrire.
+      </p>
+      <a class="btn primary" href="/projects/{{ slug }}/settings/crawl" style="margin-top:12px;display:inline-block;">Paramètres du projet</a>
+    </section>
+  {% else %}
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2 style="margin:0;">Écrire une page</h2>
+        <span class="muted small">
+          {% if restant is none %}
+            articles illimités
+          {% else %}
+            {{ restant }} article{{ 's' if restant > 1 }} restant{{ 's' if restant > 1 }} ce mois-ci
+          {% endif %}
+        </span>
+      </div>
+
+      <p class="muted small">
+        L'agent lit une page existante de la même section et écrit la nouvelle
+        <strong>dans sa forme</strong> — mêmes clés de tête, même langue — puis l'ajoute à
+        l'index de la section pour qu'elle ne soit pas orpheline. Le résultat part en
+        <strong>pull request brouillon</strong> : rien n'est publié tant que tu ne l'as pas
+        relue et fusionnée.
+      </p>
+
+      <div class="setting-form">
+        <label>
+          Sujet de la page
+          <input id="c-sujet" placeholder="Comment choisir un outil de veille SEO" />
+        </label>
+        <label>
+          Adresse de la page
+          <input id="c-route" class="mono" placeholder="/blog/mon-sujet" />
+          <span class="muted small">
+            La section doit déjà contenir au moins une page : c'est elle qui sert de modèle.
+            Si l'agent ne trouve pas de sœur, il te le dira plutôt que d'inventer une
+            arborescence.
+          </span>
+        </label>
+        <div class="modal-actions between">
+          <span class="muted small">
+            Besoin d'idées ? <a href="/projects/{{ slug }}/competitors">Concurrents</a> liste
+            les sujets que tes rivaux traitent et que tu ne couvres pas.
+          </span>
+          <button class="btn primary" type="button" id="c-go">Rédiger (PR)</button>
+        </div>
+      </div>
+
+      <div id="c-status" class="muted" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
+        <h2 style="margin:0;">Pages proposées</h2>
+        <span class="muted small">{{ pages|length }}</span>
+      </div>
+
+      {% if not pages %}
+        <p class="muted">Aucune page proposée pour l'instant.</p>
+      {% else %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead>
+              <tr>
+                <th>Adresse</th>
+                <th>Sujet demandé</th>
+                <th>Lien depuis la section</th>
+                <th>Pull request</th>
+                <th>Le</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in pages %}
+                <tr>
+                  <td class="mono">{{ p.route }}</td>
+                  <td class="muted small">{{ p.sujet }}</td>
+                  <td>
+                    {% if p.orpheline %}
+                      <span class="badge warn">à lier à la main</span>
+                    {% else %}
+                      <span class="badge ok">liée</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if p.pr_url %}
+                      <a href="{{ p.pr_url }}" target="_blank" rel="noreferrer">#{{ p.pr_number }}</a>
+                      {% if p.etat == 'en_attente' %}<span class="muted small">· vérification en cours</span>
+                      {% elif p.etat == 'verifiee' %}<span class="muted small">· build vert</span>
+                      {% elif p.etat == 'refusee' %}<span class="badge error">build rouge</span>
+                      {% elif p.etat == 'inconnue' %}<span class="muted small">· rien à vérifier sur ce dépôt</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="muted small">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="muted small">{{ p.updated_at }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+    <script>
+    (function () {
+      var slug = {{ slug | tojson }};
+      var sujet = document.getElementById('c-sujet');
+      var route = document.getElementById('c-route');
+      var btn = document.getElementById('c-go');
+      var box = document.getElementById('c-status');
+      var touche = false;
+
+      function say(html, cls) { box.className = cls || 'muted'; box.innerHTML = html; }
+      function esc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      /* L'adresse est SUGGEREE, jamais imposee : la section est une decision editoriale que
+         nous ne pouvons pas deviner (/blog, /guides, /ressources). Des que le client y touche,
+         on arrete de la reecrire sous ses doigts. */
+      function slugifier(s) {
+        return String(s || '').toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+      }
+      route.addEventListener('input', function () { touche = true; });
+      sujet.addEventListener('input', function () {
+        if (touche) return;
+        var s = slugifier(sujet.value);
+        route.value = s ? '/blog/' + s : '';
+      });
+
+      /* Le sujet de Concurrents arrive par l'URL : ?sujet=… pre-remplit le formulaire sans
+         rien engendrer, pour que le client relise avant de depenser un article. */
+      try {
+        var q = new URLSearchParams(window.location.search).get('sujet');
+        if (q) { sujet.value = q; sujet.dispatchEvent(new Event('input')); sujet.focus(); }
+      } catch (e) { /* URL exotique : le formulaire reste vide, ce n'est pas une panne */ }
+
+      btn.addEventListener('click', function () {
+        var s = (sujet.value || '').trim(), r = (route.value || '').trim();
+        if (!s || !r) { say('Il faut un sujet et une adresse.', 'error'); return; }
+        btn.disabled = true;
+        btn.textContent = 'Rédaction…';
+        say('Le modèle écrit la page en imitant une page existante de la même section. ' +
+            'Cela prend une trentaine de secondes.');
+        fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sujet: s, route: r })
+        })
+          .then(function (resp) { return resp.json(); })
+          .then(function (d) {
+            btn.disabled = false;
+            btn.textContent = d.ok ? 'PR créée' : 'Rédiger (PR)';
+            var lien = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
+            if (!d.ok) { say(esc(d.error || 'Erreur pendant la rédaction.') + lien, 'error'); return; }
+            var mot = d.orpheline
+              ? ' <strong>Cette page n\'est liée depuis aucun index</strong> : ajoute le lien avant de fusionner.'
+              : ' Le lien depuis <span class="mono">' + esc(d.index || 'la section') + '</span> est dans le diff.';
+            say('Page écrite dans <span class="mono">' + esc(d.file) + '</span>.' + lien + mot +
+                ' Le texte vient d\'un modèle : relis-le avant de fusionner.',
+                d.orpheline ? 'muted' : 'ok');
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = 'Rédiger (PR)';
+            say('Erreur réseau pendant la rédaction.', 'error');
+          });
+      });
+    })();
+    </script>
+  {% endif %}
+{% endblock %}

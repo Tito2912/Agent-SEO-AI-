@@ -183,16 +183,57 @@ def test_a_covered_subject_names_the_page_and_offers_the_retarget(customer, own_
     assert 'data-url="https://site.fr/blog/kling-ai-prix-2026"' in body
 
 
-def test_an_uncovered_subject_is_reported_and_never_actionable(customer, own_crawl) -> None:
+def _row(body: str, needle: str) -> str:
+    """The WHOLE <tr> containing `needle`, both halves of it.
+
+    Slicing one side only is how a guard ends up reading the half of the row where the action
+    cell is not: `body.split(needle)[0].rsplit("<tr>", 1)[1]` stops before the buttons, and a
+    mutation that adds the wrong button survives it. Measured, 2026-09-20.
+    """
+    before, found, after = body.partition(needle)
+    assert found, "%r is nowhere on the page" % needle
+    return before.rsplit("<tr>", 1)[1] + found + after.split("</tr>", 1)[0]
+
+
+def test_an_uncovered_subject_is_never_RETARGETED(customer, own_crawl) -> None:
     """Putting a keyword into a page that does not cover the subject is stuffing, and a
-    corrector that does it makes the site worse. Owner's rule: retarget first, create later."""
+    corrector that does it makes the site worse. Owner's rule: retarget first, create later.
+
+    The rule is about RETARGETING, and it has not moved. What changed on 2026-09-20 is that
+    "later" arrived: an uncovered subject can now justify a NEW page, which is the opposite
+    gesture. The test below states that half.
+    """
     client, slug, pid, uid, _plans = customer
     own_crawl(OWN_PAGES)
     _add_ready_rival(pid, uid)
     body = client.get(f"/projects/{slug}/competitors").text
     assert "Aucune page sur ce sujet" in body
-    heygen_row = body.split("HeyGen")[1].split("</tr>")[0]
-    assert "data-keyword-pr" not in heygen_row, "an uncovered subject was made actionable"
+    heygen_row = _row(body, "HeyGen")
+    assert "data-keyword-pr" not in heygen_row, "an uncovered subject was offered a retarget"
+
+
+def test_an_uncovered_subject_offers_to_WRITE_a_page_instead(customer, own_crawl) -> None:
+    """"Create later" — and the button engenders nothing: it opens the Contenu screen with the
+    subject prefilled, so the customer reads the address before spending an article."""
+    client, slug, pid, uid, _plans = customer
+    own_crawl(OWN_PAGES)
+    _add_ready_rival(pid, uid)
+    body = client.get(f"/projects/{slug}/competitors").text
+    heygen_row = _row(body, "HeyGen")
+    assert "data-content-draft" in heygen_row, heygen_row
+    assert f"/projects/{slug}/content?sujet=" in heygen_row, heygen_row
+
+
+def test_a_COVERED_subject_is_not_offered_a_second_page(customer, own_crawl) -> None:
+    """Écrire une deuxième page sur un sujet déjà traité, c'est se cannibaliser soi-même :
+    deux pages du site se disputent la même requête et aucune ne gagne."""
+    client, slug, pid, uid, _plans = customer
+    own_crawl(OWN_PAGES)
+    _add_ready_rival(pid, uid)
+    body = client.get(f"/projects/{slug}/competitors").text
+    kling_row = _row(body, "kling-ai-prix-2026")
+    assert "data-content-draft" not in kling_row, kling_row
+    assert "data-keyword-pr" in kling_row, "le témoin : la ligne lue est bien celle qui porte une action"
 
 
 def test_the_home_page_is_never_offered_as_the_page_to_retarget(customer, own_crawl) -> None:

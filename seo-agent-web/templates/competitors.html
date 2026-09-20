@@ -162,14 +162,22 @@
                   </td>
                   <td class="num mono">{{ '%.0f'|format(f.match_score * 100) }} %</td>
                   <td class="num">
-                    {% if f.covered and github_cfg and github_cfg.repo %}
+                    {% if not github_cfg or not github_cfg.repo %}
+                      <span class="muted small">GitHub requis</span>
+                    {% elif f.covered %}
                       <button type="button" class="btn primary" data-keyword-pr
                               data-query="{{ f.competitor_title }}" data-url="{{ f.own_url }}"
                               title="Ouvre une pull request qui réécrit le titre et la meta description de ta page pour ce sujet">Recibler (PR)</button>
-                    {% elif f.covered %}
-                      <span class="muted small">GitHub requis</span>
                     {% else %}
-                      <span class="muted small">—</span>
+                      {# « Retarget first, create later » : le later est arrivé le 20/09/2026. Un
+                         sujet NON couvert ne se recible pas — glisser un mot-clé dans une page
+                         qui parle d'autre chose reste du bourrage — mais il peut justifier une
+                         page neuve, ce qui est l'inverse. Le bouton n'engendre RIEN : il ouvre
+                         l'écran Contenu avec le sujet pré-rempli, pour que le client relise
+                         l'adresse avant de dépenser un article. #}
+                      <a class="btn" data-content-draft
+                         href="/projects/{{ slug }}/content?sujet={{ f.competitor_title | urlencode }}"
+                         title="Ouvre l'écran Contenu avec ce sujet pré-rempli">Rédiger une page</a>
                     {% endif %}
                   </td>
                 </tr>

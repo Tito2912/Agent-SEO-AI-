@@ -23,6 +23,7 @@ GitHub et le modèle sont bouchonnés : ce qui est sous test, c'est la décision
 from __future__ import annotations
 
 import base64
+import json
 import os
 import sys
 import tempfile
@@ -492,3 +493,130 @@ def test_un_index_ILLISIBLE_ouvre_quand_meme_mais_le_DIT(customer, plan, github,
     assert r.json()["orpheline"] is True, r.text
     corps = [b for p, b in github["post"] if p.endswith("/pulls")][0]["body"]
     assert "illisible" in corps, corps
+
+
+# ── l'écran : ce que le client voit avant et après ────────────────────────────────────────────
+
+def test_un_plan_sous_PRO_voit_le_forfait_pas_le_formulaire(customer, plan) -> None:
+    client, slug, _pid, _uid = customer
+    plan["plan"] = "solo"
+    page = client.get(f"/projects/{slug}/content").text
+    assert "plans Pro et supérieurs" in page
+    assert 'id="c-go"' not in page, "le bouton est affiché à qui ne peut pas s'en servir"
+
+
+def test_sans_DEPOT_connecte_l_ecran_dit_quoi_faire(customer, plan) -> None:
+    """« Aucun dépôt GitHub connecté » après trente secondes de rédaction serait un gâchis :
+    la page neuve est un fichier, il faut un dépôt où l'écrire."""
+    client, slug, pid, _uid = customer
+    with app_module.DB.session() as db:
+        proj = db.get(Project, pid)
+        proj.settings = {k: v for k, v in proj.settings.items() if k != "github_repo"}
+        db.commit()
+    page = client.get(f"/projects/{slug}/content").text
+    assert "dépôt GitHub" in page
+    assert 'id="c-go"' not in page
+
+
+def test_l_ecran_montre_le_formulaire_et_le_QUOTA_restant(customer, plan) -> None:
+    client, slug, _pid, _uid = customer
+    plan["restant"] = 3
+    page = client.get(f"/projects/{slug}/content").text
+    assert 'id="c-go"' in page and 'id="c-sujet"' in page and 'id="c-route"' in page
+    assert "3 articles restants" in page, "le client ne sait pas ce qu'il lui reste"
+
+
+def _ligne_du_journal(page: str, route: str) -> str:
+    """La ligne de tableau de cette adresse, et rien d'autre.
+
+    Découper sur l'adresse seule attrapait le `placeholder="/blog/mon-sujet"` du formulaire,
+    plus haut dans la page : mes deux premières assertions lisaient donc le formulaire en
+    croyant lire le journal. C'est la cinquième fois de ce chantier qu'une sous-chaîne trop
+    large fait dire à un test autre chose que ce qu'il annonce.
+    """
+    cellule = '<td class="mono">%s</td>' % route
+    assert cellule in page, "aucune ligne de journal pour %s" % route
+    return cellule + page.split(cellule, 1)[1].split("</tr>", 1)[0]
+
+
+def test_l_ecran_JOURNALISE_les_pages_deja_proposees(customer, plan, github, modele) -> None:
+    """Sans cette liste, le client ne sait ni ce qu'il a déjà demandé, ni laquelle de ses pull
+    requests attend encore un lien."""
+    client, slug, _pid, _uid = customer
+    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
+    ligne = _ligne_du_journal(client.get(f"/projects/{slug}/content").text, ROUTE)
+    assert SUJET in ligne, ligne
+    assert "https://github.com/client/site.fr/pull/77" in ligne and "#77" in ligne, ligne
+
+
+def test_une_page_ORPHELINE_est_signalee_dans_le_journal(customer, plan, github, modele) -> None:
+    """C'est le seul endroit où l'information se relit après coup : le corps de la PR le dit
+    une fois, l'écran le redit tant que la PR n'est pas fusionnée."""
+    client, slug, _pid, _uid = customer
+    github["fichiers"]["app/blog/page.tsx"] = INDEX_MANUEL.replace(
+        "    </ul>", '      <nav><a href="/blog/premier-article">encore</a></nav>\n    </ul>')
+    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
+    ligne = _ligne_du_journal(client.get(f"/projects/{slug}/content").text, ROUTE)
+    assert "à lier à la main" in ligne, ligne
+
+
+def test_une_page_LIEE_n_est_pas_signalee_comme_orpheline(customer, plan, github, modele) -> None:
+    """Le témoin de l'assertion ci-dessus : sans lui, un badge affiché partout la validerait."""
+    client, slug, _pid, _uid = customer
+    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
+    ligne = _ligne_du_journal(client.get(f"/projects/{slug}/content").text, ROUTE)
+    assert "à lier à la main" not in ligne and "liée" in ligne, ligne
+
+
+def test_le_journal_ne_montre_QUE_les_pages_ecrites(customer, plan, github, modele) -> None:
+    """Les corrections ont leur écran. Les mélanger ici donnerait un journal où l'on ne
+    retrouve plus ce qu'on a demandé."""
+    from backend.models import IssueTask
+
+    client, slug, pid, uid = customer
+    with app_module.DB.session() as db:
+        db.add(IssueTask(
+            project_id=pid, user_id=uid, issue_key="missing_meta_description",
+            issue_label="Une correction ordinaire", crawl_ts="",
+            url="https://site.fr/une-correction", status="in_progress", severity="notice",
+            note=json.dumps({"pr_url": "https://github.com/client/site.fr/pull/5",
+                             "pr_number": 5}, ensure_ascii=False)))
+        db.commit()
+    page = client.get(f"/projects/{slug}/content").text
+    assert "Une correction ordinaire" not in page and "/pull/5" not in page, \
+        "une correction est apparue dans le journal des pages écrites"
+
+
+def test_c_est_le_plan_de_l_HOTE_qui_ouvre_l_ECRAN(customer, plan) -> None:
+    """Même règle que la porte de l'API, mesurée sur l'écran : un consultant au forfait
+    Gratuit voit le formulaire sur le projet d'une agence Pro, et pas l'inverse."""
+    client, slug, _pid, hote = customer
+    mid = _invite(client, hote)
+    plan["plans"] = {hote: "pro", mid: "free"}
+    assert 'id="c-go"' in client.get(f"/projects/{slug}/content").text
+
+    plan["plans"] = {hote: "free", mid: "business"}
+    page = client.get(f"/projects/{slug}/content").text
+    assert 'id="c-go"' not in page and "plans Pro et supérieurs" in page
+
+
+def test_l_ecran_est_ATTEIGNABLE_depuis_la_navigation(customer, plan) -> None:
+    """Une route qu'aucun lien n'atteint n'existe pas pour le client."""
+    client, slug, _pid, _uid = customer
+    page = client.get(f"/projects/{slug}").text
+    assert f'href="/projects/{slug}/content"' in page, "aucune entrée de menu vers Contenu"
+
+
+def test_le_sujet_venu_de_CONCURRENTS_pre_remplit_sans_rien_engendrer(customer, plan, github, modele) -> None:
+    """Le bouton de l'écran Concurrents n'appelle pas le modèle : il ouvre ce formulaire.
+
+    Écrire une page coûte un article du quota, et la SECTION est une décision éditoriale que
+    nous ne pouvons pas deviner. Engendrer au clic depuis l'autre écran dépenserait un article
+    sur une adresse que personne n'a relue.
+    """
+    client, slug, _pid, _uid = customer
+    r = client.get(f"/projects/{slug}/content?sujet=Comparatif+des+outils")
+    assert r.status_code == 200
+    _ai, vus = modele
+    assert vus == [], "le modèle a été appelé par un simple affichage"
+    assert github["put"] == [] and plan["debits"] == []

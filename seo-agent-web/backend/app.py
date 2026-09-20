@@ -26966,6 +26966,84 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     })
 
 
+@app.get("/projects/{slug}/content", response_class=HTMLResponse)
+def project_content(request: Request, slug: str) -> HTMLResponse:
+    """L'ecran d'ou part une page neuve, et le journal de celles deja proposees.
+
+    Deux entrees, parce que le proprietaire a demande les deux : la saisie libre est ici, et
+    les sujets non couverts sont sur l'ecran Concurrents — la ou ils sont deja calcules. Les
+    recalculer ici voudrait dire comparer deux fois le meme crawl a la meme liste de rivaux,
+    et deux endroits qui repondent a la meme question finissent par diverger.
+
+    LE JOURNAL N'EST PAS UNE DECORATION. Une page proposee vit ensuite sur GitHub : sans cette
+    liste, le client ne sait ni ce qu'il a deja demande, ni laquelle de ses pull requests
+    attend encore un lien. C'est aussi le seul endroit ou `orpheline` se lit apres coup.
+    """
+    proj_row = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    payeur = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
+    est_admin = bool(getattr(user, "is_admin", False))
+    acces, restant, plan_key = est_admin, None, ""
+    try:
+        with DB.session() as db:
+            plan_key = billing.effective_plan_key(db, user_id=payeur)
+            if not est_admin:
+                acces = billing.plan_rank(plan_key) >= billing.plan_rank("pro")
+            if acces:
+                restant = billing.remaining_quota(db, user_id=payeur, metric="ai_articles_month")
+    except Exception:
+        acces, restant = est_admin, None
+
+    pages: list[dict[str, Any]] = []
+    try:
+        with DB.session() as db:
+            taches = list(db.scalars(
+                select(IssueTask)
+                .where(IssueTask.project_id == proj_row.id,
+                       IssueTask.issue_key == _CONTENT_PAGE_KEY)
+                .order_by(IssueTask.updated_at.desc())))
+        for t in taches:
+            try:
+                note = json.loads(t.note) if t.note else {}
+            except Exception:
+                note = {}
+            if not isinstance(note, dict):
+                note = {}
+            verif = note.get("verification")
+            verif = verif if isinstance(verif, dict) else {}
+            pages.append({
+                "route": str(t.url or ""),
+                "sujet": str(note.get("sujet") or ""),
+                "pr_url": str(note.get("pr_url") or ""),
+                "pr_number": int(note.get("pr_number") or 0),
+                "files": note.get("files") if isinstance(note.get("files"), list) else [],
+                "orpheline": bool(note.get("orpheline")),
+                "etat": str(verif.get("etat") or ""),
+                "raison": str(verif.get("raison") or ""),
+                "status": str(t.status or ""),
+                "updated_at": t.updated_at.strftime("%d/%m/%Y") if t.updated_at else "",
+            })
+    except Exception:
+        pages = []
+
+    resp = templates.TemplateResponse(
+        "content.html",
+        {
+            "request": request,
+            "project": {"slug": proj_row.slug, "site_name": proj_row.site_name,
+                        "base_url": proj_row.base_url},
+            "slug": slug,
+            "has_access": acces,
+            "plan_key": plan_key,
+            "restant": restant,
+            "github_cfg": _project_github_cfg(proj_row),
+            "pages": pages,
+        },
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 def _competitor_has_access(db, *, user_id: str) -> bool:
     """Pro and above. Owner's decision, 2026-08-29.
 
