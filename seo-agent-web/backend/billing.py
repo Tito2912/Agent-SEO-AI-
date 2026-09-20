@@ -590,6 +590,23 @@ def sync_subscription_from_stripe(db: Session, *, stripe_subscription_id: str) -
     return upsert_subscription(db, stripe_subscription=sub)
 
 
+def _tracer_le_plan(db: Session, *, user_id: str, sid: str, avant: str) -> None:
+    """Dit ce que l'abonnement a change, ET quand il n'a rien change.
+
+    Les deux sont utiles et c'est le second qui manquait : « l'evenement est arrive et le plan
+    n'a pas bouge » est un diagnostic, pas un silence. Le 27/09/2026, entre « le webhook a ete
+    rejete » et « il a ete traite sans effet », il n'y avait aucun moyen de trancher.
+    """
+    try:
+        apres = effective_plan_key(db, user_id=user_id)
+    except Exception:
+        return
+    if apres != avant:
+        logger.info("[STRIPE] plan %s -> %s (user %s, abonnement %s)", avant, apres, user_id, sid)
+    else:
+        logger.info("[STRIPE] plan INCHANGE (%s) apres mise a jour de l'abonnement %s (user %s)",
+                    avant, sid, user_id)
+
 def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> BillingSubscription | None:
     sid = str(stripe_subscription.get("id") or "").strip()
     cid = str(stripe_subscription.get("customer") or "").strip()
@@ -643,6 +660,12 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
     cpe = _ts_to_dt(stripe_subscription.get("current_period_end"))
     trial_end = _ts_to_dt(stripe_subscription.get("trial_end"))
 
+    # Le plan AVANT l'ecriture, pour pouvoir dire ce que cet evenement a change. Sans cette
+    # mesure, un webhook qui arrive et ne change rien est indiscernable d'un webhook qui n'est
+    # jamais arrive — or c'est exactement la question que pose le rendez-vous du 27/09/2026,
+    # ou un downgrade Business -> Pro doit se produire sur l'abonnement de test.
+    _plan_avant = effective_plan_key(db, user_id=uid)
+
     existing = db.scalar(select(BillingSubscription).where(BillingSubscription.stripe_subscription_id == sid))
     if existing:
         existing.user_id = uid
@@ -663,6 +686,7 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         existing.stripe_data = _json_safe(stripe_subscription)
         db.add(existing)
         db.commit()
+        _tracer_le_plan(db, user_id=uid, sid=sid, avant=_plan_avant)
         return existing
 
     row = BillingSubscription(

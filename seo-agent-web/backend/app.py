@@ -13254,22 +13254,46 @@ def billing_portal(request: Request) -> RedirectResponse:
 
 @app.post("/stripe/webhook")
 async def stripe_webhook(request: Request) -> JSONResponse:
+    """Chaque webhook laisse une ligne, y compris — SURTOUT — ceux qu'on refuse.
+
+    Les deux refus de signature repartaient en 400 sans rien ecrire. C'est la panne qui ne
+    ressemble a rien : Stripe la voit dans son tableau de bord, nous pas, et l'effet visible
+    est seulement un plan qui n'a pas change. Le 27/09/2026 un downgrade Business -> Pro est
+    programme sur l'abonnement de test, et tout l'interet du rendez-vous est de pouvoir dire
+    ce qui s'est passe. Un evenement rejete en silence rendrait l'observation impossible.
+
+    La signature n'est PAS journalisee, seulement son verdict : c'est un secret partage.
+    """
     payload = await request.body()
     sig = str(request.headers.get("stripe-signature") or "").strip()
     if not sig:
+        logger.warning("[STRIPE] webhook REFUSE : en-tete de signature absent (%d octets)",
+                       len(payload or b""))
         return JSONResponse({"ok": False, "error": "missing_signature"}, status_code=400)
     try:
         event = billing.construct_webhook_event(payload=payload, sig_header=sig)
     except Exception as e:
+        # LE CAS DU 27/09 : une signature valide pour un AUTRE secret. Arrive si les cles
+        # test/live et l'endpoint ne basculent pas ensemble — l'application lit UN seul
+        # `STRIPE_WEBHOOK_SECRET`, elle est donc entierement en test ou entierement en live.
+        logger.error("[STRIPE] webhook REFUSE : signature invalide (%s: %s). "
+                     "Verifie que STRIPE_WEBHOOK_SECRET correspond a l'endpoint qui a emis.",
+                     type(e).__name__, e)
         return JSONResponse({"ok": False, "error": str(e) or "invalid_signature"}, status_code=400)
+
+    _type = str(event.get("type") or "?") if isinstance(event, dict) else "?"
+    _eid = str(event.get("id") or "?") if isinstance(event, dict) else "?"
+    logger.info("[STRIPE] webhook recu : %s (%s)", _type, _eid)
 
     with DB.session() as db:
         try:
             billing.handle_stripe_event(db, event=event)
         except Exception as e:
-            logger.error("[STRIPE] webhook error: %s: %s", type(e).__name__, e)
+            logger.error("[STRIPE] webhook %s (%s) EN ERREUR : %s: %s",
+                         _type, _eid, type(e).__name__, e)
             return JSONResponse({"ok": False, "error": "webhook_handler_error"}, status_code=500)
 
+    logger.info("[STRIPE] webhook %s (%s) traite", _type, _eid)
     return JSONResponse({"ok": True})
 
 
