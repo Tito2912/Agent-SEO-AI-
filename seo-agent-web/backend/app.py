@@ -205,7 +205,8 @@ _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
 # compare les deux listes pour chaque route /cron.
 _CSRF_EXEMPT_PATHS = {"/healthz", "/stripe/webhook", "/cron/check-backlinks", "/cron/autopilot",
                       "/cron/auto-search-backlinks", "/cron/auto-post-backlinks",
-                      "/cron/refresh-competitors", "/cron/verify-pull-requests"}
+                      "/cron/refresh-competitors", "/cron/verify-pull-requests",
+                      "/cron/auto-content"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, deque[float]] = {}
@@ -10828,6 +10829,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/cron/refresh-competitors",
         "/cron/auto-search-backlinks",
         "/cron/auto-post-backlinks",
+        "/cron/auto-content",
     } or path.startswith("/ressources-seo") or path.startswith("/docs"):
         return await call_next(request)
 
@@ -16542,6 +16544,12 @@ def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONR
         _balayer_verifications_pr(limit=25)
     except Exception as e:
         logger.error("[PR] balayage depuis l'autopilote : %s: %s", type(e).__name__, e)
+    # Meme logique pour le mode automatique de redaction : chaque projet porte sa propre
+    # date hebdomadaire, donc un passage de plus ne produit rien de plus.
+    try:
+        _balayer_contenu_auto()
+    except Exception as e:
+        logger.error("[contenu-auto] balayage depuis l'autopilote : %s: %s", type(e).__name__, e)
 
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
     if not config_path:
@@ -26729,6 +26737,209 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 _CONTENT_PAGE_KEY = "ai_content_page"
 
 
+def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
+                       sujet: str, route: str,
+                       owner: str, repo_name: str, branch: str, token: str,
+                       motif: str = "content_draft",
+                       refuser_si_orpheline: bool = False) -> dict[str, Any]:
+    """Ecrit la page, la lie, ouvre la PR brouillon, enregistre la tache et debite l'article.
+
+    SORTIE COMMUNE A LA MAIN ET AU CRON, et c'est la raison d'etre de cette fonction. Le mode
+    automatique ne doit pas etre une SECONDE implementation du meme geste : les deux
+    divergeraient, et c'est celle que personne ne regarde qui finirait par ecrire n'importe
+    quoi chez un client. Une seule difference les separe, et elle est un parametre :
+
+        `refuser_si_orpheline` — en manuel, une page qu'on ne sait pas lier part quand meme,
+        parce qu'une personne relit le brouillon et saura ou poser l'entree. En automatique
+        personne ne lira la phrase : on refuse AVANT de creer quoi que ce soit.
+
+    Rend un dictionnaire pret a servir de reponse JSON, plus `status` que l'appelant HTTP
+    retire. La porte de plan et de quota n'est PAS ici : elle appartient a l'appelant, qui
+    seul sait s'il parle a une personne (402 et un lien vers l'abonnement) ou a un cron
+    (on saute ce projet en silence).
+    """
+    # Une seule page proposee a la fois pour une adresse donnee : la seconde ecrirait le meme
+    # fichier et ajouterait une seconde entree au meme index, donc un conflit.
+    _open_pr = _open_pr_for_issue(
+        project_id=project_id, issue_key=_CONTENT_PAGE_KEY, url=route,
+        owner=owner, repo_name=repo_name, token=token,
+    )
+    if _open_pr:
+        return {"ok": False, "status": 409, "duplicate": True, "pr_url": _open_pr, "error": (
+            "Une page est déjà proposée pour cette adresse et attend ta revue. Fusionne ou "
+            "ferme celle-ci d'abord."
+        )}
+
+    try:
+        tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
+    except Exception as e:
+        return {"ok": False, "status": 400, "error": f"Lecture du dépôt impossible : {e}"}
+    all_paths = [
+        item["path"] for item in (tree_data.get("tree") or [])
+        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
+    ]
+
+    from datetime import datetime as _dt
+    placement = repo_index.placement_pour_route(all_paths, route, date=_dt.utcnow().strftime("%Y-%m-%d"))
+    logger.info("[contenu] %s %s -> %s", slug, route,
+                placement.get("fichier") or ("refus: " + str(placement.get("refus") or "")))
+    if placement["refus"]:
+        return {"ok": False, "status": 422, "error": placement["refus"]}
+    fichier = str(placement["fichier"])
+    soeur = str((placement["soeurs"] or [""])[0])
+
+    import base64 as _b64
+
+    def _lire(chemin: str) -> tuple[str, str] | None:
+        """(contenu, sha) du fichier sur la branche de base, ou None."""
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
+                                 token=token, params={"ref": branch}, timeout_s=15)
+            return (_b64.b64decode(str(fd.get("content") or "").replace("\n", "")).decode("utf-8", errors="replace"),
+                    str(fd.get("sha") or ""))
+        except Exception:
+            return None
+
+    lu_soeur = _lire(soeur) if soeur else None
+    if lu_soeur is None:
+        return {"ok": False, "status": 400, "error": f"Impossible de lire la page sœur {soeur}."}
+    soeur_contenu = lu_soeur[0]
+
+    contenu, refus = rediger_une_page(
+        sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
+        site_name=site_name)
+    if refus:
+        return {"ok": False, "status": 422, "error": refus}
+    titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
+
+    index_chemin = str(placement.get("index") or "")
+    index_sortie, index_sha, note_lien, orpheline = "", "", "", True
+    if not index_chemin:
+        note_lien = ("**Aucune page de section trouvée** pour `%s` : la page n'est liée depuis "
+                     "nulle part. Ajoute le lien avant de fusionner."
+                     % str(placement.get("section") or ""))
+    else:
+        lu_index = _lire(index_chemin)
+        if lu_index is None:
+            note_lien = "**Index `%s` illisible** : le lien n'a pas pu être posé." % index_chemin
+        else:
+            index_sha = lu_index[1]
+            index_sortie, note_lien, orpheline = _lien_pour_la_page_neuve(
+                lu_index[0], index_chemin,
+                soeur_slug=str(placement.get("soeur_slug") or ""),
+                slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
+                titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
+                titre_neuf=titre_neuf)
+
+    # EN AUTOMATIQUE, UNE ORPHELINE NE PART PAS. En manuel la phrase ci-dessus suffit :
+    # une personne relit le brouillon. Ici personne ne la lira, et une page que rien ne
+    # pointe est exactement ce que le crawler signalerait au passage suivant. On refuse
+    # AVANT la premiere ecriture, pour ne meme pas laisser une branche derriere soi.
+    if refuser_si_orpheline and orpheline:
+        return {"ok": False, "status": 422, "orpheline": True,
+                "error": "page non liable sans decision humaine : %s" % note_lien}
+
+    try:
+        ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
+        base_sha = ref_data["object"]["sha"]
+    except Exception as e:
+        return {"ok": False, "status": 400, "error": f"Impossible de lire la branche {branch} : {e}"}
+    fix_branch = "seo-contenu/%s-%s" % (_safe_github_branch_suffix(route.strip("/")),
+                                        _dt.utcnow().strftime("%Y%m%d-%H%M%S"))
+    try:
+        _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
+    except Exception as e:
+        return {"ok": False, "status": 400, "error": f"Impossible de créer la branche : {e}"}
+
+    ecrits: list[str] = []
+    try:
+        _github_api_put(_github_content_api_path(owner, repo_name, fichier), token=token, json_body={
+            "message": "seo(contenu) : %s\n\nGenerated by SEO Agent" % (titre_neuf or sujet)[:72],
+            "content": _b64.b64encode(contenu.encode("utf-8")).decode("ascii"),
+            "branch": fix_branch})
+        ecrits.append(fichier)
+        if index_sortie:
+            _github_api_put(_github_content_api_path(owner, repo_name, index_chemin), token=token, json_body={
+                "message": "seo(contenu) : lien vers %s\n\nGenerated by SEO Agent" % route,
+                "content": _b64.b64encode(index_sortie.encode("utf-8")).decode("ascii"),
+                "sha": index_sha, "branch": fix_branch})
+            ecrits.append(index_chemin)
+    except Exception as e:
+        # La branche reste, vide ou a moitie ecrite, et aucune PR ne s'ouvre. On la NOMME plutot
+        # que de tenter un nettoyage : supprimer une ref apres un echec d'ecriture demande le
+        # meme jeton qui vient d'echouer, et une branche orpheline se voit, se supprime, et ne
+        # coute rien — contrairement a une suppression qui se tromperait de branche.
+        return {"ok": False, "status": 400, "files": ecrits, "branch": fix_branch, "error": (
+            f"Écriture impossible sur {fix_branch} : {e}. La branche a été créée : tu peux la "
+            "supprimer sans risque."
+        )}
+
+    pr_title = "seo(contenu) : %s" % (titre_neuf or sujet)
+    pr_body = (
+        "## Page rédigée par l'agent\n\n"
+        f"**Sujet demandé :** {sujet}\n"
+        f"**Adresse :** `{route}`\n"
+        f"**Fichier créé :** `{fichier}`\n"
+        f"**Page sœur imitée :** `{soeur}`\n\n"
+        f"La forme de cette page — ses clés de tête, ses bornes, sa langue — est recopiée sur "
+        f"`{soeur}` plutôt que composée depuis un gabarit : c'est la seule façon de rendre un "
+        "fichier qui se construise sur ce dépôt-ci. Les clés manquantes sont vérifiées avant "
+        "écriture, pas seulement demandées au modèle.\n\n"
+        f"### Lien depuis la section\n\n{note_lien}\n\n"
+        "### À relire avant de fusionner\n\n"
+        "Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, "
+        "noms, dates, prix et promesses commerciales sont à contrôler. Cette pull request "
+        "reste en **brouillon** et ne sera jamais fusionnée automatiquement.\n\n"
+        f"Généré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
+    )
+    try:
+        pr_data = _ouvrir_pull_request(
+                      owner=owner, repo=repo_name, token=token,
+                      title=pr_title, body=pr_body,
+                      head=fix_branch, base=branch, draft=True)
+        pr_url = pr_data.get("html_url", "")
+        pr_number = pr_data.get("number", 0)
+    except Exception as e:
+        return {"ok": False, "status": 400, "branch": fix_branch, "files": ecrits,
+                "error": f"Erreur lors de la création de la PR : {e}"}
+
+    issue_label = f"Page rédigée : {route}"
+    try:
+        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=False),
+                            "pr_title": pr_title,
+                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
+                            "branch": fix_branch, "files": ecrits, "sujet": sujet,
+                            "orpheline": bool(orpheline), "contenu": True}, ensure_ascii=False)
+        with DB.session() as _db:
+            _ex = _db.scalar(select(IssueTask).where(
+                IssueTask.project_id == project_id, IssueTask.issue_key == _CONTENT_PAGE_KEY,
+                IssueTask.url == route))
+            if _ex:
+                _ex.status = "in_progress"
+                _ex.issue_label = issue_label
+                _ex.note = _note
+            else:
+                _db.add(IssueTask(
+                    project_id=project_id, user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
+                    issue_key=_CONTENT_PAGE_KEY, issue_label=issue_label, crawl_ts="",
+                    url=route, status="in_progress", severity="notice", note=_note,
+                ))
+            _db.commit()
+    except Exception:
+        pass
+
+    _article_charge(user, 1, slug=slug, motif=motif)
+
+    return {
+        "ok": True, "status": 200, "pr_url": pr_url, "pr_number": pr_number,
+        "branch": fix_branch,
+        "verification": "en_attente", "route": route, "file": fichier,
+        "index": index_chemin if index_sortie else "", "orpheline": bool(orpheline),
+        "lien": note_lien, "files": ecrits, "sister": soeur,
+    }
+
+
+
 class _ContentDraftBody(BaseModel):
     sujet: str = ""
     route: str = ""
@@ -26793,177 +27004,32 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
 
-    # Une seule page proposee a la fois pour une adresse donnee : la seconde ecrirait le meme
-    # fichier et ajouterait une seconde entree au meme index, donc un conflit.
-    _open_pr = _open_pr_for_issue(
-        project_id=str(proj.id), issue_key=_CONTENT_PAGE_KEY, url=route,
-        owner=owner, repo_name=repo_name, token=token,
-    )
-    if _open_pr:
-        return JSONResponse({"ok": False, "duplicate": True, "pr_url": _open_pr, "error": (
-            "Une page est déjà proposée pour cette adresse et attend ta revue. Fusionne ou "
-            "ferme celle-ci d'abord."
-        )}, status_code=409)
+    out = _proposer_une_page(
+        user, project_id=str(proj.id), site_name=str(proj.site_name or slug),
+        slug=slug, sujet=sujet, route=route,
+        owner=owner, repo_name=repo_name, branch=branch, token=token)
+    return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
+
+
+def _reglages_contenu_auto(reglages: Any) -> dict[str, Any]:
+    """Les reglages du mode automatique, toujours complets, depuis les reglages d'un projet.
+
+    LES TROIS LECTEURS PASSENT PAR ICI — le gabarit, le balayage hebdomadaire, la route qui
+    sauvegarde. Un projet cree avant cette fonctionnalite n'a pas la cle ; laisser chacun
+    redire sa propre valeur par defaut est la forme de defaut que ce projet a deja payee
+    plusieurs fois, et ici elle donnerait un interrupteur eteint sur un mode allume.
+    """
+    brut = reglages if isinstance(reglages, dict) else {}
+    auto = brut.get("content_auto")
+    auto = auto if isinstance(auto, dict) else {}
     try:
-        tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": f"Lecture du dépôt impossible : {e}"}, status_code=400)
-    all_paths = [
-        item["path"] for item in (tree_data.get("tree") or [])
-        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
-    ]
-
-    from datetime import datetime as _dt
-    placement = repo_index.placement_pour_route(all_paths, route, date=_dt.utcnow().strftime("%Y-%m-%d"))
-    logger.info("[contenu] %s %s -> %s", slug, route,
-                placement.get("fichier") or ("refus: " + str(placement.get("refus") or "")))
-    if placement["refus"]:
-        return JSONResponse({"ok": False, "error": placement["refus"]}, status_code=422)
-    fichier = str(placement["fichier"])
-    soeur = str((placement["soeurs"] or [""])[0])
-
-    import base64 as _b64
-
-    def _lire(chemin: str) -> tuple[str, str] | None:
-        """(contenu, sha) du fichier sur la branche de base, ou None."""
-        try:
-            fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
-                                 token=token, params={"ref": branch}, timeout_s=15)
-            return (_b64.b64decode(str(fd.get("content") or "").replace("\n", "")).decode("utf-8", errors="replace"),
-                    str(fd.get("sha") or ""))
-        except Exception:
-            return None
-
-    lu_soeur = _lire(soeur) if soeur else None
-    if lu_soeur is None:
-        return JSONResponse({"ok": False, "error": f"Impossible de lire la page sœur {soeur}."}, status_code=400)
-    soeur_contenu = lu_soeur[0]
-
-    site_name = str(proj.site_name or slug)
-    contenu, refus = rediger_une_page(
-        sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
-        site_name=site_name)
-    if refus:
-        return JSONResponse({"ok": False, "error": refus}, status_code=422)
-    titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
-
-    index_chemin = str(placement.get("index") or "")
-    index_sortie, index_sha, note_lien, orpheline = "", "", "", True
-    if not index_chemin:
-        note_lien = ("**Aucune page de section trouvée** pour `%s` : la page n'est liée depuis "
-                     "nulle part. Ajoute le lien avant de fusionner."
-                     % str(placement.get("section") or ""))
-    else:
-        lu_index = _lire(index_chemin)
-        if lu_index is None:
-            note_lien = "**Index `%s` illisible** : le lien n'a pas pu être posé." % index_chemin
-        else:
-            index_sha = lu_index[1]
-            index_sortie, note_lien, orpheline = _lien_pour_la_page_neuve(
-                lu_index[0], index_chemin,
-                soeur_slug=str(placement.get("soeur_slug") or ""),
-                slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
-                titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
-                titre_neuf=titre_neuf)
-
-    try:
-        ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
-        base_sha = ref_data["object"]["sha"]
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
-    fix_branch = "seo-contenu/%s-%s" % (_safe_github_branch_suffix(route.strip("/")),
-                                        _dt.utcnow().strftime("%Y%m%d-%H%M%S"))
-    try:
-        _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
-    except Exception as e:
-        return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
-
-    ecrits: list[str] = []
-    try:
-        _github_api_put(_github_content_api_path(owner, repo_name, fichier), token=token, json_body={
-            "message": "seo(contenu) : %s\n\nGenerated by SEO Agent" % (titre_neuf or sujet)[:72],
-            "content": _b64.b64encode(contenu.encode("utf-8")).decode("ascii"),
-            "branch": fix_branch})
-        ecrits.append(fichier)
-        if index_sortie:
-            _github_api_put(_github_content_api_path(owner, repo_name, index_chemin), token=token, json_body={
-                "message": "seo(contenu) : lien vers %s\n\nGenerated by SEO Agent" % route,
-                "content": _b64.b64encode(index_sortie.encode("utf-8")).decode("ascii"),
-                "sha": index_sha, "branch": fix_branch})
-            ecrits.append(index_chemin)
-    except Exception as e:
-        # La branche reste, vide ou a moitie ecrite, et aucune PR ne s'ouvre. On la NOMME plutot
-        # que de tenter un nettoyage : supprimer une ref apres un echec d'ecriture demande le
-        # meme jeton qui vient d'echouer, et une branche orpheline se voit, se supprime, et ne
-        # coute rien — contrairement a une suppression qui se tromperait de branche.
-        return JSONResponse({"ok": False, "files": ecrits, "branch": fix_branch, "error": (
-            f"Écriture impossible sur {fix_branch} : {e}. La branche a été créée : tu peux la "
-            "supprimer sans risque."
-        )}, status_code=400)
-
-    pr_title = "seo(contenu) : %s" % (titre_neuf or sujet)
-    pr_body = (
-        "## Page rédigée par l'agent\n\n"
-        f"**Sujet demandé :** {sujet}\n"
-        f"**Adresse :** `{route}`\n"
-        f"**Fichier créé :** `{fichier}`\n"
-        f"**Page sœur imitée :** `{soeur}`\n\n"
-        f"La forme de cette page — ses clés de tête, ses bornes, sa langue — est recopiée sur "
-        f"`{soeur}` plutôt que composée depuis un gabarit : c'est la seule façon de rendre un "
-        "fichier qui se construise sur ce dépôt-ci. Les clés manquantes sont vérifiées avant "
-        "écriture, pas seulement demandées au modèle.\n\n"
-        f"### Lien depuis la section\n\n{note_lien}\n\n"
-        "### À relire avant de fusionner\n\n"
-        "Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, "
-        "noms, dates, prix et promesses commerciales sont à contrôler. Cette pull request "
-        "reste en **brouillon** et ne sera jamais fusionnée automatiquement.\n\n"
-        f"Généré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
-    )
-    try:
-        pr_data = _ouvrir_pull_request(
-                      owner=owner, repo=repo_name, token=token,
-                      title=pr_title, body=pr_body,
-                      head=fix_branch, base=branch, draft=True)
-        pr_url = pr_data.get("html_url", "")
-        pr_number = pr_data.get("number", 0)
-    except Exception as e:
-        return JSONResponse({"ok": False, "branch": fix_branch, "files": ecrits,
-                             "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
-
-    issue_label = f"Page rédigée : {route}"
-    try:
-        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=False),
-                            "pr_title": pr_title,
-                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
-                            "branch": fix_branch, "files": ecrits, "sujet": sujet,
-                            "orpheline": bool(orpheline), "contenu": True}, ensure_ascii=False)
-        with DB.session() as _db:
-            _ex = _db.scalar(select(IssueTask).where(
-                IssueTask.project_id == proj.id, IssueTask.issue_key == _CONTENT_PAGE_KEY,
-                IssueTask.url == route))
-            if _ex:
-                _ex.status = "in_progress"
-                _ex.issue_label = issue_label
-                _ex.note = _note
-            else:
-                _db.add(IssueTask(
-                    project_id=str(proj.id), user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
-                    issue_key=_CONTENT_PAGE_KEY, issue_label=issue_label, crawl_ts="",
-                    url=route, status="in_progress", severity="notice", note=_note,
-                ))
-            _db.commit()
+        dernier = float(auto.get("last_run") or 0)
     except Exception:
-        pass
-
-    _article_charge(user, 1, slug=slug, motif="content_draft")
-
-    return JSONResponse({
-        "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
-        "verification": "en_attente", "route": route, "file": fichier,
-        "index": index_chemin if index_sortie else "", "orpheline": bool(orpheline),
-        "lien": note_lien, "files": ecrits, "sister": soeur,
-    })
+        dernier = 0.0
+    return {"enabled": bool(auto.get("enabled")),
+            "section": str(auto.get("section") or ""),
+            "last_run": dernier}
 
 
 @app.get("/projects/{slug}/content", response_class=HTMLResponse)
@@ -27038,6 +27104,8 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "restant": restant,
             "github_cfg": _project_github_cfg(proj_row),
             "pages": pages,
+            "auto": _reglages_contenu_auto(proj_row.settings),
+            "auto_jours": _CONTENU_AUTO_JOURS,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -27289,6 +27357,245 @@ def cron_refresh_competitors(request: Request) -> JSONResponse:
         db.commit()
     logger.info("[competitors] refresh: %d crawl(s) mis en file", len(queued))
     return JSONResponse({"ok": True, "queued": len(queued), "domains": queued[:20]})
+
+
+# ── Contenu : le mode automatique ─────────────────────────────────────────────────────────────
+
+_CONTENU_AUTO_JOURS = 7            # au plus une page par semaine et par projet
+_CONTENU_AUTO_MAX_PROJETS = 100    # la borne d'un passage, comme tous les balayages d'ici
+
+
+class _AuteurAutomatique:
+    """Le proprietaire du projet, pour les fonctions qui attendent l'utilisateur d'une requete.
+
+    `is_admin` est FAUX exprès, meme quand ce proprietaire est administrateur. La porte et le
+    debit sautent pour un administrateur, et c'est defendable pour un geste qu'une personne
+    declenche en regardant l'ecran. Un geste qui se repete tout seul, non : un mode automatique
+    sans plafond est exactement ce que la politique anti-spam de Google punit, et le compte qui
+    y perdrait le plus est celui du client.
+    """
+
+    is_admin = False
+
+    def __init__(self, user_id: str) -> None:
+        self.id = str(user_id or "")
+
+
+def _slug_de_sujet(sujet: str) -> str:
+    """Un slug d'URL depuis un titre de page : minuscules, sans accents, sans ponctuation."""
+    base = unicodedata.normalize("NFKD", str(sujet or "")).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^A-Za-z0-9]+", "-", base).strip("-").lower()[:60].strip("-")
+
+
+def _sujets_non_couverts(db, *, project_id: str, owner_user_id: str, slug: str) -> list[str]:
+    """Les titres des sujets qu'un concurrent traite et que ce site ne couvre pas.
+
+    LA MEME SOURCE QUE L'ECRAN CONCURRENTS, et le meme moteur : `competitors_mod.compare` reste
+    l'unique endroit ou « ce sujet est-il couvert » se decide. Ce qui differe est ce qu'on en
+    garde — l'ecran affiche un score, des termes et une page a recibler, le mode automatique
+    n'a besoin que d'un titre.
+
+    Rend une liste vide, jamais une supposition, quand il manque un cote de la comparaison :
+    sans crawl de son propre site, tout sujet paraitrait non couvert et on ecrirait des pages
+    que le client a deja.
+    """
+    pages_a_nous, _ts = _own_pages_for_project(_runs_dir_for_user(owner_user_id), slug)
+    if not pages_a_nous:
+        return []
+    titres: list[str] = []
+    for row in _competitor_rows(db, project_id):
+        if row.status != "ready" or not isinstance(row.pages, list) or not row.pages:
+            continue
+        for trouvaille in competitors_mod.compare(pages_a_nous, row.pages, limit=25):
+            titre = str(trouvaille.get("competitor_title") or "").strip()
+            if not trouvaille.get("covered") and titre and titre not in titres:
+                titres.append(titre)
+    return titres
+
+
+def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str, int]:
+    """Une page par semaine et par projet, sur des sujets qu'aucune page du site ne couvre.
+
+    CE MODE EST VOLONTAIREMENT ETROIT, et chaque restriction repond a la meme crainte : la
+    politique anti-spam de Google vise le contenu produit en masse pour le classement, quelle
+    qu'en soit la fabrication. Un mode automatique genereux ferait de cette fonction un moyen
+    de NUIRE au client qu'elle pretend servir.
+
+        * il faut l'avoir demande, projet par projet, et nommer la section ;
+        * une page par semaine au plus, sous le plafond mensuel du forfait ;
+        * uniquement des sujets qu'un concurrent traite et que le site ne couvre PAS — ecrire
+          une seconde page sur un sujet deja traite serait se cannibaliser soi-meme ;
+        * un sujet deja propose ne revient jamais, meme si sa pull request a ete fermee ;
+        * et une page qu'on ne sait pas LIER est refusee, la ou le mode manuel se contente de
+          le dire — parce qu'ici personne ne lira la phrase.
+
+    LA DATE EST POSEE AVANT L'ESSAI, PAS APRES, et c'est deliberе. Un projet dont le placement
+    est refuse — pas de page soeur, section inconnue — serait sinon reessaye a chaque passage :
+    le cout d'un refus est petit, mais il se paierait a chaque tour et pour toujours. Poser la
+    date d'abord garantit AU PLUS un essai par semaine, meme si l'essai leve.
+
+    Ce qui n'est PAS ici : la porte de plan et de quota vit dans `_article_gate`, appelee plus
+    bas comme le fait la route manuelle. Un projet hors forfait est saute sans poser de date —
+    son quota repart au renouvellement, et il n'aura pas perdu sa semaine.
+    """
+    resultats = {"proposees": 0, "refusees": 0, "sans_sujet": 0, "hors_forfait": 0}
+    maintenant = time.time()
+    with DB.session() as db:
+        candidats = [
+            {"id": str(p.id), "slug": str(p.slug), "owner": str(p.owner_user_id),
+             "site_name": str(p.site_name or ""),
+             "settings": dict(p.settings or {}) if isinstance(p.settings, dict) else {}}
+            for p in db.scalars(select(Project))
+        ]
+
+    vus = 0
+    for cand in candidats:
+        if vus >= max(0, int(limit)):
+            break
+        auto = _reglages_contenu_auto(cand["settings"])
+        if not auto["enabled"]:
+            continue
+        if auto["last_run"] > maintenant - _CONTENU_AUTO_JOURS * 86400:
+            continue
+        vus += 1
+        section = "/" + auto["section"].strip().strip("/")
+        if section == "/":
+            resultats["refusees"] += 1
+            logger.info("[contenu-auto] %s : aucune section configurée", cand["slug"])
+            continue
+
+        auteur = _AuteurAutomatique(cand["owner"])
+        ouvert, motif_refus = _article_gate(auteur, slug=cand["slug"])
+        if not ouvert:
+            resultats["hors_forfait"] += 1
+            logger.info("[contenu-auto] %s sauté : %s", cand["slug"], motif_refus)
+            continue
+
+        with DB.session() as db:
+            proj = db.get(Project, cand["id"])
+            cfg = _project_github_cfg(proj) if proj is not None else {"repo": "", "branch": ""}
+            sujets = _sujets_non_couverts(db, project_id=cand["id"], owner_user_id=cand["owner"],
+                                          slug=cand["slug"])
+            deja = {str(u or "") for u in db.scalars(
+                select(IssueTask.url).where(IssueTask.project_id == cand["id"],
+                                            IssueTask.issue_key == _CONTENT_PAGE_KEY))}
+        parts = _github_repo_parts(cfg["repo"]) if cfg.get("repo") else None
+        token, source = _effective_user_connection_value(
+            user_id=_compte_payeur(cand["owner"], cand["slug"]), key="GITHUB_TOKEN")
+        if parts is None or not token or source != "user" or not _github_branch_allowed(cfg["branch"]):
+            resultats["refusees"] += 1
+            logger.info("[contenu-auto] %s : dépôt GitHub indisponible", cand["slug"])
+            continue
+
+        choisi, route = "", ""
+        for sujet in sujets:
+            slug_page = _slug_de_sujet(sujet)
+            candidate = "%s/%s" % (section, slug_page) if slug_page else ""
+            if candidate and candidate not in deja:
+                choisi, route = sujet, candidate
+                break
+        if not choisi:
+            resultats["sans_sujet"] += 1
+            continue
+
+        try:
+            with DB.session() as db:
+                p = db.get(Project, cand["id"])
+                if p is not None:
+                    reglages = dict(p.settings or {})
+                    reglages["content_auto"] = {**auto, "last_run": maintenant}
+                    p.settings = reglages
+                    db.commit()
+        except Exception as e:
+            logger.error("[contenu-auto] %s : date non posée (%s) — on n'essaie pas",
+                         cand["slug"], e)
+            continue
+
+        try:
+            sortie = _proposer_une_page(
+                auteur, project_id=cand["id"], site_name=cand["site_name"] or cand["slug"],
+                slug=cand["slug"], sujet=choisi, route=route,
+                owner=parts[0], repo_name=parts[1], branch=cfg["branch"], token=token,
+                motif="content_auto", refuser_si_orpheline=True)
+        except Exception as e:
+            resultats["refusees"] += 1
+            logger.error("[contenu-auto] %s : %s: %s", cand["slug"], type(e).__name__, e)
+            continue
+        if sortie.get("ok"):
+            resultats["proposees"] += 1
+            logger.info("[contenu-auto] %s : %s -> %s", cand["slug"], route, sortie.get("pr_url"))
+        else:
+            resultats["refusees"] += 1
+            logger.info("[contenu-auto] %s : %s refusé — %s",
+                        cand["slug"], route, sortie.get("error"))
+    return resultats
+
+
+class _ContentAutoBody(BaseModel):
+    enabled: bool = False
+    section: str = ""
+
+
+@app.post("/api/projects/{slug}/content/auto")
+def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBody) -> JSONResponse:
+    """Allumer ou eteindre le mode automatique, et nommer la section ou les pages iront.
+
+    LA SECTION EST OBLIGATOIRE POUR ALLUMER. En manuel, le client tape l'adresse et relit ;
+    ici personne ne la relira, et `/blog` contre `/guides` n'est pas une chose qu'on devine.
+    Un mode allume sans section serait un mode qui refuse en silence chaque semaine.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    gate_ok, gate_msg = _article_gate(user, slug=slug)
+    if not gate_ok and body.enabled:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+
+    section = "/" + str(body.section or "").strip().strip("/")
+    if body.enabled and section == "/":
+        return JSONResponse({"ok": False, "error": (
+            "Indique la section où les pages doivent aller, par exemple /blog. Personne ne "
+            "relira l'adresse avant publication : nous ne la devinons pas."
+        )}, status_code=400)
+
+    with DB.session() as db:
+        p = db.get(Project, proj.id)
+        if p is None:
+            return JSONResponse({"ok": False, "error": "Projet introuvable."}, status_code=404)
+        reglages = dict(p.settings or {})
+        reglages["content_auto"] = {
+            "enabled": bool(body.enabled),
+            "section": section if section != "/" else "",
+            # La derniere date SURVIT a une extinction : rallumer ne doit pas offrir une page
+            # de plus dans la meme semaine.
+            "last_run": _reglages_contenu_auto(reglages)["last_run"],
+        }
+        p.settings = reglages
+        db.commit()
+    logger.info("[contenu-auto] %s : %s section=%s", slug,
+                "allumé" if body.enabled else "éteint", section)
+    return JSONResponse({"ok": True, "enabled": bool(body.enabled),
+                         "section": section if section != "/" else ""})
+
+
+@app.post("/cron/auto-content")
+def cron_auto_content(request: Request) -> JSONResponse:
+    """Le passage du mode automatique. Hebdomadaire par projet, quelle que soit sa cadence.
+
+    Elle est aussi appelee depuis `/cron/autopilot`, pour la meme raison que le balayage des
+    verifications : oublier une ligne d'ordonnanceur ne doit pas eteindre la fonction en
+    silence. L'appeler deux fois le meme jour ne produit rien de plus — chaque projet porte
+    sa propre date, et c'est elle qui decide.
+    """
+    cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
+    if not cron_secret:
+        return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
+    auth = request.headers.get("Authorization", "")
+    token = auth[len("Bearer "):].strip() if auth.startswith("Bearer ") else auth.strip()
+    if not token or not hmac.compare_digest(token, cron_secret):
+        return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
+    return JSONResponse({"ok": True, "resultats": _balayer_contenu_auto()})
 
 
 @app.get("/projects/{slug}/performance", response_class=HTMLResponse)

@@ -77,6 +77,44 @@
 
     <section class="card">
       <div class="card-title-row">
+        <h2 style="margin:0;">Mode automatique</h2>
+        <span class="muted small">
+          {% if auto.enabled %}<span class="badge ok">allumé</span>{% else %}éteint{% endif %}
+        </span>
+      </div>
+
+      <p class="muted small">
+        Une page par semaine au plus, prise dans les sujets que
+        <a href="/projects/{{ slug }}/competitors">tes concurrents traitent et que tu ne couvres
+        pas</a> — jamais un sujet que tu traites déjà, ce serait te cannibaliser. Chaque page
+        compte dans ton quota mensuel, et une page que l'agent ne sait pas
+        <strong>lier</strong> à sa section n'est pas écrite du tout : ici personne ne relit
+        avant.
+      </p>
+
+      <div class="setting-form">
+        <label style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="c-auto" {% if auto.enabled %}checked{% endif %} />
+          Écrire une page automatiquement, au plus une tous les {{ auto_jours }} jours
+        </label>
+        <label>
+          Section où poser les pages
+          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="/blog" />
+          <span class="muted small">
+            Obligatoire pour allumer : <span class="mono">/blog</span> ou
+            <span class="mono">/guides</span> n'est pas une chose qui se devine, et personne ne
+            relira l'adresse avant la pull request.
+          </span>
+        </label>
+        <div class="modal-actions between">
+          <span id="c-auto-status" class="muted small" role="status" aria-live="polite"></span>
+          <button class="btn" type="button" id="c-auto-save">Enregistrer</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title-row">
         <h2 style="margin:0;">Pages proposées</h2>
         <span class="muted small">{{ pages|length }}</span>
       </div>
@@ -194,6 +232,39 @@
             btn.disabled = false;
             btn.textContent = 'Rédiger (PR)';
             say('Erreur réseau pendant la rédaction.', 'error');
+          });
+      });
+
+      /* Le mode automatique. */
+      var autoBox = document.getElementById('c-auto');
+      var autoSection = document.getElementById('c-auto-section');
+      var autoSave = document.getElementById('c-auto-save');
+      var autoStatus = document.getElementById('c-auto-status');
+      autoSave.addEventListener('click', function () {
+        autoSave.disabled = true;
+        autoStatus.className = 'muted small';
+        autoStatus.textContent = 'Enregistrement…';
+        fetch('/api/projects/' + encodeURIComponent(slug) + '/content/auto', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: autoBox.checked, section: autoSection.value || '' })
+        })
+          .then(function (resp) { return resp.json(); })
+          .then(function (d) {
+            autoSave.disabled = false;
+            if (!d.ok) {
+              autoStatus.className = 'error small';
+              autoStatus.textContent = d.error || 'Enregistrement impossible.';
+              return;
+            }
+            autoStatus.className = 'ok small';
+            autoStatus.textContent = d.enabled
+              ? 'Mode automatique allumé sur ' + d.section + '.'
+              : 'Mode automatique éteint.';
+          })
+          .catch(function () {
+            autoSave.disabled = false;
+            autoStatus.className = 'error small';
+            autoStatus.textContent = 'Erreur réseau.';
           });
       });
     })();
