@@ -21264,6 +21264,78 @@ def rediger_une_page(
         return "", refus
     return contenu if contenu.endswith("\n") else contenu + "\n", ""
 
+
+def _lignes_citant(contenu: str, aiguille: str) -> list[int]:
+    """Les indices des lignes qui citent `aiguille`, casse comprise."""
+    if not aiguille:
+        return []
+    return [i for i, ligne in enumerate(str(contenu or "").split("\n")) if aiguille in ligne]
+
+
+def lien_a_poser(index_contenu: str, soeur_slug: str) -> dict[str, Any]:
+    """L'index de section liste-t-il ses pages A LA MAIN, et sur quelle ligne ?
+
+    C'est la question que l'etape 1 avait laissee ouverte parce qu'elle demande de LIRE le
+    fichier. Le signal est direct : si l'index cite le slug d'une page existante, c'est une
+    liste ecrite a la main et la page neuve doit y etre ajoutee. S'il ne le cite pas, la liste
+    est engendree — un gabarit Hugo qui parcourt son dossier, un `getStaticProps` qui lit le
+    systeme de fichiers — et creer le fichier suffit.
+
+    Rend `{requis, ligne, fragment}`. `requis=False` ne veut pas dire « rien a faire » avec
+    certitude : la liste peut vivre dans un fichier de donnees voisin (`lib/posts.ts`) que
+    nous ne regardons pas ici. L'appelant doit donc traiter `False` comme « cet index-la n'a
+    rien a nous apprendre », pas comme une preuve. Une page orpheline se verra de toute facon
+    au crawl suivant, et c'est un filet dont on se contente pour cette etape.
+    """
+    lignes = _lignes_citant(index_contenu, soeur_slug)
+    if not lignes:
+        return {"requis": False, "ligne": -1, "fragment": ""}
+    if len(lignes) > 1:
+        # Un index qui cite deux fois la meme page (une carte + un menu, par exemple) n'a pas
+        # UNE forme a cloner mais deux, et choisir au hasard en casserait une.
+        return {"requis": True, "ligne": -1, "fragment": "",
+                "ambigu": "la soeur est citee %d fois dans cet index" % len(lignes)}
+    i = lignes[0]
+    return {"requis": True, "ligne": i, "fragment": str(index_contenu).split("\n")[i]}
+
+
+def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
+                    slug_neuf: str, titre_soeur: str = "", titre_neuf: str = "",
+                    ) -> tuple[str, str]:
+    """L'index avec une entree de plus, CLONEE sur celle d'une soeur. Ou ("", raison).
+
+    Meme geste qu'aux etapes precedentes, un cran plus haut : on ne compose pas une entree de
+    liste depuis un gabarit — on recopie celle d'a cote en y remplacant le slug et le titre.
+    Une entree peut etre un `<li><a href>`, un objet d'un tableau, une ligne de Markdown ; les
+    enumerer serait sans fin, et le client en a deja une sous la main.
+
+    ON VERIFIE APRES : l'index modifie repasse par `_refus_de_format`, le meme jeu que les
+    deux chemins qui commitent. Une entree sur plusieurs lignes ne se clone pas en copiant une
+    seule ligne, et c'est le controle qui l'attrape plutot qu'une regle qui devinerait.
+    """
+    etat = lien_a_poser(index_contenu, soeur_slug)
+    if etat.get("ambigu"):
+        return "", etat["ambigu"]
+    if not etat["requis"]:
+        return "", "cet index ne cite aucune soeur : la liste parait engendree"
+
+    lignes = str(index_contenu).split("\n")
+    i = etat["ligne"]
+    clone = lignes[i].replace(soeur_slug, slug_neuf)
+    # Le libelle n'est remplace que s'il se LIT dans l'entree. Quand il vient d'ailleurs — du
+    # front matter de la page, d'une variable — on ne le fabrique pas : poser le slug suffit,
+    # le site lira le titre a la source.
+    if titre_soeur and titre_neuf and titre_soeur in clone:
+        clone = clone.replace(titre_soeur, titre_neuf)
+    if clone == lignes[i]:
+        return "", "le slug %r ne se lit pas dans l'entree a cloner" % soeur_slug
+
+    sortie = "\n".join(lignes[:i + 1] + [clone] + lignes[i + 1:])
+    refus = _refus_de_format(index_chemin, sortie)
+    if refus:
+        return "", "l'index ne se relit plus apres ajout : %s" % refus
+    return sortie, ""
+
 def _keep_length_above_floor(new_content: str, old_content: str,
                              valeur_ancienne_fautive: bool = False) -> tuple[str, list[str]]:
     """Ne pas faire passer sous le plancher une valeur qui le respectait.
