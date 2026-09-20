@@ -3358,31 +3358,20 @@ def _schema_org_validation_errors(ld_json_texts: list[str], *, page_url: str | N
                     if not (isinstance(dp, str) and dp.strip()):
                         errors.add("datePublished_missing")
 
-            # Semrush-like: some validators treat Offer.price as invalid when encoded as a string.
-            if "SoftwareApplication" in types:
-                offers = obj.get("offers")
-                if isinstance(offers, dict):
-                    offer_type = offers.get("@type")
-                    if offer_type == "Offer":
-                        if isinstance(offers.get("price"), str):
-                            errors.add("offer_price_is_string")
-                    elif offer_type == "AggregateOffer":
-                        # Ahrefs-like: flag common invalid numeric fields encoded as strings.
-                        if any(isinstance(offers.get(k), str) for k in ("lowPrice", "highPrice", "offerCount")):
-                            errors.add("offer_price_is_string")
-                        inner = offers.get("offers")
-                        if isinstance(inner, list):
-                            for off in inner:
-                                if not isinstance(off, dict):
-                                    continue
-                                if off.get("@type") == "Offer" and isinstance(off.get("price"), str):
-                                    errors.add("offer_price_is_string")
-                elif isinstance(offers, list):
-                    for off in offers:
-                        if not isinstance(off, dict):
-                            continue
-                        if off.get("@type") == "Offer" and isinstance(off.get("price"), str):
-                            errors.add("offer_price_is_string")
+            # RETIRE le 20/09/2026 : `offer_price_is_string`. schema.org accepte `Text` OU
+            # `Number` pour `Offer.price`, et la documentation Google pour les donnees
+            # structurees `Product` ecrit `"price": "119.99"` — en chaine — dans ses propres
+            # exemples. La sous-erreur alimentait pourtant
+            # `structured_data_google_rich_results_validation_error` : on attribuait a Google
+            # une plainte que Google ne formule pas, sur la facon dont il recommande lui-meme
+            # d'ecrire un prix.
+            #
+            # Le commentaire d'origine le disait a demi-mot — « SOME VALIDATORS treat... » —
+            # et le verrou sur `SoftwareApplication` etait un confinement, pas un oubli :
+            # garder une regle discutable sur un type rare. L'elargir au `Product` aurait
+            # signale chaque fiche produit de chaque client e-commerce. On la retire plutot
+            # que de choisir entre incoherente et bruyante ; la reference du projet est
+            # Ahrefs, qui ne l'applique pas.
 
             if "position" in obj:
                 pos = obj.get("position")
@@ -7074,7 +7063,6 @@ def _score_issues(
         "faq_question_invalid",
         "faq_question_name_missing",
         "faq_answer_missing",
-        "offer_price_is_string",
     }
 
     structured_data_schema_org_errors_set: set[str] = set()

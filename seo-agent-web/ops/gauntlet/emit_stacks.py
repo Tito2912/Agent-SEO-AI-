@@ -242,15 +242,15 @@ def head_tags(spec: Spec, site: str) -> list[tuple[str, dict]]:
         # que la regle 301 etait bien en vigueur. Seules les URL dont le SCHEMA est l'anomalie
         # (http_css, http_js, http_image) doivent rester absolues.
         tags.append(("link", {"rel": "stylesheet", "href": "/ancienne.css"}))
-    if spec.jsonld_bad_price:
-        # `SoftwareApplication` et pas `Product` : MESURE sur le banc deploye — le
-        # controle `offer_price_is_string` du crawler est conditionne a ce type-la, donc
-        # un Offer au prix en chaine sur un Product ne declenche RIEN. La fixture doit
-        # porter ce que le crawler sait voir, sinon elle mesure un silence.
+    if spec.jsonld_faq_incomplete:
+        # Une `Question` sans `acceptedAnswer` : Google l'exige, son test des resultats
+        # enrichis la refuse, donc la famille visee est bien declenchee par une VRAIE erreur.
+        # La fixture portait avant un prix en chaine, retire du crawler le 20/09/2026 parce
+        # que Google ecrit lui-meme les prix en chaine dans ses exemples.
         tags.append(("script", {
             "type": "application/ld+json",
-            "text": ('{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de '
-                     'test","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}'),
+            "text": ('{"@context":"https://schema.org","@type":"FAQPage","mainEntity":'
+                     '[{"@type":"Question","name":"Une question sans reponse ?"}]}'),
         }))
     if spec.jsonld_no_type:
         # `SCHEMA_ORG_HARD_ERRORS` ne contient que `invalid_json` et `missing_type`. Le contexte
@@ -605,10 +605,10 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
         # `head_tags`. Next remonte dans <head> un <link> rendu par la page.
         extra += ('\n      <link rel="stylesheet" href="'
                   + site.replace("https://", "http://") + '/style.css" />')
-    if spec.jsonld_bad_price:
+    if spec.jsonld_faq_incomplete:
         extra += ('\n      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
-                 '`{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de test",'
-                 '"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}` }} />')
+                 '`{"@context":"https://schema.org","@type":"FAQPage","mainEntity":'
+                 '[{"@type":"Question","name":"Une question sans reponse ?"}]}` }} />')
     if spec.jsonld_no_type:
         extra += ('\n      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
                   '`{"@context":"https://schema.org","name":"Objet sans type declare"}` }} />')

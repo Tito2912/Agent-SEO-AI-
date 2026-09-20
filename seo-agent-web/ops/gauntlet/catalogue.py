@@ -67,7 +67,7 @@ class Spec:
 
     # (code de langue, cible) — cible = slug du parcours ou URL absolue.
     hreflang: tuple[tuple[str, str], ...] = ()
-    jsonld_bad_price: bool = False
+    jsonld_faq_incomplete: bool = False
     # Un objet schema.org SANS `@type` : la seule des deux erreurs « dures » du crawler
     # (`invalid_json`, `missing_type`) qu'une page puisse porter sans casser sa propre syntaxe.
     jsonld_no_type: bool = False
@@ -209,13 +209,14 @@ CATALOGUE: list[Spec] = [
          "script charge depuis une URL qui redirige.", redirected_js=True),
 
     # ── G. donnees structurees ────────────────────────────────────────────────────────────
-    # `SCHEMA_ORG_HARD_ERRORS` ne contient que `invalid_json` et `missing_type` ; un prix en
-    # chaine appartient a `RICH_RESULTS_ERRORS`. Mesure : la page produit bien
-    # `schema_org_errors: ['offer_price_is_string']` et c'est la famille rich results qui compte.
-    # `structured_data_schema_org_validation_error` demanderait un JSON casse ou sans @type —
-    # une page a ajouter au parcours, pas une correction de celle-ci.
+    # `SCHEMA_ORG_HARD_ERRORS` ne contient que `invalid_json` et `missing_type` ; une FAQ
+    # incomplete appartient a `RICH_RESULTS_ERRORS`.
+    # Cette page portait un Offer au prix en chaine jusqu'au 20/09/2026. Regle retiree du
+    # crawler : schema.org accepte `Text` pour `price` et Google ecrit lui-meme ses prix en
+    # chaine — on attribuait a Google une plainte qu'il ne formule pas. Une `Question` sans
+    # `acceptedAnswer`, elle, est une erreur que son test des resultats enrichis refuse.
     Spec("schema-invalid", "structured_data_google_rich_results_validation_error",
-         "Offer dont le prix est une chaine.", jsonld_bad_price=True),
+         "FAQ dont la question n'a pas de reponse.", jsonld_faq_incomplete=True),
     Spec("schema-no-type", "structured_data_schema_org_validation_error",
          "objet schema.org sans @type declare.", jsonld_no_type=True),
 
