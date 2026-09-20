@@ -494,6 +494,162 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
     return {"stack": stack, "routes": routes, "dynamic": dynamic, "shared": sorted(set(shared))}
 
 
+
+_DATE_JEKYLL_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})-(.+)$")
+_DATE_ROUTE_RE = re.compile(r"^/\d{4}/\d{2}/\d{2}/.+$")
+
+
+def _slug_de_route(route: str) -> str:
+    """Le dernier segment d'une route : `/blog/mon-sujet` -> `mon-sujet`."""
+    return norm_route(route).rsplit("/", 1)[-1]
+
+
+def _section_de_route(route: str) -> str:
+    """La route parente : `/blog/mon-sujet` -> `/blog`, `/contact` -> `/`."""
+    parts = [p for p in norm_route(route).split("/") if p]
+    return _route_from_segments(parts[:-1])
+
+
+def _transposer(chemin_soeur: str, slug_soeur: str, slug_neuf: str, *, date: str = "") -> str:
+    """Le chemin de la soeur, son slug remplace par le neuf. "" si le slug ne s'y lit pas.
+
+    On REMPLACE dans le chemin existant au lieu de reconstruire depuis la stack. Une
+    reconstruction demanderait de reimplementer, a l'envers, les sept conventions que ce module
+    connait — et de les tenir a jour deux fois. La transposition les herite toutes, y compris
+    les variantes qu'aucune regle generale ne capture : `src/content/` chez Astro contre
+    `content/` chez Next, un theme qui range ses articles ailleurs, un suffixe de langue.
+
+    Le slug est remplace sur sa DERNIERE occurrence : `content/blog/blog.md` ne doit pas voir
+    son dossier renomme.
+    """
+    if not slug_soeur or slug_soeur not in chemin_soeur:
+        return ""
+    coupe = chemin_soeur.rfind(slug_soeur)
+    neuf = chemin_soeur[:coupe] + slug_neuf + chemin_soeur[coupe + len(slug_soeur):]
+    if date:
+        # Jekyll date ses articles dans le NOM DE FICHIER, et la route en decoule. Transposer
+        # tel quel donnerait a l'article neuf la date de son ainee — publie dans le passe, a la
+        # mauvaise URL. On ne remplace que le prefixe du nom de fichier, jamais un dossier.
+        dossier, _, base = neuf.rpartition("/")
+        m = _DATE_JEKYLL_RE.match(base)
+        if m:
+            base = "%s-%s" % (date, m.group(4))
+            neuf = (dossier + "/" + base) if dossier else base
+    return neuf
+
+
+def placement_pour_route(all_paths: list[str], route: str, *, date: str = "") -> dict[str, Any]:
+    """Ou creer le fichier d'une page qui n'existe pas encore, et quoi lier.
+
+    Rend `{fichier, section, soeurs, index, stack, refus}`. **`refus` non vide veut dire qu'on
+    ne sait pas, et alors on ne devine pas** : creer une arborescence chez un client sur une
+    supposition est pire que de lui dire qu'on ne sait pas ou poser sa page.
+
+    LA METHODE : transposer le chemin d'une page SOEUR — une page existante de la meme
+    section — plutot que de deduire un chemin de la stack. C'est la methode que ce projet
+    applique deja partout ailleurs (`_inserer_og_complet` recopie les champs de la mise en
+    page, `_complete_open_graph` clone la ligne que le modele vient d'ecrire) : **decrire une
+    grammaire bat decrire une forme**. Elle a trois proprietes qu'une reconstruction n'a pas :
+
+    * elle herite des sept conventions de ce module sans les reecrire a l'envers ;
+    * elle suit les ecarts qu'aucune regle ne capture — un theme qui range ses articles
+      ailleurs, un suffixe de langue, `src/content/` contre `content/` ;
+    * **elle refuse toute seule quand il n'y a pas de soeur** — le tout premier article d'un
+      blog, ou la convention n'existe simplement pas encore.
+
+    `index` est le fichier de la page de SECTION (`/blog`) quand il existe. Savoir s'il faut le
+    modifier demande de le LIRE — un gabarit Hugo qui parcourt le dossier n'a besoin de rien,
+    une liste ecrite a la main si — et cette fonction ne lit aucun fichier. Elle desigen le
+    candidat ; la decision revient a l'etape suivante.
+    """
+    chemins = _clean_paths(all_paths)
+    index_repo = build_repo_index(chemins)
+    routes = index_repo.get("routes") or {}
+    cible = norm_route(route)
+    slug = _slug_de_route(cible)
+    vide: dict[str, Any] = {
+        "fichier": "", "section": _section_de_route(cible), "soeurs": [],
+        "index": "", "stack": index_repo.get("stack", ""), "refus": "",
+    }
+
+    if cible == "/" or not slug:
+        return {**vide, "refus": "la racine n'est pas une page a creer"}
+    if cible in routes:
+        return {**vide, "refus": "cette page existe deja : %s" % ", ".join(routes[cible][:3])}
+
+    section = _section_de_route(cible)
+    # JEKYLL DATE SES PERMALIENS (`/2026/01/15/titre`), donc chaque article est SEUL dans sa
+    # section et le modele par section ne trouve jamais de soeur. Ce n'est pas un defaut du
+    # modele : c'est une convention ou la section n'est pas un dossier mais une date. Les
+    # soeurs d'un article Jekyll sont les autres fichiers de `_posts/`, point. Une regle par
+    # stack est justifiee ici — ce module en porte deja sept dans l'autre sens.
+    if index_repo.get("stack") == STACK_JEKYLL and _DATE_ROUTE_RE.match(cible):
+        posts = [f for f in chemins if f.startswith("_posts/") and _ext(f) in _CONTENT_EXTS + ("html", "htm")]
+        if not posts:
+            return {**vide, "refus": "aucun article sous _posts/ : la convention de ce site "
+                                     "pour les articles est inconnue"}
+        modele = sorted(posts)[0]
+        stem = modele.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        m = _DATE_JEKYLL_RE.match(stem)
+        slug_modele = m.group(4) if m else stem
+        fichier = _transposer(modele, slug_modele, slug, date=date)
+        if not fichier or fichier in set(chemins):
+            return {**vide, "soeurs": sorted(posts)[:5],
+                    "refus": "impossible de transposer %s" % modele}
+        return {**vide, "fichier": fichier, "soeurs": sorted(posts)[:5],
+                "index": (routes.get("/") or [""])[0], "refus": ""}
+
+    # UN SEUL passage. Ma premiere version en faisait deux — collecter les soeurs, puis les
+    # regrouper par forme — et le second refiltrait exactement comme le premier. Une mutation
+    # qui desactivait le filtre du premier a SURVECU : il ne servait qu'a produire un refus.
+    # Deux passages qui posent la meme question finissent par diverger.
+    #
+    # Les soeurs DIRECTES seulement : `/blog/a` est une soeur de `/blog/b`, pas `/blog/2026/a`.
+    # Une petite-fille porte une convention differente.
+    #
+    # On regroupe par FORME (dossier + extension) : un site qui a dix pages regulieres et une
+    # page bricolee doit suivre les dix.
+    soeurs: list[str] = []
+    formes: dict[str, list[tuple[str, str]]] = {}
+    for r, fichiers in routes.items():
+        if r == section or _section_de_route(r) != section:
+            continue
+        s = _slug_de_route(r)
+        for f in fichiers:
+            if f not in soeurs:
+                soeurs.append(f)
+            if s and s in f:
+                dossier = f.rsplit("/", 1)[0] if "/" in f else ""
+                formes.setdefault("%s|%s" % (dossier, _ext(f)), []).append((f, s))
+
+    if not soeurs:
+        return {**vide, "refus": "aucune page soeur sous %s : la convention de ce site pour "
+                                 "cette section est inconnue" % section}
+    if not formes:
+        return {**vide, "soeurs": soeurs[:5],
+                "refus": "les pages de %s ne portent pas leur slug dans leur chemin : "
+                         "transposition impossible" % section}
+
+    forme_majoritaire = max(formes, key=lambda k: (len(formes[k]), k))
+    modele, slug_modele = sorted(formes[forme_majoritaire])[0]
+    fichier = _transposer(modele, slug_modele, slug, date=date)
+    if not fichier:
+        return {**vide, "soeurs": soeurs[:5],
+                "refus": "impossible de transposer %s" % modele}
+    if fichier in set(chemins):
+        return {**vide, "soeurs": soeurs[:5],
+                "refus": "le fichier %s existe deja sans servir cette route" % fichier}
+
+    index_fichiers = routes.get(section) or []
+    return {
+        "fichier": fichier,
+        "section": section,
+        "soeurs": [f for f, _s in sorted(formes[forme_majoritaire])][:5],
+        "index": index_fichiers[0] if index_fichiers else "",
+        "stack": index_repo.get("stack", ""),
+        "refus": "",
+    }
+
 def route_files(index: dict[str, Any], url: str, *, limit: int = 4) -> list[str]:
     """Per-page source file(s) for one URL. Empty when the URL is not in the map — the
     caller must then fall back to its own resolution. Never returns a shared template."""
