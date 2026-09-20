@@ -5008,7 +5008,16 @@ def _score_issues(
     def _non_empty(value: str | None) -> bool:
         return bool(value and value.strip())
 
-    _HOTES_PRIVES = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}
+    # Une liste de REFUS, pas une adresse d'ecoute. Bandit signale le litteral "0.0.0.0" en
+    # supposant un `bind()` sur toutes les interfaces (B104) ; ici il sert exactement a
+    # l'inverse : reconnaitre une URL qu'aucun robot ne peut atteindre, pour ne pas la compter
+    # comme une balise sociale valide. La dispense porte donc sur la LIGNE, et le mot-cle ne
+    # figure pas dans ce paragraphe — sinon bandit lit la prose comme des noms de tests.
+    #
+    # Ce signalement a tenu la barriere CI rouge du 19/09/2026 (a2e9f80) au 20/09 sans que je
+    # m'en apercoive : je lancais bandit sur `seo-agent-web/backend` seul, la CI le lance AUSSI
+    # sur `skills/`. Rejouer les commandes du fichier CI, avec SES cibles, pas les miennes.
+    _HOTES_PRIVES = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}  # nosec B104
 
     def _url_non_publique(value: str | None) -> bool:
         """Une URL qu'aucun robot ni reseau social ne peut atteindre depuis l'exterieur.
