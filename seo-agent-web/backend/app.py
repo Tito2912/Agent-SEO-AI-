@@ -3629,6 +3629,72 @@ def _correction_charge(user: Any, count: int, *, slug: str = "", motif: str = ""
         pass
 
 
+
+def _article_gate(user: Any, *, slug: str = "") -> tuple[bool, str]:
+    """Cette personne peut-elle faire ecrire un article maintenant ? (autorise, message).
+
+    DEUX PORTES, et elles disent des choses differentes. Le PLAN d'abord — Pro et au-dessus,
+    aligne sur l'ecran Concurrents (`_competitor_has_access`) qui fournit les sujets : un
+    client qui ne voit pas ses concurrents n'a pas de quoi alimenter cette fonction. Le QUOTA
+    ensuite, sur `ai_articles_month`.
+
+    UN COMPTEUR A PART, decision du proprietaire le 20/09/2026 : *« ce n'est pas une
+    correction »*. Un article coute sans commune mesure avec une reecriture de snippet, et les
+    melanger rendrait les deux quotas illisibles — un client qui publie deux articles ne doit
+    pas perdre ses corrections du mois.
+
+    Les plafonds sont volontairement bas (4 et 12 par mois). La politique anti-spam de Google
+    vise le contenu produit en masse pour le classement, quelle qu'en soit la fabrication :
+    un plafond genereux ferait de cette fonction un moyen de NUIRE au client. Ils se reglent
+    sans deploiement via `PLAN_CONFIG_JSON`, comme les autres.
+    """
+    compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
+    # `payeur`, et pas un nom quelconque : la garde qui enumere les facturations des routes a
+    # `slug` lit la SOURCE de `user_id`, et toute autre expression lui est opaque. Meme raison
+    # qu'en 19/09 dans `_plafond_de_correction` — rester sous surveillance plutot que d'obtenir
+    # une dispense, parce qu'une dispense de plus est une ligne que personne ne relira.
+    payeur = (compte or "").strip() or str(getattr(user, "id", "") or "")
+    if bool(getattr(user, "is_admin", False)):
+        return True, ""
+    try:
+        with DB.session() as _db:
+            if billing.plan_rank(billing.effective_plan_key(_db, user_id=payeur)) < billing.plan_rank("pro"):
+                return False, ("La redaction de contenu est incluse a partir du plan Pro. "
+                               "Va sur Abonnement pour changer de forfait.")
+            restant = billing.remaining_quota(_db, user_id=payeur, metric="ai_articles_month")
+    except Exception:
+        return False, "Impossible de verifier ton quota d'articles pour le moment."
+    if isinstance(restant, int) and restant <= 0:
+        return False, "Quota d'articles atteint ce mois-ci. Il repart au renouvellement."
+    return True, ""
+
+
+def _article_charge(user: Any, count: int, *, slug: str = "", motif: str = "") -> None:
+    """Debite des articles, avec la meme provenance que les corrections.
+
+    `slug`, `motif` et `par` pour la meme raison qu'en 7244051 : un debit anonyme ne se
+    rembourse qu'en lisant des heures. `par` n'est pas redondant — le compte qui PAYE est
+    l'hote, la personne qui a clique peut etre un membre.
+    """
+    if count <= 0 or bool(getattr(user, "is_admin", False)):
+        return
+    compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
+    # La MEME resolution, sous le MEME nom, que la porte ci-dessus : autoriser sur le solde d'un
+    # compte et debiter sur un autre laisserait le second partir en negatif sans qu'aucune porte
+    # ne se ferme. `_correction_charge` fait le meme calcul dans l'appel, ce qui lui vaut une
+    # dispense dans la garde ; on ne reprend pas cette dette ici.
+    payeur = (compte or "").strip() or str(getattr(user, "id", "") or "")
+    try:
+        with DB.session() as _db:
+            billing.usage_add(
+                _db, user_id=payeur,
+                metric="ai_articles_month", amount=int(count),
+                meta={"slug": slug, "motif": motif,
+                      "par": str(getattr(user, "id", "") or "")})
+    except Exception:
+        pass
+
+
 def _parse_ai_json(text: str) -> dict[str, Any]:
     """Tolerant JSON-object extraction (handles ```json fences / surrounding prose)."""
     if not isinstance(text, str):
@@ -21336,6 +21402,41 @@ def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
         return "", "l'index ne se relit plus apres ajout : %s" % refus
     return sortie, ""
 
+
+def _lien_pour_la_page_neuve(index_contenu: str, index_chemin: str, *, soeur_slug: str,
+                             slug_neuf: str, titre_soeur: str = "", titre_neuf: str = "",
+                             ) -> tuple[str, str, bool]:
+    """L'index modifie, la phrase a mettre dans la PR, et SI la page sort orpheline.
+
+    LES TROIS ISSUES NE SE DISTINGUENT PAS PAR LE TEXTE D'UN REFUS, et c'est pour ca que cette
+    fonction existe. Lire `ajouter_le_lien` avec un `"engendree" in refus` serait le piege des
+    sous-chaines que ce projet s'est deja tendu quatre fois en une seule session. On relit donc
+    l'ETAT rendu par `lien_a_poser`, pas un message destine a un humain :
+
+        liste engendree      -> rien a poser, et ce n'est PAS une orpheline
+        lien pose            -> l'index part dans la pull request
+        refus (ambigu, ...)  -> la PR s'ouvre quand meme, en DISANT que la page est orpheline
+
+    LE TROISIEME CAS EST UN CHOIX, ET IL VAUT POUR LE MODE MANUEL SEUL. La pull request est un
+    brouillon qu'une personne relit : lui cacher qu'il manque un lien serait pire que de ne rien
+    proposer, et elle est la mieux placee pour savoir ou l'entree va. Le mode automatique devra
+    REFUSER dans ce cas — personne ne lira la phrase.
+    """
+    etat = lien_a_poser(index_contenu, soeur_slug)
+    if not etat["requis"]:
+        return "", ("La liste de `%s` ne cite le slug d'aucune page : elle paraît engendrée, "
+                    "créer le fichier suffit. Ce n'est pas une preuve — la liste peut vivre "
+                    "dans un fichier de données voisin." % index_chemin), False
+    sortie, refus = ajouter_le_lien(
+        index_contenu, index_chemin, soeur_slug=soeur_slug, slug_neuf=slug_neuf,
+        titre_soeur=titre_soeur, titre_neuf=titre_neuf)
+    if sortie:
+        return sortie, ("Lien ajouté dans `%s`, cloné sur l'entrée d'une page sœur."
+                        % index_chemin), False
+    return "", ("**Cette page n'est liée depuis aucun index** : %s. Ajoute le lien avant de "
+                "fusionner, sinon elle sera orpheline." % refus), True
+
+
 def _keep_length_above_floor(new_content: str, old_content: str,
                              valeur_ancienne_fautive: bool = False) -> tuple[str, list[str]]:
     """Ne pas faire passer sous le plancher une valeur qui le respectait.
@@ -26622,6 +26723,246 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
         "verification": "en_attente",
         "files": patched_files, "files_count": len(patched_files), "query": query,
+    })
+
+
+_CONTENT_PAGE_KEY = "ai_content_page"
+
+
+class _ContentDraftBody(BaseModel):
+    sujet: str = ""
+    route: str = ""
+
+
+@app.post("/api/projects/{slug}/content/draft")
+def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> JSONResponse:
+    """Rediger une page neuve et l'ouvrir en pull request BROUILLON sur le depot du client.
+
+    L'assemblage des trois briques posees aux etapes 1 a 3a : `placement_pour_route` dit OU le
+    fichier va, `rediger_une_page` dit QUOI y ecrire en clonant la forme d'une page soeur, et
+    `_lien_pour_la_page_neuve` dit COMMENT la relier a sa section.
+
+    IL N'Y A PAS D'APERCU AVANT LA PR, ET C'EST DELIBERE. Un apercu qui engendre sans debiter
+    donnerait des appels de modele gratuits en boucle ; un apercu qui debite ferait payer un
+    brouillon jete. La pull request en BROUILLON est deja la surface de relecture — c'est le
+    meme choix qu'a fait la verification des corrections : ouverte, diffable, non fusionnable.
+
+    UN ARTICLE = UNE UNITE, jamais un fichier. La correction facture au fichier ecrit par le
+    modele parce que c'est la son unite de travail ; ici l'index modifie en passant n'est pas
+    un second article. Decision du proprietaire le 20/09/2026 : compteur separe, *« ce n'est
+    pas une correction »*.
+
+    CE QUE CETTE ROUTE NE FAIT PAS : elle ne fusionne jamais, quel que soit le mode du projet.
+    Tout le texte vient d'un modele — pas une valeur bornee reecrite, une page entiere — et le
+    corps de la PR le dit en toutes lettres.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    sujet = (body.sujet or "").strip()
+    route = (body.route or "").strip()
+    if not sujet or not route:
+        return JSONResponse({"ok": False, "error": "Sujet ou adresse de la page manquant."}, status_code=400)
+    if "://" in route:
+        if not _same_site_url(route, str(proj.base_url or "")):
+            return JSONResponse({"ok": False, "error": "Cette adresse n'appartient pas au site du projet."}, status_code=400)
+        from urllib.parse import urlparse as _urlparse
+        route = _urlparse(route).path or "/"
+    if not route.startswith("/"):
+        route = "/" + route
+
+    cfg = _project_github_cfg(proj)
+    if not cfg["repo"]:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    retry_after = _rate_limit_retry_after(bucket="content_draft_user", subject=str(getattr(user, "id", "")), limit=6, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    gate_ok, gate_msg = _article_gate(user, slug=slug)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+
+    repo_parts = _github_repo_parts(cfg["repo"])
+    if repo_parts is None:
+        return JSONResponse({"ok": False, "needs_setup": True, "error": "Configuration GitHub invalide."}, status_code=400)
+    owner, repo_name = repo_parts
+    branch = cfg["branch"]
+    if not _github_branch_allowed(branch):
+        return JSONResponse({"ok": False, "error": "Branche GitHub invalide."}, status_code=400)
+
+    # Une seule page proposee a la fois pour une adresse donnee : la seconde ecrirait le meme
+    # fichier et ajouterait une seconde entree au meme index, donc un conflit.
+    _open_pr = _open_pr_for_issue(
+        project_id=str(proj.id), issue_key=_CONTENT_PAGE_KEY, url=route,
+        owner=owner, repo_name=repo_name, token=token,
+    )
+    if _open_pr:
+        return JSONResponse({"ok": False, "duplicate": True, "pr_url": _open_pr, "error": (
+            "Une page est déjà proposée pour cette adresse et attend ta revue. Fusionne ou "
+            "ferme celle-ci d'abord."
+        )}, status_code=409)
+
+    try:
+        tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Lecture du dépôt impossible : {e}"}, status_code=400)
+    all_paths = [
+        item["path"] for item in (tree_data.get("tree") or [])
+        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
+    ]
+
+    from datetime import datetime as _dt
+    placement = repo_index.placement_pour_route(all_paths, route, date=_dt.utcnow().strftime("%Y-%m-%d"))
+    logger.info("[contenu] %s %s -> %s", slug, route,
+                placement.get("fichier") or ("refus: " + str(placement.get("refus") or "")))
+    if placement["refus"]:
+        return JSONResponse({"ok": False, "error": placement["refus"]}, status_code=422)
+    fichier = str(placement["fichier"])
+    soeur = str((placement["soeurs"] or [""])[0])
+
+    import base64 as _b64
+
+    def _lire(chemin: str) -> tuple[str, str] | None:
+        """(contenu, sha) du fichier sur la branche de base, ou None."""
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
+                                 token=token, params={"ref": branch}, timeout_s=15)
+            return (_b64.b64decode(str(fd.get("content") or "").replace("\n", "")).decode("utf-8", errors="replace"),
+                    str(fd.get("sha") or ""))
+        except Exception:
+            return None
+
+    lu_soeur = _lire(soeur) if soeur else None
+    if lu_soeur is None:
+        return JSONResponse({"ok": False, "error": f"Impossible de lire la page sœur {soeur}."}, status_code=400)
+    soeur_contenu = lu_soeur[0]
+
+    site_name = str(proj.site_name or slug)
+    contenu, refus = rediger_une_page(
+        sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
+        site_name=site_name)
+    if refus:
+        return JSONResponse({"ok": False, "error": refus}, status_code=422)
+    titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
+
+    index_chemin = str(placement.get("index") or "")
+    index_sortie, index_sha, note_lien, orpheline = "", "", "", True
+    if not index_chemin:
+        note_lien = ("**Aucune page de section trouvée** pour `%s` : la page n'est liée depuis "
+                     "nulle part. Ajoute le lien avant de fusionner."
+                     % str(placement.get("section") or ""))
+    else:
+        lu_index = _lire(index_chemin)
+        if lu_index is None:
+            note_lien = "**Index `%s` illisible** : le lien n'a pas pu être posé." % index_chemin
+        else:
+            index_sha = lu_index[1]
+            index_sortie, note_lien, orpheline = _lien_pour_la_page_neuve(
+                lu_index[0], index_chemin,
+                soeur_slug=str(placement.get("soeur_slug") or ""),
+                slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
+                titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
+                titre_neuf=titre_neuf)
+
+    try:
+        ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
+        base_sha = ref_data["object"]["sha"]
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
+    fix_branch = "seo-contenu/%s-%s" % (_safe_github_branch_suffix(route.strip("/")),
+                                        _dt.utcnow().strftime("%Y%m%d-%H%M%S"))
+    try:
+        _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
+
+    ecrits: list[str] = []
+    try:
+        _github_api_put(_github_content_api_path(owner, repo_name, fichier), token=token, json_body={
+            "message": "seo(contenu) : %s\n\nGenerated by SEO Agent" % (titre_neuf or sujet)[:72],
+            "content": _b64.b64encode(contenu.encode("utf-8")).decode("ascii"),
+            "branch": fix_branch})
+        ecrits.append(fichier)
+        if index_sortie:
+            _github_api_put(_github_content_api_path(owner, repo_name, index_chemin), token=token, json_body={
+                "message": "seo(contenu) : lien vers %s\n\nGenerated by SEO Agent" % route,
+                "content": _b64.b64encode(index_sortie.encode("utf-8")).decode("ascii"),
+                "sha": index_sha, "branch": fix_branch})
+            ecrits.append(index_chemin)
+    except Exception as e:
+        # La branche reste, vide ou a moitie ecrite, et aucune PR ne s'ouvre. On la NOMME plutot
+        # que de tenter un nettoyage : supprimer une ref apres un echec d'ecriture demande le
+        # meme jeton qui vient d'echouer, et une branche orpheline se voit, se supprime, et ne
+        # coute rien — contrairement a une suppression qui se tromperait de branche.
+        return JSONResponse({"ok": False, "files": ecrits, "branch": fix_branch, "error": (
+            f"Écriture impossible sur {fix_branch} : {e}. La branche a été créée : tu peux la "
+            "supprimer sans risque."
+        )}, status_code=400)
+
+    pr_title = "seo(contenu) : %s" % (titre_neuf or sujet)
+    pr_body = (
+        "## Page rédigée par l'agent\n\n"
+        f"**Sujet demandé :** {sujet}\n"
+        f"**Adresse :** `{route}`\n"
+        f"**Fichier créé :** `{fichier}`\n"
+        f"**Page sœur imitée :** `{soeur}`\n\n"
+        f"La forme de cette page — ses clés de tête, ses bornes, sa langue — est recopiée sur "
+        f"`{soeur}` plutôt que composée depuis un gabarit : c'est la seule façon de rendre un "
+        "fichier qui se construise sur ce dépôt-ci. Les clés manquantes sont vérifiées avant "
+        "écriture, pas seulement demandées au modèle.\n\n"
+        f"### Lien depuis la section\n\n{note_lien}\n\n"
+        "### À relire avant de fusionner\n\n"
+        "Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, "
+        "noms, dates, prix et promesses commerciales sont à contrôler. Cette pull request "
+        "reste en **brouillon** et ne sera jamais fusionnée automatiquement.\n\n"
+        f"Généré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
+    )
+    try:
+        pr_data = _ouvrir_pull_request(
+                      owner=owner, repo=repo_name, token=token,
+                      title=pr_title, body=pr_body,
+                      head=fix_branch, base=branch, draft=True)
+        pr_url = pr_data.get("html_url", "")
+        pr_number = pr_data.get("number", 0)
+    except Exception as e:
+        return JSONResponse({"ok": False, "branch": fix_branch, "files": ecrits,
+                             "error": f"Erreur lors de la création de la PR : {e}"}, status_code=400)
+
+    issue_label = f"Page rédigée : {route}"
+    try:
+        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=False),
+                            "pr_title": pr_title,
+                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
+                            "branch": fix_branch, "files": ecrits, "sujet": sujet,
+                            "orpheline": bool(orpheline), "contenu": True}, ensure_ascii=False)
+        with DB.session() as _db:
+            _ex = _db.scalar(select(IssueTask).where(
+                IssueTask.project_id == proj.id, IssueTask.issue_key == _CONTENT_PAGE_KEY,
+                IssueTask.url == route))
+            if _ex:
+                _ex.status = "in_progress"
+                _ex.issue_label = issue_label
+                _ex.note = _note
+            else:
+                _db.add(IssueTask(
+                    project_id=str(proj.id), user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
+                    issue_key=_CONTENT_PAGE_KEY, issue_label=issue_label, crawl_ts="",
+                    url=route, status="in_progress", severity="notice", note=_note,
+                ))
+            _db.commit()
+    except Exception:
+        pass
+
+    _article_charge(user, 1, slug=slug, motif="content_draft")
+
+    return JSONResponse({
+        "ok": True, "pr_url": pr_url, "pr_number": pr_number, "branch": fix_branch,
+        "verification": "en_attente", "route": route, "file": fichier,
+        "index": index_chemin if index_sortie else "", "orpheline": bool(orpheline),
+        "lien": note_lien, "files": ecrits, "sister": soeur,
     })
 
 

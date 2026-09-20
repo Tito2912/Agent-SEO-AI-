@@ -569,7 +569,7 @@ def placement_pour_route(all_paths: list[str], route: str, *, date: str = "") ->
     slug = _slug_de_route(cible)
     vide: dict[str, Any] = {
         "fichier": "", "section": _section_de_route(cible), "soeurs": [],
-        "index": "", "stack": index_repo.get("stack", ""), "refus": "",
+        "soeur_slug": "", "index": "", "stack": index_repo.get("stack", ""), "refus": "",
     }
 
     if cible == "/" or not slug:
@@ -597,6 +597,7 @@ def placement_pour_route(all_paths: list[str], route: str, *, date: str = "") ->
             return {**vide, "soeurs": sorted(posts)[:5],
                     "refus": "impossible de transposer %s" % modele}
         return {**vide, "fichier": fichier, "soeurs": sorted(posts)[:5],
+                "soeur_slug": slug_modele,
                 "index": (routes.get("/") or [""])[0], "refus": ""}
 
     # UN SEUL passage. Ma premiere version en faisait deux — collecter les soeurs, puis les
@@ -619,8 +620,13 @@ def placement_pour_route(all_paths: list[str], route: str, *, date: str = "") ->
             if f not in soeurs:
                 soeurs.append(f)
             if s and s in f:
-                dossier = f.rsplit("/", 1)[0] if "/" in f else ""
-                formes.setdefault("%s|%s" % (dossier, _ext(f)), []).append((f, s))
+                # LA FORME, C'EST LE CHEMIN DONT ON A RETIRE LE SLUG, pas le dossier qui le
+                # contient. Chez Next App Router le slug EST un dossier
+                # (`app/blog/<slug>/page.tsx`) : grouper par dossier rangeait chaque soeur dans
+                # son propre groupe, la majorite ne departageait donc plus rien, et le modele
+                # retenu etait simplement celui dont le dossier se classait en dernier. Une page
+                # bricolee bien placee dans l'alphabet gagnait contre dix pages regulieres.
+                formes.setdefault(_transposer(f, s, "{slug}"), []).append((f, s))
 
     if not soeurs:
         return {**vide, "refus": "aucune page soeur sous %s : la convention de ce site pour "
@@ -645,10 +651,15 @@ def placement_pour_route(all_paths: list[str], route: str, *, date: str = "") ->
         "fichier": fichier,
         "section": section,
         "soeurs": [f for f, _s in sorted(formes[forme_majoritaire])][:5],
+        # Le slug de la soeur MODELE, celui qu'on vient de transposer. Sans lui, l'appelant qui
+        # veut cloner l'entree de liste de cette soeur devrait le rededuire de son chemin — donc
+        # reimplementer, mal, la regle Jekyll des noms dates juste au-dessus.
+        "soeur_slug": slug_modele,
         "index": index_fichiers[0] if index_fichiers else "",
         "stack": index_repo.get("stack", ""),
         "refus": "",
     }
+
 
 def route_files(index: dict[str, Any], url: str, *, limit: int = 4) -> list[str]:
     """Per-page source file(s) for one URL. Empty when the URL is not in the map — the

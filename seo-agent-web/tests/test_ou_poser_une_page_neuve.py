@@ -83,6 +83,28 @@ def test_la_soeur_choisie_sert_de_MODELE_et_est_nommee() -> None:
     assert "content/blog/premier-article.md" in p["soeurs"]
 
 
+def test_le_SLUG_de_la_soeur_modele_est_rendu_lui_aussi() -> None:
+    """L'étape 3a clone l'entrée de liste de la sœur : il lui faut le slug de CETTE sœur.
+
+    Le redéduire du chemin côté appelant reviendrait à réimplémenter, en moins bien, la règle
+    Jekyll des noms datés qui vit juste à côté de la transposition.
+    """
+    assert ri.placement_pour_route(HUGO, "/blog/mon-sujet")["soeur_slug"] == "premier-article"
+    assert ri.placement_pour_route(NEXT, "/blog/mon-sujet")["soeur_slug"] == "premier-article"
+
+
+def test_le_slug_de_la_soeur_jekyll_est_rendu_SANS_sa_date() -> None:
+    """`2026-01-15-premier-article` est un nom de fichier, pas un slug : l'index cite l'un
+    et jamais l'autre."""
+    p = ri.placement_pour_route(JEKYLL, "/2026/09/20/mon-sujet", date="2026-09-20")
+    assert p["soeur_slug"] == "premier-article", p
+
+
+def test_un_refus_ne_promet_aucun_slug_de_soeur() -> None:
+    """Sinon l'appelant croit tenir une sœur là où on vient de lui dire qu'on ne sait pas."""
+    assert ri.placement_pour_route(NEXT, "/blog/premier-article")["soeur_slug"] == ""
+
+
 def test_la_stack_est_rendue_pour_l_etape_suivante() -> None:
     assert ri.placement_pour_route(NEXT, "/blog/x")["stack"] == ri.STACK_NEXT_APP
     assert ri.placement_pour_route(HUGO, "/blog/x")["stack"] == ri.STACK_HUGO
@@ -183,6 +205,33 @@ def test_la_forme_MAJORITAIRE_l_emporte_sur_une_page_bricolee() -> None:
                     "static/blog/bricolee.html"]
     p = ri.placement_pour_route(arbre, "/blog/mon-sujet")
     assert p["fichier"] == "content/blog/mon-sujet.md", p
+
+
+def test_la_majorite_departage_AUSSI_quand_le_slug_est_un_DOSSIER() -> None:
+    """Le cas où la règle ne départageait rien du tout, et où personne ne le voyait.
+
+    Chez Next App Router le slug est un dossier (`app/blog/<slug>/page.tsx`). En groupant les
+    sœurs par dossier, chacune se retrouvait SEULE dans son groupe : « la forme majoritaire »
+    départageait entre des groupes de taille 1, donc par ordre alphabétique de dossier. Une page
+    bricolée nommée `z-…` gagnait contre deux pages régulières, et c'est elle qu'on aurait
+    clonée pour écrire la suivante.
+
+    Le test au-dessus ne l'attrapait pas : Hugo range ses articles à plat, une forme = un
+    dossier, et le groupement par dossier y donne la bonne réponse par accident.
+    """
+    arbre = NEXT + ["app/blog/z-page-bricolee/index.jsx"]
+    p = ri.placement_pour_route(arbre, "/blog/mon-sujet")
+    assert p["fichier"] == "app/blog/mon-sujet/page.tsx", p
+    assert p["soeur_slug"] != "z-page-bricolee", p
+    assert all("bricolee" not in s for s in p["soeurs"]), p["soeurs"]
+
+
+def test_la_soeur_MODELE_est_la_premiere_de_la_liste_rendue() -> None:
+    """Invariant dont dépend l'étape 3b : elle lit `soeurs[0]` et clone `soeur_slug`. Si les
+    deux désignaient des pages différentes, on chercherait un slug dans le mauvais fichier."""
+    for arbre in (NEXT, HUGO):
+        p = ri.placement_pour_route(arbre, "/blog/mon-sujet")
+        assert p["soeur_slug"] in p["soeurs"][0], p
 
 
 def test_un_slug_repete_dans_le_chemin_n_est_remplace_QU_UNE_FOIS() -> None:

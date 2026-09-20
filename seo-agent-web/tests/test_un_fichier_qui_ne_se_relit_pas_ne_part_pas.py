@@ -189,4 +189,4 @@ def test_la_porte_existe_et_elle_est_UTILISEE() -> None:
     arbre = ast.parse(APP_PY.read_text(encoding="utf-8"))
     appels = [n for n in ast.walk(arbre)
               if isinstance(n, ast.Call) and ast.unparse(n.func) == "_ouvrir_pull_request"]
-    assert len(appels) == 4, "%d routes ouvrent une PR (attendu 4)" % len(appels)
+    assert len(appels) == 5, "%d routes ouvrent une PR (attendu 5)" % len(appels)

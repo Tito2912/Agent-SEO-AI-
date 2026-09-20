@@ -189,7 +189,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             # pas facturee au quota (voir `_correction_charge`), si bien qu'un compte gratuit
             # obtient les corrections mecaniques tant qu'il n'a pas consomme ses deux appels.
             # C'est exactement ce qu'on veut lui montrer : celles qui se mergent sans relecture.
-            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 2,
+            "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 2, "ai_articles_month": 0,
                        "members": 0},
             "correction": {"model": "claude-sonnet-4-6", "max_files": 2},
             "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
@@ -207,6 +207,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "backlink_searches_month": 30,
                 "backlink_replies_month": 30,
                 "ai_corrections_month": 100,
+                "ai_articles_month": 0,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
             "crawl": {"max_pages_per_crawl": 3_000, "max_pagespeed_urls": 15, "job_timeout_s": 7_200},
@@ -223,6 +224,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "backlink_searches_month": 200,
                 "backlink_replies_month": 200,
                 "ai_corrections_month": 300,
+                "ai_articles_month": 4,
             },
             "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
             "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
@@ -241,6 +243,7 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 # Was 150 — HALF of Pro's 300, on a plan costing twice as much and raising every
                 # other metric 3-5x. Upgrading from Pro used to cut the correction quota in two.
                 "ai_corrections_month": 900,
+                "ai_articles_month": 12,
             },
             "correction": {"model": "claude-opus-4-8", "max_files": 40},
             "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},

@@ -336,15 +336,21 @@ def test_le_cron_AUTOPILOTE_balaie_aussi(monkeypatch) -> None:
 
 # --- ce que les routes posent -------------------------------------------------------------------
 
-def test_les_QUATRE_routes_ouvrent_en_brouillon_et_laissent_une_trace() -> None:
-    """La garde ENUMERE : une cinquieme route qui ouvrirait sans brouillon serait nommee ici."""
+def test_les_CINQ_routes_ouvrent_en_brouillon_et_laissent_une_trace() -> None:
+    """La garde ENUMERE : une sixieme route qui ouvrirait sans brouillon serait nommee ici.
+
+    La cinquieme est arrivee le 20/09/2026 : `api_content_draft`, qui CREE une page au lieu
+    d'en corriger une. Le compte est un fil declencheur, pas une limite — il force a venir
+    verifier que la nouvelle passe bien par le brouillon et la trace, ce que ce test fait
+    juste en dessous. Le monter sans lire les deux assertions suivantes viderait la garde.
+    """
     import ast as _ast
 
     source = Path(m.__file__).read_text(encoding="utf-8")
     arbre = _ast.parse(source)
     appels = [n for n in _ast.walk(arbre)
               if isinstance(n, _ast.Call) and _ast.unparse(n.func) == "_ouvrir_pull_request"]
-    assert len(appels) == 4, "%d routes ouvrent une PR (attendu 4)" % len(appels)
+    assert len(appels) == 5, "%d routes ouvrent une PR (attendu 5)" % len(appels)
     sans_brouillon = [n.lineno for n in appels
                       if not any(k.arg == "draft" and getattr(k.value, "value", None) is True
                                  for k in n.keywords)]
@@ -354,8 +360,8 @@ def test_les_QUATRE_routes_ouvrent_en_brouillon_et_laissent_une_trace() -> None:
 
     traces = [n for n in _ast.walk(arbre)
               if isinstance(n, _ast.Call) and _ast.unparse(n.func) == "_bloc_verification"]
-    assert len(traces) == 4, (
-        "%d traces de vérification pour 4 pull requests : une route ouvrira un brouillon que "
+    assert len(traces) == 5, (
+        "%d traces de vérification pour 5 pull requests : une route ouvrira un brouillon que "
         "personne ne viendra jamais sortir" % len(traces))
 
 
@@ -456,8 +462,8 @@ def test_une_pull_request_ne_porte_qu_UNE_trace_de_verification() -> None:
     plusieurs fois.
 
     Le test ne cherche pas un motif correct : il verifie une propriete de structure — aucune
-    trace n'est fabriquee a l'interieur d'une boucle. C'est vrai aujourd'hui pour les quatre
-    routes, et ca le restera pour la cinquieme.
+    trace n'est fabriquee a l'interieur d'une boucle. C'est vrai aujourd'hui pour les cinq
+    routes, et ca le restera pour la sixieme.
     """
     import ast as _ast
 
@@ -479,7 +485,7 @@ def test_la_porte_envoie_REELLEMENT_le_drapeau_brouillon(monkeypatch) -> None:
     """Passer `draft=True` a la porte ne prouve rien si la porte ne le transmet pas.
 
     Une mutation l'a montre : desactiver le drapeau A L'INTERIEUR de la fonction laissait les
-    quatre appelants intacts, et les gardes qui les enumerent restaient vertes. La verification
+    cinq appelants intacts, et les gardes qui les enumerent restaient vertes. La verification
     aurait alors porte sur des pull requests deja ouvertes a la relecture du client.
     """
     envoye: dict = {}
@@ -517,7 +523,7 @@ def test_le_balayage_ne_va_PAS_CHERCHER_les_taches_deja_closes(monkeypatch) -> N
     assert resultats.get("verifiee", 0) >= 1, resultats
 
 
-def test_les_QUATRE_routes_annoncent_que_la_verification_est_EN_COURS() -> None:
+def test_les_CINQ_routes_annoncent_que_la_verification_est_EN_COURS() -> None:
     """Une interface qui dit « Pull Request créée » sur un brouillon ment au client.
 
     Avant ce changement, « PR créée » et « Correction mergée » etaient exacts. Ils ne le sont
@@ -539,7 +545,7 @@ def test_les_QUATRE_routes_annoncent_que_la_verification_est_EN_COURS() -> None:
             englobantes = [p for p in portees if p[0] <= n.lineno <= p[1]]
             if englobantes:
                 routes_pr.add(max(englobantes, key=lambda p: p[0])[2])
-    assert len(routes_pr) == 4, routes_pr
+    assert len(routes_pr) == 5, routes_pr
 
     muettes = []
     for debut, fin, nom in portees:
