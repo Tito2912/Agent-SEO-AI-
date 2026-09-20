@@ -1214,6 +1214,7 @@ def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
     data = event.get("data") if isinstance(event.get("data"), dict) else {}
     obj = data.get("object") if isinstance(data.get("object"), dict) else {}
     if not etype:
+        logger.warning("[STRIPE] evenement SANS TYPE ignore (charge utile inattendue)")
         return
 
     if etype == "checkout.session.completed":
@@ -1231,6 +1232,17 @@ def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
         # object is already a subscription
         upsert_subscription(db, stripe_subscription=obj)
         return
+
+    # DIRE QU'ON NE FAIT RIEN. Cette fonction ne traite que deux familles d'evenements et
+    # sortait en silence pour toutes les autres ; la route, elle, journalise « traite » des
+    # que le handler n'a pas leve. Un type ignore se lisait donc comme un succes.
+    #
+    # Le rendez-vous du 27/09/2026 en depend : un `subscription_schedule` fait basculer le
+    # compte de test, et Stripe emet autour de lui des `subscription_schedule.*` et des
+    # `invoice.*` que nous ignorons volontairement. Si le `customer.subscription.updated`
+    # attendu n'arrivait pas — endpoint mal configure, evenement non selectionne — on ne
+    # verrait que des lignes « traite » et on conclurait que tout va bien.
+    logger.info("[STRIPE] evenement %s IGNORE : aucun traitement prevu pour ce type", etype)
 
 
 def list_invoices(db: Session, *, user_id: str, limit: int = 12) -> list[dict[str, Any]]:

@@ -246,6 +246,44 @@ def test_la_trace_ne_fait_pas_tomber_le_webhook(monkeypatch, caplog) -> None:
         assert vrai(db, user_id=_uid) == "pro"
 
 
+def test_un_type_IGNORE_le_dit_au_lieu_de_passer_pour_un_succes(caplog) -> None:
+    """LE TROU QUE LA JOURNALISATION DE LA ROUTE AVAIT CREE, trouvé en relisant le handler.
+
+    `handle_stripe_event` ne traite que deux familles d'événements et sortait en silence pour
+    toutes les autres. La route, elle, écrit « traité » dès que le handler n'a pas levé : un
+    type ignoré se lisait donc comme un succès — j'avais remplacé un silence par un message
+    faux, ce qui est pire.
+
+    Le 27/09, Stripe émettra autour du basculement des `subscription_schedule.*` et des
+    `invoice.*` que nous ignorons volontairement. Si le `customer.subscription.updated`
+    attendu n'arrivait pas, on ne verrait que des lignes « traité ».
+    """
+    with caplog.at_level(logging.INFO):
+        with m.DB.session() as db:
+            billing.handle_stripe_event(db, event={
+                "type": "subscription_schedule.released", "id": "evt_sched",
+                "data": {"object": {"id": "sub_sched"}}})
+    assert "subscription_schedule.released IGNORE" in caplog.text, caplog.text
+
+
+def test_un_evenement_SANS_TYPE_le_dit_aussi(caplog) -> None:
+    with caplog.at_level(logging.INFO):
+        with m.DB.session() as db:
+            billing.handle_stripe_event(db, event={"data": {"object": {}}})
+    assert "SANS TYPE" in caplog.text, caplog.text
+
+
+def test_un_type_TRAITE_ne_se_declare_PAS_ignore(caplog) -> None:
+    """Le contre-test : une ligne « ignoré » sur un événement traité inverserait le
+    diagnostic, et c'est le jour J qu'on s'en apercevrait."""
+    _uid, cid, sid = _abonne_business()
+    with caplog.at_level(logging.INFO):
+        with m.DB.session() as db:
+            billing.handle_stripe_event(db, event=_evenement(
+                "customer.subscription.updated", cid=cid, sid=sid, price=PRO_PRICE))
+    assert "IGNORE" not in caplog.text, caplog.text
+
+
 # --- l'enumeration -------------------------------------------------------------------------------
 
 def test_AUCUNE_sortie_du_webhook_n_est_muette() -> None:
