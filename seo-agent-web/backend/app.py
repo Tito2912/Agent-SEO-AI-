@@ -21165,6 +21165,105 @@ def _front_matter_scalars(content: str) -> list[tuple[str, str]]:
     return out
 
 
+
+_CLES_META_JS_RE = re.compile(r"^\s*([A-Za-z_$][\w$]*)\s*:", re.M)
+
+
+def _forme_dune_soeur(contenu: str, chemin: str) -> dict[str, Any]:
+    """Ce qu'une page SOEUR impose a sa cadette : ses cles de tete, sa borne, sa langue.
+
+    On ne decrit pas un gabarit, on lit celui du client. Un blog Hugo en TOML (`+++`), un blog
+    Astro en YAML (`---`) et une page Next qui exporte un objet `metadata` n'ont aucune forme
+    commune, et aucune liste de cles ecrite d'avance ne survivrait a leur diversite. La seule
+    source fiable est la page d'a cote.
+
+    Rend `{bornes, cles, extrait}`. `cles` vide veut dire qu'on n'a rien su lire — l'appelant
+    s'abstient alors, plutot que d'ecrire un fichier dont la structure ne ressemble a rien de
+    ce que le site contient.
+    """
+    texte = str(contenu or "")
+    lignes = texte.split("\n")
+    span = _front_matter_span(lignes)
+    if span:
+        borne = lignes[0].strip()
+        cles = [c for c, _v in _front_matter_scalars(texte)]
+        # Les cles non scalaires (listes, objets) comptent aussi : `tags:` sur sa propre ligne.
+        for i in span:
+            m = re.match(r"^([A-Za-z_][\w.-]*)\s*[:=]", lignes[i])
+            if m and m.group(1) not in cles:
+                cles.append(m.group(1))
+        return {"bornes": borne, "cles": cles, "extrait": "\n".join(lignes[:span[-1] + 2])}
+
+    if chemin.lower().endswith((".tsx", ".jsx", ".ts", ".js", ".mjs", ".astro", ".svelte", ".vue")):
+        m = re.search(r"\bmetadata\s*[:=]", texte)
+        if m:
+            bornes_bloc = _bloc_accolades_equilibrees(texte, m.end())
+            if bornes_bloc:
+                bloc = texte[bornes_bloc[0]:bornes_bloc[1]]
+                cles = [c for c in _CLES_META_JS_RE.findall(bloc[1:-1])]
+                if cles:
+                    return {"bornes": "metadata", "cles": cles, "extrait": bloc}
+    return {"bornes": "", "cles": [], "extrait": ""}
+
+
+_SYSTEME_REDACTION = (
+    "Tu rediges UNE page pour le site d'un client, dans le MEME format et la MEME langue que "
+    "la page existante qu'on te montre. Tu rends un objet JSON {\"contenu\": \"...\"} "
+    "contenant le fichier COMPLET, pret a etre commite. Aucune explication, aucun bloc de code."
+)
+
+
+def rediger_une_page(
+    *, sujet: str, chemin: str, soeur_chemin: str, soeur_contenu: str,
+    site_name: str = "", model_override: str = "",
+) -> tuple[str, str]:
+    """Le contenu du fichier a creer, ou ("", raison du refus).
+
+    LE MODELE NE RECOIT PAS UNE CONSIGNE DE FORMAT, IL RECOIT UNE PAGE. C'est la methode que ce
+    projet applique partout — `_inserer_og_complet` recopie les champs de la mise en page,
+    `_complete_open_graph` clone la ligne que le modele vient d'ecrire : decrire une grammaire
+    bat decrire une forme. Une liste de cles ecrite d'avance ne survivrait ni a Hugo en TOML,
+    ni a Astro en YAML, ni a un `export const metadata` de Next.
+
+    ET ON VERIFIE PLUTOT QUE DE CONSIGNER. La consigne dit « les memes cles » ; le controle
+    ci-dessous EXIGE les memes cles. Un modele qui en oublie une casse le build du client, et
+    cette famille-la ne peut pas etre rattrapee par un reecriveur borne : on refuse.
+    """
+    forme = _forme_dune_soeur(soeur_contenu, soeur_chemin)
+    if not forme["cles"]:
+        return "", ("structure illisible dans %s : on ne sait pas quelle forme doit avoir la "
+                    "page neuve" % soeur_chemin)
+
+    demande = (
+        "SUJET DE LA PAGE A ECRIRE : %s\n\n"
+        "FICHIER A CREER : %s\n"
+        "SITE : %s\n\n"
+        "PAGE EXISTANTE DU MEME TYPE, a imiter EXACTEMENT pour la forme (%s) :\n"
+        "-----\n%s\n-----\n\n"
+        "CONTRAINTES :\n"
+        "- memes cles de tete que la page montree, toutes presentes : %s ;\n"
+        "- meme langue que la page montree ;\n"
+        "- le corps traite le sujet, il ne le paraphrase pas en boucle ;\n"
+        "- aucun lien invente vers une page dont tu ignores l'existence."
+        % (sujet, chemin, site_name or "?", soeur_chemin,
+           soeur_contenu[:4000], ", ".join(forme["cles"]))
+    )
+    out = _correction_ai_json(system=_SYSTEME_REDACTION, user_msg=demande,
+                              max_tokens=4000, model_override=model_override)
+    contenu = str((out or {}).get("contenu") or "").strip()
+    if not contenu:
+        return "", "le modele n'a rien rendu d'exploitable"
+
+    manquantes = [c for c in forme["cles"]
+                  if c not in _forme_dune_soeur(contenu, chemin)["cles"]]
+    if manquantes:
+        return "", ("cles de tete manquantes : %s — le fichier casserait le site"
+                    % ", ".join(manquantes[:5]))
+    refus = _refus_de_format(chemin, contenu)
+    if refus:
+        return "", refus
+    return contenu if contenu.endswith("\n") else contenu + "\n", ""
+
 def _keep_length_above_floor(new_content: str, old_content: str,
                              valeur_ancienne_fautive: bool = False) -> tuple[str, list[str]]:
     """Ne pas faire passer sous le plancher une valeur qui le respectait.
