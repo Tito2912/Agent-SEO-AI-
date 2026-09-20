@@ -138,7 +138,11 @@ def ouvrir() -> None:
         try:
             out = m._proposer_une_page(
                 _Proprietaire(uid), project_id=pid, site_name=repo, slug=slug,
-                sujet=SUJET, route=route, owner=OWNER, repo_name=repo,
+                sujet=SUJET, route=route,
+                # L'adresse de PRODUCTION, pas celle de l'apercu : le canonical d'une page
+                # doit designer le site, pas le deploiement d'essai qui la montre.
+                base_url="https://%s.netlify.app/" % repo,
+                owner=OWNER, repo_name=repo,
                 branch=BRANCH, token=TOKEN, motif="banc_contenu",
                 refuser_si_orpheline=False)
         except Exception as e:

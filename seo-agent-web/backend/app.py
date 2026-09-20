@@ -21243,6 +21243,62 @@ def _front_matter_scalars(content: str) -> list[tuple[str, str]]:
 _CLES_META_JS_RE = re.compile(r"^\s*([A-Za-z_$][\w$]*)\s*:", re.M)
 
 
+_TITLE_TAG_RE = re.compile(r"<title\b[^>]*>", re.I)
+_NOM_DE_META_RE = re.compile(r'\b(?:name|property)\s*=\s*["\']([^"\']+)["\']', re.I)
+_REL_DE_LINK_RE = re.compile(r'\brel\s*=\s*["\']?([\w-]+)', re.I)
+_NOM_DE_META_OBJET_RE = re.compile(r"""\b(?:name|property)\s*:\s*(['"])([^'"]+)\1""")
+_REL_DE_LINK_OBJET_RE = re.compile(r"""\brel\s*:\s*(['"])([\w-]+)\1""")
+_TITRE_OBJET_RE = re.compile(r"""^\s*title\s*:\s*['"]""", re.M)
+# Un `viewport` seul ne fait pas une tete : n'importe quel fragment de gabarit en porte un.
+# Il faut au moins un signal EDITORIAL pour dire qu'on lit bien la tete d'une page.
+_SIGNAUX_DE_TETE = ("title", "description", "link:canonical")
+
+
+def _cles_de_tete_balisees(texte: str) -> list[str]:
+    """Les balises de tete qu'une page porte, quelle que soit la facon dont elle les declare.
+
+    MESURE DU 20/09/2026, les neuf soeurs du banc lues une par une. SIX idiomes sur neuf
+    ecrivent leur tete en BALISES et non en cles structurees :
+
+        static-html   `<head>` d'un document complet
+        astro         `<head>`, apres un front matter JS que le lecteur YAML ne sait pas lire
+        next-pages    `<Head>` de next/head
+        gatsby        `export function Head()`, l'idiome de cette stack
+        sveltekit     `<svelte:head>`
+
+    et Nuxt fait bande a part en les declarant en OBJETS dans `useHead()`. D'ou les DEUX
+    lectures ci-dessous, et pas une de plus : ce sont les deux seules que les neuf depots
+    utilisent. Le lecteur d'avant n'en connaissait aucune, et refusait donc six stacks sur
+    neuf — non pas parce que leur tete etait illisible, mais parce que personne n'avait
+    regarde comment elles l'ecrivaient.
+
+    On rend des NOMS (`description`, `og:url`, `link:canonical`), pas des valeurs : l'appelant
+    veut savoir ce que la page neuve doit porter, pas ce que la soeur en dit.
+    """
+    cles: list[str] = []
+
+    def _ajouter(nom: str) -> None:
+        propre = (nom or "").strip().lower()
+        if propre and propre not in cles:
+            cles.append(propre)
+
+    if _TITLE_TAG_RE.search(texte) or _TITRE_OBJET_RE.search(texte):
+        _ajouter("title")
+    for tag in _META_TAG_RE.finditer(texte):
+        nom = _NOM_DE_META_RE.search(tag.group(0))
+        if nom:
+            _ajouter(nom.group(1))
+    for tag in _LINK_TAG_RE.finditer(texte):
+        rel = _REL_DE_LINK_RE.search(tag.group(0))
+        if rel:
+            _ajouter("link:" + rel.group(1))
+    for objet in _NOM_DE_META_OBJET_RE.finditer(texte):
+        _ajouter(objet.group(2))
+    for objet in _REL_DE_LINK_OBJET_RE.finditer(texte):
+        _ajouter("link:" + objet.group(2))
+    return cles
+
+
 def _forme_dune_soeur(contenu: str, chemin: str) -> dict[str, Any]:
     """Ce qu'une page SOEUR impose a sa cadette : ses cles de tete, sa borne, sa langue.
 
@@ -21266,7 +21322,12 @@ def _forme_dune_soeur(contenu: str, chemin: str) -> dict[str, Any]:
             m = re.match(r"^([A-Za-z_][\w.-]*)\s*[:=]", lignes[i])
             if m and m.group(1) not in cles:
                 cles.append(m.group(1))
-        return {"bornes": borne, "cles": cles, "extrait": "\n".join(lignes[:span[-1] + 2])}
+        # ON NE REND PLUS LA MAIN SUR UN FRONT MATTER VIDE, et c'est le cas d'Astro : ses bornes
+        # `---` encadrent du JavaScript, pas du YAML, donc aucune cle n'en sort — et la page
+        # portait sa tete en balises quinze lignes plus bas. Le lecteur s'arretait la et disait
+        # « structure illisible » d'une page parfaitement lisible.
+        if cles:
+            return {"bornes": borne, "cles": cles, "extrait": "\n".join(lignes[:span[-1] + 2])}
 
     if chemin.lower().endswith((".tsx", ".jsx", ".ts", ".js", ".mjs", ".astro", ".svelte", ".vue")):
         m = re.search(r"\bmetadata\s*[:=]", texte)
@@ -21277,6 +21338,10 @@ def _forme_dune_soeur(contenu: str, chemin: str) -> dict[str, Any]:
                 cles = [c for c in _CLES_META_JS_RE.findall(bloc[1:-1])]
                 if cles:
                     return {"bornes": "metadata", "cles": cles, "extrait": bloc}
+
+    balisees = _cles_de_tete_balisees(texte)
+    if any(signal in balisees for signal in _SIGNAUX_DE_TETE):
+        return {"bornes": "balises", "cles": balisees, "extrait": ""}
     return {"bornes": "", "cles": [], "extrait": ""}
 
 
