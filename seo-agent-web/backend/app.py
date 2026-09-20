@@ -21355,6 +21355,107 @@ _OG_URL_OBJET_RE = re.compile(
 _CONTENT_KEY_RE = re.compile(r"""(\bcontent\s*:\s*)(['"])(.*?)(\2)""", re.S)
 
 
+_DEBUT_DE_BALISE = ("/", ">")
+_NOM_DE_BALISE_RE = re.compile(r"</?\s*([A-Za-z][\w:.-]*)")
+# Ce qui est du CODE et non de la prose, meme entre deux balises : le corps d'un `<script>`
+# ou d'un `<style>`. Un `\'` y est un echappement legitime.
+_BALISES_OPAQUES = ("script", "style")
+_EXT_BALISEES = (".jsx", ".tsx", ".js", ".ts", ".mjs", ".astro", ".svelte", ".vue",
+                 ".html", ".htm")
+
+
+def _spans_texte_balise(contenu: str) -> list[tuple[int, int]]:
+    """Les regions de TEXTE entre deux balises — ce que le visiteur lit tel quel.
+
+    POURQUOI PAS UN SIMPLE SUIVI DE CHAINES, qui serait dix lignes : dans du JSX, une apostrophe
+    de prose (`l'accueil`) est indiscernable d'une ouverture de chaine. Un scanner qui n'en
+    suivrait que les guillemets se desynchroniserait a la premiere phrase francaise et
+    lirait tout le reste du fichier a l'envers.
+
+    On suit donc les BALISES : ce qui est entre le `>` d'une balise et le `<` de la suivante
+    est du texte. Le code qui precede la premiere balise et celui qui suit la derniere sont
+    exclus par construction — une region doit etre bornee des DEUX cotes.
+
+    Les guillemets ne sont suivis qu'a l'INTERIEUR d'une balise, la ou ils delimitent
+    vraiment une valeur d'attribut. Le corps d'un `<script>` ou d'un `<style>` est saute : il
+    est entre deux balises sans etre de la prose.
+    """
+    spans: list[tuple[int, int]] = []
+    i, n = 0, len(contenu)
+    dans_balise = False
+    chaine = ""
+    nom_courant = ""
+    fermante = False
+    debut_texte = -1
+    while i < n:
+        c = contenu[i]
+        if chaine:
+            if c == "\\":
+                i += 2
+                continue
+            if c == chaine:
+                chaine = ""
+        elif dans_balise:
+            if c in "\"'":
+                chaine = c
+            elif c == ">":
+                dans_balise = False
+                debut_texte = i + 1
+                # Le saut ne vaut QUE pour la balise ouvrante. Le declencher aussi sur
+                # `</script>` faisait chercher une seconde fermeture qui n'existe pas, et la
+                # lecture s'arretait la — tout le texte apres le script devenait invisible.
+                if nom_courant in _BALISES_OPAQUES and not fermante:
+                    ferme = contenu.lower().find("</" + nom_courant, i)
+                    if ferme < 0:
+                        break
+                    i, debut_texte = ferme - 1, -1
+        elif c == "<" and i + 1 < n and (contenu[i + 1].isalpha()
+                                         or contenu[i + 1] in _DEBUT_DE_BALISE):
+            if debut_texte >= 0 and i > debut_texte:
+                spans.append((debut_texte, i))
+            dans_balise = True
+            fermante = contenu[i + 1] == "/"
+            debut_texte = -1
+            nom = _NOM_DE_BALISE_RE.match(contenu, i)
+            nom_courant = nom.group(1).lower() if nom else ""
+        i += 1
+    return spans
+
+
+def _antislashs_de_trop(contenu: str, chemin: str) -> tuple[str, list[str]]:
+    """Les `\\'` poses dans du texte de balisage, ou l'antislash n'est PAS un echappement.
+
+    MESURE DU 20/09/2026, banc des neuf idiomes, page next-app. Le modele a ecrit huit
+    antislashs dans le meme fichier. SIX etaient justes — `title: 'Comment … d\\'un site'`, a
+    l'interieur d'une chaine JavaScript a guillemets simples, ou l'echappement est obligatoire.
+    DEUX etaient faux : `<p>… d\\'un site</p>`, dans du texte JSX, ou les enfants d'un element
+    ne sont pas une chaine litterale. L'antislash s'y affiche, tel quel, chez le visiteur.
+
+    Memes deux caracteres, contexte oppose. C'est pour cela qu'on ne peut pas les enlever tous,
+    et c'est pour cela que ce defaut survit a tout : le fichier compile, le build est VERT, et
+    seule la page rendue le montre.
+
+    Une region qui contient une accolade est laissee tranquille : `{maVariable}` est une
+    expression JavaScript, pas de la prose, et un echappement peut y etre legitime.
+    """
+    if not str(chemin or "").lower().endswith(_EXT_BALISEES):
+        return contenu, []
+    suspects: list[int] = []
+    for debut, fin in _spans_texte_balise(contenu):
+        region = contenu[debut:fin]
+        if "{" in region or "}" in region:
+            continue
+        for trouve in re.finditer(r"\\(['\"])", region):
+            suspects.append(debut + trouve.start())
+    if not suspects:
+        return contenu, []
+    out = contenu
+    for position in reversed(suspects):
+        out = out[:position] + out[position + 1:]
+    return out, ["%d antislash(s) retire(s) d'un texte de balisage, ou il se serait affiche"
+                 % len(suspects)]
+
+
 def _spans_url_de_page(contenu: str) -> list[tuple[int, int, str]]:
     """Les bornes de CHAQUE canonical et og:url litteral du fichier, avec son role.
 
@@ -21513,10 +21614,12 @@ def rediger_une_page(
     # ce banc ait produite deux fois sur deux, et un garde-fou qu'on peut oublier de
     # brancher ne protege que les appelants dont on se souvient.
     contenu, notes_url = _urls_de_la_page_neuve(contenu, url_de_la_page=url_de_la_page)
-    if notes_url:
-        logger.info("[contenu] adresses corrigees : %s", " ; ".join(notes_url))
-        if notes is not None:
-            notes.extend(notes_url)
+    contenu, notes_bs = _antislashs_de_trop(contenu, chemin)
+    for lot in (notes_url, notes_bs):
+        if lot:
+            logger.info("[contenu] repris : %s", " ; ".join(lot))
+            if notes is not None:
+                notes.extend(lot)
     refus = _refus_de_format(chemin, contenu)
     if refus:
         return "", refus
