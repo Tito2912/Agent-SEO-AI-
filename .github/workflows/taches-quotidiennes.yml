@@ -10,7 +10,9 @@
 #   - `refresh-competitors` ne reprend que les concurrents crawles il y a plus de trente jours
 #     (`_COMPETITOR_REFRESH_DAYS`), les autres sont ignores ;
 #   - `auto-search-backlinks` respecte la frequence choisie par chaque projet (vingt heures
-#     minimum en quotidien, cent soixante en hebdomadaire).
+#     minimum en quotidien, cent soixante en hebdomadaire) ;
+#   - `auto-content` n'ecrit qu'une page par semaine et par projet, et seulement sur les
+#     projets qui ont allume le mode automatique.
 # Les appeler tous les jours ne declenche donc que ce qui est DU. C'est la route qui decide,
 # pas l'ordonnanceur — et c'est pour ca qu'un seul creneau suffit.
 #
@@ -18,7 +20,7 @@
 # depreciee : sa docstring dit « Deprecated — automated Reddit posting removed », et elle rend
 # `posted: 0` sans rien faire. La planifier ajouterait un appel quotidien pour rien.
 #
-# CHAQUE APPEL EST INDEPENDANT. Un echec sur l'un ne doit pas empecher les deux autres : un
+# CHAQUE APPEL EST INDEPENDANT. Un echec sur l'un ne doit pas empecher les autres : un
 # audit qui tombe ne doit pas priver les concurrents de leur rafraichissement mensuel. Le job
 # echoue a la fin, en nommant ce qui a rate.
 
@@ -70,9 +72,14 @@ jobs:
           appeler GET  /cron/autopilot
           appeler POST /cron/refresh-competitors
           appeler GET  /cron/auto-search-backlinks
+          # Redondant avec l'autopilote, qui la declenche deja en passant. C'est voulu :
+          # l'enumeration de ce fichier est ce qui se relit quand on se demande ce qui
+          # tourne, et une tache qui n'y figure que par effet de bord finit par disparaitre
+          # sans que personne ne s'en apercoive. Un passage de plus ne produit rien de plus.
+          appeler POST /cron/auto-content
 
           if [ -n "$rates" ]; then
             echo "Taches en echec :$rates"
             exit 1
           fi
-          echo "Les trois taches ont repondu."
+          echo "Les quatre taches ont repondu."
