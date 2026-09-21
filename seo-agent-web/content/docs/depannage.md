@@ -4,7 +4,7 @@ meta_title: "Dépannage — documentation {{app_name}}"
 description: "Crawl vide ou incomplet, Search Console qui ne remonte rien, boutons de correction absents, anomalie qui persiste : les causes et les vérifications."
 kind: "Dépannage"
 section: "Compte et facturation"
-order: 51
+order: 52
 updated_at: "2026-09-03"
 audience: "Tous les plans"
 keywords: ["dépannage", "erreurs", "crawl vide", "problème"]

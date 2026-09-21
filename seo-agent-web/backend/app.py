@@ -9749,6 +9749,12 @@ def _content_tokens() -> dict[str, str]:
         tokens[f"projects_{key}"] = _plan_token_value(catalog, key, "limits", "projects")
         tokens[f"pages_{key}"] = _plan_token_value(catalog, key, "limits", "pages_crawled_month")
         tokens[f"corrections_{key}"] = _plan_token_value(catalog, key, "limits", "ai_corrections_month")
+        # Ajoutes le 21/09/2026 avec leurs pages de doc. Deux fonctionnalites — les comptes
+        # d'equipe et la redaction de contenu — ont vecu sans jeton, donc sans page : la seule
+        # facon de les documenter aurait ete d'ecrire leurs plafonds en dur, et une doc qui
+        # ecrit un chiffre en dur ment des le premier reglage de PLAN_CONFIG_JSON.
+        tokens[f"articles_{key}"] = _plan_token_value(catalog, key, "limits", "ai_articles_month")
+        tokens[f"members_{key}"] = _plan_token_value(catalog, key, "limits", "members")
         tokens[f"assistant_{key}"] = _plan_token_value(catalog, key, "limits", "assistant_messages_month")
         tokens[f"maxpages_{key}"] = _plan_token_value(catalog, key, "crawl", "max_pages_per_crawl")
         tokens[f"pagespeed_{key}"] = _plan_token_value(catalog, key, "crawl", "max_pagespeed_urls")

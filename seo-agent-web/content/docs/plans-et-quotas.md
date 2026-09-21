@@ -5,11 +5,11 @@ description: "Ce que chaque plan {{app_name}} inclut : projets, pages crawlées,
 kind: "Référence"
 section: "Compte et facturation"
 order: 50
-updated_at: "2026-09-03"
+updated_at: "2026-09-21"
 audience: "Tous les plans"
 keywords: ["tarifs", "quotas", "limites", "abonnement"]
 app_href: "/billing"
-related: ["corrections-automatiques", "lancer-un-crawl", "analyser-les-concurrents"]
+related: ["corrections-automatiques", "lancer-un-crawl", "rediger-du-contenu", "comptes-d-equipe"]
 faq:
   - question: "Comment se compte une correction IA ?"
     answer: "Un fichier écrit par le modèle égale une unité. Une pull request qui modifie un seul gabarit et règle 300 URLs coûte donc une unité — le quota mesure le travail du modèle, pas le nombre de lignes du rapport."
@@ -36,7 +36,9 @@ page.
 | **Corrections IA / mois** | {{corrections_free}} | {{corrections_solo}} | {{corrections_pro}} | {{corrections_business}} |
 | **Fichiers max / correction** | {{files_free}} | {{files_solo}} | {{files_pro}} | {{files_business}} |
 | **URLs Core Web Vitals / crawl** | {{pagespeed_free}} | {{pagespeed_solo}} | {{pagespeed_pro}} | {{pagespeed_business}} |
+| **Articles rédigés / mois** | {{articles_free}} | {{articles_solo}} | {{articles_pro}} | {{articles_business}} |
 | **Messages assistant / mois** | {{assistant_free}} | {{assistant_solo}} | {{assistant_pro}} | {{assistant_business}} |
+| **Places d'équipe** | {{members_free}} | {{members_solo}} | {{members_pro}} | {{members_business}} |
 | **Opportunités backlinks** | — | ✓ | ✓ | ✓ |
 | **Concurrents** | — | — | ✓ | ✓ |
 
@@ -56,6 +58,28 @@ gabarit réglées.
 
 Le plan Free n'inclut pas de correction IA. Il inclut l'audit complet, les suggestions, les
 exports et le fix-pack : de quoi corriger à la main.
+
+### Articles rédigés — un compteur à part
+
+**Une unité = une page écrite**, quelle que soit sa taille et quel que soit le nombre de
+fichiers touchés : l'index de section modifié au passage pour que la page ne soit pas orpheline
+n'est pas un second article.
+
+Ce compteur est **séparé de celui des corrections**, délibérément. Un article n'a pas de commune
+mesure avec une réécriture de titre, et les mélanger rendrait les deux quotas illisibles :
+publier deux pages ne doit pas vous priver de vos corrections du mois.
+
+Les plafonds sont volontairement bas. La politique anti-spam de Google vise le contenu produit
+en masse pour le classement, quelle que soit la façon dont il est produit — un plafond généreux
+ferait de cette fonction un moyen de nuire au site qu'elle doit servir. Voir
+[Rédiger une page et la proposer en pull request](/docs/rediger-du-contenu).
+
+### Places d'équipe
+
+Une place permet d'inviter une personne sur vos projets. Elles sont **forfaitaires** : aucune
+facturation supplémentaire, aucun paiement au siège. Ce que consomme un collaborateur sur un de
+vos projets est débité sur **votre** compte, avec la trace de qui a cliqué. Voir
+[Comptes d'équipe](/docs/comptes-d-equipe).
 
 ### Fichiers par correction
 
