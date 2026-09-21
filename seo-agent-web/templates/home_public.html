@@ -1,12 +1,12 @@
 {% extends "public_layout.html" %}
 
-{% block title %}{{ app_name }} - Audit SEO Intelligent{% endblock %}
+{% block title %}{{ app_name }} - L'audit SEO qui livre le correctif{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="SEO Audit vous aide à crawler vos sites, prioriser les corrections techniques, suivre Google Search Console et améliorer votre référencement naturel mois après mois." />
+<meta name="description" content="{{ app_name }} crawle votre site, écrit la correction dans votre code et vous l'envoie en pull request — vérifiée par votre propre CI avant de vous être proposée." />
 <link rel="canonical" href="{{ canonical_url }}" />
-<meta property="og:title" content="{{ app_name }} - Audit SEO Intelligent" />
-<meta property="og:description" content="Crawl SEO, audits techniques, suivi de performance et recommandations IA dans un seul tableau de bord." />
+<meta property="og:title" content="{{ app_name }} - L'audit SEO qui livre le correctif" />
+<meta property="og:description" content="La correction arrive en pull request sur votre dépôt, écrite dans la forme de votre code et vérifiée par votre build. Neuf technologies prises en charge." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
 <style>
@@ -195,10 +195,11 @@
 
   <!-- ── HERO ─────────────────────────────────────── -->
   <div class="hero">
-    <div class="hero-eyebrow">Crawl · Audit · Dashboard · IA</div>
-    <h1>Améliorez votre SEO.<br>Mois après mois.</h1>
+    <div class="hero-eyebrow">Audit · Correction · Pull request</div>
+    <h1>L'audit SEO qui livre le correctif,<br>pas la liste de courses.</h1>
     <p class="hero-sub">
-      Crawlez vos sites, identifiez les problèmes critiques et obtenez des recommandations priorisées - directement dans votre navigateur.
+      {{ app_name }} crawle votre site, écrit la correction dans votre code et vous l'envoie en
+      pull request — vérifiée par votre propre CI avant d'arriver sur votre bureau.
     </p>
     <div class="hero-actions">
       <a class="btn primary" href="/auth/signup">Commencer gratuitement</a>
@@ -206,31 +207,43 @@
     </div>
     <div class="hero-stats">
       <div class="stat-item">
-        <div class="stat-value">Multi-sites</div>
-        <div class="stat-label">Tous vos projets, un seul outil</div>
+        <div class="stat-value">9 technologies</div>
+        <div class="stat-label">Next, Astro, Nuxt, Gatsby, SvelteKit, Hugo, Jekyll, HTML</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">Votre CI décide</div>
+        <div class="stat-label">Aucune correction proposée sans build vert</div>
       </div>
       <div class="stat-item">
         <div class="stat-value">100 %</div>
         <div class="stat-label">Hébergé en Europe</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">IA incluse</div>
-        <div class="stat-label">Recommandations intelligentes</div>
       </div>
     </div>
   </div>
 
   <!-- ── FEATURES ──────────────────────────────────── -->
   <div class="section-label">
-    <h2>Tout ce qu'il vous faut, au même endroit</h2>
-    <p>Arrêtez de jongler entre dix outils. {{ app_name }} centralise l'essentiel.</p>
+    <h2>Du problème au correctif, sans quitter votre dépôt</h2>
+    <p>Les autres outils vous disent quoi faire. {{ app_name }} le fait, et vous laisse le dernier mot.</p>
   </div>
 
   <div class="grid">
     <section class="card feature-card">
+      <span class="feature-icon">🔧</span>
+      <h3>Corrections en pull request</h3>
+      <p>L'anomalie est corrigée dans votre code, dans la forme de votre projet, et arrive en pull request. Vous relisez un diff, pas un rapport.</p>
+    </section>
+
+    <section class="card feature-card">
+      <span class="feature-icon">✅</span>
+      <h3>Vérifié par votre build</h3>
+      <p>La pull request reste en brouillon tant que votre propre chaîne d'intégration n'a pas dit que le site se construit. Un correctif qui casse ne vous est jamais proposé.</p>
+    </section>
+
+    <section class="card feature-card">
       <span class="feature-icon">🔍</span>
-      <h3>Crawl & Audit complet</h3>
-      <p>Analysez chaque page : balises, redirections, Core Web Vitals, liens cassés. Une liste d'actions priorisées vous attend à chaque crawl.</p>
+      <h3>Crawl & audit complet</h3>
+      <p>Balises, redirections, Core Web Vitals, liens cassés, données structurées, hreflang. Chaque anomalie est classée par gravité et par effort.</p>
     </section>
 
     <section class="card feature-card">
@@ -252,6 +265,24 @@
     </section>
 
     <section class="card feature-card">
+      <span class="feature-icon">🥊</span>
+      <h3>Concurrents et sujets manquants</h3>
+      <p>Ce que vos concurrents traitent et que vous ne couvrez pas. Les sujets sont rapportés, jamais transformés en correction automatique.</p>
+    </section>
+
+    <section class="card feature-card">
+      <span class="feature-icon">✍️</span>
+      <h3>Rédaction de pages</h3>
+      <p>Une page neuve écrite dans la forme de votre site, liée à sa section pour ne pas rester orpheline, livrée en pull request brouillon.</p>
+    </section>
+
+    <section class="card feature-card">
+      <span class="feature-icon">👥</span>
+      <h3>Comptes d'équipe</h3>
+      <p>Invitez un consultant ou un client sur vos projets. Ce qu'il consomme est débité sur votre compte, avec la trace de qui a agi.</p>
+    </section>
+
+    <section class="card feature-card">
       <span class="feature-icon">📄</span>
       <h3>Exports PDF & CSV</h3>
       <p>Partagez des rapports professionnels avec vos clients ou votre équipe en un clic, sans mise en forme manuelle.</p>
@@ -266,25 +297,25 @@
 
   <!-- ── HOW IT WORKS ──────────────────────────────── -->
   <div class="section-label">
-    <h2>Opérationnel en 3 minutes</h2>
-    <p>Pas de configuration complexe. Vous auditez dès l'inscription.</p>
+    <h2>Trois étapes, et le correctif est écrit</h2>
+    <p>Pas de configuration complexe. Vous auditez dès l'inscription, sans carte bancaire.</p>
   </div>
 
   <div class="steps">
     <section class="card step-card">
       <div class="step-num">1</div>
       <h3>Ajoutez votre site</h3>
-      <p>Entrez l'URL de votre site et choisissez les modules à activer : crawl, performance, backlinks, mots-clés.</p>
+      <p>L'URL suffit pour auditer. Connectez votre dépôt GitHub quand vous voulez recevoir les corrections, pas avant.</p>
     </section>
     <section class="card step-card">
       <div class="step-num">2</div>
       <h3>Lancez le crawl</h3>
-      <p>Notre moteur analyse chaque page et génère un rapport détaillé avec les problèmes et leur niveau de priorité.</p>
+      <p>Chaque page est analysée, chaque anomalie classée par gravité — et rattachée au fichier de votre dépôt qui la produit.</p>
     </section>
     <section class="card step-card">
       <div class="step-num">3</div>
-      <h3>Corrigez & mesurez</h3>
-      <p>Suivez les recommandations, observez l'impact sur votre trafic et répétez pour progresser en continu.</p>
+      <h3>Recevez la pull request</h3>
+      <p>Le correctif est écrit, votre build le valide, et il attend votre relecture. Rien n'est publié sans votre fusion.</p>
     </section>
   </div>
 
