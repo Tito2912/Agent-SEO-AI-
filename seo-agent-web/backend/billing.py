@@ -191,7 +191,8 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
             # C'est exactement ce qu'on veut lui montrer : celles qui se mergent sans relecture.
             "limits": {"projects": 1, "pages_crawled_month": 800, "assistant_messages_month": 30, "ai_corrections_month": 2, "ai_articles_month": 0,
                        "members": 0},
-            "correction": {"model": "claude-sonnet-4-6", "max_files": 2},
+            "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
+                           "max_files": 2},
             "crawl": {"max_pages_per_crawl": 1_500, "max_pagespeed_urls": 5, "job_timeout_s": 3_600},
             "features": ["Audit complet", "Suggestions IA (limitées)", "Exports",
                          "Corrections du code en pull request GitHub (2/mois, pour essayer)"],
@@ -209,7 +210,8 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 100,
                 "ai_articles_month": 0,
             },
-            "correction": {"model": "claude-sonnet-4-6", "max_files": 12},
+            "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
+                           "max_files": 12},
             "crawl": {"max_pages_per_crawl": 3_000, "max_pagespeed_urls": 15, "job_timeout_s": 7_200},
             "features": ["Corrections du code en pull request GitHub (100/mois)", "Audit complet", "Suggestions IA", "Exports PDF/CSV", "Monitoring", "Opportunités backlinks"],
         },
@@ -226,7 +228,8 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 300,
                 "ai_articles_month": 4,
             },
-            "correction": {"model": "claude-sonnet-4-6", "max_files": 20},
+            "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
+                           "max_files": 20},
             "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
             "features": ["Corrections du code en pull request GitHub (300/mois)", "Comptes d'équipe (2 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
@@ -245,7 +248,8 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "ai_corrections_month": 900,
                 "ai_articles_month": 12,
             },
-            "correction": {"model": "claude-opus-4-8", "max_files": 40},
+            "correction": {"model": "claude-opus-4-8", "model_openai": "gpt-5.5",
+                           "max_files": 40},
             "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},
             "features": ["Corrections du code en pull request GitHub (900/mois)", "Comptes d'équipe (5 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
@@ -284,8 +288,9 @@ def _apply_plan_config_override(defaults: dict[str, dict[str, Any]]) -> None:
                     defaults[plan_key].setdefault("crawl", {})[k] = int(v)
         corr = pv.get("correction")
         if isinstance(corr, dict):
-            if "model" in corr:
-                defaults[plan_key].setdefault("correction", {})["model"] = str(corr["model"])
+            for cle in ("model", "model_openai"):
+                if cle in corr:
+                    defaults[plan_key].setdefault("correction", {})[cle] = str(corr[cle])
             if isinstance(corr.get("max_files"), (int, float)) and not isinstance(corr.get("max_files"), bool):
                 defaults[plan_key].setdefault("correction", {})["max_files"] = int(corr["max_files"])
 
@@ -296,8 +301,36 @@ def correction_config_for_plan(plan_key: str) -> dict[str, Any]:
     plan = cat.get(str(plan_key or "").strip().lower()) or cat.get("free", {})
     corr = plan.get("correction") if isinstance(plan, dict) else None
     if isinstance(corr, dict):
-        return {"model": str(corr.get("model") or ""), "max_files": int(corr.get("max_files") or 0)}
-    return {"model": "", "max_files": 0}
+        return {"model": str(corr.get("model") or ""),
+                "model_openai": str(corr.get("model_openai") or ""),
+                "max_files": int(corr.get("max_files") or 0)}
+    return {"model": "", "model_openai": "", "max_files": 0}
+
+
+def openai_peer_for_model(anthropic_model: str) -> str:
+    """Le modele OpenAI de MEME PALIER que ce modele Anthropic.
+
+    LE REPLI DOIT ETRE DE QUALITE EGALE — decision du proprietaire, 21/09/2026. Jusque-la le
+    palier disparaissait avec le fournisseur : `model_override` n'etait honore que du cote
+    Anthropic, et tout le monde, du forfait Gratuit au Business, retombait sur le meme modele.
+
+    La correspondance vit dans le CATALOGUE, pas dans le code d'appel : c'est deja lui qui
+    repond a « qu'est-ce que ce forfait obtient », et il se regle sans deploiement par
+    `PLAN_CONFIG_JSON`. Un nom de modele vieillit ; une table qu'on ne peut changer qu'en
+    deployant vieillit mal.
+
+    Un modele inconnu — surcharge d'environnement, catalogue modifie — rend le pair du palier
+    STANDARD, jamais rien. Rendre "" ferait taire le repli entier, et une panne vaut mieux
+    qu'une degradation muette seulement quand elle est CHOISIE, pas quand elle est accidentelle.
+    """
+    cat = plan_catalog()
+    vise = str(anthropic_model or "").strip()
+    for plan in cat.values():
+        corr = plan.get("correction") if isinstance(plan, dict) else None
+        if isinstance(corr, dict) and str(corr.get("model") or "").strip() == vise and vise:
+            return str(corr.get("model_openai") or "").strip()
+    standard = (cat.get("pro") or {}).get("correction") or {}
+    return str(standard.get("model_openai") or "").strip()
 
 
 def crawl_config_for_plan(plan_key: str) -> dict[str, int]:

@@ -3498,12 +3498,13 @@ def _correction_ai_model(provider: str) -> str:
     if provider == "anthropic":
         return (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
     if provider == "openai":
-        # gpt-4o-mini is broadly available; override via OPENAI_CHAT_MODEL if your
-        # account has a newer model (e.g. gpt-5.1-mini).
+        # PLUS DE MODELE `mini` PAR DEFAUT. Le repli doit etre de qualite egale (proprietaire,
+        # 21/09/2026) : le defaut vient du catalogue des forfaits, la ou vit deja la question
+        # « qu'est-ce que ce plan obtient », et se regle sans deploiement.
         return (
             os.environ.get("OPENAI_CHAT_MODEL")
             or os.environ.get("OPENAI_MODEL")
-            or "gpt-4o-mini"
+            or billing.openai_peer_for_model("")
         ).strip()
     return ""
 
@@ -3766,6 +3767,12 @@ def _anthropic_messages_text(
     return "".join(out).strip()
 
 
+# Les modeles qui refusent une temperature autre que leur valeur par defaut. Rempli par
+# l'observation, jamais par une liste ecrite d'avance : un nom de modele qu'on n'a pas encore vu
+# ne doit pas dependre de ce qu'on aura pense a y inscrire.
+_OPENAI_SANS_TEMPERATURE: set[str] = set()
+
+
 def _openai_chat_text(
     *, system: str, user_msg: str, model: str, max_tokens: int, temperature: float, json_mode: bool
 ) -> str:
@@ -3775,21 +3782,40 @@ def _openai_chat_text(
     base = (os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").strip().rstrip("/")
     payload: dict[str, Any] = {
         "model": model,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
+        # `max_tokens` EST REFUSE par toute la generation gpt-5, mesure le 21/09/2026 :
+        # « Unsupported parameter: 'max_tokens' is not supported with this model ». C'est ce
+        # detail, et non un mauvais choix de nom, qui tenait le repli sur un modele mini : tout
+        # modele moderne rejetait l'appel avant meme de le lire. `max_completion_tokens` est
+        # accepte par les deux generations — verifie sur gpt-5.5 ET sur gpt-4o-mini.
+        "max_completion_tokens": max_tokens,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user_msg},
         ],
     }
+    if model not in _OPENAI_SANS_TEMPERATURE:
+        payload["temperature"] = temperature
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
-    resp = requests.post(
-        f"{base}/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json=payload,
-        timeout=90,
-    )
+
+    def _appeler(corps: dict[str, Any]) -> Any:
+        return requests.post(
+            f"{base}/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=corps,
+            timeout=90,
+        )
+
+    resp = _appeler(payload)
+    # CERTAINS MODELES N'ACCEPTENT QUE LA TEMPERATURE PAR DEFAUT (gpt-5.5 : « Only the default
+    # (1) is supported »). On ne DEVINE pas lesquels a partir de leur nom — ce serait un pari
+    # sur les modeles a venir, et c'est ce genre de pari qui a fige ce client. On lit le refus,
+    # on retire le parametre, on retient le modele pour les appels suivants du processus.
+    if resp.status_code == 400 and "temperature" in (resp.text or "").lower():
+        _OPENAI_SANS_TEMPERATURE.add(model)
+        logger.info("[correction-ai] %s n'accepte que la temperature par defaut", model)
+        payload.pop("temperature", None)
+        resp = _appeler(payload)
     if resp.status_code != 200:
         raise RuntimeError(f"OpenAI HTTP {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
@@ -3819,8 +3845,20 @@ def _correction_ai_json(
         order.append("anthropic")
     json_hint = "\n\nRéponds UNIQUEMENT avec l'objet JSON valide, sans texte autour ni bloc markdown."
     for prov in order:
-        model = (model_override if (prov == "anthropic" and model_override) else _correction_ai_model(prov))
-        if model_override and prov != "anthropic":
+        if prov == "anthropic":
+            model = model_override or _correction_ai_model(prov)
+        else:
+            # LE PALIER SUIT LE FOURNISSEUR. Il se deduit du modele Anthropic deja passe, donc
+            # aucun appelant ne peut l'oublier — et ils sont une vingtaine. Une surcharge
+            # d'environnement reste prioritaire : c'est le levier d'urgence.
+            model = ((os.environ.get("OPENAI_CHAT_MODEL") or os.environ.get("OPENAI_MODEL")
+                      or "").strip()
+                     or billing.openai_peer_for_model(model_override)
+                     or _correction_ai_model(prov))
+            if model_override:
+                logger.info("[correction-ai] palier %r servi par %r cote OpenAI",
+                            model_override, model)
+        if False:
             # The per-plan model (Sonnet for Solo/Pro, Opus for Business) only applies to the
             # Anthropic path. With no ANTHROPIC_API_KEY the whole tier differentiation is
             # silently dropped and every plan gets the OpenAI fallback — a 199 EUR customer runs
