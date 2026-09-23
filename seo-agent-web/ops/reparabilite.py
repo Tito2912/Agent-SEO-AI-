@@ -142,7 +142,6 @@ VERDICTS: dict[str, tuple[str, str]] = {
     "https_to_http_redirect": ("HORS_DEPOT", "meme redirection de scheme, en sens inverse"),
     "http_page_has_internal_links_to_https": ("HORS_DEPOT", "page servie en http qui lie en https : c'est la page http qui ne devrait plus etre servie"),
     "redirect_302": ("HORS_DEPOT", "302 au lieu de 301 ; le code vit dans la couche qui redirige, et rien ne mesure si le provisoire est DELIBERE"),
-    "sitemap_xml_not_found": ("HORS_DEPOT", "aucun sitemap servi ; la plupart des stacks le GENERENT, et l'ecrire en dur a deja casse un build (test_un_generateur_typescript_n_est_JAMAIS_complete)"),
     "css_not_minified": ("HORS_DEPOT", "sortie de build : minifier la source du depot detruirait la source"),
     "javascript_not_minified": ("HORS_DEPOT", "sortie de build, meme raison"),
     "image_file_size_too_large": ("HORS_DEPOT", "poids d'un binaire servi ; recompresser n'est pas une edition de markup"),

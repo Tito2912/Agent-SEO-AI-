@@ -4092,7 +4092,12 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     # `inconsistent_ai_training_bot_policy` se repare dans `robots.txt` elle aussi : on la range
     # sur le fichier qu'elle EDITE, pas sur ce que son nom evoque. Meme regle que ci-dessous.
     robots = set(_ROBOTS_KEYS) | set(_AI_POLICY_KEYS)
-    sitemap = set(_SITEMAP_FAMILY_KEYS)
+    # `_SITEMAP_CREATE_KEYS` rejoint le groupe sitemap pour la resolution des candidats,
+    # meme si son correcteur CREE le fichier au lieu d'en editer un : toute cle revendiquee
+    # doit pouvoir nommer des fichiers, sinon la garde d'exclusivite la signale comme
+    # orpheline — et elle a raison, une cle sans famille est une cle qu'aucun ciblage ne
+    # sait router si son chemin special disparaissait.
+    sitemap = set(_SITEMAP_FAMILY_KEYS) | set(_SITEMAP_CREATE_KEYS)
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
     # `links_with_no_anchor_text` rejoint le groupe des liens : ce qu'elle edite est un <a> dans
     # le corps d'une page ou d'un en-tete partage, exactement les memes fichiers que les autres
@@ -4251,6 +4256,11 @@ def _handled_issue_keys() -> set[str]:
     for group in (
         _SITEMAP_ADD_KEYS, _SITEMAP_REWRITE_KEYS, _SITEMAP_ALTERNATE_KEYS, _SITEMAP_REMOVE_KEYS,
         _SITEMAP_HTTPS_KEYS, _SITEMAP_DEDUPE_KEYS, _HREFLANG_RETURN_KEYS,
+        # La seule famille de ce tableau qui CREE un fichier au lieu d'en modifier un. Elle
+        # debloque `sitemap_not_in_robots`, qui refusait jusqu'ici en la nommant : « Aucun
+        # sitemap lisible a declarer : c'est `sitemap_xml_not_found` qu'il faut traiter
+        # d'abord. » Un correcteur ecrit attendait celui-ci.
+        _SITEMAP_CREATE_KEYS,
         _HREFLANG_DROP_KEYS, _ANCHOR_TEXT_KEYS, _ROBOTS_KEYS,
         _AI_POLICY_KEYS,
         _CANONICAL_BROKEN_KEYS,
@@ -23448,6 +23458,196 @@ def _served_lang_strategy(all_paths: list[str]) -> str:
     return "source"
 
 
+_SITEMAP_CREATE_KEYS = {"sitemap_xml_not_found"}
+# Les dossiers servis TELS QUELS par les generateurs des neuf idiomes, du plus specifique au
+# plus general. Ils ne servent que de repli : l'emplacement se DEDUIT d'abord du depot.
+_DOSSIERS_STATIQUES = ("public", "static", "assets")
+# Au-dela, un sitemap doit etre decoupe en index. Le seuil officiel est 50 000 URL / 50 Mo ;
+# on s'arrete bien avant, parce qu'un fichier qu'on ne sait pas decouper vaut mieux refuse
+# qu'ecrit a moitie.
+_SITEMAP_URLS_MAX = 5000
+
+
+# Les formes qui PRODUISENT un sitemap a la construction. Ecrire un fichier statique a cote
+# d'un generateur ne repare rien : selon la stack, le generateur gagne la route et notre
+# fichier est mort-ne, ou les deux coexistent et se contredisent. Dans les deux cas la cause
+# reelle — un generateur casse ou mal configure — reste entiere, et la correction se croit
+# faite. C'est exactement l'avertissement que portait le verdict `HORS_DEPOT` de cette famille
+# avant qu'elle ait un correcteur : « la plupart des stacks le GENERENT ».
+_SITEMAP_GENERATEURS_FICHIERS = (
+    "sitemap.ts", "sitemap.js", "sitemap.xml.ts", "sitemap.xml.js",
+    "sitemap.xml.tsx", "sitemap.xml/+server.ts", "sitemap.xml/+server.js",
+)
+_SITEMAP_GENERATEURS_PAQUETS = (
+    "gatsby-plugin-sitemap", "@astrojs/sitemap", "@nuxtjs/sitemap", "nuxt-simple-sitemap",
+    "next-sitemap", "svelte-sitemap", "vite-plugin-sitemap",
+)
+
+
+def _sitemap_deja_engendre(all_paths: list[str], package_json: str = "") -> str:
+    """Ce qui, dans ce depot, produit deja un sitemap — ou "" si rien ne le fait.
+
+    TROIS SIGNES, et ils ne se valent pas. Un FICHIER de route (`app/sitemap.ts`,
+    `src/routes/sitemap.xml/+server.ts`) est une preuve directe. Un PAQUET declare
+    (`@astrojs/sitemap`) l'est presque autant : on ne l'installe pas par hasard. HUGO engendre
+    son sitemap SANS rien declarer — c'est son comportement par defaut, et c'est le piege le
+    plus silencieux des trois, parce qu'aucun fichier ni aucune dependance ne le trahit.
+
+    On rend ce qu'on a trouve, pas un booleen : l'appelant doit pouvoir le NOMMER dans son
+    refus. Un refus qui ne dit pas ce qu'il a vu ne s'instruit pas.
+    """
+    chemins = [str(p) for p in (all_paths or []) if p]
+    for chemin in chemins:
+        minuscule = chemin.lower()
+        for forme in _SITEMAP_GENERATEURS_FICHIERS:
+            if minuscule.endswith("/" + forme) or minuscule == forme:
+                return chemin
+    paquets = str(package_json or "")
+    for nom in _SITEMAP_GENERATEURS_PAQUETS:
+        if '"%s"' % nom in paquets:
+            return nom
+    for chemin in chemins:
+        nom = chemin.rsplit("/", 1)[-1].lower()
+        if nom in ("hugo.toml", "hugo.yaml", "hugo.json") or (
+                nom in ("config.toml", "config.yaml") and "/" not in chemin):
+            return "Hugo (sitemap engendre par defaut)"
+    return ""
+
+
+def _emplacement_du_sitemap(all_paths: list[str]) -> str:
+    """Ou poser `sitemap.xml` dans CE depot, ou "" si on ne sait pas.
+
+    ON TRANSPOSE, ON NE DEVINE PAS. Mesure du 22/09/2026 sur les neuf depots du banc : chacun
+    range son sitemap exactement la ou vit son `robots.txt` — a la racine pour static-html et
+    Jekyll, dans `public/` pour next-pages, Astro et Nuxt, dans `static/` pour Gatsby,
+    SvelteKit et Hugo. Le `robots.txt` est donc un temoin fiable de l'endroit que ce
+    generateur-la sert tel quel, et il survit aux conventions qu'aucune table n'anticipe.
+
+    Le repli par dossier connu ne sert qu'aux depots sans `robots.txt`. Il est ordonne et
+    borne : `public/` avant `static/`, et seulement si le dossier EXISTE deja dans l'arbre —
+    en creer un que le generateur ne sert pas produirait un fichier invisible, donc une
+    correction qui se croit faite.
+
+    NEXT APP ROUTER EST LE CAS QU'ON ACCEPTE DE SERVIR IMPARFAITEMENT. Son idiome est
+    `app/sitemap.ts`, un module qui engendre le XML. Ecrire `public/sitemap.xml` y est
+    NEANMOINS correct : Next sert `public/` tel quel. On perd l'idiome, on gagne un sitemap
+    valide sans ecrire de code dans le depot du client.
+    """
+    chemins = [p for p in (all_paths or []) if p]
+    for chemin in chemins:
+        nom = chemin.rsplit("/", 1)[-1].lower()
+        if nom == "robots.txt":
+            dossier = chemin.rsplit("/", 1)[0] if "/" in chemin else ""
+            return ("%s/sitemap.xml" % dossier) if dossier else "sitemap.xml"
+    presents = {p.split("/", 1)[0] for p in chemins if "/" in p}
+    for dossier in _DOSSIERS_STATIQUES:
+        if dossier in presents:
+            return "%s/sitemap.xml" % dossier
+    return ""
+
+
+def _urls_indexables_du_rapport(pages: list[dict[str, Any]] | None) -> list[str]:
+    """Les URL que le crawl a vues indexables, dedoublonnees et triees.
+
+    MEME DEFINITION QUE LE CRAWLER, volontairement etroite : 200, HTML, sans `noindex`, et
+    canonique d'elle-meme. Un sitemap qui liste une page `noindex` ou une copie non canonique
+    cree trois anomalies la ou il en reparait une — et ces trois-la, le produit les detecte
+    (`sitemap_noindex_page`, `sitemap_non_canonical_page`). S'auto-infliger un defaut qu'on
+    sait detecter serait le comble.
+    """
+    out: list[str] = []
+    for page in pages or []:
+        if not isinstance(page, dict):
+            continue
+        if int(page.get("status_code") or 0) != 200 or page.get("error"):
+            continue
+        for champ in ("meta_robots", "x_robots_tag"):
+            if "noindex" in str(page.get(champ) or "").lower():
+                break
+        else:
+            url = str(page.get("final_url") or page.get("url") or "").strip()
+            canonical = str(page.get("canonical") or "").strip()
+            if canonical and _norm_url_for_match(canonical) != _norm_url_for_match(url):
+                continue
+            if url.lower().startswith(("http://", "https://")) and url not in out:
+                out.append(url)
+    return sorted(out)
+
+
+def _sitemap_xml(urls: list[str]) -> str:
+    """Un sitemap minimal et valide : `<loc>` et rien d'autre.
+
+    PAS DE `lastmod`, PAS DE `priority`, PAS DE `changefreq`. Un `lastmod` demanderait une date
+    que le crawl ne connait pas — il verrait la date du jour, c'est-a-dire une date fausse pour
+    toutes les pages. Les deux autres sont ignores par Google depuis des annees. Une entree
+    avec le seul `<loc>` est valide ; une entree ornee d'une date inventee est un mensonge que
+    le prochain crawl du client contredira.
+    """
+    lignes = ['<?xml version="1.0" encoding="UTF-8"?>',
+              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for url in urls:
+        lignes.append("  <url><loc>%s</loc></url>" % html.escape(url, quote=False))
+    lignes.append("</urlset>")
+    return "\n".join(lignes) + "\n"
+
+
+def _deep_creer_le_sitemap(
+    *, owner: str, repo_name: str, token: str, fix_branch: str, all_paths: list[str],
+    pages: list[dict[str, Any]] | None, package_json: str = "",
+) -> tuple[list[str], list[str]]:
+    """Ecrit `sitemap.xml` dans un depot qui n'en a pas. Rend (fichiers ecrits, notes).
+
+    LE PREMIER CORRECTEUR QUI N'APPELLE AUCUN MODELE. Tout ce qu'il ecrit est connu : la liste
+    des pages vient du crawl, l'emplacement se lit dans le depot, et le format est fige par une
+    norme. Il ne consomme donc aucun quota, ne peut rien halluciner, et n'a pas besoin d'etre
+    relu pour son contenu — seulement approuve.
+
+    On ne REGENERE jamais un sitemap existant. Cette famille signale une absence ; si le fichier
+    est la, c'est l'arbre qui est perime et ecraser serait detruire le travail du client.
+    """
+    engendre = _sitemap_deja_engendre(all_paths, package_json)
+    if engendre:
+        return [], ["Ce depot produit deja un sitemap (%s) : en ecrire un statique a cote ne "
+                    "reparerait rien et masquerait la vraie cause. Le sitemap n'est pas servi "
+                    "alors qu'il est engendre — c'est la generation ou la configuration du "
+                    "site qu'il faut regarder." % engendre]
+    cible = _emplacement_du_sitemap(all_paths)
+    if not cible:
+        return [], ["Aucun `robots.txt` ni dossier statique connu dans ce depot : impossible "
+                    "de savoir ou un fichier servi tel quel doit etre pose."]
+    if cible in (all_paths or []):
+        return [], ["`%s` existe deja dans le depot : l'anomalie vient d'ailleurs (le fichier "
+                    "n'est peut-etre pas servi a la racine du site)." % cible]
+
+    urls = _urls_indexables_du_rapport(pages)
+    if not urls:
+        return [], ["Aucune page indexable dans le dernier crawl : un sitemap vide n'aiderait "
+                    "personne."]
+    if len(urls) > _SITEMAP_URLS_MAX:
+        return [], ["%d pages indexables : au-dela de %d un sitemap doit etre decoupe en index, "
+                    "ce que ce correcteur ne sait pas encore faire."
+                    % (len(urls), _SITEMAP_URLS_MAX)]
+
+    import base64 as _b64
+    try:
+        _github_api_put(
+            _github_content_api_path(owner, repo_name, cible), token=token,
+            json_body={
+                "message": "fix(seo): %s\n\nGenerated by SEO Agent" % cible,
+                "content": _b64.b64encode(_sitemap_xml(urls).encode("utf-8")).decode("ascii"),
+                "branch": fix_branch,
+            },
+        )
+    except Exception as exc:
+        return [], ["Creation de %s impossible : %s" % (cible, exc)]
+    return [cible], [
+        "`%s` cree avec %d URL indexables, telles que le dernier crawl les a vues. "
+        "Emplacement deduit du depot lui-meme. Aucun `lastmod` n'est ecrit : le crawl ne "
+        "connait pas la date de modification des pages, et une date inventee serait pire "
+        "qu'absente. Declarer ce sitemap dans `robots.txt` est une correction separee "
+        "(`sitemap_not_in_robots`), desormais debloquee." % (cible, len(urls))]
+
+
 def _deep_fix_served_html_lang(
     *, owner: str, repo_name: str, token: str, fix_branch: str, all_paths: list[str],
     file_state: dict[str, dict[str, str]],
@@ -25270,7 +25470,32 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # tests, which is the whole reason that test was written.
     _lang_changes: list[str] = []
     _lang_notes: list[str] = []
-    if issue_key in _SERVED_LANG_FIX_KEYS and _served_lang_strategy(all_paths) == "postbuild":
+    if issue_key in _SITEMAP_CREATE_KEYS:
+        # MEME FORME QUE LE CORRECTIF DE LANGUE CI-DESSOUS, et pour la meme raison : la boucle
+        # de patch MODIFIE des fichiers existants, elle ne sait pas en creer un. Une absence se
+        # repare en ecrivant, pas en reecrivant.
+        patched_files, skipped, targets, _ai_files = [], [], [], []
+        try:
+            _pkg = ""
+            if "package.json" in all_paths:
+                try:
+                    import base64 as _b64pkg
+                    _fd = _github_api_get(
+                        _github_content_api_path(owner, repo_name, "package.json"),
+                        token=token, params={"ref": branch}, timeout_s=15)
+                    _pkg = _b64pkg.b64decode(
+                        str(_fd.get("content") or "").replace("\n", "")).decode(
+                            "utf-8", errors="replace")
+                except Exception:
+                    _pkg = ""
+            _lang_changes, _lang_notes = _deep_creer_le_sitemap(
+                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, package_json=_pkg,
+                pages=_report_pages if isinstance(_report_pages, list) else None)
+        except Exception as exc:
+            _lang_changes, _lang_notes = [], ["Creation du sitemap impossible : %s" % exc]
+        patched_files = list(_lang_changes)
+    elif issue_key in _SERVED_LANG_FIX_KEYS and _served_lang_strategy(all_paths) == "postbuild":
         # The ONE shape where no source fix exists: Next.js App Router with no locale segment,
         # whose root layout never receives the route. Everywhere else the patcher runs, with the
         # stack's own idiom in the hint — adding a build step to a project that can fix itself
