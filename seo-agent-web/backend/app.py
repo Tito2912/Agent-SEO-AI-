@@ -4097,7 +4097,8 @@ def _issue_file_families() -> "list[tuple[str, set[str], list[str]]]":
     # doit pouvoir nommer des fichiers, sinon la garde d'exclusivite la signale comme
     # orpheline — et elle a raison, une cle sans famille est une cle qu'aucun ciblage ne
     # sait router si son chemin special disparaissait.
-    sitemap = set(_SITEMAP_FAMILY_KEYS) | set(_SITEMAP_CREATE_KEYS)
+    sitemap = (set(_SITEMAP_FAMILY_KEYS) | set(_SITEMAP_CREATE_KEYS)
+               | set(_SITEMAP_REPAIR_KEYS))
     redirect_config = set(_REDIRECT_CONFIG_KEYS)
     # `links_with_no_anchor_text` rejoint le groupe des liens : ce qu'elle edite est un <a> dans
     # le corps d'une page ou d'un en-tete partage, exactement les memes fichiers que les autres
@@ -4260,7 +4261,7 @@ def _handled_issue_keys() -> set[str]:
         # debloque `sitemap_not_in_robots`, qui refusait jusqu'ici en la nommant : « Aucun
         # sitemap lisible a declarer : c'est `sitemap_xml_not_found` qu'il faut traiter
         # d'abord. » Un correcteur ecrit attendait celui-ci.
-        _SITEMAP_CREATE_KEYS,
+        _SITEMAP_CREATE_KEYS, _SITEMAP_REPAIR_KEYS,
         _HREFLANG_DROP_KEYS, _ANCHOR_TEXT_KEYS, _ROBOTS_KEYS,
         _AI_POLICY_KEYS,
         _CANONICAL_BROKEN_KEYS,
@@ -23648,6 +23649,100 @@ def _deep_creer_le_sitemap(
         "(`sitemap_not_in_robots`), desormais debloquee." % (cible, len(urls))]
 
 
+_SITEMAP_REPAIR_KEYS = {"sitemap_invalid_format"}
+
+
+def _fichiers_sitemap_du_depot(all_paths: list[str]) -> list[str]:
+    """Les fichiers `*sitemap*.xml` du depot, hors sorties de construction.
+
+    `dist/`, `build/`, `.next/`, `out/` et `public/` d'un generateur contiennent des COPIES
+    engendrees : les reecrire ne survit pas a la construction suivante. On ne garde donc que ce
+    qui est plausiblement source. `public/` reste retenu parce que chez Next, Astro et Nuxt
+    c'est un dossier SOURCE servi tel quel — la distinction se fait par le generateur, pas par
+    le nom du dossier, et le refus de generateur s'en charge en amont.
+    """
+    exclus = ("dist/", "build/", "out/", ".next/", ".nuxt/", ".output/", "node_modules/")
+    out: list[str] = []
+    for chemin in (all_paths or []):
+        minuscule = str(chemin).lower()
+        if any(minuscule.startswith(e) or ("/" + e) in minuscule for e in exclus):
+            continue
+        nom = minuscule.rsplit("/", 1)[-1]
+        if nom.endswith(".xml") and "sitemap" in nom:
+            out.append(str(chemin))
+    return sorted(out)
+
+
+def _deep_reparer_le_sitemap(
+    *, owner: str, repo_name: str, token: str, fix_branch: str, all_paths: list[str],
+    pages: list[dict[str, Any]] | None, package_json: str = "",
+) -> tuple[list[str], list[str]]:
+    """Reecrit un sitemap que l'analyseur ne sait pas lire. Rend (fichiers ecrits, notes).
+
+    CE QU'ON REPARE ICI EST UN FICHIER QUE PERSONNE NE LIT. `sitemap_parse_error` ne se leve
+    que sur du XML qui ne s'analyse pas — un index de sitemaps valide, lui, s'analyse tres
+    bien et suit ses enfants. Un fichier illisible pour nous l'est aussi pour Google : le
+    remplacer par un sitemap valide ne detruit donc aucune information exploitable.
+
+    UN SEUL SITEMAP, OU RIEN. C'est la garde qui empeche la reparation de creer une anomalie
+    voisine. Quand un site en porte plusieurs — un index et ses enfants — remplacer l'enfant
+    casse par la liste COMPLETE du site ferait apparaitre chaque URL dans deux sitemaps a la
+    fois, ce que ce produit detecte sous le nom `page_in_multiple_sitemaps`. Repartir les URL
+    entre plusieurs fichiers demanderait de savoir ce que chacun etait CENSE contenir, et un
+    fichier illisible ne le dit pas. On refuse en le disant.
+    """
+    engendre = _sitemap_deja_engendre(all_paths, package_json)
+    if engendre:
+        return [], ["Ce depot produit son sitemap (%s) : le fichier servi est une sortie de "
+                    "construction, et le reecrire ne survivrait pas au prochain build. C'est "
+                    "la generation qu'il faut corriger." % engendre]
+
+    fichiers = _fichiers_sitemap_du_depot(all_paths)
+    if not fichiers:
+        return [], ["Aucun fichier sitemap dans le depot : le sitemap servi vient d'ailleurs "
+                    "(un generateur, un service externe, une regle de reecriture)."]
+    if len(fichiers) > 1:
+        return [], ["Ce depot porte %d fichiers sitemap (%s). Remplacer l'un d'eux par la "
+                    "liste complete du site ferait apparaitre chaque page dans plusieurs "
+                    "sitemaps a la fois, et un fichier illisible ne dit pas ce qu'il etait "
+                    "cense contenir." % (len(fichiers), ", ".join(fichiers[:4]))]
+
+    cible = fichiers[0]
+    urls = _urls_indexables_du_rapport(pages)
+    if not urls:
+        return [], ["Aucune page indexable dans le dernier crawl : remplacer le sitemap par un "
+                    "fichier vide serait pire que le laisser illisible."]
+    if len(urls) > _SITEMAP_URLS_MAX:
+        return [], ["%d pages indexables : au-dela de %d un sitemap doit etre decoupe en index, "
+                    "ce que ce correcteur ne sait pas encore faire."
+                    % (len(urls), _SITEMAP_URLS_MAX)]
+
+    import base64 as _b64
+    try:
+        fd = _github_api_get(_github_content_api_path(owner, repo_name, cible),
+                             token=token, params={"ref": fix_branch}, timeout_s=20)
+        sha = str(fd.get("sha") or "")
+    except Exception as exc:
+        return [], ["Lecture de %s impossible : %s" % (cible, exc)]
+    try:
+        _github_api_put(
+            _github_content_api_path(owner, repo_name, cible), token=token,
+            json_body={
+                "message": "fix(seo): %s reecrit en XML valide\n\nGenerated by SEO Agent" % cible,
+                "content": _b64.b64encode(_sitemap_xml(urls).encode("utf-8")).decode("ascii"),
+                "sha": sha,
+                "branch": fix_branch,
+            },
+        )
+    except Exception as exc:
+        return [], ["Ecriture de %s impossible : %s" % (cible, exc)]
+    return [cible], [
+        "`%s` ne s'analysait pas : reecrit en XML valide avec les %d URL indexables du dernier "
+        "crawl. Un fichier illisible pour nous l'est aussi pour les moteurs, donc rien "
+        "d'exploitable n'est perdu — mais relis le diff si ce sitemap portait des extensions "
+        "(images, actualites, videos) : elles ne sont pas reconduites." % (cible, len(urls))]
+
+
 def _deep_fix_served_html_lang(
     *, owner: str, repo_name: str, token: str, fix_branch: str, all_paths: list[str],
     file_state: dict[str, dict[str, str]],
@@ -25470,7 +25565,29 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # tests, which is the whole reason that test was written.
     _lang_changes: list[str] = []
     _lang_notes: list[str] = []
-    if issue_key in _SITEMAP_CREATE_KEYS:
+    if issue_key in _SITEMAP_REPAIR_KEYS:
+        patched_files, skipped, targets, _ai_files = [], [], [], []
+        _pkg_r = ""
+        if "package.json" in all_paths:
+            try:
+                import base64 as _b64r
+                _fdr = _github_api_get(
+                    _github_content_api_path(owner, repo_name, "package.json"),
+                    token=token, params={"ref": branch}, timeout_s=15)
+                _pkg_r = _b64r.b64decode(
+                    str(_fdr.get("content") or "").replace("\n", "")).decode(
+                        "utf-8", errors="replace")
+            except Exception:
+                _pkg_r = ""
+        try:
+            _lang_changes, _lang_notes = _deep_reparer_le_sitemap(
+                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, package_json=_pkg_r,
+                pages=_report_pages if isinstance(_report_pages, list) else None)
+        except Exception as exc:
+            _lang_changes, _lang_notes = [], ["Reparation du sitemap impossible : %s" % exc]
+        patched_files = list(_lang_changes)
+    elif issue_key in _SITEMAP_CREATE_KEYS:
         # MEME FORME QUE LE CORRECTIF DE LANGUE CI-DESSOUS, et pour la meme raison : la boucle
         # de patch MODIFIE des fichiers existants, elle ne sait pas en creer un. Une absence se
         # repare en ecrivant, pas en reecrivant.

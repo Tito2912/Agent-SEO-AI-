@@ -90,11 +90,16 @@ VERDICTS: dict[str, tuple[str, str]] = {
     "page_has_no_outgoing_links": ("DEVINER", "page sans aucun lien sortant ; vers quoi lier n'est pas mesure"),
     "more_than_three_parameters_in_url": ("DEVINER", "plus de trois parametres dans l'URL ; la forme voulue depend du routage"),
     "robots_invalid_format": ("DEVINER", "le PARSEUR robots a leve une exception : on sait que le fichier est illisible, pas ce qui y manque (seo_audit.py:9353)"),
-    "sitemap_invalid_format": ("DEVINER", "XML de sitemap illisible ; reparer un XML casse demande d'en deviner l'intention"),
+    # `sitemap_invalid_format` a quitte cette table le 22/09/2026 : elle a un correcteur. Le
+    # verdict disait « reparer un XML casse demande d'en deviner l'intention », et il avait
+    # raison — c'est pourquoi le correcteur ne REPARE pas le XML : il le REMPLACE par un
+    # sitemap engendre depuis le crawl, et il REFUSE des que le site en porte plusieurs, cas
+    # ou il faudrait effectivement deviner ce que chaque fichier etait cense contenir.
     "incorrect_pages_found_in_sitemap_xml": (
         "DEVINER",
         "LE NOM MENT : ce ne sont pas des pages mais des FICHIERS sitemap en sitemap_parse_error "
-        "ou sitemap_too_large (seo_audit.py:9400) - meme inconnue que sitemap_invalid_format",
+        "ou sitemap_too_large (seo_audit.py:9400) - donc un doublon d'affichage de "
+        "sitemap_invalid_format, que `_deep_reparer_le_sitemap` traite deja sous son vrai nom",
     ),
     "sitemap_file_too_large": ("DEVINER", "sitemap au-dela de la limite ; le scinder suppose de savoir qui le GENERE"),
     "similar_ai_generated_content": ("DEVINER", "pages trop ressemblantes ; les reecrire est un travail editorial, et le libelle ne pretend meme pas reconnaitre une IA"),

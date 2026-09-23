@@ -263,6 +263,94 @@ def test_un_config_toml_IMBRIQUE_n_est_pas_du_Hugo() -> None:
     assert m._sitemap_deja_engendre(["themes/joli/config.toml", "index.html"], "") == ""
 
 
+# ── réparer un sitemap illisible ─────────────────────────────────────────────────────────────
+
+@pytest.fixture()
+def github_lecture(monkeypatch, github):
+    """La réparation LIT le fichier avant de l'écrire : il lui faut son sha."""
+    monkeypatch.setattr(m, "_github_api_get", lambda *a, **kw: {"sha": "ancien", "content": ""})
+    return github
+
+
+def _reparer(arbre, pages, pkg=""):
+    return m._deep_reparer_le_sitemap(owner="o", repo_name="r", token="t", fix_branch="b",
+                                      all_paths=arbre, pages=pages, package_json=pkg)
+
+
+def test_un_sitemap_illisible_est_REECRIT_en_XML_valide(github_lecture) -> None:
+    """`sitemap_parse_error` ne se lève que sur du XML qui ne s'analyse pas — un index valide,
+    lui, s'analyse et suit ses enfants. Un fichier illisible pour nous l'est aussi pour
+    Google : le remplacer ne détruit rien d'exploitable."""
+    import xml.etree.ElementTree as ET
+
+    changes, notes = _reparer(["index.html", "sitemap.xml"], PAGES)
+    assert changes == ["sitemap.xml"], changes
+    ecrit = dict(github_lecture)["sitemap.xml"]
+    assert ET.fromstring(ecrit).tag.endswith("urlset")
+    assert notes and "2 URL" in notes[0], notes
+
+
+def test_le_SHA_du_fichier_existant_est_renvoye(github_lecture) -> None:
+    """Sans lui GitHub refuse l'écriture : on remplace un fichier, on n'en crée pas un."""
+    envois = []
+    vrai = m._github_api_put
+
+    def _espion(path, **kw):
+        envois.append(kw.get("json_body") or {})
+        return vrai(path, **kw)
+
+    m._github_api_put = _espion
+    try:
+        _reparer(["index.html", "sitemap.xml"], PAGES)
+    finally:
+        m._github_api_put = vrai
+    assert envois and envois[0].get("sha") == "ancien", envois
+
+
+def test_PLUSIEURS_sitemaps_font_refuser(github_lecture) -> None:
+    """La garde qui empêche de réparer en créant l'anomalie voisine. Remplacer un enfant cassé
+    par la liste complète ferait apparaître chaque URL dans deux sitemaps — ce que ce produit
+    détecte sous le nom `page_in_multiple_sitemaps`."""
+    changes, notes = _reparer(["sitemap.xml", "sitemap-pages.xml"], PAGES)
+    assert changes == [] and github_lecture == []
+    assert "plusieurs sitemaps" in notes[0], notes
+
+
+def test_un_depot_qui_ENGENDRE_fait_refuser_aussi(github_lecture) -> None:
+    """Réécrire une sortie de construction ne survit pas au build suivant."""
+    changes, notes = _reparer(["app/sitemap.ts", "public/sitemap.xml"], PAGES)
+    assert changes == [] and github_lecture == []
+    assert "app/sitemap.ts" in notes[0], notes
+
+
+def test_une_COPIE_de_build_n_est_pas_prise_pour_la_source() -> None:
+    """`dist/sitemap.xml` est engendré : le réécrire serait effacé au build suivant, et il ne
+    doit surtout pas compter comme un second sitemap qui ferait refuser à tort."""
+    assert m._fichiers_sitemap_du_depot(
+        ["public/sitemap.xml", "dist/sitemap.xml", "build/sitemap.xml"]) == ["public/sitemap.xml"]
+
+
+def test_sans_fichier_sitemap_dans_le_depot_on_refuse(github_lecture) -> None:
+    """Le sitemap servi vient d'ailleurs — un service externe, une règle de réécriture."""
+    changes, notes = _reparer(["index.html"], PAGES)
+    assert changes == [] and github_lecture == []
+    assert "Aucun fichier sitemap" in notes[0], notes
+
+
+def test_un_crawl_vide_ne_remplace_pas_par_du_vide(github_lecture) -> None:
+    changes, notes = _reparer(["index.html", "sitemap.xml"],
+                              [{"url": "https://site.fr/x", "status_code": 404}])
+    assert changes == [] and github_lecture == []
+    assert "pire" in notes[0], notes
+
+
+def test_la_note_AVERTIT_sur_les_extensions_perdues(github_lecture) -> None:
+    """Images, actualités, vidéos : un sitemap peut en porter, et nous ne les reconduisons
+    pas. Le relecteur doit le savoir avant de fusionner, pas après."""
+    _c, notes = _reparer(["index.html", "sitemap.xml"], PAGES)
+    assert "extensions" in notes[0] and "images" in notes[0], notes
+
+
 # ── l'intégration ────────────────────────────────────────────────────────────────────────────
 
 def test_la_famille_est_DECLAREE_corrigeable() -> None:
