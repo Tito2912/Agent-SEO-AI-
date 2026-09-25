@@ -69,6 +69,22 @@ SUJET = "Comment vérifier les balises canoniques d'un site"
 ETAT = os.path.join(os.environ.get("GAUNTLET_WORKDIR", "."), "contenu-banc.json")
 
 
+def stacks_demandees() -> list[str]:
+    """Les piles a jouer. `--stack=next-pages` n'en joue qu'une.
+
+    Un banc complet coute neuf appels de modele. Apres un correctif qui ne visait qu'une pile,
+    les huit autres ne mesurent rien de neuf : on paie pour confirmer ce qu'on sait deja.
+    """
+    for arg in sys.argv[1:]:
+        if arg.startswith("--stack="):
+            voulues = [s.strip() for s in arg.split("=", 1)[1].split(",") if s.strip()]
+            inconnues = [s for s in voulues if s not in STACKS]
+            if inconnues:
+                raise SystemExit("pile inconnue : %s" % ", ".join(inconnues))
+            return voulues
+    return list(STACKS)
+
+
 class _Proprietaire:
     """Administrateur : le debit et la porte ne sont pas ce qu'on mesure ici, et facturer un
     banc a un compte de test brouillerait les compteurs qu'on relit par ailleurs."""
@@ -117,7 +133,7 @@ def _section_la_plus_fournie(paths: list[str]) -> str:
 
 def ouvrir() -> None:
     resultats = []
-    for stack in STACKS:
+    for stack in stacks_demandees():
         repo = "noyaru-stack-%s" % stack
         slug, pid, uid = _projet_local(stack)
         try:

@@ -21477,6 +21477,38 @@ def _spans_texte_balise(contenu: str) -> list[tuple[int, int]]:
     return spans
 
 
+def _spans_de_prose(contenu: str) -> list[tuple[int, int]]:
+    """Les regions de `_spans_texte_balise` que borne une VRAIE balise — donc de la prose.
+
+    POURQUOI FILTRER CE QUE L'AUTRE FONCTION REND DEJA. `Array<string>` et
+    `Map<string, number>` ouvrent une pseudo-balise `string` pour un scanner de balises : ce
+    qui suit leur `>` est du CODE. Y traiter les guillemets comme de la prose ferait compter
+    l'interieur des chaines, et fabriquerait exactement le faux refus qu'on enleve ici.
+
+    Le discriminant est GRAMMATICAL, pas une liste d'elements HTML : une balise de balisage se
+    referme (`</main>`) ou se ferme elle-meme (`<br />`), un generique n'a pas de `</string>`.
+    Une liste d'elements connus aurait marche sur les neuf idiomes du banc et rate le premier
+    composant maison (`<MonEncart>`).
+    """
+    spans: list[tuple[int, int]] = []
+    minuscule = contenu.lower()
+    for debut, fin in _spans_texte_balise(contenu):
+        ouverture = contenu.rfind("<", 0, debut)
+        if ouverture < 0:
+            continue
+        if debut >= 2 and contenu[debut - 2] == "/":
+            spans.append((debut, fin))
+            continue
+        nom = _NOM_DE_BALISE_RE.match(contenu, ouverture)
+        if not nom:
+            if "</>" in contenu:
+                spans.append((debut, fin))
+            continue
+        if ("</" + nom.group(1).lower()) in minuscule:
+            spans.append((debut, fin))
+    return spans
+
+
 def _antislashs_de_trop(contenu: str, chemin: str) -> tuple[str, list[str]]:
     """Les `\\'` poses dans du texte de balisage, ou l'antislash n'est PAS un echappement.
 
@@ -21942,15 +21974,56 @@ def _unbalanced_delimiters(content: str) -> str:
     Les faux refus sont le vrai risque, puisqu'un refus coute une correction. D'ou les trois
     zones ignorees : l'interieur des chaines (le JSON-LD est plein d'accolades), les gabarits
     entre accents graves, et les commentaires.
+
+    QUATRIEME ZONE, MESUREE LE 25/09/2026 sur le banc des neuf idiomes. Le comptage suivait les
+    guillemets PARTOUT, y compris dans le texte entre deux balises. Une apostrophe de prose
+    (`<p>L'agent lit la page.</p>`) y ouvrait une chaine qui ne se refermait jamais, et tout le
+    reste du fichier etait avale : la page next-pages a ete refusee deux fois de suite, avec
+    deux modeles differents, sur un fichier PARFAITEMENT equilibre. Le motif annonce etait
+    toujours le meme — `{ non referme (+1), ( non referme (+1)`, les delimiteurs du composant
+    jamais comptes.
+
+    Deux modeles qui echouent au meme endroit de la meme facon ne se trompent pas : c'est la
+    mesure qui se trompe. Trois formes de prose francaise ordinaire declenchaient ce refus —
+    un nombre impair d'apostrophes, une citation a guillemet droit, une enumeration `1) 2) 3)`.
+
+    DANS LA PROSE, ON NE COMPTE QUE `{` ET `}`. Eux seuls y sont des delimiteurs : une
+    expression JSX ou une interpolation de gabarit. Une parenthese, un crochet, un guillemet y
+    sont des caracteres que le visiteur lit. C'est la meme lecon que `_spans_texte_balise`
+    portait deja, ecrite pour la meme raison, et que cette fonction-ci ignorait.
+
+    Mais l'accolade ROUVRE du code, et le comptage complet reprend jusqu'a sa fermeture : sans
+    cela `{liste.map((x)` jamais referme serait passe, et on aurait echange un faux refus
+    contre un vrai defaut non vu.
     """
     depth: dict[str, int] = {"{": 0, "[": 0, "(": 0}
     quote: str | None = None
     escaped = False
     comment = ""          # "" | "//" | "/*"
+    proses = _spans_de_prose(content)
+    p = 0
+    span_actif = -1
+    socle = 0
     i = 0
     while i < len(content):
         ch = content[i]
         nxt = content[i + 1] if i + 1 < len(content) else ""
+        while p < len(proses) and proses[p][1] <= i:
+            p += 1
+        dans_prose = p < len(proses) and proses[p][0] <= i
+        if dans_prose and span_actif != p:
+            span_actif, socle = p, depth["{"]
+        # `{` ROUVRE DU CODE. Dans du texte JSX, une accolade n'est pas un caractere que le
+        # visiteur lit : elle ouvre une expression JavaScript, ou les guillemets, parentheses
+        # et commentaires redeviennent ce qu'ils sont. Sans cette reprise, un `{liste.map((x)`
+        # jamais referme passait — on aurait echange un faux refus contre un vrai defaut non vu.
+        if dans_prose and depth["{"] == socle and not quote and not comment:
+            if ch == "{":
+                depth["{"] += 1
+            elif ch == "}":
+                depth["{"] -= 1
+            i += 1
+            continue
         if comment == "//":
             if ch == "\n":
                 comment = ""
