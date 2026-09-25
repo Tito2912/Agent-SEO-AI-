@@ -197,3 +197,148 @@ def test_une_accolade_dans_une_chaine_n_est_pas_un_delimiteur() -> None:
                "  )\n"
                "}\n")
     assert app._refus_de_format("src/pages/x.jsx", contenu) is None
+
+
+# --- Ce que 413 fichiers REELS ont trouve -------------------------------------------------------
+# Premier correctif ecrit, la sonde a relu tous les fichiers des neuf depots du banc. Un seul
+# refus, et il etait faux. La preuve est de construction : un fichier deja dans le depot, que
+# Netlify construit et sert, est valide. Ces trois tests figent les deux formes trouvees.
+
+LIGNE_REELLE = ("{alternates.map((a) => (<link rel=\"alternate\" hreflang={a.lang} "
+                "href={a.href} />))}")
+
+
+def test_la_ligne_de_base_astro_qui_avait_ete_refusee_a_tort() -> None:
+    """`src/layouts/Base.astro`, textuellement. Apres le `/>` on est dans l'expression qui se
+    referme, pas dans du texte : ses deux parentheses doivent etre comptees."""
+    contenu = "---\nconst alternates = []\n---\n<html>\n<head>\n%s\n</head>\n</html>\n" % LIGNE_REELLE
+    assert app._refus_de_format("src/layouts/Base.astro", contenu) is None
+
+
+@pytest.mark.parametrize("element", ["(<p>{x}</p>)", "(<hr key={x} />)"])
+def test_un_element_dans_une_expression_ne_mange_pas_ses_parentheses(element: str) -> None:
+    """Fermante ou auto-fermante, meme exigence : ce qui suit l'element appartient au code.
+
+    Ma deuxieme version comptait les elements ouverts et croyait ce cas resolu : apres `</p>`
+    on est bien toujours dans `<main>`, mais AUSSI dans l'accolade ouverte avant lui. Il faut
+    suivre les deux.
+    """
+    contenu = ("export default function P() {\n  return (\n    <main>\n"
+               "      {items.map((x) => %s)}\n    </main>\n  )\n}\n" % element)
+    assert app._refus_de_format("src/pages/x.jsx", contenu) is None
+
+
+def test_une_expression_vraiment_non_refermee_dans_un_element_reste_vue() -> None:
+    """Le pendant du test precedent : sans lui, « ne rien compter » passerait les deux."""
+    contenu = ("export default function P() {\n  return (\n    <main>\n"
+               "      {items.map((x) => (<p>{x}</p>)}\n    </main>\n  )\n}\n")
+    assert app._refus_de_format("src/pages/x.jsx", contenu)
+
+
+# --- Cinq autres trous, trouves par la deuxieme serie de mutations ------------------------------
+
+def test_du_code_apres_un_generique_reste_du_code() -> None:
+    """Sans le controle de fermeture, `Array<string>` empilerait un element et tout ce qui suit
+    deviendrait de la prose. Ma premiere version du test ne le montrait pas : le desequilibre
+    que j'y avais mis tombait DANS une accolade, donc hors prose de toute facon.
+
+    Le desequilibre doit aussi etre BORNE par une balise plus loin : une region de prose qui
+    court jusqu'a la fin du fichier n'est jamais emise, et masquait la mutation sans rien
+    prouver. Deux fois de suite, ce test a mesure autre chose que ce qu'il annonce.
+    """
+    ts = ("const noms: Array<string> = ['a'\n"
+          "export default function P() { return <p>texte</p> }\n")
+    assert app._unbalanced_delimiters(ts), "crochet non referme manque apres un generique"
+
+
+def test_une_balise_auto_fermante_n_ouvre_pas_un_element() -> None:
+    """`<Encart />` ne se ferme pas : ce qui suit appartient a l'englobant, pas a l'encart.
+
+    Le composant est utilise des DEUX facons dans le fichier — c'est la seule situation ou le
+    controle de fermeture, a lui seul, ne suffit pas a distinguer les deux.
+    """
+    contenu = ("export default function P() {\n"
+               "  return (\n"
+               "    <main>\n"
+               "      {items.map((x) => (<Encart key={x} />))}\n"
+               "      <Encart>L'agent lit la page.</Encart>\n"
+               "    </main>\n"
+               "  )\n"
+               "}\n")
+    assert app._refus_de_format("src/pages/x.jsx", contenu) is None
+
+
+def test_la_prose_reprend_apres_une_expression() -> None:
+    """Ce qui suit `{valeur}` est encore du texte. Sinon l'apostrophe d'apres rouvre une chaine."""
+    contenu = ("export default function P() {\n"
+               "  return (\n"
+               "    <main>\n"
+               "      <p>L'etat vaut {valeur} et c'est tout.</p>\n"
+               "    </main>\n"
+               "  )\n"
+               "}\n")
+    assert app._refus_de_format("src/pages/x.jsx", contenu) is None
+
+
+def test_le_corps_d_un_script_reste_du_code() -> None:
+    """Un `<script>` casse doit partir en refus : son corps n'est pas de la prose."""
+    contenu = ("<html>\n<body>\n  <p>L'agent lit la page.</p>\n"
+               "  <script>\n    const f = (a\n  </script>\n</body>\n</html>\n")
+    assert app._refus_de_format("src/pages/x.astro", contenu)
+
+
+def test_une_fermeture_de_casse_differente_est_reconnue() -> None:
+    """HTML ne distingue pas la casse : `<section>` peut se fermer par `</SECTION>`.
+
+    Ma premiere version mettait la majuscule sur l'OUVRANTE — or c'est le nom de l'ouvrante
+    qu'on met en minuscules avant de chercher, donc la recherche tombait juste de toute facon.
+    C'est la FERMANTE qui doit differer pour que le test touche ce qu'il nomme.
+    """
+    contenu = ("---\nconst titre = 'x'\n---\n"
+               "<section>L'agent lit la page d'accueil (section Sitemap.</SECTION>\n")
+    assert app._refus_de_format("src/pages/x.astro", contenu) is None
+
+
+def test_une_chaine_qui_porte_une_balise_ouvrante_garde_son_guillemet() -> None:
+    """Construire du HTML par concatenation est courant : `const ouvre = "<li>"`.
+
+    Le scanner de prose ne suit les chaines qu'a l'INTERIEUR des balises — cette `<li>` est donc
+    vue comme une vraie balise, et la region de texte qu'elle ouvre recouvre le guillemet
+    fermant de la chaine. Si l'appelant sautait cette region, il ne verrait jamais ce guillemet
+    et lirait tout le reste du fichier comme une chaine ouverte. C'est ce que garantit le
+    `not quote` de l'appelant : les deux balayages ne voient pas la meme chose, et c'est celui
+    qui suit les chaines qui doit gagner.
+    """
+    contenu = ('const ouvre = "<li>"\n'
+               "export default function P() {\n"
+               "  return (\n"
+               "    <main><li>L'agent lit la page.</li></main>\n"
+               "  )\n"
+               "}\n")
+    assert app._refus_de_format("src/pages/x.jsx", contenu) is None
+
+    # ET le fichier CASSE doit encore partir en refus. Sans cette moitie, le test ne voit rien :
+    # perdre le guillemet fermant fait tout avaler, donc ne produit AUCUN refus — le meme
+    # resultat qu'un fichier sain. Un defaut qui n'ajoute pas de bruit se mesure par ce qu'il
+    # fait DISPARAITRE.
+    casse = contenu.replace("  )\n", "")
+    assert app._refus_de_format("src/pages/x.jsx", casse), (
+        "parenthese non refermee manquee : le guillemet fermant de la chaine a ete saute")
+
+
+def test_un_chevron_dans_un_attribut_ne_coupe_pas_la_balise() -> None:
+    """`title="a > b"` : le chevron appartient a la valeur, pas a la fin de la balise.
+
+    POURQUOI CE TEST REGARDE LA FONCTION ET PAS LE VERDICT. J'ai cherche une entree ou retirer
+    le suivi des chaines d'attribut change le refus final : sur douze candidats, aucune. Le
+    garde `not quote` de l'appelant masque le defaut — les deux protegent la meme chose par
+    deux cotes.
+
+    Le laisser non teste pour autant serait s'en remettre a ce masque. Sans ce suivi,
+    `_spans_de_prose` rend une region qui COMMENCE au milieu d'un attribut (` b">L'agent...`) :
+    son contrat est faux meme si son unique appelant d'aujourd'hui n'en souffre pas. C'est le
+    genre de ligne qu'un deuxieme appelant paierait, et il n'y aurait alors plus rien pour dire
+    d'ou vient le defaut.
+    """
+    texte = '<main><p title="a > b">L\'agent lit la page.</p></main>'
+    assert [texte[d:f] for d, f in app._spans_de_prose(texte)] == ["L'agent lit la page."]

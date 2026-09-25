@@ -21478,34 +21478,92 @@ def _spans_texte_balise(contenu: str) -> list[tuple[int, int]]:
 
 
 def _spans_de_prose(contenu: str) -> list[tuple[int, int]]:
-    """Les regions de `_spans_texte_balise` que borne une VRAIE balise — donc de la prose.
+    """Le texte qu'un visiteur lit : dans un element ouvert, et hors de toute expression.
 
-    POURQUOI FILTRER CE QUE L'AUTRE FONCTION REND DEJA. `Array<string>` et
-    `Map<string, number>` ouvrent une pseudo-balise `string` pour un scanner de balises : ce
-    qui suit leur `>` est du CODE. Y traiter les guillemets comme de la prose ferait compter
-    l'interieur des chaines, et fabriquerait exactement le faux refus qu'on enleve ici.
+    PREMIERE VERSION, FAUSSE, ET C'EST LA LECON. J'avais defini la prose comme « ce qui suit
+    une vraie balise ». Les 413 fichiers REELS des neuf depots du banc ont rendu un seul refus,
+    et il etait faux — `src/layouts/Base.astro` :
 
-    Le discriminant est GRAMMATICAL, pas une liste d'elements HTML : une balise de balisage se
-    referme (`</main>`) ou se ferme elle-meme (`<br />`), un generique n'a pas de `</string>`.
-    Une liste d'elements connus aurait marche sur les neuf idiomes du banc et rate le premier
-    composant maison (`<MonEncart>`).
+        {alternates.map((a) => (<link rel="alternate" hreflang={a.lang} href={a.href} />))}
+
+    Apres le `/>` on n'est pas dans du texte : on est dans l'expression qui se referme, et ses
+    deux parentheses cessaient d'etre comptees. Le cas jumeau `(<p>{x}</p>))` echouait pareil,
+    par la balise FERMANTE — preuve qu'aucune regle « regarde la balise qui precede » ne pouvait
+    tenir. Ma deuxieme version, qui comptait les elements ouverts, echouait encore : apres
+    `</p>` on est bien toujours dans `<main>`, mais AUSSI dans l'accolade ouverte avant lui.
+
+    IL FAUT LES DEUX, ET DANS LA MEME PASSE. On retient, pour chaque element ouvert, la
+    profondeur d'accolades ou il s'est ouvert. Du texte n'est de la prose que si un element est
+    ouvert ET qu'on est revenu a SA profondeur d'accolades. Une region emise ne contient donc
+    aucun delimiteur, par construction — ce qui permet a l'appelant de la sauter entierement au
+    lieu d'y faire des exceptions.
+
+    Un element ne compte que s'il SE REFERME quelque part (`</main>`) : c'est ce qui distingue
+    une balise d'un generique TypeScript — `Array<string>` n'a pas de `</string>`, et ce qui
+    suit son `>` reste du code. Le discriminant est grammatical, pas une liste d'elements HTML :
+    une liste connue aurait marche sur les neuf idiomes du banc et rate le premier composant
+    maison (`<MonEncart>`). Une balise auto-fermante n'ouvre rien : elle laisse le contexte
+    exactement comme elle l'a trouve.
+
+    POURQUOI PAS `_spans_texte_balise`, qui balaye deja les balises : elle repond a « entre
+    quelles balises », question suffisante pour un antislash de prose, qui y est ou n'y est pas.
+    Ici il faut « a l'interieur de quoi », parce qu'un delimiteur pose apres `</p>` appartient au
+    code qui entourait l'element. Deux questions, deux passes.
     """
     spans: list[tuple[int, int]] = []
     minuscule = contenu.lower()
-    for debut, fin in _spans_texte_balise(contenu):
-        ouverture = contenu.rfind("<", 0, debut)
-        if ouverture < 0:
-            continue
-        if debut >= 2 and contenu[debut - 2] == "/":
-            spans.append((debut, fin))
-            continue
-        nom = _NOM_DE_BALISE_RE.match(contenu, ouverture)
-        if not nom:
-            if "</>" in contenu:
-                spans.append((debut, fin))
-            continue
-        if ("</" + nom.group(1).lower()) in minuscule:
-            spans.append((debut, fin))
+    i, n = 0, len(contenu)
+    pile: list[int] = []      # profondeur d'accolades a l'ouverture de chaque element
+    accolades = 0
+    dans_balise = False
+    chaine = ""
+    fermante = False
+    nom = ""
+    debut = -1
+    while i < n:
+        c = contenu[i]
+        if chaine:
+            if c == "\\":
+                i += 2
+                continue
+            if c == chaine:
+                chaine = ""
+        elif dans_balise:
+            if c in "\"'":
+                chaine = c
+            elif c == ">":
+                dans_balise = False
+                auto = i >= 1 and contenu[i - 1] == "/"
+                if nom in _BALISES_OPAQUES and not fermante:
+                    # Le corps d'un `<script>` est du code entre deux balises. On saute jusqu'a
+                    # sa fermeture, en empilant l'element : sa fermeture, elle, depilera.
+                    ferme = minuscule.find("</" + nom, i)
+                    if ferme < 0:
+                        break
+                    pile.append(accolades)
+                    i, debut = ferme - 1, -1
+                else:
+                    if fermante:
+                        if pile:
+                            pile.pop()
+                    elif not auto and ("</" + (nom or "")) in minuscule:
+                        pile.append(accolades)
+                    debut = i + 1 if (pile and accolades == pile[-1]) else -1
+        elif c == "<" and i + 1 < n and (contenu[i + 1].isalpha()
+                                         or contenu[i + 1] in _DEBUT_DE_BALISE):
+            if debut >= 0 and i > debut:
+                spans.append((debut, i))
+            dans_balise = True
+            fermante = contenu[i + 1] == "/"
+            debut = -1
+            trouve = _NOM_DE_BALISE_RE.match(contenu, i)
+            nom = trouve.group(1).lower() if trouve else ""
+        elif c in "{}":
+            if debut >= 0 and i > debut:
+                spans.append((debut, i))
+            accolades += 1 if c == "{" else -1
+            debut = i + 1 if (pile and accolades == pile[-1]) else -1
+        i += 1
     return spans
 
 
@@ -22002,26 +22060,16 @@ def _unbalanced_delimiters(content: str) -> str:
     comment = ""          # "" | "//" | "/*"
     proses = _spans_de_prose(content)
     p = 0
-    span_actif = -1
-    socle = 0
     i = 0
     while i < len(content):
         ch = content[i]
         nxt = content[i + 1] if i + 1 < len(content) else ""
         while p < len(proses) and proses[p][1] <= i:
             p += 1
-        dans_prose = p < len(proses) and proses[p][0] <= i
-        if dans_prose and span_actif != p:
-            span_actif, socle = p, depth["{"]
-        # `{` ROUVRE DU CODE. Dans du texte JSX, une accolade n'est pas un caractere que le
-        # visiteur lit : elle ouvre une expression JavaScript, ou les guillemets, parentheses
-        # et commentaires redeviennent ce qu'ils sont. Sans cette reprise, un `{liste.map((x)`
-        # jamais referme passait — on aurait echange un faux refus contre un vrai defaut non vu.
-        if dans_prose and depth["{"] == socle and not quote and not comment:
-            if ch == "{":
-                depth["{"] += 1
-            elif ch == "}":
-                depth["{"] -= 1
+        # Une region de prose ne contient AUCUN delimiteur : `_spans_de_prose` la coupe
+        # des qu'une accolade ouvre une expression. On la saute donc entierement, au
+        # lieu d'y faire des exceptions caractere par caractere.
+        if p < len(proses) and proses[p][0] <= i and not quote and not comment:
             i += 1
             continue
         if comment == "//":
