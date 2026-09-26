@@ -21580,17 +21580,34 @@ def _antislashs_de_trop(contenu: str, chemin: str) -> tuple[str, list[str]]:
     et c'est pour cela que ce defaut survit a tout : le fichier compile, le build est VERT, et
     seule la page rendue le montre.
 
-    Une region qui contient une accolade est laissee tranquille : `{maVariable}` est une
-    expression JavaScript, pas de la prose, et un echappement peut y etre legitime.
+    LE 26/09/2026, CETTE FONCTION A CHANGE DE SCANNER. Elle lisait `_spans_texte_balise`, qui
+    repond a « entre quelles balises » — et du code pris en SANDWICH entre deux blocs de
+    balisage y repond « texte ». Deux formes atteignables :
+
+        <main><p>texte</p></main>
+        const titre = 'l\\'agent lit';        <-- echappement OBLIGATOIRE, retire a tort
+        <footer>fin</footer>
+
+    et un fichier qui fabrique du balisage en chaines (`const ouvre = '<p>un</p>'`), ou la
+    chaine voisine tombe entre les deux balises. Le litteral se refermait au milieu d'une
+    phrase : **le build du client cassait**. Les tests couvraient le code AVANT la premiere
+    balise et APRES la derniere ; entre deux, personne n'avait regarde.
+
+    Aucun des 360 fichiers reels des neuf depots ne le declenche — 58 portent pourtant un
+    echappement. C'etait donc un defaut LATENT : reel, atteignable, et que rien n'aurait
+    signale avant un deploiement rouge.
+
+    `_spans_de_prose` tranche par la profondeur : apres `</main>` plus rien n'est ouvert, donc
+    ce qui suit est du code. Elle coupe aussi ses regions a chaque accolade, ce qui rend
+    inutile la garde « la region contient une accolade » que portait cette fonction — une
+    expression `{maVariable}` n'entre plus jamais dans une region de prose. Garder une garde
+    dont plus rien ne prouve l'effet, c'est garder une ligne que personne ne pourra juger.
     """
     if not str(chemin or "").lower().endswith(_EXT_BALISEES):
         return contenu, []
     suspects: list[int] = []
-    for debut, fin in _spans_texte_balise(contenu):
-        region = contenu[debut:fin]
-        if "{" in region or "}" in region:
-            continue
-        for trouve in re.finditer(r"\\(['\"])", region):
+    for debut, fin in _spans_de_prose(contenu):
+        for trouve in re.finditer(r"\\(['\"])", contenu[debut:fin]):
             suspects.append(debut + trouve.start())
     if not suspects:
         return contenu, []

@@ -192,3 +192,65 @@ def test_le_REDACTEUR_applique_la_garde_lui_meme(monkeypatch) -> None:
     assert "<p>Cette page explique la verification d'un site.</p>" in contenu, contenu
     assert contenu.count("\\'") == 6, contenu.count("\\'")
     assert any("antislash" in n for n in notes), notes
+
+
+# ── le code PRIS EN SANDWICH entre deux blocs de balisage ────────────────────────────────────
+# Mesure du 26/09/2026. Les tests ci-dessus couvrent le code AVANT la première balise et APRÈS
+# la dernière. Entre deux, personne n'avait regardé : `_spans_texte_balise` ne répond qu'à
+# « entre quelles balises », et du code placé entre `</main>` et `<footer>` y répond « texte ».
+# Un `BS'` légitime y était retiré — le littéral JavaScript se ferme au milieu d'une phrase et
+# le build du client casse. Aucun des 360 fichiers réels des neuf dépôts ne le déclenche (58
+# portent pourtant un échappement), donc c'était un défaut LATENT : réel, atteignable, et que
+# rien n'aurait signalé avant un déploiement rouge.
+
+def test_du_code_ENTRE_deux_blocs_de_balisage_est_laisse_tranquille() -> None:
+    """Ni avant la première balise, ni après la dernière : ENTRE les deux.
+
+    La région ne contient aucune accolade, donc la garde qui épargnait les expressions ne la
+    protégeait pas. C'est la profondeur d'éléments qui tranche : après `</main>` plus rien
+    n'est ouvert, donc ce qui suit est du code.
+    """
+    source = ("<main><p>texte</p></main>\n"
+              "const titre = 'l\\'agent lit';\n"
+              "<footer>fin</footer>\n")
+    assert "\\'" in source, "la fixture ne pose plus le piege"
+    assert _sortie(source) == source
+
+
+def test_un_fichier_qui_fabrique_du_balisage_en_chaines_est_intact() -> None:
+    """Construire du HTML par concaténation est courant, et chaque chaîne porte des balises.
+
+    Le scanner voit `<p>` … `</p>` et appelle « texte » tout ce qu'il y a entre — y compris la
+    chaîne voisine, qui n'a rien à voir.
+    """
+    source = ("const ouvre = '<p>un</p>';\n"
+              "const titre = 'l\\'agent';\n"
+              "const ferme = '<p>deux</p>';\n")
+    assert "\\'" in source, "la fixture ne pose plus le piege"
+    assert _sortie(source, "src/lib/html.js") == source
+
+
+def test_une_expression_reste_epargnee_sans_la_garde_des_accolades() -> None:
+    """La garde « la région contient une accolade » devient inutile une fois la prose définie
+    par la profondeur : `_spans_de_prose` coupe déjà ses régions à chaque accolade.
+
+    On le vérifie ici plutôt que de garder une garde dont plus rien ne prouve l'effet.
+    """
+    source = "<main>\n  <p>{ligne.replace('a\\'b', '')}</p>\n</main>\n"
+    assert "\\'" in source, "la fixture ne pose plus le piege"
+    assert _sortie(source) == source
+    assert all("{" not in source[d:f] and "}" not in source[d:f]
+               for d, f in m._spans_de_prose(source)), "une region de prose porte une accolade"
+
+
+def test_un_antislash_devant_autre_chose_qu_un_guillemet_est_du_CONTENU() -> None:
+    """Un chemin Windows dans du texte s'affiche tel quel, et c'est voulu.
+
+    On ne retire un antislash que devant un guillemet, parce que la seule chose mesuree est un
+    modele qui echappe par reflexe une apostrophe francaise la ou il ne faut pas. Devant une
+    lettre, l'antislash est ce que l'auteur a ecrit : le retirer changerait le texte que le
+    visiteur lit, ce qui est exactement le tort qu'on repare ici, en sens inverse.
+    """
+    source = "<main>\n  <p>Le dossier C:\\dossier\\projet contient tout.</p>\n</main>\n"
+    assert source.count("\\") == 2, "la fixture ne pose plus le piege"
+    assert _sortie(source) == source
