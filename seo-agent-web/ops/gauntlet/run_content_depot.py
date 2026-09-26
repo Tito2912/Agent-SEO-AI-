@@ -55,7 +55,6 @@ from backend import app as m  # noqa: E402
 from backend import repo_index  # noqa: E402
 from backend.models import Project, User  # noqa: E402
 
-TOKEN = os.environ["FIXTURE_TOKEN"]
 ETAT = os.path.join(_ATELIER, "contenu-depot.json")
 
 
@@ -64,6 +63,16 @@ def _arg(nom: str, defaut: str = "") -> str:
         if a.startswith("--%s=" % nom):
             return a.split("=", 1)[1]
     return defaut
+
+
+# Le jeton se NOMME, il ne se devine pas. Un jeton fine-grained ne vaut que pour le depot
+# auquel on l'a restreint : preferer automatiquement le plus recent casserait le fork, et
+# preferer celui du banc rendrait un 404 illisible sur un depot client. `--jeton=GITHUB_TOKEN`
+# dit lequel, et l'erreur nomme la variable manquante plutot que de rendre un refus opaque.
+_NOM_JETON = _arg("jeton", "FIXTURE_TOKEN")
+TOKEN = os.environ.get(_NOM_JETON, "")
+if not TOKEN and any(a in sys.argv for a in ("--ouvrir", "--verdict", "--fermer")):
+    raise SystemExit("variable d'environnement %s absente ou vide" % _NOM_JETON)
 
 
 class _Proprietaire:
@@ -169,15 +178,34 @@ def verdict() -> None:
             print("pas de PR"); continue
         pr = m._github_api_get(m._github_api_path(
             "repos", r["owner"], r["repo"], "pulls", str(r["pr_number"])), token=TOKEN)
-        st = m._github_api_get(m._github_api_path(
-            "repos", r["owner"], r["repo"], "commits", pr["head"]["sha"], "check-runs"),
-            token=TOKEN)
-        runs = st.get("check_runs") or []
-        if not runs:
-            print("#%s : aucune verification (les Actions d'un fork sont desactivees par "
-                  "defaut)" % r["pr_number"])
-        for c in runs:
-            print("#%s  %-34s %s" % (r["pr_number"], c["name"][:34], c.get("conclusion")))
+        # DEUX SOURCES, ET ELLES NE SE RECOUVRENT PAS. GitHub Actions publie des `check-runs` ;
+        # Netlify publie son apercu de deploiement comme un `status` de commit. Ne lire que
+        # les premiers rend « aucune verification » sur un depot entierement construit par
+        # Netlify — c'est-a-dire le cas le plus courant chez les clients de ce produit.
+        vus = 0
+        try:
+            cr = m._github_api_get(m._github_api_path(
+                "repos", r["owner"], r["repo"], "commits", pr["head"]["sha"], "check-runs"),
+                token=TOKEN)
+            for c in cr.get("check_runs") or []:
+                vus += 1
+                print("#%s  check   %-30s %s"
+                      % (r["pr_number"], c["name"][:30], c.get("conclusion")))
+        except Exception as exc:
+            print("#%s  check-runs illisibles : %s" % (r["pr_number"], str(exc)[:90]))
+        try:
+            st = m._github_api_get(m._github_api_path(
+                "repos", r["owner"], r["repo"], "commits", pr["head"]["sha"], "status"),
+                token=TOKEN)
+            for s in st.get("statuses") or []:
+                vus += 1
+                print("#%s  statut  %-30s %s"
+                      % (r["pr_number"], str(s.get("context"))[:30], s.get("state")))
+        except Exception as exc:
+            print("#%s  statuts illisibles : %s" % (r["pr_number"], str(exc)[:90]))
+        if not vus:
+            print("#%s : AUCUN verdict automatique. Ni Actions ni Netlify ne se prononcent sur "
+                  "ce depot — la relecture humaine est le seul controle." % r["pr_number"])
 
 
 def fermer() -> None:
