@@ -486,7 +486,29 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
             stem = inner.rsplit("/", 1)[-1].rsplit(".", 1)[0]
             parents = inner.split("/")[:-1]
             candidate = _route_from_segments(parents + ([] if stem in {"index", "_index"} else [stem]))
-            for prefix in prefixes:
+            # CHEZ ASTRO, `src/content/<collection>/` porte UN NIVEAU DE PLUS que chez Next et
+            # Nuxt : le premier segment est le nom de la COLLECTION, et rien ne dit qu'il
+            # apparaisse dans l'URL. C'est la route dynamique qui decide ou la collection est
+            # montee, et une integration peut la monter a la racine.
+            #
+            # MESURE DU 26/09/2026, premier essai hors fixtures, sur un fork de `withastro/docs`
+            # (3004 fichiers) : la collection `docs` y est montee A LA RACINE par Starlight, donc
+            # `src/content/docs/fr/guides/x.mdx` se sert a `/fr/guides/x`. On en deduisait
+            # `/docs/fr/guides/x` — 2612 routes fausses. Pour le correcteur, aucune URL du crawl
+            # ne retrouve son fichier et 2612 pages deviennent silencieusement incorrigibles ;
+            # pour le redacteur, le canonical porte un segment qui n'existe pas.
+            #
+            # Le garde-fou EXISTAIT — « seulement si une route dynamique couvre le prefixe » —
+            # mais `src/pages/[...enRedirectSlug].astro`, un attrape-tout de racine pose pour
+            # les redirections, donne le prefixe `/` qui couvre tout. Un garde-fou dont la
+            # condition est satisfaite par n'importe quoi ne garde rien.
+            #
+            # On ne devine donc pas : une collection Astro n'est rattachee que si une route
+            # dynamique NON RACINE la nomme. Sinon le point de montage est inconnu, et une
+            # route inconnue vaut mieux qu'une route fausse — le produit refuse d'ecrire la ou
+            # il ne sait pas, il n'invente pas une adresse.
+            utiles = [x for x in prefixes if not (stack == STACK_ASTRO and x == "/")]
+            for prefix in utiles:
                 if prefix == "/" or candidate == prefix or candidate.startswith(prefix + "/"):
                     add(candidate, p)
                     break
