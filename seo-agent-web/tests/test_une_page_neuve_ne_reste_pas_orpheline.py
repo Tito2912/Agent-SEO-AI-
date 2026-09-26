@@ -77,14 +77,29 @@ def test_un_index_qui_ne_cite_personne_n_a_rien_a_apprendre() -> None:
     assert m.lien_a_poser(INDEX_ENGENDRE, "premier-article")["requis"] is False
 
 
-def test_une_soeur_citee_DEUX_FOIS_rend_le_clonage_ambigu() -> None:
-    """Une carte en haut de page ET une entrée de menu : deux formes, pas une. En choisir une
-    au hasard en casserait l'autre — on refuse plutôt que de trancher à pile ou face."""
+def test_une_soeur_citee_DEUX_FOIS_va_dans_la_LISTE_pas_dans_le_menu() -> None:
+    """Une entrée de menu ET une entrée de liste : deux formes, mais une seule est un catalogue.
+
+    CE TEST DISAIT L'INVERSE JUSQU'AU 26/09/2026. La règle d'alors refusait dès qu'une sœur
+    était citée deux fois — « en choisir une au hasard casserait l'autre » — et la page sortait
+    orpheline. Mesuré sur un vrai site client : son index cite la sœur TROIS fois, dans un
+    parcours numéroté, un encart et une rubrique. Aucune page n'y était donc jamais liée.
+
+    Le raisonnement était sain, la conclusion non : on ne choisit pas au hasard, on choisit la
+    liste qui ÉNUMÈRE la section. Un `<nav>` n'est pas une entrée de liste et n'entre pas dans
+    le comptage ; la page ne sera pas recopiée dans la navigation du site.
+    """
     deux = INDEX_MAIN.replace(
         "    </ul>",
         '      <nav><a href="/blog/premier-article">encore</a></nav>\n    </ul>')
-    etat = m.lien_a_poser(deux, "premier-article")
-    assert etat["requis"] is True and etat.get("ambigu"), etat
+    etat = m.lien_a_poser(deux, "premier-article", "/blog")
+    assert etat["requis"] is True and not etat.get("ambigu"), etat
+    sortie, refus = m.ajouter_le_lien(
+        deux, "app/blog/page.tsx", soeur_slug="premier-article", slug_neuf="mon-sujet",
+        titre_soeur="Premier article", titre_neuf="Mon sujet", section="/blog")
+    assert not refus, refus
+    assert sortie.count("mon-sujet") == 1, "le lien a été posé %d fois" % sortie.count("mon-sujet")
+    assert "<nav><a href=\"/blog/mon-sujet\"" not in sortie, "posé dans la navigation"
 
 
 # --- poser le lien ------------------------------------------------------------------------------

@@ -75,6 +75,23 @@ INDEX_MANUEL = """export default function Blog() {
 }
 """
 
+# Un index dont les liens vivent dans une PHRASE : aucune entrée de liste à cloner, donc aucun
+# endroit où poser la page sans abîmer le texte du client. C'est le seul cas qui rend encore
+# une page orpheline en mode manuel.
+#
+# Jusqu'au 26/09/2026, les deux tests ci-dessous se contentaient d'ajouter un `<nav>` à côté de
+# la liste : une deuxième citation de la sœur suffisait alors à faire refuser. Depuis, l'agent
+# choisit la liste qui ÉNUMÈRE la section et pose le lien — ce refus-là n'existe plus, et une
+# fixture qui l'invoquait mesurerait une limite disparue.
+INDEX_PROSE = """export default function Blog() {
+  return (
+    <p>Commencez par <a href="/blog/premier-article">le premier</a>, puis
+      <a href="/blog/second-article">le second</a>, et relisez
+      <a href="/blog/premier-article">le premier</a>.</p>
+  );
+}
+"""
+
 # La même section, mais dont la liste est engendrée en lisant le dossier : rien à ajouter.
 INDEX_ENGENDRE = """import { tousLesArticles } from "@/lib/posts";
 
@@ -505,8 +522,7 @@ def test_un_index_AMBIGU_ouvre_quand_meme_mais_le_DIT(customer, plan, github, mo
     rien proposer. Le mode automatique, lui, devra refuser : personne n'y lira la phrase.
     """
     client, slug, _pid, _uid = customer
-    github["fichiers"]["app/blog/page.tsx"] = INDEX_MANUEL.replace(
-        "    </ul>", '      <nav><a href="/blog/premier-article">encore</a></nav>\n    </ul>')
+    github["fichiers"]["app/blog/page.tsx"] = INDEX_PROSE
     r = _demander(client, slug, sujet=SUJET, route=ROUTE)
     assert r.status_code == 200, r.text
     assert r.json()["orpheline"] is True, r.text
@@ -583,8 +599,7 @@ def test_une_page_ORPHELINE_est_signalee_dans_le_journal(customer, plan, github,
     """C'est le seul endroit où l'information se relit après coup : le corps de la PR le dit
     une fois, l'écran le redit tant que la PR n'est pas fusionnée."""
     client, slug, _pid, _uid = customer
-    github["fichiers"]["app/blog/page.tsx"] = INDEX_MANUEL.replace(
-        "    </ul>", '      <nav><a href="/blog/premier-article">encore</a></nav>\n    </ul>')
+    github["fichiers"]["app/blog/page.tsx"] = INDEX_PROSE
     assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
     ligne = _ligne_du_journal(client.get(f"/projects/{slug}/content").text, ROUTE)
     assert "à lier à la main" in ligne, ligne

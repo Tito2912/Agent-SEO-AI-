@@ -21788,6 +21788,35 @@ def rediger_une_page(
     return contenu if contenu.endswith("\n") else contenu + "\n", ""
 
 
+_RESUME_APRES_LIEN_RE = re.compile(
+    r"(\]\([^)\s]*\)|</a>)(\s*[\u2014\u2013:-]\s+\S.*)$")
+
+
+def _sans_le_resume_de_la_soeur(entree: str) -> str:
+    """L'entree clonee, privee du resume qui decrivait la SOEUR.
+
+    MESURE DU 26/09/2026 SUR UN VRAI INDEX CLIENT. Cloner
+
+        2. [Choisir une plateforme](/fr/guides/…) — produit (actif vs CFD), frais, retraits.
+
+    pour une page d'interets composes donnait une entree dont le lien etait juste et la phrase
+    FAUSSE : « Calculer les interets composes — produit (actif vs CFD), frais, retraits ». Le
+    slug et le titre etaient remplaces ; la prose editoriale qui les suit ne l'etait pas, parce
+    que rien ne peut la deduire.
+
+    ON NE LA REECRIT DONC PAS, ON L'ENLEVE. Ecrire un resume demanderait d'inventer ; le
+    tronquer depuis la description de la page neuve donnerait une phrase coupee au milieu. Une
+    entree sans resume, au milieu d'entrees qui en ont, se voit dans le diff et se complete en
+    dix secondes. Une entree qui decrit une AUTRE page ne se voit pas — c'est le genre de
+    defaut qui survit a la relecture parce qu'il se lit bien.
+
+    On ne touche qu'a ce qui suit le LIEN, et seulement si c'est de la prose introduite par un
+    separateur. Un balisage qui suit — `</li>`, une virgule d'objet, une balise fermante — est
+    de la structure, pas une description : l'enlever casserait l'entree.
+    """
+    return _RESUME_APRES_LIEN_RE.sub(lambda t: t.group(1), str(entree or ""), count=1)
+
+
 def _lignes_citant(contenu: str, aiguille: str) -> list[int]:
     """Les indices des lignes qui citent `aiguille`, casse comprise."""
     if not aiguille:
@@ -21795,7 +21824,99 @@ def _lignes_citant(contenu: str, aiguille: str) -> list[int]:
     return [i for i, ligne in enumerate(str(contenu or "").split("\n")) if aiguille in ligne]
 
 
-def lien_a_poser(index_contenu: str, soeur_slug: str) -> dict[str, Any]:
+_MARQUEUR_LISTE_RE = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|<li\b)", re.I)
+_NUMERO_LISTE_RE = re.compile(r"^(\s*)(\d+)([.)]\s)")
+
+
+def _bloc_de_liste(lignes: list[str], i: int) -> tuple[int, int]:
+    """Les bornes du bloc de liste contigu qui contient la ligne `i`, ou (i, i+1).
+
+    Un bloc s'arrete a la premiere ligne qui n'est ni une entree de liste ni sa continuation
+    indentee. On ne cherche pas a comprendre l'imbrication : on veut seulement savoir QUELLES
+    entrees voisinent, pour compter combien de pages soeurs une liste enumere.
+    """
+    if not _MARQUEUR_LISTE_RE.match(lignes[i] or ""):
+        return i, i + 1
+    debut = i
+    while debut > 0 and (_MARQUEUR_LISTE_RE.match(lignes[debut - 1] or "")
+                         or (lignes[debut - 1].startswith(("  ", "\t"))
+                             and lignes[debut - 1].strip())):
+        debut -= 1
+    fin = i + 1
+    while fin < len(lignes) and (_MARQUEUR_LISTE_RE.match(lignes[fin] or "")
+                                 or (lignes[fin].startswith(("  ", "\t"))
+                                     and lignes[fin].strip())):
+        fin += 1
+    return debut, fin
+
+
+def _ligne_a_cloner(index_contenu: str, lignes_citantes: list[int],
+                    section: str = "") -> int:
+    """Parmi plusieurs citations de la soeur, celle qui appartient au CATALOGUE. -1 sinon.
+
+    LE PROBLEME, MESURE LE 26/09/2026 SUR UN VRAI SITE CLIENT. L'index d'une section peut citer
+    la meme soeur trois fois : dans un parcours recommande, dans un encart « demarrer », dans
+    une rubrique thematique. La version precedente refusait alors de poser le lien — « pas UNE
+    forme a cloner mais trois » — et rendait une page ORPHELINE. Refuser une page a un client
+    parce qu'on ne sait pas lire son index, c'est lui faire payer notre limite.
+
+    LE DISCRIMINANT N'EST PAS EDITORIAL, IL EST COMPTABLE. Parmi ces trois listes, une seule a
+    pour role d'ENUMERER la section : c'est celle qui cite le plus de pages voisines distinctes.
+    Les autres mentionnent la soeur en passant, au fil d'une phrase ou d'un encart. Ajouter une
+    page au catalogue de sa propre section n'est pas une prise de position — c'est l'en omettre
+    qui en serait une. On ne touche pas aux mentions de contexte.
+
+    C'est la meme grammaire que le banc applique deja pour CHOISIR une section : celle qui porte
+    le plus de soeurs. Une section a une page n'a pas de convention ; une liste a une entree
+    n'est pas un catalogue.
+
+    Une ligne qui n'est pas une entree de liste ne peut pas etre clonee — un titre, une phrase
+    qui cite le lien au milieu d'un paragraphe. Elle est ecartee avant tout comptage.
+    """
+    lignes = str(index_contenu or "").split("\n")
+    prefixe = ("/" + section.strip("/") + "/") if section else "/"
+    meilleur, meilleur_score = -1, 0
+    for i in lignes_citantes:
+        if i >= len(lignes) or not _MARQUEUR_LISTE_RE.match(lignes[i] or ""):
+            continue
+        debut, fin = _bloc_de_liste(lignes, i)
+        voisines = set()
+        for j in range(debut, fin):
+            ligne = lignes[j] or ""
+            cibles = re.findall(r"\]\(([^)\s]+)\)", ligne)
+            cibles += re.findall(r"href=['\"]([^'\"]+)['\"]", ligne)
+            for cible in cibles:
+                url = cible.split("#")[0].rstrip("/")
+                if url.startswith(prefixe):
+                    voisines.add(url)
+        if len(voisines) > meilleur_score:
+            meilleur, meilleur_score = i, len(voisines)
+    # Une liste qui ne cite qu'UNE page n'enumere rien : c'est une mention.
+    return meilleur if meilleur_score > 1 else -1
+
+
+def _renumeroter_la_liste(lignes: list[str], debut: int, fin: int) -> None:
+    """Rendre a une liste ORDONNEE la suite de ses numeros, en place.
+
+    Cloner `2. [Page](...)` produit un second « 2. ». Les analyseurs Markdown renumerotent a
+    l'affichage, donc la page servie serait juste — mais le diff que relit un humain porterait
+    deux fois le meme numero, et un diff qu'on n'ose pas lire est un diff qu'on approuve sans
+    le lire. On maintient l'invariant de la liste ; ce n'est pas deviner, c'est ne pas casser.
+
+    Les listes non numerotees ne sont pas touchees : elles n'ont pas d'invariant a tenir.
+    """
+    numero = 0
+    for j in range(debut, min(fin, len(lignes))):
+        trouve = _NUMERO_LISTE_RE.match(lignes[j] or "")
+        if not trouve:
+            continue
+        numero += 1
+        lignes[j] = _NUMERO_LISTE_RE.sub(
+            lambda m, n=numero: "%s%d%s" % (m.group(1), n, m.group(3)), lignes[j], count=1)
+
+
+def lien_a_poser(index_contenu: str, soeur_slug: str,
+                 section: str = "") -> dict[str, Any]:
     """L'index de section liste-t-il ses pages A LA MAIN, et sur quelle ligne ?
 
     C'est la question que l'etape 1 avait laissee ouverte parce qu'elle demande de LIRE le
@@ -21814,17 +21935,23 @@ def lien_a_poser(index_contenu: str, soeur_slug: str) -> dict[str, Any]:
     if not lignes:
         return {"requis": False, "ligne": -1, "fragment": ""}
     if len(lignes) > 1:
-        # Un index qui cite deux fois la meme page (une carte + un menu, par exemple) n'a pas
-        # UNE forme a cloner mais deux, et choisir au hasard en casserait une.
-        return {"requis": True, "ligne": -1, "fragment": "",
-                "ambigu": "la soeur est citee %d fois dans cet index" % len(lignes)}
+        # Un index qui cite deux fois la meme page n'a pas UNE forme a cloner mais deux. On ne
+        # choisit pas au hasard pour autant : `_ligne_a_cloner` designe celle qui appartient au
+        # CATALOGUE de la section — la liste qui enumere le plus de pages voisines. Les autres
+        # citations sont des mentions de contexte, et on n'y touche pas.
+        i = _ligne_a_cloner(index_contenu, lignes, section)
+        if i < 0:
+            return {"requis": True, "ligne": -1, "fragment": "",
+                    "ambigu": "la soeur est citee %d fois et aucune de ces listes n'enumere "
+                              "la section" % len(lignes)}
+        return {"requis": True, "ligne": i, "fragment": str(index_contenu).split("\n")[i]}
     i = lignes[0]
     return {"requis": True, "ligne": i, "fragment": str(index_contenu).split("\n")[i]}
 
 
 def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
                     slug_neuf: str, titre_soeur: str = "", titre_neuf: str = "",
-                    ) -> tuple[str, str]:
+                    section: str = "") -> tuple[str, str]:
     """L'index avec une entree de plus, CLONEE sur celle d'une soeur. Ou ("", raison).
 
     Meme geste qu'aux etapes precedentes, un cran plus haut : on ne compose pas une entree de
@@ -21836,7 +21963,7 @@ def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
     deux chemins qui commitent. Une entree sur plusieurs lignes ne se clone pas en copiant une
     seule ligne, et c'est le controle qui l'attrape plutot qu'une regle qui devinerait.
     """
-    etat = lien_a_poser(index_contenu, soeur_slug)
+    etat = lien_a_poser(index_contenu, soeur_slug, section)
     if etat.get("ambigu"):
         return "", etat["ambigu"]
     if not etat["requis"]:
@@ -21850,10 +21977,14 @@ def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
     # le site lira le titre a la source.
     if titre_soeur and titre_neuf and titre_soeur in clone:
         clone = clone.replace(titre_soeur, titre_neuf)
+    clone = _sans_le_resume_de_la_soeur(clone)
     if clone == lignes[i]:
         return "", "le slug %r ne se lit pas dans l'entree a cloner" % soeur_slug
 
-    sortie = "\n".join(lignes[:i + 1] + [clone] + lignes[i + 1:])
+    posees = lignes[:i + 1] + [clone] + lignes[i + 1:]
+    debut, fin = _bloc_de_liste(posees, i)
+    _renumeroter_la_liste(posees, debut, fin)
+    sortie = "\n".join(posees)
     refus = _refus_de_format(index_chemin, sortie)
     if refus:
         return "", "l'index ne se relit plus apres ajout : %s" % refus
@@ -21862,7 +21993,7 @@ def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
 
 def _lien_pour_la_page_neuve(index_contenu: str, index_chemin: str, *, soeur_slug: str,
                              slug_neuf: str, titre_soeur: str = "", titre_neuf: str = "",
-                             ) -> tuple[str, str, bool]:
+                             section: str = "") -> tuple[str, str, bool]:
     """L'index modifie, la phrase a mettre dans la PR, et SI la page sort orpheline.
 
     LES TROIS ISSUES NE SE DISTINGUENT PAS PAR LE TEXTE D'UN REFUS, et c'est pour ca que cette
@@ -21879,14 +22010,14 @@ def _lien_pour_la_page_neuve(index_contenu: str, index_chemin: str, *, soeur_slu
     proposer, et elle est la mieux placee pour savoir ou l'entree va. Le mode automatique devra
     REFUSER dans ce cas — personne ne lira la phrase.
     """
-    etat = lien_a_poser(index_contenu, soeur_slug)
+    etat = lien_a_poser(index_contenu, soeur_slug, section)
     if not etat["requis"]:
         return "", ("La liste de `%s` ne cite le slug d'aucune page : elle paraît engendrée, "
                     "créer le fichier suffit. Ce n'est pas une preuve — la liste peut vivre "
                     "dans un fichier de données voisin." % index_chemin), False
     sortie, refus = ajouter_le_lien(
         index_contenu, index_chemin, soeur_slug=soeur_slug, slug_neuf=slug_neuf,
-        titre_soeur=titre_soeur, titre_neuf=titre_neuf)
+        titre_soeur=titre_soeur, titre_neuf=titre_neuf, section=section)
     if sortie:
         return sortie, ("Lien ajouté dans `%s`, cloné sur l'entrée d'une page sœur."
                         % index_chemin), False
@@ -27644,7 +27775,11 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                 soeur_slug=str(placement.get("soeur_slug") or ""),
                 slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
                 titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
-                titre_neuf=titre_neuf)
+                titre_neuf=titre_neuf,
+                # La section sert a reconnaitre le CATALOGUE parmi plusieurs listes : celle
+                # qui enumere le plus de pages de CETTE section. Sans elle, un menu global
+                # riche en liens passerait pour le catalogue de la rubrique.
+                section=str(placement.get("section") or ""))
 
     # EN AUTOMATIQUE, UNE ORPHELINE NE PART PAS. En manuel la phrase ci-dessus suffit :
     # une personne relit le brouillon. Ici personne ne la lira, et une page que rien ne

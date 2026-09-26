@@ -357,8 +357,23 @@ def test_une_page_qu_on_ne_sait_pas_LIER_n_est_PAS_ecrite(projet, plan, github, 
     passage suivant. Rien n'est écrit : pas même une branche.
     """
     slug, pid, _uid = projet
-    github["fichiers"]["app/blog/page.tsx"] = INDEX_MANUEL.replace(
-        "    </ul>", '      <nav><a href="/blog/premier-article">encore</a></nav>\n    </ul>')
+    # UN INDEX QUI NE SE LAISSE PAS LIRE : ses liens vivent dans une PHRASE, pas dans une
+    # liste. Il n'y a aucune entrée à cloner, donc aucun endroit où poser la page sans
+    # abîmer le texte du client.
+    #
+    # Cette fixture était, jusqu'au 26/09/2026, un `<nav>` ajouté à côté de la liste — la
+    # sœur y était citée deux fois et la règle d'alors refusait pour cette seule raison.
+    # Depuis, une deuxième citation ne suffit plus : l'agent choisit la liste qui ÉNUMÈRE la
+    # section et pose le lien. Le refus qu'on mesure ici doit donc venir d'une vraie absence
+    # de liste, sinon ce test vérifierait une limite qui n'existe plus.
+    github["fichiers"]["app/blog/page.tsx"] = (
+        "export default function Blog() {\n"
+        "  return (\n"
+        "    <p>Commencez par <a href=\"/blog/premier-article\">le premier</a>, puis\n"
+        "      <a href=\"/blog/second-article\">le second</a>, et relisez\n"
+        "      <a href=\"/blog/premier-article\">le premier</a>.</p>\n"
+        "  );\n"
+        "}\n")
     res = app_module._balayer_contenu_auto()
     assert res["proposees"] == 0 and res["refusees"] == 1, res
     assert github["put"] == [] and plan["debits"] == []
