@@ -202,6 +202,73 @@ def test_les_quatre_separateurs_de_resume_sont_reconnus(separateur: str) -> None
     assert m._sans_le_resume_de_la_soeur(entree) == "- [Titre](/fr/guides/a/)"
 
 
+def test_le_libelle_du_lien_annonce_la_BONNE_page() -> None:
+    """MESURE DU 27/09/2026, chaine complete sur un vrai depot. L'entree sortait
+
+        3. [Choisir une plateforme : checklist](/fr/guides/comment-calculer-les-interets-composes/)
+
+    Cible juste, libelle faux. Un lien qui annonce une page et en designe une autre est PIRE
+    qu'une page orpheline : l'orpheline n'est pas trouvee, celui-ci est trouve et trompe.
+
+    La cause : on remplacait le titre de la soeur s'il se LISAIT dans l'entree, et l'index
+    porte un libelle editorial plus court que le titre de la page.
+    """
+    # LE TITRE DE LA SOEUR NE SE LIT PAS DANS L'INDEX, et c'est tout le sujet. Ma premiere
+    # version passait le libelle de l'index comme `titre_soeur` : le remplacement par
+    # sous-chaine suffisait alors, et la mutation qui supprime le retitrage y a SURVECU. Le
+    # vrai depot porte « Comment choisir une plateforme d'investissement (checklist) » en front
+    # matter et « Choisir une plateforme : checklist » dans la liste.
+    sortie, refus = m.ajouter_le_lien(
+        INDEX_REEL, "content/fr/guides.mdx",
+        soeur_slug="comment-choisir-une-plateforme",
+        slug_neuf="comment-calculer-les-interets-composes",
+        titre_soeur="Comment choisir une plateforme d'investissement (checklist)",
+        titre_neuf="Calculer les interets composes",
+        section="/fr/guides")
+    assert not refus, refus
+    ligne = next(l for l in sortie.split("\n") if "interets-composes" in l)
+    assert "[Calculer les interets composes]" in ligne, ligne
+    assert "Choisir une plateforme" not in ligne, ligne
+
+
+def test_seul_le_lien_de_la_page_neuve_est_retitre() -> None:
+    """Une ligne peut porter plusieurs liens. Retitrer le mauvais recreerait le defaut."""
+    entree = ("5. Option crypto : [DCA](/fr/guides/dca-crypto/) et "
+              "[X](/fr/guides/ma-page/)")
+    obtenu = m._retitrer_le_lien(entree, "ma-page", "Mon titre")
+    assert "[DCA](/fr/guides/dca-crypto/)" in obtenu, obtenu
+    assert "[Mon titre](/fr/guides/ma-page/)" in obtenu, obtenu
+
+
+def test_une_entree_qui_cite_DEUX_FOIS_la_page_voit_ses_deux_liens_retitres() -> None:
+    """Une vignette et un titre pointant la meme page : n'en retitrer qu'un laisserait le
+    libelle de la soeur sur l'autre."""
+    entree = "- [Ancien](/blog/ma-page/) — voir [Ancien aussi](/blog/ma-page/)"
+    obtenu = m._retitrer_le_lien(entree, "ma-page", "Mon titre")
+    assert obtenu.count("[Mon titre]") == 2, obtenu
+    assert "Ancien" not in obtenu, obtenu
+
+
+def test_une_IMAGE_ne_devient_pas_du_texte() -> None:
+    """`[![alt](/img.png)](/page/)` a pour texte de lien une IMAGE. Y mettre du texte la ferait
+    disparaitre — on echangerait un libelle faux contre une vignette perdue."""
+    entree = "- [![Couverture](/img/x.png)](/blog/ma-page/)"
+    assert m._retitrer_le_lien(entree, "ma-page", "Mon titre") == entree
+
+
+def test_une_entree_SANS_texte_de_lien_n_est_pas_touchee() -> None:
+    """`{ slug: "..." }` : le libelle vient d'ailleurs, le site le lira a la source. C'est le
+    cas que l'ancienne regle traitait bien et qu'il ne faut pas casser."""
+    entree = '  { slug: "ma-page", ordre: 3 },'
+    assert m._retitrer_le_lien(entree, "ma-page", "Mon titre") == entree
+
+
+def test_le_libelle_d_une_entree_HTML_est_retitre_aussi() -> None:
+    entree = '<li><a href="/blog/ma-page/">Ancien titre</a></li>'
+    obtenu = m._retitrer_le_lien(entree, "ma-page", "Mon titre")
+    assert obtenu == '<li><a href="/blog/ma-page/">Mon titre</a></li>', obtenu
+
+
 @pytest.mark.parametrize("entree", [
     '<li><a href="/blog/x">Titre</a></li>',
     '  { slug: "mon-article", titre: "Mon article" },',

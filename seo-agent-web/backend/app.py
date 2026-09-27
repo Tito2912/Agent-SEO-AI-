@@ -21792,6 +21792,55 @@ _RESUME_APRES_LIEN_RE = re.compile(
     r"(\]\([^)\s]*\)|</a>)(\s*[\u2014\u2013:-]\s+\S.*)$")
 
 
+def _retitrer_le_lien(entree: str, slug_neuf: str, titre_neuf: str) -> str:
+    """Donner au lien qui pointe vers `slug_neuf` le titre de la page neuve.
+
+    MESURE DU 27/09/2026, chaine complete sur un vrai depot client. L'entree clonee sortait
+
+        3. [Choisir une plateforme : checklist](/fr/guides/comment-calculer-les-interets-composes/)
+
+    — cible juste, libelle faux. Un lien qui annonce une page et en designe une autre est pire
+    qu'une page orpheline : l'orpheline n'est pas trouvee, celui-ci est trouve et trompe.
+
+    POURQUOI LE REMPLACEMENT PAR SOUS-CHAINE NE POUVAIT PAS MARCHER. On remplacait le titre de
+    la soeur *s'il se lisait* dans l'entree. Or l'index porte un libelle EDITORIAL, plus court
+    que le titre de la page : « Choisir une plateforme : checklist » contre « Comment choisir
+    une plateforme d'investissement (checklist) ». Les deux designent la meme page et ne se
+    ressemblent pas assez pour qu'une sous-chaine les relie. Chercher une ressemblance aurait
+    demande de deviner un seuil ; la STRUCTURE, elle, ne demande rien.
+
+    ON REMPLACE DONC LE TEXTE DU LIEN, pas une sous-chaine de la ligne — et seulement celui du
+    lien qui pointe vers la page neuve. Une ligne peut en porter plusieurs (« 5. Option crypto :
+    [DCA](...) »), et retitrer le mauvais recreerait le defaut qu'on repare.
+
+    Une entree sans texte de lien — `{ slug: "mon-article" }`, une ligne de donnees — n'est pas
+    touchee : son libelle vient d'ailleurs, et le site le lira a la source. C'est le cas que
+    l'ancienne regle traitait bien, et qu'il ne faut pas casser en le remplacant.
+    """
+    if not slug_neuf or not titre_neuf:
+        return entree
+    texte = str(entree or "")
+    # TOUS les liens vers la page neuve, pas seulement le premier : une entree peut la citer
+    # deux fois (une vignette et un titre), et n'en retitrer qu'un laisserait le libelle de la
+    # soeur sur l'autre. Un `count=1` ne se demontrait sur aucune entree realiste — et une
+    # distinction qu'aucun cas ne separe se retire, elle ne se documente pas.
+    #
+    # SAUF UNE IMAGE. `[![alt](/img.png)](/page/)` a pour texte de lien une image : y mettre du
+    # texte la ferait disparaitre. Le libelle qu'on remplace doit etre du texte.
+    motif_md = re.compile(r"\[([^\]]*)\]\((\S*%s\S*)\)" % re.escape(slug_neuf))
+    texte, n = motif_md.subn(
+        lambda t: (t.group(0) if ("!" in t.group(1) or "<" in t.group(1))
+                   else "[%s](%s)" % (titre_neuf, t.group(2))), texte)
+    if n:
+        return texte
+    motif_html = re.compile(
+        r"(<a\b[^>]*href=[\'\"][^\'\"]*%s[^\'\"]*[\'\"][^>]*>)([^<]*)(</a>)"
+        % re.escape(slug_neuf), re.I)
+    texte, _ = motif_html.subn(
+        lambda t: t.group(1) + titre_neuf + t.group(3), texte, count=1)
+    return texte
+
+
 def _sans_le_resume_de_la_soeur(entree: str) -> str:
     """L'entree clonee, privee du resume qui decrivait la SOEUR.
 
@@ -21977,6 +22026,11 @@ def ajouter_le_lien(index_contenu: str, index_chemin: str, *, soeur_slug: str,
     # le site lira le titre a la source.
     if titre_soeur and titre_neuf and titre_soeur in clone:
         clone = clone.replace(titre_soeur, titre_neuf)
+    # APRES le remplacement par sous-chaine, et sans le remplacer : celui-ci traite le cas ou
+    # le libelle de l'index EST le titre de la page ; celui-la le cas, plus frequent, ou l'index
+    # porte une formule editoriale plus courte. Le second est idempotent sur le resultat du
+    # premier.
+    clone = _retitrer_le_lien(clone, slug_neuf, titre_neuf)
     clone = _sans_le_resume_de_la_soeur(clone)
     if clone == lignes[i]:
         return "", "le slug %r ne se lit pas dans l'entree a cloner" % soeur_slug

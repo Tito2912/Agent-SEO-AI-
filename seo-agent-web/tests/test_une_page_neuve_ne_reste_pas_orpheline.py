@@ -156,8 +156,20 @@ def test_un_titre_de_soeur_VIDE_ne_mutile_pas_la_ligne() -> None:
         INDEX_MAIN, "app/blog/page.tsx", soeur_slug="premier-article",
         slug_neuf="mon-sujet", titre_soeur="", titre_neuf="Mon sujet")
     assert refus == "", refus
-    assert '<li><a href="/blog/mon-sujet">Premier article</a></li>' in sortie, sortie
-    assert "MMon sujeto" not in sortie and sortie.count("Mon sujet") == 0, sortie
+    # CE TEST ATTENDAIT « Premier article » JUSQU'AU 27/09/2026 : sans titre de sœur lisible, on
+    # ne savait pas quoi mettre et garder le libellé de la sœur était le moins mauvais choix.
+    # Depuis, le texte du lien est remplacé par STRUCTURE et non par sous-chaîne : le titre de
+    # la sœur ne sert plus à rien ici, et l'entrée annonce la bonne page.
+    #
+    # La propriété que ce test garde n'a pas changé : un titre vide ne doit pas mutiler la
+    # ligne. `replace("", x)` insérerait entre chaque caractère.
+    assert '<li><a href="/blog/mon-sujet">Mon sujet</a></li>' in sortie, sortie
+    assert '<li><a href="/blog/premier-article">Premier article</a></li>' in sortie, sortie
+    # `count == 0` jusqu'au 27/09/2026 : sans titre de sœur, rien n'était remplacé et le
+    # nouveau titre n'apparaissait nulle part. Il apparaît maintenant — UNE fois. Le témoin de
+    # mutilation, lui, ne bouge pas : `replace("", x)` l'insérerait entre chaque caractère.
+    assert "MMon sujeto" not in sortie, sortie
+    assert sortie.count("Mon sujet") == 1, sortie
 
 
 def test_un_slug_IDENTIQUE_a_celui_de_la_soeur_est_refuse() -> None:
