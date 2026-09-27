@@ -28280,37 +28280,62 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
         return {"ok": False, "status": 400, "error": (
             "langue(s) que ce site ne sert pas : %s" % ", ".join(inconnues))}
 
-    principal = _preparer_la_page(
-        lire_fichier=_lire, all_paths=all_paths, sujet=sujet, route=route, base_url=base_url,
-        site_name=site_name, slug=slug, langue=langue_source)
-    if not principal.get("ok"):
-        return principal
-    seule = {"ok": True, "plans": [principal], "cle": "", "valeur": ""}
-    if not autres and len(connues) < 2:
-        return seule
-
-    # MEME SEULE, UNE PAGE NEUVE D'UN SITE MULTILINGUE DOIT PORTER SA PROPRE CLE. Le modele
-    # clone la soeur, donc il recopie sa cle de traduction : la page rejoindrait la famille de
-    # la soeur, et ses hreflang annonceraient comme traductions des pages sur un autre sujet.
-    soeur = str(principal["soeur"])
-    cle, versions, _notes = _traductions_de_la_page(
-        lire=_texte, routes=routes, chemin=soeur, langues=connues)
-    if not cle and not autres:
-        return seule
-    if not cle:
-        return {"ok": False, "status": 422, "error": (
-            "ce dépôt ne lie pas ses traductions par une valeur de tête : les versions ne "
-            "pourraient pas se désigner entre elles (hreflang). Génère une langue à la fois.")}
-    sans_version = [l or "(défaut)" for l in autres if l not in versions]
-    if sans_version:
-        return {"ok": False, "status": 422, "error": (
-            "la page imitée (%s) n'existe pas en %s : aucune forme ni section à suivre dans "
-            "cette langue." % (soeur, ", ".join(sans_version)))}
-
     route_de: dict[str, str] = {}
     for r, fichiers in routes.items():
         for f in (fichiers or []):
             route_de.setdefault(str(f), str(r))
+
+    # LA SOEUR SE CHOISIT AVANT LA REDACTION, PARMI CELLES QUI ONT UNE FAMILLE. Mesure du
+    # 27/09/2026 sur le depot client EN LIGNE : la page neuve de la veille,
+    # `comment-calculer-les-interets-composes`, n'existe qu'en francais et precede
+    # `comment-choisir-une-plateforme` dans l'alphabet. Le placement la prenait pour soeur,
+    # elle n'avait aucune traduction, et TOUTE demande multilingue sur /fr/guides/ etait
+    # refusee — avec un message faux, « ce depot ne lie pas ses traductions ».
+    #
+    # Le meme choix nourrissait un second defaut, en monolingue : sans famille, aucune cle
+    # n'etait trouvee, donc rien n'etait force, et le modele recopiait la cle de la soeur —
+    # deux pages francaises sous la meme `translationKey`.
+    #
+    # On essaie donc les pages imitables de la section, dans l'ordre du placement, et on garde
+    # la premiere dont la famille couvre TOUTES les langues demandees. Les lectures sont
+    # partagees (`_lire` memorise) et bornees par la liste du placement.
+    soeur_famille, cle, versions = "", "", {}
+    if len(connues) >= 2:
+        placement = repo_index.placement_pour_route(all_paths, route)
+        for candidate in (placement.get("soeurs") or []):
+            c, v, _notes = _traductions_de_la_page(
+                lire=_texte, routes=routes, chemin=candidate, langues=connues)
+            cle = cle or c
+            if c and all(l in v for l in autres):
+                soeur_famille, cle, versions = candidate, c, v
+                break
+        if autres and not soeur_famille and not placement.get("refus"):
+            if not cle:
+                return {"ok": False, "status": 422, "error": (
+                    "ce dépôt ne lie pas ses traductions par une valeur de tête : les versions "
+                    "ne pourraient pas se désigner entre elles (hreflang). Génère une langue à "
+                    "la fois.")}
+            return {"ok": False, "status": 422, "error": (
+                "aucune page de %s n'existe à la fois en %s : il n'y a ni forme ni section à "
+                "suivre dans toutes ces langues. Pages essayées : %s."
+                % (placement.get("section") or "cette section",
+                   ", ".join(l or "(défaut)" for l in autres),
+                   ", ".join(placement.get("soeurs") or [])))}
+
+    principal = _preparer_la_page(
+        lire_fichier=_lire, all_paths=all_paths, sujet=sujet, route=route, base_url=base_url,
+        site_name=site_name, slug=slug, langue=langue_source,
+        soeur_imposee=soeur_famille,
+        soeur_slug_imposee=route_de.get(soeur_famille, "").rstrip("/").rsplit("/", 1)[-1]
+        if soeur_famille else "")
+    if not principal.get("ok"):
+        return principal
+    # MEME SEULE, UNE PAGE NEUVE D'UN SITE MULTILINGUE DOIT PORTER SA PROPRE CLE. Le modele
+    # clone la soeur, donc il recopie sa cle de traduction : la page rejoindrait la famille de
+    # la soeur, et ses hreflang annonceraient comme traductions des pages sur un autre sujet.
+    if not cle:
+        return {"ok": True, "plans": [principal], "cle": "", "valeur": ""}
+    soeur = str(principal["soeur"])
     plans = [principal]
     slug_principal = route.rstrip("/").rsplit("/", 1)[-1]
 

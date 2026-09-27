@@ -452,6 +452,15 @@ def test_un_solde_EXACT_laisse_passer_et_les_langues_ATTEIGNENT_la_generation(
     assert github["put"] == [] and modele[1] == [] and plan["debits"] == []
 
 
+def test_un_site_MONOLINGUE_ne_lit_que_la_soeur_et_l_index(customer, plan, github, modele) -> None:
+    """Chercher des traductions sur un site qui n'en a pas coûterait des lectures GitHub à
+    chaque page, pour rien."""
+    client, slug, _pid, _uid = customer
+    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
+    lus = sorted(p.split("/contents/", 1)[1] for p in github["get"] if "/contents/" in p)
+    assert lus == ["app/blog/page.tsx", "app/blog/premier-article/page.tsx"], lus
+
+
 def test_combien_d_articles_coute_une_demande() -> None:
     v = app_module._versions_demandees
     assert v("/blog/x", []) == 1

@@ -72,6 +72,13 @@ def _index(liens: list[tuple[str, str]]) -> str:
 
 
 FICHIERS = {
+    # LE PIEGE MESURE SUR LE DEPOT EN LIGNE le 27/09/2026 : une page qui n'existe qu'en
+    # francais (celle que l'agent venait d'ecrire) et precede toutes les autres dans l'alphabet.
+    # Le placement la proposait en premier ; prise pour soeur, elle faisait refuser toute
+    # demande multilingue, et en monolingue sa cle etait recopiee telle quelle.
+    "content/fr/guides/comment-epargner.mdx": _page(
+        "Comment épargner", "guides/comment-epargner",
+        "https://site.fr/fr/guides/comment-epargner/", "Epargner chaque mois."),
     "content/fr/guides/dca-crypto.mdx": _page(
         "DCA crypto : guide pratique", "guides/crypto-dca",
         "https://site.fr/fr/guides/dca-crypto/", "Le DCA en crypto, pas a pas."),
@@ -406,10 +413,56 @@ def test_sans_cle_une_page_SEULE_part_comme_avant(github, modele, debits) -> Non
     assert _proposer()["ok"]
 
 
-def test_une_langue_ou_la_soeur_n_existe_pas_est_refusee(github, modele, debits) -> None:
+def test_une_soeur_SANS_FAMILLE_n_est_pas_prise_meme_premiere(github, modele, debits) -> None:
+    """`comment-epargner` precede `dca-crypto` et n'existe qu'en francais."""
+    out = _proposer(["de"])
+    assert out["ok"], out
+    assert modele.vues[0] == "content/fr/guides/dca-crypto.mdx", modele.vues
+
+
+def test_une_page_SEULE_n_imite_pas_non_plus_une_soeur_sans_famille(github, modele, debits) -> None:
+    """Sinon aucune cle n'est trouvee, rien n'est force, et la page neuve recopie
+    `guides/comment-epargner` : deux pages francaises sous la meme cle."""
+    _proposer()
+    assert modele.vues == ["content/fr/guides/dca-crypto.mdx"], modele.vues
+    page = _ecrits(github)["content/fr/guides/calculer-les-interets-composes.mdx"]
+    assert 'translationKey: "guides/calculer-les-interets-composes"' in page, page
+
+
+def test_si_la_premiere_famille_est_INCOMPLETE_on_prend_la_suivante(github, modele, debits) -> None:
+    """`dca-crypto` n'a plus de version allemande ; `debuter-investissement` en a une."""
     github["tree"].remove("content/de/guides/krypto-dca.mdx")
     out = _proposer(["de"])
-    assert not out["ok"] and "n'existe pas en de" in out["error"], out
+    assert out["ok"], out
+    assert modele.vues[0] == "content/fr/guides/debuter-investissement.mdx", modele.vues
+    assert modele.vues[1] == "content/de/guides/anfangen-zu-investieren.mdx", modele.vues
+
+
+def test_une_adresse_DEJA_SERVIE_garde_son_vrai_refus_avec_des_langues(
+        github, modele, debits) -> None:
+    """Le placement refuse, donc ne propose aucune soeur : dire « aucune page n'existe dans
+    ces langues » masquerait la vraie cause."""
+    app_module.DB.create_tables()
+    out = app_module._proposer_une_page(
+        SimpleNamespace(id="u-langues"), project_id="p-langues", site_name="site.fr",
+        slug="site", sujet=SUJET, route="/fr/guides/dca-crypto/", base_url="https://site.fr",
+        owner="client", repo_name="site", branch="main", token="t", langues=["de"])
+    assert not out["ok"] and "existe deja" in out["error"], out
+
+
+def test_une_langue_qu_AUCUNE_page_de_la_section_ne_couvre_est_refusee(
+        github, modele, debits) -> None:
+    github["tree"].remove("content/de/guides/krypto-dca.mdx")
+    github["tree"].remove("content/de/guides/anfangen-zu-investieren.mdx")
+    # L'allemand reste une langue du site — une page HORS de la section — sans quoi le refus
+    # serait « langue que ce site ne sert pas », et le test mesurerait autre chose.
+    github["tree"].append("content/de/impressum.mdx")
+    github["fichiers"]["content/de/impressum.mdx"] = _page(
+        "Impressum", "legal-notice", "https://site.fr/de/impressum/", "Impressum.")
+    out = _proposer(["de"])
+    assert not out["ok"] and "n'existe à la fois en de" in out["error"], out
+    assert "ne lie pas ses traductions" not in out["error"], "le message ment sur la cause"
+    assert modele.vues == [], "le refus devait tomber AVANT le modele"
     _rien_ecrit(github)
 
 
