@@ -28018,6 +28018,108 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 _CONTENT_PAGE_KEY = "ai_content_page"
 
 
+def _lire_du_depot(*, owner: str, repo_name: str, branch: str, token: str,
+                   ) -> "Callable[[str], tuple[str, str] | None]":
+    """Un lecteur de fichier lie a une branche : (contenu, sha), ou None.
+
+    Sorti de `_proposer_une_page` pour que `_preparer_la_page` n'ait pas a connaitre GitHub.
+    Une fonction qui prepare du contenu et une qui parle a une API n'ont pas les memes raisons
+    de changer — et la premiere devient testable sans reseau.
+    """
+    import base64 as _b64
+
+    def _lire(chemin: str) -> "tuple[str, str] | None":
+        try:
+            fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
+                                 token=token, params={"ref": branch}, timeout_s=15)
+            return (_b64.b64decode(str(fd.get("content") or "").replace("\n", "")).decode(
+                "utf-8", errors="replace"), str(fd.get("sha") or ""))
+        except Exception:
+            return None
+
+    return _lire
+
+
+def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]",
+                      all_paths: list[str], sujet: str, route: str, base_url: str,
+                      site_name: str, slug: str, langue: str = "",
+                      ) -> dict[str, Any]:
+    """Tout ce qu'une page demande AVANT la moindre ecriture. Ne touche pas au depot.
+
+    POURQUOI CETTE FONCTION EXISTE. `_proposer_une_page` faisait tout d'un trait : choisir le
+    fichier, ecrire la page, poser le lien, creer la branche, commiter, ouvrir la PR. Tant
+    qu'une page partait seule, c'etait lisible. Des qu'il faut en livrer PLUSIEURS dans une
+    seule pull request — une par langue, decide le 27/09/2026 — il faut avoir prepare toutes
+    les langues AVANT d'ecrire la premiere : sinon un refus sur la troisieme laisse deux pages
+    a moitie posees sur une branche.
+
+    Le reste de `_proposer_une_page` n'a pas ete recopie : cette fonction est ce qu'il appelle.
+    Deux implementations du meme geste divergeraient, et c'est celle que personne ne regarde
+    qui finirait par ecrire n'importe quoi chez un client — la docstring de `_proposer_une_page`
+    le dit deja du mode automatique.
+
+    Rend soit `{"ok": False, "status": .., "error": ..}`, soit le PLAN : le fichier a ecrire,
+    son contenu, l'index modifie et son sha, la note de lien, et si la page sort orpheline.
+    """
+    from datetime import datetime as _dt
+    placement = repo_index.placement_pour_route(all_paths, route, date=_dt.utcnow().strftime("%Y-%m-%d"))
+    logger.info("[contenu] %s %s -> %s", slug, route,
+                placement.get("fichier") or ("refus: " + str(placement.get("refus") or "")))
+    if placement["refus"]:
+        return {"ok": False, "status": 422, "error": placement["refus"]}
+    fichier = str(placement["fichier"])
+    soeur = str((placement["soeurs"] or [""])[0])
+
+    _lire = lire_fichier
+
+    lu_soeur = _lire(soeur) if soeur else None
+    if lu_soeur is None:
+        return {"ok": False, "status": 400, "error": f"Impossible de lire la page sœur {soeur}."}
+    soeur_contenu = lu_soeur[0]
+
+    # L'adresse publique de la page : la seule verite dont dispose le garde-fou d'URL, et
+    # elle est certaine puisque c'est nous qui venons de la choisir.
+    url_de_la_page = (str(base_url or "").rstrip("/") + route) if base_url else ""
+    notes_redaction: list[str] = []
+    contenu, refus = rediger_une_page(
+        sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
+        site_name=site_name, url_de_la_page=url_de_la_page, notes=notes_redaction)
+    if refus:
+        return {"ok": False, "status": 422, "error": refus}
+    titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
+
+    index_chemin = str(placement.get("index") or "")
+    index_sortie, index_sha, note_lien, orpheline = "", "", "", True
+    if not index_chemin:
+        note_lien = ("**Aucune page de section trouvée** pour `%s` : la page n'est liée depuis "
+                     "nulle part. Ajoute le lien avant de fusionner."
+                     % str(placement.get("section") or ""))
+    else:
+        lu_index = _lire(index_chemin)
+        if lu_index is None:
+            note_lien = "**Index `%s` illisible** : le lien n'a pas pu être posé." % index_chemin
+        else:
+            index_sha = lu_index[1]
+            index_sortie, note_lien, orpheline = _lien_pour_la_page_neuve(
+                lu_index[0], index_chemin,
+                soeur_slug=str(placement.get("soeur_slug") or ""),
+                slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
+                titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
+                titre_neuf=titre_neuf,
+                # La section sert a reconnaitre le CATALOGUE parmi plusieurs listes : celle
+                # qui enumere le plus de pages de CETTE section. Sans elle, un menu global
+                # riche en liens passerait pour le catalogue de la rubrique.
+                section=str(placement.get("section") or ""))
+
+    return {
+        "ok": True, "route": route, "fichier": fichier, "contenu": contenu,
+        "titre": titre_neuf, "soeur": soeur, "langue": langue,
+        "index_chemin": index_chemin, "index_sortie": index_sortie, "index_sha": index_sha,
+        "note_lien": note_lien, "orpheline": bool(orpheline),
+        "notes_redaction": notes_redaction,
+    }
+
+
 def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                        sujet: str, route: str, base_url: str,
                        owner: str, repo_name: str, branch: str, token: str,
@@ -28060,65 +28162,25 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
 
+    plan = _preparer_la_page(
+        lire_fichier=_lire_du_depot(owner=owner, repo_name=repo_name, branch=branch,
+                                    token=token),
+        all_paths=all_paths, sujet=sujet, route=route, base_url=base_url,
+        site_name=site_name, slug=slug)
+    if not plan.get("ok"):
+        return plan
+    fichier = str(plan["fichier"])
+    contenu = str(plan["contenu"])
+    titre_neuf = str(plan["titre"])
+    soeur = str(plan["soeur"])
+    index_chemin = str(plan["index_chemin"])
+    index_sortie = str(plan["index_sortie"])
+    index_sha = str(plan["index_sha"])
+    note_lien = str(plan["note_lien"])
+    orpheline = bool(plan["orpheline"])
+    notes_redaction = list(plan["notes_redaction"])
     from datetime import datetime as _dt
-    placement = repo_index.placement_pour_route(all_paths, route, date=_dt.utcnow().strftime("%Y-%m-%d"))
-    logger.info("[contenu] %s %s -> %s", slug, route,
-                placement.get("fichier") or ("refus: " + str(placement.get("refus") or "")))
-    if placement["refus"]:
-        return {"ok": False, "status": 422, "error": placement["refus"]}
-    fichier = str(placement["fichier"])
-    soeur = str((placement["soeurs"] or [""])[0])
-
     import base64 as _b64
-
-    def _lire(chemin: str) -> tuple[str, str] | None:
-        """(contenu, sha) du fichier sur la branche de base, ou None."""
-        try:
-            fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
-                                 token=token, params={"ref": branch}, timeout_s=15)
-            return (_b64.b64decode(str(fd.get("content") or "").replace("\n", "")).decode("utf-8", errors="replace"),
-                    str(fd.get("sha") or ""))
-        except Exception:
-            return None
-
-    lu_soeur = _lire(soeur) if soeur else None
-    if lu_soeur is None:
-        return {"ok": False, "status": 400, "error": f"Impossible de lire la page sœur {soeur}."}
-    soeur_contenu = lu_soeur[0]
-
-    # L'adresse publique de la page : la seule verite dont dispose le garde-fou d'URL, et
-    # elle est certaine puisque c'est nous qui venons de la choisir.
-    url_de_la_page = (str(base_url or "").rstrip("/") + route) if base_url else ""
-    notes_redaction: list[str] = []
-    contenu, refus = rediger_une_page(
-        sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
-        site_name=site_name, url_de_la_page=url_de_la_page, notes=notes_redaction)
-    if refus:
-        return {"ok": False, "status": 422, "error": refus}
-    titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
-
-    index_chemin = str(placement.get("index") or "")
-    index_sortie, index_sha, note_lien, orpheline = "", "", "", True
-    if not index_chemin:
-        note_lien = ("**Aucune page de section trouvée** pour `%s` : la page n'est liée depuis "
-                     "nulle part. Ajoute le lien avant de fusionner."
-                     % str(placement.get("section") or ""))
-    else:
-        lu_index = _lire(index_chemin)
-        if lu_index is None:
-            note_lien = "**Index `%s` illisible** : le lien n'a pas pu être posé." % index_chemin
-        else:
-            index_sha = lu_index[1]
-            index_sortie, note_lien, orpheline = _lien_pour_la_page_neuve(
-                lu_index[0], index_chemin,
-                soeur_slug=str(placement.get("soeur_slug") or ""),
-                slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
-                titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
-                titre_neuf=titre_neuf,
-                # La section sert a reconnaitre le CATALOGUE parmi plusieurs listes : celle
-                # qui enumere le plus de pages de CETTE section. Sans elle, un menu global
-                # riche en liens passerait pour le catalogue de la rubrique.
-                section=str(placement.get("section") or ""))
 
     # EN AUTOMATIQUE, UNE ORPHELINE NE PART PAS. En manuel la phrase ci-dessus suffit :
     # une personne relit le brouillon. Ici personne ne la lira, et une page que rien ne
