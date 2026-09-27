@@ -63,6 +63,18 @@
             arborescence.
           </span>
         </label>
+        {# Rempli apres le rendu par /content/langues : lire l'arbre du depot prend des
+           secondes. Reste cache sur un site qui ne sert qu'une langue. #}
+        <fieldset id="c-langues-bloc" hidden style="border:0;padding:0;margin:0;">
+          <legend>Langues</legend>
+          <div id="c-langues" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0;"></div>
+          <span class="muted small">
+            Une version par langue cochée, toutes dans la même pull request et liées entre
+            elles (hreflang). Chaque version imite la traduction de la même page existante,
+            et son adresse vient de son titre. La langue de l'adresse est toujours écrite.
+          </span>
+          <div id="c-cout" class="muted small" role="status" aria-live="polite" style="margin-top:4px;"></div>
+        </fieldset>
         <div class="modal-actions between">
           <span class="muted small">
             Besoin d'idées ? <a href="/projects/{{ slug }}/competitors">Concurrents</a> liste
@@ -136,7 +148,7 @@
             <tbody>
               {% for p in pages %}
                 <tr>
-                  <td class="mono">{{ p.route }}</td>
+                  <td class="mono">{{ p.route }}{% for v in p.versions %}<br><span class="muted small">{{ v }}</span>{% endfor %}</td>
                   <td class="muted small">{{ p.sujet }}</td>
                   <td>
                     {% if p.orpheline %}
@@ -195,7 +207,71 @@
         if (touche) return;
         var s = slugifier(sujet.value);
         route.value = s ? '/blog/' + s : '';
+        majLangues();
       });
+
+      /* LES LANGUES. Mesurees dans le depot par le serveur, jamais saisies : une case ne peut
+         pas offrir ce que la redaction refuserait. La langue de l'ADRESSE est cochee et
+         verrouillee — c'est la page demandee, pas une traduction. Elle se lit comme le
+         serveur la lit : un premier segment qui est une langue du site, sinon la racine. */
+      var restant = {{ restant | tojson }};
+      var langBloc = document.getElementById('c-langues-bloc');
+      var langBox = document.getElementById('c-langues');
+      var cout = document.getElementById('c-cout');
+      var codes = [];
+      function libelle(code) { return code ? code.toUpperCase() : 'racine (sans préfixe)'; }
+      function langueDeRoute(r) {
+        var seg = (String(r || '').split('/').filter(Boolean)[0] || '').toLowerCase();
+        return codes.indexOf(seg) >= 0 ? seg : '';
+      }
+      function cochees() {
+        if (langBloc.hidden) return [];
+        return Array.prototype.map.call(
+          langBox.querySelectorAll('input:checked'), function (c) { return c.value; });
+      }
+      function majLangues() {
+        if (!codes.length) return;
+        var principale = langueDeRoute(route.value);
+        Array.prototype.forEach.call(langBox.querySelectorAll('input'), function (c) {
+          var est = c.value === principale;
+          /* Une case cochee PAR L'ECRAN parce qu'elle etait la langue de l'adresse se decoche
+             quand l'adresse change de langue : sinon `/fr/…` corrige en `/guides/…` laisserait
+             une traduction francaise que personne n'a demandee — et payee. */
+          if (est && !c.checked) { c.checked = true; c.dataset.auto = '1'; }
+          if (!est && c.dataset.auto) { c.checked = false; delete c.dataset.auto; }
+          c.disabled = est;
+          c.title = est ? "langue de l'adresse : toujours écrite" : '';
+        });
+        var n = Math.max(1, cochees().length);
+        var txt = n > 1 ? n + ' versions : ' + n + ' articles.' : '1 version : 1 article.';
+        if (restant !== null && n > restant) {
+          cout.className = 'error small';
+          cout.textContent = txt + ' Il ne t\'en reste que ' + restant + ' ce mois-ci.';
+        } else {
+          cout.className = 'muted small';
+          cout.textContent = txt;
+        }
+      }
+      route.addEventListener('input', majLangues);
+      fetch('/api/projects/' + encodeURIComponent(slug) + '/content/langues')
+        .then(function (resp) { return resp.json(); })
+        .then(function (d) {
+          /* Un site monolingue, ou un depot illisible : pas de choix a offrir, et le
+             formulaire marche comme avant. La redaction dira elle-meme pourquoi elle refuse. */
+          if (!d.ok || !d.langues || d.langues.length < 2) return;
+          codes = d.langues.map(function (l) { return l.code; });
+          langBox.innerHTML = d.langues.map(function (l) {
+            return '<label style="display:flex;align-items:center;gap:6px;">' +
+              '<input type="checkbox" value="' + esc(l.code) + '" /> ' + esc(libelle(l.code)) +
+              ' <span class="muted small">(' + esc(l.pages) + ' pages)</span></label>';
+          }).join('');
+          Array.prototype.forEach.call(langBox.querySelectorAll('input'), function (c) {
+            c.addEventListener('change', majLangues);
+          });
+          langBloc.hidden = false;
+          majLangues();
+        })
+        .catch(function () { /* meme repli : le formulaire reste monolingue */ });
 
       /* Le sujet de Concurrents arrive par l'URL : ?sujet=… pre-remplit le formulaire sans
          rien engendrer, pour que le client relise avant de depenser un article. */
@@ -207,13 +283,17 @@
       btn.addEventListener('click', function () {
         var s = (sujet.value || '').trim(), r = (route.value || '').trim();
         if (!s || !r) { say('Il faut un sujet et une adresse.', 'error'); return; }
+        var langues = cochees();
         btn.disabled = true;
         btn.textContent = 'Rédaction…';
-        say('Le modèle écrit la page en imitant une page existante de la même section. ' +
+        say(langues.length > 1
+          ? 'Le modèle écrit ' + langues.length + ' versions, chacune en imitant la même page ' +
+            'dans sa langue. Cela prend une à deux minutes : garde cet onglet ouvert.'
+          : 'Le modèle écrit la page en imitant une page existante de la même section. ' +
             'Cela prend une trentaine de secondes.');
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, route: r })
+          body: JSON.stringify({ sujet: s, route: r, langues: langues })
         })
           .then(function (resp) { return resp.json(); })
           .then(function (d) {
@@ -224,14 +304,25 @@
             var mot = d.orpheline
               ? ' <strong>Cette page n\'est liée depuis aucun index</strong> : ajoute le lien avant de fusionner.'
               : ' Le lien depuis <span class="mono">' + esc(d.index || 'la section') + '</span> est dans le diff.';
-            say('Page écrite dans <span class="mono">' + esc(d.file) + '</span>.' + lien + mot +
+            var ecrits = (d.pages && d.pages.length > 1)
+              ? d.pages.length + ' versions écrites : ' + d.pages.map(function (p) {
+                  return '<span class="mono">' + esc(p.route) + '</span>';
+                }).join(', ') + '.'
+              : 'Page écrite dans <span class="mono">' + esc(d.file) + '</span>.';
+            say(ecrits + lien + mot +
                 ' Le texte vient d\'un modèle : relis-le avant de fusionner.',
                 d.orpheline ? 'muted' : 'ok');
           })
           .catch(function () {
+            /* La connexion coupee n'arrete PAS le serveur : la redaction continue, et la PR
+               s'ouvrira quand meme. Dire « erreur » pousserait a relancer — deux PR, deux
+               debits. On dit ce qui se passe vraiment. */
             btn.disabled = false;
             btn.textContent = 'Rédiger (PR)';
-            say('Erreur réseau pendant la rédaction.', 'error');
+            say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être ' +
+                'de notre côté. Recharge cette page dans quelques minutes : si la pull request ' +
+                'a été ouverte, elle apparaîtra dans « Pages proposées ». Ne relance pas ' +
+                'avant, tu risquerais de payer deux fois.', 'error');
           });
       });
 

@@ -28027,6 +28027,19 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 _CONTENT_PAGE_KEY = "ai_content_page"
 
 
+def _chemins_du_depot(*, owner: str, repo_name: str, branch: str, token: str) -> list[str]:
+    """Les fichiers du depot que l'agent a le droit de lire. Leve si GitHub ne repond pas.
+
+    La meme liste pour la redaction et pour l'ecran qui propose les langues : si l'ecran
+    lisait les langues ailleurs, il pourrait en offrir une que la redaction refuserait.
+    """
+    tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
+    return [
+        item["path"] for item in (tree_data.get("tree") or [])
+        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
+    ]
+
+
 def _lire_du_depot(*, owner: str, repo_name: str, branch: str, token: str,
                    ) -> "Callable[[str], tuple[str, str] | None]":
     """Un lecteur de fichier lie a une branche : (contenu, sha), ou None.
@@ -28371,13 +28384,9 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         )}
 
     try:
-        tree_data = _github_api_get(_github_api_path("repos", owner, repo_name, "git", "trees", branch), token=token, params={"recursive": "1"}, timeout_s=20)
+        all_paths = _chemins_du_depot(owner=owner, repo_name=repo_name, branch=branch, token=token)
     except Exception as e:
         return {"ok": False, "status": 400, "error": f"Lecture du dépôt impossible : {e}"}
-    all_paths = [
-        item["path"] for item in (tree_data.get("tree") or [])
-        if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
-    ]
 
     prepare = _preparer_les_pages(
         lire_fichier=_lire_du_depot(owner=owner, repo_name=repo_name, branch=branch,
@@ -28632,6 +28641,45 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
 
+@app.get("/api/projects/{slug}/content/langues")
+def api_content_langues(request: Request, slug: str) -> JSONResponse:
+    """Les langues que le depot sert, pour que l'ecran ne propose que celles-la.
+
+    MESUREES, PAS SAISIES. Une liste libre laisserait cocher l'italien sur un site qui n'en a
+    pas, et la redaction refuserait apres coup ; une liste figee ne connaitrait pas le site.
+    La source est celle de la redaction — les routes du depot, `_langues_des_routes` — pour
+    qu'aucune case ne puisse offrir ce que la redaction refuserait.
+
+    APPELEE PAR L'ECRAN APRES SON RENDU : lire l'arbre d'un depot de trois mille fichiers prend
+    des secondes, et l'ecran sert aussi au journal et au mode automatique.
+
+    Le code "" est la langue servie a la racine, sans prefixe. On ne la NOMME pas : rien dans
+    les routes ne dit si c'est de l'anglais ou du francais, et une etiquette devinee serait
+    fausse une fois sur deux.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    cfg = _project_github_cfg(proj)
+    repo_parts = _github_repo_parts(cfg["repo"]) if cfg["repo"] else None
+    if repo_parts is None or not _github_branch_allowed(cfg["branch"]):
+        return JSONResponse({"ok": False, "error": "Aucun dépôt GitHub connecté à ce projet."}, status_code=400)
+    token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
+    if not token or source != "user":
+        return JSONResponse({"ok": False, "error": "GitHub non connecté."}, status_code=400)
+    try:
+        chemins = _chemins_du_depot(owner=repo_parts[0], repo_name=repo_parts[1],
+                                    branch=cfg["branch"], token=token)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"Lecture du dépôt impossible : {e}"}, status_code=400)
+    routes = repo_index.build_repo_index(chemins).get("routes") or {}
+    langues = _langues_des_routes(routes)
+    return JSONResponse({"ok": True, "langues": [
+        {"code": code, "pages": n}
+        for code, n in sorted(langues.items(), key=lambda kv: (-kv[1], kv[0]))]})
+
+
 
 def _reglages_contenu_auto(reglages: Any) -> dict[str, Any]:
     """Les reglages du mode automatique, toujours complets, depuis les reglages d'un projet.
@@ -28698,8 +28746,15 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
                 note = {}
             verif = note.get("verification")
             verif = verif if isinstance(verif, dict) else {}
+            versions = note.get("pages") if isinstance(note.get("pages"), list) else []
             pages.append({
                 "route": str(t.url or ""),
+                # Les AUTRES versions d'une page multilingue : la tache est rangee sous
+                # l'adresse principale, et sans elles le journal tairait trois fichiers sur
+                # quatre de la pull request.
+                "versions": [str(v.get("route") or "") for v in versions
+                             if isinstance(v, dict) and v.get("route")
+                             and str(v.get("route")) != str(t.url or "")],
                 "sujet": str(note.get("sujet") or ""),
                 "pr_url": str(note.get("pr_url") or ""),
                 "pr_number": int(note.get("pr_number") or 0),

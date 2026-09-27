@@ -604,6 +604,90 @@ def test_l_ecran_montre_le_formulaire_et_le_QUOTA_restant(customer, plan) -> Non
     assert "3 articles restants" in page, "le client ne sait pas ce qu'il lui reste"
 
 
+# Un depot MULTILINGUE, forme mesuree sur un site client : l'anglais a la racine, `fr` et `de`
+# prefixes par des routes dynamiques. Seuls les CHEMINS comptent pour l'ecran des langues.
+TREE_MULTILINGUE = [
+    "package.json", "next.config.mjs", "app/(site)/[...slug]/page.tsx",
+    "app/(site)/fr/[...slug]/page.tsx", "app/(site)/de/[...slug]/page.tsx",
+    "content/fr/guides/a.mdx", "content/fr/guides/b.mdx", "content/fr/guides/c.mdx",
+    "content/de/guides/a.mdx", "content/de/guides/b.mdx",
+    "content/en/guides/a.mdx", "content/en/guides/b.mdx",
+]
+
+
+def test_l_ecran_propose_les_langues_MESUREES_du_depot(customer, plan, github) -> None:
+    client, slug, _pid, _uid = customer
+    github["tree"] = list(TREE_MULTILINGUE)
+    r = client.get(f"/api/projects/{slug}/content/langues")
+    assert r.status_code == 200, r.text
+    assert r.json()["langues"] == [{"code": "fr", "pages": 3}, {"code": "", "pages": 2},
+                                   {"code": "de", "pages": 2}], r.text
+
+
+def test_un_site_MONOLINGUE_ne_propose_qu_une_langue(customer, plan, github) -> None:
+    """L'ecran cache le choix sous deux langues : une seule case serait une question sans
+    alternative."""
+    client, slug, _pid, _uid = customer
+    langues = client.get(f"/api/projects/{slug}/content/langues").json()["langues"]
+    assert [l["code"] for l in langues] == [""], langues
+
+
+def test_les_langues_sans_DEPOT_ne_lisent_rien(customer, plan, github) -> None:
+    client, slug, pid, _uid = customer
+    with app_module.DB.session() as db:
+        proj = db.get(Project, pid)
+        proj.settings = {k: v for k, v in proj.settings.items() if k != "github_repo"}
+        db.commit()
+    r = client.get(f"/api/projects/{slug}/content/langues")
+    assert r.status_code == 400 and github["get"] == [], r.text
+
+
+def test_les_langues_d_une_branche_INVALIDE_ne_lisent_rien(customer, plan, github) -> None:
+    """La branche vient des reglages du projet et part dans un chemin d'API GitHub : `../x`
+    doit etre refusee avant, comme sur la route qui ecrit."""
+    client, slug, pid, _uid = customer
+    with app_module.DB.session() as db:
+        proj = db.get(Project, pid)
+        proj.settings = {**proj.settings, "github_branch": "../x"}
+        db.commit()
+    r = client.get(f"/api/projects/{slug}/content/langues")
+    assert r.status_code == 400 and github["get"] == [], r.text
+
+
+def test_les_langues_d_un_AUTRE_compte_ne_se_lisent_pas(customer, plan, github) -> None:
+    """La route lit le depot avec le jeton du client : elle doit etre aussi fermee que celle
+    qui ecrit."""
+    client, slug, _pid, _uid = customer
+    client.cookies.clear()
+    r = client.get(f"/api/projects/{slug}/content/langues")
+    assert r.status_code in (303, 307, 401, 403, 404), r.status_code
+    assert github["get"] == []
+
+
+def test_l_ecran_porte_le_choix_des_langues_CACHE_et_l_envoie(customer, plan) -> None:
+    client, slug, _pid, _uid = customer
+    page = client.get(f"/projects/{slug}/content").text
+    assert '<fieldset id="c-langues-bloc" hidden' in page
+    assert "/content/langues" in page and "langues: langues" in page
+
+
+def test_le_journal_montre_TOUTES_les_versions_d_une_page(customer, plan, github, modele) -> None:
+    client, slug, pid, uid = customer
+    with app_module.DB.session() as db:
+        db.add(app_module.IssueTask(
+            project_id=pid, user_id=uid, created_by=uid,
+            issue_key=app_module._CONTENT_PAGE_KEY, issue_label="x", crawl_ts="",
+            url="/fr/guides/x/", status="in_progress", severity="notice",
+            note=json.dumps({"sujet": "x", "pages": [
+                {"langue": "fr", "route": "/fr/guides/x/", "fichier": "a"},
+                {"langue": "de", "route": "/de/guides/y/", "fichier": "b"}]})))
+        db.commit()
+    page = client.get(f"/projects/{slug}/content").text
+    ligne = page.split('<td class="mono">/fr/guides/x/', 1)[1].split("</tr>", 1)[0]
+    assert "/de/guides/y/" in ligne, ligne
+    assert ligne.count("/fr/guides/x/") == 0, "l'adresse principale est repetee comme une version"
+
+
 def _ligne_du_journal(page: str, route: str) -> str:
     """La ligne de tableau de cette adresse, et rien d'autre.
 
