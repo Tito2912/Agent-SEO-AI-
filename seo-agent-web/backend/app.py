@@ -28043,6 +28043,8 @@ def _lire_du_depot(*, owner: str, repo_name: str, branch: str, token: str,
 def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]",
                       all_paths: list[str], sujet: str, route: str, base_url: str,
                       site_name: str, slug: str, langue: str = "",
+                      soeur_imposee: str = "", soeur_slug_imposee: str = "",
+                      adresse_depuis_le_titre: bool = False,
                       ) -> dict[str, Any]:
     """Tout ce qu'une page demande AVANT la moindre ecriture. Ne touche pas au depot.
 
@@ -28060,15 +28062,30 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
 
     Rend soit `{"ok": False, "status": .., "error": ..}`, soit le PLAN : le fichier a ecrire,
     son contenu, l'index modifie et son sha, la note de lien, et si la page sort orpheline.
+
+    LES TROIS PARAMETRES DE FIN SERVENT LES TRADUCTIONS (`_preparer_les_pages`) :
+
+    * `soeur_imposee` — la version de CETTE langue de la page que la langue principale imite.
+      Laisser `placement_pour_route` choisir prendrait la premiere page de la section, et les
+      N versions imiteraient N pages differentes : mesure du 27/09/2026 sur un site client, la
+      soeur francaise etait `comment-choisir-une-plateforme`, l'allemande choisie seule
+      `beste-tools-technische-analyse`. Les entrees d'index clonees ne se correspondaient plus.
+    * `adresse_depuis_le_titre` — le slug est TRADUIT (`dca-crypto`, `krypto-dca`), donc
+      inconnu avant que le modele ait ecrit la page. `route` n'est alors qu'une adresse
+      PROVISOIRE dans la bonne section : la vraie se deduit du titre ecrit, et le garde-fou
+      d'adresse remet ensuite canonical et og:url dessus — comme il le fait deja quand le
+      modele se trompe.
     """
     from datetime import datetime as _dt
-    placement = repo_index.placement_pour_route(all_paths, route, date=_dt.utcnow().strftime("%Y-%m-%d"))
+    jour = _dt.utcnow().strftime("%Y-%m-%d")
+    placement = repo_index.placement_pour_route(all_paths, route, date=jour)
     logger.info("[contenu] %s %s -> %s", slug, route,
                 placement.get("fichier") or ("refus: " + str(placement.get("refus") or "")))
     if placement["refus"]:
         return {"ok": False, "status": 422, "error": placement["refus"]}
     fichier = str(placement["fichier"])
-    soeur = str((placement["soeurs"] or [""])[0])
+    soeur = soeur_imposee or str((placement["soeurs"] or [""])[0])
+    soeur_slug = soeur_slug_imposee or str(placement.get("soeur_slug") or "")
 
     _lire = lire_fichier
 
@@ -28078,15 +28095,33 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
     soeur_contenu = lu_soeur[0]
 
     # L'adresse publique de la page : la seule verite dont dispose le garde-fou d'URL, et
-    # elle est certaine puisque c'est nous qui venons de la choisir.
+    # elle est certaine puisque c'est nous qui venons de la choisir. Provisoire, elle
+    # MENTIRAIT : on ne la donne pas, et on la pose apres coup.
     url_de_la_page = (str(base_url or "").rstrip("/") + route) if base_url else ""
     notes_redaction: list[str] = []
     contenu, refus = rediger_une_page(
         sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
-        site_name=site_name, url_de_la_page=url_de_la_page, notes=notes_redaction)
+        site_name=site_name, url_de_la_page="" if adresse_depuis_le_titre else url_de_la_page,
+        notes=notes_redaction)
     if refus:
         return {"ok": False, "status": 422, "error": refus}
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
+
+    if adresse_depuis_le_titre:
+        slug_neuf = _slug_de_sujet(titre_neuf)
+        if not slug_neuf:
+            return {"ok": False, "status": 422, "error": (
+                "le titre de la version %s ne donne aucun slug en caractères latins : son "
+                "adresse ne peut pas en être déduite" % (langue or "par défaut"))}
+        route = "%s/%s%s" % (str(placement.get("section") or "").rstrip("/"), slug_neuf,
+                             "/" if route.endswith("/") else "")
+        placement = repo_index.placement_pour_route(all_paths, route, date=jour)
+        if placement["refus"]:
+            return {"ok": False, "status": 422, "error": "%s : %s" % (route, placement["refus"])}
+        fichier = str(placement["fichier"])
+        url_de_la_page = (str(base_url or "").rstrip("/") + route) if base_url else ""
+        contenu, notes_url = _urls_de_la_page_neuve(contenu, url_de_la_page=url_de_la_page)
+        notes_redaction.extend(notes_url)
 
     index_chemin = str(placement.get("index") or "")
     index_sortie, index_sha, note_lien, orpheline = "", "", "", True
@@ -28102,7 +28137,7 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
             index_sha = lu_index[1]
             index_sortie, note_lien, orpheline = _lien_pour_la_page_neuve(
                 lu_index[0], index_chemin,
-                soeur_slug=str(placement.get("soeur_slug") or ""),
+                soeur_slug=soeur_slug,
                 slug_neuf=route.rstrip("/").rsplit("/", 1)[-1],
                 titre_soeur=(_find_head_text_value(soeur_contenu, "title") or ("", ""))[1],
                 titre_neuf=titre_neuf,
@@ -28113,19 +28148,192 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
 
     return {
         "ok": True, "route": route, "fichier": fichier, "contenu": contenu,
-        "titre": titre_neuf, "soeur": soeur, "langue": langue,
+        "titre": titre_neuf, "soeur": soeur, "soeur_slug": soeur_slug, "langue": langue,
         "index_chemin": index_chemin, "index_sortie": index_sortie, "index_sha": index_sha,
         "note_lien": note_lien, "orpheline": bool(orpheline),
         "notes_redaction": notes_redaction,
     }
 
 
+def _valeur_de_traduction(valeur_soeur: str, slugs_soeur: dict[str, str],
+                          slugs_neufs: dict[str, str], langue_source: str) -> str:
+    """La valeur de cle de traduction des pages neuves, TRANSPOSEE depuis celle de la soeur.
+
+    Rend "" quand la valeur de la soeur ne contient le slug d'aucune de ses versions.
+
+    ON NE LA DEMANDE PAS AU MODELE. Il clone la soeur, donc il recopie SA valeur : les N pages
+    neuves rejoindraient la famille de la soeur, et ses hreflang pointeraient vers une page sur
+    un autre sujet. C'est le genre de defaut qui survit a la relecture — la cle a la bonne forme,
+    elle designe juste la mauvaise page.
+
+    LA MEME GRAMMAIRE QUE `_transposer` POUR LES CHEMINS. Mesure du 27/09/2026 sur un site
+    client : `translationKey: "guides/how-to-choose-a-platform"` dans les quatre langues, et
+    `how-to-choose-a-platform` est le slug de la version ANGLAISE. La valeur est une section
+    plus le slug d'une langue ; on remplace ce slug par le slug neuf de la MEME langue.
+
+    Si cette langue n'est pas generee, on met le slug neuf de la langue principale : le meme
+    site l'a fait lui-meme pour `guides/compte-nickel`, une page qui n'existe qu'en francais.
+    La valeur reste unique — c'est tout ce que son role demande.
+
+    A deux slugs presents, le plus LONG gagne : `dca` peut se lire dans `guides/crypto-dca`
+    sans en etre le slug.
+    """
+    presents = [(len(s), l) for l, s in slugs_soeur.items() if s and s in valeur_soeur]
+    if not presents:
+        return ""
+    langue = max(presents)[1]
+    ancien = slugs_soeur[langue]
+    neuf = slugs_neufs.get(langue) or slugs_neufs.get(langue_source) or ""
+    if not neuf:
+        return ""
+    coupe = valeur_soeur.rfind(ancien)
+    return valeur_soeur[:coupe] + neuf + valeur_soeur[coupe + len(ancien):]
+
+
+def _poser_valeur_de_tete(contenu: str, cle: str, valeur: str) -> str:
+    """Remplacer la valeur d'une cle SIMPLE du bloc de tete, guillemets conserves.
+
+    Pas de refus si la cle manque : `rediger_une_page` a deja refuse toute page a laquelle
+    manque une cle de la soeur, et la cle de traduction en est une. Ma premiere version
+    refusait ICI aussi ; une mutation qui desactivait ce refus a SURVECU — aucune page ne
+    pouvait l'atteindre.
+    """
+    texte = str(contenu or "")
+    marque = texte[:4].strip()
+    if marque not in ("---", "+++"):
+        return texte
+    borne = "---" if marque == "---" else "+++"
+    fin = texte.find("\n" + borne, len(borne))
+    if fin < 0:
+        return texte
+    motif = re.compile(r"^(%s\s*[:=]\s*)([\"']?)[^\n]*?\2([ \t\r]*)$" % re.escape(cle), re.M)
+    tete = motif.sub(lambda t: t.group(1) + t.group(2) + valeur + t.group(2) + t.group(3),
+                     texte[:fin], count=1)
+    return tete + texte[fin:]
+
+
+def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None]",
+                        all_paths: list[str], sujet: str, route: str, langues: list[str],
+                        base_url: str, site_name: str, slug: str) -> dict[str, Any]:
+    """Les plans de TOUTES les versions d'une page, ou le refus de la premiere qui echoue.
+
+    RIEN N'EST ECRIT TANT QUE TOUT N'EST PAS PRET. Decide le 27/09/2026 : une seule pull request
+    pour toutes les langues, pour que les hreflang soient coherents des la fusion. Un refus sur
+    la troisieme langue apres avoir pose les deux premieres laisserait une famille incomplete ;
+    ici il ne laisse rien.
+
+    `route` est l'adresse dans la langue PRINCIPALE, celle que le client a tapee. Les autres ne
+    se deduisent pas de la sienne — leurs slugs sont traduits — elles se construisent :
+
+        section    celle de la version, dans cette langue, de la soeur principale ;
+        soeur      cette version meme (`_traductions_de_la_page`) ;
+        slug       tire du titre que le modele vient d'ecrire.
+
+    Une langue ou la soeur n'a pas de version est REFUSEE, pas contournee : sans elle on ne sait
+    ni dans quelle section poser la page, ni quelle forme lui donner.
+
+    Rend `{"ok": True, "plans": [...], "cle": .., "valeur": ..}`. Sur un site qui ne sert
+    qu'une langue, un seul plan et aucune cle, sans une lecture de plus.
+    """
+    lus: dict[str, "tuple[str, str] | None"] = {}
+
+    def _lire(chemin: str) -> "tuple[str, str] | None":
+        if chemin not in lus:
+            lus[chemin] = lire_fichier(chemin)
+        return lus[chemin]
+
+    def _texte(chemin: str) -> str:
+        lu = _lire(chemin)
+        if lu is None:
+            raise OSError("illisible : %s" % chemin)
+        return lu[0]
+
+    routes = (repo_index.build_repo_index(all_paths).get("routes") or {})
+    connues = _langues_des_routes(routes)
+    langue_source = _langue_de_route(route, {k for k in connues if k})
+    autres = [l for l in dict.fromkeys(str(x or "").lower() for x in (langues or []))
+              if l != langue_source]
+    inconnues = [l or "(défaut)" for l in autres if l not in connues]
+    if inconnues:
+        return {"ok": False, "status": 400, "error": (
+            "langue(s) que ce site ne sert pas : %s" % ", ".join(inconnues))}
+
+    principal = _preparer_la_page(
+        lire_fichier=_lire, all_paths=all_paths, sujet=sujet, route=route, base_url=base_url,
+        site_name=site_name, slug=slug, langue=langue_source)
+    if not principal.get("ok"):
+        return principal
+    seule = {"ok": True, "plans": [principal], "cle": "", "valeur": ""}
+    if not autres and len(connues) < 2:
+        return seule
+
+    # MEME SEULE, UNE PAGE NEUVE D'UN SITE MULTILINGUE DOIT PORTER SA PROPRE CLE. Le modele
+    # clone la soeur, donc il recopie sa cle de traduction : la page rejoindrait la famille de
+    # la soeur, et ses hreflang annonceraient comme traductions des pages sur un autre sujet.
+    soeur = str(principal["soeur"])
+    cle, versions, _notes = _traductions_de_la_page(
+        lire=_texte, routes=routes, chemin=soeur, langues=connues)
+    if not cle and not autres:
+        return seule
+    if not cle:
+        return {"ok": False, "status": 422, "error": (
+            "ce dépôt ne lie pas ses traductions par une valeur de tête : les versions ne "
+            "pourraient pas se désigner entre elles (hreflang). Génère une langue à la fois.")}
+    sans_version = [l or "(défaut)" for l in autres if l not in versions]
+    if sans_version:
+        return {"ok": False, "status": 422, "error": (
+            "la page imitée (%s) n'existe pas en %s : aucune forme ni section à suivre dans "
+            "cette langue." % (soeur, ", ".join(sans_version)))}
+
+    route_de: dict[str, str] = {}
+    for r, fichiers in routes.items():
+        for f in (fichiers or []):
+            route_de.setdefault(str(f), str(r))
+    plans = [principal]
+    slug_principal = route.rstrip("/").rsplit("/", 1)[-1]
+    for langue in autres:
+        route_soeur = route_de.get(versions[langue], "")
+        section = route_soeur.rstrip("/").rsplit("/", 1)[0]
+        plan = _preparer_la_page(
+            lire_fichier=_lire, all_paths=all_paths, sujet=sujet,
+            route="%s/%s%s" % (section, slug_principal, "/" if route.endswith("/") else ""),
+            base_url=base_url, site_name=site_name, slug=slug, langue=langue,
+            soeur_imposee=versions[langue],
+            soeur_slug_imposee=route_soeur.rstrip("/").rsplit("/", 1)[-1],
+            adresse_depuis_le_titre=True)
+        if not plan.get("ok"):
+            return {**plan, "error": "version %s : %s" % (langue or "par défaut", plan.get("error"))}
+        plans.append(plan)
+
+    valeur_soeur = _valeurs_de_tete(_texte(soeur)).get(cle, "")
+    slugs_soeur = {langue_source: str(principal["soeur_slug"])}
+    slugs_soeur.update({l: route_de.get(c, "").rstrip("/").rsplit("/", 1)[-1]
+                        for l, c in versions.items()})
+    valeur = _valeur_de_traduction(
+        valeur_soeur, slugs_soeur,
+        {p["langue"]: str(p["route"]).rstrip("/").rsplit("/", 1)[-1] for p in plans},
+        langue_source)
+    if not valeur:
+        return {"ok": False, "status": 422, "error": (
+            "la clé de traduction `%s: %s` ne contient le slug d'aucune version : sa valeur "
+            "pour la page neuve ne peut pas être déduite, et une valeur recopiée la lierait à "
+            "une autre page." % (cle, valeur_soeur))}
+    for plan in plans:
+        plan["contenu"] = _poser_valeur_de_tete(str(plan["contenu"]), cle, valeur)
+    return {"ok": True, "plans": plans, "cle": cle, "valeur": valeur}
+
+
 def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                        sujet: str, route: str, base_url: str,
                        owner: str, repo_name: str, branch: str, token: str,
                        motif: str = "content_draft",
-                       refuser_si_orpheline: bool = False) -> dict[str, Any]:
+                       refuser_si_orpheline: bool = False,
+                       langues: "list[str] | None" = None) -> dict[str, Any]:
     """Ecrit la page, la lie, ouvre la PR brouillon, enregistre la tache et debite l'article.
+
+    `langues` ajoute des TRADUCTIONS a la page de `route` : toutes preparees avant la premiere
+    ecriture (`_preparer_les_pages`), toutes sur la meme branche, dans la meme PR. Chaque
+    version est un article : elle est ecrite par le modele, comme la premiere.
 
     SORTIE COMMUNE A LA MAIN ET AU CRON, et c'est la raison d'etre de cette fonction. Le mode
     automatique ne doit pas etre une SECONDE implementation du meme geste : les deux
@@ -28162,23 +28370,23 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         if isinstance(item, dict) and item.get("type") == "blob" and _github_file_path_allowed(str(item.get("path") or ""))
     ]
 
-    plan = _preparer_la_page(
+    prepare = _preparer_les_pages(
         lire_fichier=_lire_du_depot(owner=owner, repo_name=repo_name, branch=branch,
                                     token=token),
-        all_paths=all_paths, sujet=sujet, route=route, base_url=base_url,
-        site_name=site_name, slug=slug)
-    if not plan.get("ok"):
-        return plan
+        all_paths=all_paths, sujet=sujet, route=route, langues=list(langues or []),
+        base_url=base_url, site_name=site_name, slug=slug)
+    if not prepare.get("ok"):
+        return prepare
+    plans: list[dict[str, Any]] = list(prepare["plans"])
+    plan = plans[0]
     fichier = str(plan["fichier"])
-    contenu = str(plan["contenu"])
     titre_neuf = str(plan["titre"])
     soeur = str(plan["soeur"])
     index_chemin = str(plan["index_chemin"])
     index_sortie = str(plan["index_sortie"])
-    index_sha = str(plan["index_sha"])
     note_lien = str(plan["note_lien"])
-    orpheline = bool(plan["orpheline"])
-    notes_redaction = list(plan["notes_redaction"])
+    orpheline = any(bool(p["orpheline"]) for p in plans)
+    notes_redaction = [n for p in plans for n in p["notes_redaction"]]
     from datetime import datetime as _dt
     import base64 as _b64
 
@@ -28188,7 +28396,8 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
     # AVANT la premiere ecriture, pour ne meme pas laisser une branche derriere soi.
     if refuser_si_orpheline and orpheline:
         return {"ok": False, "status": 422, "orpheline": True,
-                "error": "page non liable sans decision humaine : %s" % note_lien}
+                "error": "page non liable sans decision humaine : %s"
+                         % " ".join(str(p["note_lien"]) for p in plans if p["orpheline"])}
 
     try:
         ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
@@ -28204,17 +28413,18 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
 
     ecrits: list[str] = []
     try:
-        _github_api_put(_github_content_api_path(owner, repo_name, fichier), token=token, json_body={
-            "message": "seo(contenu) : %s\n\nGenerated by SEO Agent" % (titre_neuf or sujet)[:72],
-            "content": _b64.b64encode(contenu.encode("utf-8")).decode("ascii"),
-            "branch": fix_branch})
-        ecrits.append(fichier)
-        if index_sortie:
-            _github_api_put(_github_content_api_path(owner, repo_name, index_chemin), token=token, json_body={
-                "message": "seo(contenu) : lien vers %s\n\nGenerated by SEO Agent" % route,
-                "content": _b64.b64encode(index_sortie.encode("utf-8")).decode("ascii"),
-                "sha": index_sha, "branch": fix_branch})
-            ecrits.append(index_chemin)
+        for p in plans:
+            _github_api_put(_github_content_api_path(owner, repo_name, str(p["fichier"])), token=token, json_body={
+                "message": "seo(contenu) : %s\n\nGenerated by SEO Agent" % (str(p["titre"]) or sujet)[:72],
+                "content": _b64.b64encode(str(p["contenu"]).encode("utf-8")).decode("ascii"),
+                "branch": fix_branch})
+            ecrits.append(str(p["fichier"]))
+            if p["index_sortie"]:
+                _github_api_put(_github_content_api_path(owner, repo_name, str(p["index_chemin"])), token=token, json_body={
+                    "message": "seo(contenu) : lien vers %s\n\nGenerated by SEO Agent" % p["route"],
+                    "content": _b64.b64encode(str(p["index_sortie"]).encode("utf-8")).decode("ascii"),
+                    "sha": p["index_sha"], "branch": fix_branch})
+                ecrits.append(str(p["index_chemin"]))
     except Exception as e:
         # La branche reste, vide ou a moitie ecrite, et aucune PR ne s'ouvre. On la NOMME plutot
         # que de tenter un nettoyage : supprimer une ref apres un echec d'ecriture demande le
@@ -28226,17 +28436,35 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         )}
 
     pr_title = "seo(contenu) : %s" % (titre_neuf or sujet)
+    if len(plans) == 1:
+        tete_pr = (
+            "## Page rédigée par l'agent\n\n"
+            f"**Sujet demandé :** {sujet}\n"
+            f"**Adresse :** `{route}`\n"
+            f"**Fichier créé :** `{fichier}`\n"
+            f"**Page sœur imitée :** `{soeur}`\n\n"
+            f"La forme de cette page — ses clés de tête, ses bornes, sa langue — est recopiée sur "
+            f"`{soeur}` plutôt que composée depuis un gabarit : c'est la seule façon de rendre un "
+            "fichier qui se construise sur ce dépôt-ci. Les clés manquantes sont vérifiées avant "
+            "écriture, pas seulement demandées au modèle.\n\n"
+            f"### Lien depuis la section\n\n{note_lien}\n\n")
+    else:
+        tete_pr = (
+            f"## Page rédigée par l'agent, en {len(plans)} langues\n\n"
+            f"**Sujet demandé :** {sujet}\n"
+            f"**Clé de traduction :** `{prepare['cle']}: \"{prepare['valeur']}\"`, la même dans "
+            "les %d versions : c'est elle qui les désigne comme une seule page (hreflang). Elle "
+            "est transposée depuis celle de la page sœur, pas écrite par le modèle — il aurait "
+            "recopié celle de la sœur.\n\n"
+            "Chaque version recopie la forme de la MÊME page sœur dans sa propre langue, et son "
+            "adresse vient de son titre : les slugs de ce site sont traduits.\n\n" % len(plans)
+            + "".join(
+                "### Version %s — `%s`\n\n**Fichier créé :** `%s`\n**Page sœur imitée :** "
+                "`%s`\n\n%s\n\n" % (p["langue"] or "par défaut", p["route"], p["fichier"],
+                                    p["soeur"], p["note_lien"])
+                for p in plans))
     pr_body = (
-        "## Page rédigée par l'agent\n\n"
-        f"**Sujet demandé :** {sujet}\n"
-        f"**Adresse :** `{route}`\n"
-        f"**Fichier créé :** `{fichier}`\n"
-        f"**Page sœur imitée :** `{soeur}`\n\n"
-        f"La forme de cette page — ses clés de tête, ses bornes, sa langue — est recopiée sur "
-        f"`{soeur}` plutôt que composée depuis un gabarit : c'est la seule façon de rendre un "
-        "fichier qui se construise sur ce dépôt-ci. Les clés manquantes sont vérifiées avant "
-        "écriture, pas seulement demandées au modèle.\n\n"
-        f"### Lien depuis la section\n\n{note_lien}\n\n"
+        tete_pr
         + (("### Adresses reprises\n\n"
             + "\n".join("- %s" % n for n in notes_redaction)
             + "\n\nLe modèle avait écrit une adresse qui ne mène nulle part. Elle a été "
@@ -28266,7 +28494,10 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                             "pr_title": pr_title,
                             "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
                             "branch": fix_branch, "files": ecrits, "sujet": sujet,
-                            "orpheline": bool(orpheline), "contenu": True}, ensure_ascii=False)
+                            "orpheline": bool(orpheline), "contenu": True,
+                            "pages": [{"langue": p["langue"], "route": p["route"],
+                                       "fichier": p["fichier"]} for p in plans]},
+                           ensure_ascii=False)
         with DB.session() as _db:
             _ex = _db.scalar(select(IssueTask).where(
                 IssueTask.project_id == project_id, IssueTask.issue_key == _CONTENT_PAGE_KEY,
@@ -28285,7 +28516,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
     except Exception:
         pass
 
-    _article_charge(user, 1, slug=slug, motif=motif)
+    _article_charge(user, len(plans), slug=slug, motif=motif)
 
     return {
         "ok": True, "status": 200, "pr_url": pr_url, "pr_number": pr_number,
@@ -28293,6 +28524,8 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         "verification": "en_attente", "route": route, "file": fichier,
         "index": index_chemin if index_sortie else "", "orpheline": bool(orpheline),
         "lien": note_lien, "files": ecrits, "sister": soeur,
+        "pages": [{"langue": p["langue"], "route": p["route"], "file": p["fichier"]}
+                  for p in plans],
     }
 
 
