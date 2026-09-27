@@ -509,8 +509,13 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
             # il ne sait pas, il n'invente pas une adresse.
             utiles = [x for x in prefixes if not (stack == STACK_ASTRO and x == "/")]
             for prefix in utiles:
-                if prefix == "/" or candidate == prefix or candidate.startswith(prefix + "/"):
+                if candidate == prefix or candidate.startswith(prefix + "/"):
                     add(candidate, p)
+                    break
+                if prefix == "/":
+                    # L'attrape-tout de racine prend tout ce qui reste — mais le premier
+                    # segment du candidat vient du NOM D'UN DOSSIER, pas d'une route.
+                    add(_sans_langue_non_routee(candidate), p)
                     break
 
     return {"stack": stack, "routes": routes, "dynamic": dynamic, "shared": sorted(set(shared))}
@@ -558,6 +563,51 @@ def _transposer(chemin_soeur: str, slug_soeur: str, slug_neuf: str, *, date: str
             base = "%s-%s" % (date, m.group(4))
             neuf = (dossier + "/" + base) if dossier else base
     return neuf
+
+
+_CODE_LANGUE_RE = re.compile(r"^[a-z]{2}(?:-[a-z]{2})?$")
+
+
+def _sans_langue_non_routee(candidate: str) -> str:
+    """Retirer d'une route le dossier de langue qu'AUCUNE route ne sert.
+
+    MESURE DU 27/09/2026 SUR UN SITE CLIENT EN PRODUCTION. Le depot porte quatre dossiers de
+    contenu — `content/de`, `content/en`, `content/es`, `content/fr` — mais son arborescence de
+    routage n'en connait que trois :
+
+        app/(site)/[...slug]/page.tsx        <- aucun prefixe : la langue par defaut
+        app/(site)/de/[...slug]/page.tsx     <- /de
+        app/(site)/es/[...slug]/page.tsx     <- /es
+        app/(site)/fr/[...slug]/page.tsx     <- /fr
+
+    L'anglais est donc servi A LA RACINE. Verifie sur le site en ligne :
+    `/guides/crypto-dca/` rend 200, `/en/guides/crypto-dca/` rend 404. On en deduisait pourtant
+    `/en/guides/crypto-dca`, parce que l'attrape-tout de racine accepte tout.
+
+    Consequences, les deux silencieuses : les 23 pages anglaises n'etaient rattachables a aucune
+    URL du crawl, donc INCORRIGIBLES sans que rien ne le dise ; et une page anglaise ecrite par
+    l'agent aurait porte un canonical vers une 404.
+
+    MEME GRAMMAIRE QUE POUR LES COLLECTIONS ASTRO, et meme cause : un segment de route qui vient
+    du NOM D'UN DOSSIER et que rien ne confirme. Ici la confirmation est directe — une langue est
+    prefixee dans l'URL si et seulement si une route dynamique porte son segment.
+
+    ON NE RETIRE QU'UN CODE DE LANGUE. `content/blog/article.md` chez Nuxt : `blog` EST un
+    segment d'URL, et le retirer casserait un mappage juste. La forme du code est une norme
+    publique, et elle ne sert qu'a ne pas toucher au reste.
+
+    ON N'A PAS A VERIFIER QU'AUCUNE ROUTE NE SERT CETTE LANGUE : l'appelant a deja essaye tous
+    les prefixes non racine avant d'arriver ici. Si `/de` existait, `/de/guides/x` l'aurait
+    pris et cette fonction ne serait jamais appelee. Ma premiere version portait la
+    verification quand meme ; une mutation qui la desactive a SURVECU — elle etait
+    inatteignable. Une garde qu'aucune entree ne peut declencher n'est pas une garde.
+    """
+    segments = [s for s in str(candidate or "").split("/") if s]
+    if not segments:
+        return candidate
+    if not _CODE_LANGUE_RE.match(segments[0].lower()):
+        return candidate
+    return _route_from_segments(segments[1:])
 
 
 def placement_pour_route(all_paths: list[str], route: str, *, date: str = "") -> dict[str, Any]:

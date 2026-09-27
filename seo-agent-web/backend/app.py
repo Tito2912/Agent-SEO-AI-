@@ -21917,7 +21917,9 @@ def _sans_le_resume_de_la_soeur(entree: str) -> str:
 # chaque nouveau depot, une norme non. Elle ne sert d'ailleurs qu'a FILTRER : ce qui decide
 # qu'un segment est une langue, c'est qu'il porte des pages, et qu'une autre langue porte leurs
 # traductions.
-_CODE_LANGUE_RE = re.compile(r"^[a-z]{2}(?:-[a-z]{2})?$")
+# La MEME regle que `repo_index`, importee et non recopiee : deux listes qui repondent
+# a la meme question finissent par diverger, et ce fichier a deja paye cette forme-la.
+_CODE_LANGUE_RE = repo_index._CODE_LANGUE_RE
 _ROUTES_MINIMUM_PAR_LANGUE = 2
 
 
@@ -22027,6 +22029,126 @@ def _famille_de_traduction(contenu_source: str, candidats: dict[str, str],
     # `type`, parce qu'un nom plus precis a moins de chances d'etre un hasard.
     cle = max(par_cle, key=lambda k: (len(par_cle[k]), len(k)))
     return cle, par_cle[cle]
+
+
+_LECTURES_MAX_PAR_LANGUE = 14
+
+
+def _langue_de_route(route: str, langues: "set[str] | None" = None) -> str:
+    """Le prefixe de langue d'une route, ou "" pour la langue par defaut."""
+    segments = [s for s in str(route or "").split("/") if s]
+    tete = segments[0].lower() if segments else ""
+    if not tete or not _CODE_LANGUE_RE.match(tete):
+        return ""
+    return tete if (langues is None or tete in langues) else ""
+
+
+def _sans_la_langue(route: str, langue: str) -> str:
+    """`/fr/guides/dca` sans son prefixe -> `/guides/dca`. Le reste est la route interne."""
+    norme = "/" + str(route or "").strip("/")
+    if langue and norme.lower().startswith("/" + langue + "/"):
+        return norme[len(langue) + 1:]
+    if langue and norme.lower() == "/" + langue:
+        return "/"
+    return norme
+
+
+def _traductions_de_la_page(
+    *, lire: "Callable[[str], str]", routes: dict[str, Any], chemin: str,
+    langues: dict[str, int], plafond: int = _LECTURES_MAX_PAR_LANGUE,
+) -> tuple[str, dict[str, str], list[str]]:
+    """La cle de traduction et, pour chaque langue, le fichier qui correspond a `chemin`.
+
+    Rend `(cle, {langue: chemin}, notes)`. `cle` vide veut dire : ce depot ne lie pas ses
+    traductions par une valeur de tete — l'appelant ne pourra pas garantir les hreflang, et
+    devra le DIRE plutot que d'inventer une cle.
+
+    POURQUOI ON NE DEDUIT PAS LE CHEMIN. Il serait tentant de remplacer `/fr/` par `/de/` dans
+    la route et de transposer le chemin. Mesure du 27/09/2026 sur un site client : les slugs
+    sont TRADUITS — `dca-crypto`, `krypto-dca`, `dca-cripto`, `crypto-dca`. La route allemande
+    ne se deduit pas de la francaise ; elle se CHERCHE, par la seule chose qui ne change pas.
+
+    DEUX TEMPS, POUR NE PAS LIRE TOUT LE DEPOT. On lit d'abord quelques pages d'UNE autre
+    langue, dans une section de meme nom, pour laisser `_famille_de_traduction` DESIGNER la
+    cle — c'est le passage cher, et il est borne. Ensuite, la cle connue, chaque langue se
+    resout en lisant jusqu'a trouver la bonne valeur, et on s'arrete au premier succes.
+
+    LES TEMOINS VIENNENT DE LA MEME LANGUE ET DE LA MEME SECTION : ce sont les pages qui
+    ressemblent le plus a la source sans etre sa traduction. Si une cle ne les distingue pas
+    d'elle, elle ne distingue rien.
+    """
+    notes: list[str] = []
+    par_chemin: dict[str, str] = {}
+    for route, fichiers in (routes or {}).items():
+        for f in (fichiers or []):
+            par_chemin.setdefault(str(f), str(route))
+    route_source = par_chemin.get(chemin, "")
+    if not route_source:
+        return "", {}, ["%s n'a pas de route connue : ses traductions sont introuvables."
+                        % chemin]
+    connues = {k for k in (langues or {}) if k}
+    langue_source = _langue_de_route(route_source, connues)
+    interne = _sans_la_langue(route_source, langue_source)
+    section = interne.rsplit("/", 1)[0] or "/"
+
+    def _fichiers_de(route: str) -> list[str]:
+        return [str(f) for f in ((routes or {}).get(route) or [])]
+
+    # Les candidats d'une langue, les pages de la MEME section d'abord.
+    def _candidats(langue: str) -> list[str]:
+        proches, loin = [], []
+        for route in sorted(routes or {}):
+            if route == route_source or _langue_de_route(route, connues) != langue:
+                continue
+            cible = proches if _sans_la_langue(route, langue).startswith(section) else loin
+            for f in _fichiers_de(route):
+                if f != chemin:
+                    cible.append(f)
+        return (proches + loin)[:plafond]
+
+    try:
+        source = lire(chemin)
+    except Exception as exc:
+        return "", {}, ["Lecture de %s impossible : %s" % (chemin, exc)]
+
+    temoins: list[str] = []
+    for f in _candidats(langue_source)[:3]:
+        try:
+            temoins.append(lire(f))
+        except Exception:
+            continue
+
+    cibles = [l for l in (langues or {}) if l != langue_source]
+    cle, trouvees = "", {}
+    for langue in cibles:
+        lots: dict[str, str] = {}
+        for f in _candidats(langue):
+            try:
+                lots[f] = lire(f)
+            except Exception:
+                continue
+            if cle:
+                if _valeurs_de_tete(lots[f]).get(cle) == _valeurs_de_tete(source).get(cle):
+                    trouvees[langue] = f
+                    break
+                continue
+            cle_lot, famille = _famille_de_traduction(source, lots, temoins)
+            if cle_lot and famille:
+                cle = cle_lot
+                # `famille` porte des CONTENUS ; on veut le chemin qui les a produits.
+                for chem, contenu in lots.items():
+                    if contenu in famille.values():
+                        trouvees[langue] = chem
+                        break
+                if langue in trouvees:
+                    break
+        if langue not in trouvees:
+            notes.append("aucune page %s ne correspond a %s : cette langue n'a pas encore "
+                         "cette page." % (langue or "(defaut)", chemin))
+    if not cle:
+        notes.append("Ce depot ne lie pas ses traductions par une valeur de tete : les "
+                     "hreflang ne pourront pas etre garantis.")
+    return cle, trouvees, notes
 
 
 def _lignes_citant(contenu: str, aiguille: str) -> list[int]:
