@@ -21911,6 +21911,124 @@ def _sans_le_resume_de_la_soeur(entree: str) -> str:
     return _RESUME_APRES_LIEN_RE.sub(lambda t: t.group(1), str(entree or ""), count=1)
 
 
+# Un code de langue tel qu'il apparait dans une URL : `fr`, `pt-br`, `zh-cn`. C'est une FORME,
+# et ce projet s'en mefie — mais celle-ci est une norme publique (ISO 639-1, etendue par region),
+# pas une convention de client. La difference compte : une liste de conventions vieillit avec
+# chaque nouveau depot, une norme non. Elle ne sert d'ailleurs qu'a FILTRER : ce qui decide
+# qu'un segment est une langue, c'est qu'il porte des pages, et qu'une autre langue porte leurs
+# traductions.
+_CODE_LANGUE_RE = re.compile(r"^[a-z]{2}(?:-[a-z]{2})?$")
+_ROUTES_MINIMUM_PAR_LANGUE = 2
+
+
+def _langues_des_routes(routes: "list[str] | dict[str, Any]") -> dict[str, int]:
+    """Les langues que ce site sert, et combien de routes chacune porte.
+
+    La langue par defaut — celle servie a la racine, sans prefixe — est rendue sous la cle "".
+    Un site monolingue rend donc `{"": n}`, et l'appelant n'a pas de cas particulier a ecrire.
+
+    POURQUOI LES ROUTES ET NON LES CHEMINS. Les chemins dependent de la stack : `content/fr/`
+    chez Nuxt, `src/content/docs/fr/` chez Astro, `_posts/` chez Jekyll. Les routes sont la
+    forme normalisee que ce module produit deja pour les sept conventions qu'il connait — y
+    lire les langues les herite toutes sans en reecrire aucune.
+
+    UN SEGMENT QUI NE PORTE QU'UNE PAGE N'EST PAS UNE LANGUE. `/fr/` sur un site francais
+    monolingue serait une section comme une autre ; le plancher evite de prendre une rubrique
+    `/en/` (une page de presentation en anglais) pour une langue du site.
+    """
+    compte: dict[str, int] = {}
+    for route in routes or ():
+        segments = [s for s in str(route or "").split("/") if s]
+        tete = segments[0].lower() if segments else ""
+        cle = tete if (tete and _CODE_LANGUE_RE.match(tete)) else ""
+        compte[cle] = compte.get(cle, 0) + 1
+    return {k: v for k, v in compte.items()
+            if not k or v >= _ROUTES_MINIMUM_PAR_LANGUE}
+
+
+def _valeurs_de_tete(contenu: str) -> dict[str, str]:
+    """Les couples cle/valeur SIMPLES du bloc de tete. Ni listes ni objets.
+
+    On ne cherche pas a analyser le front matter — `_front_matter_parse_error` le fait deja
+    quand il faut refuser. Ici on veut comparer des valeurs entre deux fichiers, et seules les
+    valeurs d'une ligne s'y pretent.
+    """
+    texte = str(contenu or "")
+    marque = texte[:4].strip()
+    if marque not in ("---", "+++"):
+        return {}
+    borne = "---" if marque == "---" else "+++"
+    fin = texte.find("\n" + borne, len(borne))
+    tete = texte[len(borne):fin] if fin > 0 else ""
+    out: dict[str, str] = {}
+    for ligne in tete.split("\n"):
+        trouve = re.match(r"^([A-Za-z][\w-]*)\s*[:=]\s*(.+?)\s*$", ligne)
+        if not trouve:
+            continue
+        valeur = trouve.group(2).strip().strip("\"'")
+        if valeur and not valeur.startswith(("[", "{", "|", ">")):
+            out[trouve.group(1)] = valeur
+    return out
+
+
+def _famille_de_traduction(contenu_source: str, candidats: dict[str, str],
+                           temoins: "list[str] | None" = None,
+                           ) -> tuple[str, dict[str, str]]:
+    """La cle qui lie les traductions, et la page de chaque langue. ("", {}) si rien ne lie.
+
+    LE PROBLEME. Pour ecrire la version allemande d'une page, il faut sa soeur ALLEMANDE — pas
+    la francaise. Et pour que les hreflang se lient, toutes les versions doivent partager la
+    valeur qui les designe comme une meme page. Cette valeur porte un nom different selon les
+    sites : `translationKey`, `i18nKey`, `slug_commun`, `ref`. Les enumerer serait sans fin.
+
+    ON NE LA NOMME PAS, ON LA TROUVE : c'est la cle dont la valeur est EGALE entre deux pages
+    de langues differentes. Mesure du 27/09/2026 sur un site client :
+
+        content/fr/guides/dca-crypto.mdx   translationKey: "guides/crypto-dca"
+        content/de/guides/krypto-dca.mdx   translationKey: "guides/crypto-dca"
+
+    Les slugs different dans chaque langue (`krypto-dca`, `dca-cripto`), le titre aussi, la
+    description aussi. Ce qui ne change pas, c'est la cle — par construction, puisque c'est son
+    role. Chercher l'EGALITE la designe sans qu'on ait a la connaitre.
+
+    UNE CLE QUI NE VARIE JAMAIS NE LIE RIEN, et c'est le piege : `type: "guide"` est egal entre
+    toutes les pages de la section, traductions ou non. Il lie donc PLUS de candidats que la
+    vraie cle, et gagnerait tout classement par nombre.
+
+    MA PREMIERE VERSION L'ENONCAIT DANS CETTE DOCSTRING SANS LE VERIFIER — elle demandait a
+    l'appelant de ne passer que des candidats de la meme section. Mesure immediate sur le site
+    client : la fonction a rendu `type` et a « lie » une page sans rapport qu'on lui avait
+    glissee. **Une precondition ecrite dans un commentaire n'est pas une garde.**
+
+    LES TEMOINS LA RENDENT MESURABLE. On passe d'autres pages de la MEME langue que la source :
+    si l'une d'elles porte la meme valeur pour une cle, cette cle designe une CATEGORIE, pas une
+    page, et elle est ecartee. `type` tombe ; `translationKey`, unique par page, reste.
+    """
+    source = _valeurs_de_tete(contenu_source)
+    if not source:
+        return "", {}
+    # Une valeur que partage une page de la meme langue ne designe pas une page.
+    for autre in (temoins or []):
+        valeurs = _valeurs_de_tete(autre)
+        for cle in list(source):
+            if valeurs.get(cle) == source[cle]:
+                source.pop(cle, None)
+    if not source:
+        return "", {}
+    par_cle: dict[str, dict[str, str]] = {}
+    for langue, contenu in (candidats or {}).items():
+        valeurs = _valeurs_de_tete(contenu)
+        for cle, valeur in source.items():
+            if valeurs.get(cle) == valeur:
+                par_cle.setdefault(cle, {})[langue] = contenu
+    if not par_cle:
+        return "", {}
+    # La cle qui lie le PLUS de langues. A egalite, la plus longue : `translationKey` avant
+    # `type`, parce qu'un nom plus precis a moins de chances d'etre un hasard.
+    cle = max(par_cle, key=lambda k: (len(par_cle[k]), len(k)))
+    return cle, par_cle[cle]
+
+
 def _lignes_citant(contenu: str, aiguille: str) -> list[int]:
     """Les indices des lignes qui citent `aiguille`, casse comprise."""
     if not aiguille:
