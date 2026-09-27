@@ -23,6 +23,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -131,13 +132,20 @@ def test_une_page_SANS_forme_lisible_rend_le_vide() -> None:
 # --- ce qui sort ---------------------------------------------------------------------------------
 
 def test_une_page_conforme_est_rendue(monkeypatch) -> None:
-    attendu = ("---\ntitle: Mon sujet\ndescription: Une description neuve.\n"
-               "date: 2026-09-20\ntags:\n  - seo\n---\n\n# Mon sujet\n\nDu corps neuf.\n")
-    monkeypatch.setattr(m, "_correction_ai_json", _modele(attendu))
+    rendu = ("---\ntitle: Mon sujet\ndescription: Une description neuve.\n"
+             "date: 2026-09-20\ntags:\n  - seo\n---\n\n# Mon sujet\n\nDu corps neuf.\n")
+    monkeypatch.setattr(m, "_correction_ai_json", _modele(rendu))
     contenu, refus = m.rediger_une_page(
         sujet="Mon sujet", chemin="content/blog/mon-sujet.md",
         soeur_chemin="content/blog/premier.md", soeur_contenu=SOEUR_YAML)
-    assert refus == "" and contenu == attendu
+    # UNE SEULE EXCEPTION AU « RENDU TEL QUEL », depuis le 27/09/2026 : la date du front matter
+    # est remise au jour. Le modele recopiait celle de la soeur, et une page creee aujourd'hui
+    # s'annoncait vieille de six mois en production. Voir
+    # `test_une_page_ecrite_aujourd_hui_date_d_aujourd_hui.py`.
+    jour = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    assert refus == ""
+    assert contenu == rendu.replace("2026-09-20", jour), contenu
+    assert contenu.count(jour) == 1, "la date de tete n'a pas ete remise une fois et une seule"
 
 
 def test_le_fichier_se_termine_par_un_saut_de_ligne(monkeypatch) -> None:
