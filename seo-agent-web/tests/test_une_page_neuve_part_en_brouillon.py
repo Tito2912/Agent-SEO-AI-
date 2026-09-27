@@ -428,6 +428,38 @@ def test_un_quota_EPUISE_n_atteint_jamais_github(customer, plan, github, modele)
     assert github["get"] == [] and github["put"] == [] and plan["debits"] == []
 
 
+def test_un_solde_qui_ne_couvre_pas_TOUTES_les_langues_n_atteint_jamais_github(
+        customer, plan, github, modele) -> None:
+    """Deux versions demandees, un article restant : la porte refuse AVANT le modele. Verifier
+    « au moins un » laisserait partir deux appels payes et un compteur negatif."""
+    client, slug, _pid, _uid = customer
+    plan["restant"] = 1
+    r = _demander(client, slug, sujet=SUJET, route=ROUTE, langues=["de"])
+    assert r.status_code == 402, r.text
+    assert "Il te reste 1" in r.json()["error"] and "2" in r.json()["error"], r.text
+    assert github["get"] == [] and github["put"] == [] and modele[1] == []
+
+
+def test_un_solde_EXACT_laisse_passer_et_les_langues_ATTEIGNENT_la_generation(
+        customer, plan, github, modele) -> None:
+    """Deux articles pour deux versions : la porte ouvre. Ce depot Next ne sert pas `de` — le
+    refus qui suit prouve que les langues ont bien ete TRANSMISES, et il tombe avant tout
+    appel au modele et tout debit."""
+    client, slug, _pid, _uid = customer
+    plan["restant"] = 2
+    r = _demander(client, slug, sujet=SUJET, route=ROUTE, langues=["de"])
+    assert r.status_code == 400 and "ne sert pas" in r.json()["error"], r.text
+    assert github["put"] == [] and modele[1] == [] and plan["debits"] == []
+
+
+def test_combien_d_articles_coute_une_demande() -> None:
+    v = app_module._versions_demandees
+    assert v("/blog/x", []) == 1
+    assert v("/fr/guides/x", ["fr", "de"]) == 2
+    assert v("/fr/guides/x", ["FR", " de ", "de"]) == 2
+    assert v("/guides/x", ["", "de", "es"]) == 3
+
+
 def test_une_adresse_DEJA_SERVIE_n_est_pas_reecrite(customer, plan, github, modele) -> None:
     """Le refus vient de `placement_pour_route` et sort AVANT la première ligne engendrée."""
     client, slug, _pid, _uid = customer

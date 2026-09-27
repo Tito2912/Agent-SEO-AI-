@@ -3632,8 +3632,13 @@ def _correction_charge(user: Any, count: int, *, slug: str = "", motif: str = ""
 
 
 
-def _article_gate(user: Any, *, slug: str = "") -> tuple[bool, str]:
-    """Cette personne peut-elle faire ecrire un article maintenant ? (autorise, message).
+def _article_gate(user: Any, *, slug: str = "", n: int = 1) -> tuple[bool, str]:
+    """Cette personne peut-elle faire ecrire `n` articles maintenant ? (autorise, message).
+
+    `n` compte les VERSIONS d'une meme page, une par langue : chacune est ecrite par le
+    modele, chacune est debitee. Verifier « au moins un » laisserait une demande en quatre
+    langues passer avec un seul article restant, et le compteur partir en negatif apres quatre
+    appels au modele deja payes.
 
     DEUX PORTES, et elles disent des choses differentes. Le PLAN d'abord — Pro et au-dessus,
     aligne sur l'ecran Concurrents (`_competitor_has_access`) qui fournit les sujets : un
@@ -3668,6 +3673,10 @@ def _article_gate(user: Any, *, slug: str = "") -> tuple[bool, str]:
         return False, "Impossible de verifier ton quota d'articles pour le moment."
     if isinstance(restant, int) and restant <= 0:
         return False, "Quota d'articles atteint ce mois-ci. Il repart au renouvellement."
+    if isinstance(restant, int) and restant < n:
+        return False, ("Il te reste %d article(s) ce mois-ci, et cette page en demande %d — un "
+                       "par langue. Retire des langues ou attends le renouvellement."
+                       % (restant, n))
     return True, ""
 
 
@@ -28251,7 +28260,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
     routes = (repo_index.build_repo_index(all_paths).get("routes") or {})
     connues = _langues_des_routes(routes)
     langue_source = _langue_de_route(route, {k for k in connues if k})
-    autres = [l for l in dict.fromkeys(str(x or "").lower() for x in (langues or []))
+    autres = [l for l in dict.fromkeys(str(x or "").strip().lower() for x in (langues or []))
               if l != langue_source]
     inconnues = [l or "(défaut)" for l in autres if l not in connues]
     if inconnues:
@@ -28533,6 +28542,26 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
 class _ContentDraftBody(BaseModel):
     sujet: str = ""
     route: str = ""
+    # Les langues cochees, celle de `route` comprise ou non ; "" est la langue servie a la
+    # racine. Vide : une seule page, comme avant le multilingue.
+    langues: list[str] = []
+
+
+def _versions_demandees(route: str, langues: list[str]) -> int:
+    """Combien d'articles une demande coutera, AVANT d'avoir lu le depot.
+
+    La porte passe avant la lecture du depot, et c'est voulu : un refus de quota ne doit pas
+    couter N appels au modele. On ne connait donc pas encore les langues du site, et la langue
+    de la route se lit a sa FORME — un premier segment qui ressemble a un code de langue.
+
+    C'EST UN MAJORANT, jamais un minorant. Il ne depasse le vrai compte que dans un cas : une
+    section dont le nom a la forme d'un code (`/it/…` sur un site qui ne sert pas l'italien)
+    ET la racine cochee. La porte refuse alors une demande qu'un article de plus aurait
+    couverte ; l'inverse — laisser passer une demande que le solde ne couvre pas — n'arrive
+    jamais.
+    """
+    tete = _langue_de_route(route)
+    return len({tete} | {str(l or "").strip().lower() for l in (langues or [])})
 
 
 @app.post("/api/projects/{slug}/content/draft")
@@ -28582,7 +28611,8 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     retry_after = _rate_limit_retry_after(bucket="content_draft_user", subject=str(getattr(user, "id", "")), limit=6, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
-    gate_ok, gate_msg = _article_gate(user, slug=slug)
+    gate_ok, gate_msg = _article_gate(user, slug=slug,
+                                      n=_versions_demandees(route, body.langues))
     if not gate_ok:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
 
@@ -28597,7 +28627,8 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     out = _proposer_une_page(
         user, project_id=str(proj.id), site_name=str(proj.site_name or slug),
         slug=slug, sujet=sujet, route=route, base_url=str(proj.base_url or ""),
-        owner=owner, repo_name=repo_name, branch=branch, token=token)
+        owner=owner, repo_name=repo_name, branch=branch, token=token,
+        langues=list(body.langues))
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
 

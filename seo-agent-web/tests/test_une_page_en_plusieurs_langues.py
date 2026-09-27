@@ -207,7 +207,7 @@ def test_chaque_version_vit_dans_SA_section_sous_un_slug_TRADUIT(github, modele,
 def test_la_langue_principale_COCHEE_ne_fait_pas_une_version_de_plus(github, modele, debits) -> None:
     """L'ecran enverra toutes les cases cochees, la langue de la page comprise, et en capitales
     si un gabarit les ecrit ainsi. Elle n'est pas une traduction d'elle-meme."""
-    out = _proposer(["FR", "de"])
+    out = _proposer(["FR", " de "])
     assert out["ok"], out
     assert [p["langue"] for p in out["pages"]] == ["fr", "de"]
     assert debits == [2]
