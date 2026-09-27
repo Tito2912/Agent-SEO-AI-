@@ -21567,6 +21567,49 @@ def _spans_de_prose(contenu: str) -> list[tuple[int, int]]:
     return spans
 
 
+_DATE_ISO_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+
+
+def _dater_du_jour(contenu: str, aujourdhui: str = "") -> tuple[str, list[str]]:
+    """Mettre a la date du JOUR les dates du front matter d'une page qu'on vient d'ecrire.
+
+    MESURE DU 27/09/2026, page livree en production chez un client. Le front matter portait
+
+        updatedAt: "2026-03-22"
+
+    soit, au caractere pres, la date de la page soeur dont la forme avait ete transposee. La
+    page etait creee le 27 septembre et s'annoncait vieille de six mois. Elle s'affichait
+    « Mis a jour : 22/03/2026 » en tete de l'article.
+
+    MEME FAMILLE QUE LE RESUME RECOPIE : une valeur clonee, plausible, que personne ne
+    recompte. Le build est vert, la page est belle, et la date est fausse — pour le lecteur
+    comme pour un moteur qui s'en sert comme signal de fraicheur.
+
+    LA DATE N'EST PAS A DEVINER, ON LA DETIENT. C'est la difference avec le resume, qu'on
+    enleve faute de pouvoir l'ecrire : ici la bonne valeur est connue, on la pose. Une page que
+    l'agent cree a l'instant n'a aucune raison d'en annoncer une autre.
+
+    ON NE TOUCHE QUE LE FRONT MATTER. Une date dans le CORPS peut etre une citation, un exemple
+    chiffre, un historique — la reecrire abimerait le texte. La borne est la meme que celle de
+    `_enforce_length_ceilings` : le bloc de tete, et lui seul.
+    """
+    texte = str(contenu or "")
+    jour = aujourdhui or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    marque = texte[:4].strip()
+    if marque not in ("---", "+++"):
+        return texte, []
+    borne = "---" if marque == "---" else "+++"
+    fin = texte.find("\n" + borne, len(borne))
+    if fin < 0:
+        return texte, []
+    tete, reste = texte[:fin], texte[fin:]
+    neuve, n = _DATE_ISO_RE.subn(jour, tete)
+    if not n or neuve == tete:
+        return texte, []
+    return neuve + reste, ["%d date(s) du front matter mise(s) au %s : une page ecrite "
+                           "aujourd'hui ne peut pas dater d'hier." % (n, jour)]
+
+
 def _antislashs_de_trop(contenu: str, chemin: str) -> tuple[str, list[str]]:
     """Les `\\'` poses dans du texte de balisage, ou l'antislash n'est PAS un echappement.
 
@@ -21777,6 +21820,8 @@ def rediger_une_page(
     # brancher ne protege que les appelants dont on se souvient.
     contenu, notes_url = _urls_de_la_page_neuve(contenu, url_de_la_page=url_de_la_page)
     contenu, notes_bs = _antislashs_de_trop(contenu, chemin)
+    contenu, notes_date = _dater_du_jour(contenu)
+    notes_bs = notes_bs + notes_date
     for lot in (notes_url, notes_bs):
         if lot:
             logger.info("[contenu] repris : %s", " ; ".join(lot))
