@@ -146,13 +146,19 @@ def ouvrir() -> None:
         route = "%s/%s" % (section.rstrip("/"), m._slug_de_sujet(sujet))
     print("route visee : %s" % route)
 
+    # `--langues=de,es,` : la virgule finale est la langue servie a la RACINE (code "").
+    brut = _arg("langues")
+    langues = brut.split(",") if brut else []
+    if langues:
+        print("langues : %s" % ", ".join(l or "(racine)" for l in langues))
+
     t0 = time.time()
     try:
         out = m._proposer_une_page(
             _Proprietaire(uid), project_id=pid, site_name=repo, slug=slug,
             sujet=sujet, route=route, base_url=base,
             owner=owner, repo_name=repo, branch=branche, token=TOKEN,
-            motif="banc_depot_tiers", refuser_si_orpheline=False)
+            motif="banc_depot_tiers", refuser_si_orpheline=False, langues=langues)
     except Exception as e:
         out = {"ok": False, "error": "%s: %s" % (type(e).__name__, e)}
     duree = time.time() - t0
@@ -165,10 +171,12 @@ def ouvrir() -> None:
     etat = {"depot": depot, "ok": True, "owner": owner, "repo": repo, "branche": branche,
             "pr_number": out.get("pr_number"), "file": out.get("file"),
             "fix_branch": out.get("branch"), "route": route, "base": base,
-            "orpheline": out.get("orpheline")}
+            "orpheline": out.get("orpheline"), "pages": out.get("pages") or []}
     json.dump([etat], open(ETAT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     print("PR #%s  %s  orpheline=%s  (%.1fs)"
           % (etat["pr_number"], etat["file"], etat["orpheline"], duree))
+    for p in etat["pages"]:
+        print("  [%s] %s  ->  %s" % (p.get("langue") or "racine", p.get("route"), p.get("file")))
     print("NE PAS FUSIONNER. `--verdict` puis `--fermer`.")
 
 

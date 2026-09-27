@@ -21770,6 +21770,133 @@ def _urls_de_la_page_neuve(contenu: str, *, url_de_la_page: str) -> tuple[str, l
     return out, list(reversed(notes))
 
 
+def _sans_accents(texte: str) -> str:
+    return re.sub(r"[̀-ͯ]", "", unicodedata.normalize("NFKD", str(texte or "")))
+
+
+# Les TROIS manieres dont un site fabrique l'identifiant d'un titre, telles qu'on les rencontre :
+# retirer la ponctuation (`d’actifs` -> `dactifs`), la remplacer par un tiret (`d-actifs`), ou
+# la regle de github-slugger (accents gardes). On ne DIT pas laquelle vaut pour un site : on la
+# MESURE sur ses pages (`_regle_des_ancres`). Une liste finie de conventions publiques n'est pas
+# une table par client — c'est l'alphabet dans lequel la mesure s'ecrit.
+_REGLES_D_ANCRE: dict[str, "Callable[[str], str]"] = {
+    "supprime": lambda t: re.sub(r"-+", "-", re.sub(r"\s+", "-", re.sub(
+        r"[^a-z0-9\s-]", "", _sans_accents(t).lower()).strip())),
+    "remplace": lambda t: re.sub(r"[^a-z0-9]+", "-", _sans_accents(t).lower()).strip("-"),
+    "github": lambda t: re.sub(r"\s", "-", re.sub(r"[^\w\s-]", "", str(t or "").lower()).strip()),
+}
+_TITRE_MD_RE = re.compile(r"^#{2,4}[ \t]+(.+?)[ \t#]*$", re.M)
+_ANCRE_RE = re.compile(r"""(?:(["'])|\]\()#([^"'\s)#]+)(?(1)\1|\))""")
+
+
+def _titres_et_ancres(contenu: str) -> tuple[list[str], list[str]]:
+    """Les titres Markdown du corps (sans emphase) et les ancres internes citees partout."""
+    texte = str(contenu or "")
+    titres = [re.sub(r"[*_`]|\[([^\]]*)\]\([^)]*\)", r"\1", t).strip()
+              for t in _TITRE_MD_RE.findall(texte)]
+    return titres, [m.group(2) for m in _ANCRE_RE.finditer(texte)]
+
+
+def _regles_des_ancres(exemples: list[str]) -> list[str]:
+    """Les regles qui expliquent le PLUS d'ancres de ces pages — une seule si la mesure tranche.
+
+    Sans aucune ancre expliquee, toutes restent candidates : on ne sait rien.
+
+    Pas de seuil : une page ecrite a la main peut porter ses propres ancres mortes, et exiger
+    qu'une regle les explique TOUTES eliminerait la vraie. Mesure du 27/09/2026 sur le site
+    client : la regle du site explique toutes les ancres de 63 pages sur 68, et les cinq autres
+    ont deja un sommaire casse en ligne.
+
+    UNE REGLE BATTUE PAR LA MESURE N'A PLUS VOIX. Ma premiere version, faute de gagnant unique,
+    exigeait l'accord de TOUTES les regles — github-slugger compris, qui fait `schritt-0--ziel`
+    de « Schritt 0 — Ziel » et avait moins bien explique les exemples. Rejouee sur la PR #7 :
+    8 ancres JUSTES sur 10 retirees en allemand, 8 en espagnol. Seules les ex aequo en tete
+    doivent s'accorder.
+    """
+    scores = {nom: 0 for nom in _REGLES_D_ANCRE}
+    for page in exemples:
+        titres, ancres = _titres_et_ancres(page)
+        for nom, regle in _REGLES_D_ANCRE.items():
+            ids = {regle(t) for t in titres}
+            scores[nom] += sum(1 for a in ancres if a in ids)
+    meilleur = max(scores.values())
+    return [n for n, s in scores.items() if s == meilleur]
+
+
+def _retirer_l_entree(contenu: str, ancre: str) -> str:
+    """Retirer l'entree de liste YAML (ou le lien Markdown) qui porte `#ancre`."""
+    lignes = contenu.split("\n")
+    for i, ligne in enumerate(lignes):
+        if not re.search(r"""["']#%s["']""" % re.escape(ancre), ligne):
+            continue
+        debut = i
+        while debut >= 0 and not re.match(r"^\s*- ", lignes[debut]):
+            debut -= 1
+        if debut < 0:
+            break
+        retrait = len(lignes[debut]) - len(lignes[debut].lstrip())
+        fin = debut + 1
+        while fin < len(lignes) and lignes[fin].strip() and (
+                len(lignes[fin]) - len(lignes[fin].lstrip())) > retrait:
+            fin += 1
+        return "\n".join(lignes[:debut] + lignes[fin:])
+    # Un lien de corps `[texte](#ancre)` : on garde le texte, on retire la cible.
+    return re.sub(r"\[([^\]]*)\]\(#%s\)" % re.escape(ancre), r"\1", contenu)
+
+
+def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
+                        plus_d_exemples: "Callable[[], list[str]] | None" = None,
+                        ) -> tuple[str, list[str]]:
+    """Les ancres internes de la page neuve, remises sur ses titres ou retirees.
+
+    MESURE DU 27/09/2026, premiere page multilingue en production : 5 liens de sommaire morts
+    sur 40, contre 0 sur toutes les pages ecrites a la main du site. Deux causes :
+
+        « Axe 1 — Classes d’actifs »  -> le modele ecrit `classes-d-actifs`, le site produit
+                                          `classes-dactifs` (il RETIRE l'apostrophe) ;
+        « Rééquilibrer »              -> le modele ecrit `#rebalancer`.
+
+    Le build est vert, la page se lit bien, et le lien ne mene nulle part : c'est la famille
+    de defauts qui survit a la relecture.
+
+    LA REGLE DU SITE SE MESURE (`_regle_des_ancres`), d'abord sur la soeur ; si elle ne
+    departage pas — ses titres n'ont ni apostrophe ni tiret special — `plus_d_exemples` en
+    fournit d'autres. Personne ne lit rien de plus quand la soeur suffit ou que la page neuve
+    n'a pas d'ancre.
+
+    Une ancre qu'une AUTRE regle rattache a un titre est remise dans la regle du site. Une
+    ancre qu'aucun titre n'explique est RETIREE, pas devinee : `#rebalancer` pour
+    « Rééquilibrer » demanderait de juger que ce sont les memes mots. Une entree absente d'un
+    sommaire se voit ; un lien mort non. Sans regle mesurable, seules les ancres sur lesquelles
+    toutes les regles s'accordent sont gardees.
+    """
+    titres, ancres = _titres_et_ancres(contenu)
+    if not ancres:
+        return contenu, []
+    candidates = _regles_des_ancres(exemples)
+    if len(candidates) > 1 and plus_d_exemples is not None:
+        candidates = _regles_des_ancres(exemples + list(plus_d_exemples()))
+    regle = candidates[0] if len(candidates) == 1 else ""
+    par_regle = {nom: {r(t): t for t in titres} for nom, r in _REGLES_D_ANCRE.items()}
+    notes: list[str] = []
+    out = contenu
+    for ancre in dict.fromkeys(ancres):
+        if all(ancre in par_regle[nom] for nom in candidates):
+            continue
+        titre = next((ids[ancre] for ids in par_regle.values() if ancre in ids), None)
+        if regle and titre is not None:
+            juste = _REGLES_D_ANCRE[regle](titre)
+            out = re.sub(r"""(["'(])#%s(["')])""" % re.escape(ancre),
+                         lambda t: t.group(1) + "#" + juste + t.group(2), out)
+            notes.append("ancre `#%s` remise à `#%s` (titre « %s »)" % (ancre, juste, titre))
+        else:
+            out = _retirer_l_entree(out, ancre)
+            notes.append("lien de sommaire `#%s` retiré : %s" % (
+                ancre, "aucun titre de la page ne lui correspond" if regle or titre is None
+                else "la règle d'ancre de ce site ne se mesure pas sur ses pages"))
+    return out, notes
+
+
 _SYSTEME_REDACTION = (
     "Tu rediges UNE page pour le site d'un client, dans le MEME format et la MEME langue que "
     "la page existante qu'on te montre. Tu rends un objet JSON {\"contenu\": \"...\"} "
@@ -28129,6 +28256,26 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
         return {"ok": False, "status": 422, "error": refus}
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
 
+    def _voisines() -> list[str]:
+        # Les pages du MEME dossier et de la meme extension que la soeur : meme gabarit, donc
+        # meme fabrique d'identifiants. Bornees, et lues seulement si la soeur ne tranche pas.
+        dossier, _, nom = soeur.rpartition("/")
+        ext = nom.rsplit(".", 1)[-1]
+        lues = []
+        for chemin in sorted(all_paths):
+            if len(lues) >= 8:
+                break
+            if (chemin != soeur and chemin.rpartition("/")[0] == dossier
+                    and chemin.endswith("." + ext)):
+                lu = _lire(chemin)
+                if lu is not None:
+                    lues.append(lu[0])
+        return lues
+
+    contenu, notes_ancres = _ancres_du_sommaire(contenu, exemples=[soeur_contenu],
+                                                plus_d_exemples=_voisines)
+    notes_redaction.extend(notes_ancres)
+
     if adresse_depuis_le_titre:
         slug_neuf = _slug_de_sujet(titre_neuf)
         if not slug_neuf:
@@ -28524,9 +28671,10 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         tete_pr
         + (("### Adresses reprises\n\n"
             + "\n".join("- %s" % n for n in notes_redaction)
-            + "\n\nLe modèle avait écrit une adresse qui ne mène nulle part. Elle a été "
-              "remise à celle de cette page : un build ne voit pas un canonical qui "
-              "ment.\n\n")
+            + "\n\nChaque ligne ci-dessus reprend une valeur que le modèle avait écrite : "
+              "une adresse qui ne menait nulle part a été remise sur sa cible, ou retirée "
+              "quand aucune cible ne lui correspond. Un build ne voit ni un canonical qui "
+              "ment, ni un lien de sommaire mort.\n\n")
            if notes_redaction else "")
         + "### À relire avant de fusionner\n\n"
         "Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, "
