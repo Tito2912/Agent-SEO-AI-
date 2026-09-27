@@ -28313,16 +28313,30 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
             route_de.setdefault(str(f), str(r))
     plans = [principal]
     slug_principal = route.rstrip("/").rsplit("/", 1)[-1]
-    for langue in autres:
+
+    def _traduire(langue: str) -> dict[str, Any]:
         route_soeur = route_de.get(versions[langue], "")
         section = route_soeur.rstrip("/").rsplit("/", 1)[0]
-        plan = _preparer_la_page(
+        return _preparer_la_page(
             lire_fichier=_lire, all_paths=all_paths, sujet=sujet,
             route="%s/%s%s" % (section, slug_principal, "/" if route.endswith("/") else ""),
             base_url=base_url, site_name=site_name, slug=slug, langue=langue,
             soeur_imposee=versions[langue],
             soeur_slug_imposee=route_soeur.rstrip("/").rsplit("/", 1)[-1],
             adresse_depuis_le_titre=True)
+
+    # LES TRADUCTIONS PARTENT ENSEMBLE. Chacune ne depend que de la page principale (sa soeur
+    # est la traduction de la sienne), pas des autres ; en serie, quatre langues faisaient
+    # attendre quatre appels au modele dans une requete HTTP que Cloudflare peut couper. Le
+    # prix : un refus sur une langue n'epargne plus les appels des autres. On le paie, parce
+    # qu'un refus est l'exception et l'attente la regle.
+    #
+    # Les refus restent rapportes dans l'ORDRE des langues demandees, pas dans celui de leur
+    # arrivee : le meme echec doit donner le meme message.
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(1, min(len(autres), 4))) as pool:
+        traduits = list(pool.map(_traduire, autres))
+    for langue, plan in zip(autres, traduits):
         if not plan.get("ok"):
             return {**plan, "error": "version %s : %s" % (langue or "par défaut", plan.get("error"))}
         plans.append(plan)

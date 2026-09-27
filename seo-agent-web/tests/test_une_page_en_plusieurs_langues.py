@@ -158,17 +158,21 @@ def modele(monkeypatch):
     vues: list[str] = []
     casse: set[str] = set()
     titres = dict(TITRES)
+    lentes: set[str] = set()
 
     def _ai(*, system, user_msg, **kw):
         soeur = re.search(r"pour la forme \(([^)]+)\)", user_msg).group(1)
         vues.append(soeur)
         langue = soeur.split("/")[1]
+        if langue in lentes:
+            import time
+            time.sleep(0.4)
         if langue in casse:
             return {"contenu": "---\ntitle: \"Sans les autres cles\"\n---\n\nTexte.\n"}
         return {"contenu": _redige(FICHIERS[soeur], titres[langue])}
 
     monkeypatch.setattr(app_module, "_correction_ai_json", _ai)
-    return SimpleNamespace(vues=vues, casse=casse, titres=titres)
+    return SimpleNamespace(vues=vues, casse=casse, titres=titres, lentes=lentes)
 
 
 @pytest.fixture()
@@ -240,9 +244,43 @@ def test_l_adresse_PROVISOIRE_n_apparait_nulle_part(github, modele, debits) -> N
 def test_chaque_version_imite_la_traduction_de_la_MEME_soeur(github, modele, debits) -> None:
     """Sans soeur imposee, l'allemand clonerait `anfangen-zu-investieren`, premier de l'alphabet."""
     _proposer(["de", ""])
-    assert modele.vues == ["content/fr/guides/dca-crypto.mdx",
-                           "content/de/guides/krypto-dca.mdx",
-                           "content/en/guides/crypto-dca.mdx"], modele.vues
+    # La principale d'abord (les autres ont besoin de sa soeur), puis les traductions, dans
+    # l'ordre ou elles arrivent : elles partent ensemble.
+    assert modele.vues[0] == "content/fr/guides/dca-crypto.mdx", modele.vues
+    assert sorted(modele.vues[1:]) == ["content/de/guides/krypto-dca.mdx",
+                                       "content/en/guides/crypto-dca.mdx"], modele.vues
+
+
+def test_les_traductions_s_ecrivent_EN_MEME_TEMPS(github, modele, debits, monkeypatch) -> None:
+    """Une barriere a deux places : les deux traductions doivent l'atteindre ENSEMBLE. En
+    serie, la premiere attend seule, la barriere expire, et la version sort illisible."""
+    import threading
+
+    barriere = threading.Barrier(2, timeout=5)
+    ai = app_module._correction_ai_json
+
+    def _ensemble(**kw):
+        if "content/fr/" not in kw["user_msg"]:
+            try:
+                barriere.wait()
+            except threading.BrokenBarrierError:
+                return {"contenu": ""}
+        return ai(**kw)
+
+    monkeypatch.setattr(app_module, "_correction_ai_json", _ensemble)
+    out = _proposer(["de", ""])
+    assert out["ok"], out
+
+
+def test_un_refus_est_rapporte_dans_l_ORDRE_des_langues_pas_de_leur_arrivee(
+        github, modele, debits) -> None:
+    """L'allemand echoue LENTEMENT, l'anglais vite : rapporter dans l'ordre d'arrivee donnerait
+    l'anglais, alors que l'allemand a ete demande en premier."""
+    modele.casse.update({"de", "en"})
+    modele.lentes.add("de")
+    out = _proposer(["de", ""])
+    assert out["error"].startswith("version de :"), out["error"]
+    _rien_ecrit(github)
 
 
 def test_chaque_canonical_designe_SA_version(github, modele, debits) -> None:

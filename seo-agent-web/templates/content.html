@@ -288,7 +288,7 @@
         btn.textContent = 'Rédaction…';
         say(langues.length > 1
           ? 'Le modèle écrit ' + langues.length + ' versions, chacune en imitant la même page ' +
-            'dans sa langue. Cela prend une à deux minutes : garde cet onglet ouvert.'
+            'dans sa langue. Cela prend environ une minute : garde cet onglet ouvert.'
           : 'Le modèle écrit la page en imitant une page existante de la même section. ' +
             'Cela prend une trentaine de secondes.');
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
