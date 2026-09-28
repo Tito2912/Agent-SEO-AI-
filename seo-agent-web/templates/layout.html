@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}SEO Agent{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=15" />
+    <link rel="stylesheet" href="/static/styles.css?v=16" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
@@ -16,18 +16,16 @@
       <aside class="sidebar">
 
         <!-- Brand -->
-        <div class="brand">
-          <div class="brand-logo">
-            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="8.5" cy="8.5" r="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-              <path d="M6.5 8.5h4M8.5 6.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <a href="/" class="brand-link">SEO Agent</a>
-            <div class="brand-sub">Tableau de bord</div>
-          </div>
+        {# Logo du pack Noyaru (28/09/2026) : symbole ET lettrage, prevus pour un fond sombre. Il
+           remplace la pastille-loupe et le texte « SEO Agent ». #}
+        <div class="brand brand-noyaru">
+          <a href="/" class="brand-link" aria-label="Noyaru - Accueil">
+            <picture>
+              <source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" />
+              <img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" class="brand-image" />
+            </picture>
+          </a>
+          <div class="brand-sub">Tableau de bord</div>
         </div>
 
         <!-- Nav -->

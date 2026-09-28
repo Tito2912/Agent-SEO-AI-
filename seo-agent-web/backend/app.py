@@ -9526,19 +9526,25 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "static")), name="static")
 
 
+# Les adresses a la RACINE que navigateurs et robots demandent d'eux-memes, sans lire le <head>.
+# Meme version que `_favicons.html` (v=3, pack Noyaru du 28/09/2026) : une redirection vers
+# l'ancienne version garderait l'ancienne icone en cache pour qui passe par la racine.
+_VERSION_ICONES = "3"
+
+
 @app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
 def favicon_ico() -> RedirectResponse:
-    return RedirectResponse(url="/static/favicon.ico?v=2", status_code=308)
+    return RedirectResponse(url=f"/static/favicon.ico?v={_VERSION_ICONES}", status_code=308)
 
 
 @app.api_route("/apple-touch-icon.png", methods=["GET", "HEAD"], include_in_schema=False)
 def apple_touch_icon() -> RedirectResponse:
-    return RedirectResponse(url="/static/apple-touch-icon.png?v=2", status_code=308)
+    return RedirectResponse(url=f"/static/apple-touch-icon.png?v={_VERSION_ICONES}", status_code=308)
 
 
 @app.api_route("/site.webmanifest", methods=["GET", "HEAD"], include_in_schema=False)
 def site_webmanifest() -> RedirectResponse:
-    return RedirectResponse(url="/static/site.webmanifest?v=2", status_code=308)
+    return RedirectResponse(url=f"/static/site.webmanifest?v={_VERSION_ICONES}", status_code=308)
 
 
 @app.middleware("http")

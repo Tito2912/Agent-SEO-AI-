@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=10" />
+    <link rel="stylesheet" href="/static/styles.css?v=11" />
     <style>
       /* Public nav overrides */
       .pub-nav {
@@ -60,7 +60,13 @@
   </head>
   <body>
     <header class="pub-nav">
-      <a href="/" class="pub-nav-brand">{{ app_name }}</a>
+      <a href="/" class="pub-nav-brand" aria-label="{{ app_name }} - Accueil">
+        <picture>
+          <source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" />
+          <img src="/static/brand/noyaru-logo.png?v=3" alt="{{ app_name }}" width="1200" height="316"
+               style="display:block;height:30px;width:auto;" />
+        </picture>
+      </a>
 
       <nav class="pub-nav-links">
         {% set path = request.url.path %}
