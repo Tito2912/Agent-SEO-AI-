@@ -71,6 +71,30 @@
            section, son pourquoi et sa source. #}
         <div id="c-sujet-ia-note" role="status" aria-live="polite" hidden></div>
 
+        {# TAILLE ET TON, communs aux deux modes (demande du 28/09/2026). Par defaut rien
+           n'est impose : l'article imite une page de sa section, comme avant. #}
+        <div class="c-style-ligne">
+          <label>
+            Taille
+            <select id="c-taille">
+              <option value="">Comme la section</option>
+              {% for cle, libelle in tailles_article %}<option value="{{ cle }}">{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            Ton
+            <select id="c-ton">
+              <option value="">Comme la section</option>
+              {% for cle, libelle in tons_article %}<option value="{{ cle }}">{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <span class="muted small" style="display:block;margin:-2px 0 10px;">
+          « Comme la section » imite une page qu'elle contient déjà. Un choix explicite prime sur
+          elle ; les traductions suivent la version principale. Chaque version compte pour un
+          article, quelle que soit sa taille.
+        </span>
+
         <div id="c-bloc-contenu" {% if a_depot %}hidden{% endif %}>
           {% if sections_crawl %}
             <label>
@@ -340,6 +364,7 @@
       var boutonIA = document.getElementById('c-sujet-ia');
       var noteIA = document.getElementById('c-sujet-ia-note');
       var sujetsProposes = [];
+      function choixStyle(id) { var el = document.getElementById(id); return el ? el.value : ''; }
       /* « Investir 101 - Educators Financial Group » -> « Investir 101 » : le nom du site en fin
          de titre est du bruit a l'ecran. Affichage seul : la source envoyee reste EXACTE, le
          serveur la verifie a la lettre. */
@@ -642,7 +667,8 @@
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues, suivi: jeton })
+          body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues, suivi: jeton,
+                                 taille: choixStyle('c-taille'), ton: choixStyle('c-ton') })
         })
           .then(function (resp) { return resp.json(); })
           .then(function (d) {
@@ -729,7 +755,8 @@
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton })
+          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton,
+                                 taille: choixStyle('c-taille'), ton: choixStyle('c-ton') })
         })
           .then(function (resp) { return resp.json(); })
           .then(function (d) {

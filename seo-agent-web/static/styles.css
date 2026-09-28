@@ -331,6 +331,9 @@ a:hover { text-decoration: underline; }
 .c-proposition-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .c-proposition.erreur { border-left-color: rgba(239, 68, 68, .7); }
 .c-proposition.erreur p { margin: 0; }
+/* Taille et ton, cote a cote ; l'un sous l'autre sur un ecran etroit. */
+.c-style-ligne { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .c-style-ligne { grid-template-columns: 1fr; } }
 .alert.error  { border-color: rgba(239, 68, 68, .30); background: rgba(239, 68, 68, .07); }
 .alert.ok     { border-color: rgba(16, 185, 129, .28); background: rgba(16, 185, 129, .07); }
 .alert.notice { border-color: rgba(129, 140, 248, .30); background: rgba(129, 140, 248, .07); }

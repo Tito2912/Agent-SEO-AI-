@@ -3739,6 +3739,17 @@ def _parse_ai_json(text: str) -> dict[str, Any]:
     return {}
 
 
+def _delai_pour(max_tokens: int) -> int:
+    """Combien attendre une reponse de `max_tokens`, en secondes.
+
+    Un appel sans flux ne rend RIEN avant sa fin : le delai de lecture borne donc la generation
+    entiere. Il etait fixe a 90 s pour tout appel ; un article long (9 000 tokens) s'ecrit en
+    trois a quatre minutes et aurait echoue a chaque fois (releve le 28/09/2026, en ajoutant le
+    choix de la taille). ~40 tokens/s au pire observe, plus 30 s de marge ; jamais moins de 90.
+    """
+    return max(90, int(max_tokens) // 40 + 30)
+
+
 def _anthropic_messages_text(
     *, system: str, user_msg: str, model: str, max_tokens: int
 ) -> str:
@@ -3748,6 +3759,8 @@ def _anthropic_messages_text(
     base = (os.environ.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com/v1").strip().rstrip("/")
     # Note: newer models (Opus 4.8+) reject the `temperature` param ("deprecated for
     # this model"); we omit it and rely on the model default.
+    # Dans une variable : bandit (B113) ne reconnait pas un delai passe par un appel.
+    delai = _delai_pour(max_tokens)
     resp = requests.post(
         f"{base}/messages",
         headers={
@@ -3761,7 +3774,7 @@ def _anthropic_messages_text(
             "system": system,
             "messages": [{"role": "user", "content": user_msg}],
         },
-        timeout=90,
+        timeout=delai,
     )
     if resp.status_code != 200:
         raise RuntimeError(f"Anthropic HTTP {resp.status_code}: {resp.text[:300]}")
@@ -3807,12 +3820,14 @@ def _openai_chat_text(
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
 
+    delai = _delai_pour(max_tokens)
+
     def _appeler(corps: dict[str, Any]) -> Any:
         return requests.post(
             f"{base}/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=corps,
-            timeout=90,
+            timeout=delai,
         )
 
     resp = _appeler(payload)
@@ -22101,12 +22116,77 @@ _SYSTEME_REDACTION = (
 )
 
 
+# ── Taille et ton d'un article (demande du proprietaire, 28/09/2026) ──────────────────────
+#
+# Par defaut, RIEN n'est impose : l'article imite une page de sa section, comme avant. Un choix
+# explicite PRIME sur la page imitee, qui continue de donner la forme (cles, plan, ton de base).
+# Un article compte pour UN au quota quelle que soit sa taille (decision du 28/09/2026).
+_TAILLES_ARTICLE: dict[str, tuple[str, int, int]] = {
+    # cle : (libelle, mots vises, plafond de tokens de la version principale)
+    "court": ("Court · ~800 mots", 800, 4000),
+    "moyen": ("Moyen · ~1 500 mots", 1500, 6000),
+    "long": ("Long · ~2 500 mots", 2500, 9000),
+}
+_TONS_ARTICLE: dict[str, tuple[str, str]] = {
+    "pedagogique": ("Pédagogique", "pedagogique : explique pas a pas, definit chaque terme "
+                    "technique a sa premiere apparition, s'appuie sur des exemples concrets"),
+    "expert": ("Expert", "expert : precis et dense, vocabulaire du metier assume, sans "
+               "vulgarisation superflue"),
+    "conversationnel": ("Conversationnel", "conversationnel : phrases courtes, s'adresse "
+                        "directement au lecteur, chaleureux sans familiarite"),
+    "commercial": ("Commercial", "commercial : oriente benefices et passage a l'action, sans "
+                   "promesse inverifiable ni superlatif creux"),
+}
+
+
+def _style_valide(taille: str, ton: str) -> tuple[dict[str, str], str]:
+    """({taille, ton}, "") ou ({}, raison). "" ou "auto" : comme la section."""
+    t = str(taille or "").strip().lower()
+    t = "" if t == "auto" else t
+    o = str(ton or "").strip().lower()
+    o = "" if o == "auto" else o
+    if t and t not in _TAILLES_ARTICLE:
+        return {}, "taille inconnue : %s" % t
+    if o and o not in _TONS_ARTICLE:
+        return {}, "ton inconnu : %s" % o
+    return {"taille": t, "ton": o}, ""
+
+
+def _consigne_de_style(style: "dict[str, str] | None") -> str:
+    """Les lignes de CONTRAINTES qu'un choix explicite ajoute ; "" quand rien n'est choisi.
+
+    PAS POUR UNE TRADUCTION : elle suit sa reference, plan et longueur compris. Lui redonner
+    une longueur, c'est l'inviter a ajouter ou retirer des sections — la famille mentirait.
+    """
+    style = style or {}
+    lignes = []
+    taille = _TAILLES_ARTICLE.get(style.get("taille") or "")
+    if taille:
+        mots = taille[1]
+        lignes.append("\n- LONGUEUR DU CORPS : environ %d mots (entre %d et %d). Elle PRIME sur "
+                      "la longueur de la page montree, qui ne donne que la forme ;"
+                      % (mots, round(mots * 0.85), round(mots * 1.15)))
+    ton = _TONS_ARTICLE.get(style.get("ton") or "")
+    if ton:
+        lignes.append("\n- TON : %s. Il PRIME sur celui de la page montree ;" % ton[1])
+    return "".join(lignes)
+
+
+def _plafond_de_tokens(style: "dict[str, str] | None", *, traduction: bool) -> int:
+    """Le plafond de sortie : 4 000 par defaut, plus pour un article long, et une traduction
+    en demande ~50 % de plus (l'allemand est plus long que le francais)."""
+    taille = _TAILLES_ARTICLE.get((style or {}).get("taille") or "")
+    base = taille[2] if taille else 4000
+    return int(base * 1.5) if traduction else base
+
+
 def rediger_une_page(
     *, sujet: str, chemin: str, soeur_chemin: str, soeur_contenu: str,
     site_name: str = "", url_de_la_page: str = "", model_override: str = "",
     notes: list[str] | None = None,
     slug_sur_le_modele: str = "", sortie: dict[str, str] | None = None,
     reference: str = "", langue_reference: str = "",
+    style: "dict[str, str] | None" = None,
 ) -> tuple[str, str]:
     """Le contenu du fichier a creer, ou ("", raison du refus).
 
@@ -22141,9 +22221,10 @@ def rediger_une_page(
         "- memes cles de tete que la page montree, toutes presentes : %s ;\n"
         "- meme langue que la page montree ;\n"
         "- le corps traite le sujet, il ne le paraphrase pas en boucle ;\n"
-        "- aucun lien invente vers une page dont tu ignores l'existence."
+        "- aucun lien invente vers une page dont tu ignores l'existence.%s"
         % (sujet, chemin, site_name or "?", soeur_chemin,
-           soeur_contenu[:4000], ", ".join(forme["cles"]))
+           soeur_contenu[:4000], ", ".join(forme["cles"]),
+           "" if reference else _consigne_de_style(style))
     )
     if reference:
         # LA PAGE MONTREE DONNE LA FORME, LA REFERENCE DONNE LE FOND. Deux sources, deux roles,
@@ -22169,7 +22250,7 @@ def rediger_une_page(
     # a une page ecrite depuis le sujet peut tronquer sa traduction, et un JSON tronque ne rend
     # rien d'exploitable.
     out = _correction_ai_json(system=_SYSTEME_REDACTION, user_msg=demande,
-                              max_tokens=6000 if reference else 4000,
+                              max_tokens=_plafond_de_tokens(style, traduction=bool(reference)),
                               model_override=model_override)
     if sortie is not None:
         sortie["slug"] = str((out or {}).get("slug") or "")
@@ -28484,6 +28565,7 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
                       soeur_imposee: str = "", soeur_slug_imposee: str = "",
                       adresse_depuis_le_titre: bool = False,
                       reference: str = "", langue_reference: str = "",
+                      style: "dict[str, str] | None" = None,
                       ) -> dict[str, Any]:
     """Tout ce qu'une page demande AVANT la moindre ecriture. Ne touche pas au depot.
 
@@ -28544,7 +28626,7 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
         site_name=site_name, url_de_la_page="" if adresse_depuis_le_titre else url_de_la_page,
         notes=notes_redaction, sortie=sortie,
         slug_sur_le_modele=soeur_slug if adresse_depuis_le_titre else "",
-        reference=reference, langue_reference=langue_reference)
+        reference=reference, langue_reference=langue_reference, style=style)
     if refus:
         return {"ok": False, "status": 422, "error": refus}
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
@@ -28703,7 +28785,8 @@ def _poser_valeur_de_tete(contenu: str, cle: str, valeur: str) -> str:
 def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None]",
                         all_paths: list[str], sujet: str, route: str, langues: list[str],
                         base_url: str, site_name: str, slug: str,
-                        suivi: "Callable[[str], None]" = _sans_suivi) -> dict[str, Any]:
+                        suivi: "Callable[[str], None]" = _sans_suivi,
+                        style: "dict[str, str] | None" = None) -> dict[str, Any]:
     """Les plans de TOUTES les versions d'une page, ou le refus de la premiere qui echoue.
 
     RIEN N'EST ECRIT TANT QUE TOUT N'EST PAS PRET. Decide le 27/09/2026 : une seule pull request
@@ -28796,7 +28879,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
         site_name=site_name, slug=slug, langue=langue_source,
         soeur_imposee=soeur_famille,
         soeur_slug_imposee=route_de.get(soeur_famille, "").rstrip("/").rsplit("/", 1)[-1]
-        if soeur_famille else "")
+        if soeur_famille else "", style=style)
     if not principal.get("ok"):
         return principal
     # MEME SEULE, UNE PAGE NEUVE D'UN SITE MULTILINGUE DOIT PORTER SA PROPRE CLE. Le modele
@@ -28838,7 +28921,8 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
             # « Rééquilibrage » en francais, « Kosten und Friktion » en allemand, « Size your
             # crypto sleeve » en anglais — sous des hreflang qui les declarent EQUIVALENTES.
             # Chaque page se lisait bien ; c'est la famille qui mentait.
-            reference=str(principal["contenu"]), langue_reference=langue_source)
+            reference=str(principal["contenu"]), langue_reference=langue_source,
+            style=style)
 
     # LES TRADUCTIONS PARTENT ENSEMBLE. Chacune ne depend que de la page principale (sa soeur
     # est la traduction de la sienne), pas des autres ; en serie, quatre langues faisaient
@@ -28883,7 +28967,8 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                        motif: str = "content_draft",
                        refuser_si_orpheline: bool = False,
                        langues: "list[str] | None" = None,
-                       suivi: "Callable[[str], None]" = _sans_suivi) -> dict[str, Any]:
+                       suivi: "Callable[[str], None]" = _sans_suivi,
+                       style: "dict[str, str] | None" = None) -> dict[str, Any]:
     """Ecrit la page, la lie, ouvre la PR brouillon, enregistre la tache et debite l'article.
 
     `langues` ajoute des TRADUCTIONS a la page de `route` : toutes preparees avant la premiere
@@ -28926,7 +29011,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         lire_fichier=_lire_du_depot(owner=owner, repo_name=repo_name, branch=branch,
                                     token=token),
         all_paths=all_paths, sujet=sujet, route=route, langues=list(langues or []),
-        base_url=base_url, site_name=site_name, slug=slug, suivi=suivi)
+        base_url=base_url, site_name=site_name, slug=slug, suivi=suivi, style=style)
     if not prepare.get("ok"):
         return prepare
     plans: list[dict[str, Any]] = list(prepare["plans"])
@@ -29096,6 +29181,9 @@ class _ContentDraftBody(BaseModel):
     langues: list[str] = []
     # Le jeton sous lequel l'ecran suit les etapes (`/content/suivi/{jeton}`). Facultatif.
     suivi: str = ""
+    # "" ou "auto" : comme la section. Sinon une cle de `_TAILLES_ARTICLE` / `_TONS_ARTICLE`.
+    taille: str = ""
+    ton: str = ""
 
 
 def _versions_demandees(route: str, langues: list[str]) -> int:
@@ -29162,6 +29250,10 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
     retry_after = _rate_limit_retry_after(bucket="content_draft_user", subject=str(getattr(user, "id", "")), limit=6, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    # AVANT la porte de quota : un choix invalide ne doit rien couter ni rien reserver.
+    style, refus_style = _style_valide(body.taille, body.ton)
+    if refus_style:
+        return JSONResponse({"ok": False, "error": refus_style}, status_code=400)
     gate_ok, gate_msg = _article_gate(user, slug=slug,
                                       n=_versions_demandees(route, body.langues))
     if not gate_ok:
@@ -29180,7 +29272,7 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
         slug=slug, sujet=sujet, route=route, base_url=str(proj.base_url or ""),
         owner=owner, repo_name=repo_name, branch=branch, token=token,
         langues=list(body.langues),
-        suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)))
+        suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)), style=style)
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
 
@@ -29356,6 +29448,7 @@ def rediger_un_article(
     *, sujet: str, langue: str, site_name: str = "", section: str = "",
     modele: "dict[str, Any] | None" = None, liens: "list[dict[str, Any]] | None" = None,
     reference: str = "", langue_reference: str = "", model_override: str = "",
+    style: "dict[str, str] | None" = None,
 ) -> tuple[dict[str, str], str]:
     """Un article {titre, description, slug, markdown}, ou ({}, raison du refus).
 
@@ -29387,9 +29480,9 @@ def rediger_un_article(
         "- `description` : une phrase de 140 a 160 caracteres ;\n"
         "- `slug` : court, dans la langue de l'article, minuscules et tirets ;\n"
         "- le corps traite le sujet, il ne le paraphrase pas en boucle ; les chiffres "
-        "illustratifs sont presentes comme tels."
+        "illustratifs sont presentes comme tels.%s"
         % (sujet, langue or "celle du site", site_name or "?", section or "?", bloc_modele,
-           bloc_liens))
+           bloc_liens, "" if reference else _consigne_de_style(style)))
     if reference:
         demande += (
             "\n\nCET ARTICLE EST UNE TRADUCTION. Version de reference (%s), a traduire "
@@ -29398,7 +29491,7 @@ def rediger_un_article(
             "jamais une adresse de la reference.\n-----\n%s\n-----"
             % (langue_reference or "?", reference[:14000]))
     out = _correction_ai_json(system=_SYSTEME_ARTICLE, user_msg=demande,
-                              max_tokens=6000 if reference else 4000,
+                              max_tokens=_plafond_de_tokens(style, traduction=bool(reference)),
                               model_override=model_override) or {}
     article = {k: str(out.get(k) or "").strip() for k in ("titre", "description", "slug", "markdown")}
     if not article["titre"] or not article["markdown"]:
@@ -29426,7 +29519,8 @@ def _article_en_html(markdown_texte: str) -> str:
 def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section: str,
                            langues: "list[str] | None" = None, site_name: str = "",
                            model_override: str = "",
-                           suivi: "Callable[[str], None]" = _sans_suivi) -> dict[str, Any]:
+                           suivi: "Callable[[str], None]" = _sans_suivi,
+                           style: "dict[str, str] | None" = None) -> dict[str, Any]:
     """Toutes les versions d'un article, ou le refus de la premiere qui echoue. N'ecrit rien.
 
     `pages` sort de `_pages_du_crawl`. `section` est celle ou la version PRINCIPALE sera
@@ -29479,7 +29573,7 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
             sujet=sujet, langue=_code(cle), site_name=site_name, section=section_cible,
             modele=modele_cible, liens=_liens_de(cle, section_cible),
             reference=reference, langue_reference=_code(langue_source),
-            model_override=model_override)
+            model_override=model_override, style=style)
         if refus:
             return {"ok": False, "status": 422,
                     "error": "version %s : %s" % (_code(cle) or "principale", refus)}
@@ -29555,6 +29649,8 @@ class _ContentArticleBody(BaseModel):
     section: str = ""
     langues: list[str] = []
     suivi: str = ""
+    taille: str = ""
+    ton: str = ""
 
 
 @app.post("/api/projects/{slug}/content/article")
@@ -29576,6 +29672,10 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
     retry_after = _rate_limit_retry_after(bucket="content_draft_user", subject=str(getattr(user, "id", "")), limit=6, window_s=60 * 60)
     if isinstance(retry_after, int):
         return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    # AVANT la porte de quota : un choix invalide ne doit rien couter ni rien reserver.
+    style, refus_style = _style_valide(body.taille, body.ton)
+    if refus_style:
+        return JSONResponse({"ok": False, "error": refus_style}, status_code=400)
     gate_ok, gate_msg = _article_gate(user, slug=slug,
                                       n=_versions_demandees(section.rstrip("/") + "/x", body.langues))
     if not gate_ok:
@@ -29589,7 +29689,8 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
     out = _preparer_des_articles(pages=_pages_du_crawl(pages_brutes), sujet=sujet,
                                  section=section, langues=list(body.langues),
                                  site_name=str(proj.site_name or slug),
-                                 suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)))
+                                 suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)),
+                                 style=style)
     if not out.get("ok"):
         return JSONResponse({"ok": False, "error": out.get("error")},
                             status_code=int(out.get("status") or 422))
@@ -29878,6 +29979,10 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "auto": _reglages_contenu_auto(proj_row.settings),
             "auto_jours": _CONTENU_AUTO_JOURS,
             "sections_crawl": sections_crawl,
+            # Les choix viennent des tables de la redaction : l'ecran ne peut rien offrir
+            # qu'elle refuserait.
+            "tailles_article": [(k, v[0]) for k, v in _TAILLES_ARTICLE.items()],
+            "tons_article": [(k, v[0]) for k, v in _TONS_ARTICLE.items()],
             "langues_crawl": langues_crawl,
             "articles": articles,
             "slash_final": slash_final,
