@@ -21823,25 +21823,38 @@ def _regles_des_ancres(exemples: list[str]) -> list[str]:
     return [n for n, s in scores.items() if s == meilleur]
 
 
-def _retirer_l_entree(contenu: str, ancre: str) -> str:
-    """Retirer l'entree de liste YAML (ou le lien Markdown) qui porte `#ancre`."""
+def _retirer_l_entree(contenu: str, cible: str) -> tuple[str, bool]:
+    """Retirer l'entree de liste YAML — ou le lien Markdown — qui porte la valeur `cible`.
+
+    Rend `(contenu, False)` quand la valeur n'est ni dans une entree de liste ni dans un lien
+    de corps : `buttonHref: "/x/"` sous `cta:` est une cle SEULE, et la retirer casserait le
+    schema du front matter. L'appelant le DIT alors, il ne touche a rien.
+
+    LA LIGNE DOIT APPARTENIR A L'ENTREE. Ma premiere version remontait jusqu'a la premiere
+    ligne `- ` au-dessus, quelle qu'elle soit : pour une cle seule placee sous une liste, elle
+    aurait supprime l'entree voisine, sans rapport. Tant que les cibles etaient des ancres de
+    sommaire, toujours en liste, rien ne le montrait ; avec les liens, c'est le cas courant.
+    """
     lignes = contenu.split("\n")
+    retrait_de = lambda ligne: len(ligne) - len(ligne.lstrip())  # noqa: E731
     for i, ligne in enumerate(lignes):
-        if not re.search(r"""["']#%s["']""" % re.escape(ancre), ligne):
+        if not re.search(r"""["']%s["']""" % re.escape(cible), ligne):
             continue
         debut = i
         while debut >= 0 and not re.match(r"^\s*- ", lignes[debut]):
             debut -= 1
         if debut < 0:
             break
-        retrait = len(lignes[debut]) - len(lignes[debut].lstrip())
+        retrait = retrait_de(lignes[debut])
+        if any(retrait_de(lignes[j]) <= retrait for j in range(debut + 1, i + 1)):
+            break
         fin = debut + 1
-        while fin < len(lignes) and lignes[fin].strip() and (
-                len(lignes[fin]) - len(lignes[fin].lstrip())) > retrait:
+        while fin < len(lignes) and lignes[fin].strip() and retrait_de(lignes[fin]) > retrait:
             fin += 1
-        return "\n".join(lignes[:debut] + lignes[fin:])
-    # Un lien de corps `[texte](#ancre)` : on garde le texte, on retire la cible.
-    return re.sub(r"\[([^\]]*)\]\(#%s\)" % re.escape(ancre), r"\1", contenu)
+        return "\n".join(lignes[:debut] + lignes[fin:]), True
+    # Un lien de corps `[texte](cible)` : on garde le texte, on retire la cible.
+    neuf, n = re.subn(r"\[([^\]]*)\]\(%s\)" % re.escape(cible), r"\1", contenu)
+    return neuf, bool(n)
 
 
 def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
@@ -21913,11 +21926,85 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
                          lambda t: t.group(1) + "#" + juste + t.group(2), out)
             notes.append("ancre `#%s` remise à `#%s` (titre « %s »)" % (ancre, juste, titre))
         else:
-            out = _retirer_l_entree(out, ancre)
-            notes.append("lien de sommaire `#%s` retiré : %s" % (
-                ancre, "aucun titre de la page ne lui correspond" if titre is None
+            out, retiree = _retirer_l_entree(out, "#" + ancre)
+            notes.append("lien de sommaire `#%s` %s : %s" % (
+                ancre, "retiré" if retiree else "MORT, À CORRIGER À LA MAIN (hors liste)",
+                "aucun titre de la page ne lui correspond" if titre is None
                 else "la règle d'ancre de ce site ne se mesure pas sur ses pages"))
     return out, notes
+
+
+_LIEN_INTERNE_RE = re.compile(r"""(?:["']|\]\()(/(?!/)[^"'\s)#?]*)""")
+
+
+def _liens_internes(contenu: str) -> list[str]:
+    """Les liens internes d'un fichier, dans l'ordre : valeurs entre guillemets et liens Markdown."""
+    return _LIEN_INTERNE_RE.findall(str(contenu or ""))
+
+
+def _reparer_les_liens(plans: list[dict[str, Any]], *, routes: dict[str, Any],
+                       traduire: "Callable[[str, str], str]") -> None:
+    """Chaque lien interne ecrit par le modele mene a une page du depot, ou il n'est plus la.
+
+    MESURE DU 28/09/2026, PR #10 de prosperfactory.com. La consigne « les liens internes sont
+    ceux de la page montree, dans SA langue » n'a pas tenu : le modele n'a pas recopie le lien
+    francais `/fr/guides/dca-crypto/`, il l'a TRADUIT — `/de/guides/dca-krypto/`,
+    `/es/guides/dca-crypto/` — en inventant des slugs plausibles. Les vrais sont `krypto-dca` et
+    `dca-cripto`. Build vert, liens morts : une consigne n'est pas une garde.
+
+    ON NE JUGE QUE CE QU'ON CONNAIT. Un lien est mort s'il vise une SECTION dont le depot connait
+    les pages sans viser l'une d'elles. Une section inconnue (`/tags/…`, une page engendree) ou
+    un fichier (`.png`) ne se juge pas : se tromper retirerait un lien juste.
+
+    UNE TRADUCTION SE REPARE PAR SA REFERENCE. Les versions traduisent la meme liste de liens
+    dans le meme ordre : le lien mort en position i correspond au lien VIVANT en position i de
+    la version principale, et la famille de traduction de celui-ci (`traduire`) donne sa
+    version dans cette langue. Sans correspondance — listes de longueurs differentes, page
+    principale, pas de traduction —, le lien est RETIRE, jamais devine.
+
+    Modifie les plans sur place et ajoute ses notes a `notes_redaction`.
+    """
+    connues = {repo_index.norm_route(r) for r in (routes or {})}
+    sections = {r.rsplit("/", 1)[0] for r in connues if r.count("/") > 1}
+
+    def _mort(lien: str) -> bool:
+        route = repo_index.norm_route(lien)
+        if "." in route.rsplit("/", 1)[-1]:
+            return False
+        return route not in connues and route.rsplit("/", 1)[0] in sections
+
+    reference = _liens_internes(str(plans[0]["contenu"])) if plans else []
+    for plan in plans:
+        contenu = str(plan["contenu"])
+        liens = _liens_internes(contenu)
+        vus: set[str] = set()
+        for i, lien in enumerate(liens):
+            # Un meme lien cite deux fois est repare ou retire en UNE fois : repasser dessus
+            # ecrirait une seconde note, fausse, sur une adresse deja traitee.
+            if lien in vus or not _mort(lien):
+                continue
+            vus.add(lien)
+            juste = ""
+            # Ni « sauf la page principale » ni « si le lien de reference est vivant » : pour
+            # la principale, la reference EST le lien mort, et un lien mort n'a pas de
+            # traduction. Ma premiere version portait les deux conditions ; aucune entree ne
+            # pouvait les distinguer de leur absence.
+            if len(liens) == len(reference):
+                juste = traduire(reference[i], str(plan["langue"]))
+                if juste and lien.endswith("/") and not juste.endswith("/"):
+                    juste += "/"
+            if juste:
+                contenu = re.sub(r"""(["'(])%s(["')])""" % re.escape(lien),
+                                 lambda t: t.group(1) + juste + t.group(2), contenu)
+                plan["notes_redaction"].append(
+                    "lien `%s` remis à `%s` — la traduction de `%s`, que le modèle avait "
+                    "devinée" % (lien, juste, reference[i]))
+            else:
+                contenu, retire = _retirer_l_entree(contenu, lien)
+                plan["notes_redaction"].append(
+                    "lien `%s` %s : aucune page du dépôt à cette adresse" % (
+                        lien, "retiré" if retire else "MORT, À CORRIGER À LA MAIN (hors liste)"))
+        plan["contenu"] = contenu
 
 
 _SYSTEME_REDACTION = (
@@ -28546,7 +28633,22 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
     # MEME SEULE, UNE PAGE NEUVE D'UN SITE MULTILINGUE DOIT PORTER SA PROPRE CLE. Le modele
     # clone la soeur, donc il recopie sa cle de traduction : la page rejoindrait la famille de
     # la soeur, et ses hreflang annonceraient comme traductions des pages sur un autre sujet.
+    # Les liens d'une version traduite se reparent par la famille de traduction du lien de
+    # meme rang dans la version principale. Pas de cache ici : `_lire` memorise deja chaque
+    # fichier, donc une seconde recherche ne coute aucune lecture. Ma premiere version en
+    # portait un ; une mutation qui le desactivait a SURVECU — il n'economisait rien.
+    par_route = {repo_index.norm_route(r): f for r, f in routes.items()}
+
+    def _traduire_lien(lien: str, langue: str) -> str:
+        fichiers = par_route.get(repo_index.norm_route(lien)) or []
+        if not fichiers:
+            return ""
+        _c, trouves, _n = _traductions_de_la_page(
+            lire=_texte, routes=routes, chemin=str(fichiers[0]), langues=connues)
+        return route_de.get(trouves.get(langue, ""), "")
+
     if not cle:
+        _reparer_les_liens([principal], routes=routes, traduire=_traduire_lien)
         return {"ok": True, "plans": [principal], "cle": "", "valeur": ""}
     soeur = str(principal["soeur"])
     plans = [principal]
@@ -28600,6 +28702,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
             "une autre page." % (cle, valeur_soeur))}
     for plan in plans:
         plan["contenu"] = _poser_valeur_de_tete(str(plan["contenu"]), cle, valeur)
+    _reparer_les_liens(plans, routes=routes, traduire=_traduire_lien)
     return {"ok": True, "plans": plans, "cle": cle, "valeur": valeur}
 
 

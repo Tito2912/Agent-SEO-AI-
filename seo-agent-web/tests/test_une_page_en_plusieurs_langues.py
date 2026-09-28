@@ -116,10 +116,14 @@ TITRES = {"fr": "Calculer les intérêts composés",
           "en": "How to calculate compound interest"}
 
 
-def _redige(soeur_contenu: str, titre: str) -> str:
+def _redige(soeur_contenu: str, titre: str, liens: "list[str] | None" = None) -> str:
     cle = re.search(r'translationKey: "([^"]+)"', soeur_contenu).group(1)
     canonical = re.search(r'canonical: "([^"]+)"', soeur_contenu).group(1)
-    return _page(titre, cle, canonical, "Un guide sur les interets composes.")
+    page = _page(titre, cle, canonical, "Un guide sur les interets composes.")
+    if liens:
+        page = page.replace("---\n\n", "internalLinks:\n" + "".join(
+            '  - href: "%s"\n    anchor: "a"\n' % l for l in liens) + "---\n\n", 1)
+    return page
 
 
 @pytest.fixture()
@@ -169,6 +173,7 @@ def modele(monkeypatch):
     slugs: dict[str, str] = {}
     demandes: dict[str, str] = {}
     plafonds: dict[str, int] = {}
+    liens: dict[str, list[str]] = {}
 
     def _ai(*, system, user_msg, **kw):
         soeur = re.search(r"pour la forme \(([^)]+)\)", user_msg).group(1)
@@ -183,11 +188,11 @@ def modele(monkeypatch):
             time.sleep(0.4)
         if langue in casse:
             return {"contenu": "---\ntitle: \"Sans les autres cles\"\n---\n\nTexte.\n"}
-        return {"contenu": _redige(FICHIERS[soeur], titres[langue])}
+        return {"contenu": _redige(FICHIERS[soeur], titres[langue], liens.get(langue))}
 
     monkeypatch.setattr(app_module, "_correction_ai_json", _ai)
     return SimpleNamespace(vues=vues, casse=casse, titres=titres, lentes=lentes, slugs=slugs,
-                           demandes=demandes, plafonds=plafonds)
+                           demandes=demandes, plafonds=plafonds, liens=liens)
 
 
 @pytest.fixture()
@@ -254,6 +259,47 @@ def test_une_version_TRADUIT_la_principale_au_lieu_d_ecrire_un_autre_article(
         assert modele.plafonds[langue] == 6000, modele.plafonds
     assert "TRADUCTION" not in modele.demandes["fr"]
     assert modele.plafonds["fr"] == 4000
+
+
+def test_un_lien_devine_est_remis_sur_la_traduction_trouvee_PAR_LA_FAMILLE(
+        github, modele, debits) -> None:
+    """Le bout en bout de la PR #10 : le modele « traduit » `/fr/guides/dca-crypto/` en
+    `/de/guides/dca-krypto/`, et en `/guides/dca-crypto/` a la racine. La vraie adresse
+    allemande — `krypto-dca` — ne vient d'aucune table : elle sort de la cle de traduction."""
+    modele.liens.update({
+        "fr": ["/fr/guides/dca-crypto/", "/fr/guides/debuter-investissement/"],
+        "de": ["/de/guides/dca-krypto/", "/de/guides/anfangen-zu-investieren/"],
+        "en": ["/guides/dca-crypto/", "/guides/start-investing/"],
+    })
+    out = _proposer(["de", ""])
+    assert out["ok"], out
+    ecrits = _ecrits(github)
+    assert '"/de/guides/krypto-dca/"' in ecrits["content/de/guides/zinseszins-berechnen.mdx"]
+    assert '"/guides/crypto-dca/"' in ecrits[
+        "content/en/guides/how-to-calculate-compound-interest.mdx"]
+    body = [b for p, b in github["post"] if p.endswith("/pulls")][0]["body"]
+    assert "remis à `/de/guides/krypto-dca/`" in body, body
+
+
+def test_sur_un_depot_SANS_cle_de_traduction_la_page_seule_perd_ses_liens_inventes(
+        github, modele, debits) -> None:
+    """Sans cle, la preparation sort par un autre chemin : il doit reparer lui aussi."""
+    for chemin, contenu in list(github["fichiers"].items()):
+        github["fichiers"][chemin] = re.sub(r'translationKey: "[^"]+"\n', "", contenu)
+    modele.liens["fr"] = ["/fr/guides/levier-explique/", "/fr/guides/dca-crypto/"]
+    out = _proposer()
+    assert out["ok"], out
+    page = _ecrits(github)["content/fr/guides/calculer-les-interets-composes.mdx"]
+    assert "levier-explique" not in page and '"/fr/guides/dca-crypto/"' in page, page
+
+
+def test_une_page_SEULE_perd_aussi_ses_liens_inventes(github, modele, debits) -> None:
+    """« Aucun lien invente » n'etait qu'une consigne, en monolingue aussi."""
+    modele.liens["fr"] = ["/fr/guides/levier-explique/", "/fr/guides/dca-crypto/"]
+    out = _proposer()
+    assert out["ok"], out
+    page = _ecrits(github)["content/fr/guides/calculer-les-interets-composes.mdx"]
+    assert "levier-explique" not in page and '"/fr/guides/dca-crypto/"' in page, page
 
 
 def test_la_page_PRINCIPALE_ne_demande_pas_de_slug(github, modele, debits) -> None:
