@@ -166,11 +166,16 @@ def modele(monkeypatch):
     casse: set[str] = set()
     titres = dict(TITRES)
     lentes: set[str] = set()
+    slugs: dict[str, str] = {}
+    demandes: dict[str, str] = {}
 
     def _ai(*, system, user_msg, **kw):
         soeur = re.search(r"pour la forme \(([^)]+)\)", user_msg).group(1)
         vues.append(soeur)
         langue = soeur.split("/")[1]
+        demandes[langue] = user_msg
+        if langue in slugs:
+            return {"contenu": _redige(FICHIERS[soeur], titres[langue]), "slug": slugs[langue]}
         if langue in lentes:
             import time
             time.sleep(0.4)
@@ -179,7 +184,8 @@ def modele(monkeypatch):
         return {"contenu": _redige(FICHIERS[soeur], titres[langue])}
 
     monkeypatch.setattr(app_module, "_correction_ai_json", _ai)
-    return SimpleNamespace(vues=vues, casse=casse, titres=titres, lentes=lentes)
+    return SimpleNamespace(vues=vues, casse=casse, titres=titres, lentes=lentes, slugs=slugs,
+                           demandes=demandes)
 
 
 @pytest.fixture()
@@ -213,6 +219,47 @@ def test_chaque_version_vit_dans_SA_section_sous_un_slug_TRADUIT(github, modele,
     }, _ecrits(github)
     assert [p["route"] for p in out["pages"]] == [
         ROUTE, "/de/guides/zinseszins-berechnen/", "/guides/how-to-calculate-compound-interest/"]
+
+
+def test_le_slug_d_une_traduction_est_COURT_comme_celui_de_sa_soeur(github, modele, debits) -> None:
+    """Mesure du 27/09/2026 (PR #8) : le titre entier donnait
+    `portfolio-diversifizieren-praxis-guide-investieren-krypto`. Le modele propose un slug sur le
+    modele de `krypto-dca` ; le code le NETTOIE — on ne lui confie pas l'alphabet d'une URL."""
+    modele.titres["de"] = "Zinseszins berechnen: Formel, Beispiele und typische Fehler"
+    modele.slugs["de"] = "Zinses Zins!"
+    out = _proposer(["de"])
+    assert out["pages"][1]["route"] == "/de/guides/zinses-zins/", out["pages"]
+    assert '"krypto-dca"' in modele.demandes["de"], "le slug de la soeur n'a pas ete montre"
+
+
+def test_sans_slug_propose_le_titre_perd_son_SOUS_TITRE(github, modele, debits) -> None:
+    modele.titres["de"] = "Zinseszins berechnen: Formel, Beispiele und typische Fehler"
+    out = _proposer(["de"])
+    assert out["pages"][1]["route"] == "/de/guides/zinseszins-berechnen/", out["pages"]
+
+
+def test_la_page_PRINCIPALE_ne_demande_pas_de_slug(github, modele, debits) -> None:
+    """Son adresse est celle que le client a tapee : la demander au modele l'inviterait a en
+    proposer une autre."""
+    _proposer(["de"])
+    assert "AJOUTE" not in modele.demandes["fr"] and "AJOUTE" in modele.demandes["de"]
+
+
+def test_les_notes_d_une_PR_multilingue_disent_leur_LANGUE(github, modele, debits) -> None:
+    _proposer(["de", ""])
+    body = [b for p, b in github["post"] if p.endswith("/pulls")][0]["body"]
+    reprises = body.split("### Adresses reprises", 1)[1].split("###", 1)[0]
+    lignes = [l for l in reprises.splitlines() if l.startswith("- ")]
+    assert lignes and all(l.startswith(("- **fr** —", "- **de** —", "- **par défaut** —"))
+                          for l in lignes), lignes
+
+
+def test_les_notes_d_une_PR_a_UNE_langue_restent_sans_prefixe(github, modele, debits) -> None:
+    _proposer()
+    body = [b for p, b in github["post"] if p.endswith("/pulls")][0]["body"]
+    reprises = body.split("### Adresses reprises", 1)[1].split("###", 1)[0]
+    lignes = [l for l in reprises.splitlines() if l.startswith("- ")]
+    assert lignes and not any(l.startswith("- **") for l in lignes), lignes
 
 
 def test_la_langue_principale_COCHEE_ne_fait_pas_une_version_de_plus(github, modele, debits) -> None:

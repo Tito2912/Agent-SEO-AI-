@@ -21908,8 +21908,15 @@ def rediger_une_page(
     *, sujet: str, chemin: str, soeur_chemin: str, soeur_contenu: str,
     site_name: str = "", url_de_la_page: str = "", model_override: str = "",
     notes: list[str] | None = None,
+    slug_sur_le_modele: str = "", sortie: dict[str, str] | None = None,
 ) -> tuple[str, str]:
     """Le contenu du fichier a creer, ou ("", raison du refus).
+
+    `slug_sur_le_modele` demande en plus au modele un slug COURT dans la langue de la page, sur
+    le modele de celui de la soeur ; il revient dans `sortie["slug"]`. Mesure du 27/09/2026 : un
+    slug tire du titre entier donnait `portfolio-diversifizieren-praxis-guide-investieren-krypto`
+    sur un site dont les slugs font deux a quatre mots (`krypto-dca`). Traduire un slug est un
+    geste de redaction, pas une regle : c'est le modele qui connait la langue.
 
     LE MODELE NE RECOIT PAS UNE CONSIGNE DE FORMAT, IL RECOIT UNE PAGE. C'est la methode que ce
     projet applique partout — `_inserer_og_complet` recopie les champs de la mise en page,
@@ -21940,8 +21947,15 @@ def rediger_une_page(
         % (sujet, chemin, site_name or "?", soeur_chemin,
            soeur_contenu[:4000], ", ".join(forme["cles"]))
     )
+    if slug_sur_le_modele:
+        demande += (
+            "\n\nAJOUTE a l'objet JSON une cle \"slug\" : l'adresse de la page, dans SA langue, "
+            "aussi courte que \"%s\" (celle de la page montree) — minuscules, mots separes par "
+            "des tirets, sans le nom du site ni de mots de remplissage." % slug_sur_le_modele)
     out = _correction_ai_json(system=_SYSTEME_REDACTION, user_msg=demande,
                               max_tokens=4000, model_override=model_override)
+    if sortie is not None:
+        sortie["slug"] = str((out or {}).get("slug") or "")
     contenu = str((out or {}).get("contenu") or "").strip()
     if not contenu:
         return "", "le modele n'a rien rendu d'exploitable"
@@ -28248,10 +28262,12 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
     # MENTIRAIT : on ne la donne pas, et on la pose apres coup.
     url_de_la_page = (str(base_url or "").rstrip("/") + route) if base_url else ""
     notes_redaction: list[str] = []
+    sortie: dict[str, str] = {}
     contenu, refus = rediger_une_page(
         sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
         site_name=site_name, url_de_la_page="" if adresse_depuis_le_titre else url_de_la_page,
-        notes=notes_redaction)
+        notes=notes_redaction, sortie=sortie,
+        slug_sur_le_modele=soeur_slug if adresse_depuis_le_titre else "")
     if refus:
         return {"ok": False, "status": 422, "error": refus}
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
@@ -28277,7 +28293,12 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
     notes_redaction.extend(notes_ancres)
 
     if adresse_depuis_le_titre:
-        slug_neuf = _slug_de_sujet(titre_neuf)
+        # Le slug que le modele propose, sur le modele de celui de la soeur, NETTOYE : on ne
+        # lui confie pas l'alphabet d'une URL. A defaut, le titre SANS son complement — ce qui
+        # suit « : », « ( » ou un tiret long est un sous-titre, pas le nom de la page.
+        slug_neuf = (_slug_de_sujet(sortie.get("slug", ""))
+                     or _slug_de_sujet(re.split(r"\s*[:(—–|]\s*|\s+-\s+",
+                                                titre_neuf)[0]))
         if not slug_neuf:
             return {"ok": False, "status": 422, "error": (
                 "le titre de la version %s ne donne aucun slug en caractères latins : son "
@@ -28590,7 +28611,10 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
     index_sortie = str(plan["index_sortie"])
     note_lien = str(plan["note_lien"])
     orpheline = any(bool(p["orpheline"]) for p in plans)
-    notes_redaction = [n for p in plans for n in p["notes_redaction"]]
+    # Dans une PR a plusieurs versions, une note sans sa langue oblige a ouvrir quatre fichiers
+    # pour savoir lequel a ete repris (mesure sur la PR #8 de prosperfactory, 27/09/2026).
+    notes_redaction = [("**%s** — %s" % (p["langue"] or "par défaut", n)) if len(plans) > 1 else n
+                       for p in plans for n in p["notes_redaction"]]
     from datetime import datetime as _dt
     import base64 as _b64
 
