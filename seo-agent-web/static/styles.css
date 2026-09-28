@@ -443,6 +443,17 @@ input, select {
   transition: border-color .12s ease, box-shadow .12s ease;
 }
 input::placeholder { color: rgba(255,255,255,.28); }
+/* Le menu OUVERT d'un select est dessine par le systeme. Avec un fond de select presque
+   transparent, Chromium sous Windows le peint en blanc — et le texte du theme, clair, y
+   devient invisible (signale le 28/09/2026 sur l'ecran Contenu). Un fond opaque pour les
+   options le rend lisible partout. */
+select option, select optgroup { background-color: #1b1b1f; color: var(--text); }
+/* `hidden` doit CACHER, quelle que soit la regle d'affichage du composant : `label { display:
+   flex }` l'emportait sur l'attribut, et l'ecran Contenu montrait une liste de sections vide
+   quand le depot n'avait pas encore repondu (verifie dans Chromium, 28/09/2026). */
+[hidden] { display: none !important; }
+/* Un intitule de groupe (`legend`) au meme corps que les intitules de champ. */
+fieldset > legend { font-size: 12px; color: var(--muted); padding: 0; margin-bottom: 4px; }
 input:focus, select:focus {
   outline: none;
   box-shadow: var(--ring);

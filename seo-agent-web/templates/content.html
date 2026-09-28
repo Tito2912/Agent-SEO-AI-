@@ -37,14 +37,16 @@
          VISIBLE mais inactif : le client doit savoir qu'il existe et comment l'ouvrir. #}
       <fieldset class="c-modes" style="border:0;padding:0;margin:0 0 10px;">
         <legend class="muted small">Où va la page</legend>
-        <label style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
-          <input type="radio" name="c-mode" value="github" {% if a_depot %}checked{% else %}disabled{% endif %} />
+        {# `.radio` et non un `label` nu : la regle generale `label { flex-direction: column }`
+           posait le bouton AU-DESSUS de son texte (capture du 28/09/2026). #}
+        <label class="radio" style="align-items:flex-start;">
+          <input type="radio" name="c-mode" value="github" {% if a_depot %}checked{% else %}disabled{% endif %} style="margin-top:3px;" />
           <span><strong>Pull request sur ton dépôt GitHub</strong>
             <span class="muted small">— la page est écrite dans ton site, liée depuis sa section, en brouillon à relire.
             {% if not a_depot %}<a href="/projects/{{ slug }}/settings/crawl">Connecte un dépôt GitHub</a> pour l'activer.{% endif %}</span></span>
         </label>
-        <label style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
-          <input type="radio" name="c-mode" value="contenu" {% if not a_depot %}checked{% endif %} />
+        <label class="radio" style="align-items:flex-start;">
+          <input type="radio" name="c-mode" value="contenu" {% if not a_depot %}checked{% endif %} style="margin-top:3px;" />
           <span><strong>Contenu seul</strong>
             <span class="muted small">— tu repars avec l'article en Markdown et en HTML, et tu le publies toi-même.</span></span>
         </label>
@@ -59,7 +61,7 @@
           <div id="c-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 6px;">
             <span class="muted small">Tes concurrents traitent, pas toi :</span>
             {% for s in sujets_suggeres %}
-              <button type="button" class="btn" data-sujet="{{ s }}" style="font-size:12px;padding:3px 10px;">{{ s }}</button>
+              <button type="button" class="btn small" data-sujet="{{ s }}">{{ s }}</button>
             {% endfor %}
           </div>
         {% endif %}
@@ -70,23 +72,24 @@
               Section du site
               <select id="c-section">
                 {% for s in sections_crawl %}
-                  <option value="{{ s.section }}">{{ s.section }} — {{ s.pages }} pages</option>
+                  <option value="{{ s.section }}">{{ s.section }}/ · {{ s.pages }} pages déjà publiées</option>
                 {% endfor %}
               </select>
               <span class="muted small">
-                L'article imite une page existante de cette section — longueur du titre, ton,
-                type de plan — et ne lie que des pages que le dernier crawl a vues.
+                Le nombre de pages dit combien la section en contient déjà : l'article imite
+                l'une d'elles — longueur du titre, ton, type de plan — et ne lie que des pages
+                que le dernier crawl a vues.
               </span>
             </label>
             {% if langues_crawl|length > 1 %}
-              <fieldset id="c-langues-contenu" style="border:0;padding:0;margin:0;">
+              <fieldset id="c-langues-contenu" class="c-langues-ligne" style="border:0;padding:0;margin:0;">
                 <legend>Langues</legend>
-                {% for l in langues_crawl %}
-                  <label style="display:flex;align-items:center;gap:8px;margin:2px 0;">
-                    <input type="checkbox" value="{{ l.code }}" />
-                    <span>{{ l.nom }}</span> <span class="muted small">{{ l.pages }} pages</span>
-                  </label>
-                {% endfor %}
+                <div style="display:flex;flex-wrap:wrap;gap:4px 18px;">
+                  {% for l in langues_crawl %}
+                    <label class="checkbox"><input type="checkbox" value="{{ l.code }}" />
+                      <span data-iso="{{ l.iso }}" data-racine="{{ 'oui' if not l.code else '' }}">{{ l.nom }}</span></label>
+                  {% endfor %}
+                </div>
                 <span class="muted small">
                   Une version par langue cochée : la page principale, puis ses traductions — même
                   plan, mêmes chiffres. La langue de la section est toujours écrite.
@@ -111,18 +114,17 @@
         </label>
         <label>
           Adresse de la page
-          <input id="c-route" class="mono" placeholder="/blog/mon-sujet" />
+          <input id="c-route" class="mono" placeholder="se remplit avec le sujet" />
           <span class="muted small">
-            La section doit déjà contenir au moins une page : c'est elle qui sert de modèle.
-            Si l'agent ne trouve pas de sœur, il te le dira plutôt que d'inventer une
-            arborescence.
+            Composée de la section et du sujet ; tu peux la modifier. Le nombre de pages d'une
+            section dit combien elle en contient déjà : l'agent imite l'une d'elles.
           </span>
         </label>
         {# Rempli apres le rendu par /content/langues : lire l'arbre du depot prend des
            secondes. Reste cache sur un site qui ne sert qu'une langue. #}
         <fieldset id="c-langues-bloc" hidden style="border:0;padding:0;margin:0;">
           <legend>Langues</legend>
-          <div id="c-langues" style="display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0;"></div>
+          <div id="c-langues" style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:4px 0;"></div>
           <span class="muted small">
             Une version par langue cochée, toutes dans la même pull request et liées entre
             elles (hreflang). Chaque version imite la traduction de la même page existante,
@@ -319,6 +321,7 @@
         if (touche) return;
         var s = slugifier(sujet.value);
         var prefixe = (sectionGithub && sectionGithub.value) ? sectionGithub.value.replace(/\/$/, '') : '';
+        route.placeholder = prefixe ? prefixe + '/…' : 'se remplit avec le sujet';
         route.value = s ? prefixe + '/' + s + (slashFinal ? '/' : '') : '';
         majLangues();
       }
@@ -383,9 +386,26 @@
       var langBox = document.getElementById('c-langues');
       var cout = document.getElementById('c-cout');
       var codes = [];
-      /* La racine NOMMEE quand le crawl sait laquelle c'est (« EN (racine) »). */
+      /* LES LANGUES PAR LEUR NOM — « Allemand », pas « DE ». `Intl.DisplayNames` est integre au
+         navigateur : aucune table de noms a tenir. Repli sur le code s'il est absent. La racine
+         est nommee quand le crawl sait laquelle c'est (`iso_racine`). */
       var nomRacine = {{ nom_racine | tojson }};
-      function libelle(code) { return code ? code.toUpperCase() : (nomRacine || 'racine (sans préfixe)'); }
+      var isoRacine = {{ iso_racine | tojson }};
+      var noms = null;
+      try { noms = new Intl.DisplayNames(['fr'], { type: 'language' }); } catch (e) { noms = null; }
+      function nomLangue(iso) {
+        var n = '';
+        try { n = noms && iso ? noms.of(iso) : ''; } catch (e) { n = ''; }
+        return n && n.toLowerCase() !== String(iso).toLowerCase()
+          ? n.charAt(0).toUpperCase() + n.slice(1) : String(iso || '').toUpperCase();
+      }
+      function libelle(code) {
+        if (code) return nomLangue(code);
+        return isoRacine ? nomLangue(isoRacine) + ' (racine)' : (nomRacine || 'racine (sans préfixe)');
+      }
+      Array.prototype.forEach.call(document.querySelectorAll('[data-iso]'), function (s) {
+        if (s.dataset.iso) s.textContent = nomLangue(s.dataset.iso) + (s.dataset.racine ? ' (racine)' : '');
+      });
       function langueDeRoute(r) {
         var seg = (String(r || '').split('/').filter(Boolean)[0] || '').toLowerCase();
         return codes.indexOf(seg) >= 0 ? seg : '';
@@ -397,7 +417,10 @@
       }
       function majLangues() {
         if (!codes.length) return;
-        var principale = langueDeRoute(route.value);
+        /* Sans adresse encore (sujet vide), la langue de la page se lit dans la SECTION choisie :
+           la capture du 28/09/2026 verrouillait la racine alors que `/fr/guides` etait
+           selectionnee. */
+        var principale = langueDeRoute(route.value || (sectionGithub && sectionGithub.value) || '');
         Array.prototype.forEach.call(langBox.querySelectorAll('input'), function (c) {
           var est = c.value === principale;
           /* Une case cochee PAR L'ECRAN parce qu'elle etait la langue de l'adresse se decoche
@@ -588,8 +611,8 @@
              automatique : la meme mesure pour les deux champs. */
           if (d.sections && d.sections.length && sectionGithub) {
             sectionGithub.innerHTML = d.sections.map(function (s) {
-              return '<option value="' + esc(s.section) + '">' + esc(s.section) + ' — ' +
-                esc(s.pages) + ' pages</option>';
+              return '<option value="' + esc(s.section) + '">' + esc(s.section.replace(/\/$/, '')) + '/ · ' +
+                esc(s.pages) + ' pages déjà publiées</option>';
             }).join('');
             document.getElementById('c-section-github-bloc').hidden = false;
             var liste = document.getElementById('c-sections-liste');
@@ -602,11 +625,12 @@
           codes = d.langues.map(function (l) { return l.code; });
           /* Une ligne par langue : case, nom, nombre de pages — la grille precedente mettait
              la case au-dessus de son nom et le compte en dessous. */
-          langBox.style.display = 'block';
+          /* `.checkbox` du design system : la case A GAUCHE de son nom, les langues cote a cote.
+             Le nombre de pages par langue est retire — il ne disait rien d'utile (capture du
+             28/09/2026). */
           langBox.innerHTML = d.langues.map(function (l) {
-            return '<label style="display:flex;align-items:center;gap:8px;margin:2px 0;">' +
-              '<input type="checkbox" value="' + esc(l.code) + '" /> <span>' + esc(libelle(l.code)) +
-              '</span> <span class="muted small">' + esc(l.pages) + ' pages</span></label>';
+            return '<label class="checkbox"><input type="checkbox" value="' + esc(l.code) + '" /> <span>' +
+              esc(libelle(l.code)) + '</span></label>';
           }).join('');
           Array.prototype.forEach.call(langBox.querySelectorAll('input'), function (c) {
             c.addEventListener('change', majLangues);

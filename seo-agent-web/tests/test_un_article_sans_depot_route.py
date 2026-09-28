@@ -133,8 +133,9 @@ def test_l_ecran_propose_les_SECTIONS_du_crawl_et_NOMME_la_langue_racine(
     langue de la racine s'affichait « racine (sans préfixe) » alors que ses pages la déclarent."""
     client, slug, _pid, _uid = customer
     page = client.get(f"/projects/{slug}/content").text
-    assert '<option value="/fr/guides">/fr/guides — 3 pages</option>' in page
-    assert "EN (racine)" in page
+    # « 8 pages » ne disait pas ce qu'il comptait (capture du 28/09/2026).
+    assert '<option value="/fr/guides">/fr/guides/ · 3 pages déjà publiées</option>' in page
+    assert "EN (racine)" in page and 'data-iso="en"' in page
 
 
 def test_la_note_stockee_garde_le_MARKDOWN_pas_le_html(customer, plan, crawl, modele) -> None:

@@ -29214,7 +29214,9 @@ def _langues_du_crawl(pages: "list[dict[str, Any]]") -> list[dict[str, Any]]:
     """Les langues du site pour l'ecran : cle de route, nom lisible, nombre de pages."""
     connues = _langues_des_routes([p["chemin"] for p in pages])
     racine = _code_de_la_racine(pages, {k for k in connues if k})
-    return [{"code": k, "pages": n,
+    # `iso` est le code de langue REEL, racine comprise : l'ecran en tire le nom (« Allemand »)
+    # par `Intl.DisplayNames`, integre au navigateur — aucune table de noms a tenir ici.
+    return [{"code": k, "pages": n, "iso": k or racine,
              "nom": k.upper() if k else ("%s (racine)" % racine.upper() if racine else "racine")}
             for k, n in sorted(connues.items(), key=lambda kv: (-kv[1], kv[0]))]
 
@@ -29714,6 +29716,7 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "articles": articles,
             "slash_final": slash_final,
             "nom_racine": next((l["nom"] for l in langues_crawl if not l["code"]), ""),
+            "iso_racine": next((l["iso"] for l in langues_crawl if not l["code"]), ""),
             "sujets_suggeres": sujets_suggeres,
         },
     )
