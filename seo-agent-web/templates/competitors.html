@@ -69,6 +69,39 @@
           });
         }
         function dire(texte, cls) { statut.hidden = false; statut.className = cls || 'muted small'; statut.textContent = texte; }
+        /* « Ajouter » ENVOIE le formulaire, donc recharge la page : la liste, qui n'existait que
+           dans la page, disparaissait au premier ajout (releve le 28/09/2026). Elle est gardee
+           pour l'onglet et reaffichee au retour ; ceux deja suivis y sont marques, pas reproposes. */
+        var suivis = {{ competitors | map(attribute='domain') | list | tojson }};
+        var plein = {{ (competitors | length >= max_competitors) | tojson }};
+        var cle = 'noyaru-concurrents-' + slug;
+        function garder(d) { try { sessionStorage.setItem(cle, JSON.stringify(d)); } catch (e) {} }
+        function relire() { try { return JSON.parse(sessionStorage.getItem(cle) || 'null'); } catch (e) { return null; } }
+        function afficher(d) {
+          dire('Recherches : « ' + d.requetes.join(' », « ') + ' ». Ajoute ceux que tu reconnais.');
+          /* Chaque candidat avec sa PREUVE : sur combien de tes recherches il se classe, et
+             sa meilleure position. « Ajouter » passe par le formulaire ci-dessus et ses
+             controles (cible publique, doublon, plafond de cinq). */
+          liste.innerHTML = d.candidats.map(function (c) {
+            var action = suivis.indexOf(c.domaine) >= 0
+              ? '<span class="badge ok">Suivi</span>'
+              : '<button type="button" class="btn small" data-ajouter="' + esc(c.domaine) + '"' +
+                (plein ? ' disabled title="Plafond de sites suivis atteint"' : '') + '>Ajouter</button>';
+            return '<div class="checkbox" style="justify-content:space-between;border-top:1px solid var(--border);padding:6px 0;">' +
+              '<span><strong>' + esc(c.domaine) + '</strong> <span class="muted small">— classé sur ' +
+              c.requetes.length + ' de tes ' + d.requetes.length + ' recherches, meilleure position ' +
+              esc(c.position) + '</span></span>' + action + '</div>';
+          }).join('');
+          liste.hidden = false;
+          Array.prototype.forEach.call(liste.querySelectorAll('[data-ajouter]'), function (b) {
+            b.addEventListener('click', function () {
+              champ.value = b.dataset.ajouter;
+              document.getElementById('k-ajouter').click();
+            });
+          });
+        }
+        var precedent = relire();
+        if (precedent && precedent.candidats && precedent.candidats.length) { afficher(precedent); }
         bouton.addEventListener('click', function () {
           bouton.disabled = true;
           bouton.textContent = 'Recherche…';
@@ -80,29 +113,13 @@
               bouton.disabled = false;
               bouton.textContent = "Trouver avec l'IA";
               if (!d.ok) { dire(d.error || 'Recherche impossible.', 'error small'); return; }
+              garder(d);
               if (!d.candidats || !d.candidats.length) {
                 dire('Aucun concurrent trouvé sur ' + d.requetes.length + ' recherches : « ' +
                      d.requetes.join(' », « ') + ' ».');
                 return;
               }
-              dire('Recherches : « ' + d.requetes.join(' », « ') + ' ». Ajoute ceux que tu reconnais.');
-              /* Chaque candidat avec sa PREUVE : sur combien de tes recherches il se classe, et
-                 sa meilleure position. « Ajouter » passe par le formulaire ci-dessus et ses
-                 controles (cible publique, doublon, plafond de cinq). */
-              liste.innerHTML = d.candidats.map(function (c) {
-                return '<div class="checkbox" style="justify-content:space-between;border-top:1px solid var(--border);padding:6px 0;">' +
-                  '<span><strong>' + esc(c.domaine) + '</strong> <span class="muted small">— classé sur ' +
-                  c.requetes.length + ' de tes ' + d.requetes.length + ' recherches, meilleure position ' +
-                  esc(c.position) + '</span></span>' +
-                  '<button type="button" class="btn small" data-ajouter="' + esc(c.domaine) + '">Ajouter</button></div>';
-              }).join('');
-              liste.hidden = false;
-              Array.prototype.forEach.call(liste.querySelectorAll('[data-ajouter]'), function (b) {
-                b.addEventListener('click', function () {
-                  champ.value = b.dataset.ajouter;
-                  document.getElementById('k-ajouter').click();
-                });
-              });
+              afficher(d);
             })
             .catch(function () {
               bouton.disabled = false;

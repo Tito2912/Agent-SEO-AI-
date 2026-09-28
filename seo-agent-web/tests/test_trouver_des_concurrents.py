@@ -172,3 +172,23 @@ def test_un_plan_sous_PRO_n_atteint_pas_google(customer, plan, recherche) -> Non
     client, slug, _pid, _uid = customer
     plan["plan"] = "solo"
     assert _post(client, slug).status_code == 403 and recherche["appels"] == []
+
+
+# ── la liste survit a l'ajout ─────────────────────────────────────────────────────────────────
+
+
+def test_la_page_dit_au_script_QUI_est_deja_suivi(customer, plan, recherche, monkeypatch) -> None:
+    """« Ajouter » recharge la page ; le script reaffiche la liste gardee pour l'onglet et y marque
+    les sites deja suivis. Il ne le sait que si la page le lui dit (releve le 28/09/2026 : la
+    liste disparaissait au premier ajout)."""
+    client, slug, _pid, _uid = customer
+    monkeypatch.setattr(m, "_validate_public_crawl_target", lambda url: "")
+    client.get(f"/projects/{slug}")
+    token = client.cookies.get(m._CSRF_COOKIE_NAME, "")
+    r = client.post(f"/projects/{slug}/competitors/add", data={"url": "https://www.Rival.fr/x", "_csrf": token},
+                    follow_redirects=False)
+    assert r.status_code == 303 and "err=" not in r.headers["location"], r.headers["location"]
+    html = client.get(f"/projects/{slug}/competitors").text
+    assert 'var suivis = ["rival.fr"];' in html
+    assert "var plein = false;" in html
+    assert "sessionStorage.setItem(cle" in html and "afficher(precedent)" in html
