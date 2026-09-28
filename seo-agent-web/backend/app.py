@@ -9578,6 +9578,7 @@ def _startup() -> None:
     _start_job_worker()
     _start_retention()
     _start_verification_pr()
+    _start_contenu_auto()
 
 
 def _shutdown() -> None:
@@ -28968,7 +28969,9 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                        refuser_si_orpheline: bool = False,
                        langues: "list[str] | None" = None,
                        suivi: "Callable[[str], None]" = _sans_suivi,
-                       style: "dict[str, str] | None" = None) -> dict[str, Any]:
+                       style: "dict[str, str] | None" = None,
+                       fusion_auto: bool = False,
+                       publication: str = "") -> dict[str, Any]:
     """Ecrit la page, la lie, ouvre la PR brouillon, enregistre la tache et debite l'article.
 
     `langues` ajoute des TRADUCTIONS a la page de `route` : toutes preparees avant la premiere
@@ -29115,8 +29118,13 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
            if notes_redaction else "")
         + "### À relire avant de fusionner\n\n"
         "Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, "
-        "noms, dates, prix et promesses commerciales sont à contrôler. Cette pull request "
-        "reste en **brouillon** et ne sera jamais fusionnée automatiquement.\n\n"
+        "noms, dates, prix et promesses commerciales sont à contrôler. "
+        + ("Le propriétaire a réglé le mode automatique en **publication automatique** : cette "
+           "pull request sera fusionnée dès que les vérifications de ce dépôt passeront. Sans "
+           "vérification disponible, ou si elles échouent, elle attend une validation humaine."
+           if fusion_auto else
+           "Cette pull request reste en **brouillon** et ne sera fusionnée qu'après validation.")
+        + "\n\n"
         f"Généré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
     suivi("Ouverture de la pull request brouillon")
@@ -29133,10 +29141,11 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
 
     issue_label = f"Page rédigée : {route}"
     try:
-        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=False),
+        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=fusion_auto),
                             "pr_title": pr_title,
                             "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0,
                             "branch": fix_branch, "files": ecrits, "sujet": sujet,
+                            "publication": publication,
                             "orpheline": bool(orpheline), "contenu": True,
                             "pages": [{"langue": p["langue"], "route": p["route"],
                                        "fichier": p["fichier"]} for p in plans]},
@@ -29150,20 +29159,22 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                 _ex.issue_label = issue_label
                 _ex.note = _note
             else:
-                _db.add(IssueTask(
+                _ex = IssueTask(
                     project_id=project_id, user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), created_by=str(getattr(user, "id", "") or ""),
                     issue_key=_CONTENT_PAGE_KEY, issue_label=issue_label, crawl_ts="",
                     url=route, status="in_progress", severity="notice", note=_note,
-                ))
+                )
+                _db.add(_ex)
             _db.commit()
+            task_id = str(_ex.id)
     except Exception:
-        pass
+        task_id = ""
 
     _article_charge(user, len(plans), slug=slug, motif=motif)
 
     return {
         "ok": True, "status": 200, "pr_url": pr_url, "pr_number": pr_number,
-        "branch": fix_branch,
+        "branch": fix_branch, "task_id": task_id,
         "verification": "en_attente", "route": route, "file": fichier,
         "index": index_chemin if index_sortie else "", "orpheline": bool(orpheline),
         "lien": note_lien, "files": ecrits, "sister": soeur,
@@ -29912,6 +29923,45 @@ def api_content_article_lire(request: Request, slug: str, task_id: str) -> JSONR
 
 
 
+# ── Le mode automatique : cadence, jour, heure, fuseau, publication (28/09/2026) ────────────
+#
+# Decisions du proprietaire : d'une page par mois a deux par semaine (au-dela, on approche du
+# « contenu produit en masse » que Google sanctionne, et le quota fond) ; un jour et une heure
+# dans le fuseau du client, Paris par defaut ; deux publications — VERIFICATION (la PR attend
+# que le client la valide, un e-mail le previent) et AUTOMATIQUE (fusionnee seule une fois la
+# CI de son depot verte).
+_FREQUENCES_AUTO: dict[str, tuple[str, int]] = {
+    # cle : (libelle, jours minimum entre deux pages)
+    "mensuelle": ("Une page par mois", 27),
+    "bimensuelle": ("Une page toutes les deux semaines", 13),
+    "hebdomadaire": ("Une page par semaine", 6),
+    "bihebdomadaire": ("Deux pages par semaine", 2),
+}
+_JOURS_AUTO = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+_MOIS_AUTO = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
+              "septembre", "octobre", "novembre", "décembre")
+_FUSEAUX_AUTO: tuple[tuple[str, str], ...] = (
+    ("Europe/Paris", "Paris"), ("Europe/Brussels", "Bruxelles"), ("Europe/Zurich", "Zurich"),
+    ("Europe/Luxembourg", "Luxembourg"), ("Europe/London", "Londres"),
+    ("America/Toronto", "Montréal / Toronto"), ("America/New_York", "New York"),
+    ("America/Los_Angeles", "Los Angeles"), ("America/Martinique", "Martinique / Guadeloupe"),
+    ("America/Cayenne", "Guyane"), ("Indian/Reunion", "La Réunion"),
+    ("Africa/Casablanca", "Casablanca"), ("Africa/Abidjan", "Abidjan / Dakar"),
+    ("Africa/Tunis", "Tunis / Alger"), ("Pacific/Noumea", "Nouméa"), ("UTC", "UTC"),
+)
+_PUBLICATIONS_AUTO = ("verification", "auto")
+
+
+def _fuseau_auto(nom: str) -> Any:
+    """Le fuseau du client ; UTC, et une ligne de journal, si la base des fuseaux manque."""
+    from zoneinfo import ZoneInfo
+    try:
+        return ZoneInfo(str(nom or "Europe/Paris"))
+    except Exception as exc:
+        logger.error("[contenu-auto] fuseau %r illisible (%s) : UTC", nom, exc)
+        return timezone.utc
+
+
 def _reglages_contenu_auto(reglages: Any) -> dict[str, Any]:
     """Les reglages du mode automatique, toujours complets, depuis les reglages d'un projet.
 
@@ -29927,9 +29977,73 @@ def _reglages_contenu_auto(reglages: Any) -> dict[str, Any]:
         dernier = float(auto.get("last_run") or 0)
     except Exception:
         dernier = 0.0
+    def _nombre(cle: str, defaut: int, bas: int, haut: int) -> int:
+        try:
+            v = int(auto.get(cle))
+        except Exception:
+            return defaut
+        return v if bas <= v <= haut else defaut
+
+    try:
+        depuis = float(auto.get("depuis") or 0)
+    except Exception:
+        depuis = 0.0
+    style, _refus = _style_valide(str(auto.get("taille") or ""), str(auto.get("ton") or ""))
+    frequence = str(auto.get("frequence") or "")
+    fuseau = str(auto.get("fuseau") or "")
+    publication = str(auto.get("publication") or "")
+    langues = auto.get("langues")
     return {"enabled": bool(auto.get("enabled")),
             "section": str(auto.get("section") or ""),
-            "last_run": dernier}
+            "last_run": dernier,
+            # L'instant ou la cadence a ete reglee : aucun creneau ANTERIEUR ne se declenche.
+            # 0 pour un reglage d'avant cette fonction — il garde son comportement : une page
+            # au prochain passage, puis la cadence.
+            "depuis": depuis,
+            "taille": style.get("taille", ""), "ton": style.get("ton", ""),
+            "langues": [str(x) for x in langues if isinstance(x, str)][:10]
+            if isinstance(langues, list) else [],
+            "frequence": frequence if frequence in _FREQUENCES_AUTO else "hebdomadaire",
+            "jour": _nombre("jour", 0, 0, 6),
+            "heure": _nombre("heure", 9, 0, 23),
+            "fuseau": fuseau if fuseau in dict(_FUSEAUX_AUTO) else "Europe/Paris",
+            "publication": publication if publication in _PUBLICATIONS_AUTO else "verification"}
+
+
+def _prochain_creneau(auto: dict[str, Any]) -> "datetime | None":
+    """Le prochain creneau ou une page est due : strictement apres la derniere page ET le reglage,
+    au moins l'intervalle de la frequence apres la derniere page, le bon jour, a l'heure dite,
+    dans le fuseau du client. Un creneau PASSE veut dire « due au prochain passage ».
+
+    Deux pages par semaine : le jour choisi et trois jours plus tard (lundi et jeudi). Une par
+    mois : le jour choisi de la PREMIERE semaine du mois.
+    """
+    fuseau = _fuseau_auto(auto["fuseau"])
+    frequence = auto["frequence"]
+    ecart = _FREQUENCES_AUTO[frequence][1]
+    borne = max(float(auto["last_run"] or 0), float(auto["depuis"] or 0))
+    mini = float(auto["last_run"]) + ecart * 86400 if auto["last_run"] else 0.0
+    jours = {auto["jour"], (auto["jour"] + 3) % 7} if frequence == "bihebdomadaire" else {auto["jour"]}
+    depart = datetime.fromtimestamp(max(borne, mini), fuseau)
+    for d in range(0, 70):
+        jour = (depart + timedelta(days=d)).date()
+        if jour.weekday() not in jours or (frequence == "mensuelle" and jour.day > 7):
+            continue
+        creneau = datetime(jour.year, jour.month, jour.day, auto["heure"], tzinfo=fuseau)
+        if creneau.timestamp() > borne and creneau.timestamp() >= mini:
+            return creneau
+    return None
+
+
+def _dire_creneau(creneau: "datetime | None", auto: dict[str, Any], *, maintenant: float) -> str:
+    """« lundi 5 octobre à 09:00 (Paris) » — ou « au prochain passage » s'il est deja la."""
+    if creneau is None:
+        return ""
+    if creneau.timestamp() <= maintenant:
+        return "au prochain passage (quelques minutes)"
+    return "%s %d %s à %02d:00 (%s)" % (
+        _JOURS_AUTO[creneau.weekday()], creneau.day, _MOIS_AUTO[creneau.month - 1],
+        creneau.hour, dict(_FUSEAUX_AUTO).get(auto["fuseau"], auto["fuseau"]))
 
 
 @app.get("/projects/{slug}/content", response_class=HTMLResponse)
@@ -29994,6 +30108,8 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
                 "etat": str(verif.get("etat") or ""),
                 "raison": str(verif.get("raison") or ""),
                 "status": str(t.status or ""),
+                "id": str(t.id),
+                "publication": str(note.get("publication") or ""),
                 "updated_at": t.updated_at.strftime("%d/%m/%Y") if t.updated_at else "",
             })
     except Exception:
@@ -30041,7 +30157,13 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "github_cfg": _project_github_cfg(proj_row),
             "pages": pages,
             "auto": _reglages_contenu_auto(proj_row.settings),
-            "auto_jours": _CONTENU_AUTO_JOURS,
+            "auto_prochain": _dire_creneau(
+                _prochain_creneau(_reglages_contenu_auto(proj_row.settings)),
+                _reglages_contenu_auto(proj_row.settings), maintenant=time.time())
+            if _reglages_contenu_auto(proj_row.settings)["enabled"] else "",
+            "frequences_auto": [(k, v[0]) for k, v in _FREQUENCES_AUTO.items()],
+            "jours_auto": list(enumerate(_JOURS_AUTO)),
+            "fuseaux_auto": list(_FUSEAUX_AUTO),
             "sections_crawl": sections_crawl,
             # Les choix viennent des tables de la redaction : l'ecran ne peut rien offrir
             # qu'elle refuserait.
@@ -30493,7 +30615,6 @@ def cron_refresh_competitors(request: Request) -> JSONResponse:
 
 # ── Contenu : le mode automatique ─────────────────────────────────────────────────────────────
 
-_CONTENU_AUTO_JOURS = 7            # au plus une page par semaine et par projet
 _CONTENU_AUTO_MAX_PROJETS = 100    # la borne d'un passage, comme tous les balayages d'ici
 
 
@@ -30585,7 +30706,7 @@ def _pourquoi_aucun_sujet(db, *, project_id: str, owner_user_id: str, slug: str)
 
 
 def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str, int]:
-    """Une page par semaine et par projet, sur des sujets qu'aucune page du site ne couvre.
+    """Les pages du mode automatique, a la cadence de chaque projet, sur des sujets non couverts.
 
     CE MODE EST VOLONTAIREMENT ETROIT, et chaque restriction repond a la meme crainte : la
     politique anti-spam de Google vise le contenu produit en masse pour le classement, quelle
@@ -30593,7 +30714,7 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
     de NUIRE au client qu'elle pretend servir.
 
         * il faut l'avoir demande, projet par projet, et nommer la section ;
-        * une page par semaine au plus, sous le plafond mensuel du forfait ;
+        * deux pages par semaine au plus (`_FREQUENCES_AUTO`), sous le plafond mensuel du forfait ;
         * uniquement des sujets qu'un concurrent traite et que le site ne couvre PAS — ecrire
           une seconde page sur un sujet deja traite serait se cannibaliser soi-meme ;
         * un sujet deja propose ne revient jamais, meme si sa pull request a ete fermee ;
@@ -30609,6 +30730,21 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
     bas comme le fait la route manuelle. Un projet hors forfait est saute sans poser de date —
     son quota repart au renouvellement, et il n'aura pas perdu sa semaine.
     """
+    # UN SEUL PASSAGE A LA FOIS. Trois portes y menent — la boucle du service, le cron
+    # quotidien, l'autopilote — et deux passages simultanes liraient la meme date avant que
+    # l'un l'ait posee : deux pages le meme jour.
+    if not _CONTENU_AUTO_VERROU.acquire(blocking=False):
+        return {"deja_en_cours": 1}
+    try:
+        return _balayer_contenu_auto_sous_verrou(limit=limit)
+    finally:
+        _CONTENU_AUTO_VERROU.release()
+
+
+_CONTENU_AUTO_VERROU = threading.Lock()
+
+
+def _balayer_contenu_auto_sous_verrou(*, limit: int) -> dict[str, int]:
     resultats = {"proposees": 0, "refusees": 0, "sans_sujet": 0, "hors_forfait": 0}
     maintenant = time.time()
     with DB.session() as db:
@@ -30626,7 +30762,8 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
         auto = _reglages_contenu_auto(cand["settings"])
         if not auto["enabled"]:
             continue
-        if auto["last_run"] > maintenant - _CONTENU_AUTO_JOURS * 86400:
+        creneau = _prochain_creneau(auto)
+        if creneau is None or creneau.timestamp() > maintenant:
             continue
         vus += 1
         section = "/" + auto["section"].strip().strip("/")
@@ -30636,7 +30773,9 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
             continue
 
         auteur = _AuteurAutomatique(cand["owner"])
-        ouvert, motif_refus = _article_gate(auteur, slug=cand["slug"])
+        ouvert, motif_refus = _article_gate(
+            auteur, slug=cand["slug"],
+            n=_versions_demandees(section.rstrip("/") + "/x", auto["langues"]))
         if not ouvert:
             resultats["hors_forfait"] += 1
             logger.info("[contenu-auto] %s sauté : %s", cand["slug"], motif_refus)
@@ -30688,7 +30827,11 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
                 slug=cand["slug"], sujet=choisi, route=route,
                 base_url=cand["base_url"],
                 owner=parts[0], repo_name=parts[1], branch=cfg["branch"], token=token,
-                motif="content_auto", refuser_si_orpheline=True)
+                motif="content_auto", refuser_si_orpheline=True,
+                langues=auto["langues"],
+                style={"taille": auto["taille"], "ton": auto["ton"]},
+                fusion_auto=auto["publication"] == "auto",
+                publication=auto["publication"])
         except Exception as e:
             resultats["refusees"] += 1
             logger.error("[contenu-auto] %s : %s: %s", cand["slug"], type(e).__name__, e)
@@ -30696,6 +30839,11 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
         if sortie.get("ok"):
             resultats["proposees"] += 1
             logger.info("[contenu-auto] %s : %s -> %s", cand["slug"], route, sortie.get("pr_url"))
+            if auto["publication"] == "verification":
+                _prevenir_page_a_valider(owner_id=cand["owner"], slug=cand["slug"],
+                                         site_name=cand["site_name"] or cand["slug"],
+                                         sujet=choisi, pr_url=str(sortie.get("pr_url") or ""),
+                                         task_id=str(sortie.get("task_id") or ""))
         else:
             resultats["refusees"] += 1
             logger.info("[contenu-auto] %s : %s refusé — %s",
@@ -30703,9 +30851,108 @@ def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str
     return resultats
 
 
+def _prevenir_page_a_valider(*, owner_id: str, slug: str, site_name: str, sujet: str,
+                             pr_url: str, task_id: str, raison: str = "") -> bool:
+    """Previent le proprietaire qu'une page ecrite toute seule attend sa validation.
+
+    Le bouton de l'e-mail mene a une PAGE de Noyaru, connectee, qui porte le vrai bouton : un
+    lien d'e-mail qui fusionnerait au clic serait declenche par les antivirus de messagerie qui
+    visitent chaque lien. Rend False si l'envoi n'a pas pu se faire — la page reste listee dans
+    l'ecran Contenu, l'e-mail n'est qu'un raccourci.
+    """
+    try:
+        with DB.session() as db:
+            proprio = db.get(User, str(owner_id))
+            adresse = str(getattr(proprio, "email", "") or "").strip()
+        if not adresse:
+            return False
+        app_name = _safe_env("APP_NAME") or "Noyaru"
+        base = (_safe_env("PUBLIC_BASE_URL") or "https://noyaru.com").rstrip("/")
+        valider = "%s/projects/%s/content/valider/%s" % (base, slug, task_id)
+        sujet_mail = "Une page attend ta validation — %s" % site_name
+        texte = "\n".join([
+            "%s a rédigé une page pour %s :" % (app_name, site_name), "", "  %s" % sujet, "",
+            *(["Pourquoi elle attend : %s" % raison, ""] if raison else []),
+            "Relis-la sur GitHub : %s" % pr_url,
+            "Puis valide-la (elle sera fusionnée) : %s" % valider, "",
+            "— %s" % app_name])
+        e = html.escape
+        html_mail = (
+            '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"></head>'
+            '<body style="margin:0;padding:24px;background:#f4f4f7;font-family:Arial,sans-serif;">'
+            '<table width="560" cellpadding="0" cellspacing="0" align="center" '
+            'style="background:#fff;border-radius:8px;padding:28px;">'
+            '<tr><td><h1 style="font-size:19px;margin:0 0 12px;">Une page attend ta validation</h1>'
+            '<p style="color:#555;margin:0 0 8px;">%s a rédigé une page pour <strong>%s</strong> :</p>'
+            '<p style="margin:0 0 16px;font-size:16px;"><strong>%s</strong></p>%s'
+            '<p style="margin:0 0 20px;"><a href="%s" style="color:#0a9468;">Relire la pull '
+            'request sur GitHub</a></p>'
+            '<a href="%s" style="display:inline-block;background:#0a9468;color:#fff;'
+            'text-decoration:none;padding:12px 26px;border-radius:6px;font-weight:600;">'
+            'Valider la page</a>'
+            '<p style="color:#999;font-size:12px;margin:22px 0 0;">Rien n\'est publié sans ta '
+            'validation. Tu reçois cet e-mail parce que le mode automatique de %s est réglé '
+            'sur « vérification ».</p></td></tr></table></body></html>'
+            % (e(app_name), e(site_name), e(sujet),
+               ('<p style="color:#a15c00;margin:0 0 16px;">%s</p>' % e(raison)) if raison else "",
+               e(pr_url, quote=True), e(valider, quote=True), e(app_name)))
+        _send_email(to_addr=adresse, subject=sujet_mail, body=texte, html_body=html_mail)
+        return True
+    except Exception as exc:
+        logger.warning("[contenu-auto] e-mail de validation non envoye (%s) : %s", slug, exc)
+        return False
+
+
+def _contenu_auto_intervalle_s() -> int:
+    raw = _safe_env("CONTENU_AUTO_EVERY_SECONDS")
+    try:
+        return max(60, min(3600, int(raw))) if raw else 600
+    except Exception:
+        return 600
+
+
+def _boucle_contenu_auto() -> None:
+    """Le mode automatique, toutes les dix minutes, dans le service web.
+
+    UNE HEURE CHOISIE demande un passage frequent : le cron quotidien de 03:00 UTC ne sait pas
+    tenir « jeudi 14:00 a Paris ». Meme mecanisme que `_boucle_verification_pr` — un fil demon,
+    sans ordonnanceur externe (GitHub retarde les cadences courtes, mesure du 19/09/2026). Il
+    ATTEND avant son premier passage : un redemarrage n'ecrit pas de page en demarrant, et les
+    tests qui ouvrent l'application ne declenchent rien.
+    """
+    while not _WORKER_STOP.wait(float(_contenu_auto_intervalle_s())):
+        try:
+            resultats = _balayer_contenu_auto()
+            if any(resultats.values()):
+                logger.info("[contenu-auto] passage : %s", resultats)
+        except Exception as e:
+            logger.error("[contenu-auto] passage interrompu : %s: %s", type(e).__name__, e)
+
+
+_CONTENU_AUTO_STARTED_GUARD = threading.Lock()
+_CONTENU_AUTO_STARTED = False
+
+
+def _start_contenu_auto() -> None:
+    global _CONTENU_AUTO_STARTED
+    with _CONTENU_AUTO_STARTED_GUARD:
+        if _CONTENU_AUTO_STARTED:
+            return
+        _CONTENU_AUTO_STARTED = True
+        threading.Thread(target=_boucle_contenu_auto, daemon=True).start()
+
+
 class _ContentAutoBody(BaseModel):
     enabled: bool = False
     section: str = ""
+    taille: str = ""
+    ton: str = ""
+    langues: list[str] = []
+    frequence: str = "hebdomadaire"
+    jour: int = 0
+    heure: int = 9
+    fuseau: str = "Europe/Paris"
+    publication: str = "verification"
 
 
 @app.post("/api/projects/{slug}/content/auto")
@@ -30723,6 +30970,19 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
     gate_ok, gate_msg = _article_gate(user, slug=slug)
     if not gate_ok and body.enabled:
         return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+
+    # Chaque reglage est VERIFIE, pas corrige en silence : un client qui choisit « jeudi » et
+    # retrouve « lundi » ne comprendrait pas pourquoi sa page arrive un autre jour.
+    style, refus_style = _style_valide(body.taille, body.ton)
+    refus = (refus_style
+             or ("fréquence inconnue : %s" % body.frequence if body.frequence not in _FREQUENCES_AUTO else "")
+             or ("jour invalide" if not 0 <= int(body.jour) <= 6 else "")
+             or ("heure invalide" if not 0 <= int(body.heure) <= 23 else "")
+             or ("fuseau inconnu : %s" % body.fuseau if body.fuseau not in dict(_FUSEAUX_AUTO) else "")
+             or ("publication inconnue : %s" % body.publication
+                 if body.publication not in _PUBLICATIONS_AUTO else ""))
+    if refus:
+        return JSONResponse({"ok": False, "error": refus}, status_code=400)
 
     section = "/" + str(body.section or "").strip().strip("/")
     if body.enabled and section == "/":
@@ -30742,13 +31002,124 @@ def api_content_auto_settings(request: Request, slug: str, body: _ContentAutoBod
             # La derniere date SURVIT a une extinction : rallumer ne doit pas offrir une page
             # de plus dans la meme semaine.
             "last_run": _reglages_contenu_auto(reglages)["last_run"],
+            # A partir de MAINTENANT : un creneau deja passe aujourd'hui ne part pas a
+            # l'enregistrement.
+            "depuis": time.time(),
+            "taille": style["taille"], "ton": style["ton"],
+            "langues": [str(x).strip().lower() for x in body.langues][:10],
+            "frequence": body.frequence, "jour": int(body.jour), "heure": int(body.heure),
+            "fuseau": body.fuseau, "publication": body.publication,
         }
         p.settings = reglages
         db.commit()
-    logger.info("[contenu-auto] %s : %s section=%s", slug,
-                "allumé" if body.enabled else "éteint", section)
+        auto = _reglages_contenu_auto(reglages)
+    logger.info("[contenu-auto] %s : %s section=%s %s %s %02dh %s", slug,
+                "allumé" if body.enabled else "éteint", section, body.frequence,
+                _JOURS_AUTO[auto["jour"]], auto["heure"], body.publication)
     return JSONResponse({"ok": True, "enabled": bool(body.enabled),
-                         "section": section if section != "/" else ""})
+                         "section": section if section != "/" else "",
+                         "prochain": _dire_creneau(_prochain_creneau(auto), auto,
+                                                   maintenant=time.time())
+                         if body.enabled else ""})
+
+
+def _page_a_valider(request: Request, slug: str, task_id: str) -> "tuple[Any, Any, dict[str, Any]]":
+    """(projet, tache, note) d'une page proposee de CE projet, ou HTTPException 404.
+
+    Rattachee au projet de l'URL, dont la propriete vient d'etre verifiee : un identifiant seul
+    ne doit ouvrir la page d'aucun autre compte.
+    """
+    proj = _db_project_or_404(request, slug)
+    with DB.session() as db:
+        tache = db.get(IssueTask, str(task_id or ""))
+    if (tache is None or str(tache.project_id) != str(proj.id)
+            or str(tache.issue_key or "") != _CONTENT_PAGE_KEY):
+        raise HTTPException(status_code=404, detail="Page introuvable")
+    try:
+        note = json.loads(tache.note) if tache.note else {}
+    except Exception:
+        note = {}
+    return proj, tache, note if isinstance(note, dict) else {}
+
+
+@app.get("/projects/{slug}/content/valider/{task_id}", response_class=HTMLResponse)
+def page_contenu_valider(request: Request, slug: str, task_id: str,
+                         msg: str | None = None, err: str | None = None) -> HTMLResponse:
+    """La page ou mene l'e-mail « une page attend ta validation ». Elle porte le vrai bouton."""
+    if not getattr(request.state, "user", None):
+        return RedirectResponse(url="/auth/login?next=" + quote(str(request.url.path)), status_code=303)
+    proj, tache, note = _page_a_valider(request, slug, task_id)
+    verif = note.get("verification") if isinstance(note.get("verification"), dict) else {}
+    return templates.TemplateResponse("content_valider.html", {
+        "request": request, "slug": slug,
+        "project": {"slug": proj.slug, "site_name": proj.site_name},
+        "task_id": str(tache.id), "sujet": str(note.get("sujet") or ""),
+        "pr_url": str(note.get("pr_url") or ""), "pr_number": int(note.get("pr_number") or 0),
+        "pages": [p for p in (note.get("pages") or []) if isinstance(p, dict)],
+        "etat": str(verif.get("etat") or ""), "raison": str(verif.get("raison") or ""),
+        "fusionnee": str(tache.status or "") == "done",
+        "msg": msg, "err": err,
+    })
+
+
+@app.post("/projects/{slug}/content/valider/{task_id}")
+def page_contenu_valider_post(request: Request, slug: str, task_id: str) -> RedirectResponse:
+    """Valider = « le contenu me va ». La fusion, elle, passe par le CHEMIN UNIQUE.
+
+    Premiere version : la route fusionnait tout de suite. Le garde-fou
+    `test_plus_AUCUNE_fusion_synchrone_dans_les_routes` l'a refusee, et il avait raison — une
+    personne qui a relu le TEXTE n'a pas verifie le BUILD, et une page qui casse le site du
+    client se fusionnait quand meme. La validation marque la PR pour fusion et relit le verdict
+    du depot sur-le-champ, par `_reprendre_une_verification` : fusionnee maintenant si les
+    verifications sont vertes, des qu'elles le deviennent sinon ; et sur un depot SANS
+    verification, la validation humaine suffit — c'est le seul cas ou elle remplace la CI.
+    """
+    ici = "/projects/%s/content/valider/%s" % (slug, task_id)
+    if not getattr(request.state, "user", None):
+        return RedirectResponse(url="/auth/login", status_code=303)
+    _proj, tache, note = _page_a_valider(request, slug, task_id)
+    if str(tache.status or "") == "done":
+        return RedirectResponse(url=_path_with_flash(ici, msg="Cette page est déjà fusionnée."), status_code=303)
+    verif = note.get("verification") if isinstance(note.get("verification"), dict) else {}
+    if not verif:
+        return RedirectResponse(url=_path_with_flash(ici, err="Cette page n'a pas de pull request à suivre."),
+                                status_code=303)
+    # PAS de refus sur un ancien verdict rouge : le verdict est RELU ci-dessous. Une CI
+    # relancee et passee au vert entre-temps doit pouvoir fusionner (mutation du 28/09/2026 :
+    # le refus anticipe etait redondant quand la CI est toujours rouge, et faux sinon).
+    verif.update({"fusion_auto": True, "valide_par_client": True, "etat": "en_attente"})
+    note["verification"] = verif
+    note["valide_par"] = str(getattr(request.state.user, "id", "") or "")
+    # Plus d'e-mail pour cette page : la personne qui devait etre prevenue vient de valider.
+    note["prevenu_le"] = note.get("prevenu_le") or time.time()
+    _ecrire_verification(str(tache.id), note)
+    with DB.session() as db:
+        tache = db.get(IssueTask, str(tache.id))
+    issue = _reprendre_une_verification(tache)
+    logger.info("[contenu] %s : page %s validee -> %s", slug, task_id, issue)
+    if issue == "fusionnee":
+        return RedirectResponse(url=_path_with_flash(ici, msg="Page validée et fusionnée."), status_code=303)
+    if issue == "attendre":
+        return RedirectResponse(url=_path_with_flash(ici, msg=(
+            "Page validée : elle sera fusionnée dès que les vérifications de ton dépôt passeront.")),
+            status_code=303)
+    if issue == "echouee":
+        return RedirectResponse(url=_path_with_flash(ici, err=(
+            "Les vérifications de ton dépôt échouent sur cette pull request : elle n'est pas "
+            "fusionnée. Corrige-les sur GitHub, puis valide à nouveau.")), status_code=303)
+    if issue == "fermee":
+        return RedirectResponse(url=_path_with_flash(
+            ici, err="La pull request n'est plus ouverte sur GitHub (fermée ou déjà fusionnée à la main)."),
+            status_code=303)
+    with DB.session() as db:
+        relue = db.get(IssueTask, str(tache.id))
+    try:
+        raison = str((json.loads(relue.note or "{}").get("verification") or {}).get("raison") or "")
+    except Exception:
+        raison = ""
+    return RedirectResponse(url=_path_with_flash(ici, err=(
+        "Validée, mais la fusion n'a pas abouti (%s). Réessaie, ou fusionne-la sur GitHub."
+        % (raison[:200] or issue))), status_code=303)
 
 
 @app.post("/cron/auto-content")
@@ -32962,6 +33333,7 @@ def _reprendre_une_verification(tache: Any) -> str:
         # detruire le travail. La refermer effacerait le diff que le client peut vouloir lire
         # pour comprendre ce que la correction tentait.
         verif["etat"], verif["raison"] = "echouee", raison
+        _prevenir_si_publication_arretee(tache, note, raison)
         _ecrire_verification(tache.id, note, statut="blocked")
         _commenter_la_pr(proprio, nom, numero, jeton,
                          "Les vérifications de ce dépôt ont échoué sur cette correction :\n\n> %s"
@@ -32981,7 +33353,10 @@ def _reprendre_une_verification(tache: Any) -> str:
     verif["etat"] = "verifiee" if decision == "promouvoir" else "non_verifiable"
     verif["raison"] = raison
     fusionnee = False
-    if verif.get("fusion_auto") and decision == "promouvoir":
+    # Une validation HUMAINE remplace la CI la ou il n'y en a pas (« inconnu ») — jamais la ou
+    # elle a echoue : ce cas-la est parti plus haut, en « refuser ».
+    if verif.get("fusion_auto") and (decision == "promouvoir"
+                                     or (decision == "inconnu" and verif.get("valide_par_client"))):
         try:
             _github_api_put(
                 _github_api_path("repos", proprio, nom, "pulls", str(numero), "merge"),
@@ -32990,13 +33365,35 @@ def _reprendre_une_verification(tache: Any) -> str:
             fusionnee = True
         except Exception as e:
             logger.info("[PR] fusion automatique impossible (#%s): %s", numero, e)
+            verif["raison"] = "GitHub refuse la fusion : %s" % str(e)[:200]
     elif verif.get("fusion_auto"):
         # Fusion automatique demandee mais rien n'a pu etre verifie : on N'AVANCE PAS tout seul
         # sur un depot muet. C'est le seul endroit ou cette etape retire un automatisme, et
         # c'est voulu — fusionner sans verification est exactement ce qu'on cherche a arreter.
         verif["raison"] = raison + " — fusion automatique suspendue, à relire"
+        _prevenir_si_publication_arretee(tache, note, verif["raison"])
     _ecrire_verification(tache.id, note, statut="done" if fusionnee else None)
     return "fusionnee" if fusionnee else verif["etat"]
+
+
+def _prevenir_si_publication_arretee(tache: Any, note: dict[str, Any], raison: str) -> None:
+    """Une page du mode automatique en PUBLICATION AUTOMATIQUE qui ne peut pas partir seule —
+    depot sans verification, ou verifications en echec — n'attend pas en silence : le client
+    recoit le meme e-mail qu'en mode verification, avec la raison. Une fois par page."""
+    if str(tache.issue_key or "") != _CONTENT_PAGE_KEY or note.get("publication") != "auto":
+        return
+    if note.get("prevenu_le"):
+        return
+    with DB.session() as db:
+        projet = db.get(Project, str(tache.project_id))
+    if projet is None:
+        return
+    if _prevenir_page_a_valider(owner_id=str(projet.owner_user_id), slug=str(projet.slug),
+                                site_name=str(projet.site_name or projet.slug),
+                                sujet=str(note.get("sujet") or ""),
+                                pr_url=str(note.get("pr_url") or ""), task_id=str(tache.id),
+                                raison=raison):
+        note["prevenu_le"] = time.time()
 
 
 def _ecrire_verification(task_id: str, note: dict[str, Any], *, statut: str | None = None) -> None:

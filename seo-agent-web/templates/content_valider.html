@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block title %}Valider une page - {{ project.site_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Valider une page</h1>
+    <p class="muted">{{ project.site_name }} · <a href="/projects/{{ slug }}/content">Contenu</a></p>
+  </div>
+
+  {% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>{% endif %}
+  {% if msg %}<div class="alert" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>{% endif %}
+
+  <section class="card">
+    <h2 style="margin-top:0;">{{ sujet or "Page rédigée" }}</h2>
+    {% for p in pages %}
+      <p class="mono small" style="margin:2px 0;">{{ p.route }}{% if p.langue %} <span class="muted">({{ p.langue }})</span>{% endif %}</p>
+    {% endfor %}
+    {% if raison %}<p class="muted small" style="margin-top:10px;">{{ raison }}</p>{% endif %}
+
+    <p style="margin-top:14px;">
+      {% if pr_url %}<a href="{{ pr_url }}" target="_blank" rel="noreferrer">Relire la pull request #{{ pr_number }} sur GitHub</a>{% endif %}
+    </p>
+    <p class="muted small">
+      Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, noms,
+      dates et promesses commerciales sont à contrôler avant de valider.
+    </p>
+
+    {% if fusionnee %}
+      <p><span class="badge ok">fusionnée</span></p>
+    {% else %}
+      <form method="post" action="/projects/{{ slug }}/content/valider/{{ task_id }}" class="modal-actions between">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <span class="muted small">Valider fusionne la pull request : la page part en ligne avec ton prochain déploiement.</span>
+        <button class="btn primary" type="submit">Valider et fusionner</button>
+      </form>
+    {% endif %}
+  </section>
+{% endblock %}

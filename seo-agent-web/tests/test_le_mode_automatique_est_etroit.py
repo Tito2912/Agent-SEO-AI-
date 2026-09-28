@@ -314,7 +314,12 @@ def test_la_semaine_ECOULEE_rouvre_le_passage(projet, plan, github, modele) -> N
     assert app_module._balayer_contenu_auto()["proposees"] == 1
     premiere = _pages_neuves(github)
     github["put"].clear()
-    _eteindre(pid, last_run=time.time() - 8 * 86400)
+    # Le creneau HIER a minuit (Paris) : entre la derniere page + 6 jours et maintenant, quel que
+    # soit le jour ou le test tourne. Le jour par defaut (lundi) le faisait passer par chance.
+    from datetime import datetime as _dt, timedelta as _td
+    from zoneinfo import ZoneInfo as _Z
+    hier = (_dt.now(_Z("Europe/Paris")) - _td(days=1)).weekday()
+    _eteindre(pid, last_run=time.time() - 8 * 86400, jour=hier, heure=0)
     assert app_module._balayer_contenu_auto()["proposees"] == 1
     seconde = _pages_neuves(github)
     assert seconde and not (seconde & premiere), (premiere, seconde)
@@ -427,7 +432,8 @@ def test_allumer_SANS_SECTION_est_refuse(client_connecte, plan) -> None:
 def test_l_interrupteur_se_regle_et_se_relit(client_connecte, plan) -> None:
     client, slug, pid = client_connecte
     assert _regler(client, slug, enabled=True, section="guides").status_code == 200
-    assert _auto(pid) == {"enabled": True, "section": "/guides", "last_run": 0}
+    auto = _auto(pid)
+    assert (auto["enabled"], auto["section"], auto["last_run"]) == (True, "/guides", 0), auto
     page = client.get(f"/projects/{slug}/content").text
     assert 'value="/guides"' in page and 'id="c-auto" checked' in page, page[:200]
 
@@ -509,7 +515,8 @@ def test_les_deux_modes_partagent_leur_COEUR() -> None:
             englobantes = [p for p in portees if p[0] <= n.lineno <= p[1]]
             if englobantes:
                 appelants.add(max(englobantes, key=lambda p: p[0])[2])
-    assert appelants == {"api_content_draft", "_balayer_contenu_auto"}, appelants
+    # Le balayage passe par son verrou : le geste vit dans `_balayer_contenu_auto_sous_verrou`.
+    assert appelants == {"api_content_draft", "_balayer_contenu_auto_sous_verrou"}, appelants
 
 
 def test_un_projet_SANS_reglage_ne_plante_pas_le_balayage(projet, plan, github, modele) -> None:

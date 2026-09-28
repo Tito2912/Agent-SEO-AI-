@@ -209,19 +209,20 @@
       </div>
 
       <p class="muted small">
-        Une page par semaine au plus, prise dans les sujets que
+        Des pages prises dans les sujets que
         <a href="/projects/{{ slug }}/competitors">tes concurrents traitent et que tu ne couvres
-        pas</a> — jamais un sujet que tu traites déjà, ce serait te cannibaliser. Chaque page
+        pas</a> — jamais un sujet que tu traites déjà, ce serait te cannibaliser. Chaque version
         compte dans ton quota mensuel, et une page que l'agent ne sait pas
-        <strong>lier</strong> à sa section n'est pas écrite du tout : ici personne ne relit
-        avant.
+        <strong>lier</strong> à sa section n'est pas écrite du tout.
       </p>
 
       <div class="setting-form">
         <label class="checkbox">
           <input type="checkbox" id="c-auto" {% if auto.enabled %}checked{% endif %} />
-          <span>Écrire une page automatiquement, au plus une tous les {{ auto_jours }} jours</span>
+          <span>Écrire des pages automatiquement</span>
         </label>
+        {% if auto_prochain %}<p class="muted small" id="c-auto-prochain" style="margin:0;">Prochaine page : {{ auto_prochain }}</p>
+        {% else %}<p class="muted small" id="c-auto-prochain" style="margin:0;" hidden></p>{% endif %}
         <label>
           Section où poser les pages
           <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="ex. /guides" list="c-sections-liste" />
@@ -232,6 +233,78 @@
             relira l'adresse avant la pull request.
           </span>
         </label>
+
+        {# CADENCE : frequence, jour, heure, fuseau (decision du 28/09/2026 : d'une par mois a
+           deux par semaine, Paris par defaut). #}
+        <div class="c-style-ligne">
+          <label>
+            Fréquence
+            <select id="c-auto-frequence">
+              {% for cle, libelle in frequences_auto %}<option value="{{ cle }}" {% if auto.frequence == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            Jour
+            <select id="c-auto-jour">
+              {% for i, nom in jours_auto %}<option value="{{ i }}" {% if auto.jour == i %}selected{% endif %}>{{ nom|capitalize }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            Heure
+            <select id="c-auto-heure">
+              {% for h in range(24) %}<option value="{{ h }}" {% if auto.heure == h %}selected{% endif %}>{{ '%02d' % h }}:00</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            Fuseau horaire
+            <select id="c-auto-fuseau">
+              {% for cle, nom in fuseaux_auto %}<option value="{{ cle }}" {% if auto.fuseau == cle %}selected{% endif %}>{{ nom }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+        <span class="muted small" style="display:block;margin:-2px 0 6px;">
+          « Deux par semaine » : le jour choisi et trois jours plus tard. « Une par mois » : le
+          jour choisi de la première semaine du mois.
+        </span>
+
+        <div class="c-style-ligne">
+          <label>
+            Taille
+            <select id="c-auto-taille">
+              <option value="">Comme la section</option>
+              {% for cle, libelle in tailles_article %}<option value="{{ cle }}" {% if auto.taille == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+          <label>
+            Ton
+            <select id="c-auto-ton">
+              <option value="">Comme la section</option>
+              {% for cle, libelle in tons_article %}<option value="{{ cle }}" {% if auto.ton == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+            </select>
+          </label>
+        </div>
+
+        {# Rempli par /content/langues, comme la redaction manuelle : seules les langues que le
+           depot sert. Cache sur un site d'une seule langue. #}
+        <fieldset id="c-auto-langues-bloc" hidden style="border:0;padding:0;margin:10px 0 0;">
+          <legend>Traduire aussi en</legend>
+          <div id="c-auto-langues" style="display:flex;flex-wrap:wrap;gap:4px 18px;"></div>
+        </fieldset>
+
+        <fieldset style="border:0;padding:0;margin:10px 0 0;">
+          <legend>Publication</legend>
+          <label class="radio" style="align-items:flex-start;">
+            <input type="radio" name="c-auto-publication" value="verification" {% if auto.publication != 'auto' %}checked{% endif %} style="margin-top:3px;" />
+            <span><strong>Avec vérification</strong>
+              <span class="muted small">— la pull request attend ta validation ; un e-mail te prévient, avec un bouton pour la valider.</span></span>
+          </label>
+          <label class="radio" style="align-items:flex-start;">
+            <input type="radio" name="c-auto-publication" value="auto" {% if auto.publication == 'auto' %}checked{% endif %} style="margin-top:3px;" />
+            <span><strong>Automatique</strong>
+              <span class="muted small">— la pull request est fusionnée seule dès que les vérifications de ton dépôt passent. Sans vérification, ou si elles échouent, elle t'attend et un e-mail te prévient.</span></span>
+          </label>
+        </fieldset>
+
         <div class="modal-actions between">
           <span id="c-auto-status" class="muted small" role="status" aria-live="polite"></span>
           <button class="btn" type="button" id="c-auto-save">Enregistrer</button>
@@ -300,10 +373,16 @@
                   <td>
                     {% if p.pr_url %}
                       <a href="{{ p.pr_url }}" target="_blank" rel="noreferrer">#{{ p.pr_number }}</a>
-                      {% if p.etat == 'en_attente' %}<span class="muted small">· vérification en cours</span>
+                      {# Les etats que la verification ECRIT (`_reprendre_une_verification`) :
+                         le gabarit testait `refusee` et `inconnue`, qu'elle n'ecrit jamais. #}
+                      {% if p.status == 'done' %}<span class="badge ok">fusionnée</span>
+                      {% elif p.etat == 'en_attente' %}<span class="muted small">· vérification en cours</span>
                       {% elif p.etat == 'verifiee' %}<span class="muted small">· build vert</span>
-                      {% elif p.etat == 'refusee' %}<span class="badge error">build rouge</span>
-                      {% elif p.etat == 'inconnue' %}<span class="muted small">· rien à vérifier sur ce dépôt</span>
+                      {% elif p.etat == 'echouee' %}<span class="badge error">build rouge</span>
+                      {% elif p.etat == 'non_verifiable' %}<span class="muted small">· rien à vérifier sur ce dépôt</span>
+                      {% endif %}
+                      {% if p.status != 'done' and p.etat != 'abandonnee' %}
+                        · <a href="/projects/{{ slug }}/content/valider/{{ p.id }}">Valider</a>
                       {% endif %}
                     {% else %}
                       <span class="muted small">—</span>
@@ -729,6 +808,16 @@
           });
           langBloc.hidden = false;
           majLangues();
+          /* Les memes langues pour le mode automatique, cochees selon ses reglages. */
+          var autoLangues = document.getElementById('c-auto-langues');
+          if (autoLangues) {
+            autoLangues.innerHTML = d.langues.map(function (l) {
+              return '<label class="checkbox"><input type="checkbox" value="' + esc(l.code) + '"' +
+                (autoLanguesChoisies.indexOf(l.code) >= 0 ? ' checked' : '') + ' /> <span>' +
+                esc(libelle(l.code)) + '</span></label>';
+            }).join('');
+            document.getElementById('c-auto-langues-bloc').hidden = false;
+          }
         })
         .catch(function () { /* meme repli : le formulaire reste monolingue */ });
 
@@ -792,6 +881,8 @@
       });
 
       /* Le mode automatique. */
+      function valeur(id) { var el = document.getElementById(id); return el ? el.value : ''; }
+      var autoLanguesChoisies = {{ auto.langues | tojson }};
       var autoBox = document.getElementById('c-auto');
       var autoSection = document.getElementById('c-auto-section');
       var autoSave = document.getElementById('c-auto-save');
@@ -803,7 +894,15 @@
         autoStatus.textContent = 'Enregistrement…';
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/auto', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: autoBox.checked, section: autoSection.value || '' })
+          body: JSON.stringify({
+            enabled: autoBox.checked, section: autoSection.value || '',
+            frequence: valeur('c-auto-frequence'), jour: parseInt(valeur('c-auto-jour'), 10),
+            heure: parseInt(valeur('c-auto-heure'), 10), fuseau: valeur('c-auto-fuseau'),
+            taille: valeur('c-auto-taille'), ton: valeur('c-auto-ton'),
+            langues: Array.prototype.map.call(
+              document.querySelectorAll('#c-auto-langues input:checked'), function (c) { return c.value; }),
+            publication: (document.querySelector('input[name="c-auto-publication"]:checked') || {}).value || 'verification'
+          })
         })
           .then(function (resp) { return resp.json(); })
           .then(function (d) {
@@ -817,6 +916,11 @@
             autoStatus.textContent = d.enabled
               ? 'Mode automatique allumé sur ' + d.section + '.'
               : 'Mode automatique éteint.';
+            var prochain = document.getElementById('c-auto-prochain');
+            if (prochain) {
+              prochain.hidden = !d.prochain;
+              prochain.textContent = d.prochain ? 'Prochaine page : ' + d.prochain : '';
+            }
           })
           .catch(function () {
             autoSave.disabled = false;

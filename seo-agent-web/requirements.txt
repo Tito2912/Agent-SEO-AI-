@@ -24,6 +24,9 @@ boto3==1.43.18
 cryptography==50.0.0
 playwright==1.60.0
 defusedxml==0.7.1
+# La base des fuseaux horaires (mode automatique : « jeudi 14:00 a Montreal »). Presente
+# par hasard sous Windows (psycopg l'exige la seulement) ; l'image Linux ne la garantit pas.
+tzdata==2026.4
 # 2.2.0 carries CVE-2026-84379/84380/84382 (and httpcore2 2.2.0 carries CVE-2026-84381).
 # 2.12.0 is the first release fixing all four; httpcore2 comes along as its dependency.
 httpx2==2.12.0
