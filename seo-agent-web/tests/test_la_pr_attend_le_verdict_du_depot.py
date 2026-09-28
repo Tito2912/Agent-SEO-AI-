@@ -616,6 +616,12 @@ def test_une_ERREUR_ne_tue_pas_la_boucle(monkeypatch) -> None:
     monkeypatch.setattr(m, "_balayer_verifications_pr", _capricieux)
     monkeypatch.setattr(m, "_pr_verif_interval_s", lambda: 30)
     monkeypatch.setattr(m._WORKER_STOP, "wait", lambda _s: None)
+    # LE SIGNAL D'ARRET EST GLOBAL, et un autre test peut l'avoir laisse leve : fermer un
+    # `TestClient` ouvert en contexte appelle `_shutdown`, qui le leve et que rien ne rebaisse
+    # dans le meme processus. Releve le 28/09/2026 : lance juste apres `test_smoke.py`, ce test
+    # comptait ZERO passage — la boucle sortait avant le premier. On baissait le signal a la
+    # fin, jamais au debut : une precondition supposee n'est pas une precondition.
+    m._WORKER_STOP.clear()
     try:
         m._boucle_verification_pr()
     finally:
