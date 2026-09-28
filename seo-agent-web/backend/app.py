@@ -29077,6 +29077,409 @@ def api_content_langues(request: Request, slug: str) -> JSONResponse:
         for code, n in sorted(langues.items(), key=lambda kv: (-kv[1], kv[0]))]})
 
 
+# ── MODE « CONTENU SEUL » ─────────────────────────────────────────────────────────────────────
+#
+# Decision du proprietaire, 28/09/2026 : a cote du mode GitHub, un mode ou le client repart avec
+# l'article — Markdown et HTML — et le publie lui-meme. Pas de depot, donc pas de page soeur a
+# cloner fichier par fichier : la SOURCE est le crawl du site, qui garde pour chaque page son
+# titre, sa description, sa langue, son plan (H2) et ses hreflang. Meme methode que le mode
+# GitHub, autre matiere : on imite une page EXISTANTE de la section, on traduit la version
+# principale, et un lien ne peut viser qu'une page que le crawl a vue.
+
+_CONTENT_ARTICLE_KEY = "ai_content_article"
+
+
+def _pages_du_crawl(pages: "list[dict[str, Any]]") -> list[dict[str, Any]]:
+    """Les pages PUBLIEES du crawl, reduites a ce que la redaction lit.
+
+    Publiee = servie en 200 et sans `noindex` : une page d'erreur ou retiree de l'index n'est
+    ni un modele a imiter, ni une cible de lien.
+    """
+    out: list[dict[str, Any]] = []
+    for p in pages or []:
+        if not isinstance(p, dict) or int(p.get("status_code") or 0) != 200:
+            continue
+        if "noindex" in str(p.get("meta_robots") or "").lower():
+            continue
+        url = str(p.get("final_url") or p.get("url") or "")
+        chemin = urlsplit(url).path or "/"
+        out.append({
+            "url": url, "chemin": repo_index.norm_route(chemin),
+            "slash": chemin.endswith("/") and chemin != "/",
+            "titre": str(p.get("title") or ""), "description": str(p.get("meta_description") or ""),
+            "h2": [str(h) for h in (p.get("h2") or [])][:20],
+            # La langue SERVIE d'abord : c'est celle du document que lit un moteur. La valeur
+            # apres JavaScript peut la corriger — mesure du 12/09/2026 sur un site client.
+            "langue": str(p.get("served_lang") or p.get("lang") or "").split("-")[0].lower(),
+            "hreflang": {str(k).lower(): str(v) for k, v in (p.get("hreflang") or {}).items()},
+            "article": bool(p.get("article_like")), "mots": int(p.get("text_word_count") or 0),
+        })
+    return out
+
+
+def _section_de(chemin: str) -> str:
+    return chemin.rstrip("/").rsplit("/", 1)[0] or "/"
+
+
+def _code_de_la_racine(pages: "list[dict[str, Any]]", codes: "set[str]") -> str:
+    """La langue servie a la racine, NOMMEE : celle que ses pages declarent le plus souvent.
+
+    `_langues_des_routes` la rend sous la cle "", sans dire laquelle c'est ; l'ecran l'affichait
+    « racine (sans prefixe) ». Les pages de la racine declarent la leur (`<html lang>`) : la
+    plus frequente la nomme. A egalite, l'ordre alphabetique — pas celui d'un ensemble, qui
+    changerait d'un lancement a l'autre.
+    """
+    racine = [p["langue"] for p in pages if not _langue_de_route(p["chemin"], codes) and p["langue"]]
+    return max(sorted(set(racine)), key=racine.count) if racine else ""
+
+
+def _langues_du_crawl(pages: "list[dict[str, Any]]") -> list[dict[str, Any]]:
+    """Les langues du site pour l'ecran : cle de route, nom lisible, nombre de pages."""
+    connues = _langues_des_routes([p["chemin"] for p in pages])
+    racine = _code_de_la_racine(pages, {k for k in connues if k})
+    return [{"code": k, "pages": n,
+             "nom": k.upper() if k else ("%s (racine)" % racine.upper() if racine else "racine")}
+            for k, n in sorted(connues.items(), key=lambda kv: (-kv[1], kv[0]))]
+
+
+def _sections_du_crawl(pages: "list[dict[str, Any]]") -> list[dict[str, Any]]:
+    """Les sections du site, celles qui portent le plus d'ARTICLES d'abord.
+
+    Une section est le dossier PARENT d'une page. On ne propose que celles qui portent au moins
+    deux pages : une seule page ne dit pas quelle forme ont les suivantes.
+
+    LES RUBRIQUES D'ABORD. Mesure du 28/09/2026 sur un site client : classees par nombre de
+    pages, `/` (13), `/de`, `/es` et `/fr` passaient devant `/fr/guides` (8) — les pages
+    institutionnelles (a propos, contact) de chaque langue. La premiere option, choisie par
+    defaut, aurait fait ecrire un guide parmi les mentions legales.
+
+    MA PREMIERE CORRECTION CLASSAIT PAR « ARTICLES » (`article_like` du crawler) et elle etait
+    fausse sur ce site : TOUTES ses pages portent une balise `<article>` et un H1, « a propos »
+    comprise — un seul gabarit. Elle ne tenait que sur ma reconstitution du crawl. Le critere
+    retenu est STRUCTUREL : une section dont le dernier segment est une langue du site, ou la
+    racine, est le PREMIER NIVEAU de cette langue, pas une rubrique. Elle reste proposee — un
+    site peut publier ses articles a la racine — mais apres les rubriques. Les articles
+    departagent ensuite, la ou le crawler sait les distinguer.
+    """
+    codes = {k for k in _langues_des_routes([p["chemin"] for p in pages]) if k}
+    compte: dict[str, list[int]] = {}
+    for p in pages:
+        if p["chemin"] != "/":
+            n = compte.setdefault(_section_de(p["chemin"]), [0, 0])
+            n[0] += 1
+            n[1] += 1 if p["article"] else 0
+
+    def _premier_niveau(section: str) -> bool:
+        return section == "/" or section.strip("/").split("/")[-1] in codes
+
+    return [{"section": s, "pages": n[0], "articles": n[1]}
+            for s, n in sorted(compte.items(),
+                               key=lambda kv: (_premier_niveau(kv[0]), -kv[1][1], -kv[1][0], kv[0]))
+            if n[0] >= 2]
+
+
+def _modele_de_section(pages: "list[dict[str, Any]]", section: str) -> "dict[str, Any] | None":
+    """La page de la section que l'article imitera : un ARTICLE d'abord, le plus fourni ensuite.
+
+    Pas la premiere de l'alphabet — c'est la lecon du mode GitHub : l'ordre alphabetique a deja
+    choisi une page sans traduction et fait refuser toute une section.
+    """
+    dans = [p for p in pages if _section_de(p["chemin"]) == section and p["chemin"] != section]
+    if not dans:
+        return None
+    return max(dans, key=lambda p: (p["article"], len(p["h2"]) > 0, p["mots"], p["chemin"]))
+
+
+_SYSTEME_ARTICLE = (
+    "Tu rediges UN article pour le site d'un client. Tu rends un objet JSON "
+    "{\"titre\": \"...\", \"description\": \"...\", \"slug\": \"...\", \"markdown\": \"...\"}. "
+    "Aucune explication, aucun bloc de code autour du JSON."
+)
+
+
+def rediger_un_article(
+    *, sujet: str, langue: str, site_name: str = "", section: str = "",
+    modele: "dict[str, Any] | None" = None, liens: "list[dict[str, Any]] | None" = None,
+    reference: str = "", langue_reference: str = "", model_override: str = "",
+) -> tuple[dict[str, str], str]:
+    """Un article {titre, description, slug, markdown}, ou ({}, raison du refus).
+
+    LE MODELE RECOIT UNE PAGE, PAS UN GABARIT — la meme doctrine que `rediger_une_page`, mais la
+    page vient du CRAWL : son titre, sa description et son plan donnent la longueur, le ton et la
+    maniere de decouper que ce site pratique deja.
+
+    LES LIENS INTERNES SONT UNE LISTE FERMEE, et elle est verifiee ensuite (`_reparer_les_liens`)
+    : la consigne seule n'a pas tenu en production le 28/09/2026.
+    """
+    bloc_modele = ""
+    if modele:
+        bloc_modele = (
+            "\nPAGE EXISTANTE DE LA MEME SECTION, a imiter pour la longueur du titre, le ton de "
+            "la description et le type de plan (PAS pour le sujet) :\n"
+            "- titre : %s\n- description : %s\n- plan : %s\n"
+            % (modele["titre"], modele["description"], " | ".join(modele["h2"]) or "?"))
+    bloc_liens = ""
+    if liens:
+        bloc_liens = ("\nLIENS INTERNES AUTORISES — les seuls ; ecris-les en chemin relatif, "
+                      "tels quels, et seulement s'ils servent le lecteur :\n"
+                      + "\n".join("- %s — %s" % (l["chemin"] + ("/" if l.get("slash") else ""),
+                                                 l["titre"]) for l in liens) + "\n")
+    demande = (
+        "SUJET : %s\nLANGUE DE L'ARTICLE : %s\nSITE : %s\nSECTION : %s\n%s%s\n"
+        "CONTRAINTES :\n"
+        "- `markdown` est le CORPS : pas de titre de niveau 1, des sections `##` ;\n"
+        "- aucun HTML brut, aucun lien vers une page absente de la liste ;\n"
+        "- `description` : une phrase de 140 a 160 caracteres ;\n"
+        "- `slug` : court, dans la langue de l'article, minuscules et tirets ;\n"
+        "- le corps traite le sujet, il ne le paraphrase pas en boucle ; les chiffres "
+        "illustratifs sont presentes comme tels."
+        % (sujet, langue or "celle du site", site_name or "?", section or "?", bloc_modele,
+           bloc_liens))
+    if reference:
+        demande += (
+            "\n\nCET ARTICLE EST UNE TRADUCTION. Version de reference (%s), a traduire "
+            "FIDELEMENT : meme plan, memes sections dans le meme ordre, memes idees, memes "
+            "chiffres. Les liens internes sont ceux de la liste ci-dessus, dans SA langue — "
+            "jamais une adresse de la reference.\n-----\n%s\n-----"
+            % (langue_reference or "?", reference[:14000]))
+    out = _correction_ai_json(system=_SYSTEME_ARTICLE, user_msg=demande,
+                              max_tokens=6000 if reference else 4000,
+                              model_override=model_override) or {}
+    article = {k: str(out.get(k) or "").strip() for k in ("titre", "description", "slug", "markdown")}
+    if not article["titre"] or not article["markdown"]:
+        return {}, "le modele n'a rien rendu d'exploitable"
+    # Un titre de niveau 1 en tete du corps doublerait celui que le client posera lui-meme.
+    article["markdown"] = re.sub(r"\A#\s+[^\n]*\n+", "", article["markdown"])
+    return article, ""
+
+
+def _article_en_html(markdown_texte: str) -> str:
+    """Le corps HTML d'un article, SANS aucun HTML ecrit par le modele.
+
+    L'extension `extra` de python-markdown laisse passer le HTML brut. Le texte vient d'un
+    modele et finira colle dans le site du client : on echappe tout chevron AVANT la conversion,
+    pour que seul le Markdown produise des balises.
+    """
+    from backend import content_library as _cl
+    source = str(markdown_texte or "").replace("<", "&lt;").replace(">", "&gt;")
+    # Les citations Markdown commencent par `>` : on les rend a la ligne, ou elles ne peuvent
+    # pas ouvrir de balise.
+    source = re.sub(r"(?m)^(\s*)&gt;", r"\1>", source)
+    return _cl._markdown_instance().convert(source)
+
+
+def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section: str,
+                           langues: "list[str] | None" = None, site_name: str = "",
+                           model_override: str = "") -> dict[str, Any]:
+    """Toutes les versions d'un article, ou le refus de la premiere qui echoue. N'ecrit rien.
+
+    `pages` sort de `_pages_du_crawl`. `section` est celle ou la version PRINCIPALE sera
+    publiee ; sa langue est celle de l'article principal.
+
+    LA LANGUE DE LA RACINE SE MESURE : `_langues_des_routes` la rend sous la cle "", sans dire
+    laquelle c'est. Les pages servies a la racine DECLARENT la leur (`<html lang>`) : la plus
+    frequente la nomme.
+
+    LES TRADUCTIONS SUIVENT LES HREFLANG DU CRAWL. La version allemande de la page modele est
+    celle que la page modele designe elle-meme — pas une deduction de chemin : les slugs sont
+    traduits, les sections parfois aussi.
+    """
+    chemins = [p["chemin"] for p in pages]
+    connues = _langues_des_routes(chemins)
+    codes = {k for k in connues if k}
+    par_chemin = {p["chemin"]: p for p in pages}
+    par_url = {repo_index.norm_route(urlsplit(p["url"]).path or "/"): p for p in pages}
+    code_racine = _code_de_la_racine(pages, codes)
+
+    def _code(cle: str) -> str:
+        return cle or code_racine
+
+    section = repo_index.norm_route(section)
+    langue_source = _langue_de_route(section + "/x", codes)
+    autres = [l for l in dict.fromkeys(str(x or "").strip().lower() for x in (langues or []))
+              if l != langue_source]
+    inconnues = [l or "(racine)" for l in autres if l not in connues]
+    if inconnues:
+        return {"ok": False, "status": 400, "error": (
+            "langue(s) que ce site ne sert pas : %s" % ", ".join(inconnues))}
+
+    modele = _modele_de_section(pages, section)
+    if modele is None:
+        return {"ok": False, "status": 422, "error": (
+            "aucune page publiée sous %s dans le dernier crawl : pas de forme à imiter. "
+            "Choisis une section qui contient déjà des pages." % section)}
+
+    def _liens_de(cle: str, section_cible: str) -> list[dict[str, Any]]:
+        # Les pages de CETTE langue, celles de la section d'abord : ce sont les voisines que
+        # le lecteur cherchera. Bornees : une liste de mille liens noierait la consigne.
+        de_la_langue = [p for p in pages if _langue_de_route(p["chemin"], codes) == cle]
+        proches = [p for p in de_la_langue if _section_de(p["chemin"]) == section_cible]
+        loin = [p for p in de_la_langue if p not in proches]
+        return (proches + loin)[:40]
+
+    def _version(cle: str, section_cible: str, modele_cible: "dict[str, Any] | None",
+                 reference: str = "") -> dict[str, Any]:
+        article, refus = rediger_un_article(
+            sujet=sujet, langue=_code(cle), site_name=site_name, section=section_cible,
+            modele=modele_cible, liens=_liens_de(cle, section_cible),
+            reference=reference, langue_reference=_code(langue_source),
+            model_override=model_override)
+        if refus:
+            return {"ok": False, "status": 422,
+                    "error": "version %s : %s" % (_code(cle) or "principale", refus)}
+        # Un lien ABSOLU vers le site lui-meme echapperait au controle, qui lit les chemins :
+        # on le ramene en relatif avant, pour que `_reparer_les_liens` le voie.
+        hote = urlsplit(modele["url"]).netloc.lower().removeprefix("www.")
+        if hote:
+            article["markdown"] = re.sub(
+                r"\]\(https?://(?:www\.)?%s(/[^)]*)\)" % re.escape(hote), r"](\1)",
+                article["markdown"], flags=re.I)
+        slug_propre = _slug_de_sujet(article["slug"]) or _slug_de_sujet(article["titre"])
+        slash = "/" if (modele_cible or modele)["slash"] else ""
+        adresse = ("%s/%s%s" % (section_cible.rstrip("/"), slug_propre, slash)
+                   if section_cible else "")
+        return {"ok": True, "langue": cle, "code": _code(cle), "titre": article["titre"],
+                "description": article["description"], "slug": slug_propre,
+                "adresse": adresse, "contenu": article["markdown"], "notes_redaction": []}
+
+    principal = _version(langue_source, section, modele)
+    if not principal.get("ok"):
+        return principal
+
+    def _traduire(cle: str) -> dict[str, Any]:
+        cible_url = modele["hreflang"].get(_code(cle), "")
+        modele_l = par_url.get(repo_index.norm_route(urlsplit(cible_url).path or "/"))
+        section_l = _section_de(modele_l["chemin"]) if modele_l else ""
+        return _version(cle, section_l, modele_l, reference=principal["contenu"])
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(1, min(len(autres), 4))) as pool:
+        versions_traduites = list(pool.map(_traduire, autres))
+    versions = [principal]
+    for cle, version in zip(autres, versions_traduites):
+        if not version.get("ok"):
+            return version
+        versions.append(version)
+
+    def _traduire_lien(lien: str, cle: str) -> str:
+        page = par_chemin.get(repo_index.norm_route(lien))
+        cible = (page or {}).get("hreflang", {}).get(_code(cle), "")
+        return repo_index.norm_route(urlsplit(cible).path) if cible else ""
+
+    _reparer_les_liens(versions, routes={c: [c] for c in chemins}, traduire=_traduire_lien)
+    return {"ok": True, "versions": versions}
+
+
+def _versions_servies(versions: "list[dict[str, Any]]") -> list[dict[str, Any]]:
+    """Les versions telles que l'ecran les montre : Markdown ET HTML, titre de niveau 1 compris.
+
+    Le HTML est rendu a la LECTURE, jamais stocke : une correction du rendu vaut alors pour
+    tous les articles deja rediges, sans migration.
+    """
+    out = []
+    for v in versions:
+        corps = str(v.get("markdown") or v.get("contenu") or "")
+        titre = str(v.get("titre") or "")
+        out.append({
+            "langue": v.get("langue", ""), "code": v.get("code", ""), "titre": titre,
+            "description": v.get("description", ""), "slug": v.get("slug", ""),
+            "adresse": v.get("adresse", ""), "notes": list(v.get("notes") or v.get("notes_redaction") or []),
+            "markdown": "# %s\n\n%s" % (titre, corps.strip()) + "\n",
+            "html": "<h1>%s</h1>\n%s" % (html.escape(titre), _article_en_html(corps)),
+        })
+    return out
+
+
+class _ContentArticleBody(BaseModel):
+    sujet: str = ""
+    section: str = ""
+    langues: list[str] = []
+
+
+@app.post("/api/projects/{slug}/content/article")
+def api_content_article(request: Request, slug: str, body: _ContentArticleBody) -> JSONResponse:
+    """Rediger un article SANS depot : le client repart avec le Markdown et le HTML.
+
+    Les MEMES portes que la redaction avec GitHub — session, cadence, plan et quota compte en
+    VERSIONS — pour qu'aucun des deux modes ne soit la porte derobee de l'autre. Seul le
+    transport change : rien n'est ecrit chez le client, l'article est conserve dans le journal.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    sujet = (body.sujet or "").strip()
+    section = (body.section or "").strip()
+    if not sujet or not section:
+        return JSONResponse({"ok": False, "error": "Sujet ou section manquant."}, status_code=400)
+    retry_after = _rate_limit_retry_after(bucket="content_draft_user", subject=str(getattr(user, "id", "")), limit=6, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    gate_ok, gate_msg = _article_gate(user, slug=slug,
+                                      n=_versions_demandees(section.rstrip("/") + "/x", body.langues))
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+
+    pages_brutes, crawl_ts = _own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)
+    if not pages_brutes:
+        return JSONResponse({"ok": False, "error": (
+            "Aucun crawl de ton site pour l'instant : c'est lui qui dit quelles pages existent "
+            "et à quoi elles ressemblent. Lance un crawl, puis reviens ici.")}, status_code=400)
+    out = _preparer_des_articles(pages=_pages_du_crawl(pages_brutes), sujet=sujet,
+                                 section=section, langues=list(body.langues),
+                                 site_name=str(proj.site_name or slug))
+    if not out.get("ok"):
+        return JSONResponse({"ok": False, "error": out.get("error")},
+                            status_code=int(out.get("status") or 422))
+    versions = out["versions"]
+    stockees = [{"langue": v["langue"], "code": v["code"], "titre": v["titre"],
+                 "description": v["description"], "slug": v["slug"], "adresse": v["adresse"],
+                 "markdown": v["contenu"], "notes": v["notes_redaction"]} for v in versions]
+    adresse = versions[0]["adresse"] or section
+    task_id = ""
+    with DB.session() as db:
+        tache = db.scalar(select(IssueTask).where(
+            IssueTask.project_id == str(proj.id), IssueTask.issue_key == _CONTENT_ARTICLE_KEY,
+            IssueTask.url == adresse))
+        note = json.dumps({"sujet": sujet, "crawl_ts": crawl_ts, "article": True,
+                           "versions": stockees}, ensure_ascii=False)
+        if tache is None:
+            tache = IssueTask(
+                project_id=str(proj.id), user_id=_compte_payeur(str(user.id), slug),
+                created_by=str(user.id), issue_key=_CONTENT_ARTICLE_KEY,
+                issue_label="Article rédigé : %s" % sujet[:200], crawl_ts=crawl_ts or "",
+                url=adresse, status="done", severity="notice", note=note)
+            db.add(tache)
+        else:
+            tache.note, tache.issue_label, tache.status = note, "Article rédigé : %s" % sujet[:200], "done"
+        db.commit()
+        task_id = str(tache.id)
+    _article_charge(user, len(versions), slug=slug, motif="content_article")
+    return JSONResponse({"ok": True, "id": task_id, "versions": _versions_servies(stockees)})
+
+
+@app.get("/api/projects/{slug}/content/article/{task_id}")
+def api_content_article_lire(request: Request, slug: str, task_id: str) -> JSONResponse:
+    """Relire un article deja redige, depuis le journal. Aucun appel au modele, aucun debit."""
+    proj = _db_project_or_404(request, slug)
+    if not getattr(request.state, "user", None):
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    with DB.session() as db:
+        tache = db.get(IssueTask, str(task_id or ""))
+        # Rattachee au projet de l'URL, que la propriete a deja verifie : un identifiant seul
+        # ne doit jamais suffire a lire l'article d'un autre compte.
+        if (tache is None or str(tache.project_id) != str(proj.id)
+                or tache.issue_key != _CONTENT_ARTICLE_KEY):
+            return JSONResponse({"ok": False, "error": "Article introuvable."}, status_code=404)
+        try:
+            note = json.loads(tache.note or "{}")
+        except Exception:
+            note = {}
+    versions = note.get("versions") if isinstance(note, dict) else None
+    return JSONResponse({"ok": True, "id": str(task_id), "sujet": note.get("sujet", ""),
+                         "versions": _versions_servies(versions if isinstance(versions, list) else [])})
+
+
 
 def _reglages_contenu_auto(reglages: Any) -> dict[str, Any]:
     """Les reglages du mode automatique, toujours complets, depuis les reglages d'un projet.
@@ -29165,6 +29568,30 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
     except Exception:
         pages = []
 
+    # LE MODE « CONTENU SEUL » LIT LE CRAWL, qui est sur disque : pas d'appel reseau au rendu,
+    # contrairement aux langues du DEPOT, que l'ecran demande apres coup a GitHub.
+    sections_crawl: list[dict[str, Any]] = []
+    langues_crawl: list[dict[str, Any]] = []
+    articles: list[dict[str, Any]] = []
+    try:
+        pages_crawl = _pages_du_crawl(_own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)[0])
+        sections_crawl = _sections_du_crawl(pages_crawl)[:40]
+        langues_crawl = _langues_du_crawl(pages_crawl)
+        with DB.session() as db:
+            for t in db.scalars(select(IssueTask).where(
+                    IssueTask.project_id == proj_row.id,
+                    IssueTask.issue_key == _CONTENT_ARTICLE_KEY).order_by(IssueTask.updated_at.desc())):
+                note = json.loads(t.note or "{}") if t.note else {}
+                versions = note.get("versions") if isinstance(note, dict) else []
+                articles.append({
+                    "id": str(t.id), "sujet": str((note or {}).get("sujet") or ""),
+                    "adresse": str(t.url or ""),
+                    "langues": [str(v.get("code") or "?") for v in (versions or []) if isinstance(v, dict)],
+                    "updated_at": t.updated_at.strftime("%d/%m/%Y") if t.updated_at else "",
+                })
+    except Exception as exc:
+        logger.warning("[contenu] ecran : crawl ou journal illisible : %s", exc)
+
     resp = templates.TemplateResponse(
         "content.html",
         {
@@ -29179,6 +29606,9 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "pages": pages,
             "auto": _reglages_contenu_auto(proj_row.settings),
             "auto_jours": _CONTENU_AUTO_JOURS,
+            "sections_crawl": sections_crawl,
+            "langues_crawl": langues_crawl,
+            "articles": articles,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

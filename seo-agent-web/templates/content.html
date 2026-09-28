@@ -5,7 +5,7 @@
   <div class="page-header">
     <h1>Contenu</h1>
     <p class="muted">
-      {{ project.site_name }} · faire écrire une page neuve et l'ouvrir en pull request
+      {{ project.site_name }} · faire écrire une page neuve, en pull request ou prête à publier
     </p>
   </div>
 
@@ -18,16 +18,8 @@
       </p>
       <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
     </section>
-  {% elif not (github_cfg and github_cfg.repo) %}
-    <section class="card">
-      <h2 style="margin-top:0;">Connecte d'abord ton dépôt GitHub</h2>
-      <p class="muted">
-        Une page neuve est un fichier ajouté à ton dépôt, proposé en pull request. Sans dépôt
-        connecté, il n'y a nulle part où l'écrire.
-      </p>
-      <a class="btn primary" href="/projects/{{ slug }}/settings/crawl" style="margin-top:12px;display:inline-block;">Paramètres du projet</a>
-    </section>
   {% else %}
+    {% set a_depot = github_cfg and github_cfg.repo %}
 
     <section class="card">
       <div class="card-title-row">
@@ -41,19 +33,68 @@
         </span>
       </div>
 
-      <p class="muted small">
-        L'agent lit une page existante de la même section et écrit la nouvelle
-        <strong>dans sa forme</strong> — mêmes clés de tête, même langue — puis l'ajoute à
-        l'index de la section pour qu'elle ne soit pas orpheline. Le résultat part en
-        <strong>pull request brouillon</strong> : rien n'est publié tant que tu ne l'as pas
-        relue et fusionnée.
-      </p>
+      {# DEUX MODES, decision du proprietaire du 28/09/2026. Sans depot, le mode GitHub reste
+         VISIBLE mais inactif : le client doit savoir qu'il existe et comment l'ouvrir. #}
+      <fieldset class="c-modes" style="border:0;padding:0;margin:0 0 10px;">
+        <legend class="muted small">Où va la page</legend>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
+          <input type="radio" name="c-mode" value="github" {% if a_depot %}checked{% else %}disabled{% endif %} />
+          <span><strong>Pull request sur ton dépôt GitHub</strong>
+            <span class="muted small">— la page est écrite dans ton site, liée depuis sa section, en brouillon à relire.
+            {% if not a_depot %}<a href="/projects/{{ slug }}/settings/crawl">Connecte un dépôt GitHub</a> pour l'activer.{% endif %}</span></span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
+          <input type="radio" name="c-mode" value="contenu" {% if not a_depot %}checked{% endif %} />
+          <span><strong>Contenu seul</strong>
+            <span class="muted small">— tu repars avec l'article en Markdown et en HTML, et tu le publies toi-même.</span></span>
+        </label>
+      </fieldset>
 
       <div class="setting-form">
         <label>
           Sujet de la page
           <input id="c-sujet" placeholder="Comment choisir un outil de veille SEO" />
         </label>
+
+        <div id="c-bloc-contenu" {% if a_depot %}hidden{% endif %}>
+          {% if sections_crawl %}
+            <label>
+              Section du site
+              <select id="c-section">
+                {% for s in sections_crawl %}
+                  <option value="{{ s.section }}">{{ s.section }} — {{ s.pages }} pages</option>
+                {% endfor %}
+              </select>
+              <span class="muted small">
+                L'article imite une page existante de cette section — longueur du titre, ton,
+                type de plan — et ne lie que des pages que le dernier crawl a vues.
+              </span>
+            </label>
+            {% if langues_crawl|length > 1 %}
+              <fieldset id="c-langues-contenu" style="border:0;padding:0;margin:0;">
+                <legend>Langues</legend>
+                {% for l in langues_crawl %}
+                  <label style="display:flex;align-items:center;gap:8px;margin:2px 0;">
+                    <input type="checkbox" value="{{ l.code }}" />
+                    <span>{{ l.nom }}</span> <span class="muted small">{{ l.pages }} pages</span>
+                  </label>
+                {% endfor %}
+                <span class="muted small">
+                  Une version par langue cochée : la page principale, puis ses traductions — même
+                  plan, mêmes chiffres. La langue de la section est toujours écrite.
+                </span>
+              </fieldset>
+            {% endif %}
+          {% else %}
+            <p class="muted small" id="c-sans-crawl">
+              Aucun crawl de ton site pour l'instant. C'est lui qui dit quelles sections existent
+              et à quoi ressemblent leurs pages : <a href="/projects/{{ slug }}">lance un crawl</a>,
+              puis reviens ici.
+            </p>
+          {% endif %}
+        </div>
+
+        <div id="c-bloc-github" {% if not a_depot %}hidden{% endif %}>
         <label>
           Adresse de la page
           <input id="c-route" class="mono" placeholder="/blog/mon-sujet" />
@@ -75,18 +116,41 @@
           </span>
           <div id="c-cout" class="muted small" role="status" aria-live="polite" style="margin-top:4px;"></div>
         </fieldset>
+        </div>
         <div class="modal-actions between">
           <span class="muted small">
             Besoin d'idées ? <a href="/projects/{{ slug }}/competitors">Concurrents</a> liste
             les sujets que tes rivaux traitent et que tu ne couvres pas.
           </span>
-          <button class="btn primary" type="button" id="c-go">Rédiger (PR)</button>
+          <button class="btn primary" type="button" id="c-go">{% if a_depot %}Rédiger (PR){% else %}Rédiger l'article{% endif %}</button>
         </div>
       </div>
 
       <div id="c-status" class="muted" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;"></div>
+
+      {# L'article du mode « contenu seul ». L'apercu est un iframe SANS script : le HTML vient
+         d'un modele, et meme echappe au rendu il n'a rien a executer dans l'ecran du client. #}
+      <div id="c-article" hidden style="margin-top:14px;">
+        <div id="c-versions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+        <div class="setting-form">
+          <label>Titre (balise title) <input id="c-a-titre" readonly /></label>
+          <label>Meta description <span id="c-a-desc-n" class="muted small"></span>
+            <textarea id="c-a-desc" rows="2" readonly></textarea></label>
+          <label>Adresse suggérée <input id="c-a-adresse" class="mono" readonly /></label>
+        </div>
+        <ul id="c-a-notes" class="muted small"></ul>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">
+          <button class="btn" type="button" data-copier="markdown">Copier le Markdown</button>
+          <button class="btn" type="button" data-copier="html">Copier le HTML</button>
+          <button class="btn" type="button" data-telecharger="md">Télécharger .md</button>
+          <button class="btn" type="button" data-telecharger="html">Télécharger .html</button>
+        </div>
+        <iframe id="c-a-apercu" sandbox title="Aperçu de l'article"
+                style="width:100%;height:520px;border:1px solid var(--border, #333);border-radius:8px;background:#fff;"></iframe>
+      </div>
     </section>
 
+    {% if a_depot %}
     <section class="card">
       <div class="card-title-row">
         <h2 style="margin:0;">Mode automatique</h2>
@@ -124,6 +188,32 @@
         </div>
       </div>
     </section>
+    {% endif %}
+
+    {% if articles %}
+    <section class="card">
+      <div class="card-title-row">
+        <h2 style="margin:0;">Articles rédigés</h2>
+        <span class="muted small">{{ articles|length }}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table compact">
+          <thead><tr><th>Adresse suggérée</th><th>Sujet</th><th>Langues</th><th>Le</th><th></th></tr></thead>
+          <tbody>
+            {% for a in articles %}
+              <tr>
+                <td class="mono">{{ a.adresse }}</td>
+                <td class="muted small">{{ a.sujet }}</td>
+                <td class="muted small">{{ a.langues|join(', ') }}</td>
+                <td class="muted small">{{ a.updated_at }}</td>
+                <td><button class="btn" type="button" data-ouvrir-article="{{ a.id }}">Ouvrir</button></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
 
     <section class="card">
       <div class="card-title-row">
@@ -253,7 +343,162 @@
         }
       }
       route.addEventListener('input', majLangues);
-      fetch('/api/projects/' + encodeURIComponent(slug) + '/content/langues')
+
+      /* LES DEUX MODES. Le choix montre le bloc du mode et renomme le bouton ; le sujet est
+         commun. Sans depot, le mode GitHub est desactive par le serveur, pas masque ici. */
+      var aDepot = {{ 'true' if a_depot else 'false' }};
+      var blocGithub = document.getElementById('c-bloc-github');
+      var blocContenu = document.getElementById('c-bloc-contenu');
+      function mode() {
+        var r = document.querySelector('input[name="c-mode"]:checked');
+        return r ? r.value : 'contenu';
+      }
+      function majMode() {
+        var m = mode();
+        blocGithub.hidden = m !== 'github';
+        blocContenu.hidden = m !== 'contenu';
+        btn.textContent = m === 'github' ? 'Rédiger (PR)' : "Rédiger l'article";
+        majCoutContenu();
+      }
+      Array.prototype.forEach.call(document.querySelectorAll('input[name="c-mode"]'), function (r) {
+        r.addEventListener('change', majMode);
+      });
+
+      /* Le cout du mode contenu : une version par langue cochee, la langue de la section
+         comprise — la meme regle que le serveur (`_versions_demandees`). */
+      var sectionSel = document.getElementById('c-section');
+      var languesContenu = document.getElementById('c-langues-contenu');
+      function languesArticle() {
+        if (!languesContenu) return [];
+        return Array.prototype.map.call(
+          languesContenu.querySelectorAll('input:checked'), function (c) { return c.value; });
+      }
+      function majCoutContenu() {
+        if (mode() !== 'contenu' || !languesContenu || !sectionSel) return;
+        var seg = (sectionSel.value.split('/').filter(Boolean)[0] || '').toLowerCase();
+        var codesContenu = Array.prototype.map.call(
+          languesContenu.querySelectorAll('input'), function (c) { return c.value; });
+        var principale = codesContenu.indexOf(seg) >= 0 ? seg : '';
+        Array.prototype.forEach.call(languesContenu.querySelectorAll('input'), function (c) {
+          var est = c.value === principale;
+          if (est && !c.checked) { c.checked = true; c.dataset.auto = '1'; }
+          if (!est && c.dataset.auto) { c.checked = false; delete c.dataset.auto; }
+          c.disabled = est;
+          c.title = est ? 'langue de la section : toujours écrite' : '';
+        });
+      }
+      if (sectionSel) sectionSel.addEventListener('change', majCoutContenu);
+
+      /* L'ARTICLE. Chaque version s'affiche a la demande ; l'apercu passe par `srcdoc` dans un
+         iframe `sandbox` sans permission — aucun script ne peut s'y executer. */
+      var articleBox = document.getElementById('c-article');
+      var versionsBox = document.getElementById('c-versions');
+      var versions = [];
+      var courante = null;
+      function montrer(i) {
+        courante = versions[i];
+        Array.prototype.forEach.call(versionsBox.querySelectorAll('button'), function (b, j) {
+          b.className = j === i ? 'btn primary' : 'btn';
+        });
+        document.getElementById('c-a-titre').value = courante.titre;
+        document.getElementById('c-a-desc').value = courante.description;
+        document.getElementById('c-a-desc-n').textContent = '(' + courante.description.length + ' caractères)';
+        document.getElementById('c-a-adresse').value = courante.adresse || courante.slug;
+        document.getElementById('c-a-notes').innerHTML = (courante.notes || []).map(function (n) {
+          return '<li>' + esc(n) + '</li>';
+        }).join('');
+        document.getElementById('c-a-apercu').srcdoc =
+          '<!doctype html><meta charset="utf-8"><body style="font:16px/1.6 system-ui,sans-serif;' +
+          'max-width:720px;margin:24px auto;padding:0 16px;color:#111">' + courante.html + '</body>';
+      }
+      function afficherArticle(liste) {
+        versions = liste || [];
+        if (!versions.length) return;
+        versionsBox.innerHTML = versions.map(function (v, i) {
+          return '<button class="btn" type="button" data-version="' + i + '">' +
+            esc((v.code || v.langue || '?').toUpperCase()) + '</button>';
+        }).join('');
+        Array.prototype.forEach.call(versionsBox.querySelectorAll('button'), function (b) {
+          b.addEventListener('click', function () { montrer(+b.dataset.version); });
+        });
+        articleBox.hidden = false;
+        montrer(0);
+      }
+      function nomDeFichier(ext) {
+        return (courante.slug || 'article') + (courante.code ? '.' + courante.code : '') + '.' + ext;
+      }
+      Array.prototype.forEach.call(document.querySelectorAll('[data-copier]'), function (b) {
+        b.addEventListener('click', function () {
+          if (!courante) return;
+          var texte = courante[b.dataset.copier];
+          var fait = function () { say('Copié dans le presse-papiers.', 'ok'); };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(texte).then(fait, function () { say('Copie refusée par le navigateur : utilise le téléchargement.', 'error'); });
+          } else { say('Copie indisponible dans ce navigateur : utilise le téléchargement.', 'error'); }
+        });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-telecharger]'), function (b) {
+        b.addEventListener('click', function () {
+          if (!courante) return;
+          var ext = b.dataset.telecharger;
+          var texte = ext === 'md' ? courante.markdown : courante.html;
+          var lien = document.createElement('a');
+          lien.href = URL.createObjectURL(new Blob([texte], { type: ext === 'md' ? 'text/markdown' : 'text/html' }));
+          lien.download = nomDeFichier(ext);
+          document.body.appendChild(lien);
+          lien.click();
+          lien.remove();
+        });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-ouvrir-article]'), function (b) {
+        b.addEventListener('click', function () {
+          fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article/' + encodeURIComponent(b.dataset.ouvrirArticle))
+            .then(function (resp) { return resp.json(); })
+            .then(function (d) {
+              if (!d.ok) { say(esc(d.error || 'Article illisible.'), 'error'); return; }
+              if (d.sujet) sujet.value = d.sujet;
+              afficherArticle(d.versions);
+              articleBox.scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(function () { say('Erreur réseau.', 'error'); });
+        });
+      });
+
+      function redigerArticle() {
+        var s = (sujet.value || '').trim();
+        if (!sectionSel) { say("Lance d'abord un crawl : c'est lui qui dit quelles sections existent.", 'error'); return; }
+        if (!s) { say('Il faut un sujet.', 'error'); return; }
+        var langues = languesArticle();
+        btn.disabled = true;
+        btn.textContent = 'Rédaction…';
+        articleBox.hidden = true;
+        say(langues.length > 1
+          ? 'Le modèle écrit la version principale, puis ' + (langues.length - 1) + ' traduction(s). ' +
+            'Cela prend environ une minute : garde cet onglet ouvert.'
+          : "Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.");
+        fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues })
+        })
+          .then(function (resp) { return resp.json(); })
+          .then(function (d) {
+            btn.disabled = false;
+            btn.textContent = "Rédiger l'article";
+            if (!d.ok) { say(esc(d.error || 'Erreur pendant la rédaction.'), 'error'); return; }
+            say((d.versions.length > 1 ? d.versions.length + ' versions rédigées. ' : 'Article rédigé. ') +
+                'Le texte vient d\'un modèle : relis-le avant de le publier. Il reste dans « Articles rédigés ».', 'ok');
+            afficherArticle(d.versions);
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.textContent = "Rédiger l'article";
+            say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être de ' +
+                'notre côté. Recharge cette page dans quelques minutes : l\'article apparaîtra dans ' +
+                '« Articles rédigés ». Ne relance pas avant, tu risquerais de payer deux fois.', 'error');
+          });
+      }
+
+      if (aDepot) fetch('/api/projects/' + encodeURIComponent(slug) + '/content/langues')
         .then(function (resp) { return resp.json(); })
         .then(function (d) {
           /* Un site monolingue, ou un depot illisible : pas de choix a offrir, et le
@@ -281,6 +526,7 @@
       } catch (e) { /* URL exotique : le formulaire reste vide, ce n'est pas une panne */ }
 
       btn.addEventListener('click', function () {
+        if (mode() === 'contenu') { redigerArticle(); return; }
         var s = (sujet.value || '').trim(), r = (route.value || '').trim();
         if (!s || !r) { say('Il faut un sujet et une adresse.', 'error'); return; }
         var langues = cochees();
@@ -331,7 +577,8 @@
       var autoSection = document.getElementById('c-auto-section');
       var autoSave = document.getElementById('c-auto-save');
       var autoStatus = document.getElementById('c-auto-status');
-      autoSave.addEventListener('click', function () {
+      /* Le mode automatique ecrit par pull request : sans depot, sa carte n'est pas rendue. */
+      if (autoSave) autoSave.addEventListener('click', function () {
         autoSave.disabled = true;
         autoStatus.className = 'muted small';
         autoStatus.textContent = 'Enregistrement…';
@@ -358,6 +605,7 @@
             autoStatus.textContent = 'Erreur réseau.';
           });
       });
+      majMode();
     })();
     </script>
   {% endif %}

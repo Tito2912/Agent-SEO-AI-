@@ -592,17 +592,21 @@ def test_un_plan_sous_PRO_voit_le_forfait_pas_le_formulaire(customer, plan) -> N
     assert 'id="c-go"' not in page, "le bouton est affiché à qui ne peut pas s'en servir"
 
 
-def test_sans_DEPOT_connecte_l_ecran_dit_quoi_faire(customer, plan) -> None:
-    """« Aucun dépôt GitHub connecté » après trente secondes de rédaction serait un gâchis :
-    la page neuve est un fichier, il faut un dépôt où l'écrire."""
+def test_sans_DEPOT_le_mode_contenu_seul_est_ouvert_et_GitHub_dit_comment_s_activer(
+        customer, plan) -> None:
+    """Jusqu'au 28/09/2026, un projet sans dépôt tombait sur un mur. Décision du propriétaire :
+    le client peut repartir avec l'article (mode « contenu seul »). Le mode GitHub reste VISIBLE,
+    désactivé, avec le chemin pour l'ouvrir — un client doit savoir qu'il existe."""
     client, slug, pid, _uid = customer
     with app_module.DB.session() as db:
         proj = db.get(Project, pid)
         proj.settings = {k: v for k, v in proj.settings.items() if k != "github_repo"}
         db.commit()
     page = client.get(f"/projects/{slug}/content").text
-    assert "dépôt GitHub" in page
-    assert 'id="c-go"' not in page
+    assert 'id="c-go"' in page
+    assert 'value="github" disabled' in page and "Connecte un dépôt GitHub" in page
+    assert 'value="contenu" checked' in page
+    assert 'id="c-auto-save"' not in page, "le mode automatique ecrit par PR : pas sans depot"
 
 
 def test_l_ecran_montre_le_formulaire_et_le_QUOTA_restant(customer, plan) -> None:
