@@ -16592,7 +16592,18 @@ def api_automation_github_corrections(request: Request) -> JSONResponse:
 
 
 @app.get("/cron/autopilot")
-def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONResponse:
+def cron_autopilot(request: Request) -> JSONResponse:
+    """Les balayages quotidiens : verification des pull requests, redaction automatique.
+
+    L'AUDIT HISTORIQUE EST RETIRE (decision du proprietaire, 28/09/2026). Cette route lancait
+    en plus un audit de 300 pages des sites de `seo-autopilot.yml` — un fichier d'avant le
+    multi-client, qui ne listait plus que `creativeai-tools.com` — en tache de fond DANS le
+    conteneur web, jusqu'a trois heures. Il plantait a chaque appel depuis au moins le
+    20/09/2026 : son job etait enregistre au nom de `"cron"`, qui n'est pas un utilisateur, et
+    la cle etrangere `jobs.owner_user_id -> users.id` le refusait. La tache quotidienne etait
+    rouge neuf jours d'affilee pour un audit que personne ne lisait. Les deux balayages, eux,
+    passaient avant le plantage : ils restent.
+    """
     cron_secret = str(os.environ.get("CRON_SECRET") or "").strip()
     if not cron_secret:
         return JSONResponse({"ok": False, "error": "CRON_SECRET non configuré"}, status_code=500)
@@ -16604,28 +16615,22 @@ def cron_autopilot(request: Request, background_tasks: BackgroundTasks) -> JSONR
     # `_boucle_verification_pr`, qui tourne en continu dans ce service ; ceci n'est qu'une
     # occasion de plus, sans consequence si elle disparait. Le doublon est sans danger : une
     # pull request deja sortie du brouillon n'est plus en attente et n'est donc pas reprise.
+    balayages: dict[str, str] = {}
     try:
         _balayer_verifications_pr(limit=25)
+        balayages["pull_requests"] = "ok"
     except Exception as e:
+        balayages["pull_requests"] = type(e).__name__
         logger.error("[PR] balayage depuis l'autopilote : %s: %s", type(e).__name__, e)
     # Meme logique pour le mode automatique de redaction : chaque projet porte sa propre
     # date hebdomadaire, donc un passage de plus ne produit rien de plus.
     try:
         _balayer_contenu_auto()
+        balayages["contenu_auto"] = "ok"
     except Exception as e:
+        balayages["contenu_auto"] = type(e).__name__
         logger.error("[contenu-auto] balayage depuis l'autopilote : %s: %s", type(e).__name__, e)
-
-    config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
-    if not config_path:
-        return JSONResponse({"ok": False, "error": "yml manquant"}, status_code=500)
-    extra_args = ["--mode", "audit-only", "--no-auto-deploy", "--no-backlog"]
-    script = REPO_ROOT / "skills" / "public" / "seo-autopilot" / "scripts" / "seo_autopilot.py"
-    job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time(), config_path=str(config_path))
-    job.command = [sys.executable, "-u", str(script), "--config", str(config_path)] + extra_args
-    job.result = {"type": "autopilot", "user_id": "cron", "run_policy": "verify"}
-    _save_job(job)
-    background_tasks.add_task(_run_autopilot_job, job.id, config_path, extra_args)
-    return JSONResponse({"ok": True, "job_id": job.id})
+    return JSONResponse({"ok": True, "balayages": balayages})
 
 
 @app.get("/jobs", response_class=HTMLResponse)

@@ -6,7 +6,9 @@
 # d'erreur, elle produit une absence, et une absence ne remonte nulle part.
 #
 # UN SEUL PASSAGE POUR LES TROIS, parce que les trois se limitent elles-memes :
-#   - `autopilot` lance un audit en mode audit-only sur la configuration du produit ;
+#   - `autopilot` balaie les verifications de pull requests et la redaction automatique
+#     (son audit historique de `seo-autopilot.yml` a ete retire le 28/09/2026 : il plantait
+#     a chaque appel depuis au moins le 20/09 et rendait ce job rouge neuf jours d'affilee) ;
 #   - `refresh-competitors` ne reprend que les concurrents crawles il y a plus de trente jours
 #     (`_COMPETITOR_REFRESH_DAYS`), les autres sont ignores ;
 #   - `auto-search-backlinks` respecte la frequence choisie par chaque projet (vingt heures
