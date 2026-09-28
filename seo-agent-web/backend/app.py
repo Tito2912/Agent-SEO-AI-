@@ -8891,6 +8891,46 @@ _COMPETITOR_MAX_PER_PROJECT = 5
 # A month between automatic refreshes. A rival does not republish its site every week, and the
 # customer can always ask for a fresh pass from the page.
 _COMPETITOR_REFRESH_DAYS = 30
+# La borne DURE d'une analyse : le sous-processus est tue a ce terme, quoi qu'il fasse.
+_COMPETITOR_CRAWL_TIMEOUT_S = 1800.0
+# La borne DOUCE, bien avant : le crawler cesse de lancer des pages et ECRIT son rapport avec
+# ce qu'il a lu. Releve le 28/09/2026 sur educatorsfinancialgroup.ca : ~18 s par page (un hote
+# qui laisse pendre des requetes), 100 pages frolaient les 30 minutes — et un processus tue
+# n'ecrit rien : tout ce qui avait ete lu etait perdu, et le concurrent declare « illisible,
+# il bloque peut-etre les robots ». Les 10 minutes d'ecart couvrent le dernier lot et le rapport.
+_COMPETITOR_CRAWL_BUDGET_S = 1200.0
+
+
+def _liberer_les_analyses_mortes(db, rows: "list[Any]") -> int:
+    """Rend « failed » un concurrent reste « crawling » alors que son analyse n'existe plus.
+
+    Releve le 28/09/2026 : un processus tue en pleine analyse (redeploiement, memoire) laissait
+    la ligne « Analyse en cours… » POUR TOUJOURS — « Analyser » repondait « deja en cours », la
+    relance mensuelle saute les lignes « crawling ». Aucun geste du client ne l'en sortait.
+
+    On ne devine pas une mort, on la CONSTATE : pas de travail, un travail termine, ou un
+    travail « running » plus vieux que la borne dure du sous-processus (qui l'aurait tue) et la
+    marge de rendu. Un travail « queued » attend son tour : il est vivant.
+    """
+    liberes = 0
+    for row in rows:
+        if row.status != "crawling":
+            continue
+        job = _load_job(str(row.last_job_id)) if row.last_job_id else None
+        if job is not None and job.status == "queued":
+            continue
+        if job is not None and job.status in {"running", "cancel_requested"}:
+            debut = float(job.started_at or job.created_at or 0.0)
+            if time.time() - debut < _COMPETITOR_CRAWL_TIMEOUT_S + 300:
+                continue
+        row.status = "failed"
+        row.error = ("Analyse interrompue (le serveur a redémarré pendant qu'elle tournait) : "
+                     "relance-la.")
+        liberes += 1
+    if liberes:
+        db.commit()
+        logger.info("[competitors] %d analyse(s) morte(s) liberee(s)", liberes)
+    return liberes
 
 
 def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -8972,6 +9012,7 @@ def _run_competitor_crawl_job(job_id: str, user_id: str, competitor_id: str) -> 
         "--max-pages", str(_COMPETITOR_MAX_PAGES),
         "--workers", "3",
         "--timeout", "15",
+        "--max-duration", str(int(_COMPETITOR_CRAWL_BUDGET_S)),
         "--output-dir", str(out_dir),
     ]
     # No --ignore-robots, ever: this is somebody else's site. A rival that refuses us is not a
@@ -8984,7 +9025,7 @@ def _run_competitor_crawl_job(job_id: str, user_id: str, competitor_id: str) -> 
 
     try:
         returncode = _run_subprocess_streaming(
-            job, cmd, cwd=REPO_ROOT, job_kind="crawl", timeout_s=1800.0,
+            job, cmd, cwd=REPO_ROOT, job_kind="crawl", timeout_s=_COMPETITOR_CRAWL_TIMEOUT_S,
         )
         job.returncode = returncode
         report = None
@@ -29894,6 +29935,7 @@ def project_competitors(request: Request, slug: str,
             or _competitor_has_access(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
         )
         rows = _competitor_rows(db, str(proj_row.id)) if has_access else []
+        _liberer_les_analyses_mortes(db, rows)
         competitors = [{
             "id": str(r.id), "domain": r.domain, "base_url": r.base_url, "status": r.status,
             "pages_count": int(r.pages_count or 0), "error": r.error or "",
@@ -29930,6 +29972,7 @@ def project_competitors(request: Request, slug: str,
             "max_competitors": _COMPETITOR_MAX_PER_PROJECT,
             "max_pages": _COMPETITOR_MAX_PAGES,
             "refresh_days": _COMPETITOR_REFRESH_DAYS,
+            "budget_minutes": int(_COMPETITOR_CRAWL_BUDGET_S // 60),
             "github_cfg": github_cfg,
             # Every refusal on this page redirects with a message. Without these two the
             # customer whose rival was refused would see the page redraw and say nothing.
@@ -30179,24 +30222,23 @@ def project_competitor_analyze(request: Request, slug: str,
         row = db.get(CompetitorSite, (competitor_id or "").strip())
         if not row or str(row.project_id) != str(proj.id):
             return RedirectResponse(url=_path_with_flash(page, err="Concurrent introuvable."), status_code=303)
+        _liberer_les_analyses_mortes(db, [row])
         if row.status == "crawling":
             # A queued crawl the customer cannot see is a button they will press again.
             return RedirectResponse(url=_path_with_flash(
                 page, msg="L'analyse de ce concurrent est déjà en cours."), status_code=303)
         cid, domain = str(row.id), row.domain
+        # Le travail EXISTE avant que la ligne dise « crawling », et les deux s'ecrivent
+        # ensemble : une ligne « crawling » sans travail est ce que `_liberer_les_analyses_mortes`
+        # prend pour une analyse morte.
+        job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time())
+        job.result = {"type": "competitor", "user_id": str(user.id), "competitor_id": cid,
+                      "slug": slug, "domain": domain}
+        _save_job(job)
         row.status = "crawling"
         row.error = None
+        row.last_job_id = job.id
         db.commit()
-
-    job = Job(id=str(uuid.uuid4()), status="queued", created_at=time.time())
-    job.result = {"type": "competitor", "user_id": str(user.id), "competitor_id": cid,
-                  "slug": slug, "domain": domain}
-    _save_job(job)
-    with DB.session() as db:
-        row = db.get(CompetitorSite, cid)
-        if row is not None:
-            row.last_job_id = job.id
-            db.commit()
     return RedirectResponse(url=_path_with_flash(
         page, msg=f"Analyse de {domain} lancée (jusqu'à {_COMPETITOR_MAX_PAGES} pages)."),
         status_code=303)
@@ -30219,6 +30261,8 @@ def cron_refresh_competitors(request: Request) -> JSONResponse:
     cutoff = datetime.now(timezone.utc) - timedelta(days=_COMPETITOR_REFRESH_DAYS)
     queued: list[str] = []
     with DB.session() as db:
+        _liberer_les_analyses_mortes(db, list(db.scalars(
+            select(CompetitorSite).where(CompetitorSite.status == "crawling"))))
         rows = list(db.scalars(select(CompetitorSite).where(CompetitorSite.status != "crawling")))
         for row in rows:
             last = row.last_crawled_at

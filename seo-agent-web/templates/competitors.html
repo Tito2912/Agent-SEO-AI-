@@ -32,7 +32,8 @@
 
       <p class="muted small">
         Chaque analyse lit jusqu'à {{ max_pages }} pages du concurrent — titres, H1 et URL,
-        rien d'autre : ses performances ne nous regardent pas. Elle se relance toute seule tous
+        rien d'autre : ses performances ne nous regardent pas. Elle dure quelques minutes, et
+        {{ budget_minutes }} au plus : un site lent est lu en partie plutôt que pas du tout. Elle se relance toute seule tous
         les {{ refresh_days }} jours, et à la demande quand tu cliques.
       </p>
 

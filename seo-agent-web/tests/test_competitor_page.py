@@ -19,6 +19,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 
@@ -311,6 +312,7 @@ def test_a_second_analyse_while_one_runs_is_refused(customer) -> None:
     """A queued crawl the customer cannot see is a button they press again."""
     client, slug, pid, uid, _plans = customer
     cid = _add_ready_rival(pid, uid, pages=[], status="crawling")
+    _attacher_un_travail(cid, status="queued", uid=uid)
     page = f"/projects/{slug}/competitors"
     before = _job_count()
     _csrf_post(client, f"{page}/analyze", {"competitor_id": cid}, page)
@@ -425,3 +427,115 @@ def test_a_refusal_is_actually_shown_to_the_customer(customer) -> None:
     # Assert on text that survives HTML escaping: Jinja writes the apostrophe as &#39;, so
     # asserting on "C'est ton propre site" fails against a page that says exactly that.
     assert "ton propre site" in body and 'class="alert error"' in body
+
+
+# ── une analyse MORTE ne bloque pas le concurrent pour toujours ──────────────────────────────
+
+def _attacher_un_travail(cid, *, status, age_s=0.0, uid):
+    job = app_module.Job(id=str(uuid.uuid4()), status=status, created_at=time.time() - age_s)
+    if status != "queued":
+        job.started_at = time.time() - age_s
+    job.result = {"type": "competitor", "competitor_id": cid, "user_id": uid}
+    app_module._save_job(job)
+    assert app_module._load_job(job.id).status == status, "travail non enregistre"
+    with app_module.DB.session() as db:
+        db.get(CompetitorSite, cid).last_job_id = job.id
+        db.commit()
+    return job.id
+
+
+def _etat(cid):
+    with app_module.DB.session() as db:
+        row = db.get(CompetitorSite, cid)
+        return row.status, row.error or ""
+
+
+BORNE = app_module._COMPETITOR_CRAWL_TIMEOUT_S
+
+
+@pytest.mark.parametrize("travail", [
+    None,                                   # la ligne dit « crawling », aucun travail derriere
+    ("done", 0.0),                          # le travail a fini, la ligne n'a jamais ete rendue
+    ("failed", 0.0),
+    ("running", BORNE + 600),               # plus vieux que la borne DURE du sous-processus
+])
+def test_une_analyse_MORTE_est_liberee_et_se_relance(customer, travail) -> None:
+    """Releve le 28/09/2026 : un processus tue en pleine analyse laissait « Analyse en cours… »
+    pour toujours ; « Analyser » repondait « deja en cours »."""
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=f"mort-{uuid.uuid4().hex[:6]}.fr")
+    if travail:
+        _attacher_un_travail(cid, status=travail[0], age_s=travail[1], uid=uid)
+    page = f"/projects/{slug}/competitors"
+    assert "interrompue" in client.get(page).text
+    assert _etat(cid)[0] == "failed"
+    before = _job_count()
+    _csrf_post(client, f"{page}/analyze", {"competitor_id": cid}, page)
+    assert _job_count() == before + 1 and _etat(cid)[0] == "crawling"
+
+
+@pytest.mark.parametrize("travail", [
+    ("queued", 3 * 3600.0),                 # en file depuis longtemps : il ATTEND, il vit
+    ("running", 60.0),
+    ("running", BORNE - 60),                # long, mais le sous-processus peut encore finir
+])
+def test_une_analyse_VIVANTE_n_est_pas_touchee(customer, travail) -> None:
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=f"vif-{uuid.uuid4().hex[:6]}.fr")
+    _attacher_un_travail(cid, status=travail[0], age_s=travail[1], uid=uid)
+    client.get(f"/projects/{slug}/competitors")
+    assert _etat(cid)[0] == "crawling", _etat(cid)
+
+
+def test_la_relance_mensuelle_reprend_une_analyse_morte(customer) -> None:
+    client, slug, pid, uid, _plans = customer
+    nom = f"mensuel-{uuid.uuid4().hex[:6]}.fr"
+    cid = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=nom)
+    resp = client.post("/cron/refresh-competitors", headers={"Authorization": "Bearer test-cron-secret"})
+    assert nom in resp.json()["domains"] and _etat(cid)[0] == "crawling"
+
+
+def test_analyser_ecrit_le_travail_AVEC_l_etat(customer) -> None:
+    """Jamais « crawling » sans travail : ce serait, pour la liberation, une analyse morte."""
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, pages=[], status="new", domain=f"lie-{uuid.uuid4().hex[:6]}.fr")
+    page = f"/projects/{slug}/competitors"
+    _csrf_post(client, f"{page}/analyze", {"competitor_id": cid}, page)
+    with app_module.DB.session() as db:
+        row = db.get(CompetitorSite, cid)
+        assert row.status == "crawling" and row.last_job_id
+        assert app_module._load_job(row.last_job_id).status == "queued"
+
+
+def test_analyser_libere_SANS_passer_par_la_page(customer) -> None:
+    """Le bouton de la page vient d'une page chargee AVANT la mort de l'analyse : la route
+    doit constater elle-meme, pas compter sur l'affichage."""
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=f"direct-{uuid.uuid4().hex[:6]}.fr")
+    client.get(f"/projects/{slug}")
+    token = client.cookies.get(app_module._CSRF_COOKIE_NAME, "")
+    before = _job_count()
+    client.post(f"/projects/{slug}/competitors/analyze",
+                data={"competitor_id": cid, "_csrf": token}, follow_redirects=False)
+    assert _job_count() == before + 1 and _etat(cid)[0] == "crawling"
+
+
+def test_l_analyse_est_bornee_DOUCEMENT_avant_d_etre_tuee(customer, monkeypatch) -> None:
+    """La borne douce (le crawler s'arrete et ECRIT son rapport) passe bien avant la borne dure
+    (le processus est tue, rien n'est ecrit) : sinon un site lent perd tout ce qui a ete lu."""
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, pages=[], status="new", domain=f"lent-{uuid.uuid4().hex[:6]}.fr")
+    vu = {}
+
+    def _faux(job, cmd, cwd, job_kind, timeout_s=None, env_extra=None):
+        vu["cmd"], vu["timeout"] = cmd, timeout_s
+        return 0
+
+    monkeypatch.setattr(app_module, "_run_subprocess_streaming", _faux)
+    monkeypatch.setattr(app_module, "_validate_public_crawl_target", lambda url: "")
+    job = app_module.Job(id=str(uuid.uuid4()), status="queued", created_at=time.time())
+    job.result = {"type": "competitor", "competitor_id": cid, "user_id": uid}
+    app_module._save_job(job)
+    app_module._run_competitor_crawl_job(job.id, uid, cid)
+    budget = float(vu["cmd"][vu["cmd"].index("--max-duration") + 1])
+    assert 0 < budget <= vu["timeout"] - 300, (budget, vu["timeout"])

@@ -102,6 +102,10 @@ class CrawlConfig:
     # N'ouvre aucune visite : l'alias n'entre que dans l'index des pages DEJA vues.
     canonical_host_alias: str = ""
     profile: str = "default"
+    # Borne de TEMPS du crawl, en secondes (0 = aucune). Atteinte, plus aucune page n'est
+    # lancee et le rapport s'ecrit avec ce qui a ete lu. Sans elle, l'appelant qui borne le
+    # processus le TUE : aucun rapport, et tout ce qui avait ete lu est perdu.
+    max_duration_s: float = 0.0
 
 
 def _write_issue_rows(issues_dir: Path | None, issue_key: str, rows: list[Any]) -> None:
@@ -8948,6 +8952,13 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
         help="Maximum number of URLs to read from sitemaps in total (default: 2000).",
     )
     parser.add_argument("--timeout", type=float, default=15.0, help="HTTP timeout seconds (default: 15).")
+    parser.add_argument(
+        "--max-duration",
+        type=float,
+        default=0.0,
+        help="Stop launching pages after this many seconds of crawling and write the report with "
+        "what was read (default: 0 = no limit).",
+    )
     parser.add_argument("--workers", type=int, default=4, help="Concurrent workers (default: 4).")
     parser.add_argument("--user-agent", default=None, help="User-Agent header (default: SEOAutopilot/1.0).")
     parser.add_argument("--ignore-robots", action="store_true", help="Ignore robots.txt rules.")
@@ -9163,6 +9174,7 @@ def _parse_args(argv: list[str]) -> CrawlConfig:
     return CrawlConfig(
         base_url=base_url,
         max_pages=max(1, args.max_pages),
+        max_duration_s=max(0.0, float(args.max_duration or 0.0)),
         max_sitemap_urls=max(1, args.max_sitemap_urls),
         timeout_s=max(1.0, args.timeout),
         workers=max(1, args.workers),
@@ -9413,9 +9425,15 @@ def main(argv: list[str]) -> int:
     print(f"[CRAWL] browser concurrency = {_crawl_workers} (config.workers={config.workers}, cap={_browser_cap})", flush=True)
 
     _crawl_t0 = time.monotonic()
+    _arret_sur_le_temps = False
     with concurrent.futures.ThreadPoolExecutor(max_workers=_crawl_workers) as executor:
         last_progress = time.monotonic()
         while queue and len(pages) < config.max_pages:
+            if config.max_duration_s > 0 and time.monotonic() - _crawl_t0 >= config.max_duration_s:
+                _arret_sur_le_temps = True
+                print(f"[CRAWL] Borne de temps atteinte ({int(config.max_duration_s)}s) : "
+                      f"{len(pages)} page(s) lue(s), rapport ecrit avec elles.", flush=True)
+                break
             batch: list[str] = []
             while queue and len(batch) < _crawl_workers and (len(pages) + len(batch)) < config.max_pages:
                 u = queue.popleft()
@@ -9787,6 +9805,8 @@ def main(argv: list[str]) -> int:
         "base_url": config.base_url,
         "max_pages": config.max_pages,
         "pages_crawled": len(page_list) - len(blocked_pages),
+        # Un rapport PARTIEL se dit : moins de pages que demande, par choix de l'appelant.
+        "stopped_on_time_budget": bool(_arret_sur_le_temps),
         # Pages the host refused us (403/429/503 after retries). NOT customer errors: they are
         # excluded from scoring, so a report with a non-zero count here is incomplete.
         "blocked_by_host": {
