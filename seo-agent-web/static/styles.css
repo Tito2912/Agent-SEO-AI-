@@ -24,9 +24,13 @@
   --muted: rgba(255, 255, 255, .46);
 
   /* Accent — Emerald (muted) */
-  --accent:     #0a9468;
-  --accent-2:   #1db884;
-  --accent-rgb: 10, 148, 104;
+  /* LE VERT DE LA MARQUE, pris sur le pack Noyaru valide le 28/09/2026 : #65B588 est la teinte
+     claire du pack (textes, liens) ; #3F8F68 la teinte soutenue, de la famille des verts du logo
+     (#3C8460), pour les fonds et bordures. Contrastes mesures sur #111113 : 7,7:1 pour le texte
+     (7,4 avant), et le blanc sur l'accent garde ses 3,9:1. */
+  --accent:     #3f8f68;
+  --accent-2:   #65b588;
+  --accent-rgb: 63, 143, 104;
 
   /* Chart */
   --chart-muted: rgba(255, 255, 255, .08);
@@ -324,7 +328,7 @@ a:hover { text-decoration: underline; }
 .alert p { margin: 0; }
 
 /* La proposition de « Sujet IA » (ecran Contenu) : un encadre, pas une phrase collee au champ. */
-.c-proposition { border: 1px solid var(--border); border-left: 3px solid var(--accent, #1db884);
+.c-proposition { border: 1px solid var(--border); border-left: 3px solid var(--accent);
   background: rgba(255,255,255,.02); border-radius: 8px; padding: 10px 12px; margin: 8px 0 14px; }
 .c-proposition p { margin: 6px 0 0; line-height: 1.5; font-size: 13.5px; }
 .c-proposition p.small { font-size: 12px; }
