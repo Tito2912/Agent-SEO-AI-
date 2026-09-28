@@ -322,6 +322,15 @@ a:hover { text-decoration: underline; }
   font-size: 13px;
 }
 .alert p { margin: 0; }
+
+/* La proposition de « Sujet IA » (ecran Contenu) : un encadre, pas une phrase collee au champ. */
+.c-proposition { border: 1px solid var(--border); border-left: 3px solid var(--accent, #1db884);
+  background: rgba(255,255,255,.02); border-radius: 8px; padding: 10px 12px; margin: 8px 0 14px; }
+.c-proposition p { margin: 6px 0 0; line-height: 1.5; font-size: 13.5px; }
+.c-proposition p.small { font-size: 12px; }
+.c-proposition-tete { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.c-proposition.erreur { border-left-color: rgba(239, 68, 68, .7); }
+.c-proposition.erreur p { margin: 0; }
 .alert.error  { border-color: rgba(239, 68, 68, .30); background: rgba(239, 68, 68, .07); }
 .alert.ok     { border-color: rgba(16, 185, 129, .28); background: rgba(16, 185, 129, .07); }
 .alert.notice { border-color: rgba(129, 140, 248, .30); background: rgba(129, 140, 248, .07); }

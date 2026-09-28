@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import base64
 import json
-import re
 import os
 import sys
 import tempfile
@@ -687,15 +686,17 @@ def test_un_jeton_MAL_FORME_n_ouvre_aucun_suivi(customer, plan, github, modele) 
     assert set(app_module._SUIVIS) == avant
 
 
-def test_les_SUJETS_suggeres_excluent_ceux_deja_demandes_et_sont_bornes(
+def test_les_titres_BRUTS_des_concurrents_ne_sont_plus_en_boutons(
         customer, plan, github, modele, monkeypatch) -> None:
+    """Capture du 28/09/2026 : « Book a complimentary consultation - Educators Financial Group »
+    propose comme sujet d'article. Les titres bruts restent sur l'ecran Concurrents ; ici, c'est
+    « Sujet IA » qui choisit parmi eux celui qui convient a la section, et le reformule."""
     client, slug, _pid, _uid = customer
-    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
     monkeypatch.setattr(app_module, "_sujets_non_couverts", lambda db, **kw: [
-        SUJET, "Sujet 1", "Sujet 2", "Sujet 3", "Sujet 4", "Sujet 5", "Sujet 6"])
+        "Book a complimentary consultation - Educators Financial Group"])
     page = client.get(f"/projects/{slug}/content").text
-    boutons = re.findall(r'data-sujet="([^"]+)"', page)
-    assert boutons == ["Sujet 1", "Sujet 2", "Sujet 3", "Sujet 4", "Sujet 5"], boutons
+    assert "complimentary consultation" not in page and "data-sujet=" not in page
+    assert 'id="c-sujet-ia"' in page
 
 
 def test_la_BARRE_FINALE_et_le_nom_de_la_RACINE_se_mesurent_dans_le_crawl(

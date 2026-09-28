@@ -29863,20 +29863,6 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
     except Exception as exc:
         logger.warning("[contenu] ecran : crawl ou journal illisible : %s", exc)
 
-    # LES SUJETS SUGGERES, la ou le client ecrit — pas seulement un lien vers Concurrents. Le
-    # meme calcul que le mode automatique (`_sujets_non_couverts`), et comme lui sans les
-    # sujets deja demandes : les proposer une seconde fois pousserait a payer deux fois.
-    sujets_suggeres: list[str] = []
-    if acces:
-        try:
-            deja = {str(x.get("sujet") or "").strip().lower() for x in pages + articles}
-            with DB.session() as db:
-                sujets_suggeres = [s for s in _sujets_non_couverts(
-                    db, project_id=str(proj_row.id), owner_user_id=str(proj_row.owner_user_id),
-                    slug=slug) if s.strip().lower() not in deja][:5]
-        except Exception as exc:
-            logger.warning("[contenu] ecran : sujets suggeres indisponibles : %s", exc)
-
     resp = templates.TemplateResponse(
         "content.html",
         {
@@ -29897,7 +29883,6 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "slash_final": slash_final,
             "nom_racine": next((l["nom"] for l in langues_crawl if not l["code"]), ""),
             "iso_racine": next((l["iso"] for l in langues_crawl if not l["code"]), ""),
-            "sujets_suggeres": sujets_suggeres,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

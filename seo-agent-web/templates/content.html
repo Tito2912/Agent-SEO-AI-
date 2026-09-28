@@ -64,15 +64,12 @@
                     title="Propose un sujet que tes concurrents traitent et pas toi, pour la section choisie">Sujet IA</button>
           </span>
         </label>
-        <div id="c-sujet-ia-note" class="muted small" role="status" aria-live="polite" hidden style="margin:-4px 0 6px;"></div>
-        {% if sujets_suggeres %}
-          <div id="c-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 6px;">
-            <span class="muted small">Tes concurrents traitent, pas toi :</span>
-            {% for s in sujets_suggeres %}
-              <button type="button" class="btn small" data-sujet="{{ s }}">{{ s }}</button>
-            {% endfor %}
-          </div>
-        {% endif %}
+        {# LA PROPOSITION DE L'IA, dans un encadre a elle (capture du 28/09/2026 : une phrase
+           grise collee au champ, suivie de titres BRUTS de concurrents en boutons — « Book a
+           complimentary consultation », « Contest Rules » — qui ne sont pas des sujets). Les
+           titres bruts restent sur l'ecran Concurrents ; ici, seul le sujet choisi pour la
+           section, son pourquoi et sa source. #}
+        <div id="c-sujet-ia-note" role="status" aria-live="polite" hidden></div>
 
         <div id="c-bloc-contenu" {% if a_depot %}hidden{% endif %}>
           {% if sections_crawl %}
@@ -90,7 +87,7 @@
               </span>
             </label>
             {% if langues_crawl|length > 1 %}
-              <fieldset id="c-langues-contenu" class="c-langues-ligne" style="border:0;padding:0;margin:0;">
+              <fieldset id="c-langues-contenu" class="c-langues-ligne" style="border:0;padding:0;margin:10px 0 0;">
                 <legend>Langues</legend>
                 <div style="display:flex;flex-wrap:wrap;gap:4px 18px;">
                   {% for l in langues_crawl %}
@@ -131,7 +128,7 @@
         </label>
         {# Rempli apres le rendu par /content/langues : lire l'arbre du depot prend des
            secondes. Reste cache sur un site qui ne sert qu'une langue. #}
-        <fieldset id="c-langues-bloc" hidden style="border:0;padding:0;margin:0;">
+        <fieldset id="c-langues-bloc" hidden style="border:0;padding:0;margin:10px 0 0;">
           <legend>Langues</legend>
           <div id="c-langues" style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:4px 0;"></div>
           <span class="muted small">
@@ -343,6 +340,13 @@
       var boutonIA = document.getElementById('c-sujet-ia');
       var noteIA = document.getElementById('c-sujet-ia-note');
       var sujetsProposes = [];
+      /* « Investir 101 - Educators Financial Group » -> « Investir 101 » : le nom du site en fin
+         de titre est du bruit a l'ecran. Affichage seul : la source envoyee reste EXACTE, le
+         serveur la verifie a la lettre. */
+      function sansMarque(titre) {
+        var court = String(titre || '').replace(/\s+[-|–—]\s+[^-|–—]{2,60}$/, '');
+        return court.length >= 12 ? court : String(titre || '');
+      }
       if (boutonIA) boutonIA.addEventListener('click', function () {
         var sectionIA = mode() === 'contenu'
           ? (sectionSel ? sectionSel.value : '')
@@ -359,17 +363,22 @@
             boutonIA.textContent = 'Sujet IA';
             noteIA.hidden = false;
             if (!d.ok) {
-              noteIA.className = 'error small';
-              noteIA.innerHTML = esc(d.error || 'Aucun sujet proposé.') + (d.concurrents_url
-                ? ' <a href="' + esc(d.concurrents_url) + '">Ouvrir Concurrents</a>' : '');
+              noteIA.className = 'c-proposition erreur';
+              noteIA.innerHTML = '<p>' + esc(d.error || 'Aucun sujet proposé.') + (d.concurrents_url
+                ? ' <a href="' + esc(d.concurrents_url) + '">Ouvrir Concurrents</a>' : '') + '</p>';
               return;
             }
             sujetsProposes.push(d.inspire_de);
             sujet.value = d.sujet;
             sujet.dispatchEvent(new Event('input'));
-            noteIA.className = 'muted small';
-            noteIA.innerHTML = 'Inspiré de « ' + esc(d.inspire_de) + ' » chez tes concurrents' +
-              (d.pourquoi ? ' — ' + esc(d.pourquoi) : '') + '. Reclique pour un autre sujet.';
+            noteIA.className = 'c-proposition';
+            noteIA.innerHTML =
+              '<div class="c-proposition-tete"><span class="badge ok">Sujet proposé par l\'IA</span>' +
+              '<button type="button" class="btn small" id="c-sujet-autre">Autre sujet</button></div>' +
+              (d.pourquoi ? '<p>' + esc(d.pourquoi) + '</p>' : '') +
+              '<p class="muted small">Source : « ' + esc(sansMarque(d.inspire_de)) +
+              ' », un sujet que traite un de tes concurrents et pas toi.</p>';
+            document.getElementById('c-sujet-autre').addEventListener('click', function () { boutonIA.click(); });
           })
           .catch(function () {
             boutonIA.disabled = false;
@@ -378,16 +387,6 @@
             noteIA.className = 'error small';
             noteIA.textContent = 'Erreur réseau.';
           });
-      });
-
-      /* Les sujets suggeres remplissent le champ, sans rien rediger : le client relit avant
-         de depenser un article. */
-      Array.prototype.forEach.call(document.querySelectorAll('[data-sujet]'), function (b) {
-        b.addEventListener('click', function () {
-          sujet.value = b.dataset.sujet;
-          sujet.dispatchEvent(new Event('input'));
-          sujet.focus();
-        });
       });
 
       /* LE SUIVI. Un jeton par redaction ; l'ecran lit les etapes franchies par le serveur
