@@ -21785,6 +21785,14 @@ _REGLES_D_ANCRE: dict[str, "Callable[[str], str]"] = {
     "remplace": lambda t: re.sub(r"[^a-z0-9]+", "-", _sans_accents(t).lower()).strip("-"),
     "github": lambda t: re.sub(r"\s", "-", re.sub(r"[^\w\s-]", "", str(t or "").lower()).strip()),
 }
+# Les translitterations qu'un redacteur applique a un titre avant d'en faire un slug : l'usage
+# allemand (ä -> ae, ö -> oe, ü -> ue, ß -> ss) et l'usage suisse (ß -> ss seul). Normes
+# d'ecriture, pas conventions de client.
+_TRANSLITTERATIONS: "tuple[Callable[[str], str], ...]" = (
+    lambda t: re.sub("[äöüÄÖÜß]", lambda c: {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae",
+                                             "Ö": "Oe", "Ü": "Ue", "ß": "ss"}[c.group(0)], t),
+    lambda t: t.replace("ß", "ss"),
+)
 _TITRE_MD_RE = re.compile(r"^#{2,4}[ \t]+(.+?)[ \t#]*$", re.M)
 _ANCRE_RE = re.compile(r"""(?:(["'])|\]\()#([^"'\s)#]+)(?(1)\1|\))""")
 
@@ -21910,15 +21918,18 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
         if titre is None:
             # LA TRANSLITTERATION ALLEMANDE. Mesure du 28/09/2026 sur un essai en quatre
             # langues : le modele ecrit `verstaerkt` pour « verstärkt » (ä -> ae, l'usage
-            # allemand), le site produit `verstarkt` (il decompose puis retire l'accent). Deux
-            # entrees de sommaire JUSTES etaient retirees. On compare donc a digrammes pres —
-            # des DEUX cotes, pour qu'un « ue » authentique (`frauen`) reste egal a lui-meme —
-            # et seulement si UN SEUL titre correspond.
-            def _sans_digrammes(texte: str) -> str:
-                return re.sub(r"([aou])e", r"\1", texte)
-
-            proches = [t for t in titres if _id_certain(t)
-                       and _sans_digrammes(_id_certain(t)) == _sans_digrammes(ancre)]
+            # allemand), le site produit `verstarkt` (il decompose puis retire l'accent).
+            #
+            # ON TRANSLITTERE LE TITRE, ON NE RAPPROCHE PAS DES CHAINES. Ma premiere version
+            # comparait ancre et identifiant « a digrammes pres » ; elle ne savait rien du « ß »
+            # (le modele ecrit `groesse`, le site `groe` : il RETIRE le ß, que la decomposition
+            # ne touche pas) et devait garder une regle d'ambiguite pour des paires inventees
+            # (`aue`/`au`). Le modele applique une translitteration CONNUE au titre avant d'en
+            # faire un slug : on l'applique aussi, et l'ancre doit tomber exactement dessus —
+            # sur UN SEUL titre.
+            proches = [t for t in titres
+                       if any(_REGLES_D_ANCRE[nom](translitterer(t)) == ancre
+                              for nom in candidates for translitterer in _TRANSLITTERATIONS)]
             titre = proches[0] if len(proches) == 1 else None
         juste = _id_certain(titre) if titre is not None else ""
         if juste:
@@ -28405,19 +28416,40 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
 
     def _voisines() -> list[str]:
-        # Les pages du MEME dossier et de la meme extension que la soeur : meme gabarit, donc
-        # meme fabrique d'identifiants. Bornees, et lues seulement si la soeur ne tranche pas.
+        # Les pages du MEME gabarit que la soeur, donc de la meme fabrique d'identifiants :
+        # son dossier d'abord, puis le MEME dossier dans les autres langues.
+        #
+        # LES AUTRES LANGUES, PARCE QU'UN SITE N'A QU'UNE FONCTION DE SLUG. Mesure du
+        # 28/09/2026 : les titres allemands n'ont ni apostrophe ni tiret special, donc les pages
+        # allemandes ne departagent jamais « supprime » et « remplace » — et « Größe » donne
+        # `groe` avec l'une, `gro-e` avec l'autre. Les guides FRANCAIS, rendus par le meme
+        # gabarit (`content/fr/guides/` contre `content/de/guides/`), tranchent par leurs
+        # apostrophes. Seul le segment de langue peut differer : un blog voisin reste exclu.
+        # Bornees a huit par groupe, et lues seulement si la soeur ne tranche pas.
         dossier, _, nom = soeur.rpartition("/")
         ext = nom.rsplit(".", 1)[-1]
-        lues = []
-        for chemin in sorted(all_paths):
-            if len(lues) >= 8:
-                break
-            if (chemin != soeur and chemin.rpartition("/")[0] == dossier
-                    and chemin.endswith("." + ext)):
-                lu = _lire(chemin)
-                if lu is not None:
-                    lues.append(lu[0])
+        segments = dossier.split("/")
+
+        def _meme_gabarit(autre: str) -> bool:
+            parts = autre.split("/")
+            if len(parts) != len(segments) or autre == dossier:
+                return False
+            ecarts = [i for i, (a, b) in enumerate(zip(parts, segments)) if a != b]
+            return (len(ecarts) == 1 and bool(_CODE_LANGUE_RE.match(parts[ecarts[0]]))
+                    and bool(_CODE_LANGUE_RE.match(segments[ecarts[0]])))
+
+        lues: list[str] = []
+        for groupe in (lambda d: d == dossier, _meme_gabarit):
+            n = 0
+            for chemin in sorted(all_paths):
+                if n >= 8:
+                    break
+                if (chemin != soeur and chemin.endswith("." + ext)
+                        and groupe(chemin.rpartition("/")[0])):
+                    lu = _lire(chemin)
+                    if lu is not None:
+                        lues.append(lu[0])
+                        n += 1
         return lues
 
     contenu, notes_ancres = _ancres_du_sommaire(contenu, exemples=[soeur_contenu],

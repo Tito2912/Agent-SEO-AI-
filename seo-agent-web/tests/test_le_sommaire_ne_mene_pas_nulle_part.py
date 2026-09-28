@@ -142,13 +142,32 @@ def test_A_EGALITE_un_titre_dont_les_regles_s_accordent_est_quand_meme_rattrape(
     assert "remise" in notes[0] and "retiré" in notes[1], notes
 
 
-def test_la_translitteration_ne_devine_pas_entre_DEUX_titres() -> None:
-    """`aue` et `au` sont deux identifiants DISTINCTS qui, digrammes retirés, deviennent `au` —
-    comme l'ancre `aeue`, qui n'est ni l'un ni l'autre. Elle ne sait pas lequel viser.
+def test_le_ESZETT_translittere_est_remis_sur_l_identifiant_du_site() -> None:
+    """« Größe » : le modèle écrit `groesse`, le site `groe` — il RETIRE le ß, que la
+    décomposition des accents ne touche pas. Des digrammes ne pouvaient pas le relier."""
+    neuve = _page(["nach-sektor-und-groesse"], ["Nach Sektor und Größe"])
+    out, notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
+    assert _ancres(out) == ["nach-sektor-und-groe"], out
+    assert "remise" in notes[0], notes
 
-    (Ma première fixture prenait « Bär » et « Bar » : sur ce site les deux titres donnent
-    le MÊME identifiant `bar`, l'ancre était donc juste et le test mesurait autre chose.)"""
-    neuve = _page(["aeue"], ["Aue", "Au"])
+
+def test_la_translitteration_SUISSE_ne_change_que_le_eszett() -> None:
+    """L'usage suisse écrit `strasse` mais garde l'umlaut, que le slug retire ensuite :
+    « Straße über » -> `strasse-uber`. La translittération allemande donnerait `ueber`."""
+    neuve = _page(["strasse-uber-alles"], ["Straße über alles"])
+    out, _notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
+    assert _ancres(out) == ["strae-uber-alles"], out
+
+
+def test_la_translitteration_ne_devine_pas_entre_DEUX_titres() -> None:
+    """« Größe » (allemand) et « Grösse » (suisse) se translittèrent TOUS DEUX en `groesse`,
+    mais le site leur donne deux identifiants — `groe` et `grosse`. L'ancre `groesse` ne dit
+    pas lequel elle vise : on retire, on ne choisit pas.
+
+    (Deux fixtures fausses avant celle-ci : « Bär »/« Bar » donnent le MÊME identifiant sur ce
+    site ; `aue`/`au` ne se reliaient plus du tout une fois la translittération appliquée au
+    titre. Chacune faisait passer le test sans rien mesurer.)"""
+    neuve = _page(["groesse"], ["Größe", "Grösse"])
     out, notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
     assert _ancres(out) == [], out
     assert "retiré" in notes[0], notes
@@ -209,6 +228,37 @@ def test_les_exemples_viennent_du_MEME_gabarit(monkeypatch) -> None:
     lus: list[str] = []
     plan = _preparer(monkeypatch, fichiers, lus)
     assert "axe-1-classes-dactifs" in plan["contenu"], plan["contenu"]
+    assert not any("/blog/" in c for c in lus), lus
+
+
+def test_le_MEME_gabarit_dans_une_AUTRE_langue_tranche_quand_la_sienne_ne_peut_pas(
+        monkeypatch) -> None:
+    """Mesure du 28/09/2026 sur le site client : les guides allemands n'ont ni apostrophe ni
+    tiret spécial, ils ne départagent jamais les règles — et « Größe » donne `groe` avec
+    l'une, `gro-e` avec l'autre. Les guides français, même gabarit, tranchent. Un blog dans une
+    autre langue diffère par DEUX segments : il ne vote pas, même s'il « prouve » autre chose."""
+    neuve = _page(["nach-groesse"], ["Nach Größe"])
+    github_slugger = _page(["étape-1--les-bases"], ["Étape 1 — Les bases"])
+    fichiers = {"content/de/guides/a.mdx": SOEUR,
+                "content/de/guides.mdx": "---\ntitle: \"G\"\n---\n\n- [A](/de/guides/a/)\n",
+                "content/fr/guides/x.mdx": VOISINE,
+                **{"content/en/blog/%s.mdx" % n: github_slugger for n in ("p", "q", "r")}}
+    monkeypatch.setattr(m, "_correction_ai_json", lambda **kw: {"contenu": neuve})
+    lus: list[str] = []
+
+    def _lire(c):
+        lus.append(c)
+        return (fichiers[c], "sha") if c in fichiers else None
+
+    plan = m._preparer_la_page(
+        lire_fichier=_lire,
+        all_paths=["package.json", "next.config.mjs", "app/(site)/[...slug]/page.tsx",
+                   "app/(site)/de/[...slug]/page.tsx", "app/(site)/fr/[...slug]/page.tsx",
+                   *fichiers],
+        sujet="x", route="/de/guides/neu", base_url="https://site.fr", site_name="s", slug="s")
+    assert plan["ok"], plan
+    assert '"#nach-groe"' in plan["contenu"], plan["contenu"]
+    assert "content/fr/guides/x.mdx" in lus
     assert not any("/blog/" in c for c in lus), lus
 
 
