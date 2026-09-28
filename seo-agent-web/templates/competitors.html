@@ -148,6 +148,7 @@
                       <span class="badge ok">Analysé</span>
                     {% elif c.status == 'crawling' %}
                       <span class="badge warning">Analyse en cours…</span>
+                      <div class="muted small" data-avancement="{{ c.id }}" style="margin-top:4px;">{{ c.avancement }}</div>
                     {% elif c.status == 'failed' %}
                       <span class="badge error" title="{{ c.error }}">Illisible</span>
                     {% else %}
@@ -199,6 +200,12 @@
                 .then(function (r) { return r.json(); })
                 .then(function (d) {
                   if (!d.ok) { return; }
+                  /* La progression se met a jour EN PLACE : voir le compteur avancer est ce qui
+                     distingue une analyse lente d'une analyse bloquee. */
+                  Object.keys(d.avancements || {}).forEach(function (id) {
+                    var el = document.querySelector('[data-avancement="' + id + '"]');
+                    if (el && d.avancements[id]) { el.textContent = d.avancements[id]; }
+                  });
                   var change = ids.some(function (id, i) { return d.etats[id] !== avant[i]; }) ||
                                Object.keys(d.etats).length !== ids.length;
                   if (change) { window.location.reload(); } else { setTimeout(sonder, 10000); }

@@ -388,6 +388,10 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 .btn:hover  { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); text-decoration: none; }
+/* Un bouton desactive doit SE VOIR desactive : sans cette regle, « Reanalyser » pendant une
+   analyse avait l'air cliquable, et ne faisait rien (releve le 28/09/2026). */
+.btn:disabled,
+.btn:disabled:hover { opacity: .45; cursor: not-allowed; background: transparent; border-color: rgba(255,255,255,.10); }
 .btn:active { transform: translateY(1px); }
 
 /* Primary — transparent with accent border */

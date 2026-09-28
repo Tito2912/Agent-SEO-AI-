@@ -8933,6 +8933,30 @@ def _liberer_les_analyses_mortes(db, rows: "list[Any]") -> int:
     return liberes
 
 
+def _avancement_analyse(row: Any) -> str:
+    """Ou en est l'analyse d'un concurrent, en clair — ou "" s'il n'y en a pas en cours.
+
+    Releve le 28/09/2026 : deux analyses « en cours » depuis un moment, et le client ne pouvait
+    pas distinguer une analyse LENTE d'une analyse BLOQUEE. Le crawler ecrit deja sa progression
+    dans le travail (`job.progress`) ; elle n'etait simplement montree nulle part.
+    """
+    if row.status != "crawling" or not row.last_job_id:
+        return ""
+    job = _load_job(str(row.last_job_id))
+    if job is None:
+        return ""
+    if job.status == "queued":
+        return "en file d'attente"
+    debut = float(job.started_at or job.created_at or 0.0)
+    minutes = max(0, int((time.time() - debut) // 60)) if debut else 0
+    duree = "%d min" % minutes if minutes else "moins d'une minute"
+    prog = job.progress if isinstance(job.progress, dict) else {}
+    lues, sur = prog.get("current"), prog.get("total")
+    if isinstance(lues, int) and isinstance(sur, int) and sur > 0:
+        return "%d/%d pages · %s" % (lues, sur, duree)
+    return "démarrage · %s" % duree
+
+
 def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
     """The three fields `competitors.page_terms` reads, and nothing else.
 
@@ -29941,6 +29965,7 @@ def project_competitors(request: Request, slug: str,
             "pages_count": int(r.pages_count or 0), "error": r.error or "",
             "last_crawled_at": r.last_crawled_at.strftime("%d/%m/%Y") if r.last_crawled_at else "",
             "pages": r.pages if isinstance(r.pages, list) else [],
+            "avancement": _avancement_analyse(r),
         } for r in rows]
 
     findings: list[dict[str, Any]] = []
@@ -30162,7 +30187,8 @@ def api_competitors_etat(request: Request, slug: str) -> JSONResponse:
         rows = _competitor_rows(db, str(proj.id))
         _liberer_les_analyses_mortes(db, rows)
         etats = {str(r.id): str(r.status) for r in rows}
-    return JSONResponse({"ok": True, "etats": etats})
+        avancements = {str(r.id): _avancement_analyse(r) for r in rows}
+    return JSONResponse({"ok": True, "etats": etats, "avancements": avancements})
 
 
 @app.post("/projects/{slug}/competitors/add")

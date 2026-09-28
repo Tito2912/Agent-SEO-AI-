@@ -570,3 +570,40 @@ def test_la_page_ne_sonde_QUE_pendant_une_analyse(customer) -> None:
     _attacher_un_travail(cid, status="queued", uid=uid)
     html = client.get(page).text
     assert "/competitors/etat" in html and "se met à jour seule" in html
+
+
+# ── une analyse lente se DISTINGUE d'une analyse bloquee ───────────────────────────────────────
+
+def _avancement(customer, *, status, age_s=0.0, progress=None):
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=f"av-{uuid.uuid4().hex[:6]}.fr")
+    jid = _attacher_un_travail(cid, status=status, age_s=age_s, uid=uid)
+    if progress is not None:
+        job = app_module._load_job(jid)
+        job.progress = progress
+        app_module._save_job(job)
+    return client, slug, cid
+
+
+def test_l_avancement_se_lit_en_clair(customer) -> None:
+    """Releve le 28/09/2026 : deux analyses « en cours » et aucun moyen de savoir si elles
+    avancaient. Le crawler ecrit sa progression ; elle n'etait montree nulle part."""
+    client, slug, cid = _avancement(customer, status="running", age_s=250,
+                                    progress={"type": "crawl", "current": 37, "total": 100})
+    assert client.get(f"/api/projects/{slug}/competitors/etat").json()["avancements"][cid] == "37/100 pages · 4 min"
+    assert "37/100 pages · 4 min" in client.get(f"/projects/{slug}/competitors").text
+
+
+@pytest.mark.parametrize("status, progress, attendu", [
+    ("queued", None, "en file d'attente"),
+    ("running", None, "démarrage · moins d'une minute"),
+])
+def test_avant_la_premiere_page_on_dit_ou_on_en_est(customer, status, progress, attendu) -> None:
+    client, slug, cid = _avancement(customer, status=status, progress=progress)
+    assert client.get(f"/api/projects/{slug}/competitors/etat").json()["avancements"][cid] == attendu
+
+
+def test_un_concurrent_analyse_n_a_pas_d_avancement(customer) -> None:
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, domain=f"fini-{uuid.uuid4().hex[:6]}.fr")
+    assert client.get(f"/api/projects/{slug}/competitors/etat").json()["avancements"][cid] == ""
