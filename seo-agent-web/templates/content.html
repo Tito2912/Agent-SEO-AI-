@@ -55,6 +55,14 @@
           Sujet de la page
           <input id="c-sujet" placeholder="Comment choisir un outil de veille SEO" />
         </label>
+        {% if sujets_suggeres %}
+          <div id="c-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 6px;">
+            <span class="muted small">Tes concurrents traitent, pas toi :</span>
+            {% for s in sujets_suggeres %}
+              <button type="button" class="btn" data-sujet="{{ s }}" style="font-size:12px;padding:3px 10px;">{{ s }}</button>
+            {% endfor %}
+          </div>
+        {% endif %}
 
         <div id="c-bloc-contenu" {% if a_depot %}hidden{% endif %}>
           {% if sections_crawl %}
@@ -95,6 +103,12 @@
         </div>
 
         <div id="c-bloc-github" {% if not a_depot %}hidden{% endif %}>
+        {# Rempli apres le rendu par /content/langues, avec les sections du DEPOT : l'adresse se
+           compose de la section et du slug du sujet, et reste modifiable a la main. #}
+        <label id="c-section-github-bloc" hidden>
+          Section du site
+          <select id="c-section-github"></select>
+        </label>
         <label>
           Adresse de la page
           <input id="c-route" class="mono" placeholder="/blog/mon-sujet" />
@@ -127,6 +141,9 @@
       </div>
 
       <div id="c-status" class="muted" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;"></div>
+      {# Les etapes que le SERVEUR a franchies, lues pendant l'attente — pas une progression
+         minutee qui mentirait des que GitHub ou le modele ralentit. #}
+      <ol id="c-etapes" class="muted small" hidden style="margin:6px 0 0 18px;"></ol>
 
       {# L'article du mode « contenu seul ». L'apercu est un iframe SANS script : le HTML vient
          d'un modele, et meme echappe au rendu il n'a rien a executer dans l'ecran du client. #}
@@ -175,7 +192,8 @@
         </label>
         <label>
           Section où poser les pages
-          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="/blog" />
+          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="/blog" list="c-sections-liste" />
+          <datalist id="c-sections-liste"></datalist>
           <span class="muted small">
             Obligatoire pour allumer : <span class="mono">/blog</span> ou
             <span class="mono">/guides</span> n'est pas une chose qui se devine, et personne ne
@@ -292,13 +310,69 @@
           .normalize('NFD').replace(/[̀-ͯ]/g, '')
           .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
       }
-      route.addEventListener('input', function () { touche = true; });
-      sujet.addEventListener('input', function () {
+      /* L'adresse se COMPOSE : la section choisie parmi celles du depot, le slug du sujet, et
+         la barre finale si le site en met une (mesure dans le crawl). Plus de `/blog/`
+         suggere d'office : c'etait faux sur un site range sous `/guides`. */
+      var slashFinal = {{ 'true' if slash_final else 'false' }};
+      var sectionGithub = document.getElementById('c-section-github');
+      function composerRoute() {
         if (touche) return;
         var s = slugifier(sujet.value);
-        route.value = s ? '/blog/' + s : '';
+        var prefixe = (sectionGithub && sectionGithub.value) ? sectionGithub.value.replace(/\/$/, '') : '';
+        route.value = s ? prefixe + '/' + s + (slashFinal ? '/' : '') : '';
         majLangues();
+      }
+      route.addEventListener('input', function () { touche = true; });
+      sujet.addEventListener('input', composerRoute);
+      if (sectionGithub) sectionGithub.addEventListener('change', composerRoute);
+
+      /* Les sujets suggeres remplissent le champ, sans rien rediger : le client relit avant
+         de depenser un article. */
+      Array.prototype.forEach.call(document.querySelectorAll('[data-sujet]'), function (b) {
+        b.addEventListener('click', function () {
+          sujet.value = b.dataset.sujet;
+          sujet.dispatchEvent(new Event('input'));
+          sujet.focus();
+        });
       });
+
+      /* LE SUIVI. Un jeton par redaction ; l'ecran lit les etapes franchies par le serveur
+         toutes les deux secondes, et s'arrete a la reponse. */
+      var etapesBox = document.getElementById('c-etapes');
+      var minuteur = null;
+      function nouveauJeton() {
+        var alea = (window.crypto && window.crypto.getRandomValues)
+          ? Array.prototype.map.call(window.crypto.getRandomValues(new Uint8Array(12)), function (x) {
+              return ('0' + x.toString(16)).slice(-2); }).join('')
+          : String(Math.random()).slice(2) + String(Date.now());
+        return 'r-' + alea;
+      }
+      function suivre(jeton) {
+        etapesBox.innerHTML = '';
+        etapesBox.hidden = false;
+        var lire = function () {
+          fetch('/api/projects/' + encodeURIComponent(slug) + '/content/suivi/' + jeton)
+            .then(function (resp) { return resp.json(); })
+            .then(function (d) {
+              if (!d.ok || !d.etapes) return;
+              etapesBox.innerHTML = d.etapes.map(function (e, i) {
+                var fini = i < d.etapes.length - 1;
+                return '<li>' + esc(e) + (fini ? ' ✓' : ' …') + '</li>';
+              }).join('');
+            })
+            .catch(function () { /* le suivi est un confort : son silence n'est pas une panne */ });
+        };
+        minuteur = setInterval(lire, 2000);
+        lire();
+      }
+      function arreterSuivi(fini) {
+        if (minuteur) { clearInterval(minuteur); minuteur = null; }
+        if (fini) {
+          Array.prototype.forEach.call(etapesBox.querySelectorAll('li'), function (li) {
+            li.textContent = li.textContent.replace(/ …$/, ' ✓');
+          });
+        }
+      }
 
       /* LES LANGUES. Mesurees dans le depot par le serveur, jamais saisies : une case ne peut
          pas offrir ce que la redaction refuserait. La langue de l'ADRESSE est cochee et
@@ -309,7 +383,9 @@
       var langBox = document.getElementById('c-langues');
       var cout = document.getElementById('c-cout');
       var codes = [];
-      function libelle(code) { return code ? code.toUpperCase() : 'racine (sans préfixe)'; }
+      /* La racine NOMMEE quand le crawl sait laquelle c'est (« EN (racine) »). */
+      var nomRacine = {{ nom_racine | tojson }};
+      function libelle(code) { return code ? code.toUpperCase() : (nomRacine || 'racine (sans préfixe)'); }
       function langueDeRoute(r) {
         var seg = (String(r || '').split('/').filter(Boolean)[0] || '').toLowerCase();
         return codes.indexOf(seg) >= 0 ? seg : '';
@@ -476,12 +552,15 @@
           ? 'Le modèle écrit la version principale, puis ' + (langues.length - 1) + ' traduction(s). ' +
             'Cela prend environ une minute : garde cet onglet ouvert.'
           : "Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.");
+        var jeton = nouveauJeton();
+        suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues })
+          body: JSON.stringify({ sujet: s, section: sectionSel.value, langues: langues, suivi: jeton })
         })
           .then(function (resp) { return resp.json(); })
           .then(function (d) {
+            arreterSuivi(d.ok);
             btn.disabled = false;
             btn.textContent = "Rédiger l'article";
             if (!d.ok) { say(esc(d.error || 'Erreur pendant la rédaction.'), 'error'); return; }
@@ -490,6 +569,7 @@
             afficherArticle(d.versions);
           })
           .catch(function () {
+            arreterSuivi(false);
             btn.disabled = false;
             btn.textContent = "Rédiger l'article";
             say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être de ' +
@@ -503,12 +583,30 @@
         .then(function (d) {
           /* Un site monolingue, ou un depot illisible : pas de choix a offrir, et le
              formulaire marche comme avant. La redaction dira elle-meme pourquoi elle refuse. */
-          if (!d.ok || !d.langues || d.langues.length < 2) return;
+          if (!d.ok) return;
+          /* Les sections du depot, dans la liste de l'adresse ET dans celle du mode
+             automatique : la meme mesure pour les deux champs. */
+          if (d.sections && d.sections.length && sectionGithub) {
+            sectionGithub.innerHTML = d.sections.map(function (s) {
+              return '<option value="' + esc(s.section) + '">' + esc(s.section) + ' — ' +
+                esc(s.pages) + ' pages</option>';
+            }).join('');
+            document.getElementById('c-section-github-bloc').hidden = false;
+            var liste = document.getElementById('c-sections-liste');
+            if (liste) liste.innerHTML = d.sections.map(function (s) {
+              return '<option value="' + esc(s.section) + '"></option>';
+            }).join('');
+            composerRoute();
+          }
+          if (!d.langues || d.langues.length < 2) return;
           codes = d.langues.map(function (l) { return l.code; });
+          /* Une ligne par langue : case, nom, nombre de pages — la grille precedente mettait
+             la case au-dessus de son nom et le compte en dessous. */
+          langBox.style.display = 'block';
           langBox.innerHTML = d.langues.map(function (l) {
-            return '<label style="display:flex;align-items:center;gap:6px;">' +
-              '<input type="checkbox" value="' + esc(l.code) + '" /> ' + esc(libelle(l.code)) +
-              ' <span class="muted small">(' + esc(l.pages) + ' pages)</span></label>';
+            return '<label style="display:flex;align-items:center;gap:8px;margin:2px 0;">' +
+              '<input type="checkbox" value="' + esc(l.code) + '" /> <span>' + esc(libelle(l.code)) +
+              '</span> <span class="muted small">' + esc(l.pages) + ' pages</span></label>';
           }).join('');
           Array.prototype.forEach.call(langBox.querySelectorAll('input'), function (c) {
             c.addEventListener('change', majLangues);
@@ -537,12 +635,15 @@
             'dans sa langue. Cela prend environ une minute : garde cet onglet ouvert.'
           : 'Le modèle écrit la page en imitant une page existante de la même section. ' +
             'Cela prend une trentaine de secondes.');
+        var jeton = nouveauJeton();
+        suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sujet: s, route: r, langues: langues })
+          body: JSON.stringify({ sujet: s, route: r, langues: langues, suivi: jeton })
         })
           .then(function (resp) { return resp.json(); })
           .then(function (d) {
+            arreterSuivi(d.ok);
             btn.disabled = false;
             btn.textContent = d.ok ? 'PR créée' : 'Rédiger (PR)';
             var lien = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
@@ -563,6 +664,7 @@
             /* La connexion coupee n'arrete PAS le serveur : la redaction continue, et la PR
                s'ouvrira quand meme. Dire « erreur » pousserait a relancer — deux PR, deux
                debits. On dit ce qui se passe vraiment. */
+            arreterSuivi(false);
             btn.disabled = false;
             btn.textContent = 'Rédiger (PR)';
             say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être ' +

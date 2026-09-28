@@ -79,6 +79,15 @@ def test_un_article_en_trois_langues_rend_markdown_ET_html_et_debite_TROIS(
     assert [d.get("amount") for d in plan["debits"]] == [3], plan["debits"]
 
 
+def test_les_ETAPES_d_un_article_se_suivent(customer, plan, crawl, modele) -> None:
+    client, slug, _pid, _uid = customer
+    _post(client, slug, sujet="Le levier", section="/fr/guides", langues=["de"],
+          suivi="r-article-0001")
+    etapes = client.get(f"/api/projects/{slug}/content/suivi/r-article-0001").json()["etapes"]
+    assert etapes == ["Rédaction de la version principale", "Traduction en 1 langue, en parallèle",
+                      "Vérification des liens internes"], etapes
+
+
 def test_le_quota_est_compte_en_VERSIONS_avant_le_modele(customer, plan, crawl, modele) -> None:
     client, slug, _pid, _uid = customer
     plan["restant"] = 1

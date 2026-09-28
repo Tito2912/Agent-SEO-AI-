@@ -28309,6 +28309,64 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
 _CONTENT_PAGE_KEY = "ai_content_page"
 
 
+# LE SUIVI DES ETAPES D'UNE REDACTION. Une page en quatre langues prend une a deux minutes ; un
+# texte fige « cela prend environ une minute » ne dit pas si l'on attend le modele ou GitHub.
+# Les etapes sont celles que le serveur FRANCHIT, pas une progression minutee : l'ecran les lit
+# pendant qu'il attend la reponse.
+#
+# EN MEMOIRE, parce que le service web tourne en UN processus (`entrypoint.sh`). Avec plusieurs
+# workers, une lecture tomberait sur un autre processus et rendrait 404 : l'ecran n'afficherait
+# rien de plus qu'avant, il ne casserait pas. Chaque suivi est lie au projet ET a la personne qui
+# l'a ouvert, et expire au bout d'une heure.
+_SUIVIS: dict[str, dict[str, Any]] = {}
+_SUIVI_JETON_RE = re.compile(r"^[a-z0-9-]{8,64}$")
+_SUIVI_DUREE_S = 3600
+
+
+def _sans_suivi(_etape: str) -> None:
+    return None
+
+
+def _ouvrir_suivi(jeton: str, *, slug: str, user_id: str) -> "Callable[[str], None]":
+    """Un enregistreur d'etapes pour ce jeton, ou un enregistreur muet si le jeton ne vaut rien.
+
+    Un jeton deja pris par QUELQU'UN D'AUTRE n'est pas repris : sinon il suffirait de connaitre
+    le jeton d'un autre pour lire l'avancement de sa redaction.
+    """
+    jeton = str(jeton or "")
+    if not _SUIVI_JETON_RE.match(jeton):
+        return _sans_suivi
+    maintenant = time.time()
+    for cle, entree in list(_SUIVIS.items()):
+        if maintenant - float(entree.get("t") or 0) > _SUIVI_DUREE_S:
+            _SUIVIS.pop(cle, None)
+    existant = _SUIVIS.get(jeton)
+    if existant is not None and (existant["slug"], existant["user"]) != (slug, user_id):
+        return _sans_suivi
+    _SUIVIS[jeton] = {"slug": slug, "user": user_id, "etapes": [], "t": maintenant}
+
+    def _etape(texte: str) -> None:
+        entree = _SUIVIS.get(jeton)
+        if entree is not None:
+            entree["etapes"].append(str(texte))
+            entree["t"] = time.time()
+
+    return _etape
+
+
+@app.get("/api/projects/{slug}/content/suivi/{jeton}")
+def api_content_suivi(request: Request, slug: str, jeton: str) -> JSONResponse:
+    """Les etapes deja franchies par la redaction en cours de CE projet, pour CETTE personne."""
+    _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    entree = _SUIVIS.get(str(jeton or ""))
+    if entree is None or (entree["slug"], entree["user"]) != (slug, str(user.id)):
+        return JSONResponse({"ok": False, "etapes": []}, status_code=404)
+    return JSONResponse({"ok": True, "etapes": list(entree["etapes"])})
+
+
 def _chemins_du_depot(*, owner: str, repo_name: str, branch: str, token: str) -> list[str]:
     """Les fichiers du depot que l'agent a le droit de lire. Leve si GitHub ne repond pas.
 
@@ -28568,7 +28626,8 @@ def _poser_valeur_de_tete(contenu: str, cle: str, valeur: str) -> str:
 
 def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None]",
                         all_paths: list[str], sujet: str, route: str, langues: list[str],
-                        base_url: str, site_name: str, slug: str) -> dict[str, Any]:
+                        base_url: str, site_name: str, slug: str,
+                        suivi: "Callable[[str], None]" = _sans_suivi) -> dict[str, Any]:
     """Les plans de TOUTES les versions d'une page, ou le refus de la premiere qui echoue.
 
     RIEN N'EST ECRIT TANT QUE TOUT N'EST PAS PRET. Decide le 27/09/2026 : une seule pull request
@@ -28634,6 +28693,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
     soeur_famille, cle, versions = "", "", {}
     if len(connues) >= 2:
         placement = repo_index.placement_pour_route(all_paths, route)
+        suivi("Choix de la page modèle et de ses traductions")
         for candidate in (placement.get("soeurs") or []):
             c, v, _notes = _traductions_de_la_page(
                 lire=_texte, routes=routes, chemin=candidate, langues=connues)
@@ -28654,6 +28714,7 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
                    ", ".join(l or "(défaut)" for l in autres),
                    ", ".join(placement.get("soeurs") or [])))}
 
+    suivi("Rédaction de la version principale")
     principal = _preparer_la_page(
         lire_fichier=_lire, all_paths=all_paths, sujet=sujet, route=route, base_url=base_url,
         site_name=site_name, slug=slug, langue=langue_source,
@@ -28712,6 +28773,8 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
     # Les refus restent rapportes dans l'ORDRE des langues demandees, pas dans celui de leur
     # arrivee : le meme echec doit donner le meme message.
     from concurrent.futures import ThreadPoolExecutor
+    if autres:
+        suivi("Traduction en %d langue%s, en parallèle" % (len(autres), "s" if len(autres) > 1 else ""))
     with ThreadPoolExecutor(max_workers=max(1, min(len(autres), 4))) as pool:
         traduits = list(pool.map(_traduire, autres))
     for langue, plan in zip(autres, traduits):
@@ -28743,7 +28806,8 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                        owner: str, repo_name: str, branch: str, token: str,
                        motif: str = "content_draft",
                        refuser_si_orpheline: bool = False,
-                       langues: "list[str] | None" = None) -> dict[str, Any]:
+                       langues: "list[str] | None" = None,
+                       suivi: "Callable[[str], None]" = _sans_suivi) -> dict[str, Any]:
     """Ecrit la page, la lie, ouvre la PR brouillon, enregistre la tache et debite l'article.
 
     `langues` ajoute des TRADUCTIONS a la page de `route` : toutes preparees avant la premiere
@@ -28776,6 +28840,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
             "ferme celle-ci d'abord."
         )}
 
+    suivi("Lecture du dépôt")
     try:
         all_paths = _chemins_du_depot(owner=owner, repo_name=repo_name, branch=branch, token=token)
     except Exception as e:
@@ -28785,7 +28850,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         lire_fichier=_lire_du_depot(owner=owner, repo_name=repo_name, branch=branch,
                                     token=token),
         all_paths=all_paths, sujet=sujet, route=route, langues=list(langues or []),
-        base_url=base_url, site_name=site_name, slug=slug)
+        base_url=base_url, site_name=site_name, slug=slug, suivi=suivi)
     if not prepare.get("ok"):
         return prepare
     plans: list[dict[str, Any]] = list(prepare["plans"])
@@ -28813,6 +28878,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
                 "error": "page non liable sans decision humaine : %s"
                          % " ".join(str(p["note_lien"]) for p in plans if p["orpheline"])}
 
+    suivi("Écriture des fichiers sur une branche")
     try:
         ref_data = _github_api_get(_github_ref_api_path(owner, repo_name, branch), token=token)
         base_sha = ref_data["object"]["sha"]
@@ -28892,6 +28958,7 @@ def _proposer_une_page(user: Any, *, project_id: str, site_name: str, slug: str,
         "reste en **brouillon** et ne sera jamais fusionnée automatiquement.\n\n"
         f"Généré par [SEO Agent](https://noyaru.com) pour **{site_name}**."
     )
+    suivi("Ouverture de la pull request brouillon")
     try:
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
@@ -28951,6 +29018,8 @@ class _ContentDraftBody(BaseModel):
     # Les langues cochees, celle de `route` comprise ou non ; "" est la langue servie a la
     # racine. Vide : une seule page, comme avant le multilingue.
     langues: list[str] = []
+    # Le jeton sous lequel l'ecran suit les etapes (`/content/suivi/{jeton}`). Facultatif.
+    suivi: str = ""
 
 
 def _versions_demandees(route: str, langues: list[str]) -> int:
@@ -29034,7 +29103,8 @@ def api_content_draft(request: Request, slug: str, body: _ContentDraftBody) -> J
         user, project_id=str(proj.id), site_name=str(proj.site_name or slug),
         slug=slug, sujet=sujet, route=route, base_url=str(proj.base_url or ""),
         owner=owner, repo_name=repo_name, branch=branch, token=token,
-        langues=list(body.langues))
+        langues=list(body.langues),
+        suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)))
     return JSONResponse(out, status_code=int(out.pop("status", 200)))
 
 
@@ -29072,9 +29142,16 @@ def api_content_langues(request: Request, slug: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": f"Lecture du dépôt impossible : {e}"}, status_code=400)
     routes = repo_index.build_repo_index(chemins).get("routes") or {}
     langues = _langues_des_routes(routes)
+    # LES SECTIONS DU DEPOT, rangees comme celles du crawl (rubriques d'abord) : l'ecran les
+    # propose au lieu de suggerer `/blog/…`, qui etait faux sur un site range sous `/guides`.
+    # Le meme classement pour les deux modes : une seule fonction, pas deux listes qui
+    # finiraient par diverger.
+    sections = _sections_du_crawl([{"chemin": repo_index.norm_route(r), "article": False}
+                                   for r in routes])
     return JSONResponse({"ok": True, "langues": [
         {"code": code, "pages": n}
-        for code, n in sorted(langues.items(), key=lambda kv: (-kv[1], kv[0]))]})
+        for code, n in sorted(langues.items(), key=lambda kv: (-kv[1], kv[0]))],
+        "sections": sections[:40]})
 
 
 # ── MODE « CONTENU SEUL » ─────────────────────────────────────────────────────────────────────
@@ -29270,7 +29347,8 @@ def _article_en_html(markdown_texte: str) -> str:
 
 def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section: str,
                            langues: "list[str] | None" = None, site_name: str = "",
-                           model_override: str = "") -> dict[str, Any]:
+                           model_override: str = "",
+                           suivi: "Callable[[str], None]" = _sans_suivi) -> dict[str, Any]:
     """Toutes les versions d'un article, ou le refus de la premiere qui echoue. N'ecrit rien.
 
     `pages` sort de `_pages_du_crawl`. `section` est celle ou la version PRINCIPALE sera
@@ -29342,6 +29420,7 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
                 "description": article["description"], "slug": slug_propre,
                 "adresse": adresse, "contenu": article["markdown"], "notes_redaction": []}
 
+    suivi("Rédaction de la version principale")
     principal = _version(langue_source, section, modele)
     if not principal.get("ok"):
         return principal
@@ -29353,6 +29432,8 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
         return _version(cle, section_l, modele_l, reference=principal["contenu"])
 
     from concurrent.futures import ThreadPoolExecutor
+    if autres:
+        suivi("Traduction en %d langue%s, en parallèle" % (len(autres), "s" if len(autres) > 1 else ""))
     with ThreadPoolExecutor(max_workers=max(1, min(len(autres), 4))) as pool:
         versions_traduites = list(pool.map(_traduire, autres))
     versions = [principal]
@@ -29366,6 +29447,7 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
         cible = (page or {}).get("hreflang", {}).get(_code(cle), "")
         return repo_index.norm_route(urlsplit(cible).path) if cible else ""
 
+    suivi("Vérification des liens internes")
     _reparer_les_liens(versions, routes={c: [c] for c in chemins}, traduire=_traduire_lien)
     return {"ok": True, "versions": versions}
 
@@ -29394,6 +29476,7 @@ class _ContentArticleBody(BaseModel):
     sujet: str = ""
     section: str = ""
     langues: list[str] = []
+    suivi: str = ""
 
 
 @app.post("/api/projects/{slug}/content/article")
@@ -29427,7 +29510,8 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
             "et à quoi elles ressemblent. Lance un crawl, puis reviens ici.")}, status_code=400)
     out = _preparer_des_articles(pages=_pages_du_crawl(pages_brutes), sujet=sujet,
                                  section=section, langues=list(body.langues),
-                                 site_name=str(proj.site_name or slug))
+                                 site_name=str(proj.site_name or slug),
+                                 suivi=_ouvrir_suivi(body.suivi, slug=slug, user_id=str(user.id)))
     if not out.get("ok"):
         return JSONResponse({"ok": False, "error": out.get("error")},
                             status_code=int(out.get("status") or 422))
@@ -29573,10 +29657,15 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
     sections_crawl: list[dict[str, Any]] = []
     langues_crawl: list[dict[str, Any]] = []
     articles: list[dict[str, Any]] = []
+    slash_final = False
     try:
         pages_crawl = _pages_du_crawl(_own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)[0])
         sections_crawl = _sections_du_crawl(pages_crawl)[:40]
         langues_crawl = _langues_du_crawl(pages_crawl)
+        # LA BARRE FINALE SE MESURE : l'adresse composee par l'ecran doit ressembler a celles
+        # que le site sert deja, sinon le canonical de la page neuve differe de ses voisines.
+        hors_racine = [p for p in pages_crawl if p["chemin"] != "/"]
+        slash_final = sum(p["slash"] for p in hors_racine) * 2 > len(hors_racine)
         with DB.session() as db:
             for t in db.scalars(select(IssueTask).where(
                     IssueTask.project_id == proj_row.id,
@@ -29591,6 +29680,20 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
                 })
     except Exception as exc:
         logger.warning("[contenu] ecran : crawl ou journal illisible : %s", exc)
+
+    # LES SUJETS SUGGERES, la ou le client ecrit — pas seulement un lien vers Concurrents. Le
+    # meme calcul que le mode automatique (`_sujets_non_couverts`), et comme lui sans les
+    # sujets deja demandes : les proposer une seconde fois pousserait a payer deux fois.
+    sujets_suggeres: list[str] = []
+    if acces:
+        try:
+            deja = {str(x.get("sujet") or "").strip().lower() for x in pages + articles}
+            with DB.session() as db:
+                sujets_suggeres = [s for s in _sujets_non_couverts(
+                    db, project_id=str(proj_row.id), owner_user_id=str(proj_row.owner_user_id),
+                    slug=slug) if s.strip().lower() not in deja][:5]
+        except Exception as exc:
+            logger.warning("[contenu] ecran : sujets suggeres indisponibles : %s", exc)
 
     resp = templates.TemplateResponse(
         "content.html",
@@ -29609,6 +29712,9 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
             "sections_crawl": sections_crawl,
             "langues_crawl": langues_crawl,
             "articles": articles,
+            "slash_final": slash_final,
+            "nom_racine": next((l["nom"] for l in langues_crawl if not l["code"]), ""),
+            "sujets_suggeres": sujets_suggeres,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

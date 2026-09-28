@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import os
 import sys
 import tempfile
@@ -635,6 +636,76 @@ def test_l_ecran_propose_les_langues_MESUREES_du_depot(customer, plan, github) -
     assert r.status_code == 200, r.text
     assert r.json()["langues"] == [{"code": "fr", "pages": 3}, {"code": "", "pages": 2},
                                    {"code": "de", "pages": 2}], r.text
+
+
+def test_l_ecran_propose_les_SECTIONS_du_depot_rubriques_d_abord(customer, plan, github) -> None:
+    """Le champ d'adresse suggerait `/blog/…` sur un site range sous `/guides`."""
+    client, slug, _pid, _uid = customer
+    github["tree"] = list(TREE_MULTILINGUE)
+    sections = client.get(f"/api/projects/{slug}/content/langues").json()["sections"]
+    assert sections[0]["section"] == "/fr/guides", sections
+    assert {s["section"] for s in sections} >= {"/fr/guides", "/de/guides", "/guides"}
+
+
+def test_les_ETAPES_franchies_se_lisent_pendant_et_apres_la_redaction(
+        customer, plan, github, modele) -> None:
+    client, slug, _pid, _uid = customer
+    r = _demander(client, slug, sujet=SUJET, route=ROUTE, suivi="r-0123456789ab")
+    assert r.status_code == 200, r.text
+    etapes = client.get(f"/api/projects/{slug}/content/suivi/r-0123456789ab").json()["etapes"]
+    assert etapes[0] == "Lecture du dépôt" and "Rédaction de la version principale" in etapes
+    assert etapes[-1] == "Ouverture de la pull request brouillon", etapes
+
+
+def test_le_suivi_d_un_AUTRE_ne_se_lit_ni_ne_se_reprend(customer, plan, github, modele) -> None:
+    """Connaitre le jeton d'un autre ne doit rien donner : ni lire son avancement, ni ecraser
+    son suivi en le reutilisant."""
+    client, slug, _pid, _uid = customer
+    app_module._SUIVIS["r-deja-pris-01"] = {"slug": slug, "user": "quelqu-un-d-autre",
+                                            "etapes": ["secret"], "t": __import__("time").time()}
+    assert client.get(f"/api/projects/{slug}/content/suivi/r-deja-pris-01").status_code == 404
+    _demander(client, slug, sujet=SUJET, route=ROUTE, suivi="r-deja-pris-01")
+    assert app_module._SUIVIS["r-deja-pris-01"]["etapes"] == ["secret"]
+
+
+def test_un_suivi_de_plus_d_une_HEURE_est_purge(customer, plan, github, modele) -> None:
+    """Le registre vit en memoire : sans purge, chaque redaction y laisserait une entree pour
+    toujours."""
+    import time as _time
+    client, slug, _pid, _uid = customer
+    app_module._SUIVIS["r-tres-ancien-01"] = {"slug": slug, "user": "x", "etapes": [],
+                                              "t": _time.time() - app_module._SUIVI_DUREE_S - 1}
+    _demander(client, slug, sujet=SUJET, route=ROUTE, suivi="r-nouveau-0001")
+    assert "r-tres-ancien-01" not in app_module._SUIVIS
+    assert "r-nouveau-0001" in app_module._SUIVIS
+
+
+def test_un_jeton_MAL_FORME_n_ouvre_aucun_suivi(customer, plan, github, modele) -> None:
+    client, slug, _pid, _uid = customer
+    avant = set(app_module._SUIVIS)
+    _demander(client, slug, sujet=SUJET, route=ROUTE, suivi="../../etc")
+    assert set(app_module._SUIVIS) == avant
+
+
+def test_les_SUJETS_suggeres_excluent_ceux_deja_demandes_et_sont_bornes(
+        customer, plan, github, modele, monkeypatch) -> None:
+    client, slug, _pid, _uid = customer
+    assert _demander(client, slug, sujet=SUJET, route=ROUTE).status_code == 200
+    monkeypatch.setattr(app_module, "_sujets_non_couverts", lambda db, **kw: [
+        SUJET, "Sujet 1", "Sujet 2", "Sujet 3", "Sujet 4", "Sujet 5", "Sujet 6"])
+    page = client.get(f"/projects/{slug}/content").text
+    boutons = re.findall(r'data-sujet="([^"]+)"', page)
+    assert boutons == ["Sujet 1", "Sujet 2", "Sujet 3", "Sujet 4", "Sujet 5"], boutons
+
+
+def test_la_BARRE_FINALE_et_le_nom_de_la_RACINE_se_mesurent_dans_le_crawl(
+        customer, plan, monkeypatch) -> None:
+    from test_un_article_sans_depot import CRAWL
+    client, slug, _pid, _uid = customer
+    monkeypatch.setattr(app_module, "_own_pages_for_project", lambda runs_dir, slug: (CRAWL, "ts"))
+    page = client.get(f"/projects/{slug}/content").text
+    assert "var slashFinal = true;" in page
+    assert 'var nomRacine = "EN (racine)";' in page
 
 
 def test_un_site_MONOLINGUE_ne_propose_qu_une_langue(customer, plan, github) -> None:
