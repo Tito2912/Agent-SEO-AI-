@@ -132,3 +132,44 @@ def test_un_plan_sous_PRO_n_atteint_pas_le_modele(customer, plan, site, modele) 
     plan["plan"] = "solo"
     assert _post(client, slug, section="/fr/guides").status_code == 402
     assert modele["vues"] == []
+
+
+# ── pourquoi aucun sujet : la CAUSE, pas un message pour toutes ──────────────────────────────
+
+def _raison(monkeypatch, rows, pages=CRAWL):
+    from types import SimpleNamespace
+    monkeypatch.setattr(m, "_own_pages_for_project", lambda runs_dir, slug: (pages, "ts"))
+    monkeypatch.setattr(m, "_competitor_rows", lambda db, pid: [SimpleNamespace(**r) for r in rows])
+    return m._pourquoi_aucun_sujet(None, project_id="p", owner_user_id="u", slug="s")
+
+
+def test_des_concurrents_JAMAIS_ANALYSES_se_disent_par_leur_nom(monkeypatch) -> None:
+    """Releve le 28/09/2026 : deux concurrents ajoutes, jamais analyses ; on lui disait
+    « ajoute des concurrents » — geste deja fait. Le geste qui manque est « Analyser »."""
+    r = _raison(monkeypatch, [{"status": "new", "pages": None, "domain": "bitdegree.org"},
+                              {"status": "new", "pages": None, "domain": "ebc.com"}])
+    assert "Jamais analysés : bitdegree.org, ebc.com" in r and "« Analyser »" in r, r
+    assert "ajoute" not in r, r
+
+
+def test_chaque_etat_a_SA_phrase(monkeypatch) -> None:
+    r = _raison(monkeypatch, [{"status": "crawling", "pages": None, "domain": "a.fr"},
+                              {"status": "failed", "pages": None, "domain": "b.fr"},
+                              {"status": "ready", "pages": [], "domain": "c.fr"},
+                              {"status": "ready", "pages": [{"url": "x"}], "domain": "d.fr"}])
+    assert "Tes concurrents analysés (d.fr) ne traitent aucun sujet" in r, r
+    assert "analyse en cours : a.fr" in r and "illisibles : b.fr, c.fr" in r, r
+
+
+def test_sans_concurrent_ou_sans_crawl_le_geste_est_autre(monkeypatch) -> None:
+    assert "aucun concurrent" in _raison(monkeypatch, [])
+    assert "Aucun crawl de ton site" in _raison(monkeypatch, [{"status": "new", "pages": None,
+                                                                "domain": "a.fr"}], pages=[])
+
+
+def test_la_route_rend_la_CAUSE(customer, plan, site, modele, monkeypatch) -> None:
+    client, slug, _pid, _uid = customer
+    site["sujets"] = []
+    monkeypatch.setattr(m, "_pourquoi_aucun_sujet", lambda db, **kw: "CAUSE MESUREE")
+    r = _post(client, slug, section="/fr/guides")
+    assert r.status_code == 400 and r.json()["error"] == "CAUSE MESUREE", r.text

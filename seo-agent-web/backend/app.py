@@ -29640,10 +29640,11 @@ def api_content_sujet(request: Request, slug: str, body: _ContentSujetBody) -> J
         sujets = _sujets_non_couverts(db, project_id=str(proj.id),
                                       owner_user_id=str(proj.owner_user_id), slug=slug)
     if not sujets:
-        return JSONResponse({"ok": False, "concurrents_url": f"/projects/{slug}/competitors", "error": (
-            "Aucun sujet de concurrent à exploiter : ajoute des concurrents dans l'écran "
-            "Concurrents et attends la fin de leur crawl. Sans eux, un « sujet IA » serait une "
-            "invention, pas une mesure.")}, status_code=400)
+        with DB.session() as db:
+            raison = _pourquoi_aucun_sujet(db, project_id=str(proj.id),
+                                           owner_user_id=str(proj.owner_user_id), slug=slug)
+        return JSONResponse({"ok": False, "concurrents_url": f"/projects/{slug}/competitors",
+                             "error": raison}, status_code=400)
     pages = _pages_du_crawl(_own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)[0])
     section = repo_index.norm_route(body.section or "/")
     codes = {k for k in _langues_des_routes([p["chemin"] for p in pages]) if k}
@@ -30294,6 +30295,45 @@ def _sujets_non_couverts(db, *, project_id: str, owner_user_id: str, slug: str) 
             if not trouvaille.get("covered") and titre and titre not in titres:
                 titres.append(titre)
     return titres
+
+
+def _pourquoi_aucun_sujet(db, *, project_id: str, owner_user_id: str, slug: str) -> str:
+    """POURQUOI `_sujets_non_couverts` est vide, dit par sa cause — chacune a son geste.
+
+    Releve le 28/09/2026 : le client ajoute deux concurrents, clique « Sujet IA », lit « ajoute
+    des concurrents » — il venait de le faire. Ajouter un site ne l'ANALYSE pas ; un seul message
+    pour cinq causes renvoyait vers un geste deja fait au lieu de celui qui manque.
+    """
+    pages_a_nous, _ts = _own_pages_for_project(_runs_dir_for_user(owner_user_id), slug)
+    if not pages_a_nous:
+        return ("Aucun crawl de ton site pour l'instant : sans lui, on ne sait pas ce que tu "
+                "couvres déjà. Lance un crawl, puis reviens ici.")
+    rows = _competitor_rows(db, project_id)
+    if not rows:
+        return ("Tu ne suis aucun concurrent : ajoutes-en dans l'écran Concurrents. Sans eux, "
+                "un « sujet IA » serait une invention, pas une mesure.")
+    par_etat: dict[str, list[str]] = {}
+    for row in rows:
+        lu = row.status == "ready" and isinstance(row.pages, list) and bool(row.pages)
+        par_etat.setdefault("lu" if lu else str(row.status or "new"), []).append(str(row.domain))
+    phrases = []
+    if par_etat.get("lu"):
+        phrases.append("tes concurrents analysés (%s) ne traitent aucun sujet que tu ne couvres "
+                       "pas déjà" % ", ".join(par_etat["lu"]))
+    if par_etat.get("new"):
+        phrases.append("jamais analysé%s : %s — clique « Analyser » dans l'écran Concurrents, "
+                       "puis attends la fin de l'analyse"
+                       % ("s" if len(par_etat["new"]) > 1 else "", ", ".join(par_etat["new"])))
+    if par_etat.get("crawling"):
+        phrases.append("analyse en cours : %s — reviens dans quelques minutes"
+                       % ", ".join(par_etat["crawling"]))
+    # « ready » sans page lue : l'analyse a abouti a RIEN, ce qui se soigne comme un echec.
+    illisibles = par_etat.get("failed", []) + par_etat.get("ready", [])
+    if illisibles:
+        phrases.append("illisible%s : %s — réessaie « Analyser » ou retire-le"
+                       % ("s" if len(illisibles) > 1 else "", ", ".join(illisibles)))
+    corps = " ; ".join(phrases)
+    return "Aucun sujet de concurrent à exploiter. " + corps[:1].upper() + corps[1:] + "."
 
 
 def _balayer_contenu_auto(*, limit: int = _CONTENU_AUTO_MAX_PROJETS) -> dict[str, int]:
