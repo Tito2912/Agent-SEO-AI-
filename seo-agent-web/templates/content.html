@@ -91,8 +91,9 @@
                   {% endfor %}
                 </div>
                 <span class="muted small">
-                  Une version par langue cochée : la page principale, puis ses traductions — même
-                  plan, mêmes chiffres. La langue de la section est toujours écrite.
+                  L'article s'écrit d'abord dans la langue de la section, puis se traduit dans
+                  chaque langue cochée — même plan, mêmes chiffres. Pour écrire d'abord dans une
+                  autre langue, choisis sa section dans la liste ci-dessus.
                 </span>
               </fieldset>
             {% endif %}
@@ -126,9 +127,9 @@
           <legend>Langues</legend>
           <div id="c-langues" style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:4px 0;"></div>
           <span class="muted small">
-            Une version par langue cochée, toutes dans la même pull request et liées entre
-            elles (hreflang). Chaque version imite la traduction de la même page existante,
-            et son adresse vient de son titre. La langue de l'adresse est toujours écrite.
+            La page s'écrit d'abord dans la langue de son adresse, puis se traduit dans chaque
+            langue cochée — toutes dans la même pull request, liées entre elles (hreflang). Pour
+            écrire d'abord dans une autre langue, choisis sa section.
           </span>
           <div id="c-cout" class="muted small" role="status" aria-live="polite" style="margin-top:4px;"></div>
         </fieldset>
@@ -188,13 +189,13 @@
       </p>
 
       <div class="setting-form">
-        <label style="display:flex;align-items:center;gap:8px;">
+        <label class="checkbox">
           <input type="checkbox" id="c-auto" {% if auto.enabled %}checked{% endif %} />
-          Écrire une page automatiquement, au plus une tous les {{ auto_jours }} jours
+          <span>Écrire une page automatiquement, au plus une tous les {{ auto_jours }} jours</span>
         </label>
         <label>
           Section où poser les pages
-          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="/blog" list="c-sections-liste" />
+          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="ex. /guides" list="c-sections-liste" />
           <datalist id="c-sections-liste"></datalist>
           <span class="muted small">
             Obligatoire pour allumer : <span class="mono">/blog</span> ou
@@ -405,7 +406,18 @@
       }
       Array.prototype.forEach.call(document.querySelectorAll('[data-iso]'), function (s) {
         if (s.dataset.iso) s.textContent = nomLangue(s.dataset.iso) + (s.dataset.racine ? ' (racine)' : '');
+        s.dataset.nom = s.textContent;
       });
+      /* LA LANGUE VERROUILLEE DIT POURQUOI, dans son propre libelle. Une case cochee et grisee
+         sans explication a fait demander « pourquoi le francais est deja coche et on ne peut pas
+         le decocher » (28/09/2026) : la raison etait dans une bulle au survol et une phrase en
+         bas du bloc, deux endroits qu'on ne lit pas. */
+      function nommerVerrou(c, est, raison) {
+        var s = c.parentElement.querySelector('span');
+        if (!s) return;
+        if (!s.dataset.nom) s.dataset.nom = s.textContent;
+        s.textContent = s.dataset.nom + (est ? ' — ' + raison : '');
+      }
       function langueDeRoute(r) {
         var seg = (String(r || '').split('/').filter(Boolean)[0] || '').toLowerCase();
         return codes.indexOf(seg) >= 0 ? seg : '';
@@ -430,6 +442,7 @@
           if (!est && c.dataset.auto) { c.checked = false; delete c.dataset.auto; }
           c.disabled = est;
           c.title = est ? "langue de l'adresse : toujours écrite" : '';
+          nommerVerrou(c, est, "langue de l'adresse");
         });
         var n = Math.max(1, cochees().length);
         var txt = n > 1 ? n + ' versions : ' + n + ' articles.' : '1 version : 1 article.';
@@ -484,6 +497,7 @@
           if (!est && c.dataset.auto) { c.checked = false; delete c.dataset.auto; }
           c.disabled = est;
           c.title = est ? 'langue de la section : toujours écrite' : '';
+          nommerVerrou(c, est, 'langue de la section');
         });
       }
       if (sectionSel) sectionSel.addEventListener('change', majCoutContenu);
@@ -619,6 +633,9 @@
             if (liste) liste.innerHTML = d.sections.map(function (s) {
               return '<option value="' + esc(s.section) + '"></option>';
             }).join('');
+            /* La suggestion du mode automatique est une section QUI EXISTE, plus `/blog`. */
+            var autoChamp = document.getElementById('c-auto-section');
+            if (autoChamp) autoChamp.placeholder = 'ex. ' + d.sections[0].section;
             composerRoute();
           }
           if (!d.langues || d.langues.length < 2) return;
