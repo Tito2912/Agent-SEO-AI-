@@ -29666,11 +29666,12 @@ def _h1_sans_marque(titre: str, suffixe: str) -> str:
 def _marque_ajoutee(titre: str, site_name: str) -> str:
     """Le suffixe de marque que le MODELE a ajoute de lui-meme (« | Prosper Factory »), ou "".
 
-    Mesure du 28/09/2026 sur prosperfactory.com : 99 titles sur 102 sans aucun suffixe — le
-    site ne se nomme pas dans ses titles, et le modele l'a fait quand meme. Imiter le site, ici,
-    c'est retirer. On ne retire que ce qui NOMME le site (« Prosper Factory » pour
-    prosperfactory.com, a la casse et aux espaces pres) : une fin de titre qui dit autre chose
-    (« … - guide 2026 ») fait partie du titre.
+    Le cas d'un site qui ne se nomme PAS dans ses titles : le modele, qui a vu passer le nom du
+    site dans la consigne, peut l'ajouter quand meme. Imiter le site, ici, c'est retirer. On ne
+    retire que ce qui NOMME le site (« Prosper Factory » pour prosperfactory.com, a la casse et
+    aux espaces pres) : une fin de titre qui dit autre chose (« … - guide 2026 ») fait partie du
+    titre. (Prosperfactory.com, lui, SIGNE ses titles — « Guides | Prosper Factory », verifie en
+    ligne le 28/09/2026 — et releve donc de `_suffixe_de_marque`.)
     """
     titre = str(titre or "").strip()
     i = max(titre.rfind(sep) for sep in _SEPARATEURS_DE_MARQUE)

@@ -5,9 +5,10 @@ Relevé en production le 28/09/2026 (prosperfactory.com, premier article « Long
 UN titre, qui sert de balise title ET de H1, et le H1 exporté en Markdown et en HTML devenait
 « Comment analyser un projet crypto en profondeur avant d'investir | Prosper Factory ».
 
-Première hypothèse : le modèle imitait la marque des titles du site. FAUSSE — mesuré sur le vrai
-crawl, 99 titles sur 102 n'ont aucun suffixe : le modèle l'avait ajoutée de lui-même. Les deux
-cas se traitent donc, chacun selon ce que le crawl MESURE :
+Le modèle imite la marque des titles du site (« Guides | Prosper Factory », vérifié en ligne).
+Une sonde locale a fait croire l'inverse un moment : le script qui avait construit son crawl
+retirait lui-même tout ce qui suit « | » (`re.sub(r"\s*\|.*$", "", …)`). Les deux cas se
+traitent, chacun selon ce que le crawl MESURE :
 
 * le site met une marque en fin de title : le title la garde, le H1 non ;
 * le site n'en met pas : celle que le modèle ajoute — si elle NOMME le site — part des deux.
