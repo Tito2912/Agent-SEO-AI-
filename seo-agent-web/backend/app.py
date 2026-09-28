@@ -29553,6 +29553,7 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
         return {"ok": False, "status": 400, "error": (
             "langue(s) que ce site ne sert pas : %s" % ", ".join(inconnues))}
 
+    marque = _suffixe_de_marque([p.get("titre") or "" for p in pages])
     modele = _modele_de_section(pages, section)
     if modele is None:
         return {"ok": False, "status": 422, "error": (
@@ -29588,7 +29589,12 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
         slash = "/" if (modele_cible or modele)["slash"] else ""
         adresse = ("%s/%s%s" % (section_cible.rstrip("/"), slug_propre, slash)
                    if section_cible else "")
-        return {"ok": True, "langue": cle, "code": _code(cle), "titre": article["titre"],
+        # Le site met une marque en fin de title : le title la garde, le H1 non. Il n'en met
+        # PAS : celle que le modele a ajoutee part des deux — c'est la convention du site.
+        ajoutee = "" if marque else _marque_ajoutee(article["titre"], site_name)
+        h1 = _h1_sans_marque(article["titre"], marque or ajoutee)
+        titre = h1 if ajoutee else article["titre"]
+        return {"ok": True, "langue": cle, "code": _code(cle), "titre": titre, "h1": h1,
                 "description": article["description"], "slug": slug_propre,
                 "adresse": adresse, "contenu": article["markdown"], "notes_redaction": []}
 
@@ -29624,6 +29630,61 @@ def _preparer_des_articles(*, pages: "list[dict[str, Any]]", sujet: str, section
     return {"ok": True, "versions": versions}
 
 
+_SEPARATEURS_DE_MARQUE = (" | ", " - ", " – ", " — ", " · ")
+
+
+def _suffixe_de_marque(titres: "list[str]") -> str:
+    """Le suffixe que le site ajoute a ses balises title (« | Prosper Factory »), ou "".
+
+    Releve en production le 28/09/2026 : un article a UN titre, qui sert de balise title ET de
+    H1. Le modele imite les titles du site — marque comprise — et le H1 exporte devenait
+    « Comment analyser un projet crypto… | Prosper Factory ». Le suffixe se MESURE dans le crawl
+    : c'est la fin de titre, apres un separateur, que partagent au moins la moitie des pages
+    (et deux au moins). Un site sans marque en fin de titre n'en a pas : rien n'est retire.
+    """
+    vus: dict[str, int] = {}
+    avec_titre = [str(t or "").strip() for t in titres if str(t or "").strip()]
+    for t in avec_titre:
+        coupes = [t.rfind(sep) for sep in _SEPARATEURS_DE_MARQUE]
+        i = max(coupes)
+        if i > 0:
+            vus[t[i:]] = vus.get(t[i:], 0) + 1
+    if not vus:
+        return ""
+    suffixe, n = max(vus.items(), key=lambda kv: kv[1])
+    return suffixe if n >= 2 and n * 2 >= len(avec_titre) else ""
+
+
+def _h1_sans_marque(titre: str, suffixe: str) -> str:
+    """Le titre sans le suffixe de marque — la balise title le garde, le H1 non."""
+    titre = str(titre or "").strip()
+    if suffixe and titre.endswith(suffixe) and len(titre) - len(suffixe) >= 10:
+        return titre[: -len(suffixe)].rstrip()
+    return titre
+
+
+def _marque_ajoutee(titre: str, site_name: str) -> str:
+    """Le suffixe de marque que le MODELE a ajoute de lui-meme (« | Prosper Factory »), ou "".
+
+    Mesure du 28/09/2026 sur prosperfactory.com : 99 titles sur 102 sans aucun suffixe — le
+    site ne se nomme pas dans ses titles, et le modele l'a fait quand meme. Imiter le site, ici,
+    c'est retirer. On ne retire que ce qui NOMME le site (« Prosper Factory » pour
+    prosperfactory.com, a la casse et aux espaces pres) : une fin de titre qui dit autre chose
+    (« … - guide 2026 ») fait partie du titre.
+    """
+    titre = str(titre or "").strip()
+    i = max(titre.rfind(sep) for sep in _SEPARATEURS_DE_MARQUE)
+    if i <= 0:
+        return ""
+    queue = re.sub(r"[^a-z0-9]", "", titre[i:].lower())
+    hote = str(site_name or "").strip().lower()
+    hote = re.sub(r"^https?://", "", hote).split("/")[0].removeprefix("www.")
+    # EGALITE, pas inclusion : « blog.fr » ne doit pas manger « - Blogging guide ».
+    noms = {re.sub(r"[^a-z0-9]", "", hote),
+            re.sub(r"[^a-z0-9]", "", hote.rsplit(".", 1)[0] if "." in hote else hote)}
+    return titre[i:] if len(queue) >= 4 and queue in noms else ""
+
+
 def _versions_servies(versions: "list[dict[str, Any]]") -> list[dict[str, Any]]:
     """Les versions telles que l'ecran les montre : Markdown ET HTML, titre de niveau 1 compris.
 
@@ -29634,12 +29695,14 @@ def _versions_servies(versions: "list[dict[str, Any]]") -> list[dict[str, Any]]:
     for v in versions:
         corps = str(v.get("markdown") or v.get("contenu") or "")
         titre = str(v.get("titre") or "")
+        # Le H1 mesure a la redaction ; un article d'avant n'en a pas, il garde son titre.
+        h1 = str(v.get("h1") or "") or titre
         out.append({
             "langue": v.get("langue", ""), "code": v.get("code", ""), "titre": titre,
             "description": v.get("description", ""), "slug": v.get("slug", ""),
             "adresse": v.get("adresse", ""), "notes": list(v.get("notes") or v.get("notes_redaction") or []),
-            "markdown": "# %s\n\n%s" % (titre, corps.strip()) + "\n",
-            "html": "<h1>%s</h1>\n%s" % (html.escape(titre), _article_en_html(corps)),
+            "markdown": "# %s\n\n%s" % (h1, corps.strip()) + "\n",
+            "html": "<h1>%s</h1>\n%s" % (html.escape(h1), _article_en_html(corps)),
         })
     return out
 
@@ -29696,7 +29759,7 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
                             status_code=int(out.get("status") or 422))
     versions = out["versions"]
     stockees = [{"langue": v["langue"], "code": v["code"], "titre": v["titre"],
-                 "description": v["description"], "slug": v["slug"], "adresse": v["adresse"],
+                 "h1": v.get("h1") or v["titre"], "description": v["description"], "slug": v["slug"], "adresse": v["adresse"],
                  "markdown": v["contenu"], "notes": v["notes_redaction"]} for v in versions]
     adresse = versions[0]["adresse"] or section
     task_id = ""
