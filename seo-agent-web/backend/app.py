@@ -21876,15 +21876,25 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
     candidates = _regles_des_ancres(exemples)
     if len(candidates) > 1 and plus_d_exemples is not None:
         candidates = _regles_des_ancres(exemples + list(plus_d_exemples()))
-    regle = candidates[0] if len(candidates) == 1 else ""
     par_regle = {nom: {r(t): t for t in titres} for nom, r in _REGLES_D_ANCRE.items()}
+
+    # L'IDENTIFIANT CERTAIN d'un titre : celui sur lequel toutes les regles ex aequo
+    # s'accordent. Mesure du 28/09/2026 (PR #9) : les pages allemandes du site ne departagent
+    # pas « supprime » et « remplace », et ma version precedente, faute de regle UNIQUE, ne
+    # rattrapait rien — `#beispiel-fuer-eine-einfache-aufteilung` etait retiree alors que les
+    # deux regles ecrivent `beispiel-fur-eine-einfache-aufteilung` pour ce titre. Ce que les
+    # candidates disent toutes ensemble est su, qu'une seule gagne ou non.
+    def _id_certain(titre: str) -> str:
+        ids = {_REGLES_D_ANCRE[nom](titre) for nom in candidates}
+        return ids.pop() if len(ids) == 1 else ""
+
     notes: list[str] = []
     out = contenu
     for ancre in dict.fromkeys(ancres):
         if all(ancre in par_regle[nom] for nom in candidates):
             continue
         titre = next((ids[ancre] for ids in par_regle.values() if ancre in ids), None)
-        if titre is None and regle:
+        if titre is None:
             # LA TRANSLITTERATION ALLEMANDE. Mesure du 28/09/2026 sur un essai en quatre
             # langues : le modele ecrit `verstaerkt` pour « verstärkt » (ä -> ae, l'usage
             # allemand), le site produit `verstarkt` (il decompose puis retire l'accent). Deux
@@ -21894,18 +21904,18 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
             def _sans_digrammes(texte: str) -> str:
                 return re.sub(r"([aou])e", r"\1", texte)
 
-            proches = [t for i, t in par_regle[regle].items()
-                       if _sans_digrammes(i) == _sans_digrammes(ancre)]
+            proches = [t for t in titres if _id_certain(t)
+                       and _sans_digrammes(_id_certain(t)) == _sans_digrammes(ancre)]
             titre = proches[0] if len(proches) == 1 else None
-        if regle and titre is not None:
-            juste = _REGLES_D_ANCRE[regle](titre)
+        juste = _id_certain(titre) if titre is not None else ""
+        if juste:
             out = re.sub(r"""(["'(])#%s(["')])""" % re.escape(ancre),
                          lambda t: t.group(1) + "#" + juste + t.group(2), out)
             notes.append("ancre `#%s` remise à `#%s` (titre « %s »)" % (ancre, juste, titre))
         else:
             out = _retirer_l_entree(out, ancre)
             notes.append("lien de sommaire `#%s` retiré : %s" % (
-                ancre, "aucun titre de la page ne lui correspond" if regle or titre is None
+                ancre, "aucun titre de la page ne lui correspond" if titre is None
                 else "la règle d'ancre de ce site ne se mesure pas sur ses pages"))
     return out, notes
 

@@ -80,9 +80,12 @@ def test_a_EGALITE_seules_les_regles_de_tete_votent() -> None:
     tête acceptent — ma première version en retirait 8 justes sur 10."""
     neuve = _page(["schritt-0-ziel", "schritt-1-asset-klassen"],
                   ["Schritt 0 — Ziel", "Schritt 1 — Asset‑Klassen"])
-    out, _notes = m._ancres_du_sommaire(neuve, exemples=[SOEUR],
-                                        plus_d_exemples=lambda: [SANS_APOSTROPHE])
+    out, notes = m._ancres_du_sommaire(neuve, exemples=[SOEUR],
+                                       plus_d_exemples=lambda: [SANS_APOSTROPHE])
     assert _ancres(out) == ["schritt-0-ziel"], out
+    # Et aucune note ne la cite : une ancre juste « remise » sur elle-meme laisserait croire au
+    # relecteur que le modele s'etait trompe.
+    assert not any("schritt-0-ziel" in n for n in notes), notes
 
 
 def test_sans_regle_mesurable_l_ancre_AMBIGUE_est_retiree_pas_devinee() -> None:
@@ -123,6 +126,20 @@ def test_une_ancre_TRANSLITTEREE_a_l_allemande_est_remise_pas_retiree() -> None:
     out, notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
     assert _ancres(out) == ["warum-der-hebel-alles-verstarkt", "haufige-fehler"], out
     assert all("remise" in n for n in notes), notes
+
+
+def test_A_EGALITE_un_titre_dont_les_regles_s_accordent_est_quand_meme_rattrape() -> None:
+    """Mesure du 28/09/2026 (PR #9) : les pages allemandes ne départagent pas « supprime » et
+    « remplace ». Faute de règle UNIQUE, `#beispiel-fuer-eine-einfache-aufteilung` était
+    retirée — alors que les deux règles écrivent le MÊME identifiant pour ce titre."""
+    neuve = _page(["beispiel-fuer-eine-einfache-aufteilung", "schritt-1-asset-klassen"],
+                  ["Beispiel für eine einfache Aufteilung", "Schritt 1 — Asset‑Klassen"])
+    out, notes = m._ancres_du_sommaire(neuve, exemples=[SOEUR],
+                                       plus_d_exemples=lambda: [SANS_APOSTROPHE])
+    # Le premier est su (les deux regles s'accordent) ; le second ne l'est pas (tiret
+    # insecable : `assetklassen` contre `asset-klassen`) et reste retire.
+    assert _ancres(out) == ["beispiel-fur-eine-einfache-aufteilung"], out
+    assert "remise" in notes[0] and "retiré" in notes[1], notes
 
 
 def test_la_translitteration_ne_devine_pas_entre_DEUX_titres() -> None:
