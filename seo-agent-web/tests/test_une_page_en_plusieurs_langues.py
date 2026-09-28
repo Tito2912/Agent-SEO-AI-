@@ -168,12 +168,14 @@ def modele(monkeypatch):
     lentes: set[str] = set()
     slugs: dict[str, str] = {}
     demandes: dict[str, str] = {}
+    plafonds: dict[str, int] = {}
 
     def _ai(*, system, user_msg, **kw):
         soeur = re.search(r"pour la forme \(([^)]+)\)", user_msg).group(1)
         vues.append(soeur)
         langue = soeur.split("/")[1]
         demandes[langue] = user_msg
+        plafonds[langue] = kw.get("max_tokens")
         if langue in slugs:
             return {"contenu": _redige(FICHIERS[soeur], titres[langue]), "slug": slugs[langue]}
         if langue in lentes:
@@ -185,7 +187,7 @@ def modele(monkeypatch):
 
     monkeypatch.setattr(app_module, "_correction_ai_json", _ai)
     return SimpleNamespace(vues=vues, casse=casse, titres=titres, lentes=lentes, slugs=slugs,
-                           demandes=demandes)
+                           demandes=demandes, plafonds=plafonds)
 
 
 @pytest.fixture()
@@ -236,6 +238,22 @@ def test_sans_slug_propose_le_titre_perd_son_SOUS_TITRE(github, modele, debits) 
     modele.titres["de"] = "Zinseszins berechnen: Formel, Beispiele und typische Fehler"
     out = _proposer(["de"])
     assert out["pages"][1]["route"] == "/de/guides/zinseszins-berechnen/", out["pages"]
+
+
+def test_une_version_TRADUIT_la_principale_au_lieu_d_ecrire_un_autre_article(
+        github, modele, debits) -> None:
+    """Mesure du 27/09/2026 (PR #8) : ecrites chacune depuis le sujet, les quatre versions
+    avaient quatre plans differents sous des hreflang qui les disent equivalentes. La version
+    allemande recoit donc le TEXTE ecrit en francais, et la consigne de le traduire."""
+    _proposer(["de", ""])
+    for langue in ("de", "en"):
+        demande = modele.demandes[langue]
+        assert "CETTE PAGE EST UNE TRADUCTION" in demande, langue
+        assert "version de reference (fr)" in demande, langue
+        assert 'title: "Calculer les intérêts composés"' in demande, "le texte francais manque"
+        assert modele.plafonds[langue] == 6000, modele.plafonds
+    assert "TRADUCTION" not in modele.demandes["fr"]
+    assert modele.plafonds["fr"] == 4000
 
 
 def test_la_page_PRINCIPALE_ne_demande_pas_de_slug(github, modele, debits) -> None:

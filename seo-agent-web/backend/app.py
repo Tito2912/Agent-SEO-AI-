@@ -21884,6 +21884,19 @@ def _ancres_du_sommaire(contenu: str, *, exemples: list[str],
         if all(ancre in par_regle[nom] for nom in candidates):
             continue
         titre = next((ids[ancre] for ids in par_regle.values() if ancre in ids), None)
+        if titre is None and regle:
+            # LA TRANSLITTERATION ALLEMANDE. Mesure du 28/09/2026 sur un essai en quatre
+            # langues : le modele ecrit `verstaerkt` pour « verstärkt » (ä -> ae, l'usage
+            # allemand), le site produit `verstarkt` (il decompose puis retire l'accent). Deux
+            # entrees de sommaire JUSTES etaient retirees. On compare donc a digrammes pres —
+            # des DEUX cotes, pour qu'un « ue » authentique (`frauen`) reste egal a lui-meme —
+            # et seulement si UN SEUL titre correspond.
+            def _sans_digrammes(texte: str) -> str:
+                return re.sub(r"([aou])e", r"\1", texte)
+
+            proches = [t for i, t in par_regle[regle].items()
+                       if _sans_digrammes(i) == _sans_digrammes(ancre)]
+            titre = proches[0] if len(proches) == 1 else None
         if regle and titre is not None:
             juste = _REGLES_D_ANCRE[regle](titre)
             out = re.sub(r"""(["'(])#%s(["')])""" % re.escape(ancre),
@@ -21909,6 +21922,7 @@ def rediger_une_page(
     site_name: str = "", url_de_la_page: str = "", model_override: str = "",
     notes: list[str] | None = None,
     slug_sur_le_modele: str = "", sortie: dict[str, str] | None = None,
+    reference: str = "", langue_reference: str = "",
 ) -> tuple[str, str]:
     """Le contenu du fichier a creer, ou ("", raison du refus).
 
@@ -21947,13 +21961,32 @@ def rediger_une_page(
         % (sujet, chemin, site_name or "?", soeur_chemin,
            soeur_contenu[:4000], ", ".join(forme["cles"]))
     )
+    if reference:
+        # LA PAGE MONTREE DONNE LA FORME, LA REFERENCE DONNE LE FOND. Deux sources, deux roles,
+        # et la consigne les separe explicitement : sans ca, un modele recopie les liens de la
+        # reference — des adresses d'une AUTRE langue — dans la version qu'il traduit.
+        demande += (
+            "\n\nCETTE PAGE EST UNE TRADUCTION. Voici la version de reference (%s), a traduire "
+            "FIDELEMENT dans la langue de la page montree :\n-----\n%s\n-----\n"
+            "- meme plan, memes sections dans le meme ordre, memes idees, meme FAQ : ni section "
+            "ajoutee, ni section retiree ;\n"
+            "- la FORME (cles de tete, bornes, gabarit) vient de la page montree, pas de la "
+            "reference ;\n"
+            "- les liens internes sont ceux de la page montree, dans SA langue — jamais une "
+            "adresse de la reference ;\n"
+            "- les ancres de sommaire suivent les titres TRADUITS."
+            % (langue_reference or "langue par defaut", reference[:14000]))
     if slug_sur_le_modele:
         demande += (
             "\n\nAJOUTE a l'objet JSON une cle \"slug\" : l'adresse de la page, dans SA langue, "
             "aussi courte que \"%s\" (celle de la page montree) — minuscules, mots separes par "
             "des tirets, sans le nom du site ni de mots de remplissage." % slug_sur_le_modele)
+    # Une traduction allemande est plus longue que son original francais : le plafond qui suffit
+    # a une page ecrite depuis le sujet peut tronquer sa traduction, et un JSON tronque ne rend
+    # rien d'exploitable.
     out = _correction_ai_json(system=_SYSTEME_REDACTION, user_msg=demande,
-                              max_tokens=4000, model_override=model_override)
+                              max_tokens=6000 if reference else 4000,
+                              model_override=model_override)
     if sortie is not None:
         sortie["slug"] = str((out or {}).get("slug") or "")
     contenu = str((out or {}).get("contenu") or "").strip()
@@ -28208,6 +28241,7 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
                       site_name: str, slug: str, langue: str = "",
                       soeur_imposee: str = "", soeur_slug_imposee: str = "",
                       adresse_depuis_le_titre: bool = False,
+                      reference: str = "", langue_reference: str = "",
                       ) -> dict[str, Any]:
     """Tout ce qu'une page demande AVANT la moindre ecriture. Ne touche pas au depot.
 
@@ -28267,7 +28301,8 @@ def _preparer_la_page(*, lire_fichier: "Callable[[str], tuple[str, str] | None]"
         sujet=sujet, chemin=fichier, soeur_chemin=soeur, soeur_contenu=soeur_contenu,
         site_name=site_name, url_de_la_page="" if adresse_depuis_le_titre else url_de_la_page,
         notes=notes_redaction, sortie=sortie,
-        slug_sur_le_modele=soeur_slug if adresse_depuis_le_titre else "")
+        slug_sur_le_modele=soeur_slug if adresse_depuis_le_titre else "",
+        reference=reference, langue_reference=langue_reference)
     if refus:
         return {"ok": False, "status": 422, "error": refus}
     titre_neuf = (_find_head_text_value(contenu, "title") or ("", ""))[1]
@@ -28516,7 +28551,13 @@ def _preparer_les_pages(*, lire_fichier: "Callable[[str], tuple[str, str] | None
             base_url=base_url, site_name=site_name, slug=slug, langue=langue,
             soeur_imposee=versions[langue],
             soeur_slug_imposee=route_soeur.rstrip("/").rsplit("/", 1)[-1],
-            adresse_depuis_le_titre=True)
+            adresse_depuis_le_titre=True,
+            # UNE TRADUCTION, PAS UN SECOND ARTICLE. Mesure du 27/09/2026 (PR #8) : ecrites
+            # chacune depuis le sujet, les quatre versions avaient quatre plans differents —
+            # « Rééquilibrage » en francais, « Kosten und Friktion » en allemand, « Size your
+            # crypto sleeve » en anglais — sous des hreflang qui les declarent EQUIVALENTES.
+            # Chaque page se lisait bien ; c'est la famille qui mentait.
+            reference=str(principal["contenu"]), langue_reference=langue_source)
 
     # LES TRADUCTIONS PARTENT ENSEMBLE. Chacune ne depend que de la page principale (sa soeur
     # est la traduction de la sienne), pas des autres ; en serie, quatre langues faisaient

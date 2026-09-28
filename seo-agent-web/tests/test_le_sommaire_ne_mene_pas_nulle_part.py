@@ -115,6 +115,44 @@ def test_une_page_SANS_ancre_ne_coute_aucune_lecture() -> None:
     assert (out, notes, lues) == (page, [], [])
 
 
+def test_une_ancre_TRANSLITTEREE_a_l_allemande_est_remise_pas_retiree() -> None:
+    """Mesure du 28/09/2026 : `verstaerkt` pour « verstärkt », `haeufige` pour « Häufige ».
+    Le site décompose et retire l'accent (`verstarkt`) ; deux entrées justes étaient perdues."""
+    neuve = _page(["warum-der-hebel-alles-verstaerkt", "haeufige-fehler"],
+                  ["Warum der Hebel alles verstärkt", "Häufige Fehler"])
+    out, notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
+    assert _ancres(out) == ["warum-der-hebel-alles-verstarkt", "haufige-fehler"], out
+    assert all("remise" in n for n in notes), notes
+
+
+def test_la_translitteration_ne_devine_pas_entre_DEUX_titres() -> None:
+    """`aue` et `au` sont deux identifiants DISTINCTS qui, digrammes retirés, deviennent `au` —
+    comme l'ancre `aeue`, qui n'est ni l'un ni l'autre. Elle ne sait pas lequel viser.
+
+    (Ma première fixture prenait « Bär » et « Bar » : sur ce site les deux titres donnent
+    le MÊME identifiant `bar`, l'ancre était donc juste et le test mesurait autre chose.)"""
+    neuve = _page(["aeue"], ["Aue", "Au"])
+    out, notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
+    assert _ancres(out) == [], out
+    assert "retiré" in notes[0], notes
+
+
+def test_la_comparaison_est_SYMETRIQUE_quand_le_titre_porte_aussi_un_vrai_ue() -> None:
+    """« Häufige Fragen der Bauern » : le site écrit `haufige-fragen-der-bauern`, le modèle
+    `haeufige-fragen-der-bauern`. Ne retirer les digrammes que de l'ancre laisserait le `ue` de
+    `bauern` d'un seul côté, et l'entrée juste serait perdue."""
+    neuve = _page(["haeufige-fragen-der-bauern"], ["Häufige Fragen der Bauern"])
+    out, _notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
+    assert _ancres(out) == ["haufige-fragen-der-bauern"], out
+
+
+def test_un_ue_AUTHENTIQUE_n_est_pas_pris_pour_un_umlaut() -> None:
+    """« Frauen » : le site écrit `frauen`, et le modèle aussi. Rien à reprendre."""
+    neuve = _page(["frauen-und-geld"], ["Frauen und Geld"])
+    out, notes = m._ancres_du_sommaire(neuve, exemples=[VOISINE])
+    assert (_ancres(out), notes) == (["frauen-und-geld"], [])
+
+
 def test_les_ancres_MORTES_d_une_page_existante_n_eliminent_pas_la_vraie_regle() -> None:
     """Une page écrite à la main peut porter son propre sommaire cassé : exiger qu'une règle
     explique TOUTES les ancres éliminerait celle du site."""
