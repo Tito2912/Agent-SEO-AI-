@@ -29544,6 +29544,109 @@ def api_content_article(request: Request, slug: str, body: _ContentArticleBody) 
     return JSONResponse({"ok": True, "id": task_id, "versions": _versions_servies(stockees)})
 
 
+_SYSTEME_SUJET = (
+    "Tu proposes UN sujet d'article pour le site d'un client, choisi parmi des sujets que ses "
+    "concurrents traitent et qu'il ne couvre pas. Tu rends un objet JSON "
+    "{\"sujet\": \"...\", \"inspire_de\": \"...\", \"pourquoi\": \"...\"}. Aucune explication autour."
+)
+
+
+def proposer_un_sujet(*, section: str, langue: str, titres_section: "list[str]",
+                      sujets_concurrents: "list[str]", deja: "list[str] | None" = None,
+                      site_name: str = "", model_override: str = "") -> tuple[dict[str, str], str]:
+    """Un sujet pour CETTE section, tire des sujets concurrents non couverts, ou ({}, raison).
+
+    Le bouton « Sujet IA » de l'ecran Contenu (demande du proprietaire, 28/09/2026). Le modele ne
+    TROUVE pas les sujets : `_sujets_non_couverts` les a deja mesures (le moteur de l'ecran
+    Concurrents). Il CHOISIT celui qui colle a la section et le formule en titre dans la langue
+    de la section — ce qu'une liste de titres concurrents, souvent dans une autre langue et pour
+    un autre plan de site, ne fait pas seule.
+
+    ET ON VERIFIE PLUTOT QUE DE CROIRE. `inspire_de` doit etre un des sujets fournis, a la
+    lettre : un sujet sans source dans la concurrence serait une invention presentee comme une
+    mesure. Un titre deja porte par une page de la section est refuse : ce serait se
+    cannibaliser. Les sujets deja proposes ne sont plus offerts : chaque clic en donne un autre.
+    """
+    deja_bas = {str(d or "").strip().lower() for d in (deja or [])}
+    candidats = [s for s in dict.fromkeys(str(x or "").strip() for x in (sujets_concurrents or []))
+                 if s and s.lower() not in deja_bas]
+    if not candidats:
+        return {}, ("tous les sujets de tes concurrents ont déjà été proposés ; relance un crawl "
+                    "de tes concurrents pour en trouver d'autres")
+    demande = (
+        "SITE : %s\nSECTION OU L'ARTICLE SERA PUBLIE : %s\nLANGUE DU SUJET : %s\n\n"
+        "PAGES DEJA PUBLIEES DANS CETTE SECTION (ne pas les refaire) :\n%s\n\n"
+        "SUJETS QUE LES CONCURRENTS TRAITENT ET QUE LE SITE NE COUVRE PAS :\n%s\n\n"
+        "CONSIGNES :\n"
+        "- choisis LE sujet de la liste qui convient le mieux a cette section ;\n"
+        "- `inspire_de` : ce sujet, recopie A L'IDENTIQUE depuis la liste ;\n"
+        "- `sujet` : un titre d'article clair dans la langue demandee, pas une traduction mot "
+        "a mot ;\n"
+        "- `pourquoi` : une phrase, dans la langue de l'interface (francais)."
+        % (site_name or "?", section or "?", langue or "celle de la section",
+           "\n".join("- %s" % t for t in titres_section[:40]) or "(aucune)",
+           "\n".join("- %s" % s for s in candidats[:40])))
+    out = _correction_ai_json(system=_SYSTEME_SUJET, user_msg=demande, max_tokens=500,
+                              model_override=model_override) or {}
+    proposition = {k: str(out.get(k) or "").strip() for k in ("sujet", "inspire_de", "pourquoi")}
+    if not proposition["sujet"]:
+        return {}, "le modèle n'a rien proposé d'exploitable"
+    par_bas = {c.lower(): c for c in candidats}
+    source = par_bas.get(proposition["inspire_de"].lower())
+    if source is None:
+        return {}, ("le modèle a proposé un sujet sans l'appuyer sur un sujet de tes "
+                    "concurrents : rien n'est proposé plutôt qu'une invention")
+    if proposition["sujet"].lower() in {str(t).strip().lower() for t in titres_section}:
+        return {}, "le sujet proposé est déjà une page de cette section"
+    proposition["inspire_de"] = source
+    return proposition, ""
+
+
+class _ContentSujetBody(BaseModel):
+    section: str = ""
+    deja: list[str] = []
+
+
+@app.post("/api/projects/{slug}/content/sujet")
+def api_content_sujet(request: Request, slug: str, body: _ContentSujetBody) -> JSONResponse:
+    """« Sujet IA » : un sujet pour la section choisie, tire de la concurrence. Aucun debit.
+
+    Pas un article : rien n'est ecrit, rien n'est facture au compteur d'articles. La porte de
+    plan est la meme que celle de l'ecran (Pro), et une cadence propre borne les appels au
+    modele — un bouton qu'on peut marteler ne doit pas devenir un robinet ouvert.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    gate_ok, gate_msg = _article_gate(user, slug=slug)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
+    retry_after = _rate_limit_retry_after(bucket="content_sujet_user", subject=str(getattr(user, "id", "")), limit=30, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de requêtes. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    with DB.session() as db:
+        sujets = _sujets_non_couverts(db, project_id=str(proj.id),
+                                      owner_user_id=str(proj.owner_user_id), slug=slug)
+    if not sujets:
+        return JSONResponse({"ok": False, "concurrents_url": f"/projects/{slug}/competitors", "error": (
+            "Aucun sujet de concurrent à exploiter : ajoute des concurrents dans l'écran "
+            "Concurrents et attends la fin de leur crawl. Sans eux, un « sujet IA » serait une "
+            "invention, pas une mesure.")}, status_code=400)
+    pages = _pages_du_crawl(_own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)[0])
+    section = repo_index.norm_route(body.section or "/")
+    codes = {k for k in _langues_des_routes([p["chemin"] for p in pages]) if k}
+    cle = _langue_de_route(section + "/x", codes)
+    langue = cle or _code_de_la_racine(pages, codes)
+    titres = [p["titre"] for p in pages if _section_de(p["chemin"]) == section and p["titre"]]
+    proposition, refus = proposer_un_sujet(
+        section=section, langue=langue, titres_section=titres, sujets_concurrents=sujets,
+        deja=list(body.deja), site_name=str(proj.site_name or slug))
+    if refus:
+        return JSONResponse({"ok": False, "error": refus}, status_code=422)
+    return JSONResponse({"ok": True, **proposition})
+
+
 @app.get("/api/projects/{slug}/content/article/{task_id}")
 def api_content_article_lire(request: Request, slug: str, task_id: str) -> JSONResponse:
     """Relire un article deja redige, depuis le journal. Aucun appel au modele, aucun debit."""

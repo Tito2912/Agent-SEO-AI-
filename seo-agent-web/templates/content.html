@@ -55,8 +55,16 @@
       <div class="setting-form">
         <label>
           Sujet de la page
-          <input id="c-sujet" placeholder="Comment choisir un outil de veille SEO" />
+          {# « Sujet IA » DANS le champ, a droite (demande du 28/09/2026) : un sujet pour la
+             section choisie, tire de ce que les concurrents traitent et pas le site. #}
+          <span style="position:relative;display:block;">
+            <input id="c-sujet" placeholder="Comment choisir un outil de veille SEO" style="padding-right:120px;" />
+            <button type="button" id="c-sujet-ia" class="btn small"
+                    style="position:absolute;right:5px;top:50%;transform:translateY(-50%);"
+                    title="Propose un sujet que tes concurrents traitent et pas toi, pour la section choisie">Sujet IA</button>
+          </span>
         </label>
+        <div id="c-sujet-ia-note" class="muted small" role="status" aria-live="polite" hidden style="margin:-4px 0 6px;"></div>
         {% if sujets_suggeres %}
           <div id="c-suggestions" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 6px;">
             <span class="muted small">Tes concurrents traitent, pas toi :</span>
@@ -329,6 +337,48 @@
       route.addEventListener('input', function () { touche = true; });
       sujet.addEventListener('input', composerRoute);
       if (sectionGithub) sectionGithub.addEventListener('change', composerRoute);
+
+      /* « SUJET IA ». Un sujet pour la section du mode en cours, tire de la concurrence ; chaque
+         clic en demande un autre (`deja`). Rien n'est redige ni debite : le client relit. */
+      var boutonIA = document.getElementById('c-sujet-ia');
+      var noteIA = document.getElementById('c-sujet-ia-note');
+      var sujetsProposes = [];
+      if (boutonIA) boutonIA.addEventListener('click', function () {
+        var sectionIA = mode() === 'contenu'
+          ? (sectionSel ? sectionSel.value : '')
+          : (sectionGithub && sectionGithub.value ? sectionGithub.value : '');
+        boutonIA.disabled = true;
+        boutonIA.textContent = 'Recherche…';
+        fetch('/api/projects/' + encodeURIComponent(slug) + '/content/sujet', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: sectionIA, deja: sujetsProposes })
+        })
+          .then(function (resp) { return resp.json(); })
+          .then(function (d) {
+            boutonIA.disabled = false;
+            boutonIA.textContent = 'Sujet IA';
+            noteIA.hidden = false;
+            if (!d.ok) {
+              noteIA.className = 'error small';
+              noteIA.innerHTML = esc(d.error || 'Aucun sujet proposé.') + (d.concurrents_url
+                ? ' <a href="' + esc(d.concurrents_url) + '">Ouvrir Concurrents</a>' : '');
+              return;
+            }
+            sujetsProposes.push(d.inspire_de);
+            sujet.value = d.sujet;
+            sujet.dispatchEvent(new Event('input'));
+            noteIA.className = 'muted small';
+            noteIA.innerHTML = 'Inspiré de « ' + esc(d.inspire_de) + ' » chez tes concurrents' +
+              (d.pourquoi ? ' — ' + esc(d.pourquoi) : '') + '. Reclique pour un autre sujet.';
+          })
+          .catch(function () {
+            boutonIA.disabled = false;
+            boutonIA.textContent = 'Sujet IA';
+            noteIA.hidden = false;
+            noteIA.className = 'error small';
+            noteIA.textContent = 'Erreur réseau.';
+          });
+      });
 
       /* Les sujets suggeres remplissent le champ, sans rien rediger : le client relit avant
          de depenser un article. */
