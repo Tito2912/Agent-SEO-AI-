@@ -29929,6 +29929,163 @@ def project_competitors(request: Request, slug: str,
     return resp
 
 
+# ── TROUVER DES CONCURRENTS ───────────────────────────────────────────────────────────────────
+#
+# Demande du proprietaire, 28/09/2026 : un bouton « avec l'IA » dans le champ d'ajout. Un modele
+# qu'on interroge sur « les concurrents de ce site » INVENTE volontiers des domaines plausibles.
+# Un concurrent n'est pas une opinion : c'est un site qui se classe sur les MEMES recherches.
+# L'IA formule ces recherches depuis les pages du site ; Google (SerpAPI, deja utilise par
+# l'ecran Backlinks) dit qui s'y classe ; le compte des recherches ou un domaine apparait est la
+# preuve, et l'ecran la montre.
+
+# Les plateformes se classent partout et ne sont pas des concurrents EDITORIAUX : les proposer
+# ferait perdre une des cinq places a un site qu'on ne peut pas imiter. Une liste, parce que
+# « se classe partout » ne se mesure pas sur quatre recherches.
+_PLATEFORMES = ("wikipedia.org", "youtube.com", "reddit.com", "facebook.com", "instagram.com",
+                "linkedin.com", "twitter.com", "x.com", "quora.com", "pinterest.com",
+                "tiktok.com", "medium.com", "amazon.", "google.", "apple.com", "microsoft.com")
+# Le pays de recherche par langue, pour les langues dont le code n'est pas celui du pays
+# ou qui en ont plusieurs. Absent : Google choisit.
+_PAYS_DE_RECHERCHE = {"en": "us", "fr": "fr", "de": "de", "es": "es", "it": "it", "nl": "nl",
+                      "pt": "pt", "pl": "pl"}
+_SYSTEME_REQUETES = (
+    "Tu formules les recherches Google qu'un internaute taperait pour trouver les pages d'un "
+    "site. Tu rends un objet JSON {\"requetes\": [\"...\"]}. Aucune explication autour."
+)
+
+
+def _est_une_plateforme(domaine: str) -> bool:
+    d = str(domaine or "").lower().removeprefix("www.")
+    for p in _PLATEFORMES:
+        if p.endswith("."):
+            # Une FAMILLE de domaines nationaux : amazon.fr, amazon.de, smile.amazon.com…
+            if d.startswith(p) or ("." + p) in d:
+                return True
+        elif d == p or d.endswith("." + p):
+            return True
+    return False
+
+
+def _requetes_pour_concurrents(pages: "list[dict[str, Any]]", *, langue: str, site_name: str = "",
+                               model_override: str = "") -> list[str]:
+    """Quatre recherches au plus, dans la langue du site, tirees de ses pages les plus fournies.
+
+    L'IA formule ; si elle ne rend rien d'exploitable, les titres des pages, sans leur
+    sous-titre, servent de recherches — le bouton marche encore, un peu moins bien.
+    """
+    fournies = sorted(pages, key=lambda p: -p["mots"])[:12]
+    titres = [p["titre"] for p in fournies if p["titre"]]
+    if not titres:
+        return []
+    out = _correction_ai_json(system=_SYSTEME_REQUETES, max_tokens=300, model_override=model_override,
+                              user_msg=(
+                                  "SITE : %s\nLANGUE : %s\nTITRES DE SES PAGES :\n%s\n\n"
+                                  "Rends 4 recherches COURTES (2 a 6 mots), dans cette langue, sur "
+                                  "les sujets principaux du site, sans son nom ni sa marque."
+                                  % (site_name or "?", langue or "?", "\n".join("- %s" % t for t in titres)))) or {}
+    requetes = [str(r).strip() for r in (out.get("requetes") or []) if isinstance(r, str)]
+    requetes = [r for r in dict.fromkeys(requetes) if 3 <= len(r) <= 80][:4]
+    if requetes:
+        return requetes
+    return [r for r in dict.fromkeys(
+        re.split(r"\s*[:(—–|]\s*|\s+-\s+", t)[0].strip() for t in titres) if r][:4]
+
+
+def _chercher_google(requete: str, langue: str) -> list[dict[str, Any]]:
+    """Les resultats organiques d'une recherche : [{url, position}]. Leve si SerpAPI echoue."""
+    cle = str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip()
+    params = {"engine": "google", "q": requete, "api_key": cle, "num": "10", "hl": langue or "en"}
+    if _PAYS_DE_RECHERCHE.get(langue):
+        params["gl"] = _PAYS_DE_RECHERCHE[langue]
+    # 30 s : mesure du 28/09/2026, une recherche sur quatre a expire a 20 s.
+    resp = requests.get("https://serpapi.com/search.json", params=params, timeout=30)
+    data = resp.json()
+    if not resp.ok:
+        raise RuntimeError(str((data or {}).get("error") or "SerpAPI %s" % resp.status_code))
+    return [{"url": str(r.get("link") or ""), "position": int(r.get("position") or 99)}
+            for r in (data.get("organic_results") or []) if r.get("link")]
+
+
+def _classer_les_concurrents(resultats: "dict[str, list[dict[str, Any]]]", *,
+                             exclus: "set[str]", limite: int = 6) -> list[dict[str, Any]]:
+    """Les domaines qui se classent sur le PLUS de recherches du site, preuves a l'appui.
+
+    Un site present sur trois recherches sur quatre dispute au client ses sujets ; un site
+    present sur une seule peut n'etre qu'un hasard de la page 1. D'abord le nombre de
+    recherches, ensuite la meilleure position.
+    """
+    par_domaine: dict[str, dict[str, Any]] = {}
+    for requete, lignes in resultats.items():
+        for ligne in lignes:
+            domaine = _competitor_domain(ligne["url"])
+            if not domaine or domaine in exclus or _est_une_plateforme(domaine):
+                continue
+            fiche = par_domaine.setdefault(domaine, {"domaine": domaine, "requetes": [], "position": 99})
+            if requete not in fiche["requetes"]:
+                fiche["requetes"].append(requete)
+            fiche["position"] = min(fiche["position"], int(ligne["position"]))
+    return sorted(par_domaine.values(),
+                  key=lambda f: (-len(f["requetes"]), f["position"], f["domaine"]))[:limite]
+
+
+@app.post("/api/projects/{slug}/competitors/suggest")
+def api_competitors_suggest(request: Request, slug: str) -> JSONResponse:
+    """Des concurrents MESURES : les sites qui se classent sur les recherches du site.
+
+    Rien n'est ajoute ici : chaque concurrent coute un crawl et une des cinq places. L'ecran
+    montre les candidats et leurs preuves ; le client ajoute ceux qu'il reconnait.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    with DB.session() as db:
+        if not (bool(getattr(user, "is_admin", False))
+                or _competitor_has_access(db, user_id=_compte_payeur(str(user.id), slug))):
+            return JSONResponse({"ok": False, "error": "Plan Pro+ requis."}, status_code=403)
+        suivis = {r.domain for r in _competitor_rows(db, str(proj.id))}
+    retry_after = _rate_limit_retry_after(bucket="competitor_suggest_user", subject=str(getattr(user, "id", "")), limit=5, window_s=60 * 60)
+    if isinstance(retry_after, int):
+        return JSONResponse({"ok": False, "error": f"Trop de recherches. Réessaie dans {_format_retry_after(retry_after)}."}, status_code=429, headers={"Retry-After": str(retry_after)})
+    if not str(os.environ.get("SERPAPI_API_KEY") or os.environ.get("SERPAPI_KEY") or "").strip():
+        return JSONResponse({"ok": False, "error": (
+            "La recherche Google n'est pas configurée sur ce service (clé SerpAPI absente) : "
+            "sans elle, des « concurrents » seraient devinés, pas mesurés.")}, status_code=503)
+    pages = _pages_du_crawl(_own_pages_for_project(_runs_dir_pour_slug(request, slug), slug)[0])
+    if not pages:
+        return JSONResponse({"ok": False, "error": (
+            "Aucun crawl de ton site : c'est lui qui dit de quoi parlent tes pages, donc sur "
+            "quelles recherches chercher tes concurrents. Lance un crawl d'abord.")}, status_code=400)
+    langues = _langues_du_crawl(pages)
+    principale = langues[0] if langues else {"code": "", "iso": ""}
+    codes = {l["code"] for l in langues if l["code"]}
+    de_la_langue = [p for p in pages if _langue_de_route(p["chemin"], codes) == principale["code"]]
+    langue = principale["iso"] or ""
+    requetes = _requetes_pour_concurrents(de_la_langue or pages, langue=langue,
+                                          site_name=str(proj.site_name or slug))
+    # EN PARALLELE : en serie, quatre recherches a 30 s de delai chacune feraient attendre le
+    # client deux minutes au pire. Une recherche qui echoue n'arrete pas les autres ; l'ordre
+    # des recherches est garde, pour que l'ecran les cite comme l'IA les a formulees.
+    def _une(requete: str) -> "list[dict[str, Any]] | None":
+        try:
+            return _chercher_google(requete, langue)
+        except Exception as exc:
+            logger.warning("[concurrents] recherche %r echouee : %s", requete, exc)
+            return None
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(1, len(requetes))) as pool:
+        trouves = list(pool.map(_une, requetes))
+    resultats: dict[str, list[dict[str, Any]]] = {
+        q: r for q, r in zip(requetes, trouves) if r is not None}
+    if not resultats:
+        return JSONResponse({"ok": False, "error": "La recherche Google a échoué. Réessaie plus tard."},
+                            status_code=502)
+    exclus = suivis | {_competitor_domain(str(proj.base_url or ""))}
+    return JSONResponse({"ok": True, "requetes": list(resultats),
+                         "candidats": _classer_les_concurrents(resultats, exclus=exclus)})
+
+
 @app.post("/projects/{slug}/competitors/add")
 def project_competitor_add(request: Request, slug: str, url: str = Form(default="")) -> RedirectResponse:
     proj = _db_project_or_404(request, slug)
