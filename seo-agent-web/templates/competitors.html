@@ -180,6 +180,35 @@
             </tbody>
           </table>
         </div>
+        {% set en_cours = competitors | selectattr('status', 'equalto', 'crawling') | list %}
+        {% if en_cours %}
+          <p class="muted small" id="k-suivi-analyse" style="margin-top:8px;">
+            La page se met à jour seule à la fin de l'analyse.
+          </p>
+          <script>
+          /* Tant qu'une analyse tourne, la page demande l'etat toutes les 10 s et ne se recharge
+             que s'il CHANGE. Pas pendant une saisie : recharger effacerait le domaine tape. */
+          (function () {
+            var slug = {{ slug | tojson }};
+            var avant = {{ competitors | map(attribute='status') | list | tojson }};
+            var ids = {{ competitors | map(attribute='id') | list | tojson }};
+            var champ = document.getElementById('k-url');
+            function sonder() {
+              if (document.hidden || (champ && champ.value)) { return setTimeout(sonder, 10000); }
+              fetch('/api/projects/' + encodeURIComponent(slug) + '/competitors/etat')
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                  if (!d.ok) { return; }
+                  var change = ids.some(function (id, i) { return d.etats[id] !== avant[i]; }) ||
+                               Object.keys(d.etats).length !== ids.length;
+                  if (change) { window.location.reload(); } else { setTimeout(sonder, 10000); }
+                })
+                .catch(function () { setTimeout(sonder, 30000); });
+            }
+            setTimeout(sonder, 10000);
+          })();
+          </script>
+        {% endif %}
       {% else %}
         <p class="muted" style="margin-top:12px;">
           Aucun concurrent suivi. Ajoute le domaine d'un site qui te dispute les mêmes

@@ -539,3 +539,34 @@ def test_l_analyse_est_bornee_DOUCEMENT_avant_d_etre_tuee(customer, monkeypatch)
     app_module._run_competitor_crawl_job(job.id, uid, cid)
     budget = float(vu["cmd"][vu["cmd"].index("--max-duration") + 1])
     assert 0 < budget <= vu["timeout"] - 300, (budget, vu["timeout"])
+
+
+# ── la page se met a jour SEULE pendant une analyse ───────────────────────────────────────────
+
+def test_l_etat_de_chaque_concurrent_se_lit_sans_recharger(customer) -> None:
+    client, slug, pid, uid, _plans = customer
+    vivant = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=f"e-{uuid.uuid4().hex[:6]}.fr")
+    _attacher_un_travail(vivant, status="queued", uid=uid)
+    mort = _add_ready_rival(pid, uid, pages=[], status="crawling", domain=f"m-{uuid.uuid4().hex[:6]}.fr")
+    d = client.get(f"/api/projects/{slug}/competitors/etat").json()
+    assert d["ok"] and d["etats"][vivant] == "crawling"
+    assert d["etats"][mort] == "failed", "une page ouverte sur une analyse morte attendrait toujours"
+
+
+def test_l_etat_est_ferme_sous_PRO(customer) -> None:
+    client, slug, pid, uid, plans = customer
+    plans["key"] = "solo"
+    assert client.get(f"/api/projects/{slug}/competitors/etat").status_code == 403
+
+
+def test_la_page_ne_sonde_QUE_pendant_une_analyse(customer) -> None:
+    client, slug, pid, uid, _plans = customer
+    cid = _add_ready_rival(pid, uid, domain=f"pret-{uuid.uuid4().hex[:6]}.fr")
+    page = f"/projects/{slug}/competitors"
+    assert "/competitors/etat" not in client.get(page).text
+    with app_module.DB.session() as db:
+        db.get(CompetitorSite, cid).status = "crawling"
+        db.commit()
+    _attacher_un_travail(cid, status="queued", uid=uid)
+    html = client.get(page).text
+    assert "/competitors/etat" in html and "se met à jour seule" in html

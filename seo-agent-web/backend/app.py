@@ -30141,6 +30141,30 @@ def api_competitors_suggest(request: Request, slug: str) -> JSONResponse:
                          "candidats": _classer_les_concurrents(resultats, exclus=exclus)})
 
 
+@app.get("/api/projects/{slug}/competitors/etat")
+def api_competitors_etat(request: Request, slug: str) -> JSONResponse:
+    """L'etat de chaque concurrent, pour que la page se mette a jour SEULE.
+
+    Releve le 28/09/2026 : une analyse finie restait « Analyse en cours… » tant qu'on ne
+    rechargeait pas, et le client s'est demande si c'etait bloque. La page interroge ceci tant
+    qu'une analyse tourne, et ne se recharge que si un etat CHANGE. La liberation des analyses
+    mortes passe aussi par ici : sans elle, une page ouverte sur une analyse morte attendrait
+    un changement qui ne viendra jamais.
+    """
+    proj = _db_project_or_404(request, slug)
+    user = getattr(request.state, "user", None)
+    if not user:
+        return JSONResponse({"ok": False, "error": "Session expirée."}, status_code=401)
+    with DB.session() as db:
+        if not (bool(getattr(user, "is_admin", False))
+                or _competitor_has_access(db, user_id=_compte_payeur(str(user.id), slug))):
+            return JSONResponse({"ok": False, "error": "Plan Pro+ requis"}, status_code=403)
+        rows = _competitor_rows(db, str(proj.id))
+        _liberer_les_analyses_mortes(db, rows)
+        etats = {str(r.id): str(r.status) for r in rows}
+    return JSONResponse({"ok": True, "etats": etats})
+
+
 @app.post("/projects/{slug}/competitors/add")
 def project_competitor_add(request: Request, slug: str, url: str = Form(default="")) -> RedirectResponse:
     proj = _db_project_or_404(request, slug)
