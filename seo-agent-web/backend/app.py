@@ -9890,14 +9890,6 @@ def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
     return ctx
 
 
-def _legal_version() -> str:
-    return _safe_env("LEGAL_VERSION") or "0.1"
-
-
-def _legal_updated_at() -> str:
-    return _safe_env("LEGAL_UPDATED_AT") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-
 def _smtp_send_email(*, to_addr: str, subject: str, body: str, html_body: str = "") -> None:
     cfg = _smtp_config()
     if not cfg:
@@ -13037,8 +13029,8 @@ def terms_public(request: Request) -> HTMLResponse:
             "support_email": _support_email(),
             "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
-            "legal_version": _legal_version(),
-            "legal_updated_at": _legal_updated_at(),
+            "canonical_url": _public_url(request, "/terms"),
+            "legal_entity": _safe_env("LEGAL_ENTITY"),
         },
     )
 
@@ -13071,8 +13063,6 @@ def privacy_public(request: Request) -> HTMLResponse:
             "support_email": _support_email(),
             "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
-            "legal_version": _legal_version(),
-            "legal_updated_at": _legal_updated_at(),
             "canonical_url": _public_url(request, "/privacy"),
             # L'identite legale de l'editeur (raison sociale, adresse) : une declaration, reglee
             # sur Render sans deploiement. Absente, la page nomme le produit et son contact.

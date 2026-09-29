@@ -1,51 +1,91 @@
 {% extends "public_layout.html" %}
 
-{% block title %}CGU - {{ app_name }}{% endblock %}
+{% block title %}Conditions générales d'utilisation - {{ app_name }}{% endblock %}
 
-{% block content %}
-  <div class="page-header">
-    <h1>Conditions Générales d'Utilisation (CGU)</h1>
-    <p class="muted">Version {{ legal_version }} · Dernière mise à jour : {{ legal_updated_at }}</p>
-  </div>
-
-  <section class="card">
-    <h2>1. Objet</h2>
-    <p class="muted small">
-      {{ app_name }} fournit un service d'audit SEO, d'exports et d'assistance IA. Les présentes CGU encadrent l'accès et l'utilisation du service.
-    </p>
-
-    <h2>2. Compte &amp; sécurité</h2>
-    <ul class="examples">
-      <li>Tu es responsable de la confidentialité de ton mot de passe et de l'accès à ton compte.</li>
-      <li>La vérification d'email peut être requise pour accéder à l'application.</li>
-      <li>En cas d'abus (spam, tentative d'attaque, usage automatisé non autorisé), l'accès peut être suspendu.</li>
-    </ul>
-
-    <h2>3. Données &amp; confidentialité</h2>
-    <p class="muted small">
-      Le traitement des données personnelles est décrit dans la page <a href="/privacy">Politique de confidentialité</a>.
-    </p>
-
-    <h2>4. Paiement</h2>
-    <ul class="examples">
-      <li>Les abonnements et la facturation sont gérés via Stripe (Checkout/Portal).</li>
-      <li>Le plan actif détermine les quotas applicables (sites, pages, messages IA).</li>
-    </ul>
-
-    <h2>5. Limitations</h2>
-    <ul class="examples">
-      <li>Le service est fourni “tel quel” et peut évoluer, notamment en période bêta.</li>
-      <li>Les recommandations SEO sont indicatives ; tu restes responsable des changements appliqués à ton site.</li>
-    </ul>
-
-    <h2>6. Contact</h2>
-    <p class="muted small">
-      Pour toute question, contacte-nous à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
-    </p>
-
-    <p class="muted small" style="margin-top: 14px;">
-      Note: ce document est un modèle de base à compléter (raison sociale, mentions légales, juridiction, etc.).
-    </p>
-  </section>
+{% block head_extra %}
+<meta name="description" content="Les conditions d'utilisation de {{ app_name }} : le service, les plans et leurs quotas, les pull requests sur votre dépôt, vos responsabilités et les nôtres." />
+<link rel="canonical" href="{{ canonical_url }}" />
+{# REECRITES LE 29/09/2026. L'ancienne version etait un « modele de base a completer » publie tel
+   quel, avec la date du jour en guise de date de mise a jour. Chaque regle de fonctionnement
+   ci-dessous est celle du code : quotas remis a zero le 1er du mois (UTC, `_period_key`), une
+   correction decomptee = un fichier ecrit par le modele, aucune fusion sans validation sauf
+   option activee par le client, robots.txt toujours respecte chez les concurrents. #}
+<style>
+body > footer { max-width: 1160px !important; }
+main.container { max-width: 900px; }
+.cgu { padding: 64px 0 80px; }
+.cgu h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
+.cgu-date { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
+.cgu h2 { margin: 48px 0 12px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.cgu p, .cgu li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
+.cgu ul { padding-left: 20px; margin: 10px 0; }
+.cgu li { margin: 5px 0; }
+.cgu strong { color: var(--text); font-weight: 600; }
+</style>
 {% endblock %}
 
+{% block content %}
+<article class="cgu">
+  <h1>Conditions générales d'utilisation</h1>
+  <p class="cgu-date">Mise à jour le 29 septembre 2026</p>
+
+  <h2>1. Éditeur et objet</h2>
+  <p>
+    {% if legal_entity %}{{ app_name }} est édité par {{ legal_entity }}.{% else %}{{ app_name }} est joignable à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% endif %}
+    Ces conditions encadrent l'utilisation du service : l'analyse technique des sites que vous
+    ajoutez, la correction de leur code par pull request sur votre dépôt, la rédaction de pages,
+    l'analyse de vos concurrents, la recherche d'opportunités de liens, l'assistant et les exports.
+    En créant un compte, vous les acceptez.
+  </p>
+
+  <h2>2. Votre compte</h2>
+  <ul>
+    <li>Vous êtes responsable de la confidentialité de vos identifiants et de ce qui est fait depuis votre compte.</li>
+    <li>La vérification de votre adresse e-mail peut être demandée avant d'accéder au service.</li>
+    <li>Les collaborateurs que vous invitez agissent sur vos projets ; ce qu'ils consomment est décompté de vos quotas, et chaque action garde la trace de son auteur.</li>
+  </ul>
+
+  <h2>3. Plans, quotas et paiement</h2>
+  <ul>
+    <li>Les plans, leurs prix et leurs quotas sont ceux de la page <a href="/pricing">Tarifs</a> au moment de votre souscription. Le plan Free ne demande aucun moyen de paiement.</li>
+    <li>Les quotas sont <strong>mensuels et se renouvellent le 1er de chaque mois</strong> (heure UTC). Un quota non utilisé n'est pas reporté.</li>
+    <li>Une correction décomptée est un fichier de votre dépôt écrit par un modèle d'intelligence artificielle ; les réécritures mécaniques, qui n'en appellent aucun, ne sont pas décomptées. Un article rédigé est décompté une fois par langue.</li>
+    <li>Le paiement est traité par Stripe. Les abonnements sont mensuels et sans engagement.</li>
+    <li>Un passage au plan supérieur est immédiat : la différence pour la période en cours est facturée le jour même. Un retour au plan inférieur prend effet à la fin de la période déjà payée.</li>
+    <li>Vous résiliez depuis la page Abonnement. La suppression de votre compte résilie l'abonnement.</li>
+  </ul>
+
+  <h2>4. Votre dépôt et les pull requests</h2>
+  <ul>
+    <li>Pour corriger votre code ou publier une page, vous nous donnez accès à votre dépôt GitHub. Vous pouvez retirer cet accès à tout moment, depuis vos paramètres ou depuis GitHub.</li>
+    <li>Chaque modification arrive dans une <strong>pull request</strong>, sur une branche dédiée. Par défaut, <strong>rien n'est fusionné sans votre validation</strong>.</li>
+    <li>Si vous activez une fusion automatique — le mode « Full Access » des corrections, ou la publication automatique du mode de rédaction —, les pull requests concernées sont fusionnées dès que les vérifications de votre dépôt passent. Ce choix vous appartient, et vous pouvez le retirer.</li>
+    <li>Les textes et corrections écrits par un modèle sont plausibles, pas vérifiés : chiffres, noms, prix et promesses sont à relire. <strong>Vous restez responsable de ce qui est publié sur votre site.</strong></li>
+    <li>Vous êtes libre d'utiliser, de modifier ou de refuser les corrections et contenus produits pour vos sites.</li>
+  </ul>
+
+  <h2>5. Utilisation acceptable</h2>
+  <ul>
+    <li>N'analysez et ne modifiez que des sites et des dépôts que vous possédez ou que vous êtes autorisé à gérer.</li>
+    <li>L'analyse des concurrents ne lit que leurs pages publiques, et respecte toujours leurs règles d'exploration (robots.txt).</li>
+    <li>Sont interdits : le contournement des quotas, l'accès automatisé au service en dehors de ses fonctions, les tentatives d'attaque, et tout usage contraire à la loi.</li>
+    <li>En cas de manquement, nous pouvons suspendre ou fermer le compte concerné, après vous en avoir informé sauf urgence.</li>
+  </ul>
+
+  <h2>6. Ce que nous faisons, et ce que nous ne promettons pas</h2>
+  <ul>
+    <li>Nous mettons en œuvre les moyens raisonnables pour que le service fonctionne et reste disponible, sans garantir une disponibilité ininterrompue ; il peut évoluer.</li>
+    <li>Aucune position dans les moteurs de recherche, aucun trafic ni aucun résultat commercial n'est garanti.</li>
+    <li>Une correction n'est proposée qu'après ses propres contrôles ; elle peut néanmoins être inadaptée à votre site. La relecture et la décision de fusion vous reviennent, sauf fusion automatique activée par vous.</li>
+  </ul>
+
+  <h2>7. Données personnelles</h2>
+  <p>Leur traitement est décrit dans la <a href="/privacy">politique de confidentialité</a>.</p>
+
+  <h2>8. Modifications</h2>
+  <p>Toute modification de ces conditions est publiée sur cette page, avec sa date.</p>
+
+  <h2>9. Contact</h2>
+  <p>Pour toute question : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+</article>
+{% endblock %}
