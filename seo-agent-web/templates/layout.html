@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}Noyaru{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=22" />
+    <link rel="stylesheet" href="/static/styles.css?v=23" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
@@ -111,12 +111,12 @@
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}" href="/projects/{{ project.slug }}/competitors">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
-              Concurrents <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Pro+</span>
+              Concurrents <span class="nav-plan">Pro+</span>
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %}active{% endif %}" href="/projects/{{ project.slug }}/content">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-              Contenu <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Pro+</span>
+              Contenu <span class="nav-plan">Pro+</span>
             </a>
 
             <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
@@ -126,7 +126,7 @@
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks/opportunities">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              Opportunités <span class="badge notice" style="font-size:10px;padding:1px 6px;margin-left:2px;">Solo+</span>
+              Opportunités <span class="nav-plan">Solo+</span>
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}" href="/projects/{{ project.slug }}/issues">

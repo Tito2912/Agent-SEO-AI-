@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=14" />
+    <link rel="stylesheet" href="/static/styles.css?v=15" />
     <style>
       /* Public nav overrides */
       .pub-nav {
@@ -24,7 +24,7 @@
       }
       .pub-nav-brand {
         font-size: 17px;
-        font-weight: 900;
+        font-weight: 650;
         color: var(--text);
         text-decoration: none;
         letter-spacing: .01em;

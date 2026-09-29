@@ -114,7 +114,6 @@
 
 /* ── Empty state ── */
 .opp-empty { text-align:center;padding:40px 20px;color:var(--muted); }
-.opp-empty-icon { font-size:36px;margin-bottom:12px;opacity:.4; }
 .opp-empty p { font-size:13px;margin:0; }
 
 /* ── Pagination ── */
@@ -209,7 +208,7 @@
   {% for qopp in queue_items %}
   <div class="queue-card {{ qopp.queue_status }}" id="qcard-{{ qopp.id }}">
     <div class="queue-card-header">
-      <span class="queue-status-badge {{ qopp.queue_status }}">{{ '✓ Approuvé' if qopp.queue_status == 'approved' else '⏳ En attente' }}</span>
+      <span class="queue-status-badge {{ qopp.queue_status }}">{{ 'Approuvé' if qopp.queue_status == 'approved' else 'En attente' }}</span>
       <span class="res-source-badge {{ qopp.source }}">{{ qopp.source|upper }}</span>
       <div style="flex:1;min-width:0;">
         <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="queue-card-title">{{ qopp.title[:90] }}{% if qopp.title|length > 90 %}…{% endif %}</a>
@@ -321,7 +320,6 @@
 
   {% if not opportunities %}
   <div class="opp-empty">
-    <div class="opp-empty-icon">🔗</div>
     {% if q or status_filter %}
       <p>Aucun résultat pour ces filtres.</p>
     {% else %}
@@ -494,7 +492,7 @@
 
   function renderResults(items){
     var el = document.getElementById('search-results');
-    if(!items.length){ el.innerHTML='<div class="opp-empty"><div class="opp-empty-icon">🔍</div><p>Aucun résultat trouvé.</p></div>'; return; }
+    if(!items.length){ el.innerHTML='<div class="opp-empty"><p>Aucun résultat trouvé.</p></div>'; return; }
     el.innerHTML = items.map(function(item, i){
       var sc = item.opportunity_score;
       var col = scoreColor(sc);
@@ -532,12 +530,12 @@
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
       body: JSON.stringify({platform:item.source, opportunityTitle:item.title, opportunityUrl:item.url, targetArticleUrl:targetUrl})
     }).then(function(r){return r.json();}).then(function(data){
-      if(!data.ok){ statusEl.textContent='❌ '+(data.error||'Erreur'); return; }
+      if(!data.ok){ statusEl.textContent='Erreur : '+(data.error||'Erreur'); return; }
       var ta = document.getElementById('reply-'+i);
       ta.value = data.reply||''; ta.style.display='block';
       var cb = document.getElementById('copy-btn-'+i); if(cb) cb.style.display='';
       statusEl.textContent = '✓ Réponse générée';
-    }).catch(function(e){ statusEl.textContent='❌ '+e.message; });
+    }).catch(function(e){ statusEl.textContent='Erreur : '+e.message; });
   };
 
   window._copyReply = function(i){
@@ -574,11 +572,11 @@
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
       body: JSON.stringify({query:q, source:source})
     }).then(function(r){return r.json();}).then(function(data){
-      if(!data.ok){ statusEl.textContent='❌ '+(data.error||'Erreur'); return; }
+      if(!data.ok){ statusEl.textContent='Erreur : '+(data.error||'Erreur'); return; }
       var items = data.data||[];
       statusEl.textContent = items.length+' résultat'+(items.length!==1?'s':'')+' pour "'+escHtml(q)+'"';
       renderResults(items);
-    }).catch(function(e){ statusEl.textContent='❌ Erreur réseau : '+e.message; })
+    }).catch(function(e){ statusEl.textContent='Erreur réseau : '+e.message; })
      .finally(function(){ document.getElementById('btn-search').disabled=false; });
   }
 
@@ -619,11 +617,11 @@
       if(d.ok){ window.location.reload(); }
       else {
         var msgEl = document.getElementById('qcard-msg-'+oppId);
-        if(msgEl){ msgEl.textContent='❌ '+(d.error||'Erreur'); msgEl.style.display='block'; }
+        if(msgEl){ msgEl.textContent='Erreur : '+(d.error||'Erreur'); msgEl.style.display='block'; }
       }
     }).catch(function(){
       var msgEl = document.getElementById('qcard-msg-'+oppId);
-      if(msgEl){ msgEl.textContent='❌ Erreur réseau'; msgEl.style.display='block'; }
+      if(msgEl){ msgEl.textContent='Erreur réseau'; msgEl.style.display='block'; }
     });
   };
 
@@ -651,7 +649,7 @@
     }).then(function(r){return r.json();}).then(function(d){
       if(!d.ok){
         var msgEl = document.getElementById('qcard-msg-'+oppId);
-        if(msgEl){ msgEl.textContent='⚠ '+(d.error||'Erreur de mise à jour'); msgEl.style.display='block'; }
+        if(msgEl){ msgEl.textContent='Erreur : '+(d.error||'Erreur de mise à jour'); msgEl.style.display='block'; }
       }
       setTimeout(function(){ window.location.reload(); }, 1500);
     }).catch(function(){
@@ -681,11 +679,11 @@
       body: JSON.stringify(body)
     }).then(function(r){return r.json();}).then(function(d){
       btnSaveAuto.disabled=false;
-      statusEl.textContent = d.ok ? '✓ Paramètres enregistrés' : '❌ '+(d.error||'Erreur');
+      statusEl.textContent = d.ok ? '✓ Paramètres enregistrés' : 'Erreur : '+(d.error||'Erreur');
       if(d.ok) setTimeout(function(){ statusEl.textContent=''; }, 3000);
     }).catch(function(){
       btnSaveAuto.disabled=false;
-      statusEl.textContent='❌ Erreur réseau';
+      statusEl.textContent='Erreur réseau';
     });
   });
 

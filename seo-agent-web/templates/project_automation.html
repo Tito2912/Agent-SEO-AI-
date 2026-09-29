@@ -29,7 +29,7 @@
     var btn = e.target.closest('[data-bulk-fix]');
     if(!btn) return;
     var orig = btn.innerHTML;
-    btn.disabled = true; btn.innerHTML = '⏳ Génération en cours…';
+    btn.disabled = true; btn.innerHTML = 'Génération en cours…';
     fetch('/api/projects/'+_slug+'/github/bulk-fix',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
       .then(function(r){return r.json();})
       .then(function(d){
@@ -172,13 +172,13 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Corriger toutes les erreurs du crawl</div>
         <div class="muted small">Analyse le dernier rapport, génère les patches IA pour chaque anomalie corrigeable et pousse <strong>1 seul PR</strong> avec tous les changements.</div>
         {% if github_cfg.mode == 'auto' %}
-        <div class="muted small" style="margin-top:4px;color:var(--ok-2);">⚡ Mode Full Access : le PR sera mergé automatiquement sur <span class="mono">{{ github_cfg.branch }}</span>.</div>
+        <div class="muted small" style="margin-top:4px;color:var(--ok-2);">Mode Full Access : le PR sera mergé automatiquement sur <span class="mono">{{ github_cfg.branch }}</span>.</div>
         {% else %}
         <div class="muted small" style="margin-top:4px;">Mode Vérification : tu devras merger le PR sur GitHub.</div>
         {% endif %}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">⚡ Tout corriger en 1 PR</button>
+        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">Tout corriger en 1 PR</button>
         <span id="bulk-fix-err" style="display:none;font-size:11px;color:var(--err);max-width:220px;text-align:right;"></span>
       </div>
     </div>

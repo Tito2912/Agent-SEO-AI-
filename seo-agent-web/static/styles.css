@@ -104,7 +104,7 @@ a:hover { text-decoration: underline; }
 }
 .auth-card { width: min(480px, 100%); }
 .auth-card .page-header { margin-bottom: 16px; }
-.auth-card .page-header h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; font-weight: 800; }
+.auth-card .page-header h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; font-weight: 650; }
 .auth-card .page-header p { margin: 6px 0 0; color: var(--muted); }
 .row-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
 .btn.block { width: 100%; justify-content: center; }
@@ -149,7 +149,7 @@ a:hover { text-decoration: underline; }
 /* Le logo Noyaru porte deja symbole et lettrage : il s'empile au-dessus du sous-titre. */
 .brand-noyaru { flex-direction: column; align-items: flex-start; gap: 6px; }
 .brand-image { display: block; width: 150px; max-width: 100%; height: auto; }
-.brand-link { font-size: 14px; font-weight: 800; color: var(--text); letter-spacing: -.01em; }
+.brand-link { font-size: 14px; font-weight: 650; color: var(--text); letter-spacing: -.01em; }
 .brand-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
 
 /* Nav */
@@ -232,7 +232,7 @@ a:hover { text-decoration: underline; }
   display: grid;
   place-items: center;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 650;
   color: var(--accent-2);
   user-select: none;
 }
@@ -287,7 +287,7 @@ a:hover { text-decoration: underline; }
 .content { padding: 20px 22px 88px; }
 
 .page-header { margin-bottom: 16px; }
-.page-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.page-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 650; letter-spacing: -.02em; }
 .page-header p  { margin: 0; color: var(--muted); font-size: 13px; }
 
 /* ═══════════════════════════════════════════════════════
@@ -574,24 +574,30 @@ pre {
    Badges — severity / status
    Flat, square-ish, colored text on subtle tint
 ═══════════════════════════════════════════════════════ */
+/* PASTILLES DISCRETES (29/09/2026, « les badges sont moches ») : plus de fond plein, le statut
+   se lit a la couleur du texte et du contour. `notice` n'est plus violet — une couleur etrangere a
+   la marque, posee sur « Pro+ », « indisponible »… — mais neutre. */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 1px 7px;
+  border-radius: 5px;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .02em;
-  background: rgba(255,255,255,.05);
-  border: 1px solid var(--border-2);
-  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: .01em;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.14);
+  color: rgba(255,255,255,.62);
+  white-space: nowrap;
 }
-.badge.sm { padding: 1px 6px; font-size: 10px; }
-.badge.ok      { background: rgba(var(--ok-rgb),.12); border-color: rgba(var(--ok-rgb),.24); color: var(--ok-2); }
-.badge.warning { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.24); color: #fbbf24; }
-.badge.notice  { background: rgba(129,140,248,.12); border-color: rgba(129,140,248,.24); color: #a5b4fc; }
-.badge.error   { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); color: #f87171; }
+.badge.sm { padding: 0 6px; font-size: 10.5px; }
+.badge.ok      { border-color: rgba(var(--ok-rgb),.38); color: var(--ok-2); }
+.badge.warning { border-color: rgba(245,158,11,.38); color: #e9b456; }
+.badge.notice  { border-color: rgba(255,255,255,.14); color: rgba(255,255,255,.62); }
+.badge.error   { border-color: rgba(239,68,68,.40); color: #f19a9a; }
+/* L'offre requise par une entree du menu : un mot discret, pas une etiquette. */
+.nav-plan { margin-left: auto; font-size: 10.5px; font-weight: 500; letter-spacing: .03em; color: rgba(255,255,255,.34); }
 
 /* ═══════════════════════════════════════════════════════
    Health / status indicators
@@ -751,7 +757,7 @@ pre {
 }
 .assistant-head-left  { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .assistant-head-text  { min-width: 0; }
-.assistant-title      { font-weight: 800; font-size: 13px; letter-spacing: .01em; }
+.assistant-title      { font-weight: 650; font-size: 13px; letter-spacing: .01em; }
 .assistant-meta       { color: var(--muted); font-size: 11px; margin-top: 2px; }
 .assistant-head-actions { display: inline-flex; align-items: center; gap: 6px; }
 
@@ -1050,7 +1056,7 @@ pre {
   display: grid;
   place-items: center;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 650;
   color: transparent;
   background: rgba(255,255,255,.03);
 }
@@ -1333,7 +1339,7 @@ pre {
   border: 1px solid var(--border);
 }
 .donut-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 10px; }
-.donut-value  { font-size: 20px; font-weight: 800; }
+.donut-value  { font-size: 20px; font-weight: 650; }
 
 .gauge {
   --p: 50;
@@ -1357,7 +1363,7 @@ pre {
   border: 1px solid var(--border);
 }
 .gauge-inner { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
-.gauge-value { font-size: 42px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+.gauge-value { font-size: 42px; font-weight: 650; line-height: 1; letter-spacing: -.03em; }
 
 .bars       { display: flex; flex-direction: column; gap: 10px; }
 .bar-row    { display: grid; grid-template-columns: 70px 1fr 44px; align-items: center; gap: 10px; }
@@ -1401,7 +1407,7 @@ pre {
   margin-bottom: 8px;
 }
 .crawl-meter-title { font-weight: 700; font-size: 13px; }
-.crawl-meter-count { font-size: 16px; font-weight: 800; }
+.crawl-meter-count { font-size: 16px; font-weight: 650; }
 
 /* Logs */
 .log-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
@@ -1524,7 +1530,7 @@ pre {
 .app-surfaces .page-header h1 {
   font-size: 21px;
   letter-spacing: -.02em;
-  font-weight: 800;
+  font-weight: 650;
   color: var(--text);
 }
 
@@ -1584,7 +1590,7 @@ pre {
 }
 .metric-tile-value {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: -.03em;
   line-height: 1;
   color: var(--text);
@@ -1654,7 +1660,7 @@ dialog.modal::backdrop {
 }
 .modal-title-icon svg { width: 18px; height: 18px; }
 .modal-title-copy { min-width: 0; }
-.modal-head h2   { margin: 0; font-size: 17px; line-height: 1.25; font-weight: 800; letter-spacing: -.01em; }
+.modal-head h2   { margin: 0; font-size: 17px; line-height: 1.25; font-weight: 650; letter-spacing: -.01em; }
 .modal-subtitle,
 .modal-lede      { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
 .modal-head form { flex: 0 0 auto; }
@@ -1951,7 +1957,7 @@ dialog.modal .tab-btn.active {
   border: 1px solid rgba(var(--accent-rgb), .28);
   color: var(--accent-2);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 650;
 }
 .onboarding-step.done .onboarding-step-mark {
   background: rgba(var(--accent-rgb), .12);
@@ -1968,7 +1974,7 @@ dialog.modal .tab-btn.active {
   flex-wrap: wrap;
   margin-bottom: 4px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 650;
 }
 .onboarding-step .btn {
   width: 100%;
@@ -2072,10 +2078,10 @@ dialog.modal .tab-btn.active {
   margin-bottom: 0;
   flex-wrap: wrap;
 }
-.project-hero h1 { margin: 0 0 5px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.project-hero h1 { margin: 0 0 5px; font-size: 22px; font-weight: 650; letter-spacing: -.02em; }
 .project-hero-meta { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
 .project-hero-score { text-align: right; flex-shrink: 0; }
-.hero-score-num { font-size: 68px; font-weight: 900; letter-spacing: -.05em; line-height: 1; }
+.hero-score-num { font-size: 68px; font-weight: 650; letter-spacing: -.05em; line-height: 1; }
 .hero-score-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-top: 6px; }
 
 /* ═══════════════════════════════════════════════════════
@@ -2106,7 +2112,7 @@ dialog.modal .tab-btn.active {
 }
 .stat-strip-item { display: flex; flex-direction: column; gap: 3px; padding: 0 28px 0 0; }
 .stat-strip-item:first-child { padding-left: 0; }
-.stat-strip-num  { font-size: 34px; font-weight: 900; letter-spacing: -.04em; line-height: 1; }
+.stat-strip-num  { font-size: 34px; font-weight: 650; letter-spacing: -.04em; line-height: 1; }
 .stat-strip-lbl  { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
 .stat-strip-sub  { font-size: 12px; color: var(--muted); }
 .stat-strip-sep  { width: 1px; background: var(--border); align-self: stretch; margin: 0 28px 0 0; flex-shrink: 0; }
@@ -2130,7 +2136,7 @@ dialog.modal .tab-btn.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
+  font-weight: 650;
   font-size: 12px;
   color: var(--accent-2);
   flex-shrink: 0;
@@ -2156,14 +2162,14 @@ dialog.modal .tab-btn.active {
 .gauge-track     { fill:none; stroke:rgba(255,255,255,.07); stroke-width:9; }
 .gauge-ring      { fill:none; stroke-width:9; stroke-linecap:round; transition:stroke-dasharray .6s ease; }
 .gauge-center    { position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
-.gauge-value     { font-size:40px; font-weight:900; line-height:1; letter-spacing:-.03em; }
+.gauge-value     { font-size:40px; font-weight:650; line-height:1; letter-spacing:-.03em; }
 
 .donut-svg-wrap  { position:relative; width:120px; height:120px; flex:0 0 120px; }
 .donut-svg       { width:100%; height:100%; display:block; overflow:visible; }
 .donut-track     { fill:none; stroke:rgba(255,255,255,.07); stroke-width:14; }
 .donut-ring      { fill:none; stroke-width:14; stroke-linecap:round; transition:stroke-dasharray .4s ease; }
 .donut-center    { position:absolute; inset:0; display:grid; place-items:center; text-align:center; }
-.donut-value     { font-size:18px; font-weight:800; line-height:1.2; }
+.donut-value     { font-size:18px; font-weight:650; line-height:1.2; }
 
 /* ═══════════════════════════════════════════════════════
    Overview page — hero, KPI tiles, split layout
@@ -2218,7 +2224,7 @@ dialog.modal .tab-btn.active {
 .ov-blocked strong { color: var(--warn); }
 .ov-blocked-urls { display: block; margin-top: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .ov-blocked-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
-.ov-info h1 { margin: 0 0 5px; font-size: 26px; font-weight: 800; letter-spacing: -.025em; line-height: 1.15; }
+.ov-info h1 { margin: 0 0 5px; font-size: 26px; font-weight: 650; letter-spacing: -.025em; line-height: 1.15; }
 .ov-info-sub { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
 .ov-info-sub a { color: var(--muted); }
 .ov-info-sub a:hover { color: var(--text); text-decoration: none; }
@@ -2238,7 +2244,7 @@ dialog.modal .tab-btn.active {
 .ov-kpi + .ov-kpi { padding-left: 24px; border-left: 1px solid var(--border); }
 .ov-kpi[href] { cursor: pointer; }
 .ov-kpi[href]:hover { opacity: .7; text-decoration: none; background: transparent; }
-.ov-kpi-n { font-size: 26px; font-weight: 800; letter-spacing: -.035em; line-height: 1; color: var(--text); }
+.ov-kpi-n { font-size: 26px; font-weight: 650; letter-spacing: -.035em; line-height: 1; color: var(--text); }
 .ov-kpi-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-top: 3px; }
 .ov-kpi.err .ov-kpi-n { color: var(--err); }
 .ov-kpi.warn .ov-kpi-n { color: var(--warn); }

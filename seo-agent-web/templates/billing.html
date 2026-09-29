@@ -35,7 +35,7 @@
         <span class="badge notice" style="font-size:12px;padding:3px 10px;">{{ plan.label }}</span>
       </div>
 
-      <div style="font-size:28px;font-weight:900;letter-spacing:-.03em;margin:8px 0 4px;">{{ plan.price_label }}</div>
+      <div style="font-size:28px;font-weight:650;letter-spacing:-.03em;margin:8px 0 4px;">{{ plan.price_label }}</div>
 
       {% if subscription %}
         {% set sub_status = {
@@ -80,7 +80,7 @@
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
             <span style="font-size:13px;font-weight:600;">Sites</span>
-            <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.projects }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.projects }}</span></span>
+            <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.projects }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.projects }}</span></span>
           </div>
         </div>
 
@@ -88,9 +88,9 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
             <span style="font-size:13px;font-weight:600;">Pages crawlées</span>
             {% if is_admin %}
-              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
+              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
             {% else %}
-              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.pages_crawled_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
+              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.pages_crawled_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
             {% endif %}
           </div>
           {% if is_admin %}
@@ -107,9 +107,9 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
             <span style="font-size:13px;font-weight:600;">Messages IA</span>
             {% if is_admin %}
-              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
             {% else %}
-              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.assistant_messages_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
+              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.assistant_messages_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.assistant_messages_month }}</span></span>
             {% endif %}
           </div>
           {% if is_admin %}
@@ -126,9 +126,9 @@
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
             <span style="font-size:13px;font-weight:600;">Corrections IA</span>
             {% if is_admin %}
-              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
+              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
             {% else %}
-              <span style="font-size:20px;font-weight:800;letter-spacing:-.02em;">{{ usage.ai_corrections_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
+              <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">{{ usage.ai_corrections_month }} <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.ai_corrections_month }}</span></span>
             {% endif %}
           </div>
           {% if is_admin %}
