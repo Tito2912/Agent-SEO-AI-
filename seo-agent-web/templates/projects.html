@@ -999,7 +999,7 @@
 	              }).then(function (r) { return r.json(); }).then(function (d2) {
 	                if (d2.ok) {
 	                  msg.textContent = '✓ Dépôt lié.';
-	                  msg.style.color = 'var(--ok,#34d399)';
+	                  msg.style.color = 'var(--ok-2)';
 	                  setTimeout(function () { window.location.reload(); }, 700);
 	                } else {
 	                  /* Le serveur explique pourquoi — droits manquants, depot introuvable,

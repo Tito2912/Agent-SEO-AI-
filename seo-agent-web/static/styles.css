@@ -38,7 +38,13 @@
   --link: var(--accent-2);
 
   /* Status */
-  --ok:     #10b981;
+  /* Le vert « succes », de la famille de la marque (28/09/2026) : il etait emeraude
+     (deux teintes plus saturees), ecrit en dur a une quarantaine d'endroits, et jurait a cote du
+     vert du logo. `--ok` pour les barres et pastilles, `--ok-2` pour le texte, `--ok-rgb`
+     pour les fonds translucides. */
+  --ok:     #5bb083;
+  --ok-2:   #72c296;
+  --ok-rgb: 91, 176, 131;
   --warn:   #f59e0b;
   --err:    #ef4444;
   --notice: #818cf8;
@@ -339,7 +345,7 @@ a:hover { text-decoration: underline; }
 .c-style-ligne { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 640px) { .c-style-ligne { grid-template-columns: 1fr; } }
 .alert.error  { border-color: rgba(239, 68, 68, .30); background: rgba(239, 68, 68, .07); }
-.alert.ok     { border-color: rgba(16, 185, 129, .28); background: rgba(16, 185, 129, .07); }
+.alert.ok     { border-color: rgba(var(--ok-rgb),.28); background: rgba(var(--ok-rgb),.07); }
 .alert.notice { border-color: rgba(129, 140, 248, .30); background: rgba(129, 140, 248, .07); }
 
 /* ═══════════════════════════════════════════════════════
@@ -582,7 +588,7 @@ pre {
   color: var(--muted);
 }
 .badge.sm { padding: 1px 6px; font-size: 10px; }
-.badge.ok      { background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.24); color: #34d399; }
+.badge.ok      { background: rgba(var(--ok-rgb),.12); border-color: rgba(var(--ok-rgb),.24); color: var(--ok-2); }
 .badge.warning { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.24); color: #fbbf24; }
 .badge.notice  { background: rgba(129,140,248,.12); border-color: rgba(129,140,248,.24); color: #a5b4fc; }
 .badge.error   { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); color: #f87171; }
@@ -692,7 +698,7 @@ pre {
   background: rgba(255,255,255,.18);
   border: 2px solid rgba(13,13,16,.9);
 }
-.assistant-fab-dot.ok  { background: #22c55e; }
+.assistant-fab-dot.ok  { background: var(--ok); }
 .assistant-fab-dot.err { background: var(--err); }
 
 /* Panel */
@@ -999,7 +1005,7 @@ pre {
   border: 1px solid var(--border);
 }
 .kpi-bar > div { height: 100%; width: calc(var(--p) * 1%); background: rgba(var(--accent-rgb), .50); }
-.kpi-bar.ok   > div { background: rgba(16,185,129,.55); }
+.kpi-bar.ok   > div { background: rgba(var(--ok-rgb),.55); }
 .kpi-bar.warn > div { background: rgba(245,158,11,.55); }
 
 /* Time-series widget */
@@ -1016,7 +1022,7 @@ pre {
   background: rgba(255,255,255,.015);
 }
 .ts-metric {
-  --ts-color: 16, 185, 129;
+  --ts-color: var(--ok-rgb);
   appearance: none;
   border: 0;
   border-right: 1px solid var(--border);
@@ -1065,7 +1071,7 @@ pre {
   letter-spacing: -.03em;
   color: rgba(255,255,255,.92);
 }
-.ts-metric[data-metric="clicks"]      { --ts-color: 16, 185, 129; }
+.ts-metric[data-metric="clicks"]      { --ts-color: var(--ok-rgb); }
 .ts-metric[data-metric="impressions"] { --ts-color: 99, 102, 241; }
 .ts-metric[data-metric="ctr"]         { --ts-color: 245, 158, 11; }
 .ts-metric[data-metric="position"]    { --ts-color: 239, 68, 68; }

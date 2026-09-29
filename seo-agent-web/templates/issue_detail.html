@@ -522,7 +522,7 @@
     var prLabel = d.pr_number ? 'PR #' + d.pr_number : 'PR';
     var h = '<div style="padding:12px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);border-radius:6px;font-size:12px;">';
     h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
-    h += '<span style="color:#4ade80;font-size:15px;">&#x2713;</span>';
+    h += '<span style="color:var(--ok-2);font-size:15px;">&#x2713;</span>';
     h += '<strong>' + _esc(prLabel) + ' créée</strong>';
     if (d.pr_url) h += '<a href="' + _esc(d.pr_url) + '" target="_blank" rel="noreferrer" class="btn" style="font-size:11px;padding:2px 9px;">Voir sur GitHub ↗</a>';
     if (d.commit_sha && d.commit_url) {
@@ -698,7 +698,7 @@
       }).then(function(r){return r.json();}).then(function(d){
         if (d.ok) {
           msg.textContent = '✓ Dépôt connecté ! Lancement de l\'analyse…';
-          msg.style.color = 'var(--ok,#4ade80)';
+          msg.style.color = 'var(--ok-2)';
           // Auto-trigger the fix now that the repo is connected
           setTimeout(function() {
             ghResult.style.display = 'none';

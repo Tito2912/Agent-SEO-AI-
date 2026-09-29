@@ -122,7 +122,7 @@
     <span class="pa-stat-label">PR en cours</span>
   </div>
   <div class="pa-stat">
-    <span class="pa-stat-num" style="color:#34d399;">{{ counts.done }}</span>
+    <span class="pa-stat-num" style="color:var(--ok-2);">{{ counts.done }}</span>
     <span class="pa-stat-label">Corrigés</span>
   </div>
   {% if counts.ignored %}
@@ -172,7 +172,7 @@
         <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Corriger toutes les erreurs du crawl</div>
         <div class="muted small">Analyse le dernier rapport, génère les patches IA pour chaque anomalie corrigeable et pousse <strong>1 seul PR</strong> avec tous les changements.</div>
         {% if github_cfg.mode == 'auto' %}
-        <div class="muted small" style="margin-top:4px;color:#34d399;">⚡ Mode Full Access : le PR sera mergé automatiquement sur <span class="mono">{{ github_cfg.branch }}</span>.</div>
+        <div class="muted small" style="margin-top:4px;color:var(--ok-2);">⚡ Mode Full Access : le PR sera mergé automatiquement sur <span class="mono">{{ github_cfg.branch }}</span>.</div>
         {% else %}
         <div class="muted small" style="margin-top:4px;">Mode Vérification : tu devras merger le PR sur GitHub.</div>
         {% endif %}

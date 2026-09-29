@@ -21,7 +21,7 @@
 .stat-chip { display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600; }
 .stat-chip.todo    { background:rgba(129,140,248,.1);color:#a5b4fc; }
 .stat-chip.pr      { background:rgba(245,158,11,.1);color:#fbbf24; }
-.stat-chip.done    { background:rgba(16,185,129,.1);color:#34d399; }
+.stat-chip.done    { background:rgba(var(--ok-rgb),.1);color:var(--ok-2); }
 .stat-chip.ignored { background:rgba(255,255,255,.06);color:var(--muted); }
 
 .hub-stats { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px; }
@@ -55,7 +55,7 @@
           statsEl.innerHTML=
             '<div class="hub-stat-card"><div class="hub-stat-num" style="color:#a5b4fc;">'+tot.todo+'</div><div class="hub-stat-lbl">À corriger</div></div>'
            +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:#fbbf24;">'+tot.in_progress+'</div><div class="hub-stat-lbl">PR en cours</div></div>'
-           +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:#34d399;">'+tot.done+'</div><div class="hub-stat-lbl">Corrigés</div></div>'
+           +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--ok-2);">'+tot.done+'</div><div class="hub-stat-lbl">Corrigés</div></div>'
            +'<div class="hub-stat-card"><div class="hub-stat-num" style="color:var(--muted);">'+tot.ignored+'</div><div class="hub-stat-lbl">Ignorés</div></div>';
         }
         /* Project tiles — all projects */

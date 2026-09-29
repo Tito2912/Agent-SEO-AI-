@@ -59,7 +59,7 @@
   transition:border-color .15s;
 }
 .queue-card:hover { border-color:var(--border-2); }
-.queue-card.approved { border-left:3px solid #34d399; }
+.queue-card.approved { border-left:3px solid var(--ok-2); }
 .queue-card.pending  { border-left:3px solid #a5b4fc; }
 .queue-card-header { display:flex;align-items:flex-start;gap:10px;padding:13px 15px; }
 .queue-card-body   { padding:0 15px 13px; }
@@ -67,7 +67,7 @@
 .queue-card-url    { font-size:11px;color:var(--muted);font-family:monospace;margin:3px 0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .queue-status-badge { display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;flex-shrink:0; }
 .queue-status-badge.pending  { background:rgba(129,140,248,.15);color:#a5b4fc; }
-.queue-status-badge.approved { background:rgba(16,185,129,.15);color:#34d399; }
+.queue-status-badge.approved { background:rgba(var(--ok-rgb),.15);color:var(--ok-2); }
 
 /* ── Saved opportunity cards ── */
 .opp-saved-card {
@@ -91,7 +91,7 @@
 }
 .status-seg-btn.active-new       { background:rgba(129,140,248,.2);color:#a5b4fc; }
 .status-seg-btn.active-contacted { background:rgba(245,158,11,.2);color:#fbbf24; }
-.status-seg-btn.active-won       { background:rgba(16,185,129,.2);color:#34d399; }
+.status-seg-btn.active-won       { background:rgba(var(--ok-rgb),.2);color:var(--ok-2); }
 .status-seg-btn.active-lost      { background:rgba(239,68,68,.15);color:#f87171; }
 .status-seg-btn:hover:not([class*="active-"]) { background:rgba(255,255,255,.06);color:var(--text); }
 
@@ -215,7 +215,7 @@
         <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="queue-card-title">{{ qopp.title[:90] }}{% if qopp.title|length > 90 %}…{% endif %}</a>
         <div class="queue-card-url" title="{{ qopp.url }}">{{ qopp.url }}</div>
         {% set sc = qopp.opportunity_score %}
-        {% set sc_col = '#34d399' if sc >= 70 else '#f59e0b' if sc >= 40 else '#f87171' %}
+        {% set sc_col = 'var(--ok-2)' if sc >= 70 else '#f59e0b' if sc >= 40 else '#f87171' %}
         <div class="score-bar-wrap">
           <div class="score-bar-track"><div class="score-bar-fill" style="width:{{ sc }}%;background:{{ sc_col }};"></div></div>
           <span class="score-label" style="color:{{ sc_col }};">{{ sc }}</span>
@@ -223,7 +223,7 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;">
         {% if qopp.queue_status == 'pending' %}
-          <button type="button" class="btn small" style="font-size:11px;background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3);"
+          <button type="button" class="btn small" style="font-size:11px;background:rgba(var(--ok-rgb),.15);color:var(--ok-2);border-color:rgba(var(--ok-rgb),.3);"
             onclick="queueAction('{{ qopp.id }}','approve')">✓ Approuver</button>
           <button type="button" class="btn small" style="font-size:11px;"
             onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
@@ -340,13 +340,13 @@
         <div class="opp-saved-target">→ {{ opp.target_url[:70] }}{% if opp.target_url|length > 70 %}…{% endif %}</div>
         {% endif %}
         {% set sc = opp.opportunity_score %}
-        {% set sc_col = '#34d399' if sc >= 70 else '#f59e0b' if sc >= 40 else '#f87171' %}
+        {% set sc_col = 'var(--ok-2)' if sc >= 70 else '#f59e0b' if sc >= 40 else '#f87171' %}
         <div class="score-bar-wrap">
           <div class="score-bar-track"><div class="score-bar-fill" style="width:{{ sc }}%;background:{{ sc_col }};"></div></div>
           <span class="score-label" style="color:{{ sc_col }};">{{ sc }}</span>
         </div>
         {% if opp.queue_status == 'posted' %}
-        <span style="font-size:10px;color:#34d399;font-weight:700;">✓ Publié{% if opp.posted_at %} le {{ opp.posted_at.strftime('%d/%m %H:%M') }}{% endif %}</span>
+        <span style="font-size:10px;color:var(--ok-2);font-weight:700;">✓ Publié{% if opp.posted_at %} le {{ opp.posted_at.strftime('%d/%m %H:%M') }}{% endif %}</span>
         {% endif %}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
@@ -490,7 +490,7 @@
 
   /* ── Search ── */
   function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function scoreColor(sc){ return sc>=70?'#34d399':sc>=40?'#f59e0b':'#f87171'; }
+  function scoreColor(sc){ return sc>=70?'var(--ok-2)':sc>=40?'#f59e0b':'#f87171'; }
 
   function renderResults(items){
     var el = document.getElementById('search-results');

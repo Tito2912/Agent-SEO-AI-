@@ -12,7 +12,7 @@
 .corr-stat .num { font-size: 22px; font-weight: 700; line-height: 1; }
 .corr-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 5px; display: block; letter-spacing: .02em; }
 .corr-stat.ok { border-color: rgba(52,211,153,.35); }
-.corr-stat.ok .num { color: #34d399; }
+.corr-stat.ok .num { color: var(--ok-2); }
 .corr-stat.err { border-color: rgba(239,68,68,.35); }
 .corr-stat.err .num { color: #ef4444; }
 .corr-stat.accent .num { color: var(--accent-2, #818cf8); }
@@ -48,7 +48,7 @@
 /* ── List layout ── */
 .corr-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .corr-verify-text { font-size: 11px; font-weight: 600; }
-.corr-verify-text.ok { color: #34d399; }
+.corr-verify-text.ok { color: var(--ok-2); }
 .corr-verify-text.err { color: #f87171; }
 .corr-verify-text.warn { color: #fbbf24; }
 
@@ -104,7 +104,7 @@
   display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px;
   padding: 2px 7px; border-radius: 4px;
   background: rgba(var(--accent-rgb),.10); border: 1px solid rgba(var(--accent-rgb),.22);
-  color: #34d399; text-decoration: none; font-family: monospace; white-space: nowrap;
+  color: var(--ok-2); text-decoration: none; font-family: monospace; white-space: nowrap;
 }
 .corr-pr-badge:hover { background: rgba(var(--accent-rgb),.18); }
 .corr-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
@@ -184,7 +184,7 @@
     var el = document.getElementById('correction-flow-status');
     if (!el) return;
     el.innerHTML = message;
-    el.style.color = kind === 'error' ? 'var(--err)' : (kind === 'ok' ? 'var(--ok,#34d399)' : 'var(--muted)');
+    el.style.color = kind === 'error' ? 'var(--err)' : (kind === 'ok' ? 'var(--ok-2)' : 'var(--muted)');
   }
 
   /* ── AI preview (diagnostic + code) — side-effect free, works without GitHub ── */
@@ -577,7 +577,7 @@
             body: JSON.stringify({ repo: repo, branch: branch, mode: mode })
           }).then(function (r) { return r.json(); }).then(function (d2) {
             if (d2.ok) {
-              msg.textContent = '✓ Dépôt connecté !'; msg.style.color = 'var(--ok,#34d399)';
+              msg.textContent = '✓ Dépôt connecté !'; msg.style.color = 'var(--ok-2)';
               setTimeout(function () { window.location.reload(); }, 800);
             } else {
               msg.textContent = '✗ ' + (d2.error || 'Erreur'); msg.style.color = 'var(--err,#f87171)';
@@ -735,7 +735,7 @@
 {% set col_meta = {
   'todo':        {'label': 'À traiter',  'badge': 'notice',  'color': '#818cf8'},
   'in_progress': {'label': 'En cours',   'badge': 'warning', 'color': '#f59e0b'},
-  'done':        {'label': 'Corrigé',    'badge': 'ok',      'color': '#34d399'},
+  'done':        {'label': 'Corrigé',    'badge': 'ok',      'color': 'var(--ok-2)'},
   'ignored':     {'label': 'Ignoré',     'badge': '',        'color': 'var(--border-2)'}
 } %}
 
