@@ -40,7 +40,8 @@ concurrency:
 jobs:
   taches:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Quatre appels de cinq minutes au plus, plus quatre minutes de relance chacun.
+    timeout-minutes: 40
     steps:
       - name: Appeler les taches de fond
         env:
@@ -59,8 +60,17 @@ jobs:
             # --fail-with-body : un 401 ou un 500 doit compter comme un echec. Sans lui, curl
             # sort avec 0 quel que soit le code HTTP — c'est exactement le defaut qui rendait
             # l'ancien cron Render vert alors qu'il ne faisait rien.
+            # UNE RELANCE BORNEE. Le 28/09/2026 a 16:27, Render redeployait a la minute ou ce passage
+            # l'a appele : 502, job rouge, e-mail d'alerte — pour rien, le code etait sain. `--retry`
+            # rejoue toutes les 30 s ce que curl tient pour passager (408, 429, 500, 502, 503, 504,
+            # delai depasse, connexion refusee) ;
+            # `--retry-max-time 240` ferme la fenetre a quatre minutes, la duree d'une bascule Render.
+            # Un appel LONG qui depasse son `--max-time` n'est donc PAS rejoue : il ne tiendrait pas
+            # dans le `timeout-minutes` du job. Les routes sont idempotentes (chacune decide de ce qui
+            # est du) : un second appel apres un premier a moitie servi ne fait rien de plus.
             if curl --fail-with-body --silent --show-error --location \
                     --max-time 300 -X "$methode" \
+                    --retry 6 --retry-delay 30 --retry-max-time 240 --retry-connrefused \
                     -H "Authorization: Bearer $CRON_SECRET" \
                     "$BASE_URL$chemin"; then
               echo

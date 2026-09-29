@@ -46,8 +46,17 @@ jobs:
             echo "CRON_SECRET absent des secrets du depot."
             exit 1
           fi
+          # UNE RELANCE BORNEE. Le 28/09/2026 a 16:27, Render redeployait a la minute ou ce passage
+          # l'a appele : 502, job rouge, e-mail d'alerte — pour rien, le code etait sain. `--retry`
+          # rejoue toutes les 30 s ce que curl tient pour passager (408, 429, 500, 502, 503, 504,
+          # delai depasse, connexion refusee) ;
+          # `--retry-max-time 240` ferme la fenetre a quatre minutes, la duree d'une bascule Render.
+          # Un appel LONG qui depasse son `--max-time` n'est donc PAS rejoue : il ne tiendrait pas
+          # dans le `timeout-minutes` du job. Les routes sont idempotentes (chacune decide de ce qui
+          # est du) : un second appel apres un premier a moitie servi ne fait rien de plus.
           curl --fail-with-body --silent --show-error --location \
                --max-time 900 \
+               --retry 6 --retry-delay 30 --retry-max-time 240 --retry-connrefused \
                -H "Authorization: Bearer $CRON_SECRET" \
                "$BASE_URL/cron/check-backlinks"
           echo
