@@ -104,20 +104,20 @@ def test_no_plan_advertises_an_empty_correction_allowance(
     assert "· 0 corrections/mois" not in a_prospect_who_has_no_account.get("/pricing").text
 
 
-def test_the_public_page_lists_only_the_paid_plans(
+def test_the_free_plan_is_on_the_public_page_WITH_its_taste_of_the_corrector(
     a_prospect_who_has_no_account: TestClient,
 ) -> None:
-    """Free is NOT on /pricing — the template hardcodes solo/pro/business — and that is a display
-    choice, not an oversight.
+    """Free JOINS /pricing — the owner's decision of 29/09/2026 (« ajouter le plan free »).
 
-    Written down because it bounds what the free taste can do. A prospect never sees it there; it
-    is discovered inside the app, on /billing, by someone who already has an account. The taste
-    therefore works on CONVERSION, not on acquisition. The day Free joins this page, its quota
-    renders on its own — the template already prints any non-zero allowance — and this test is
-    what will say so out loud instead of letting the change pass unnoticed.
+    Until then Free was deliberately absent: the free taste worked on conversion only, discovered
+    inside the app on /billing. This test used to assert that absence and said it would be the
+    one to speak up the day Free joined the page. It did; the decision is now the opposite, and
+    the question it asked — should Free's correction quota be shown? — is answered yes: the
+    taste of the corrector is what the plan is for, so a prospect must see it.
     """
     body = a_prospect_who_has_no_account.get("/pricing").text
-    catalog = billing.plan_catalog()
-    assert "free" in catalog, "the plan exists"
-    assert catalog["free"]["label"] not in body, (
-        "Free is now rendered on /pricing: decide whether its correction quota should be shown")
+    free = billing.plan_catalog()["free"]
+    assert free["label"] in body, "Free is not on /pricing"
+    quota = free["limits"]["ai_corrections_month"]
+    assert quota > 0 and f"{quota} corrections/mois" in body, (
+        "Free is shown without its correction quota — the one thing it exists to let people try")

@@ -12908,6 +12908,107 @@ def auth_logout(request: Request) -> RedirectResponse:
     return resp
 
 
+def _nombre_fr(v: int) -> str:
+    """20000 -> « 20 000 » (espace fine insecable), comme on ecrit un nombre en francais."""
+    return "{:,}".format(int(v)).replace(",", "\u202f")
+
+
+def _comparatif_des_plans() -> dict[str, Any]:
+    """Les quatre plans et leurs VRAIS quotas, fonction par fonction — pour la home et /pricing.
+
+    Demande du proprietaire, 29/09/2026 : « ajouter le plan free, ajouter les quotas reels par
+    fonction et par plan ». Tout est LU, rien n'est ecrit ici : les nombres viennent de
+    `plan_catalog()` (qu'un administrateur modifie sans deploiement par `PLAN_CONFIG_JSON`), les
+    acces des MEMES portes que l'application — Solo+ pour les opportunites (`_opp_has_access`),
+    Pro+ pour les concurrents et la redaction (`_competitor_has_access`, `_article_gate`). Une
+    grille ecrite a la main se perimerait au premier reglage, et mentirait sur une page publique.
+
+    ATTENTION A ZERO : pour `remaining_quota`, une limite nulle veut dire « pas de plafond ». Une
+    fonction fermee par son PLAN s'affiche donc « — », jamais « 0 » ni « illimite ».
+    """
+    cat = billing.plan_catalog()
+    cles = [k for k in ("free", "solo", "pro", "business") if k in cat]
+
+    def lim(k: str, m: str) -> int:
+        try:
+            return int(((cat[k].get("limits") or {}).get(m)) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def bloc(k: str, b: str, m: str) -> Any:
+        return (cat[k].get(b) or {}).get(m)
+
+    def des(k: str, plan_mini: str) -> bool:
+        return billing.plan_rank(k) >= billing.plan_rank(plan_mini)
+
+    def quota(k: str, m: str, *, plan_mini: str = "free", suffixe: str = "") -> str:
+        v = lim(k, m)
+        if not des(k, plan_mini) or v <= 0:
+            return ""
+        return _nombre_fr(v) + suffixe
+
+    def ligne(libelle: str, valeurs: list[str], note: str = "") -> dict[str, Any]:
+        return {"libelle": libelle, "note": note, "valeurs": valeurs}
+
+    sections = [
+        {"titre": "Audit", "lignes": [
+            ligne("Sites suivis", [quota(k, "projects") for k in cles]),
+            ligne("Pages analysées par mois", [quota(k, "pages_crawled_month") for k in cles]),
+            ligne("Pages par analyse", [_nombre_fr(int(bloc(k, "crawl", "max_pages_per_crawl") or 0))
+                                        if bloc(k, "crawl", "max_pages_per_crawl") else "" for k in cles]),
+            ligne("Core Web Vitals", [
+                "%s URL par analyse" % _nombre_fr(int(bloc(k, "crawl", "max_pagespeed_urls") or 0))
+                if bloc(k, "crawl", "max_pagespeed_urls") else "" for k in cles],
+                note="mesurées par Google PageSpeed"),
+        ]},
+        {"titre": "Corrections en pull request", "lignes": [
+            ligne("Corrections écrites par l'IA, par mois", [quota(k, "ai_corrections_month") for k in cles],
+                  note="les réécritures mécaniques ne sont pas décomptées"),
+            ligne("Fichiers par pull request", [_nombre_fr(int(bloc(k, "correction", "max_files") or 0))
+                                               if bloc(k, "correction", "max_files") else "" for k in cles]),
+            ligne("Moteur de correction", ["Avancé" if "opus" in str(bloc(k, "correction", "model") or "").lower()
+                                           else "Standard" for k in cles]),
+            ligne("Vérification par votre CI avant proposition", ["Inclus" for _k in cles]),
+        ]},
+        {"titre": "Contenu et concurrence", "lignes": [
+            ligne("Articles rédigés par l'IA, par mois",
+                  [quota(k, "ai_articles_month", plan_mini="pro") for k in cles],
+                  note="une version par langue"),
+            ligne("Mode automatique de rédaction",
+                  ["Inclus" if quota(k, "ai_articles_month", plan_mini="pro") else "" for k in cles]),
+            ligne("Concurrents analysés", [
+                "%d par site" % _COMPETITOR_MAX_PER_PROJECT if des(k, "pro") else "" for k in cles],
+                note="%d pages lues par concurrent" % _COMPETITOR_MAX_PAGES),
+            ligne("Recherches d'opportunités de backlinks, par mois",
+                  [quota(k, "backlink_searches_month", plan_mini="solo") for k in cles]),
+            ligne("Réponses rédigées par l'IA, par mois",
+                  [quota(k, "backlink_replies_month", plan_mini="solo") for k in cles]),
+        ]},
+        {"titre": "Équipe et assistant", "lignes": [
+            ligne("Collaborateurs invités", [quota(k, "members") for k in cles]),
+            ligne("Messages à l'assistant IA, par mois", [quota(k, "assistant_messages_month") for k in cles]),
+        ]},
+    ]
+
+    accroches = {"free": "Pour voir le correcteur sur votre propre dépôt.",
+                 "solo": "Un site en production, corrigé chaque mois.",
+                 "pro": "Plusieurs sites, la concurrence et la rédaction.",
+                 "business": "Les portefeuilles de sites et les agences."}
+    cartes = []
+    for k in cles:
+        prix = str(cat[k].get("price_label") or "").strip()
+        montant, _sep, reste = prix.partition("€")
+        cartes.append({
+            "cle": k, "nom": str(cat[k].get("label") or k.title()),
+            "montant": (montant.strip() or "0") + " €", "periode": "par mois" if reste or montant.strip() != "0" else "",
+            "accroche": accroches.get(k, ""),
+            "corrections": lim(k, "ai_corrections_month"),
+            "sites": lim(k, "projects"), "pages": _nombre_fr(lim(k, "pages_crawled_month")),
+            "en_avant": k == "pro",
+        })
+    return {"cles": cles, "noms": [c["nom"] for c in cartes], "cartes": cartes, "sections": sections}
+
+
 @app.api_route("/pricing", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def pricing_public(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -12919,6 +13020,8 @@ def pricing_public(request: Request) -> HTMLResponse:
             "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
             "catalog": billing.plan_catalog(),
+            "comparatif": _comparatif_des_plans(),
+            "canonical_url": _public_url(request, "/pricing"),
             "stripe_ok": billing.stripe_enabled(),
         },
     )
@@ -13529,6 +13632,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             _public_template_context(
                 request,
                 catalog=billing.plan_catalog(),
+                comparatif=_comparatif_des_plans(),
                 featured_resources=content_library.resolve_all(
                     content_library.featured_articles(3), _content_tokens()
                 ),
