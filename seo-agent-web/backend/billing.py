@@ -896,6 +896,18 @@ def pending_plan_change(db: Session, *, user_id: str) -> dict[str, Any] | None:
     if not sched or str(sched.get("status") or "").strip().lower() not in {"active", "not_started"}:
         return None
 
+    # ONLY A PHASE THAT STARTS AFTER THE CURRENT ONE IS A CHANGE TO COME. Seen live on 29/09/2026:
+    # once the booked Business -> Pro change ran (27/09), Stripe kept the schedule `active` with
+    # both phases — Business (past) then Pro (current). Skipping only the CURRENT PRICE left the
+    # past Business phase, and the page announced « passera en Business le 27/08/2026 » — the
+    # reverse of what had happened, dated a month back. Stripe says which phase is current;
+    # the clock is the fallback when it does not.
+    current_phase = sched.get("current_phase") if isinstance(sched.get("current_phase"), dict) else {}
+    try:
+        threshold = int(current_phase.get("start_date") or 0) or int(datetime.now(UTC).timestamp())
+    except (TypeError, ValueError):
+        threshold = int(datetime.now(UTC).timestamp())
+
     for phase in sched.get("phases") or []:
         if not isinstance(phase, dict):
             continue
@@ -903,6 +915,14 @@ def pending_plan_change(db: Session, *, user_id: str) -> dict[str, Any] | None:
         price_id = _stripe_obj_id(items[0].get("price")) if items and isinstance(items[0], dict) else ""
         if not price_id or price_id == current_price:
             continue  # the phase the customer is living in right now
+        # A phase WITHOUT a start date stays reported, date unknown: the choice made earlier here —
+        # a vague warning beats a page that invites the same change to be booked twice.
+        try:
+            debut = int(phase.get("start_date") or 0)
+        except (TypeError, ValueError):
+            debut = 0
+        if debut and debut <= threshold:
+            continue  # a phase already begun (or over) is history, not a pending change
         plan_key = plan_for_price_id(price_id)
         if not plan_key:
             continue

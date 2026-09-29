@@ -113,7 +113,10 @@ def _card(body: str, label: str) -> str:
     return body.split(head, 1)[1].split("</form>", 1)[0]
 
 
-def _install_schedule(monkeypatch, *, status: str = "active", raises: bool = False, start_date: int | None = -1):
+def _install_schedule(monkeypatch, *, status: str = "active", raises: bool = False, start_date: int | None = -1,
+                      current_start: int | None = 1756317960):
+    """`current_start` is what Stripe returns as `current_phase.start_date` — the Business phase
+    by default, i.e. BEFORE the booked change runs. None: Stripe gave no current phase."""
     calls: list[str] = []
 
     def _retrieve(schedule_id, **_kw):
@@ -123,6 +126,7 @@ def _install_schedule(monkeypatch, *, status: str = "active", raises: bool = Fal
         return StripeObject.construct_from({
             "id": schedule_id,
             "status": status,
+            **({"current_phase": {"start_date": current_start}} if current_start else {}),
             "phases": [
                 {"start_date": 1756317960, "items": [{"price": BUSINESS_PRICE}]},
                 {"start_date": int(EFFECTIVE.timestamp()) if start_date == -1 else start_date,
@@ -303,3 +307,32 @@ def test_the_escape_is_offered_even_when_the_details_could_not_be_read(monkeypat
     _install_schedule(monkeypatch, raises=True)
     body = _customer(schedule_id=SCHEDULE_ID).get("/billing").text
     assert "Annuler ce changement" in body
+
+
+# ── after the booked change has run ────────────────────────────────────────────────────────────
+
+def _customer_on_pro_after_the_change():
+    """The live state of 29/09/2026: the Business -> Pro change ran on 27/09, the subscription is
+    on Pro, and Stripe keeps the schedule active with both phases."""
+    client = _customer(schedule_id=SCHEDULE_ID)
+    with app_module.DB.session() as db:
+        sub = db.query(BillingSubscription).order_by(BillingSubscription.id.desc()).first()
+        sub.stripe_price_id, sub.plan_key = PRO_PRICE, "pro"
+        db.commit()
+    return client
+
+
+def test_a_change_that_already_RAN_is_not_announced_again(monkeypatch) -> None:
+    """Seen live: « passera en Business le 27/08/2026 » — the past phase, read as a future one."""
+    _install_schedule(monkeypatch, current_start=int(EFFECTIVE.timestamp()))
+    body = _customer_on_pro_after_the_change().get("/billing").text
+    assert "Changement de plan déjà demandé" not in body
+    assert "Déjà programmé" not in body
+
+
+def test_without_a_current_phase_the_CLOCK_decides(monkeypatch) -> None:
+    """Stripe normally names the current phase; if it does not, a phase that began in the past
+    is still history."""
+    _install_schedule(monkeypatch, current_start=None)
+    body = _customer_on_pro_after_the_change().get("/billing").text
+    assert "Changement de plan déjà demandé" not in body
