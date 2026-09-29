@@ -3194,7 +3194,7 @@ def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     extra_s = (" | ".join(extra)) if extra else "—"
 
     return (
-        "Tu es l’assistant IA principal de l’app Agent SEO IA (SEO Audit). "
+        "Tu es l’assistant IA principal de l’app Noyaru. "
         "Tu aides l’utilisateur sur l’utilisation du produit (projets, audits, jobs, automation, réglages, exports), "
         "sur le SEO (technique, contenu, netlinking, analytics), ET sur des questions générales si besoin. "
         "Tu n’es pas limité au SEO.\n"
@@ -5108,7 +5108,7 @@ def _reportlab_project_report_pdf(runs_dir: Path, data: dict[str, Any]) -> bytes
     )
 
     story: list[Any] = []
-    story.append(Paragraph("SEO Audit — Rapport", styles["ReportTitle"]))
+    story.append(Paragraph("Noyaru — Rapport SEO", styles["ReportTitle"]))
     subtitle_bits = [site_name]
     if ts:
         subtitle_bits.append(ts)
@@ -5456,8 +5456,8 @@ def _reportlab_project_report_pdf(runs_dir: Path, data: dict[str, Any]) -> bytes
             )
             story.append(bt)
 
-    pdf_title = f"SEO Audit Report - {site_name} - {ts}"
-    return _reportlab_build_pdf(story, title=pdf_title, subject="SEO Audit report")
+    pdf_title = f"Rapport SEO Noyaru - {site_name} - {ts}"
+    return _reportlab_build_pdf(story, title=pdf_title, subject="Rapport SEO Noyaru")
 
 
 def _reportlab_issues_pdf(
@@ -9788,7 +9788,7 @@ def _smtp_config() -> dict[str, Any] | None:
 
 def _app_name() -> str:
     # UN SEUL NOM DE REPLI. Il y en avait trois selon l'endroit — l'ancien nom du produit,
-    # « SEO Audit », des chaines en dur ; le produit s'appelle Noyaru (demande du 28/09/2026).
+    # un second nom de repli, des chaines en dur ; le produit s'appelle Noyaru (28/09/2026).
     return _safe_env("APP_NAME") or "Noyaru"
 
 

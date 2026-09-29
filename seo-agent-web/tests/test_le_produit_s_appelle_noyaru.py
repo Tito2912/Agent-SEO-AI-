@@ -21,7 +21,9 @@ from backend import app as m  # noqa: E402
 
 RACINE = Path(__file__).resolve().parents[1]
 # L'ancien nom sous toutes ses graphies — mais pas `seo-agent-web` ni `SEO_AGENT_` (internes).
-ANCIEN = re.compile(r"SEO[ \-]?Agent(?!-web)(?!_)|SEOAgent", re.I)
+# « SEO Audit » aussi : un autre nom d'avant, reste dans dix titres d'onglet et le rapport PDF
+# apres le premier renommage (vu le 29/09/2026 sur la page Abonnement).
+ANCIEN = re.compile(r"SEO[ \-]?Agent(?!-web)(?!_)|SEOAgent|SEO Audit", re.I)
 
 
 def _lignes_fautives(fichier: Path) -> list[str]:
