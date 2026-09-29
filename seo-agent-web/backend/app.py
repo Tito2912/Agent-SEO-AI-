@@ -13043,6 +13043,24 @@ def terms_public(request: Request) -> HTMLResponse:
     )
 
 
+def _localisation_sentry() -> str:
+    """Ou Sentry recoit les traces d'erreur, LU dans le DSN : la region est dans l'hote
+    (`…ingest.de.sentry.io` pour l'Union europeenne, sinon les Etats-Unis). Sans DSN, Sentry
+    n'est pas branche et la ligne le dit."""
+    dsn = _safe_env("SENTRY_DSN")
+    if not dsn:
+        return "Non utilisé actuellement"
+    hote = urlsplit(dsn).hostname or ""
+    return "Union européenne (Allemagne)" if ".de.sentry.io" in hote else "États-Unis"
+
+
+def _localisation_sauvegardes() -> str:
+    """Ou sont les sauvegardes de la base. Rien de fiable ne se deduit d'un point d'acces S3
+    quelconque : c'est une declaration du proprietaire (`LEGAL_BACKUP_LOCATION`), reglable sur
+    Render sans deploiement. A defaut, la page ne devine pas."""
+    return _safe_env("LEGAL_BACKUP_LOCATION") or "Précisée sur demande"
+
+
 @app.api_route("/privacy", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def privacy_public(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -13055,6 +13073,16 @@ def privacy_public(request: Request) -> HTMLResponse:
             "nav_items": _public_nav_items(),
             "legal_version": _legal_version(),
             "legal_updated_at": _legal_updated_at(),
+            "canonical_url": _public_url(request, "/privacy"),
+            # L'identite legale de l'editeur (raison sociale, adresse) : une declaration, reglee
+            # sur Render sans deploiement. Absente, la page nomme le produit et son contact.
+            "legal_entity": _safe_env("LEGAL_ENTITY"),
+            "sentry_localisation": _localisation_sentry(),
+            "sauvegarde_localisation": _localisation_sauvegardes(),
+            # Deux services qui ne recoivent rien tant que leur cle n'est pas configuree : la page
+            # ne les nomme que s'ils sont branches.
+            "ahrefs_actif": bool(_ahrefs_env_token()[0]),
+            "gemini_actif": _assistant_gemini_configured(),
         },
     )
 

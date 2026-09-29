@@ -2,53 +2,152 @@
 
 {% block title %}Confidentialité - {{ app_name }}{% endblock %}
 
-{% block content %}
-  <div class="page-header">
-    <h1>Politique de confidentialité</h1>
-    <p class="muted">Version {{ legal_version }} · Dernière mise à jour : {{ legal_updated_at }}</p>
-  </div>
-
-  <section class="card">
-    <h2>1. Données collectées</h2>
-    <ul class="examples">
-      <li>Email et informations de compte (authentification, support, sécurité).</li>
-      <li>Données de projets (URL de site, paramètres de crawl, exports).</li>
-      <li>Données techniques (logs, IP, user-agent) pour la sécurité et le diagnostic.</li>
-    </ul>
-
-    <h2>2. Finalités</h2>
-    <ul class="examples">
-      <li>Fournir le service (audits, crawls, exports, quotas).</li>
-      <li>Sécuriser l'accès (anti-abus, vérification email).</li>
-      <li>Support et amélioration produit.</li>
-    </ul>
-
-    <h2>3. Sous-traitants</h2>
-    <ul class="examples">
-      <li>Hébergement: Render + Postgres.</li>
-      <li>Email transactionnel: SendGrid.</li>
-      <li>Paiement: Stripe.</li>
-      <li>Stockage artefacts: S3 (si activé).</li>
-    </ul>
-
-    <h2>4. Conservation</h2>
-    <p class="muted small">
-      Les données sont conservées le temps nécessaire au fonctionnement du service. Une politique de rétention peut être appliquée sur les logs/artefacts.
-    </p>
-
-    <h2>5. Suppression</h2>
-    <p class="muted small">
-      Tu peux demander la suppression de ton compte et de tes données depuis la page “Comptes &amp; connexions” (Zone à risque), ou en contactant le support.
-    </p>
-
-    <h2>6. Contact</h2>
-    <p class="muted small">
-      Pour toute question liée aux données personnelles : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
-    </p>
-
-    <p class="muted small" style="margin-top: 14px;">
-      Note: ce document est un modèle de base à compléter (responsable de traitement, base légale, droits RGPD, etc.).
-    </p>
-  </section>
+{% block head_extra %}
+<meta name="description" content="Quelles données {{ app_name }} traite, pourquoi, avec quels prestataires et où, combien de temps, et comment exercer vos droits." />
+<link rel="canonical" href="{{ canonical_url }}" />
+{# REECRITE LE 29/09/2026. L'ancienne version etait un « modele de base a completer », publie tel
+   quel : sous-traitants incomplets (ni fournisseurs d'IA, ni Google, ni GitHub, ni SerpAPI),
+   prestataire d'e-mail faux (SendGrid au lieu de Brevo), aucun mot des transferts hors UE — alors
+   que l'hebergement est aux Etats-Unis (Oregon). Chaque ligne ci-dessous est tiree du code.
+   La date de mise a jour est celle du DOCUMENT : l'ancienne affichait la date du jour a chaque
+   visite. #}
+<style>
+body > footer { max-width: 1160px !important; }
+main.container { max-width: 900px; }
+.conf { padding: 64px 0 80px; }
+.conf h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
+.conf-date { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
+.conf-resume { margin: 28px 0 0; padding: 20px 22px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.75); }
+.conf h2 { margin: 52px 0 14px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.conf p, .conf li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
+.conf ul { padding-left: 20px; margin: 10px 0; }
+.conf li { margin: 4px 0; }
+.conf strong { color: var(--text); font-weight: 600; }
+.conf-tableau { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); margin-top: 14px; }
+.conf table { width: 100%; border-collapse: collapse; min-width: 640px; font-size: 14px; }
+.conf th, .conf td { padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; line-height: 1.55; }
+.conf thead th { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.conf tbody th { font-weight: 600; color: var(--text); white-space: nowrap; }
+.conf td { color: rgba(255,255,255,.66); }
+.conf tr:last-child th, .conf tr:last-child td { border-bottom: 0; }
+</style>
 {% endblock %}
 
+{% block content %}
+<article class="conf">
+  <h1>Politique de confidentialité</h1>
+  <p class="conf-date">Mise à jour le 29 septembre 2026</p>
+
+  <p class="conf-resume">
+    En bref : {{ app_name }} traite les données nécessaires pour analyser votre site, corriger votre
+    code et vous facturer. L'application est hébergée aux <strong>États-Unis</strong>, et plusieurs
+    prestataires — dont les fournisseurs d'intelligence artificielle — y sont établis. Vos données ne
+    sont ni vendues, ni utilisées pour de la publicité. Vous pouvez supprimer votre compte à tout
+    moment depuis vos paramètres.
+  </p>
+
+  <h2>1. Responsable du traitement</h2>
+  <p>
+    {% if legal_entity %}{{ legal_entity }}, qui édite {{ app_name }}.{% else %}{{ app_name }}.{% endif %}
+    Pour toute question sur vos données : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+  </p>
+
+  <h2>2. Les données que nous traitons</h2>
+  <div class="conf-tableau">
+    <table>
+      <thead><tr><th scope="col">Catégorie</th><th scope="col">Ce que c'est</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Compte</th><td>Adresse e-mail ; mot de passe, stocké uniquement sous forme d'empreinte (PBKDF2) ; identifiant Google si vous vous connectez avec Google ; préférences comme le fuseau horaire.</td></tr>
+        <tr><th scope="row">Projets</th><td>Adresses des sites analysés, réglages, résultats des analyses — c'est-à-dire le contenu public des pages lues sur ces sites.</td></tr>
+        <tr><th scope="row">Connexions</th><td>Jetons d'accès que vous nous confiez (GitHub, Google Search Console, clé Bing Webmaster), chiffrés au repos.</td></tr>
+        <tr><th scope="row">Contenus produits</th><td>Corrections proposées, pages rédigées, messages envoyés à l'assistant et ses réponses.</td></tr>
+        <tr><th scope="row">Équipe</th><td>Adresses e-mail des collaborateurs que vous invitez.</td></tr>
+        <tr><th scope="row">Facturation</th><td>Plan, identifiants client et abonnement Stripe, factures. Le paiement se fait sur une page Stripe : aucune donnée de carte ne passe par nos serveurs.</td></tr>
+        <tr><th scope="row">Données techniques</th><td>Journaux du serveur (adresse IP, navigateur, adresses demandées), utilisés pour la sécurité et le diagnostic.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>3. Pourquoi, et sur quelle base</h2>
+  <ul>
+    <li><strong>Fournir le service</strong> — analyses, corrections, rédaction, quotas : exécution du contrat qui nous lie.</li>
+    <li><strong>Facturer</strong> — exécution du contrat, et obligations comptables et fiscales.</li>
+    <li><strong>Vous écrire</strong> — vérification d'adresse, mot de passe oublié, validation d'une page rédigée : exécution du contrat.</li>
+    <li><strong>Sécuriser le service</strong> — limitation des abus, protection des comptes, diagnostic des erreurs : notre intérêt légitime à faire fonctionner un service sûr.</li>
+  </ul>
+
+  <h2>4. Nos prestataires, et où ils se trouvent</h2>
+  <p>Ces prestataires traitent des données pour notre compte, chacun pour le rôle indiqué.</p>
+  <div class="conf-tableau">
+    <table>
+      <thead><tr><th scope="col">Prestataire</th><th scope="col">Rôle</th><th scope="col">Données concernées</th><th scope="col">Localisation</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Render</th><td>Hébergement de l'application et de la base de données</td><td>Toutes les données ci-dessus</td><td>États-Unis</td></tr>
+        <tr><th scope="row">Brevo</th><td>Envoi des e-mails</td><td>Adresse e-mail, contenu des e-mails</td><td>France</td></tr>
+        <tr><th scope="row">Stripe</th><td>Paiement et facturation</td><td>E-mail, facturation, moyen de paiement</td><td>Irlande, États-Unis</td></tr>
+        <tr><th scope="row">Anthropic</th><td>Intelligence artificielle : corrections, rédaction, assistant</td><td>Contenu public des pages analysées, extraits des fichiers de votre dépôt concernés, questions posées à l'assistant</td><td>États-Unis</td></tr>
+        <tr><th scope="row">OpenAI</th><td>Intelligence artificielle, en secours d'Anthropic</td><td>Les mêmes</td><td>États-Unis</td></tr>
+        <tr><th scope="row">GitHub</th><td>Lecture et écriture de votre dépôt, sur votre autorisation</td><td>Contenu du dépôt connecté</td><td>États-Unis</td></tr>
+        <tr><th scope="row">Google</th><td>Connexion avec Google, Search Console, mesure PageSpeed</td><td>Identité Google, données Search Console, adresses des pages mesurées</td><td>États-Unis</td></tr>
+        <tr><th scope="row">Microsoft Bing</th><td>Données Bing Webmaster, avec votre clé</td><td>Données de performance de votre site</td><td>États-Unis</td></tr>
+        <tr><th scope="row">SerpAPI</th><td>Recherches Google pour trouver vos concurrents et des opportunités de liens</td><td>Requêtes de recherche dérivées de votre site</td><td>États-Unis</td></tr>
+        <tr><th scope="row">Netlify</th><td>Si vous connectez votre compte : lecture de vos sites et de leurs déploiements</td><td>Liste des sites et déploiements Netlify</td><td>États-Unis</td></tr>
+        {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Données de backlinks</td><td>Domaines des sites analysés</td><td>Singapour</td></tr>{% endif %}
+        {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Intelligence artificielle de l'assistant</td><td>Questions posées à l'assistant et données du projet qui s'y rapportent</td><td>États-Unis</td></tr>{% endif %}
+        <tr><th scope="row">Sentry</th><td>Suivi des erreurs techniques</td><td>Traces d'erreur, sans adresse IP ni identifiant de compte</td><td>{{ sentry_localisation }}</td></tr>
+        <tr><th scope="row">Sauvegardes</th><td>Copies quotidiennes de la base, conservées 30 jours</td><td>Toutes les données de la base</td><td>{{ sauvegarde_localisation }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>5. Transferts hors de l'Union européenne</h2>
+  <p>
+    Plusieurs prestataires sont établis aux États-Unis, dont notre hébergeur. Ces transferts
+    reposent sur les clauses contractuelles types adoptées par la Commission européenne, ou sur le
+    cadre de protection des données UE–États-Unis lorsque le prestataire y est certifié.
+  </p>
+
+  <h2>6. Ce qui est envoyé aux modèles d'intelligence artificielle</h2>
+  <p>
+    Pour écrire une correction ou une page, nous transmettons au modèle le contenu public des pages
+    concernées et les extraits de fichiers de votre dépôt nécessaires ; pour l'assistant, votre
+    question et les données de votre projet qui s'y rapportent. Les conditions d'utilisation par API
+    d'Anthropic et d'OpenAI{% if gemini_actif %} (et de Google pour Gemini){% endif %} excluent, par défaut, l'utilisation de ces données pour entraîner leurs
+    modèles. N'écrivez pas de données personnelles dans vos questions si elles ne sont pas utiles.
+  </p>
+
+  <h2>7. Combien de temps</h2>
+  <ul>
+    <li><strong>Compte, projets et contenus</strong> — tant que votre compte existe.</li>
+    <li><strong>À la suppression du compte</strong> — l'abonnement Stripe est résilié et le client Stripe supprimé, les accès Search Console révoqués, le compte et ses projets effacés ; dans le journal d'audit, votre identité est retirée des événements. Les sauvegardes qui les contiennent encore disparaissent au terme de leurs 30 jours de conservation.</li>
+    <li><strong>Factures</strong> — le temps des obligations comptables (dix ans en France), chez Stripe.</li>
+    <li><strong>Journaux techniques</strong> — la durée de conservation de notre hébergeur.</li>
+  </ul>
+
+  <h2>8. Cookies</h2>
+  <p>
+    Nous n'utilisons que des cookies strictement nécessaires : votre session, une protection contre
+    la falsification de requêtes, et un cookie temporaire pendant une connexion avec Google. Aucun
+    cookie publicitaire ni de mesure d'audience. Le navigateur garde aussi, localement, quelques
+    préférences d'affichage — votre choix sur le bandeau de cookies, par exemple.
+  </p>
+
+  <h2>9. Sécurité</h2>
+  <p>
+    Connexions chiffrées (HTTPS), mots de passe stockés sous forme d'empreinte, jetons et clés
+    d'accès chiffrés au repos. Les modifications de votre dépôt passent par des pull requests que
+    vous relisez.
+  </p>
+
+  <h2>10. Vos droits</h2>
+  <p>
+    Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition
+    et de portabilité. La suppression se fait vous-même, dans vos paramètres (« Supprimer mon
+    compte ») ; pour le reste, écrivez à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
+    Vous pouvez aussi adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>.
+  </p>
+
+  <h2>11. Modifications</h2>
+  <p>Toute modification de cette politique est datée en haut de cette page.</p>
+</article>
+{% endblock %}
