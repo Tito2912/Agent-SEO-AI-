@@ -1,0 +1,59 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Mentions légales - {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="description" content="Éditeur, directeur de la publication et hébergeur de {{ app_name }}." />
+<link rel="canonical" href="{{ canonical_url }}" />
+{# CREEE LE 30/09/2026 : le site n'en avait pas, alors que la LCEN (art. 6 III) l'impose a un site
+   professionnel. L'editeur vient des variables LEGAL_* (une ligne par valeur declaree). L'hebergeur
+   est celui que Render nomme dans ses propres conditions (render.com/terms, lu le 30/09/2026). #}
+<style>
+body > footer { max-width: 1160px !important; }
+main.container { max-width: 900px; }
+.ml { padding: 64px 0 80px; }
+.ml h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
+.ml h2 { margin: 48px 0 14px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.ml p { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
+.ml dl { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.ml dl > div { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.ml dl > div:last-child { border-bottom: 0; }
+.ml dt { font-size: 14px; font-weight: 600; color: var(--text); }
+.ml dd { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(255,255,255,.66); overflow-wrap: anywhere; }
+@media (max-width: 640px) { .ml dl > div { grid-template-columns: 1fr; gap: 2px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<article class="ml">
+  <h1>Mentions légales</h1>
+
+  <h2>Éditeur</h2>
+  <dl>
+    <div><dt>Identité</dt><dd>{{ legal_entity or app_name }}</dd></div>
+    {% if tva %}<div><dt>TVA intracommunautaire</dt><dd>{{ tva }}</dd></div>{% endif %}
+    {% if telephone %}<div><dt>Téléphone</dt><dd><a href="tel:{{ telephone_lien }}">{{ telephone }}</a></dd></div>{% endif %}
+    <div><dt>E-mail</dt><dd><a href="mailto:{{ support_email }}">{{ support_email }}</a></dd></div>
+  </dl>
+
+  {% if directeur %}
+  <h2>Directeur de la publication</h2>
+  <p>{{ directeur }}</p>
+  {% endif %}
+
+  <h2>Hébergeur</h2>
+  <dl>
+    <div><dt>Société</dt><dd>Render Services, Inc.</dd></div>
+    <div><dt>Adresse</dt><dd>525 Brannan Street, Suite 300, San Francisco, CA 94107, États-Unis</dd></div>
+    <div><dt>Téléphone</dt><dd>+1 415-319-8186</dd></div>
+    <div><dt>Site</dt><dd><a href="https://render.com" rel="noopener">render.com</a></dd></div>
+  </dl>
+
+  <h2>Données personnelles et conditions</h2>
+  <p>
+    Les données traitées, les prestataires et vos droits sont décrits dans la
+    <a href="/privacy">politique de confidentialité</a>. L'utilisation du service est régie par les
+    <a href="/terms">conditions générales d'utilisation</a>.
+  </p>
+</article>
+{% endblock %}

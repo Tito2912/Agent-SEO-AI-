@@ -10,7 +10,10 @@
    prestataire d'e-mail faux (SendGrid au lieu de Brevo), aucun mot des transferts hors UE — alors
    que l'hebergement est aux Etats-Unis (Oregon). Chaque ligne ci-dessous est tiree du code.
    La date de mise a jour est celle du DOCUMENT : l'ancienne affichait la date du jour a chaque
-   visite. #}
+   visite.
+   30/09/2026 : Amazon Web Services nomme. Le code range les sauvegardes (backup.py) et, s'il a un
+   bucket, les rapports d'analyse (object_store.py) dans S3 via boto3 — aucune URL en clair, donc
+   invisible au releve des hotes : c'est `import boto3` que le test lit. #}
 <style>
 body > footer { max-width: 1160px !important; }
 main.container { max-width: 900px; }
@@ -36,7 +39,7 @@ main.container { max-width: 900px; }
 {% block content %}
 <article class="conf">
   <h1>Politique de confidentialité</h1>
-  <p class="conf-date">Mise à jour le 29 septembre 2026</p>
+  <p class="conf-date">Mise à jour le 30 septembre 2026</p>
 
   <p class="conf-resume">
     En bref : {{ app_name }} traite les données nécessaires pour analyser votre site, corriger votre
@@ -95,7 +98,7 @@ main.container { max-width: 900px; }
         {% if ahrefs_actif %}<tr><th scope="row">Ahrefs</th><td>Données de backlinks</td><td>Domaines des sites analysés</td><td>Singapour</td></tr>{% endif %}
         {% if gemini_actif %}<tr><th scope="row">Google (Gemini)</th><td>Intelligence artificielle de l'assistant</td><td>Questions posées à l'assistant et données du projet qui s'y rapportent</td><td>États-Unis</td></tr>{% endif %}
         <tr><th scope="row">Sentry</th><td>Suivi des erreurs techniques</td><td>Traces d'erreur, sans adresse IP ni identifiant de compte</td><td>{{ sentry_localisation }}</td></tr>
-        <tr><th scope="row">Sauvegardes</th><td>Copies quotidiennes de la base, conservées 30 jours</td><td>Toutes les données de la base</td><td>{{ sauvegarde_localisation }}</td></tr>
+        <tr><th scope="row">Amazon Web Services (S3)</th><td>Sauvegardes : copies quotidiennes de la base, conservées 30 jours{% if rapports_s3 %} ; stockage des rapports d'analyse{% endif %}</td><td>Toutes les données de la base</td><td>{{ sauvegarde_localisation }}</td></tr>
       </tbody>
     </table>
   </div>

@@ -150,5 +150,5 @@ def test_l_identite_legale_et_les_sauvegardes_sont_DECLAREES(monkeypatch) -> Non
 def test_la_date_est_celle_du_DOCUMENT_pas_du_jour() -> None:
     """L'ancienne page affichait la date du jour à chaque visite (`_legal_updated_at`)."""
     page = _page()
-    assert "Mise à jour le 29 septembre 2026" in page
+    assert "Mise à jour le 30 septembre 2026" in page
     assert "modèle de base à compléter" not in page

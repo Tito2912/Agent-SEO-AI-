@@ -9706,6 +9706,7 @@ async def beta_basic_auth_middleware(request: Request, call_next):  # type: igno
         "/pricing",
         "/terms",
         "/privacy",
+        "/mentions-legales",
         "/support",
         "/status",
     } or path.startswith("/ressources-seo") or path.startswith("/docs"):
@@ -9812,6 +9813,7 @@ def _public_nav_items() -> list[dict[str, str]]:
         {"href": "/status", "label": "Statut", "primary": ""},
         {"href": "/terms", "label": "CGU", "primary": ""},
         {"href": "/privacy", "label": "Confidentialité", "primary": ""},
+        {"href": "/mentions-legales", "label": "Mentions légales", "primary": ""},
     ]
 
 
@@ -10957,6 +10959,7 @@ async def session_auth_middleware(request: Request, call_next):  # type: ignore[
         "/pricing",
         "/terms",
         "/privacy",
+        "/mentions-legales",
         "/support",
         "/status",
         "/auth/login",
@@ -13069,10 +13072,42 @@ def privacy_public(request: Request) -> HTMLResponse:
             "legal_entity": _safe_env("LEGAL_ENTITY"),
             "sentry_localisation": _localisation_sentry(),
             "sauvegarde_localisation": _localisation_sauvegardes(),
+            # Les rapports d'analyse vont aussi dans le bucket quand ce service en a un.
+            "rapports_s3": object_store.s3_enabled(),
             # Deux services qui ne recoivent rien tant que leur cle n'est pas configuree : la page
             # ne les nomme que s'ils sont branches.
             "ahrefs_actif": bool(_ahrefs_env_token()[0]),
             "gemini_actif": _assistant_gemini_configured(),
+        },
+    )
+
+
+def _lien_telephone(numero: str) -> str:
+    """`06 14 97 64 01` -> `0614976401` : un lien `tel:` ne porte ni espace ni point."""
+    return "".join(c for c in numero if c.isdigit() or c == "+")
+
+
+@app.api_route("/mentions-legales", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def legal_notice_public(request: Request) -> HTMLResponse:
+    """Ce qu'un site professionnel doit afficher (LCEN, art. 6 III) : editeur, directeur de la
+    publication, hebergeur. L'identite de l'editeur est une DECLARATION du proprietaire, reglee sur
+    Render sans deploiement (`LEGAL_*`) ; une valeur absente fait disparaitre sa ligne, jamais un
+    libelle vide. L'hebergeur est ecrit dans le gabarit, comme les prestataires de /privacy."""
+    telephone = _safe_env("LEGAL_PHONE")
+    return templates.TemplateResponse(
+        "legal_notice_public.html",
+        {
+            "request": request,
+            "app_name": _app_name(),
+            "support_email": _support_email(),
+            "year": datetime.now(timezone.utc).year,
+            "nav_items": _public_nav_items(),
+            "canonical_url": _public_url(request, "/mentions-legales"),
+            "legal_entity": _safe_env("LEGAL_ENTITY"),
+            "tva": _safe_env("LEGAL_VAT_NUMBER"),
+            "directeur": _safe_env("LEGAL_PUBLICATION_DIRECTOR"),
+            "telephone": telephone,
+            "telephone_lien": _lien_telephone(telephone),
         },
     )
 
@@ -13260,6 +13295,7 @@ Allow: /
 Allow: /pricing
 Allow: /terms
 Allow: /privacy
+Allow: /mentions-legales
 Allow: /support
 Allow: /status
 Allow: /ressources-seo
@@ -13286,6 +13322,7 @@ def sitemap_xml(request: Request) -> PlainTextResponse:
         {"path": "/pricing", "lastmod": now, "changefreq": "monthly"},
         {"path": "/terms", "lastmod": now, "changefreq": "yearly"},
         {"path": "/privacy", "lastmod": now, "changefreq": "yearly"},
+        {"path": "/mentions-legales", "lastmod": now, "changefreq": "yearly"},
         {"path": "/support", "lastmod": now, "changefreq": "monthly"},
         {"path": "/status", "lastmod": now, "changefreq": "weekly"},
         {"path": "/ressources-seo", "lastmod": now, "changefreq": "weekly"},
