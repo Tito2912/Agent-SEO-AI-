@@ -146,8 +146,10 @@ def test_le_PALIER_survit_au_changement_de_fournisseur(openai, monkeypatch) -> N
     """Le cœur de la décision. `model_override` porte le modèle du forfait ; côté OpenAI on
     sert le pair du MÊME palier, déduit de lui — donc aucun des vingt appelants ne peut
     l'oublier."""
+    # Depuis le 30/09/2026 aucun plan n'est sur Opus PAR DEFAUT ; le palier reste un reglage du
+    # catalogue, pose ici comme un administrateur le poserait.
     monkeypatch.setenv("PLAN_CONFIG_JSON", json.dumps(
-        {"business": {"correction": {"model_openai": "modele-haut-de-gamme"}},
+        {"business": {"correction": {"model": "claude-opus-4-8", "model_openai": "modele-haut-de-gamme"}},
          "free": {"correction": {"model_openai": "modele-standard"}},
          "solo": {"correction": {"model_openai": "modele-standard"}},
          "pro": {"correction": {"model_openai": "modele-standard"}}}))
@@ -210,5 +212,5 @@ def test_les_pairs_se_reglent_SANS_deploiement(monkeypatch) -> None:
 def test_le_modele_ANTHROPIC_du_forfait_n_est_pas_touche() -> None:
     """Le témoin de tout ce qui précède : on a ajouté un pair, on n'a pas déplacé l'original."""
     cat = billing.plan_catalog()
-    assert cat["business"]["correction"]["model"] == "claude-opus-4-8"
+    assert cat["business"]["correction"]["model"] == "claude-sonnet-4-6", "recalibré le 30/09/2026"
     assert cat["pro"]["correction"]["model"] == "claude-sonnet-4-6"

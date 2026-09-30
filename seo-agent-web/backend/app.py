@@ -3585,7 +3585,10 @@ def _correction_ai_provider() -> str:
 def _correction_ai_model(provider: str) -> str:
     provider = (provider or "").strip().lower()
     if provider == "anthropic":
-        return (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-opus-4-8").strip()
+        # Le modele des appels qui n'en precisent pas : ciblage des fichiers, reponses de
+        # backlinks (manuelles et automatiques). C'etait Opus, QUEL QUE SOIT le plan du client —
+        # le double de Sonnet. Depuis le 30/09/2026 aucun plan client n'est sur Opus.
+        return (os.environ.get("SEO_CORRECTION_ANTHROPIC_MODEL") or "claude-sonnet-4-6").strip()
     if provider == "openai":
         # PLUS DE MODELE `mini` PAR DEFAUT. Le repli doit etre de qualite egale (proprietaire,
         # 21/09/2026) : le defaut vient du catalogue des forfaits, la ou vit deja la question
