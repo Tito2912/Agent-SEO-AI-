@@ -204,7 +204,7 @@ def test_the_other_plans_stay_available(monkeypatch) -> None:
     solo_card = _card(body, "Solo")
 
     assert "disabled" not in solo_card, "a customer who changed their mind had no way out"
-    assert "Downgrade fin de période" in solo_card
+    assert "Passer à Solo en fin de période" in solo_card
 
 
 def test_an_account_with_no_scheduled_change_never_calls_stripe(monkeypatch) -> None:

@@ -12908,6 +12908,12 @@ def _nombre_fr(v: int) -> str:
     return "{:,}".format(int(v)).replace(",", "\u202f")
 
 
+def _fix_pack_ouvert(plan_key: str) -> bool:
+    """Le fix pack (corrections a appliquer sans depot Git) : Solo et au-dessus. Lu par ses deux
+    routes ET par la grille des plans, pour que la page Tarifs ne puisse pas dire autre chose."""
+    return billing.plan_rank(plan_key) >= billing.plan_rank("solo")
+
+
 def _comparatif_des_plans() -> dict[str, Any]:
     """Les quatre plans et leurs VRAIS quotas, fonction par fonction — pour la home et /pricing.
 
@@ -12955,6 +12961,10 @@ def _comparatif_des_plans() -> dict[str, Any]:
                 "%s URL par analyse" % _nombre_fr(int(bloc(k, "crawl", "max_pagespeed_urls") or 0))
                 if bloc(k, "crawl", "max_pagespeed_urls") else "" for k in cles],
                 note="mesurées par Google PageSpeed"),
+            ligne("Anomalies triées par priorité, avec leurs URL", ["Inclus" for _k in cles]),
+            ligne("Audits planifiés", ["Inclus" for _k in cles],
+                  note="décomptés du quota de pages, comme un audit lancé à la main"),
+            ligne("Exports CSV et PDF", ["Inclus" for _k in cles]),
         ]},
         {"titre": "Corrections en pull request", "lignes": [
             ligne("Corrections écrites par l'IA, par mois", [quota(k, "ai_corrections_month") for k in cles],
@@ -12964,6 +12974,9 @@ def _comparatif_des_plans() -> dict[str, Any]:
             ligne("Moteur de correction", ["Avancé" if "opus" in str(bloc(k, "correction", "model") or "").lower()
                                            else "Standard" for k in cles]),
             ligne("Vérification par votre CI avant proposition", ["Inclus" for _k in cles]),
+            ligne("Contrôle après fusion, au crawl suivant", ["Inclus" for _k in cles]),
+            ligne("Fix pack sans dépôt Git", ["Inclus" if _fix_pack_ouvert(k) else "" for k in cles],
+                  note="les corrections à appliquer à la main, redirections en CSV"),
         ]},
         {"titre": "Contenu et concurrence", "lignes": [
             ligne("Articles rédigés par l'IA, par mois",
@@ -12974,10 +12987,20 @@ def _comparatif_des_plans() -> dict[str, Any]:
             ligne("Concurrents analysés", [
                 "%d par site" % _COMPETITOR_MAX_PER_PROJECT if des(k, "pro") else "" for k in cles],
                 note="%d pages lues par concurrent" % _COMPETITOR_MAX_PAGES),
-            ligne("Recherches d'opportunités de backlinks, par mois",
+        ]},
+        {"titre": "Backlinks", "lignes": [
+            ligne("Inventaire des liens entrants", ["Inclus" for _k in cles],
+                  note="import CSV, ou synchronisation Ahrefs"),
+            ligne("Recherches d'opportunités, par mois",
                   [quota(k, "backlink_searches_month", plan_mini="solo") for k in cles]),
             ligne("Réponses rédigées par l'IA, par mois",
                   [quota(k, "backlink_replies_month", plan_mini="solo") for k in cles]),
+            ligne("Surveillance des liens obtenus", ["Inclus" if des(k, "solo") else "" for k in cles]),
+        ]},
+        {"titre": "Performance", "lignes": [
+            ligne("Google Search Console et Bing Webmaster", ["Inclus" for _k in cles]),
+            ligne("Opportunités de mots-clés", ["Inclus" for _k in cles],
+                  note="tirées de votre Search Console"),
         ]},
         {"titre": "Équipe et assistant", "lignes": [
             ligne("Collaborateurs invités", [quota(k, "members") for k in cles]),
@@ -13002,6 +13025,15 @@ def _comparatif_des_plans() -> dict[str, Any]:
             "en_avant": k == "pro",
         })
     return {"cles": cles, "noms": [c["nom"] for c in cartes], "cartes": cartes, "sections": sections}
+
+
+def _comparatif_du_compte(plan_key: str) -> dict[str, Any]:
+    """La grille des plans vue depuis la page Abonnement : la colonne mise en avant est le plan
+    du compte, plus le plan que la page publique recommande."""
+    grille = _comparatif_des_plans()
+    for carte in grille["cartes"]:
+        carte["en_avant"] = carte["cle"] == plan_key
+    return grille
 
 
 @app.api_route("/pricing", methods=["GET", "HEAD"], response_class=HTMLResponse)
@@ -13447,6 +13479,9 @@ def billing_page(
             "subscription": sub,
             "subscription_active": sub_active,
             "abonnement_vu": billing.vue_abonnement(sub) if sub else {"resilie": False, "termine": False, "date": None},
+            # La MEME grille que la home et /pricing : les listes « features » du catalogue
+            # promettaient des differences que le code n'a pas (« Monitoring + alertes »).
+            "comparatif": _comparatif_du_compte(plan_key),
             "pending_change": pending_change,
             "limits": limits,
             "limits_labels": {
@@ -17526,7 +17561,7 @@ def project_overview(
         with DB.session() as db:
             plan_key = billing.effective_plan_key(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
 
-    fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
+    fix_pack_unlocked = is_admin or _fix_pack_ouvert(plan_key)
 
     top_actions: list[fix_pack.TopAction] = []
     crawl_items: dict[str, dict[str, list[dict[str, Any]]]] = {"gsc": {"query": [], "page": []}, "bing": {"query": [], "page": []}}
@@ -27408,7 +27443,7 @@ def export_project_fix_pack_zip(request: Request, slug: str, crawl: str | None =
         with DB.session() as db:
             plan_key = billing.effective_plan_key(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
 
-    fix_pack_unlocked = is_admin or plan_key in {"solo", "pro", "business"}
+    fix_pack_unlocked = is_admin or _fix_pack_ouvert(plan_key)
     if not fix_pack_unlocked:
         msg = "Fix pack disponible à partir de Solo. Va sur Abonnement pour upgrade."
         if _client_wants_json(request):

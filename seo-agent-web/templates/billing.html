@@ -157,7 +157,7 @@
   <div class="card">
     <div class="card-title-row">
       <h2>Changer de plan</h2>
-      <span class="muted small">Prix TTC · Upgrade instantané · Downgrade fin de période</span>
+      <span class="muted small">Prix TTC · passage au plan supérieur immédiat · retour au plan inférieur en fin de période</span>
     </div>
 
     {% if pending_change %}
@@ -189,6 +189,10 @@
       </div>
     {% endif %}
 
+    {#- LES QUATRE PLANS, Free compris, et la MEME grille que la home et /pricing (30/09/2026).
+        Les anciennes cartes listaient `plan.features` : des differences que le code n'a pas
+        (« Monitoring + alertes », « Suggestions IA avancées »), et pas de Free du tout. -#}
+    {% include "_tarifs_styles.html" %}
     {% if not stripe_ready %}
       <p class="muted">Stripe n'est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
     {% else %}
@@ -202,70 +206,75 @@
         </div>
       {% endif %}
       {#
-        One macro instead of three near-identical cards: the scheduled-downgrade state has to be
-        reflected on every plan, and three copies of that logic would drift apart.
+        One macro for every card: the scheduled-downgrade and cancellation states have to be
+        reflected on every plan, and four copies of that logic would drift apart.
       #}
-      {% macro plan_card(key) %}
-        {% set plan = catalog[key] %}
+      {% macro plan_card(c) %}
+        {% set key = c.cle %}
         {% set is_current = plan_key == key %}
         {% set is_scheduled = pending_change and pending_change.known and pending_change.plan_key == key %}
         {% set is_upgrade = subscription_active and rank.get(key, 0) > current_rank %}
         {% set bloque = subscription_active and abonnement_vu.resilie and not is_current %}
-        <div class="card">
-          <div class="card-title-row">
-            <h2>{{ plan.label }}</h2>
-            {% if is_scheduled %}
-              <span class="badge notice">changement programmé</span>
-            {% else %}
-              <span class="badge notice">{{ plan.price_label }}</span>
-            {% endif %}
-          </div>
-          <ul class="examples">
-            {% for f in plan.features %}
-              <li>{{ f }}</li>
-            {% endfor %}
+        <article class="tarif{% if is_current %} tarif--avant{% endif %}">
+          <header>
+            <h2>{{ c.nom }}</h2>
+            <p class="tarif-accroche">{{ c.accroche }}</p>
+          </header>
+          <p class="tarif-prix"><span>{{ c.montant }}</span><small>{{ c.periode or "sans carte bancaire" }}</small></p>
+          <ul class="tarif-cles">
+            {% if c.corrections %}<li>{{ c.corrections }} corrections/mois</li>{% endif %}
+            <li>{{ c.sites }} site{{ "s" if c.sites > 1 else "" }} suivi{{ "s" if c.sites > 1 else "" }}</li>
+            <li>{{ c.pages }} pages analysées/mois</li>
           </ul>
-          <div class="row-actions">
-            {% if prices[key] %}
-              <form method="post" action="/billing/checkout"{% if subscription_active %} class="inline"{% endif %}>
-                <input type="hidden" name="plan_key" value="{{ key }}" />
-                {% if not subscription_active %}
-                  <label class="muted small" style="display:flex;flex-direction:row;gap:7px;align-items:flex-start;margin:0 0 10px;cursor:pointer;">
-                    <input type="checkbox" name="execution_immediate" value="1" required style="margin-top:3px;" />
-                    <span>Je demande que mon abonnement commence immédiatement.</span>
-                  </label>
-                {% endif %}
-                <button
-                  type="submit"
-                  class="btn primary"
-                  {% if is_current or is_scheduled or bloque %}disabled{% endif %}
-                  {% if is_scheduled %}title="Ce changement est déjà demandé{% if pending_change.effective_at %}, il prend effet le {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}."{% endif %}
-                  {% if bloque %}title="Réactive d'abord ton abonnement avec « Gérer l'abonnement »."{% endif %}
-                >
-                  {% if is_current %}
-                    Plan actuel
-                  {% elif is_scheduled %}
-                    Déjà programmé{% if pending_change.effective_at %} · {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}
-                  {% elif is_upgrade %}
-                    Upgrade
-                  {% elif subscription_active %}
-                    Downgrade fin de période
-                  {% else %}
-                    Choisir {{ plan.label }}
-                  {% endif %}
-                </button>
+          {% if key == 'free' %}
+            {#- Revenir a Free, c'est RESILIER : le meme parcours que le bouton « Résilier ». -#}
+            {% if is_current %}
+              <button type="button" class="btn" disabled>Plan actuel</button>
+            {% elif bloque %}
+              <button type="button" class="btn" disabled>Prévu{% if abonnement_vu.date %} le {{ abonnement_vu.date.strftime('%d/%m/%Y') }}{% endif %}</button>
+            {% elif subscription_active %}
+              <form method="post" action="/billing/portal">
+                <input type="hidden" name="intention" value="resilier" />
+                <button type="submit" class="btn">Revenir au plan Free</button>
               </form>
-            {% else %}
-              <span class="muted small">Price ID manquant (Render env).</span>
             {% endif %}
-          </div>
-        </div>
+          {% elif prices[key] %}
+            <form method="post" action="/billing/checkout">
+              <input type="hidden" name="plan_key" value="{{ key }}" />
+              {% if not subscription_active %}
+                <label class="muted small" style="display:flex;flex-direction:row;gap:7px;align-items:flex-start;margin:0 0 10px;cursor:pointer;">
+                  <input type="checkbox" name="execution_immediate" value="1" required style="margin-top:3px;" />
+                  <span>Je demande que mon abonnement commence immédiatement.</span>
+                </label>
+              {% endif %}
+              <button
+                type="submit"
+                class="btn{% if not is_current %} primary{% endif %}"
+                {% if is_current or is_scheduled or bloque %}disabled{% endif %}
+                {% if is_scheduled %}title="Ce changement est déjà demandé{% if pending_change.effective_at %}, il prend effet le {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}."{% endif %}
+                {% if bloque %}title="Réactive d'abord ton abonnement avec « Gérer l'abonnement »."{% endif %}
+              >
+                {% if is_current %}
+                  Plan actuel
+                {% elif is_scheduled %}
+                  Déjà programmé{% if pending_change.effective_at %} · {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}
+                {% elif is_upgrade %}
+                  Passer à {{ c.nom }}
+                {% elif subscription_active %}
+                  Passer à {{ c.nom }} en fin de période
+                {% else %}
+                  Choisir {{ c.nom }}
+                {% endif %}
+              </button>
+            </form>
+          {% else %}
+            <span class="muted small">Indisponible pour le moment.</span>
+          {% endif %}
+        </article>
       {% endmacro %}
 
-      <div class="grid three">
-        {{ plan_card('solo') }}
-        {{ plan_card('pro') }}
-        {{ plan_card('business') }}
+      <div class="tarifs">
+        {% for c in comparatif.cartes %}{{ plan_card(c) }}{% endfor %}
       </div>
       {% if not subscription_active %}
         <p class="muted small" style="margin:14px 0 0;">
@@ -275,6 +284,7 @@
         </p>
       {% endif %}
     {% endif %}
+    {% include "_comparatif.html" %}
   </div>
 
   {% if invoices %}

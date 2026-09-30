@@ -1,0 +1,26 @@
+{# La grille « fonction par fonction », lue dans `_comparatif_des_plans()` : home, /pricing,
+   /billing. Aucun nombre ecrit ici. #}
+<h3 class="comparatif-titre" id="comparatif">Comparer les plans, fonction par fonction</h3>
+<div class="comparatif-defil">
+  <table class="comparatif">
+    <thead>
+      <tr>
+        <th scope="col">Fonction</th>
+        {% for nom in comparatif.noms %}<th scope="col"{% if comparatif.cartes[loop.index0].en_avant %} class="colonne-avant"{% endif %}>{{ nom }}</th>{% endfor %}
+      </tr>
+    </thead>
+    {% for section in comparatif.sections %}
+      <tbody>
+        <tr class="comparatif-section"><th scope="colgroup" colspan="{{ comparatif.noms|length + 1 }}">{{ section.titre }}</th></tr>
+        {% for l in section.lignes %}
+          <tr>
+            <th scope="row">{{ l.libelle }}{% if l.note %}<span>{{ l.note }}</span>{% endif %}</th>
+            {% for v in l.valeurs %}
+              <td{% if comparatif.cartes[loop.index0].en_avant %} class="colonne-avant"{% endif %}>{% if v %}{{ v }}{% else %}<span class="absent" aria-label="Non inclus">—</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    {% endfor %}
+  </table>
+</div>
