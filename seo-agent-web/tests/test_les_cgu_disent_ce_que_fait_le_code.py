@@ -91,7 +91,7 @@ def test_l_analyse_des_concurrents_respecte_TOUJOURS_robots_txt(monkeypatch) -> 
 
 def test_la_date_est_celle_du_DOCUMENT_et_le_modele_a_disparu() -> None:
     page = _cgu()
-    assert "Mise à jour le 29 septembre 2026" in page
+    assert "Mise à jour le 30 septembre 2026" in page
     assert "modèle de base à compléter" not in page
     assert datetime.now(UTC).strftime("%Y-%m-%d") not in page
 

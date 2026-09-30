@@ -223,3 +223,58 @@ Les cinq variables reviennent aux valeurs de test et le service redéploie : rie
 côté base. **Sauf les abonnements créés en live entre-temps** — leurs `sub_…` seront illisibles
 par l'API test, exactement le symptôme inverse. C'est pourquoi l'étape 4 se fait avant d'annoncer
 quoi que ce soit à un client.
+
+## Vente aux consommateurs : TVA, résiliation, rétractation
+
+Depuis le 30/09/2026 le service est ouvert aux professionnels ET aux particuliers, et EComShop est
+assujettie à la TVA. Le code est prêt ; ce qui suit se règle dans les tableaux de bord, **en test
+puis en live**, et **avant le premier client payant en live**.
+
+### TVA détaillée sur les factures (Stripe Tax)
+
+1. Stripe → Paramètres → Taxes : activer Stripe Tax.
+   - adresse d'origine : le siège (60 rue François 1er, 75008 Paris) ;
+   - code fiscal par défaut : « General – Electronically Supplied Services » ;
+   - comportement fiscal par défaut : **inclus** — les prix affichés sont TTC (CGU §3, page Tarifs).
+2. Stripe → Taxes → Immatriculations : ajouter la **France** (numéro de TVA FR18934934308).
+3. Les trois prix : comportement fiscal « inclus » (ils l'héritent du réglage par défaut s'ils sont
+   en « non spécifié »).
+4. Stripe → Paramètres → Facturation → Factures : faire figurer le numéro de TVA de l'entreprise
+   sur les factures ; raison sociale et adresse dans les coordonnées publiques.
+5. **Seulement ensuite**, Render (service web) : `STRIPE_AUTOMATIC_TAX=1`. Dans l'autre ordre,
+   Stripe **refuse** la session de paiement : plus personne ne peut souscrire.
+6. Vérifier : un paiement de test → la facture affiche « TVA 20 % (incluse) ».
+
+Avec ce réglage, le paiement demande l'adresse de facturation et accepte un numéro de TVA : un
+professionnel d'un autre pays de l'UE passe en autoliquidation (les CGU le disent dès que la
+variable est posée). Un changement de plan programmé reporte le calcul de TVA de l'abonnement.
+
+### Autoriser la résiliation dans le portail client
+
+Stripe → Paramètres → Facturation → Portail client : **Annuler les abonnements** activé, **à la fin
+de la période de facturation** (c'est ce que disent les CGU §4). Le bouton « Résilier mon
+abonnement » ouvre le portail directement sur cet écran ; si la résiliation n'y est pas autorisée,
+il ouvre le portail complet et le journal écrit `[STRIPE] parcours de resiliation refuse`.
+
+La confirmation par e-mail part toute seule du webhook (`customer.subscription.*`) :
+`[STRIPE] resiliation confirmee par e-mail`. En cas d'échec d'envoi, la ligne
+`confirmation de resiliation NON ENVOYEE` donne le compte à prévenir à la main.
+
+### Traiter une rétractation (à la main)
+
+Un consommateur écrit dans les **14 jours** qui suivent sa souscription (CGU §5) :
+
+1. Vérifier la date de souscription (Stripe → client → abonnement). Au-delà de 14 jours, la
+   rétractation ne s'applique plus ; la résiliation normale reste possible.
+2. Stripe → abonnement → **Annuler immédiatement**, remboursement **au prorata**.
+3. Le remboursement doit partir dans les 14 jours suivant la demande, par le même moyen de paiement.
+
+Le webhook envoie seul l'e-mail « Votre abonnement est résilié ». La preuve que le client avait
+demandé de commencer tout de suite est dans le journal d'audit : action `billing.checkout`,
+`execution_immediate_demandee`.
+
+### Médiateur de la consommation (obligatoire en B2C)
+
+Adhérer à un médiateur agréé (liste de la CECMC sur economie.gouv.fr), puis sur Render (service
+web) : `LEGAL_MEDIATOR` = « Nom, adresse, site ». La phrase qui le nomme apparaît alors dans les
+CGU §11 ; tant que la variable est vide, elle n'est pas affichée.

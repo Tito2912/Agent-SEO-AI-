@@ -3,39 +3,52 @@
 {% block title %}Conditions générales d'utilisation - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="Les conditions d'utilisation de {{ app_name }} : le service, les plans et leurs quotas, les pull requests sur votre dépôt, vos responsabilités et les nôtres." />
+<meta name="description" content="Les conditions d'utilisation de {{ app_name }} : le service, les prix et les quotas, la résiliation, le droit de rétractation, les pull requests sur votre dépôt, vos responsabilités et les nôtres." />
 <link rel="canonical" href="{{ canonical_url }}" />
 {# REECRITES LE 29/09/2026. L'ancienne version etait un « modele de base a completer » publie tel
    quel, avec la date du jour en guise de date de mise a jour. Chaque regle de fonctionnement
    ci-dessous est celle du code : quotas remis a zero le 1er du mois (UTC, `_period_key`), une
    correction decomptee = un fichier ecrit par le modele, aucune fusion sans validation sauf
-   option activee par le client, robots.txt toujours respecte chez les concurrents. #}
+   option activee par le client, robots.txt toujours respecte chez les concurrents.
+   30/09/2026 : le service s'ouvre aux CONSOMMATEURS (decision du proprietaire). S'y ajoutent ce
+   que la loi leur doit : prix TTC, retractation de 14 jours et son formulaire, garantie legale de
+   conformite, resiliation nommee (bouton « Resilier mon abonnement » + e-mail de confirmation),
+   mediateur, juridiction. La responsabilite n'est plafonnee qu'envers les professionnels : envers
+   un consommateur, la clause serait abusive (art. R212-1, 6° du Code de la consommation). #}
 <style>
 body > footer { max-width: 1160px !important; }
 main.container { max-width: 900px; }
 .cgu { padding: 64px 0 80px; }
 .cgu h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 650; letter-spacing: -.035em; line-height: 1.08; }
 .cgu-date { margin: 12px 0 0; font-size: 13.5px; color: var(--muted); }
-.cgu h2 { margin: 48px 0 12px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.cgu h2 { margin: 48px 0 12px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); scroll-margin-top: 90px; }
 .cgu p, .cgu li { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.66); }
 .cgu ul { padding-left: 20px; margin: 10px 0; }
 .cgu li { margin: 5px 0; }
 .cgu strong { color: var(--text); font-weight: 600; }
+.cgu-formulaire { margin: 14px 0 0; padding: 18px 20px; border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2); }
+.cgu-formulaire p { margin: 0 0 8px; font-size: 14px; }
+.cgu-formulaire p:last-child { margin-bottom: 0; }
 </style>
 {% endblock %}
 
 {% block content %}
 <article class="cgu">
   <h1>Conditions générales d'utilisation</h1>
-  <p class="cgu-date">Mise à jour le 29 septembre 2026</p>
+  <p class="cgu-date">Mise à jour le 30 septembre 2026</p>
 
   <h2>1. Éditeur et objet</h2>
   <p>
     {% if legal_entity %}{{ app_name }} est édité par {{ legal_entity }}.{% else %}{{ app_name }} est joignable à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% endif %}
+    Voir aussi les <a href="/mentions-legales">mentions légales</a>.
     Ces conditions encadrent l'utilisation du service : l'analyse technique des sites que vous
     ajoutez, la correction de leur code par pull request sur votre dépôt, la rédaction de pages,
     l'analyse de vos concurrents, la recherche d'opportunités de liens, l'assistant et les exports.
     En créant un compte, vous les acceptez.
+  </p>
+  <p>
+    Le service s'adresse aux professionnels comme aux particuliers. Quand une règle ne vaut que
+    pour les <strong>consommateurs</strong> ou que pour les <strong>professionnels</strong>, elle le dit.
   </p>
 
   <h2>2. Votre compte</h2>
@@ -45,17 +58,48 @@ main.container { max-width: 900px; }
     <li>Les collaborateurs que vous invitez agissent sur vos projets ; ce qu'ils consomment est décompté de vos quotas, et chaque action garde la trace de son auteur.</li>
   </ul>
 
-  <h2>3. Plans, quotas et paiement</h2>
+  <h2>3. Plans, prix, quotas et paiement</h2>
   <ul>
     <li>Les plans, leurs prix et leurs quotas sont ceux de la page <a href="/pricing">Tarifs</a> au moment de votre souscription. Le plan Free ne demande aucun moyen de paiement.</li>
+    <li>Les prix sont indiqués en euros, <strong>toutes taxes comprises</strong> : le montant affiché est celui que vous payez.{% if tva_detaillee %} Chaque facture détaille la TVA. Un professionnel établi dans un autre pays de l'Union européenne qui indique un numéro de TVA intracommunautaire valide paie le même montant, sans TVA (autoliquidation).{% endif %}</li>
     <li>Les quotas sont <strong>mensuels et se renouvellent le 1er de chaque mois</strong> (heure UTC). Un quota non utilisé n'est pas reporté.</li>
     <li>Une correction décomptée est un fichier de votre dépôt écrit par un modèle d'intelligence artificielle ; les réécritures mécaniques, qui n'en appellent aucun, ne sont pas décomptées. Un article rédigé est décompté une fois par langue.</li>
     <li>Le paiement est traité par Stripe. Les abonnements sont mensuels et sans engagement.</li>
     <li>Un passage au plan supérieur est immédiat : la différence pour la période en cours est facturée le jour même. Un retour au plan inférieur prend effet à la fin de la période déjà payée.</li>
-    <li>Vous résiliez depuis la page Abonnement. La suppression de votre compte résilie l'abonnement.</li>
   </ul>
 
-  <h2>4. Votre dépôt et les pull requests</h2>
+  <h2 id="resiliation">4. Résiliation</h2>
+  <ul>
+    <li>Vous résiliez à tout moment depuis la page Abonnement, avec le bouton <strong>« Résilier mon abonnement »</strong>, ou en nous écrivant à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+    <li>La résiliation prend effet à la fin de la période déjà payée : d'ici là, vous gardez votre plan et ses quotas ; ensuite, plus rien n'est prélevé et votre compte passe au plan Free.</li>
+    <li>Nous vous confirmons la résiliation par e-mail, avec sa date de fin. Jusqu'à cette date, vous pouvez revenir sur votre décision depuis la page Abonnement.</li>
+    <li>La suppression de votre compte résilie l'abonnement.</li>
+  </ul>
+
+  <h2 id="retractation">5. Droit de rétractation (consommateurs)</h2>
+  <p>
+    Si vous êtes un consommateur, vous disposez de <strong>14 jours</strong> à compter de la souscription
+    d'un abonnement payant pour vous rétracter, sans avoir à vous justifier.
+  </p>
+  <p>
+    Au moment de souscrire, vous demandez expressément que l'abonnement commence immédiatement, en
+    cochant la case prévue avant le paiement. Si vous vous rétractez ensuite, nous vous remboursons
+    le montant payé, moins la part correspondant au service fourni jusqu'à votre rétractation,
+    calculée au prorata des jours écoulés. Le remboursement intervient au plus tard 14 jours après
+    réception de votre rétractation, par le moyen de paiement utilisé.
+  </p>
+  <p>
+    Pour vous rétracter, envoyez-nous une déclaration dénuée d'ambiguïté à
+    <a href="mailto:{{ support_email }}">{{ support_email }}</a>, ou le formulaire ci-dessous.
+  </p>
+  <div class="cgu-formulaire">
+    <p><strong>Formulaire de rétractation</strong> (à compléter et à renvoyer uniquement si vous souhaitez vous rétracter)</p>
+    <p>À l'attention de {{ legal_entity or app_name }} — <a href="mailto:{{ support_email }}">{{ support_email }}</a> :</p>
+    <p>Je vous notifie par la présente ma rétractation du contrat portant sur la prestation de services ci-dessous :</p>
+    <p>— Abonnement souscrit (plan) :<br />— Souscrit le :<br />— Nom du consommateur :<br />— Adresse du consommateur :<br />— Adresse e-mail du compte :<br />— Signature du consommateur (uniquement en cas d'envoi sur papier) :<br />— Date :</p>
+  </div>
+
+  <h2>6. Votre dépôt et les pull requests</h2>
   <ul>
     <li>Pour corriger votre code ou publier une page, vous nous donnez accès à votre dépôt GitHub. Vous pouvez retirer cet accès à tout moment, depuis vos paramètres ou depuis GitHub.</li>
     <li>Chaque modification arrive dans une <strong>pull request</strong>, sur une branche dédiée. Par défaut, <strong>rien n'est fusionné sans votre validation</strong>.</li>
@@ -64,7 +108,7 @@ main.container { max-width: 900px; }
     <li>Vous êtes libre d'utiliser, de modifier ou de refuser les corrections et contenus produits pour vos sites.</li>
   </ul>
 
-  <h2>5. Utilisation acceptable</h2>
+  <h2>7. Utilisation acceptable</h2>
   <ul>
     <li>N'analysez et ne modifiez que des sites et des dépôts que vous possédez ou que vous êtes autorisé à gérer.</li>
     <li>L'analyse des concurrents ne lit que leurs pages publiques, et respecte toujours leurs règles d'exploration (robots.txt).</li>
@@ -72,20 +116,33 @@ main.container { max-width: 900px; }
     <li>En cas de manquement, nous pouvons suspendre ou fermer le compte concerné, après vous en avoir informé sauf urgence.</li>
   </ul>
 
-  <h2>6. Ce que nous faisons, et ce que nous ne promettons pas</h2>
+  <h2>8. Ce que nous faisons, et ce que nous ne promettons pas</h2>
   <ul>
     <li>Nous mettons en œuvre les moyens raisonnables pour que le service fonctionne et reste disponible, sans garantir une disponibilité ininterrompue ; il peut évoluer.</li>
     <li>Aucune position dans les moteurs de recherche, aucun trafic ni aucun résultat commercial n'est garanti.</li>
     <li>Une correction n'est proposée qu'après ses propres contrôles ; elle peut néanmoins être inadaptée à votre site. La relecture et la décision de fusion vous reviennent, sauf fusion automatique activée par vous.</li>
   </ul>
 
-  <h2>7. Données personnelles</h2>
+  <h2>9. Responsabilité et garanties</h2>
+  <ul>
+    <li><strong>Si vous êtes un professionnel</strong> : notre responsabilité est limitée aux dommages directs et prévisibles, dans la limite des sommes que vous nous avez payées au cours des <strong>12 mois</strong> précédant le fait qui l'engage. Les dommages indirects — perte de chiffre d'affaires, de trafic, de clientèle, de données ou d'image — sont exclus.</li>
+    <li><strong>Si vous êtes un consommateur</strong> : notre responsabilité s'apprécie selon le droit commun, sans limitation par ces conditions. Vous bénéficiez de la <strong>garantie légale de conformité</strong> des contenus et services numériques (articles L224-25-12 et suivants du Code de la consommation) pendant toute la durée de votre abonnement : en cas de défaut de conformité, vous pouvez obtenir la mise en conformité du service ou, à défaut, une réduction du prix ou la résolution du contrat.</li>
+  </ul>
+
+  <h2>10. Données personnelles</h2>
   <p>Leur traitement est décrit dans la <a href="/privacy">politique de confidentialité</a>.</p>
 
-  <h2>8. Modifications</h2>
+  <h2>11. Litiges et droit applicable</h2>
+  <ul>
+    <li>Ces conditions sont soumises au droit français.</li>
+    <li><strong>Si vous êtes un consommateur</strong> : adressez d'abord votre réclamation par écrit à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% if mediateur %} Si elle n'aboutit pas, vous pouvez recourir gratuitement au médiateur de la consommation : {{ mediateur }}.{% endif %} Vous pouvez saisir la juridiction de votre domicile ou toute autre juridiction compétente selon la loi ; si vous résidez dans un autre pays de l'Union européenne, vous gardez la protection des règles impératives de votre pays.</li>
+    <li><strong>Si vous êtes un professionnel</strong> : tout litige relève de la compétence des tribunaux de Paris.</li>
+  </ul>
+
+  <h2>12. Modifications</h2>
   <p>Toute modification de ces conditions est publiée sur cette page, avec sa date.</p>
 
-  <h2>9. Contact</h2>
+  <h2>13. Contact</h2>
   <p>Pour toute question : <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
 </article>
 {% endblock %}

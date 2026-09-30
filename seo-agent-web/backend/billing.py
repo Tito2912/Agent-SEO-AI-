@@ -6,6 +6,7 @@ import os
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
+from urllib.parse import quote
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -114,6 +115,17 @@ def _env(name: str) -> str:
 
 def stripe_enabled() -> bool:
     return bool(_env("STRIPE_SECRET_KEY")) and stripe is not None
+
+
+def automatic_tax_enabled() -> bool:
+    """La TVA calculee par Stripe Tax, detaillee sur chaque facture.
+
+    Un REGLAGE, pas un defaut : tant que Stripe Tax n'est pas active dans le tableau de bord
+    (adresse d'origine, immatriculation France, prix « TVA incluse »), Stripe REFUSE une session
+    de paiement qui le demande — l'allumer par defaut couperait l'encaissement. Le proprietaire
+    le declare (`STRIPE_AUTOMATIC_TAX=1`) une fois le tableau de bord pret : voir RUNBOOK.md.
+    """
+    return _env("STRIPE_AUTOMATIC_TAX").lower() in {"1", "true", "yes", "on"}
 
 
 def stripe_init() -> None:
@@ -772,6 +784,17 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
     customer_id = get_or_create_stripe_customer(db, user_id=uid, email=email)
     upsert_customer_mapping(db, user_id=uid, stripe_customer_id=customer_id)
 
+    fiscal: dict[str, Any] = {}
+    if automatic_tax_enabled():
+        # Stripe calcule la TVA et la DETAILLE sur la facture ; un professionnel d'un autre pays
+        # de l'UE saisit son numero de TVA et passe en autoliquidation. Le client existe deja :
+        # sans `customer_update`, Stripe refuse d'y enregistrer l'adresse et le numero saisis.
+        fiscal = {
+            "automatic_tax": {"enabled": True},
+            "tax_id_collection": {"enabled": True},
+            "billing_address_collection": "required",
+            "customer_update": {"address": "auto", "name": "auto"},
+        }
     session = stripe.checkout.Session.create(  # type: ignore[attr-defined]
         mode="subscription",
         customer=customer_id,
@@ -782,6 +805,7 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
         client_reference_id=uid,
         metadata={"user_id": uid, "plan_key": pk},
         subscription_data={"metadata": {"user_id": uid, "plan_key": pk}},
+        **fiscal,
     )
     url = str(getattr(session, "url", "") or "").strip()
     if not url:
@@ -789,7 +813,10 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
     return url
 
 
-def create_billing_portal_url(db: Session, *, user_id: str, email: str) -> str:
+def create_billing_portal_url(db: Session, *, user_id: str, email: str, resilier: bool = False) -> str:
+    """Le portail Stripe du client. `resilier` l'ouvre directement sur l'ecran de resiliation :
+    la loi (« resiliation en trois clics », art. L215-1-1 du Code de la consommation) veut une
+    fonction nommee sans ambiguite, et « Gerer l'abonnement » ne l'est pas."""
     stripe_init()
     if not stripe_enabled():
         raise RuntimeError("stripe_not_configured")
@@ -807,10 +834,34 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str) -> str:
         customer_id = get_or_create_stripe_customer(db, user_id=uid, email=email)
         upsert_customer_mapping(db, user_id=uid, stripe_customer_id=customer_id)
 
-    session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
-        customer=customer_id,
-        return_url=f"{base}/billing",
-    )
+    sub_row = subscription_for_user(db, user_id=uid) if resilier else None
+    sid = str(getattr(sub_row, "stripe_subscription_id", "") or "").strip()
+    session = None
+    if sid:
+        confirmation = quote("Résiliation enregistrée. Vous en recevez la confirmation par e-mail.")
+        try:
+            session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
+                customer=customer_id,
+                return_url=f"{base}/billing",
+                flow_data={
+                    "type": "subscription_cancel",
+                    "subscription_cancel": {"subscription": sid},
+                    "after_completion": {"type": "redirect",
+                                         "redirect": {"return_url": f"{base}/billing?msg={confirmation}"}},
+                },
+            )
+        except Exception as e:
+            # Le portail refuse le parcours si la resiliation n'y est pas autorisee (reglage du
+            # tableau de bord). Le client doit pouvoir resilier quand meme : on ouvre le portail
+            # entier, ou le bouton existe des qu'il est autorise, et on le DIT dans le journal.
+            logger.warning("[STRIPE] parcours de resiliation refuse (%s: %s) : portail complet ouvert. "
+                           "Autorise la resiliation dans la configuration du portail client.",
+                           type(e).__name__, e)
+    if session is None:
+        session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
+            customer=customer_id,
+            return_url=f"{base}/billing",
+        )
     url = str(getattr(session, "url", "") or "").strip()
     if not url:
         raise RuntimeError("stripe_portal_url_missing")
@@ -1158,6 +1209,10 @@ def schedule_plan_change_at_period_end(
 
     effective_at = datetime.fromtimestamp(end_date, tz=UTC)
 
+    # Des phases reecrites n'HERITENT pas du calcul de TVA de l'abonnement : on reporte le sien,
+    # sans quoi le plan inferieur serait facture sans TVA des sa premiere echeance.
+    taxe = stripe_sub.get("automatic_tax") if isinstance(stripe_sub.get("automatic_tax"), dict) else {}
+    fiscal = {"automatic_tax": {"enabled": True}} if taxe.get("enabled") else {}
     stripe.SubscriptionSchedule.modify(  # type: ignore[attr-defined]
         schedule_id,
         end_behavior="release",
@@ -1166,10 +1221,12 @@ def schedule_plan_change_at_period_end(
                 "start_date": start_date,
                 "end_date": end_date,
                 "items": [{"price": current_price_id, "quantity": 1}],
+                **fiscal,
             },
             {
                 "start_date": end_date,
                 "items": [{"price": price_id, "quantity": 1}],
+                **fiscal,
             },
         ],
     )
@@ -1265,7 +1322,38 @@ def construct_webhook_event(*, payload: bytes, sig_header: str) -> dict[str, Any
     return _stripe_to_dict(event)
 
 
-def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
+def _est_resilie(sub: dict[str, Any]) -> bool:
+    """Resilie a la demande du client : en fin de periode (`cancel_at_period_end`, ou `cancel_at`
+    selon la version d'API), ou tout de suite (`canceled`). Un abonnement arrete par des echecs
+    de paiement n'est PAS une resiliation : Stripe previent deja le client de l'impaye."""
+    raison = sub.get("cancellation_details") if isinstance(sub.get("cancellation_details"), dict) else {}
+    if str(raison.get("reason") or "") in {"payment_failed", "payment_disputed"}:
+        return False
+    statut = str(sub.get("status") or "").strip().lower()
+    return bool(sub.get("cancel_at_period_end") or sub.get("cancel_at")) or statut == "canceled"
+
+
+def _fin_de_l_abonnement(sub: dict[str, Any]) -> datetime | None:
+    """La date ou l'abonnement s'arrete. Selon la version d'API, la fin de periode est portee par
+    l'abonnement ou par son premier article."""
+    articles = sub.get("items") if isinstance(sub.get("items"), dict) else {}
+    lignes = articles.get("data") if isinstance(articles.get("data"), list) else []
+    premier = lignes[0] if lignes and isinstance(lignes[0], dict) else {}
+    for brut in (sub.get("ended_at"), sub.get("cancel_at"), sub.get("current_period_end"),
+                 premier.get("current_period_end")):
+        try:
+            if brut and int(brut) > 0:
+                return datetime.fromtimestamp(int(brut), tz=UTC)
+        except Exception:
+            continue
+    return None
+
+
+def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> dict[str, Any] | None:
+    """Traite l'evenement. Rend `{"resiliation": {...}}` la PREMIERE fois qu'un abonnement actif
+    devient resilie, pour que l'appelant en envoie la confirmation — que la loi veut sur un
+    support durable. Comparer avec la base, et non se fier au seul evenement, rend l'envoi
+    unique : Stripe renvoie un evenement tant qu'il n'a pas eu de reponse."""
     etype = str(event.get("type") or "").strip()
     data = event.get("data") if isinstance(event.get("data"), dict) else {}
     obj = data.get("object") if isinstance(data.get("object"), dict) else {}
@@ -1286,8 +1374,20 @@ def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
 
     if etype.startswith("customer.subscription."):
         # object is already a subscription
-        upsert_subscription(db, stripe_subscription=obj)
-        return
+        sid = str(obj.get("id") or "").strip()
+        avant = db.scalar(select(BillingSubscription).where(BillingSubscription.stripe_subscription_id == sid)) if sid else None
+        etait_actif = bool(avant) and str(getattr(avant, "status", "") or "").lower() in ACTIVE_SUB_STATUSES
+        etait_resilie = bool(avant) and (bool(getattr(avant, "cancel_at_period_end", False))
+                                         or _est_resilie(avant.stripe_data if isinstance(avant.stripe_data, dict) else {}))
+        row = upsert_subscription(db, stripe_subscription=obj)
+        if row is not None and etait_actif and not etait_resilie and _est_resilie(obj):
+            return {"resiliation": {
+                "user_id": str(row.user_id),
+                "plan_key": str(row.plan_key or ""),
+                "fin": _fin_de_l_abonnement(obj),
+                "immediate": str(obj.get("status") or "").strip().lower() == "canceled",
+            }}
+        return None
 
     # DIRE QU'ON NE FAIT RIEN. Cette fonction ne traite que deux familles d'evenements et
     # sortait en silence pour toutes les autres ; la route, elle, journalise « traite » des
@@ -1299,6 +1399,7 @@ def handle_stripe_event(db: Session, *, event: dict[str, Any]) -> None:
     # attendu n'arrivait pas — endpoint mal configure, evenement non selectionne — on ne
     # verrait que des lignes « traite » et on conclurait que tout va bien.
     logger.info("[STRIPE] evenement %s IGNORE : aucun traitement prevu pour ce type", etype)
+    return None
 
 
 def list_invoices(db: Session, *, user_id: str, limit: int = 12) -> list[dict[str, Any]]:

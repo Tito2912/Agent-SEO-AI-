@@ -12995,7 +12995,7 @@ def _comparatif_des_plans() -> dict[str, Any]:
         montant, _sep, reste = prix.partition("€")
         cartes.append({
             "cle": k, "nom": str(cat[k].get("label") or k.title()),
-            "montant": (montant.strip() or "0") + " €", "periode": "par mois" if reste or montant.strip() != "0" else "",
+            "montant": (montant.strip() or "0") + " €", "periode": "TTC par mois" if reste or montant.strip() != "0" else "",
             "accroche": accroches.get(k, ""),
             "corrections": lim(k, "ai_corrections_month"),
             "sites": lim(k, "projects"), "pages": _nombre_fr(lim(k, "pages_crawled_month")),
@@ -13034,6 +13034,11 @@ def terms_public(request: Request) -> HTMLResponse:
             "nav_items": _public_nav_items(),
             "canonical_url": _public_url(request, "/terms"),
             "legal_entity": _safe_env("LEGAL_ENTITY"),
+            # Le mediateur de la consommation : une adhesion du proprietaire, declaree sur Render
+            # (nom, adresse, site). Absent, la phrase qui le nomme disparait.
+            "mediateur": _safe_env("LEGAL_MEDIATOR"),
+            # La facture ne detaille la TVA que si Stripe la calcule : la phrase suit le reglage.
+            "tva_detaillee": billing.automatic_tax_enabled(),
         },
     )
 
@@ -13475,7 +13480,9 @@ def billing_page(
 
 
 @app.post("/billing/checkout")
-def billing_checkout(request: Request, plan_key: str = Form(default="")) -> RedirectResponse:
+def billing_checkout(
+    request: Request, plan_key: str = Form(default=""), execution_immediate: str = Form(default=""),
+) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
@@ -13551,10 +13558,20 @@ def billing_checkout(request: Request, plan_key: str = Form(default="")) -> Redi
                     meta={"from": current, "to": pk, "error": str(e)[:240]},
                 )
                 return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
+    if execution_immediate.strip() != "1":
+        # Un consommateur a 14 jours pour se retracter. Pour que le service commence avant, la loi
+        # veut sa DEMANDE EXPRESSE (art. L221-25 du Code de la consommation) : c'est la case du
+        # formulaire, verifiee ici et tracee dans le journal d'audit — c'est la preuve.
+        _audit_log(request, action="billing.checkout", status="missing_consent", user=user, meta={"plan_key": pk})
+        return RedirectResponse(
+            url=_path_with_flash("/billing", err="Coche la case « Je demande que mon abonnement commence immédiatement » pour souscrire."),
+            status_code=303,
+        )
     try:
         with DB.session() as db:
             url = billing.create_checkout_session_url(db, user_id=str(user.id), email=str(user.email), plan_key=pk)
-        _audit_log(request, action="billing.checkout", status="ok", user=user, meta={"plan_key": pk})
+        _audit_log(request, action="billing.checkout", status="ok", user=user,
+                   meta={"plan_key": pk, "execution_immediate_demandee": True})
         return RedirectResponse(url=url, status_code=303)
     except Exception as e:
         _audit_log(request, action="billing.checkout", status="error", user=user, meta={"plan_key": pk, "error": str(e)[:240]})
@@ -13602,7 +13619,7 @@ def billing_cancel_scheduled_change(request: Request) -> RedirectResponse:
 
 
 @app.post("/billing/portal")
-def billing_portal(request: Request) -> RedirectResponse:
+def billing_portal(request: Request, intention: str = Form(default="")) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
@@ -13623,12 +13640,58 @@ def billing_portal(request: Request) -> RedirectResponse:
         )
     try:
         with DB.session() as db:
-            url = billing.create_billing_portal_url(db, user_id=str(user.id), email=str(user.email))
-        _audit_log(request, action="billing.portal", status="ok", user=user)
+            url = billing.create_billing_portal_url(
+                db, user_id=str(user.id), email=str(user.email), resilier=intention.strip() == "resilier")
+        _audit_log(request, action="billing.portal", status="ok", user=user,
+                   meta={"resilier": intention.strip() == "resilier"})
         return RedirectResponse(url=url, status_code=303)
     except Exception as e:
         _audit_log(request, action="billing.portal", status="error", user=user, meta={"error": str(e)[:240]})
         return RedirectResponse(url=f"/billing?err={quote(str(e) or 'Erreur Stripe')}", status_code=303)
+
+
+def _confirmer_la_resiliation(info: dict[str, Any]) -> None:
+    """La confirmation qu'exige la loi apres une resiliation (art. L215-1-1 du Code de la
+    consommation) : sur un support durable, avec la date de fin.
+
+    Jamais bloquante : un e-mail qui echoue ne doit pas faire rejouer le webhook par Stripe (la
+    resiliation, elle, est deja enregistree). L'echec est journalise, pour relancer a la main."""
+    uid = str(info.get("user_id") or "").strip()
+    with DB.session() as db:
+        user = db.get(User, uid) if uid else None
+        email = str(getattr(user, "email", "") or "").strip()
+    if not email:
+        logger.warning("[STRIPE] resiliation de %s confirmee a PERSONNE : aucun compte", uid or "?")
+        return
+    fin = info.get("fin")
+    date_fin = fin.strftime("%d/%m/%Y") if isinstance(fin, datetime) else ""
+    plan = str((billing.plan_catalog().get(str(info.get("plan_key") or "")) or {}).get("label") or "").strip()
+    nom = _app_name()
+    abonnement = f"abonnement {nom} {plan}".strip()
+    if info.get("immediate"):
+        sujet = f"Votre abonnement {nom} est résilié"
+        corps = (
+            f"Bonjour,\n\nVotre {abonnement} est résilié"
+            + (f" : il a pris fin le {date_fin}." if date_fin else ".")
+            + " Votre compte est repassé au plan Free, et plus rien ne sera prélevé.\n\n"
+        )
+    else:
+        sujet = f"Votre résiliation {nom} est enregistrée"
+        quand = f"le {date_fin}, à la fin de la période déjà payée" if date_fin else "à la fin de la période déjà payée"
+        corps = (
+            f"Bonjour,\n\nNous avons bien reçu la résiliation de votre {abonnement}.\n\n"
+            f"Il prendra fin {quand} : d'ici là, vous gardez votre plan et ses quotas. "
+            "Aucun prélèvement n'aura lieu ensuite, et votre compte passera au plan Free.\n\n"
+            "Vous changez d'avis ? Vous pouvez réactiver l'abonnement jusqu'à cette date, depuis la "
+            f"page Abonnement : {(billing.public_base_url() or '').rstrip('/')}/billing\n\n"
+        )
+    corps += f"L'équipe {nom}\n{_support_email()}\n"
+    try:
+        _send_email(to_addr=email, subject=sujet, body=corps)
+        logger.info("[STRIPE] resiliation confirmee par e-mail a %s (fin %s)", _mask_email(email), date_fin or "?")
+    except Exception as e:
+        logger.error("[STRIPE] confirmation de resiliation NON ENVOYEE a %s : %s: %s — a envoyer a la main",
+                     _mask_email(email), type(e).__name__, e)
 
 
 @app.post("/stripe/webhook")
@@ -13666,12 +13729,14 @@ async def stripe_webhook(request: Request) -> JSONResponse:
 
     with DB.session() as db:
         try:
-            billing.handle_stripe_event(db, event=event)
+            effet = billing.handle_stripe_event(db, event=event)
         except Exception as e:
             logger.error("[STRIPE] webhook %s (%s) EN ERREUR : %s: %s",
                          _type, _eid, type(e).__name__, e)
             return JSONResponse({"ok": False, "error": "webhook_handler_error"}, status_code=500)
 
+    if isinstance(effet, dict) and isinstance(effet.get("resiliation"), dict):
+        _confirmer_la_resiliation(effet["resiliation"])
     logger.info("[STRIPE] webhook %s (%s) traite", _type, _eid)
     return JSONResponse({"ok": True})
 
