@@ -53,7 +53,7 @@
           {% if abonnement_vu.resilie %} <span class="muted">· Résiliation enregistrée</span>{% endif %}
         </div>
         {% if abonnement_vu.date %}
-          <div class="muted small">{{ "Fin de l'abonnement" if abonnement_vu.resilie else "Prochain renouvellement" }} : <span class="mono">{{ abonnement_vu.date.strftime("%d/%m/%Y") }}</span></div>
+          <div class="muted small">{{ "Fin de l'abonnement" if (abonnement_vu.resilie or abonnement_vu.termine) else "Prochain renouvellement" }} : <span class="mono">{{ abonnement_vu.date.strftime("%d/%m/%Y") }}</span></div>
         {% endif %}
       {% else %}
         <div class="muted small">Aucun abonnement actif.</div>

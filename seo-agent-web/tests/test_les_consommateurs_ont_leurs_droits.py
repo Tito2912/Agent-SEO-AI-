@@ -303,6 +303,19 @@ def test_un_abonnement_resilie_par_CANCEL_AT_refuse_un_changement_programme(monk
         billing.schedule_plan_change_at_period_end(db, user_id=uid, target_plan_key="solo")
 
 
+def test_un_abonnement_ANNULE_n_annonce_plus_de_renouvellement() -> None:
+    """Annulation immédiate, 30/09/2026 : Stripe efface `cancel_at`, garde la période payée dans
+    les articles et renseigne `ended_at`. La page annonçait « Prochain renouvellement »."""
+    tag = uuid.uuid4().hex[:8]
+    fini = int(datetime(2026, 9, 30, 10, 0, tzinfo=UTC).timestamp())
+    donnees = {**_abonnement_dahlia(f"sub_{tag}", "u", cancel_at=None), "status": "canceled",
+               "ended_at": fini, "canceled_at": fini}
+    client, _uid, _sid = _client(abonnement="canceled", fin_colonne=FIN, donnees=donnees)
+    texte = re.sub(r"<[^>]+>", "", html.unescape(client.get("/billing").text))
+    assert "Prochain renouvellement" not in texte
+    assert "Fin de l'abonnement : 30/09/2026" in texte and "Résiliation enregistrée" not in texte
+
+
 def test_le_RENOUVELLEMENT_se_lit_dans_les_articles() -> None:
     tag = uuid.uuid4().hex[:8]
     client, _uid, _sid = _client(abonnement="active", fin_colonne=None,

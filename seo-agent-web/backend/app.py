@@ -13446,7 +13446,7 @@ def billing_page(
             "plan": plan,
             "subscription": sub,
             "subscription_active": sub_active,
-            "abonnement_vu": billing.vue_abonnement(sub) if sub else {"resilie": False, "date": None},
+            "abonnement_vu": billing.vue_abonnement(sub) if sub else {"resilie": False, "termine": False, "date": None},
             "pending_change": pending_change,
             "limits": limits,
             "limits_labels": {

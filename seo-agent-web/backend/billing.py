@@ -687,10 +687,18 @@ def vue_abonnement(row: Any) -> dict[str, Any]:
     colonnes : une ligne ecrite avant la correction de `lire_abonnement` se lit juste tout de
     suite, sans attendre le prochain webhook."""
     donnees = getattr(row, "stripe_data", None)
-    lu = lire_abonnement(donnees if isinstance(donnees, dict) else {})
+    donnees = donnees if isinstance(donnees, dict) else {}
+    statut = str(getattr(row, "status", "") or donnees.get("status") or "").strip().lower()
+    if statut in {"canceled", "incomplete_expired"}:
+        # TERMINE : plus de renouvellement a annoncer. Une annulation immediate efface `cancel_at`
+        # et garde la fin de la periode payee — la page affichait « Prochain renouvellement » sur
+        # un abonnement annule (30/09/2026). La date utile est celle ou il s'est arrete.
+        return {"resilie": False, "termine": True,
+                "date": _date_stripe(donnees.get("ended_at")) or _date_stripe(donnees.get("canceled_at"))}
+    lu = lire_abonnement(donnees)
     resilie = lu["resilie"] or bool(getattr(row, "cancel_at_period_end", False))
     fin = lu["fin"] or getattr(row, "current_period_end", None)
-    return {"resilie": resilie, "date": (lu["cancel_at"] or fin) if resilie else fin}
+    return {"resilie": resilie, "termine": False, "date": (lu["cancel_at"] or fin) if resilie else fin}
 
 
 def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> BillingSubscription | None:
