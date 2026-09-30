@@ -7086,6 +7086,8 @@ class CompatJinja2Templates(Jinja2Templates):
 
 
 templates = CompatJinja2Templates(directory=str(REPO_ROOT / "seo-agent-web" / "templates"))
+# Les captures d'ecran des pages publiques declarent leurs vraies dimensions (voir `_capture.html`).
+templates.env.globals["dimensions_capture"] = content_library.dimensions_capture
 
 
 def _comptes_accessibles(user_id: str) -> list[str]:

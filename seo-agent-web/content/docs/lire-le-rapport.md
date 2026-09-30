@@ -5,7 +5,7 @@ description: "Ce que signifient les scores, les compteurs de pages, la comparais
 kind: "Documentation"
 section: "Prise en main"
 order: 13
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Tous les plans"
 keywords: ["rapport SEO", "score", "vue d'ensemble", "comparaison de crawls"]
 app_href: "/"
@@ -27,6 +27,8 @@ qui cloche, et ce qui a bougé depuis la dernière fois.
 Les scores résument l'état du site par famille : indexabilité, balises, contenu, maillage
 interne, performance. Ils servent à **une** chose : repérer d'un coup d'œil la famille qui
 s'effondre.
+
+![Vue d'ensemble d'un projet : score de santé, erreurs, avertissements, infos, pages crawlées et URL totales](/static/captures/resume-projet.webp "Le score de santé et les compteurs, en tête de la vue d'ensemble.")
 
 Ne les prenez pas pour une note Google. Aucun moteur ne calcule ce chiffre, et un site à 92
 peut être invisible pendant qu'un site à 61 se porte très bien. Le score est un thermomètre
@@ -67,6 +69,8 @@ page tarifs passe avant une erreur sur une page d'archive de 2019.
 
 C'est la vue la plus utile du produit, et la plus ignorée.
 
+![Histogramme de l'évolution du score de santé, un barreau par crawl avec sa date et sa durée](/static/captures/evolution-du-score.webp "L'évolution du score, un barreau par crawl.")
+
 Sélectionnez un crawl de référence : la vue d'ensemble affiche alors les **deltas** —
 anomalies apparues, anomalies résolues, pages gagnées ou perdues, évolution par famille.
 
@@ -83,6 +87,8 @@ Deux usages :
 Si Search Console est connectée, la vue d'ensemble intègre les impressions, clics et positions
 réelles, et les anomalies deviennent priorisables par trafic. Sans elle, {{app_name}} ne peut
 trier que par gravité technique, ce qui est nettement moins pertinent.
+
+![Carte Google Search Console : clics, impressions, CTR moyen et position moyenne sur 28 jours](/static/captures/search-console.webp "Les données Search Console, directement dans le rapport.")
 
 → [Connecter Search Console](/docs/connecter-search-console)
 

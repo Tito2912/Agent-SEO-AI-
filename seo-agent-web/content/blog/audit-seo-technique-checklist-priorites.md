@@ -4,7 +4,7 @@ title: "Audit SEO technique : la checklist pour prioriser les corrections"
 meta_title: "Audit SEO technique : checklist et priorités"
 description: "Une méthode pour transformer un crawl de 230 alertes en plan d'action tenable : ce qu'on corrige maintenant, ce qu'on surveille, ce qu'on ignore."
 kind: "Guide"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-05-15"
 audience: "Freelances, PME et responsables marketing"
 keywords: ["audit SEO", "crawl SEO", "priorisation SEO", "SEO technique"]
@@ -49,6 +49,8 @@ indexables.
 ## 2. Regrouper par cause, pas par ligne
 
 C'est l'étape que la plupart des audits sautent, et c'est celle qui divise le travail par dix.
+
+![Liste d'anomalies regroupées par type, avec le nombre d'occurrences de chacune](/static/captures/anomalies.webp "Des anomalies regroupées par type plutôt que listées URL par URL.")
 
 120 `meta description` manquantes, ce n'est presque jamais 120 problèmes. C'est un gabarit qui
 n'émet pas la balise. Une modification, 120 lignes qui disparaissent.

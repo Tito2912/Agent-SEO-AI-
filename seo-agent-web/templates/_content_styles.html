@@ -73,6 +73,15 @@
 .content-body ul,
 .content-body ol { margin: 0 0 16px; padding-left: 20px; }
 .content-body li { margin-bottom: 7px; }
+/* Captures et schemas (30/09/2026) : cadre discret, jamais plus large que le texte. */
+.content-body .content-figure { margin: 22px 0 26px; }
+.content-body .content-figure img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--border-2); border-radius: var(--radius-lg); background: var(--surface-card-2);
+}
+.content-body .content-figure-lien { display: block; cursor: zoom-in; }
+.content-body .content-figure-lien:hover img { border-color: rgba(var(--accent-rgb), .45); }
+.content-body .content-figure figcaption { margin-top: 9px; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .content-body a { color: var(--accent-2); }
 .content-body strong { color: var(--text); font-weight: 700; }
 .content-body code {

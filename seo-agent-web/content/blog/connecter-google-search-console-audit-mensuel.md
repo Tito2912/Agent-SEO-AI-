@@ -4,7 +4,7 @@ title: "Utiliser Google Search Console dans un audit SEO mensuel"
 meta_title: "Google Search Console : audit SEO mensuel"
 description: "Croiser les données Search Console avec un crawl technique pour décider quelles pages optimiser, au lieu de corriger dans l'ordre d'un rapport."
 kind: "Tutoriel"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-05-14"
 audience: "Sites vitrines, blogs et e-commerce"
 keywords: ["Google Search Console", "audit mensuel", "performance SEO", "requêtes SEO"]
@@ -94,6 +94,8 @@ plus Search Console**, pas l'un ou l'autre.
 ## La routine, en pratique
 
 Une fois par mois, dans cet ordre :
+
+![Carte Google Search Console : clics, impressions, CTR moyen et position moyenne sur 28 jours](/static/captures/search-console.webp "Clics, impressions, CTR et position moyenne sur 28 jours.")
 
 1. Lancer un crawl complet.
 2. Exporter les pages avec leurs impressions et clics sur 28 jours.

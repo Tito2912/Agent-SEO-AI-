@@ -4,7 +4,7 @@ title: "Core Web Vitals : lire les signaux sans se perdre dans les scores"
 meta_title: "Core Web Vitals : LCP, INP et CLS expliqués"
 description: "Ce que mesurent vraiment LCP, INP et CLS, pourquoi le score sur 100 ne veut presque rien dire, et comment relier la performance au reste de l'audit."
 kind: "Tutoriel"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-05-10"
 audience: "Développeurs, responsables produit et marketing"
 keywords: ["Core Web Vitals", "LCP", "INP", "CLS", "performance web"]
@@ -24,6 +24,8 @@ Retenir cette phrase évite l'essentiel des mauvaises décisions sur le sujet.
 
 ## Les trois mesures, une question chacune
 
+
+![Tableau des Core Web Vitals : LCP, TBT et CLS, avec le nombre de pages bonnes, moyennes et médiocres](/static/captures/core-web-vitals.webp "LCP, TBT et CLS mesurés sur un échantillon de pages.")
 ### LCP — Largest Contentful Paint
 
 **Combien de temps avant que le contenu principal soit visible ?**

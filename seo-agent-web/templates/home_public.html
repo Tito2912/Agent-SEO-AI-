@@ -1,4 +1,5 @@
 {% extends "public_layout.html" %}
+{% from "_capture.html" import capture %}
 
 {% block title %}{{ app_name }} - L'audit SEO qui livre le correctif{% endblock %}
 
@@ -54,6 +55,20 @@ main.container { max-width: 1160px; padding-top: 0; }
 .stacks ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 26px; }
 .stacks li { font-size: 14px; color: rgba(255,255,255,.78); font-weight: 500; }
 
+/* ── Captures de l'application (30/09/2026) : un vrai projet, prosperfactory.com ── */
+.capture { margin: 0; }
+.capture img { display: block; width: 100%; height: auto; border: 1px solid var(--border-2); border-radius: 12px; background: var(--surface-card-2); }
+.capture figcaption { margin-top: 10px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.apercu { padding: 72px 0 0; }
+.apercu .capture img { border-radius: 14px; box-shadow: var(--shadow-lg); }
+/* Trois ecrans en rangees texte + image : en colonnes etroites, le texte des captures devenait illisible. */
+.ecrans { margin-top: 56px; display: grid; gap: 56px; }
+.ecran { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 48px; align-items: center; }
+.ecran:nth-child(even) { grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
+.ecran:nth-child(even) .ecran-texte { order: 2; }
+.ecran-texte h3 { margin: 0 0 10px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.ecran-texte p { margin: 0; font-size: 15px; line-height: 1.65; color: rgba(255,255,255,.6); }
+
 /* ── Fonctionnement ── */
 .etapes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 44px; border-top: 1px solid var(--border-2); }
 .etape { padding: 26px 28px 0 0; }
@@ -91,7 +106,9 @@ main.container { max-width: 1160px; padding-top: 0; }
 
 @media (max-width: 920px) {
   .hero { grid-template-columns: 1fr; gap: 44px; padding-top: 56px; }
-  .etapes, .groupes, .socle { grid-template-columns: 1fr; }
+  .etapes, .groupes, .socle, .ecran, .ecran:nth-child(even) { grid-template-columns: 1fr; }
+  .ecran { gap: 20px; }
+  .ecran:nth-child(even) .ecran-texte { order: 0; }
   .etape, .etape + .etape { padding: 22px 0; border-left: 0; border-bottom: 1px solid var(--border); }
   .groupes { gap: 28px; }
   .socle { gap: 0; }
@@ -143,6 +160,11 @@ main.container { max-width: 1160px; padding-top: 0; }
       <li>Next.js</li><li>Astro</li><li>Nuxt</li><li>Gatsby</li><li>SvelteKit</li><li>Hugo</li><li>Jekyll</li><li>HTML</li>
     </ul>
   </div>
+
+  <section class="apercu" aria-label="Aperçu de l'application">
+    {{ capture("apercu-projet", "Vue d'ensemble d'un projet dans " ~ app_name ~ " : score de santé, anomalies par gravité, historique des crawls et répartition des URL",
+               "Un vrai projet : prosperfactory.com, 112 pages analysées lors du dernier crawl.", chargement="eager") }}
+  </section>
 
   <section class="h-section" id="fonctionnement">
     <p class="h-kicker">Fonctionnement</p>
@@ -218,6 +240,30 @@ main.container { max-width: 1160px; padding-top: 0; }
           <h4>Assistant IA</h4>
           <p>Posez vos questions sur vos données SEO, obtenez des meta descriptions et des pistes précises.</p>
         </div>
+      </div>
+    </div>
+
+    <div class="ecrans">
+      <div class="ecran">
+        <div class="ecran-texte">
+          <h3>Chaque anomalie corrigeable a son bouton « Créer PR »</h3>
+          <p>Un aperçu de la correction avant de l'envoyer, puis une pull request par anomalie — ou toutes les anomalies d'un crawl en une seule.</p>
+        </div>
+        {{ capture("accueil-corrections", "Accélérateur de correction : anomalies candidates avec leurs boutons Voir, Aperçu IA et Créer PR") }}
+      </div>
+      <div class="ecran">
+        <div class="ecran-texte">
+          <h3>Une page neuve, dans la forme de votre site</h3>
+          <p>Un sujet, une taille, un ton et une section : la page est écrite comme ses voisines, traduite si vous le demandez, et livrée en brouillon à relire.</p>
+        </div>
+        {{ capture("rediger-une-page", "Formulaire de rédaction : destination, sujet, taille, ton, section du site, adresse et langues") }}
+      </div>
+      <div class="ecran">
+        <div class="ecran-texte">
+          <h3>Vos données de recherche, à côté de l'audit</h3>
+          <p>Clics, impressions, CTR et position moyenne sur la période choisie, pour relier chaque correction à ce qu'elle change.</p>
+        </div>
+        {{ capture("search-console", "Graphique Google Search Console : clics, impressions, CTR et position moyenne sur 28 jours") }}
       </div>
     </div>
 

@@ -5,7 +5,7 @@ description: "Les trois portées de correction, ce que {{app_name}} écrit réel
 kind: "Documentation"
 section: "Corriger"
 order: 22
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Solo, Pro et Business"
 keywords: ["correction automatique", "pull request", "SEO technique", "IA"]
 app_href: "/"
@@ -31,6 +31,8 @@ Prérequis : un [dépôt GitHub connecté](/docs/connecter-github) au projet.
 
 Le bouton dépend de ce que vous voulez corriger. Les trois existent parce que les situations
 ne se ressemblent pas.
+
+![Écran des corrections : anomalies candidates, boutons Voir, Aperçu IA et Créer PR](/static/captures/accueil-corrections.webp "Les anomalies candidates, chacune avec son aperçu et sa pull request.")
 
 ### Une occurrence
 

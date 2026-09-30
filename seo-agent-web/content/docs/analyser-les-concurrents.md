@@ -5,7 +5,7 @@ description: "Crawler un site rival, comparer les sujets qu'il traite aux vôtre
 kind: "Documentation"
 section: "Aller plus loin"
 order: 40
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Pro et Business"
 keywords: ["concurrents", "analyse concurrentielle", "sujets non couverts", "content gap"]
 app_href: "/"
@@ -43,6 +43,8 @@ en cours, prêt, ou en erreur avec la raison.
 
 Le produit extrait les sujets de chaque page — de son URL, de son `title`, de ses titres — des
 deux côtés, puis les rapproche.
+
+![Écran Concurrents : sites suivis, puis sujets traités par les concurrents avec le taux de recouvrement](/static/captures/concurrents.webp "Les sujets de vos concurrents, comparés à vos propres pages.")
 
 Vous obtenez deux familles de résultats, et **les sujets non couverts sont affichés en
 premier**.

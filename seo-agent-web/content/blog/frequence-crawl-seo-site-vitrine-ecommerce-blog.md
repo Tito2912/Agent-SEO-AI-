@@ -4,7 +4,7 @@ title: "À quelle fréquence crawler un site vitrine, un e-commerce ou un blog ?
 meta_title: "Fréquence de crawl SEO selon le type de site"
 description: "Le bon rythme d'audit dépend de la vitesse à laquelle un site peut casser, pas de sa taille. Repères par type de site et déclencheurs à ne pas rater."
 kind: "Guide"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-05-12"
 audience: "Freelances, agences et équipes internes"
 keywords: ["fréquence de crawl", "monitoring SEO", "audit récurrent"]
@@ -52,6 +52,8 @@ vérifiée est une correction dont vous ne savez rien.
 ## Ce qu'un rythme régulier vous donne
 
 Un crawl isolé donne une photo. Une série donne trois choses qu'aucune photo ne contient :
+
+![Histogramme du score de santé d'un site, un barreau par crawl](/static/captures/evolution-du-score.webp "Un historique régulier : un barreau par crawl.")
 
 **Le sens de la marche.** Le nombre d'anomalies baisse-t-il ou monte-t-il ? Sur un site vivant,
 stable veut dire que vous corrigez au rythme où vous cassez.

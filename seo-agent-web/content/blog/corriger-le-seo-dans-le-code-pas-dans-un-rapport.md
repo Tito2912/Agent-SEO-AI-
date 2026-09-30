@@ -4,7 +4,7 @@ title: "Corriger le SEO dans le code, pas dans un rapport"
 meta_title: "Corriger le SEO directement dans le code source"
 description: "Pourquoi l'écart entre un audit et un site corrigé est le vrai problème du SEO technique, et à quoi ressemble une correction qui arrive en pull request."
 kind: "Guide"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-09-03"
 audience: "Équipes techniques, freelances et agences"
 keywords: ["correction SEO automatique", "pull request", "SEO technique", "audit actionnable", "correction côté client", "patch SEO"]
@@ -49,6 +49,8 @@ n'est pas un problème de motivation, c'est un problème de coût unitaire.
 ## Ce qui change quand la correction arrive en pull request
 
 Le trajet devient :
+
+![Anomalies candidates à la correction, chacune avec un aperçu et un bouton de création de pull request](/static/captures/accueil-corrections.webp "Chaque anomalie corrigeable débouche sur une pull request.")
 
 1. Le crawler signale.
 2. Quelqu'un décide que ça compte.

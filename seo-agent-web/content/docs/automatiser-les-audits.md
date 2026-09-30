@@ -5,7 +5,7 @@ description: "Faire tourner les crawls sans y penser, corriger toutes les erreur
 kind: "Documentation"
 section: "Aller plus loin"
 order: 42
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Tous les plans"
 keywords: ["automatisation", "monitoring SEO", "crawl planifié", "jobs"]
 app_href: "/jobs"
@@ -62,6 +62,8 @@ Les rythmes qui marchent, par type de site :
 ## Corriger en lot
 
 Page **Automatisation** d'un projet : le bouton **Tout corriger en une PR**.
+
+![Écran Automatisation : dépôt GitHub connecté, correction globale en une pull request, corrections passées](/static/captures/automatisation.webp "La correction globale : toutes les anomalies corrigeables en une seule pull request.")
 
 {{app_name}} reprend le dernier rapport, génère les correctifs pour chaque anomalie
 corrigeable, et pousse l'ensemble dans une pull request unique.

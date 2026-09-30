@@ -23,6 +23,7 @@ happens on the rendered HTML, not the source, so a token can never inject markup
 
 from __future__ import annotations
 
+import functools
 import html
 import os
 import re
@@ -108,6 +109,59 @@ def _wrap_tables(html_text: str) -> str:
     )
 
 
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+# Une image seule dans son paragraphe : ce que Markdown produit pour `![alt](src "légende")`.
+_IMAGE_SEULE_RE = re.compile(r"<p>\s*(<img\b[^>]*?/?>)\s*</p>")
+_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+
+
+@functools.lru_cache(maxsize=64)
+def dimensions_capture(nom: str) -> tuple[int, int]:
+    """Largeur et hauteur de `static/captures/<nom>.webp`, lues dans le fichier — pour que les
+    gabarits declarent des dimensions justes sans les recopier (aucun decalage au chargement).
+    Une capture absente leve : une page qui l'appellerait tomberait au premier test."""
+    fichier = STATIC_DIR / "captures" / (nom + ".webp")
+    from PIL import Image
+
+    with Image.open(fichier) as image:
+        return image.size
+
+
+def _figures(html_text: str, *, source: Path) -> str:
+    """Chaque image devient une figure complète (30/09/2026, captures d'écran des pages).
+
+    Un produit qui vend du SEO doit être exemplaire sur ses propres pages : dimensions déclarées
+    (pas de décalage au chargement), chargement différé, texte alternatif obligatoire, légende
+    tirée du titre Markdown. Une image sans alternative, ou absente de `static/`, est refusée au
+    CHARGEMENT — comme une page mal formée — plutôt que servie cassée.
+    """
+    def remplacer(m: re.Match[str]) -> str:
+        # Markdown a deja echappe les attributs : on les rend a leur texte avant de les re-echapper.
+        attrs = {k: html.unescape(v) for k, v in _ATTR_RE.findall(m.group(1))}
+        src, alt, legende = attrs.get("src", ""), attrs.get("alt", "").strip(), attrs.get("title", "").strip()
+        if not alt:
+            raise ContentError(f"{source.name}: image {src!r} sans texte alternatif")
+        if not src.startswith("/static/"):
+            raise ContentError(f"{source.name}: image {src!r} hors de /static/")
+        fichier = (STATIC_DIR / src[len("/static/"):]).resolve()
+        if STATIC_DIR.resolve() not in fichier.parents or not fichier.is_file():
+            raise ContentError(f"{source.name}: image {src!r} introuvable")
+        from PIL import Image  # chargé seulement pour les pages qui ont des images
+
+        with Image.open(fichier) as image:
+            largeur, hauteur = image.size
+        img = ('<img src="%s" alt="%s" width="%d" height="%d" loading="lazy" decoding="async" />'
+               % (html.escape(src, quote=True), html.escape(alt, quote=True), largeur, hauteur))
+        # Une capture d'ecran dense se lit mal a la largeur du texte : un clic l'ouvre en grand.
+        lien = '<a class="content-figure-lien" href="%s" target="_blank" rel="noopener" title="Agrandir">%s</a>' % (
+            html.escape(src, quote=True), img)
+        titre = "<figcaption>%s</figcaption>" % html.escape(legende) if legende else ""
+        return '<figure class="content-figure">%s%s</figure>' % (lien, titre)
+
+    return _IMAGE_SEULE_RE.sub(remplacer, html_text)
+
+
 def _clean_str(value: Any) -> str:
     return str(value or "").strip()
 
@@ -156,7 +210,7 @@ def _load_page(path: Path, *, collection: str) -> dict[str, Any]:
         raise ContentError(f"{path.name}: 'updated_at' must be YYYY-MM-DD, got {updated_at!r}")
 
     md = _markdown_instance()
-    body_html = _wrap_tables(md.convert(body))
+    body_html = _figures(_wrap_tables(md.convert(body)), source=path)
     headings = [
         {"id": _clean_str(token.get("id")), "title": _clean_str(token.get("name")), "level": 2}
         for token in (getattr(md, "toc_tokens", None) or [])

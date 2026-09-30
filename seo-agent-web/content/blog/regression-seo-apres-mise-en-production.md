@@ -4,7 +4,7 @@ title: "Les régressions SEO arrivent au déploiement, pas au fil de l'eau"
 meta_title: "Détecter une régression SEO après un déploiement"
 description: "Les pannes SEO naissent presque toutes d'une mise en production. Ce qui casse le plus souvent, et comment l'attraper en jours plutôt qu'en mois."
 kind: "Guide"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-09-02"
 audience: "Équipes techniques et responsables SEO"
 keywords: ["régression SEO", "déploiement", "noindex", "migration", "monitoring"]
@@ -64,6 +64,8 @@ Et le trafic perdu entre-temps ne se rattrape pas.
 ## La méthode : un crawl avant, un crawl après
 
 Le principe tient en une phrase : **comparer deux états, pas regarder un état**.
+
+![Histogramme du score de santé d'un site, un barreau par crawl](/static/captures/evolution-du-score.webp "Le score d'un site, crawl après crawl : chaque barreau est un crawl.")
 
 Le crawl d'avant est la référence. Le crawl d'après révèle l'écart. Sans référence, un crawl
 post-déploiement ne vous dit pas ce qui a changé — seulement ce qui existe, ce qui ne prouve

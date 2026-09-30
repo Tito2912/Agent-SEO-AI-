@@ -5,7 +5,7 @@ description: "Importer son profil de liens, faire remonter des opportunités de 
 kind: "Documentation"
 section: "Aller plus loin"
 order: 41
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Solo, Pro et Business pour les opportunités"
 keywords: ["backlinks", "netlinking", "liens entrants", "Ahrefs"]
 app_href: "/"
@@ -26,6 +26,8 @@ surveille. Il n'obtient pas de liens à votre place, parce que personne ne le pe
 ## Inventorier vos liens entrants
 
 Page **Backlinks** d'un projet. Deux façons de la remplir :
+
+![Bloc Netlinking du crawl : pages analysées, pages orphelines et domaines externes](/static/captures/netlinking.webp "Ce que le crawl dit déjà de vos liens : pages analysées, pages orphelines, domaines externes.")
 
 **Import CSV** — depuis n'importe quel outil qui exporte un profil de liens. C'est la voie
 universelle, et elle ne demande aucun abonnement.

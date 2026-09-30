@@ -5,7 +5,7 @@ description: "Comment {{app_name}} classe les anomalies détectées, ce que cont
 kind: "Documentation"
 section: "Corriger"
 order: 20
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Tous les plans"
 keywords: ["anomalies SEO", "priorisation", "erreurs de crawl", "gravité"]
 app_href: "/"
@@ -44,6 +44,8 @@ d'URLs. Elle vous évite d'ouvrir trente pages pour comprendre le motif.
 
 **Erreur** — ça empêche l'indexation ou ça casse quelque chose. Réponses 5xx, page importante
 en 404, `noindex` non voulu, boucle de redirection, canonical incohérente.
+
+![Liste des anomalies d'un crawl avec leur catégorie, leur gravité, leur nombre d'occurrences et leur évolution](/static/captures/anomalies.webp "La liste des anomalies : catégorie, gravité, occurrences et évolution depuis le crawl précédent.")
 
 **Avertissement** — ça dégrade sans bloquer. `title` dupliqué, `h1` absent, lien interne
 pointant vers une redirection, image sans `alt`, profondeur excessive.

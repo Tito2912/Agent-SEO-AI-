@@ -4,7 +4,7 @@ title: "Ce que vos concurrents publient et pas vous"
 meta_title: "Analyse concurrentielle SEO : les sujets non couverts"
 description: "Comment comparer les sujets traités par un concurrent aux vôtres, lire un vide sans en tirer la mauvaise conclusion, et décider quoi écrire."
 kind: "Guide"
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 published_at: "2026-09-01"
 audience: "Responsables marketing, éditeurs et e-commerçants"
 keywords: ["analyse concurrentielle", "content gap", "sujets non couverts", "stratégie éditoriale"]
@@ -42,6 +42,8 @@ Trois à cinq suffisent. Au-delà, les sujets se recoupent et l'analyse se dilue
 
 Une comparaison page par page ne mène nulle part : les structures d'URL diffèrent, les
 découpages aussi.
+
+![Comparaison des sujets traités par des concurrents avec les pages du site analysé](/static/captures/concurrents.webp "Des sujets de concurrents, rapprochés des pages existantes du site.")
 
 Ce qui se compare, ce sont les **sujets** — extraits de l'URL, du `title`, des titres de
 chaque page, de part et d'autre. On obtient alors deux familles de résultats, et elles ne

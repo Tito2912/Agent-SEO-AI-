@@ -5,7 +5,7 @@ description: "La page Performance d'un projet : données Search Console, mesures
 kind: "Documentation"
 section: "Search Console et mots-clés"
 order: 32
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Tous les plans"
 keywords: ["Core Web Vitals", "LCP", "INP", "CLS", "PageSpeed"]
 app_href: "/"
@@ -28,6 +28,8 @@ Si [Search Console est connectée](/docs/connecter-search-console) : clics, impr
 position moyenne et taux de clic, page par page et requête par requête, sur la période
 configurée.
 
+![Carte Google Search Console : clics, impressions, CTR moyen et position moyenne sur 28 jours](/static/captures/search-console.webp "Search Console : clics et impressions sur les 28 derniers jours.")
+
 Deux réflexes utiles :
 
 - **Regardez les impressions avant les clics.** Une page qui perd des impressions perd de la
@@ -42,6 +44,8 @@ Pour transformer ces chiffres en actions, la page voisine est plus directe :
 ## Les Core Web Vitals
 
 Trois mesures, et une seule question chacune.
+
+![Bloc Core Web Vitals : part des pages au bon niveau, puis LCP, TBT et CLS page par page](/static/captures/core-web-vitals.webp "Les Core Web Vitals d'un échantillon de pages, métrique par métrique.")
 
 **LCP — Largest Contentful Paint.** Combien de temps avant que le contenu principal soit
 visible ? En dessous de 2,5 s, c'est bon. Au-delà de 4 s, le visiteur voit une page blanche

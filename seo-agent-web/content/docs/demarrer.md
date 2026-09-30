@@ -5,7 +5,7 @@ description: "Le parcours complet du premier compte au premier correctif : crée
 kind: "Prise en main"
 section: "Prise en main"
 order: 10
-updated_at: "2026-09-03"
+updated_at: "2026-09-30"
 audience: "Nouveau compte"
 keywords: ["prise en main", "démarrer", "premier crawl", "onboarding"]
 app_href: "/"
@@ -27,6 +27,8 @@ celles qui sont faites.
 
 ## Les trois étapes indispensables
 
+
+![Vue d'ensemble d'un projet après son premier crawl : score de santé, anomalies par gravité, pages crawlées](/static/captures/resume-projet.webp "Ce que vous verrez après le premier crawl : la vue d'ensemble du projet.")
 ### 1. Ajouter le site à auditer
 
 Depuis le tableau de bord, bouton **Ajouter un site**. Une URL de départ suffit —

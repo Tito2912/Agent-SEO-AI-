@@ -5,7 +5,7 @@ description: "Faire écrire une page neuve par l'agent, dans la forme de votre s
 kind: "Documentation"
 section: "Aller plus loin"
 order: 44
-updated_at: "2026-09-21"
+updated_at: "2026-09-30"
 audience: "Pro et Business"
 keywords: ["rédaction IA", "contenu SEO", "page neuve", "pull request", "mode automatique"]
 app_href: "/"
@@ -36,6 +36,8 @@ neuve est un fichier ajouté à votre dépôt, et sans dépôt il n'y a nulle pa
 Deux champs : un **sujet** et une **adresse**. L'adresse est suggérée à partir du sujet, et vous
 la corrigez — la section (`/blog`, `/guides`, `/ressources`) est une décision éditoriale que
 personne ne peut deviner à votre place.
+
+![Formulaire de rédaction : destination, sujet, taille, ton, section du site, adresse et langues](/static/captures/rediger-une-page.webp "Le formulaire de rédaction d'une page.")
 
 Ce qui se passe ensuite, dans l'ordre :
 
@@ -78,6 +80,8 @@ Le journal des pages proposées, en bas de l'écran, garde cette information : u
 
 Éteint par défaut. Pour l'allumer il faut **nommer la section** où les pages iront : personne ne
 relira l'adresse avant la pull request, et `/blog` contre `/guides` ne se devine pas.
+
+![Réglages du mode automatique : section, fréquence, jour, heure, fuseau, taille, ton, traductions et publication](/static/captures/mode-automatique.webp "Les réglages du mode automatique.")
 
 Une fois allumé, l'agent écrit **au plus une page par semaine et par projet**, et seulement :
 
