@@ -316,6 +316,27 @@ def test_un_abonnement_ANNULE_n_annonce_plus_de_renouvellement() -> None:
     assert "Fin de l'abonnement : 30/09/2026" in texte and "Résiliation enregistrée" not in texte
 
 
+def test_pendant_une_resiliation_on_ne_CHANGE_PAS_de_plan(monkeypatch) -> None:
+    """`change_plan_now` envoie `cancel_at_period_end=False`, qui n'efface pas `cancel_at` : un
+    passage au plan supérieur serait payé pour un abonnement qui s'arrête quand même."""
+    appels = []
+    monkeypatch.setattr(billing, "change_plan_now", lambda db, **kw: appels.append(kw))
+    monkeypatch.setattr(billing, "schedule_plan_change_at_period_end", lambda db, **kw: appels.append(kw))
+    tag = uuid.uuid4().hex[:8]
+    client, _uid, _sid = _client(abonnement="active", donnees=_abonnement_dahlia(f"sub_{tag}", "u", cancel_at=int(FIN.timestamp())))
+    page = html.unescape(client.get("/billing").text)
+    assert "Pour changer de plan, réactive d'abord ton" in page
+    for carte in ("Solo", "Business"):
+        bouton = page.split("<h2>%s</h2>" % carte, 1)[1].split("</button>", 1)[0]
+        assert "disabled" in bouton, carte
+    for cible in ("business", "solo"):
+        rep = _post(client, "/billing/checkout", {"plan_key": cible})
+        assert rep.status_code == 303 and "err=" in rep.headers["location"]
+    assert not appels
+    actif = html.unescape(_client(abonnement="active")[0].get("/billing").text)
+    assert "réactive d'abord" not in actif and "disabled" not in actif.split("<h2>Business</h2>", 1)[1].split("</button>", 1)[0]
+
+
 def test_le_RENOUVELLEMENT_se_lit_dans_les_articles() -> None:
     tag = uuid.uuid4().hex[:8]
     client, _uid, _sid = _client(abonnement="active", fin_colonne=None,
@@ -328,6 +349,7 @@ def test_le_RENOUVELLEMENT_se_lit_dans_les_articles() -> None:
 
 def _session_de_paiement(monkeypatch) -> dict:
     vu = {}
+    monkeypatch.setattr(billing.stripe.Customer, "modify", lambda _id, **kw: vu.setdefault("langue", (_id, kw)))
     monkeypatch.setattr(billing, "get_or_create_stripe_customer", lambda db, **kw: "cus_x")
     monkeypatch.setattr(billing, "upsert_customer_mapping", lambda db, **kw: None)
     monkeypatch.setattr(billing, "public_base_url", lambda: "http://testserver")
@@ -345,6 +367,58 @@ def test_la_TVA_automatique_est_un_REGLAGE(monkeypatch) -> None:
     vu = _session_de_paiement(monkeypatch)
     assert vu["automatic_tax"] == {"enabled": True} and vu["tax_id_collection"] == {"enabled": True}
     assert vu["customer_update"] == {"address": "auto", "name": "auto"}
+
+
+# ── Les factures en français ────────────────────────────────────────────────────────────────
+# Première facture de test, 30/09/2026 : « Invoice », « Bill to », « Amount due ». Stripe écrit
+# dans la langue préférée du client, et le code n'en fixait aucune.
+
+def test_la_page_de_paiement_et_le_client_sont_en_FRANCAIS(monkeypatch) -> None:
+    vu = _session_de_paiement(monkeypatch)
+    assert vu["locale"] == "fr"
+    assert vu["langue"] == ("cus_x", {"preferred_locales": ["fr-FR"]}), "un client existant passe en français"
+
+
+def test_un_NOUVEAU_client_est_cree_en_francais(monkeypatch) -> None:
+    _c, uid, _sid = _client()
+    cree = {}
+    monkeypatch.setattr(billing.stripe.Customer, "create",
+                        lambda **kw: cree.update(kw) or StripeObject.construct_from({"id": "cus_nouveau"}, "sk_test"))
+    with m.DB.session() as db:
+        assert billing.get_or_create_stripe_customer(db, user_id=uid, email="x@exemple.fr") == "cus_nouveau"
+    assert cree["preferred_locales"] == ["fr-FR"]
+
+
+def test_le_portail_et_la_facture_d_un_PASSAGE_de_plan_sont_en_francais(monkeypatch) -> None:
+    _c, uid, sid = _client(abonnement="active")
+    langues, portails = [], []
+    monkeypatch.setattr(billing.stripe.Customer, "modify", lambda _id, **kw: langues.append((_id, kw)))
+    monkeypatch.setattr(billing.stripe.billing_portal.Session, "create",
+                        lambda **kw: portails.append(kw) or StripeObject.construct_from({"url": "https://p.test"}, "sk_test"))
+    monkeypatch.setattr(billing, "stripe_customer_id", lambda db, *, user_id: "cus_x")
+    with m.DB.session() as db:
+        billing.create_billing_portal_url(db, user_id=uid, email="x@exemple.fr", resilier=True)
+        billing.create_billing_portal_url(db, user_id=uid, email="x@exemple.fr")
+    assert [p.get("locale") for p in portails] == ["fr", "fr"]
+    monkeypatch.setattr(billing.stripe.Subscription, "retrieve", lambda _id, **_k: StripeObject.construct_from(
+        {**_abonnement_dahlia(sid, uid, cancel_at=None), "items": {"data": [{"id": "si_1", "price": {"id": PRO}}]}}, "sk_test"))
+    monkeypatch.setattr(billing.stripe.Subscription, "modify",
+                        lambda _id, **kw: StripeObject.construct_from({"id": sid, "latest_invoice": "in_1"}, "sk_test"))
+    monkeypatch.setattr(billing, "_invoice_is_settled", lambda _id: (True, "paid"))
+    monkeypatch.setattr(billing, "sync_subscription_from_stripe", lambda db, **kw: None)
+    with m.DB.session() as db:
+        billing.change_plan_now(db, user_id=uid, target_plan_key="business")
+    assert langues and all(kw == {"preferred_locales": ["fr-FR"]} for _id, kw in langues)
+
+
+def test_une_langue_NON_FIXEE_ne_bloque_pas_le_paiement(monkeypatch) -> None:
+    def _panne(_id, **_kw):
+        raise RuntimeError("stripe down")
+
+    vu = _session_de_paiement(monkeypatch)
+    monkeypatch.setattr(billing.stripe.Customer, "modify", _panne)
+    billing._client_en_francais("cus_x")  # ne lève pas
+    assert vu["locale"] == "fr"
 
 
 @pytest.mark.parametrize("taxe", [True, False])

@@ -13513,6 +13513,18 @@ def billing_checkout(
         if sub_active and current == pk:
             _audit_log(request, action="billing.checkout", status="noop", user=user, meta={"plan_key": pk, "current": current})
             return RedirectResponse(url="/billing?msg=Tu%20es%20d%C3%A9j%C3%A0%20sur%20ce%20plan.", status_code=303)
+        if sub_active and current != "free" and billing.vue_abonnement(sub)["resilie"]:
+            # RESILIATION PROGRAMMEE : on ne change pas le plan d'un abonnement qui se termine. Avec
+            # l'API actuelle, la resiliation vit dans `cancel_at`, que `cancel_at_period_end=False`
+            # (envoye par `change_plan_now`) n'efface pas : le client paierait la difference d'un
+            # plan superieur pour un abonnement qui s'arreterait quand meme. Le portail sait le
+            # reactiver ; ensuite le changement de plan redevient possible.
+            _audit_log(request, action="billing.plan_change", status="subscription_canceling", user=user,
+                       meta={"from": current, "to": pk})
+            return RedirectResponse(
+                url=_path_with_flash("/billing", err="Ton abonnement est résilié. Réactive-le d'abord avec « Gérer l'abonnement », puis change de plan."),
+                status_code=303,
+            )
         if sub_active and current != "free":
             try:
                 if billing.plan_rank(pk) > billing.plan_rank(current):

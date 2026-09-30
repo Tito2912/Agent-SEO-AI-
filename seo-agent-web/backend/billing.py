@@ -509,6 +509,22 @@ def cancel_and_purge_customer(db: Session, *, user_id: str) -> dict[str, Any]:
     }
 
 
+# La langue des factures, reçus et e-mails de Stripe : celle du client, sinon l'anglais. La
+# premiere facture de test du 30/09/2026 est sortie en anglais (« Invoice », « Bill to ») pour une
+# societe francaise qui vend aussi a des particuliers. Le produit n'existe qu'en francais.
+LANGUE_CLIENT = ["fr-FR"]
+
+
+def _client_en_francais(customer_id: str) -> None:
+    """Met un client DEJA cree en francais. Jamais bloquant : une facture en anglais vaut mieux
+    qu'un paiement refuse, et l'echec est journalise."""
+    try:
+        stripe.Customer.modify(customer_id, preferred_locales=LANGUE_CLIENT)  # type: ignore[attr-defined]
+    except Exception as e:
+        logger.warning("[STRIPE] langue du client %s non fixee (%s: %s) : factures en anglais",
+                       customer_id, type(e).__name__, e)
+
+
 def get_or_create_stripe_customer(db: Session, *, user_id: str, email: str) -> str:
     stripe_init()
     if not stripe_enabled():
@@ -522,7 +538,8 @@ def get_or_create_stripe_customer(db: Session, *, user_id: str, email: str) -> s
     if existing and str(existing.stripe_customer_id or "").strip():
         return str(existing.stripe_customer_id).strip()
 
-    customer = stripe.Customer.create(email=(email or "").strip(), metadata={"user_id": uid})  # type: ignore[attr-defined]
+    customer = stripe.Customer.create(  # type: ignore[attr-defined]
+        email=(email or "").strip(), metadata={"user_id": uid}, preferred_locales=LANGUE_CLIENT)
     cust_id = str(getattr(customer, "id", "") or "").strip()
     if not cust_id:
         raise RuntimeError("stripe_customer_create_failed")
@@ -830,6 +847,8 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
 
     customer_id = get_or_create_stripe_customer(db, user_id=uid, email=email)
     upsert_customer_mapping(db, user_id=uid, stripe_customer_id=customer_id)
+    # Un client cree avant LANGUE_CLIENT recevrait ses factures en anglais.
+    _client_en_francais(customer_id)
 
     fiscal: dict[str, Any] = {}
     if automatic_tax_enabled():
@@ -852,6 +871,7 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
         client_reference_id=uid,
         metadata={"user_id": uid, "plan_key": pk},
         subscription_data={"metadata": {"user_id": uid, "plan_key": pk}},
+        locale="fr",
         **fiscal,
     )
     url = str(getattr(session, "url", "") or "").strip()
@@ -890,6 +910,7 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str, resilier
             session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
                 customer=customer_id,
                 return_url=f"{base}/billing",
+                locale="fr",
                 flow_data={
                     "type": "subscription_cancel",
                     "subscription_cancel": {"subscription": sid},
@@ -908,6 +929,7 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str, resilier
         session = stripe.billing_portal.Session.create(  # type: ignore[attr-defined]
             customer=customer_id,
             return_url=f"{base}/billing",
+            locale="fr",
         )
     url = str(getattr(session, "url", "") or "").strip()
     if not url:
@@ -1105,6 +1127,9 @@ def change_plan_now(db: Session, *, user_id: str, target_plan_key: str) -> Billi
     stripe_sub = _stripe_to_dict(stripe.Subscription.retrieve(sub_id))  # type: ignore[attr-defined]
     if not stripe_sub:
         raise RuntimeError("stripe_subscription_retrieve_failed")
+    # La facture du prorata part tout de suite : elle doit partir en francais.
+    if str(getattr(sub_row, "stripe_customer_id", "") or "").strip():
+        _client_en_francais(str(sub_row.stripe_customer_id).strip())
 
     # If a schedule exists (previous downgrade), release it before doing an immediate change.
     _release_schedule_if_any(stripe_sub)

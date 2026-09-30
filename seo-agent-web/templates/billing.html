@@ -194,6 +194,13 @@
     {% else %}
       {% set rank = {'free': 0, 'solo': 1, 'pro': 2, 'business': 3} %}
       {% set current_rank = rank.get(plan_key, 0) %}
+      {% if subscription_active and abonnement_vu.resilie %}
+        <div class="setting-note" style="margin-bottom:12px;">
+          <strong>Résiliation enregistrée.</strong> Pour changer de plan, réactive d'abord ton
+          abonnement avec « Gérer l'abonnement » ; tu peux le faire jusqu'au
+          {% if abonnement_vu.date %}{{ abonnement_vu.date.strftime('%d/%m/%Y') }}{% else %}terme de la période payée{% endif %}.
+        </div>
+      {% endif %}
       {#
         One macro instead of three near-identical cards: the scheduled-downgrade state has to be
         reflected on every plan, and three copies of that logic would drift apart.
@@ -203,6 +210,7 @@
         {% set is_current = plan_key == key %}
         {% set is_scheduled = pending_change and pending_change.known and pending_change.plan_key == key %}
         {% set is_upgrade = subscription_active and rank.get(key, 0) > current_rank %}
+        {% set bloque = subscription_active and abonnement_vu.resilie and not is_current %}
         <div class="card">
           <div class="card-title-row">
             <h2>{{ plan.label }}</h2>
@@ -230,8 +238,9 @@
                 <button
                   type="submit"
                   class="btn primary"
-                  {% if is_current or is_scheduled %}disabled{% endif %}
+                  {% if is_current or is_scheduled or bloque %}disabled{% endif %}
                   {% if is_scheduled %}title="Ce changement est déjà demandé{% if pending_change.effective_at %}, il prend effet le {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}."{% endif %}
+                  {% if bloque %}title="Réactive d'abord ton abonnement avec « Gérer l'abonnement »."{% endif %}
                 >
                   {% if is_current %}
                     Plan actuel
