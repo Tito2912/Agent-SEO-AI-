@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import contextvars
 import datetime as dt
 import io
 import hashlib
@@ -3235,6 +3236,89 @@ def _assistant_clean_history(history: Any, *, max_items: int = 12) -> list[dict[
     return out
 
 
+# ── CE QUE COUTENT VRAIMENT LES IA (30/09/2026) ───────────────────────────────────────────────
+# Le calcul des marges par plan n'a pu se faire que sur des ESTIMATIONS : rien n'enregistrait les
+# tokens consommes. Chaque appel note desormais ce que le fournisseur facture (tokens d'entree, de
+# sortie, de cache), son cout en dollars, la fonction et le compte PAYEUR, dans `usage_events`
+# (metrique `ia_cout_microdollars`, sans migration). Jamais bloquant : un releve qui echoue ne
+# fait pas echouer la correction.
+
+_IA_CONTEXTE: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar("noyaru_ia_contexte", default=None)
+
+# Prix publics, dollars par million de tokens (entree, sortie), lus le 30/09/2026 sur
+# platform.claude.com/docs/en/about-claude/pricing. Cle = prefixe du nom de modele, le plus long
+# gagne. Un modele absent est note SANS cout (`prix_inconnu`), jamais au prix d'un autre.
+_PRIX_IA_USD_MTOK: dict[str, tuple[float, float]] = {
+    "claude-opus-5-5": (4.0, 20.0),
+    "claude-opus-5": (5.0, 25.0),
+    "claude-opus-4-8": (5.0, 25.0),
+    "claude-opus-4-7": (5.0, 25.0),
+    "claude-opus-4-6": (5.0, 25.0),
+    "claude-opus-4-5": (5.0, 25.0),
+    "claude-sonnet-5-5": (2.0, 10.0),
+    "claude-sonnet-5": (2.0, 10.0),
+    "claude-sonnet-4-6": (3.0, 15.0),
+    "claude-sonnet-4-5": (3.0, 15.0),
+    "claude-haiku-4-5": (1.0, 5.0),
+}
+
+
+def _cout_ia_usd(modele: str, *, entree: int, sortie: int, cache_lu: int = 0, cache_ecrit: int = 0) -> float | None:
+    cle = max((k for k in _PRIX_IA_USD_MTOK if str(modele or "").startswith(k)), key=len, default="")
+    if not cle:
+        return None
+    pe, ps = _PRIX_IA_USD_MTOK[cle]
+    return (entree * pe + sortie * ps + cache_lu * pe * 0.1 + cache_ecrit * pe * 1.25) / 1_000_000
+
+
+def _poser_contexte_ia(*, payeur: str = "", fonction: str = "", utilisateur: str = "", slug: str = "",
+                       scope: Any = None) -> contextvars.Token:
+    """Qui paie les appels d'IA qui suivent, et pour quoi. Une requete le pose par son middleware
+    (payeur resolu au moment de l'appel) ; une tache de fond, pour chaque projet qu'elle traite."""
+    return _IA_CONTEXTE.set({"payeur": payeur, "fonction": fonction, "utilisateur": utilisateur,
+                             "slug": slug, "scope": scope})
+
+
+def _noter_consommation_ia(*, fournisseur: str, modele: str, data: Any) -> None:
+    try:
+        usage: dict[str, Any] = {}
+        if isinstance(data, dict):
+            usage = data.get("usage") or data.get("usageMetadata") or {}
+        if not isinstance(usage, dict):
+            usage = {}
+        entree = int(usage.get("input_tokens") or usage.get("prompt_tokens") or usage.get("promptTokenCount") or 0)
+        sortie = int(usage.get("output_tokens") or usage.get("completion_tokens")
+                     or usage.get("candidatesTokenCount") or 0)
+        cache_lu = int(usage.get("cache_read_input_tokens") or 0)
+        cache_ecrit = int(usage.get("cache_creation_input_tokens") or 0)
+        ctx = _IA_CONTEXTE.get() or {}
+        fonction = str(ctx.get("fonction") or "")
+        scope = ctx.get("scope")
+        if not fonction and isinstance(scope, dict):
+            fonction = str(getattr(scope.get("endpoint"), "__name__", "") or "")
+        payeur = str(ctx.get("payeur") or "")
+        if not payeur and ctx.get("utilisateur"):
+            payeur = (_compte_payeur(str(ctx["utilisateur"]), str(ctx["slug"])) if ctx.get("slug")
+                      else str(ctx["utilisateur"]))
+        cout = _cout_ia_usd(modele, entree=entree, sortie=sortie, cache_lu=cache_lu, cache_ecrit=cache_ecrit)
+        logger.info("[IA] %s %s fonction=%s entree=%d sortie=%d cache=%d/%d cout=%s payeur=%s",
+                    fournisseur, modele, fonction or "?", entree, sortie, cache_lu, cache_ecrit,
+                    "?" if cout is None else "$%.5f" % cout, payeur or "-")
+        if not payeur:
+            return
+        with DB.session() as db:
+            meta = {"fournisseur": fournisseur, "modele": modele, "fonction": fonction,
+                    "plan": billing.effective_plan_key(db, user_id=payeur),
+                    "entree": entree, "sortie": sortie, "cache_lu": cache_lu, "cache_ecrit": cache_ecrit}
+            if cout is None:
+                meta["prix_inconnu"] = True
+            # Au moins 1 : une ligne a zero n'est pas ecrite, et on perdrait les tokens.
+            billing.usage_add(db, user_id=payeur, metric="ia_cout_microdollars",
+                              amount=max(1, int(round((cout or 0) * 1_000_000))), meta=meta)
+    except Exception as e:
+        logger.warning("[IA] consommation non notee : %s: %s", type(e).__name__, e)
+
+
 def _assistant_openai_chat(messages: list[dict[str, str]], *, model: str) -> str:
     api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
     if not api_key:
@@ -3256,6 +3340,7 @@ def _assistant_openai_chat(messages: list[dict[str, str]], *, model: str) -> str
     if resp.status_code != 200:
         raise RuntimeError(f"OpenAI HTTP {resp.status_code}")
     data = resp.json()
+    _noter_consommation_ia(fournisseur="openai", modele=model, data=data)
 
     content = None
     if isinstance(data, dict):
@@ -3298,6 +3383,7 @@ def _assistant_gemini_chat(contents: list[dict[str, str]], *, system: str, model
             raise RuntimeError(f"Gemini HTTP {resp.status_code}: {msg}")
         raise RuntimeError(f"Gemini HTTP {resp.status_code}")
     data = resp.json()
+    _noter_consommation_ia(fournisseur="gemini", modele=model, data=data)
 
     text = None
     if isinstance(data, dict):
@@ -3349,6 +3435,7 @@ def _assistant_claude_chat(messages: list[dict[str, str]], *, system: str, model
         raise RuntimeError(f"Claude HTTP {resp.status_code}" + (f": {err_msg}" if err_msg else ""))
 
     data = resp.json()
+    _noter_consommation_ia(fournisseur="anthropic", modele=model, data=data)
     if isinstance(data, dict):
         content_blocks = data.get("content")
         if isinstance(content_blocks, list) and content_blocks:
@@ -3779,6 +3866,7 @@ def _anthropic_messages_text(
     if resp.status_code != 200:
         raise RuntimeError(f"Anthropic HTTP {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
+    _noter_consommation_ia(fournisseur="anthropic", modele=model, data=data)
     parts = data.get("content") if isinstance(data, dict) else None
     if not isinstance(parts, list):
         return ""
@@ -3843,6 +3931,7 @@ def _openai_chat_text(
     if resp.status_code != 200:
         raise RuntimeError(f"OpenAI HTTP {resp.status_code}: {resp.text[:300]}")
     data = resp.json()
+    _noter_consommation_ia(fournisseur="openai", modele=model, data=data)
     return str(data["choices"][0]["message"]["content"] or "")
 
 
@@ -9005,6 +9094,7 @@ def _run_competitor_crawl_job(job_id: str, user_id: str, competitor_id: str) -> 
     Nothing here touches the customer's project: no report is written, no anomaly is scored, no
     quota is spent. The output is a list of {url, title, h1} stored on the CompetitorSite row.
     """
+    _poser_contexte_ia(payeur=str(user_id or ""), fonction="concurrents")
     import tempfile
 
     _mark_job_active(job_id, True)
@@ -10929,6 +11019,23 @@ def _require_system_owner(request: Request) -> User:
     if not _user_can_access_system_settings(user):
         raise HTTPException(status_code=403, detail="system_owner_required")
     return user
+
+
+_PROJET_DE_L_ADRESSE = re.compile(r"^/(?:api/)?projects/([^/]+)")
+
+
+# Declare AVANT la session : un middleware declare plus tot s'execute a l'interieur, donc apres
+# que la session a pose `request.state.user`.
+@app.middleware("http")
+async def contexte_ia_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    user = getattr(request.state, "user", None)
+    uid = str(getattr(user, "id", "") or "")
+    projet = _PROJET_DE_L_ADRESSE.match(request.url.path)
+    jeton = _poser_contexte_ia(utilisateur=uid, slug=projet.group(1) if projet else "", scope=request.scope)
+    try:
+        return await call_next(request)
+    finally:
+        _IA_CONTEXTE.reset(jeton)
 
 
 @app.middleware("http")
@@ -31096,6 +31203,7 @@ def _balayer_contenu_auto_sous_verrou(*, limit: int) -> dict[str, int]:
             continue
 
         auteur = _AuteurAutomatique(cand["owner"])
+        _poser_contexte_ia(payeur=cand["owner"], fonction="contenu automatique")
         ouvert, motif_refus = _article_gate(
             auteur, slug=cand["slug"],
             n=_versions_demandees(section.rstrip("/") + "/x", auto["langues"]))
@@ -32830,6 +32938,7 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
         # mois, jamais decomptees, et les reponses redigees en plus ; un compte redescendu sous Solo
         # gardait sa recherche automatique. Le payeur d'un projet est son proprietaire.
         user_id = str(proj.owner_user_id)
+        _poser_contexte_ia(payeur=user_id, fonction="backlinks automatiques")
         with DB.session() as dbq:
             acces = _opp_has_access(dbq, user_id=user_id)
         if not acces:
