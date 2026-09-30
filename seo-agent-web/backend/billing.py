@@ -655,6 +655,44 @@ def _tracer_le_plan(db: Session, *, user_id: str, sid: str, avant: str) -> None:
         logger.info("[STRIPE] plan INCHANGE (%s) apres mise a jour de l'abonnement %s (user %s)",
                     avant, sid, user_id)
 
+def _date_stripe(brut: Any) -> datetime | None:
+    try:
+        v = int(brut)
+    except Exception:
+        return None
+    return datetime.fromtimestamp(v, tz=UTC) if v > 0 else None
+
+
+def lire_abonnement(sub: dict[str, Any]) -> dict[str, Any]:
+    """La periode et la resiliation d'un abonnement Stripe, quelle que soit la version d'API.
+
+    Depuis l'API 2025-03-31 (« basil » ; le SDK epingle 2026-05-27.dahlia), `current_period_*`
+    n'est plus porte par l'abonnement mais par ses ARTICLES, et le portail enregistre une
+    resiliation en fin de periode dans `cancel_at` en laissant `cancel_at_period_end` a faux.
+    Ne lire que les champs d'avant laissait la page Abonnement sans date de renouvellement, et
+    sans trace d'une resiliation pourtant confirmee par e-mail (30/09/2026, premier essai reel du
+    bouton « Resilier » : les tests, eux, construisaient l'ANCIENNE forme)."""
+    articles = sub.get("items") if isinstance(sub.get("items"), dict) else {}
+    lignes = articles.get("data") if isinstance(articles.get("data"), list) else []
+    premier = lignes[0] if lignes and isinstance(lignes[0], dict) else {}
+    debut = _date_stripe(sub.get("current_period_start")) or _date_stripe(premier.get("current_period_start"))
+    fin = _date_stripe(sub.get("current_period_end")) or _date_stripe(premier.get("current_period_end"))
+    cancel_at = _date_stripe(sub.get("cancel_at"))
+    resilie = bool(sub.get("cancel_at_period_end")) or cancel_at is not None
+    return {"debut": debut, "fin": fin, "cancel_at": cancel_at, "resilie": resilie}
+
+
+def vue_abonnement(row: Any) -> dict[str, Any]:
+    """Ce que la page Abonnement affiche, relu dans l'objet Stripe STOCKE autant que dans les
+    colonnes : une ligne ecrite avant la correction de `lire_abonnement` se lit juste tout de
+    suite, sans attendre le prochain webhook."""
+    donnees = getattr(row, "stripe_data", None)
+    lu = lire_abonnement(donnees if isinstance(donnees, dict) else {})
+    resilie = lu["resilie"] or bool(getattr(row, "cancel_at_period_end", False))
+    fin = lu["fin"] or getattr(row, "current_period_end", None)
+    return {"resilie": resilie, "date": (lu["cancel_at"] or fin) if resilie else fin}
+
+
 def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> BillingSubscription | None:
     sid = str(stripe_subscription.get("id") or "").strip()
     cid = str(stripe_subscription.get("customer") or "").strip()
@@ -691,7 +729,8 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         plan_key = ""
 
     status = str(stripe_subscription.get("status") or "").strip().lower() or "unknown"
-    cancel_at_period_end = bool(stripe_subscription.get("cancel_at_period_end") or False)
+    lu = lire_abonnement(stripe_subscription)
+    cancel_at_period_end = lu["resilie"]
 
     def _ts_to_dt(ts: Any) -> datetime | None:
         try:
@@ -704,8 +743,8 @@ def upsert_subscription(db: Session, *, stripe_subscription: dict[str, Any]) -> 
         except Exception:
             return None
 
-    cps = _ts_to_dt(stripe_subscription.get("current_period_start"))
-    cpe = _ts_to_dt(stripe_subscription.get("current_period_end"))
+    cps = lu["debut"]
+    cpe = lu["fin"]
     trial_end = _ts_to_dt(stripe_subscription.get("trial_end"))
 
     # Le plan AVANT l'ecriture, pour pouvoir dire ce que cet evenement a change. Sans cette
@@ -1152,7 +1191,7 @@ def schedule_plan_change_at_period_end(
     if not stripe_sub:
         raise RuntimeError("stripe_subscription_retrieve_failed")
 
-    if bool(stripe_sub.get("cancel_at_period_end") or False):
+    if lire_abonnement(stripe_sub)["resilie"]:
         raise RuntimeError("subscription_canceling")
 
     current_price_id = _stripe_subscription_price_id(stripe_sub)

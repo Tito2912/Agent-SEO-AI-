@@ -50,10 +50,10 @@
         {% set status_cls = 'ok' if subscription.status == 'active' else ('warning' if subscription.status in ['trialing','past_due'] else 'error') %}
         <div class="muted small" style="margin-bottom:4px;">
           Statut : <span class="badge {{ status_cls }}" style="font-size:10px;padding:1px 6px;">{{ sub_status }}</span>
-          {% if subscription.cancel_at_period_end %} <span class="muted">· Résiliation enregistrée</span>{% endif %}
+          {% if abonnement_vu.resilie %} <span class="muted">· Résiliation enregistrée</span>{% endif %}
         </div>
-        {% if subscription.current_period_end %}
-          <div class="muted small">{{ "Fin de l'abonnement" if subscription.cancel_at_period_end else "Prochain renouvellement" }} : <span class="mono">{{ subscription.current_period_end.strftime("%d/%m/%Y") }}</span></div>
+        {% if abonnement_vu.date %}
+          <div class="muted small">{{ "Fin de l'abonnement" if abonnement_vu.resilie else "Prochain renouvellement" }} : <span class="mono">{{ abonnement_vu.date.strftime("%d/%m/%Y") }}</span></div>
         {% endif %}
       {% else %}
         <div class="muted small">Aucun abonnement actif.</div>
@@ -66,7 +66,7 @@
           </form>
           {#- La fonction de resiliation, nommee sans ambiguite (art. L215-1-1 du Code de la
               consommation) : elle ouvre Stripe directement sur l'ecran de resiliation. -#}
-          {% if subscription_active and not subscription.cancel_at_period_end %}
+          {% if subscription_active and not abonnement_vu.resilie %}
           <form method="post" action="/billing/portal" class="inline">
             <input type="hidden" name="intention" value="resilier" />
             <button type="submit" class="btn">Résilier mon abonnement</button>

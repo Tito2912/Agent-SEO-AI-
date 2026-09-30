@@ -59,7 +59,8 @@ def stripe_simule(monkeypatch):
     monkeypatch.setattr(billing, "plan_for_price_id", lambda p: {PRO: "pro", "price_solo": "solo", "price_business": "business"}.get(p, ""))
 
 
-def _client(*, abonnement: str | None = None, resilie: bool = False) -> tuple[TestClient, str, str]:
+def _client(*, abonnement: str | None = None, resilie: bool = False, donnees: dict | None = None,
+            fin_colonne: datetime | None = FIN) -> tuple[TestClient, str, str]:
     m.DB.create_tables()
     tag = uuid.uuid4().hex[:8]
     with m.DB.session() as db:
@@ -72,8 +73,8 @@ def _client(*, abonnement: str | None = None, resilie: bool = False) -> tuple[Te
             db.add(BillingSubscription(
                 user_id=uid, stripe_customer_id=f"cus_{tag}", stripe_subscription_id=f"sub_{tag}",
                 stripe_price_id=PRO, plan_key="pro", status=abonnement, cancel_at_period_end=resilie,
-                current_period_end=FIN, stripe_data={"id": f"sub_{tag}", "status": abonnement,
-                                                     "cancel_at_period_end": resilie}))
+                current_period_end=fin_colonne,
+                stripe_data=donnees or {"id": f"sub_{tag}", "status": abonnement, "cancel_at_period_end": resilie}))
             db.commit()
     client = TestClient(m.app)
     client.cookies.set(auth.SESSION_COOKIE_NAME, auth.make_session_token(user_id=uid, secret=os.environ["SEO_AGENT_SECRET_KEY"]))
@@ -253,6 +254,61 @@ def test_un_e_mail_en_echec_ne_fait_pas_REJOUER_le_webhook(monkeypatch) -> None:
     monkeypatch.setattr(billing, "construct_webhook_event", lambda **_kw: _evenement(sid, uid, cancel_at_period_end=True))
     rep = TestClient(m.app).post("/stripe/webhook", content=b"{}", headers={"stripe-signature": "t=1,v1=x"})
     assert rep.status_code == 200
+
+
+# ── La forme ACTUELLE de l'API (2026-05-27.dahlia) ──────────────────────────────────────────
+# Premier essai réel du bouton, 30/09/2026 : l'e-mail est parti avec la bonne date, mais la page
+# ne montrait ni la résiliation ni aucune date. Depuis l'API « basil », la période est portée par
+# les ARTICLES, et le portail résilie en fin de période par `cancel_at` (`cancel_at_period_end`
+# reste faux). Les tests ci-dessus construisaient l'ancienne forme : ceux-ci, la forme reçue.
+
+def _abonnement_dahlia(sid: str, uid: str, *, cancel_at: int | None) -> dict:
+    return {"id": sid, "customer": "cus_x", "status": "active", "cancel_at_period_end": False,
+            "cancel_at": cancel_at, "metadata": {"user_id": uid},
+            "items": {"data": [{"price": {"id": PRO}, "current_period_start": 1756317960,
+                                "current_period_end": int(FIN.timestamp())}]}}
+
+
+def test_la_resiliation_par_CANCEL_AT_est_vue_partout() -> None:
+    client, uid, sid = _client(abonnement="active")
+    obj = _abonnement_dahlia(sid, uid, cancel_at=int(FIN.timestamp()))
+    with m.DB.session() as db:
+        effet = billing.handle_stripe_event(db, event={"id": "evt_d", "type": "customer.subscription.updated",
+                                                       "data": {"object": obj}})
+        assert effet and effet["resiliation"]["fin"] == FIN
+        ligne = db.scalar(billing.select(BillingSubscription).where(BillingSubscription.stripe_subscription_id == sid))
+        assert ligne.cancel_at_period_end is True
+        assert ligne.current_period_end.strftime("%d/%m/%Y") == "30/10/2026", "la période est dans les articles"
+    page = html.unescape(client.get("/billing").text)
+    assert "Résiliation enregistrée" in page and "Fin de l'abonnement : 30/10/2026" in re.sub(r"<[^>]+>", "", page)
+    assert "Résilier mon abonnement" not in page
+
+
+def test_une_ligne_ECRITE_AVANT_la_correction_se_lit_juste_sans_attendre_un_webhook() -> None:
+    """La ligne du 30/09 : colonnes fausses (pas de résiliation, pas de date), objet Stripe stocké
+    juste. La page relit l'objet."""
+    tag = uuid.uuid4().hex[:8]
+    client, _uid, _sid = _client(abonnement="active", fin_colonne=None,
+                                 donnees=_abonnement_dahlia(f"sub_{tag}", "u", cancel_at=int(FIN.timestamp())))
+    texte = re.sub(r"<[^>]+>", "", html.unescape(client.get("/billing").text))
+    assert "Résiliation enregistrée" in texte and "Fin de l'abonnement : 30/10/2026" in texte
+    assert "Résilier mon abonnement" not in texte
+
+
+def test_un_abonnement_resilie_par_CANCEL_AT_refuse_un_changement_programme(monkeypatch) -> None:
+    _c, uid, sid = _client(abonnement="active")
+    monkeypatch.setattr(billing.stripe.Subscription, "retrieve", lambda _id, **_k: StripeObject.construct_from(
+        _abonnement_dahlia(sid, uid, cancel_at=int(FIN.timestamp())), "sk_test"))
+    with m.DB.session() as db, pytest.raises(RuntimeError, match="subscription_canceling"):
+        billing.schedule_plan_change_at_period_end(db, user_id=uid, target_plan_key="solo")
+
+
+def test_le_RENOUVELLEMENT_se_lit_dans_les_articles() -> None:
+    tag = uuid.uuid4().hex[:8]
+    client, _uid, _sid = _client(abonnement="active", fin_colonne=None,
+                                 donnees=_abonnement_dahlia(f"sub_{tag}", "u", cancel_at=None))
+    texte = re.sub(r"<[^>]+>", "", html.unescape(client.get("/billing").text))
+    assert "Prochain renouvellement : 30/10/2026" in texte and "Résilier mon abonnement" in texte
 
 
 # ── La TVA calculée par Stripe ──────────────────────────────────────────────────────────────
