@@ -10993,12 +10993,39 @@ def _load_user_from_session(request: Request) -> User | None:
     payload = auth.parse_session_token(token, secret=secret)
     if not payload:
         return None
+    if not _session_emise_apres_la_revocation(payload):
+        return None
     uid = str(payload.get("uid") or "").strip()
     if not uid:
         return None
     with DB.session() as db:
         user = db.get(User, uid)
         return user
+
+
+def _session_emise_apres_la_revocation(payload: dict[str, Any]) -> bool:
+    """Revoquer TOUTES les sessions ouvertes avant une date, sans toucher a rien d'autre.
+
+    Une session est un jeton signe valable 30 jours, et le serveur n'en garde aucune trace : une
+    deconnexion n'invalide pas un jeton copie. Le 30/09/2026 un cookie de session administrateur
+    s'est retrouve dans une capture d'ecran. Changer `SEO_AGENT_SECRET_KEY` l'aurait invalide, mais
+    cette cle est aussi un repli de CHIFFREMENT (`_encryption_seeds`) : des jetons GitHub ou Search
+    Console chiffres avec elle seraient devenus illisibles.
+
+    `SEO_AGENT_SESSIONS_NOT_BEFORE` (horodatage Unix, reglable sur Render) refuse tout jeton emis
+    avant lui ; chacun se reconnecte, rien d'autre ne bouge. Une valeur illisible ne revoque rien."""
+    brut = _safe_env("SEO_AGENT_SESSIONS_NOT_BEFORE")
+    if not brut:
+        return True
+    try:
+        limite = int(float(brut))
+    except ValueError:
+        logger.warning("[AUTH] SEO_AGENT_SESSIONS_NOT_BEFORE illisible (%r) : aucune session revoquee", brut)
+        return True
+    try:
+        return int(payload.get("iat") or 0) >= limite
+    except (TypeError, ValueError):
+        return False
 
 
 def _require_admin(request: Request) -> User:
