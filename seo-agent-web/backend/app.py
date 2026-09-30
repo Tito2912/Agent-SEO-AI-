@@ -32825,13 +32825,29 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
         if not serpapi_key:
             continue
 
+        # LE PLAN ET LE QUOTA DU PAYEUR (30/09/2026). Cette tache ne verifiait ni l'un ni l'autre :
+        # un projet a 5 mots-cles et 2 sources en quotidien consommait ~300 recherches SerpAPI par
+        # mois, jamais decomptees, et les reponses redigees en plus ; un compte redescendu sous Solo
+        # gardait sa recherche automatique. Le payeur d'un projet est son proprietaire.
         user_id = str(proj.owner_user_id)
+        with DB.session() as dbq:
+            acces = _opp_has_access(dbq, user_id=user_id)
+        if not acces:
+            project_results.append({"project": str(proj.slug), "found": 0, "drafted": 0, "skipped": "plan"})
+            continue
         found_this_proj = 0
         drafted_this_proj = 0
+        quota_atteint = False
 
         for kw in auto_cfg["keywords"][:5]:
             for src in auto_cfg["sources"]:
                 search_q = f"site:reddit.com {kw}" if src == "reddit" else kw
+                with DB.session() as dbq:
+                    recherche_permise, _reste = billing.ensure_within_quota(
+                        dbq, user_id=user_id, metric="backlink_searches_month", planned_amount=1)
+                if not recherche_permise:
+                    quota_atteint = True
+                    break
                 try:
                     resp = requests.get(
                         "https://serpapi.com/search.json",
@@ -32843,6 +32859,10 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
                         continue
                 except Exception:
                     continue
+                # Decomptee comme une recherche manuelle : une fois la reponse obtenue.
+                with DB.session() as dbq:
+                    billing.usage_add(dbq, user_id=user_id, metric="backlink_searches_month", amount=1,
+                                      meta={"auto": True, "project": str(proj.slug)})
 
                 for r in (data.get("organic_results") or []):
                     opp_url = str(r.get("link") or "").strip()
@@ -32882,7 +32902,12 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
                         opp_id = new_opp.id
                         found_this_proj += 1
 
+                    reponse_permise = False
                     if auto_cfg["auto_draft"] and ai_ready and proj.base_url:
+                        with DB.session() as dbq:
+                            reponse_permise, _reste = billing.ensure_within_quota(
+                                dbq, user_id=user_id, metric="backlink_replies_month", planned_amount=1)
+                    if reponse_permise:
                         target_url = str(proj.base_url or "").rstrip("/")
                         system_prompt = (
                             "Tu es un expert en netlinking. Tu rédiges des réponses naturelles et utiles "
@@ -32906,6 +32931,8 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
                                         opp3.reply = draft
                                         db3.add(opp3)
                                         db3.commit()
+                                    billing.usage_add(db3, user_id=user_id, metric="backlink_replies_month", amount=1,
+                                                      meta={"auto": True, "project": str(proj.slug)})
                                 drafted_this_proj += 1
                         except Exception:
                             pass
@@ -32930,7 +32957,10 @@ def cron_auto_search_backlinks(request: Request) -> JSONResponse:
 
         total_found += found_this_proj
         total_drafted += drafted_this_proj
-        project_results.append({"project": str(proj.slug), "found": found_this_proj, "drafted": drafted_this_proj})
+        resultat = {"project": str(proj.slug), "found": found_this_proj, "drafted": drafted_this_proj}
+        if quota_atteint:
+            resultat["skipped"] = "quota"
+        project_results.append(resultat)
 
     return JSONResponse({"ok": True, "total_found": total_found, "total_drafted": total_drafted, "projects": project_results})
 
