@@ -1,6 +1,9 @@
 {# LES QUATRE PLANS ET LEURS VRAIS QUOTAS — partage par la home et /pricing (29/09/2026).
    Tout vient de `_comparatif_des_plans()` : aucun nombre n'est ecrit ici. Pas de badge, pas
-   d'icone : le plan mis en avant l'est par son cadre, pas par une etiquette. #}
+   d'icone : le plan mis en avant l'est par son cadre, pas par une etiquette.
+   30/09/2026 : chaque carte liste TOUTES les fonctions ; le bouton passe sous le prix, pour ne
+   pas etre au bout d'une longue liste. #}
+{% from "_tarif_fonctions.html" import liste_fonctions %}
 {% include "_tarifs_styles.html" %}
 
 <div class="tarifs">
@@ -11,11 +14,6 @@
         <p class="tarif-accroche">{{ c.accroche }}</p>
       </header>
       <p class="tarif-prix"><span>{{ c.montant }}</span><small>{{ c.periode or "sans carte bancaire" }}</small></p>
-      <ul class="tarif-cles">
-        {% if c.corrections %}<li>{{ c.corrections }} corrections/mois</li>{% endif %}
-        <li>{{ c.sites }} site{{ "s" if c.sites > 1 else "" }} suivi{{ "s" if c.sites > 1 else "" }}</li>
-        <li>{{ c.pages }} pages analysées/mois</li>
-      </ul>
       {% if request.state.user %}
         <a class="btn{% if c.en_avant %} primary{% endif %}" href="/billing">Gérer mon plan</a>
       {% elif c.cle == "free" %}
@@ -23,6 +21,7 @@
       {% else %}
         <a class="btn{% if c.en_avant %} primary{% endif %}" href="/auth/signup">Commencer avec {{ c.nom }}</a>
       {% endif %}
+      {{ liste_fonctions(c) }}
     </article>
   {% endfor %}
 </div>

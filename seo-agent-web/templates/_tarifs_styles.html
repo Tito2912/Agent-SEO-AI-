@@ -12,9 +12,13 @@
 .tarif-prix { margin: 0; display: flex; align-items: baseline; gap: 8px; }
 .tarif-prix span { font-size: 34px; font-weight: 650; letter-spacing: -.03em; color: var(--text); line-height: 1; }
 .tarif-prix small { font-size: 13px; color: var(--muted); }
-.tarif-cles { list-style: none; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--border); display: grid; gap: 9px; flex: 1; }
-.tarif-cles li { font-size: 13.5px; color: rgba(255,255,255,.78); }
-.tarif-cles li:first-child { color: var(--text); font-weight: 600; }
+.tarif-cles { list-style: none; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--border); display: grid; gap: 8px; align-content: start; flex: 1; }
+.tarif-cles li { font-size: 13.5px; line-height: 1.4; color: rgba(255,255,255,.78); }
+.tarif-cles li.phare { color: var(--text); font-weight: 600; }
+.tarif-cles li.tarif-rubrique { margin-top: 12px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-2); }
+.tarif-cles li.tarif-rubrique:first-child { margin-top: 0; }
+.tarif-cles li.absent { color: rgba(255,255,255,.26); }
+.tarif-cles .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .tarif .btn { width: 100%; justify-content: center; text-align: center; padding: 11px 16px; }
 
 .comparatif-titre { margin: 44px 0 14px; font-size: 15px; font-weight: 600; color: var(--text); }

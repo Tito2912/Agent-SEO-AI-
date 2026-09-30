@@ -13008,12 +13008,60 @@ def _comparatif_des_plans() -> dict[str, Any]:
         ]},
     ]
 
+    # CE QUE CHAQUE CARTE DIT DE CHAQUE LIGNE (30/09/2026, « il n'y a pas toutes les fonctions
+    # dans les badges ») : les cartes listent TOUTE la grille, pas trois quotas. Formulation
+    # courte d'une valeur, et nom de la fonction quand elle est incluse ou absente. Une ligne
+    # ajoutee sans formulation s'affiche quand meme, en « libellé : valeur ».
+    formulations: dict[str, tuple[Any, str]] = {
+        "Sites suivis": (lambda v: "1 site suivi" if v == "1" else "%s sites suivis" % v, "Sites suivis"),
+        "Pages analysées par mois": (lambda v: "%s pages analysées/mois" % v, "Pages analysées"),
+        "Pages par analyse": (lambda v: "%s pages par analyse" % v, "Pages par analyse"),
+        "Core Web Vitals": (lambda v: "Core Web Vitals : %s URL" % v.split(" ")[0], "Core Web Vitals"),
+        "Anomalies triées par priorité, avec leurs URL": (None, "Anomalies triées par priorité"),
+        "Audits planifiés": (None, "Audits planifiés"),
+        "Exports CSV et PDF": (None, "Exports CSV et PDF"),
+        "Corrections écrites par l'IA, par mois": (lambda v: "%s corrections/mois" % v, "Corrections par l'IA"),
+        "Fichiers par pull request": (lambda v: "%s fichiers par pull request" % v, "Fichiers par pull request"),
+        "Moteur de correction": (lambda v: "Moteur de correction %s" % v.lower(), "Moteur de correction"),
+        "Vérification par votre CI avant proposition": (None, "Vérification par votre CI"),
+        "Contrôle après fusion, au crawl suivant": (None, "Contrôle après fusion"),
+        "Fix pack sans dépôt Git": (None, "Fix pack sans dépôt Git"),
+        "Articles rédigés par l'IA, par mois": (lambda v: "%s articles rédigés par l'IA/mois" % v, "Articles rédigés par l'IA"),
+        "Mode automatique de rédaction": (None, "Rédaction automatique"),
+        "Concurrents analysés": (lambda v: "Concurrents analysés : %s" % v, "Concurrents analysés"),
+        "Inventaire des liens entrants": (None, "Inventaire des liens entrants"),
+        "Recherches d'opportunités, par mois": (lambda v: "%s recherches de backlinks/mois" % v, "Recherches de backlinks"),
+        "Réponses rédigées par l'IA, par mois": (lambda v: "%s réponses IA/mois" % v, "Réponses rédigées par l'IA"),
+        "Surveillance des liens obtenus": (None, "Surveillance des liens obtenus"),
+        "Google Search Console et Bing Webmaster": (None, "Search Console et Bing Webmaster"),
+        "Opportunités de mots-clés": (None, "Opportunités de mots-clés"),
+        "Collaborateurs invités": (lambda v: "%s collaborateurs invités" % v, "Collaborateurs invités"),
+        "Messages à l'assistant IA, par mois": (lambda v: "%s messages à l'assistant IA/mois" % v, "Assistant IA"),
+    }
+
+    def fonctions_du_plan(i: int) -> list[dict[str, Any]]:
+        liste: list[dict[str, Any]] = []
+        for s in sections:
+            liste.append({"rubrique": s["titre"]})
+            for l in s["lignes"]:
+                v = l["valeurs"][i]
+                forme, nom = formulations.get(l["libelle"], (None, l["libelle"]))
+                if not v or v == "Inclus":
+                    texte = nom
+                elif forme is not None:
+                    texte = forme(v)
+                else:
+                    texte = "%s : %s" % (l["libelle"], v)
+                liste.append({"texte": texte, "inclus": bool(v),
+                              "phare": l["libelle"] == "Corrections écrites par l'IA, par mois"})
+        return liste
+
     accroches = {"free": "Pour voir le correcteur sur votre propre dépôt.",
                  "solo": "Un site en production, corrigé chaque mois.",
                  "pro": "Plusieurs sites, la concurrence et la rédaction.",
                  "business": "Les portefeuilles de sites et les agences."}
     cartes = []
-    for k in cles:
+    for i, k in enumerate(cles):
         prix = str(cat[k].get("price_label") or "").strip()
         montant, _sep, reste = prix.partition("€")
         cartes.append({
@@ -13022,6 +13070,7 @@ def _comparatif_des_plans() -> dict[str, Any]:
             "accroche": accroches.get(k, ""),
             "corrections": lim(k, "ai_corrections_month"),
             "sites": lim(k, "projects"), "pages": _nombre_fr(lim(k, "pages_crawled_month")),
+            "fonctions": fonctions_du_plan(i),
             "en_avant": k == "pro",
         })
     return {"cles": cles, "noms": [c["nom"] for c in cartes], "cartes": cartes, "sections": sections}

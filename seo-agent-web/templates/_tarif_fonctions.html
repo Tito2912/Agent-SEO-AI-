@@ -1,0 +1,13 @@
+{# TOUTES les fonctions d'un plan, dans l'ordre de la grille (30/09/2026, « il n'y a pas toutes
+   les fonctions dans les badges »). Lues dans `_comparatif_des_plans()` ; une fonction absente
+   du plan reste a sa place, grisee, pour que les cartes s'alignent et montrent ce que le plan
+   suivant apporte. Home, /pricing et /billing. #}
+{% macro liste_fonctions(c) -%}
+<ul class="tarif-cles">
+  {% for f in c.fonctions %}
+    {% if f.rubrique %}<li class="tarif-rubrique">{{ f.rubrique }}</li>
+    {% elif f.inclus %}<li{% if f.phare %} class="phare"{% endif %}>{{ f.texte }}</li>
+    {% else %}<li class="absent"><span class="sr">Non inclus : </span>{{ f.texte }}</li>{% endif %}
+  {% endfor %}
+</ul>
+{%- endmacro %}

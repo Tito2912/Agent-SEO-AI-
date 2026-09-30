@@ -145,6 +145,54 @@ def test_le_fix_pack_est_FERME_a_Free_par_sa_route(monkeypatch) -> None:
     assert "/billing" not in rep.headers.get("location", ""), "Solo doit passer la porte"
 
 
+# ── Les cartes listent TOUT (30/09/2026, « il n'y a pas toutes les fonctions dans les badges ») ──
+
+def _cartes(page: str, balise: str) -> dict[str, str]:
+    """Le contenu de chaque carte de plan, découpé sur son titre."""
+    cartes = {}
+    for nom in ("Free", "Solo", "Pro", "Business"):
+        cartes[nom] = page.split("<%s>%s</%s>" % (balise, nom, balise), 1)[1].split("</article>", 1)[0]
+    return cartes
+
+
+@pytest.mark.parametrize("chemin, balise", [("/pricing", "h3"), ("/", "h3"), ("/billing", "h2")])
+def test_chaque_carte_liste_TOUTES_les_lignes_de_la_grille(chemin, balise) -> None:
+    page = _abonnement() if chemin == "/billing" else TestClient(m.app).get(chemin).text
+    grille = m._comparatif_des_plans()
+    attendu = len(_lignes()) + len(grille["sections"])
+    for nom, carte in _cartes(page, balise).items():
+        assert carte.count("<li") == attendu, (chemin, nom, carte.count("<li"), attendu)
+
+
+def test_une_fonction_ABSENTE_est_grisee_et_une_INCLUSE_ne_l_est_pas() -> None:
+    cartes = _cartes(TestClient(m.app).get("/pricing").text, "h3")
+    fix_free = re.search(r'<li class="absent"><span class="sr">Non inclus : </span>Fix pack sans dépôt Git</li>', cartes["Free"])
+    assert fix_free, "Free n'a pas le fix pack : grisé"
+    assert "<li>Fix pack sans dépôt Git</li>" in cartes["Solo"]
+    assert "absent" not in cartes["Business"], "Business a tout"
+    grille = m._comparatif_des_plans()
+    for i, carte in enumerate(grille["cartes"]):
+        absents = sum(1 for f in carte["fonctions"] if "texte" in f and not f["inclus"])
+        vides = sum(1 for s in grille["sections"] for l in s["lignes"] if not l["valeurs"][i])
+        assert absents == vides, carte["cle"]
+
+
+def test_les_valeurs_des_cartes_sont_celles_de_la_GRILLE() -> None:
+    cartes = {c["cle"]: [f.get("texte") for f in c["fonctions"]] for c in m._comparatif_des_plans()["cartes"]}
+    cat = billing.plan_catalog()
+    for k in ("solo", "pro", "business"):
+        lim = cat[k]["limits"]
+        assert "%s corrections/mois" % m._nombre_fr(lim["ai_corrections_month"]) in cartes[k]
+        assert "%s messages à l'assistant IA/mois" % m._nombre_fr(lim["assistant_messages_month"]) in cartes[k]
+        assert "%s recherches de backlinks/mois" % m._nombre_fr(lim["backlink_searches_month"]) in cartes[k]
+    assert "1 site suivi" in cartes["free"], "le singulier"
+
+
+def test_le_bouton_est_AU_DESSUS_de_la_liste() -> None:
+    carte = _cartes(TestClient(m.app).get("/pricing").text, "h3")["Solo"]
+    assert carte.index("Commencer avec Solo") < carte.index('class="tarif-cles"')
+
+
 def test_la_colonne_mise_en_avant_est_le_PLAN_DU_COMPTE() -> None:
     assert [c["en_avant"] for c in m._comparatif_du_compte("free")["cartes"]] == [True, False, False, False]
     assert [c["en_avant"] for c in m._comparatif_des_plans()["cartes"]] == [False, False, True, False]

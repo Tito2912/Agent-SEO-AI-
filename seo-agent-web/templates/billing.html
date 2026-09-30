@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_tarif_fonctions.html" import liste_fonctions %}
 
 {% block title %}Abonnement - Noyaru{% endblock %}
 
@@ -221,11 +222,6 @@
             <p class="tarif-accroche">{{ c.accroche }}</p>
           </header>
           <p class="tarif-prix"><span>{{ c.montant }}</span><small>{{ c.periode or "sans carte bancaire" }}</small></p>
-          <ul class="tarif-cles">
-            {% if c.corrections %}<li>{{ c.corrections }} corrections/mois</li>{% endif %}
-            <li>{{ c.sites }} site{{ "s" if c.sites > 1 else "" }} suivi{{ "s" if c.sites > 1 else "" }}</li>
-            <li>{{ c.pages }} pages analysées/mois</li>
-          </ul>
           {% if key == 'free' %}
             {#- Revenir a Free, c'est RESILIER : le meme parcours que le bouton « Résilier ». -#}
             {% if is_current %}
@@ -270,6 +266,7 @@
           {% else %}
             <span class="muted small">Indisponible pour le moment.</span>
           {% endif %}
+          {{ liste_fonctions(c) }}
         </article>
       {% endmacro %}
 
