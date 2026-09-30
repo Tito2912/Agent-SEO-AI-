@@ -131,6 +131,7 @@ try:
         Project,
         RateLimitBucket,
         TrackedKeyword,
+        UsageEvent,
         User,
         UserConnection,
     )
@@ -154,6 +155,7 @@ except ImportError:
         Project,
         RateLimitBucket,
         TrackedKeyword,
+        UsageEvent,
         User,
         UserConnection,
     )
@@ -15008,16 +15010,78 @@ def _dashboard_onboarding_state(
     }
 
 
+# Pour lire en euros des couts factures en dollars. Un ordre de grandeur, pas une comptabilite :
+# les factures Anthropic restent la reference.
+_TAUX_USD_EUR = 0.86
+
+
+def _prix_ht_du_plan(plan_key: str) -> float:
+    """Le prix mensuel HT d'un plan (les prix affiches sont TTC, TVA 20 %)."""
+    prix = str((billing.plan_catalog().get(plan_key) or {}).get("price_label") or "")
+    chiffres = re.match(r"\s*(\d+(?:[.,]\d+)?)", prix)
+    return round(float(chiffres.group(1).replace(",", ".")) / 1.2, 2) if chiffres else 0.0
+
+
+def _couts_ia_du_mois(periode: str) -> dict[str, Any]:
+    """Le cout REEL des IA sur un mois, tel que releve a chaque appel (`ia_cout_microdollars`) :
+    par plan du payeur au moment de l'appel, et par fonction. Remplace les estimations du
+    30/09/2026 au fur et a mesure que les clients utilisent le produit."""
+    with DB.session() as db:
+        lignes = list(db.scalars(select(UsageEvent).where(
+            UsageEvent.metric == "ia_cout_microdollars", UsageEvent.period == periode)))
+    par_plan: dict[str, dict[str, Any]] = {}
+    par_fonction: dict[str, dict[str, Any]] = {}
+    total = {"appels": 0, "entree": 0, "sortie": 0, "usd": 0.0, "sans_prix": 0}
+    for ev in lignes:
+        meta = ev.meta if isinstance(ev.meta, dict) else {}
+        # Un appel sans prix connu est ecrit a 1 micro-dollar : son poids reste negligeable.
+        usd = int(ev.amount or 0) / 1_000_000
+        entree, sortie = int(meta.get("entree") or 0), int(meta.get("sortie") or 0)
+        for groupe, cle in ((par_plan, str(meta.get("plan") or "?")), (par_fonction, str(meta.get("fonction") or "?"))):
+            g = groupe.setdefault(cle, {"cle": cle, "appels": 0, "entree": 0, "sortie": 0, "usd": 0.0,
+                                        "comptes": set(), "sans_prix": 0})
+            g["appels"] += 1
+            g["entree"] += entree
+            g["sortie"] += sortie
+            g["usd"] += usd
+            g["comptes"].add(str(ev.user_id))
+            g["sans_prix"] += 1 if meta.get("prix_inconnu") else 0
+        total["appels"] += 1
+        total["entree"] += entree
+        total["sortie"] += sortie
+        total["usd"] += usd
+        total["sans_prix"] += 1 if meta.get("prix_inconnu") else 0
+
+    def fin(g: dict[str, Any]) -> dict[str, Any]:
+        comptes = len(g.pop("comptes"))
+        g["comptes"] = comptes
+        g["eur"] = round(g["usd"] * _TAUX_USD_EUR, 2)
+        g["eur_par_compte"] = round(g["eur"] / comptes, 2) if comptes else 0.0
+        g["eur_par_appel"] = round(g["eur"] / g["appels"], 4) if g["appels"] else 0.0
+        return g
+
+    ordre = {k: i for i, k in enumerate(("free", "solo", "pro", "business"))}
+    plans = sorted((fin(g) for g in par_plan.values()), key=lambda g: ordre.get(g["cle"], 9))
+    for g in plans:
+        g["prix_ht"] = _prix_ht_du_plan(g["cle"])
+        g["marge_ia"] = round(g["prix_ht"] - g["eur_par_compte"], 2)
+    fonctions = sorted((fin(g) for g in par_fonction.values()), key=lambda g: -g["usd"])
+    total["eur"] = round(total["usd"] * _TAUX_USD_EUR, 2)
+    return {"periode": periode, "plans": plans, "fonctions": fonctions, "total": total, "taux": _TAUX_USD_EUR}
+
+
 @app.get("/settings/operations", response_class=HTMLResponse)
-def settings_operations(request: Request) -> HTMLResponse:
+def settings_operations(request: Request, mois: str | None = None) -> HTMLResponse:
     _ = _require_system_owner(request)
     snapshot = _production_operations_snapshot()
+    periode = mois if mois and re.fullmatch(r"\d{4}-\d{2}", mois) else billing._period_key()
     resp = templates.TemplateResponse(
         "settings_operations.html",
         {
             "request": request,
             "project": None,
             "snapshot": snapshot,
+            "couts_ia": _couts_ia_du_mois(periode),
         },
     )
     resp.headers["Cache-Control"] = "no-store"

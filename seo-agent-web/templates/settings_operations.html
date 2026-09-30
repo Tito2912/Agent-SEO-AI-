@@ -44,6 +44,68 @@
     </div>
   </div>
 
+  {#- LE COUT REEL DES IA (30/09/2026) : releve a chaque appel, par plan du payeur et par
+      fonction. La marge ne compte que l'IA : ni Stripe, ni SerpAPI, ni l'hebergement. -#}
+  <section class="card" id="couts-ia">
+    <div class="card-title-row">
+      <h2>Coût réel des IA — {{ couts_ia.periode }}</h2>
+      <form method="get" action="/settings/operations" class="inline" style="display:flex;gap:6px;align-items:center;">
+        <input type="month" name="mois" value="{{ couts_ia.periode }}" style="max-width:170px;" />
+        <button type="submit" class="btn small">Afficher</button>
+      </form>
+    </div>
+    {% if not couts_ia.total.appels %}
+      <p class="muted small">Aucun appel relevé sur ce mois. Le relevé tourne depuis le 30/09/2026 : chaque correction, article, message à l'assistant ou réponse de backlink y apparaît dès qu'il est produit.</p>
+    {% else %}
+      <p class="muted small" style="margin-top:0;">
+        {{ couts_ia.total.appels }} appels · {{ "{:,}".format(couts_ia.total.entree).replace(",", " ") }} tokens en entrée ·
+        {{ "{:,}".format(couts_ia.total.sortie).replace(",", " ") }} en sortie ·
+        <strong>{{ "%.2f"|format(couts_ia.total.usd) }} $ ≈ {{ "%.2f"|format(couts_ia.total.eur) }} €</strong>
+        (1 $ ≈ {{ couts_ia.taux }} €){% if couts_ia.total.sans_prix %} · {{ couts_ia.total.sans_prix }} appel(s) d'un modèle sans prix connu, coût non compté{% endif %}
+      </p>
+      <div class="table-wrap">
+        <table class="table compact">
+          <thead>
+            <tr><th>Plan</th><th>Comptes</th><th>Appels</th><th>Coût IA</th><th>Par compte</th><th>Prix HT</th><th>Marge IA par compte</th></tr>
+          </thead>
+          <tbody>
+            {% for p in couts_ia.plans %}
+              <tr>
+                <td>{{ p.cle }}</td>
+                <td>{{ p.comptes }}</td>
+                <td>{{ p.appels }}</td>
+                <td>{{ "%.2f"|format(p.eur) }} €</td>
+                <td>{{ "%.2f"|format(p.eur_par_compte) }} €</td>
+                <td>{{ "%.2f"|format(p.prix_ht) }} €</td>
+                <td{% if p.marge_ia < 0 %} style="color:var(--err);"{% endif %}>{{ "%.2f"|format(p.marge_ia) }} €</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap" style="margin-top:14px;">
+        <table class="table compact">
+          <thead>
+            <tr><th>Fonction</th><th>Appels</th><th>Tokens entrée</th><th>Tokens sortie</th><th>Coût</th><th>Par appel</th></tr>
+          </thead>
+          <tbody>
+            {% for f in couts_ia.fonctions %}
+              <tr>
+                <td class="mono small">{{ f.cle }}</td>
+                <td>{{ f.appels }}</td>
+                <td>{{ "{:,}".format(f.entree).replace(",", " ") }}</td>
+                <td>{{ "{:,}".format(f.sortie).replace(",", " ") }}</td>
+                <td>{{ "%.2f"|format(f.eur) }} €</td>
+                <td>{{ "%.4f"|format(f.eur_par_appel) }} €</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">Marge IA = prix HT − coût IA moyen par compte. Hors frais Stripe, SerpAPI et hébergement.</p>
+    {% endif %}
+  </section>
+
   <section class="card">
     <div class="card-title-row">
       <h2>Readiness ouverture</h2>

@@ -197,6 +197,65 @@ def test_une_requete_sur_un_projet_debite_son_PROPRIETAIRE(claude, monkeypatch) 
     assert not _releves(membre)
 
 
+# ── Le tableau du propriétaire (/settings/operations) ───────────────────────────────────────
+
+MOIS = "2031-01"  # un mois où aucun autre test n'écrit
+
+
+def _releve(uid: str, *, plan: str, fonction: str, microusd: int, entree: int = 1000, sortie: int = 100,
+            sans_prix: bool = False, mois: str = MOIS) -> None:
+    meta = {"plan": plan, "fonction": fonction, "entree": entree, "sortie": sortie, "modele": "claude-sonnet-4-6"}
+    if sans_prix:
+        meta["prix_inconnu"] = True
+    with m.DB.session() as db:
+        db.add(UsageEvent(user_id=uid, period=mois, metric="ia_cout_microdollars", amount=microusd, meta=meta))
+        db.commit()
+
+
+def test_le_prix_HT_se_lit_dans_le_catalogue() -> None:
+    assert m._prix_ht_du_plan("pro") == pytest.approx(82.5)
+    assert m._prix_ht_du_plan("business") == pytest.approx(165.83)
+    assert m._prix_ht_du_plan("free") == 0.0
+
+
+def test_le_tableau_additionne_par_PLAN_et_par_FONCTION() -> None:
+    mois = "2031-02"
+    a, b, c = _utilisateur(), _utilisateur(), _utilisateur()
+    # La moins chère d'abord : le tri ne doit rien à l'ordre d'écriture.
+    _releve(c, plan="solo", fonction="assistant", microusd=1, sans_prix=True, mois=mois)
+    _releve(a, plan="pro", fonction="assistant", microusd=1_000_000, mois=mois)
+    _releve(a, plan="pro", fonction="api_github_fix", microusd=2_000_000, mois=mois)
+    _releve(b, plan="pro", fonction="api_github_fix", microusd=3_000_000, mois=mois)
+    t = m._couts_ia_du_mois(mois)
+    pro = next(p for p in t["plans"] if p["cle"] == "pro")
+    assert pro["comptes"] == 2 and pro["appels"] == 3 and pro["usd"] == pytest.approx(6.0)
+    assert pro["eur_par_compte"] == pytest.approx(round(6.0 * m._TAUX_USD_EUR / 2, 2))
+    assert pro["marge_ia"] == pytest.approx(82.5 - pro["eur_par_compte"], abs=0.01)
+    fix = next(f for f in t["fonctions"] if f["cle"] == "api_github_fix")
+    assert fix["appels"] == 2 and fix["usd"] == pytest.approx(5.0)
+    assert t["fonctions"][0]["cle"] == "api_github_fix", "la plus chère d'abord"
+    assert t["total"]["sans_prix"] == 1 and t["total"]["usd"] == pytest.approx(6.0), "sans prix : poids négligeable"
+    assert [p["cle"] for p in t["plans"]] == ["solo", "pro"], "dans l'ordre des plans"
+
+
+def test_la_page_montre_le_tableau_au_PROPRIETAIRE_seulement(monkeypatch) -> None:
+    uid = _utilisateur()
+    _releve(uid, plan="business", fonction="api_github_bulk_fix", microusd=4_200_000)
+    autre = _utilisateur()
+    monkeypatch.setattr(m, "_user_can_access_system_settings", lambda u: str(getattr(u, "id", "")) == uid)
+    page = _client(uid).get("/settings/operations?mois=%s" % MOIS).text
+    assert "Coût réel des IA — %s" % MOIS in page and "api_github_bulk_fix" in page
+    assert "%.2f €" % (4.2 * m._TAUX_USD_EUR) in page
+    assert _client(autre).get("/settings/operations").status_code == 403
+
+
+def test_un_mois_VIDE_le_dit(monkeypatch) -> None:
+    uid = _utilisateur()
+    monkeypatch.setattr(m, "_user_can_access_system_settings", lambda u: True)
+    page = _client(uid).get("/settings/operations?mois=2030-06").text
+    assert "Aucun appel relevé sur ce mois" in page
+
+
 def test_une_requete_hors_projet_debite_la_personne_CONNECTEE(claude) -> None:
     _route_d_essai()
     uid = _utilisateur()
