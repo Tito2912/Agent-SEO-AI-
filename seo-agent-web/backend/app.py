@@ -30731,6 +30731,8 @@ def _competitor_has_access(db, *, user_id: str) -> bool:
     spends worker slot-time on a site that is not the customer's, and the retargeting it feeds
     is the part of the product no competitor can copy.
     """
+    if _compte_admin(db, user_id):
+        return True
     plan_key = billing.effective_plan_key(db, user_id=str(user_id))
     return billing.plan_rank(plan_key) >= billing.plan_rank("pro")
 
@@ -32415,7 +32417,20 @@ def _score_opportunity(source: str, title: str, url: str, snippet: str = "", que
     return max(0, min(100, round(score)))
 
 
+def _compte_admin(db_session, user_id: str) -> bool:
+    """Un compte administrateur a tout, quel que soit son abonnement. Les portes par plan le
+    lisaient sur la PERSONNE connectee (concurrents) ou pas du tout (opportunites) : quand
+    l'abonnement fantome du compte administrateur a ete clos (30/09/2026), il est retombe en Free
+    et s'est vu refuser les opportunites, et le rafraichissement mensuel de ses concurrents."""
+    try:
+        return bool(getattr(db_session.get(User, str(user_id or "")), "is_admin", False))
+    except Exception:
+        return False
+
+
 def _opp_has_access(db_session, *, user_id: str) -> bool:
+    if _compte_admin(db_session, user_id):
+        return True
     plan_key = billing.effective_plan_key(db_session, user_id=user_id)
     return billing.plan_rank(plan_key) >= billing.plan_rank("solo")
 
