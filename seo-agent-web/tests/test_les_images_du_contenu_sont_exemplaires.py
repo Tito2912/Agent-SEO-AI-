@@ -87,6 +87,30 @@ def test_les_captures_de_l_ACCUEIL_declarent_leurs_vraies_dimensions() -> None:
         assert alt.strip(), nom
 
 
+def test_les_captures_partent_en_IMAGE_WEBP_meme_sans_registre_des_types(monkeypatch) -> None:
+    """En production (python:3.12-slim) `.webp` est inconnu : les captures partaient en
+    application/octet-stream, avec nosniff. On efface ici ce que le poste connaît déjà."""
+    import mimetypes
+    import os
+    import tempfile
+
+    os.environ.setdefault("SEO_AGENT_DATA_DIR", tempfile.mkdtemp(prefix="seo-agent-img-"))
+    os.environ.setdefault("SEO_AGENT_RUNS_DIR", tempfile.mkdtemp(prefix="seo-agent-img-runs-"))
+    os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
+    os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
+    from fastapi.testclient import TestClient
+
+    from backend import app as m
+
+    mimetypes.init(files=[])
+    for table in (mimetypes.types_map, mimetypes._db.types_map[True]):  # type: ignore[attr-defined]
+        monkeypatch.delitem(table, ".webp", raising=False)
+    assert mimetypes.guess_type("x.webp")[0] is None, "le témoin : .webp est bien inconnu"
+    m._types_mime_statiques()
+    rep = TestClient(m.app).get("/static/captures/apercu-projet.webp")
+    assert rep.status_code == 200 and rep.headers["content-type"] == "image/webp"
+
+
 def test_sans_legende_pas_de_figcaption_vide(statique) -> None:
     html = _rendu("![Vue d'ensemble](/static/captures/vue.webp)")
     assert "<figcaption>" not in html and "<figure" in html

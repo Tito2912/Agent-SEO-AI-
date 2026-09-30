@@ -9704,6 +9704,21 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/internal/openapi.json",
 )
+def _types_mime_statiques() -> None:
+    """Les types que l'image `python:3.12-slim` ne connait pas (pas de /etc/mime.types).
+
+    Le 30/09/2026 les captures .webp partaient en `application/octet-stream`, avec
+    `X-Content-Type-Options: nosniff` : le navigateur n'a pas le droit de deviner, et un robot
+    d'images peut ne pas les reconnaitre. Sous Windows, le registre les connait : le defaut ne se
+    voyait qu'en production."""
+    import mimetypes
+
+    for mime, ext in (("image/webp", ".webp"), ("image/avif", ".avif"), ("font/woff2", ".woff2"),
+                      ("application/manifest+json", ".webmanifest"), ("image/svg+xml", ".svg")):
+        mimetypes.add_type(mime, ext)
+
+
+_types_mime_statiques()
 app.mount("/static", StaticFiles(directory=str(REPO_ROOT / "seo-agent-web" / "static")), name="static")
 
 
