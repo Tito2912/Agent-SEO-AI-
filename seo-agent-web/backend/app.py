@@ -3309,8 +3309,11 @@ def _noter_consommation_ia(*, fournisseur: str, modele: str, data: Any) -> None:
         if not payeur:
             return
         with DB.session() as db:
+            # Un administrateur est illimite et corrige en Opus : compte dans son plan, il
+            # fausserait le cout reel de ce plan (30/09/2026, un faux « Pro » de test).
+            payeur_admin = bool(getattr(db.get(User, payeur), "is_admin", False))
             meta = {"fournisseur": fournisseur, "modele": modele, "fonction": fonction,
-                    "plan": billing.effective_plan_key(db, user_id=payeur),
+                    "plan": "admin" if payeur_admin else billing.effective_plan_key(db, user_id=payeur),
                     "entree": entree, "sortie": sortie, "cache_lu": cache_lu, "cache_ecrit": cache_ecrit}
             if cout is None:
                 meta["prix_inconnu"] = True
@@ -13563,6 +13566,15 @@ def billing_page(
     err_out = str(err or "").strip()
 
     with DB.session() as db:
+        if stripe_ready:
+            sub_vu = billing.subscription_for_user(db, user_id=str(user.id))
+            if sub_vu is not None:
+                try:
+                    billing.stripe_init()
+                    billing.cloturer_si_fantome(db, row=sub_vu)
+                except Exception as e:
+                    logger.warning("[BILLING] abonnement non verifie : %s: %s", type(e).__name__, e)
+                    db.rollback()
         if stripe_ready and session_id:
             try:
                 billing.sync_from_checkout_session(db, session_id=session_id)
@@ -17214,6 +17226,14 @@ def cron_autopilot(request: Request) -> JSONResponse:
     except Exception as e:
         balayages["contenu_auto"] = type(e).__name__
         logger.error("[contenu-auto] balayage depuis l'autopilote : %s: %s", type(e).__name__, e)
+    # Les abonnements « actifs » dont la periode est finie sans nouvelle de Stripe.
+    try:
+        with DB.session() as db:
+            resultat = billing.balayer_abonnements_fantomes(db)
+        balayages["abonnements"] = "ok" if not resultat["erreur"] else "erreurs:%d" % resultat["erreur"]
+    except Exception as e:
+        balayages["abonnements"] = type(e).__name__
+        logger.error("[STRIPE] balayage des abonnements : %s: %s", type(e).__name__, e)
     return JSONResponse({"ok": True, "balayages": balayages})
 
 

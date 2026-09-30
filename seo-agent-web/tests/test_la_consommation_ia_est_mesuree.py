@@ -109,6 +109,24 @@ def test_un_appel_note_ses_tokens_son_cout_et_le_payeur(claude) -> None:
     assert r.meta["fonction"] == "essai" and r.meta["modele"] == "claude-sonnet-4-6" and r.meta["plan"] == "free"
 
 
+def test_l_usage_d_un_ADMINISTRATEUR_a_sa_propre_ligne(claude, monkeypatch) -> None:
+    """Illimité et corrigé en Opus : compté dans son plan, il fausserait le coût de ce plan."""
+    uid = _utilisateur()
+    with m.DB.session() as db:
+        u = db.get(User, uid)
+        u.is_admin = True
+        db.add(u)
+        db.commit()
+    monkeypatch.setattr(billing, "effective_plan_key", lambda db, *, user_id: "pro")
+    jeton = m._poser_contexte_ia(payeur=uid, fonction="essai")
+    try:
+        m._anthropic_messages_text(system="s", user_msg="u", model="claude-opus-4-8", max_tokens=100)
+    finally:
+        m._IA_CONTEXTE.reset(jeton)
+    (r,) = _releves(uid)
+    assert r.meta["plan"] == "admin"
+
+
 def test_un_modele_sans_prix_est_NOTE_quand_meme(claude, monkeypatch) -> None:
     uid = _utilisateur()
     jeton = m._poser_contexte_ia(payeur=uid, fonction="essai")

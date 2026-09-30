@@ -60,10 +60,11 @@ def _appeler(secret="secret-cron-test"):
     return client.get("/cron/autopilot", headers={"Authorization": "Bearer " + secret})
 
 
-def test_la_route_repond_200_et_fait_ses_DEUX_balayages(cron) -> None:
+def test_la_route_repond_200_et_fait_ses_TROIS_balayages(cron) -> None:
     r = _appeler()
     assert r.status_code == 200, r.text
-    assert r.json() == {"ok": True, "balayages": {"pull_requests": "ok", "contenu_auto": "ok"}}
+    # Le troisieme (30/09/2026) : les abonnements actifs dont la periode est finie sans nouvelle de Stripe.
+    assert r.json() == {"ok": True, "balayages": {"pull_requests": "ok", "contenu_auto": "ok", "abonnements": "ok"}}
     assert (cron["pr"], cron["contenu"]) == (1, 1), "chaque balayage une fois, pas deux"
 
 
@@ -76,7 +77,7 @@ def test_un_balayage_en_echec_est_DIT_sans_faire_tomber_l_autre(cron) -> None:
     cron["echec"].add("pr")
     r = _appeler()
     assert r.status_code == 200
-    assert r.json()["balayages"] == {"pull_requests": "RuntimeError", "contenu_auto": "ok"}
+    assert r.json()["balayages"] == {"pull_requests": "RuntimeError", "contenu_auto": "ok", "abonnements": "ok"}
 
 
 def test_sans_le_bon_secret_rien_ne_tourne(cron) -> None:

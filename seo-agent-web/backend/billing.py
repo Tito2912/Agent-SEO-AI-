@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
@@ -596,6 +596,65 @@ def client_stripe_valide(db: Session, *, user_id: str, email: str) -> str:
         raise RuntimeError("stripe_customer_create_failed")
     upsert_customer_mapping(db, user_id=uid, stripe_customer_id=nid)
     return nid
+
+
+# Un abonnement qui a depasse sa fin de periode de plus que cela sans nouvelle de Stripe.
+_MARGE_PERIME = timedelta(days=2)
+
+
+def cloturer_si_fantome(db: Session, *, row: BillingSubscription) -> str:
+    """Un abonnement « actif » dont la periode est finie depuis des jours, sans webhook.
+
+    Vu le 30/09/2026 apres le passage des cles Stripe en reel : le compte administrateur
+    affichait « Pro · actif, renouvellement le 11/06/2026 » — un abonnement du mode TEST, que les
+    cles reelles ne voient plus et qu'aucun webhook ne mettra jamais a jour. Il restait actif pour
+    toujours, et son plan comptait partout (quotas, releve des couts). Meme cas si des webhooks se
+    perdent en production.
+
+    On relit l'abonnement chez Stripe : connu, il est remis a jour ; INCONNU (resource_missing), il
+    est clos. Toute autre erreur remonte : une panne ne doit rien clore. Rend « a_jour », « resynchronise »,
+    « clos »."""
+    if str(getattr(row, "status", "") or "").lower() not in ACTIVE_SUB_STATUSES:
+        return "a_jour"
+    donnees = row.stripe_data if isinstance(row.stripe_data, dict) else {}
+    fin = lire_abonnement(donnees)["fin"] or row.current_period_end
+    if fin is not None and fin.tzinfo is None:
+        fin = fin.replace(tzinfo=UTC)
+    if fin is None or fin > datetime.now(UTC) - _MARGE_PERIME:
+        return "a_jour"
+    sid = str(row.stripe_subscription_id or "").strip()
+    try:
+        sync_subscription_from_stripe(db, stripe_subscription_id=sid)
+        return "resynchronise"
+    except Exception as e:
+        if not (isinstance(e, stripe.InvalidRequestError) and getattr(e, "code", "") == "resource_missing"):
+            raise
+    row.status = "canceled"
+    row.cancel_at_period_end = False
+    db.add(row)
+    db.commit()
+    logger.warning("[STRIPE] abonnement %s introuvable avec les cles en service, periode finie le %s : clos "
+                   "(compte %s)", sid, fin.date().isoformat(), row.user_id)
+    return "clos"
+
+
+def balayer_abonnements_fantomes(db: Session, *, limit: int = 200) -> dict[str, int]:
+    """Le meme controle pour tous les abonnements actifs dont la periode est finie."""
+    compte = {"a_jour": 0, "resynchronise": 0, "clos": 0, "erreur": 0}
+    if not stripe_enabled():
+        return compte
+    stripe_init()
+    lignes = list(db.scalars(select(BillingSubscription).where(
+        BillingSubscription.status.in_(sorted(ACTIVE_SUB_STATUSES))).limit(limit)))
+    for row in lignes:
+        try:
+            compte[cloturer_si_fantome(db, row=row)] += 1
+        except Exception as e:
+            compte["erreur"] += 1
+            db.rollback()
+            logger.warning("[STRIPE] abonnement %s non verifie : %s: %s", row.stripe_subscription_id,
+                           type(e).__name__, e)
+    return compte
 
 
 def upsert_customer_mapping(db: Session, *, user_id: str, stripe_customer_id: str) -> None:
