@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Aucun plan payant ne descend sous 25 % de marge, même dans le pire cas.
+"""Aucun plan payant ne descend sous 40 % de marge, même dans le pire cas.
 
 Décision du propriétaire, 30/09/2026 : « la marge est inacceptable, je ne peux pas risquer des
 pertes ». À quota plein, 900 corrections en Opus coûtaient à Business 78 à 256 € pour 166 € HT.
 Règle retenue : dans le PIRE cas — tous les quotas consommés, uniquement sur de gros fichiers —
-chaque plan payant garde au moins 25 % de marge.
+chaque plan payant garde au moins 40 % de marge (25 % a d'abord été proposé, jugé trop juste :
+une erreur d'estimation de 50 % aurait suffi à faire perdre de l'argent).
 
 Ce test refait le calcul à partir du CATALOGUE réel (quotas et modèle de chaque plan) et de la
 TABLE DE PRIX du code (`_PRIX_IA_USD_MTOK`). Relever un quota, ou remettre un plan sur un modèle
@@ -33,7 +34,7 @@ os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
 from backend import app as m  # noqa: E402
 from backend import billing  # noqa: E402
 
-MARGE_MINIMALE = 0.25
+MARGE_MINIMALE = 0.40
 # Pire cas par unité : (tokens d'entrée, tokens de sortie). Correction : gros fichier et
 # réécriture complète (plafond 8 000) ; article : version longue ; message : historique plein.
 PIRE = {"correction": (20_000, 6_000), "article": (10_000, 7_400), "reponse": (2_000, 1_000),
@@ -74,7 +75,7 @@ def _sans_surcharge(monkeypatch):
 
 
 @pytest.mark.parametrize("plan", ["solo", "pro", "business"])
-def test_marge_du_pire_cas_au_moins_25_pourcent(plan) -> None:
+def test_marge_du_pire_cas_au_moins_40_pourcent(plan) -> None:
     ht = m._prix_ht_du_plan(plan)
     cout = _pire_cas_eur(plan)
     marge = (ht - cout) / ht

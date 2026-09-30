@@ -234,18 +234,17 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "projects": 10,
                 "members": 2,
                 "pages_crawled_month": 100_000,
-                # RECALIBRE LE 30/09/2026 (voir Business) : l'assistant a 2 000 messages coutait
-                # plus que prevu ; 300 corrections, l'argument du plan, restent.
-                "assistant_messages_month": 800,
-                "backlink_searches_month": 150,
-                "backlink_replies_month": 150,
-                "ai_corrections_month": 300,
+                # RECALIBRE LE 30/09/2026 (voir Business). Au-dessus de Solo sur chaque ligne.
+                "assistant_messages_month": 500,
+                "backlink_searches_month": 80,
+                "backlink_replies_month": 80,
+                "ai_corrections_month": 250,
                 "ai_articles_month": 4,
             },
             "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
                            "max_files": 20},
             "crawl": {"max_pages_per_crawl": 6_000, "max_pagespeed_urls": 30, "job_timeout_s": 14_400},
-            "features": ["Corrections du code en pull request GitHub (300/mois)", "Comptes d'équipe (2 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (250/mois)", "Comptes d'équipe (2 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
         "business": {
             "label": "Business",
@@ -254,22 +253,24 @@ def plan_catalog() -> dict[str, dict[str, Any]]:
                 "projects": 30,
                 "members": 5,
                 "pages_crawled_month": 300_000,
-                "assistant_messages_month": 2_000,
-                "backlink_searches_month": 400,
-                "backlink_replies_month": 400,
+                "assistant_messages_month": 1_000,
+                "backlink_searches_month": 300,
+                "backlink_replies_month": 300,
                 # RECALIBRE LE 30/09/2026, decision du proprietaire (« je ne peux pas risquer des
                 # pertes ») : a quota plein, 900 corrections en Opus coutaient 78 a 256 EUR pour
-                # 166 EUR HT. Regle : aucun plan payant sous 25 % de marge dans le pire cas (tous
-                # les quotas, gros fichiers), ~70 % en usage plein ordinaire. Business passe sur
-                # Sonnet comme les autres et se distingue par le volume ; il reste au-dessus de
-                # Pro (500 contre 300) — il etait tombe une fois a 150, la moitie de Pro.
-                "ai_corrections_month": 500,
+                # 166 EUR HT. Regle : aucun plan payant sous 40 % de marge dans le PIRE cas (tous
+                # les quotas, gros fichiers uniquement), ~77 % en usage plein ordinaire — et
+                # rentable meme si les couts reels depassaient l'estimation de 50 %. Business
+                # passe sur Sonnet comme les autres et se distingue par le volume ; il reste
+                # au-dessus de Pro (400 contre 250) — il etait tombe une fois a 150, sous Pro.
+                # Les mesures reelles (/settings/operations) diront s'il faut RELEVER ces quotas.
+                "ai_corrections_month": 400,
                 "ai_articles_month": 12,
             },
             "correction": {"model": "claude-sonnet-4-6", "model_openai": "gpt-5.5",
                            "max_files": 40},
             "crawl": {"max_pages_per_crawl": 13_000, "max_pagespeed_urls": 50, "job_timeout_s": 28_800},
-            "features": ["Corrections du code en pull request GitHub (500/mois)", "Comptes d'équipe (5 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
+            "features": ["Corrections du code en pull request GitHub (400/mois)", "Comptes d'équipe (5 collaborateurs)", "Audit complet", "Suggestions IA avancées", "Exports", "Monitoring + alertes", "Opportunités backlinks"],
         },
     }
     _apply_plan_config_override(defaults)
