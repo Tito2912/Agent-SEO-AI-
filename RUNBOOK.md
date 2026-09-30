@@ -203,6 +203,13 @@ pas dégradé, mais la ligne doit être cherchée — voir `[STRIPE] prix inconn
 
 ### Ordre des opérations
 
+0. **Deux espaces de test existent** : Noyaru utilise le bac à sable `acct_1T9qNGAt…` (clé
+   `sk_test_51T9qNGAt…`), pas le « mode test » du compte principal `acct_1T9qN9AM…` (le compte
+   live). Annuler les abonnements de test (bac à sable) avant la bascule : sinon leur ligne en
+   base reste « active » et plus aucun webhook ne la mettra à jour. Les correspondances
+   compte → client écrites pendant les essais désignent des clients inconnus du live ; elles
+   sont recréées toutes seules au premier paiement ou à la première ouverture du portail
+   (`client_stripe_valide`, journal `[STRIPE] client … introuvable`).
 1. **En live, créer les trois prix** (Solo / Pro / Business) avec les mêmes montants qu'en test.
    Noter les `price_…`.
 2. **En live, créer l'endpoint webhook** vers `https://noyaru.com/stripe/webhook`, en

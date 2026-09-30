@@ -557,6 +557,40 @@ def get_or_create_stripe_customer(db: Session, *, user_id: str, email: str) -> s
     return cust_id
 
 
+def _client_introuvable(e: Exception) -> bool:
+    return isinstance(e, stripe.InvalidRequestError) and getattr(e, "code", "") == "resource_missing"
+
+
+def client_stripe_valide(db: Session, *, user_id: str, email: str) -> str:
+    """Le client Stripe de ce compte, qui EXISTE dans le mode des cles en service.
+
+    La correspondance compte -> client s'ecrit des le premier clic sur « Choisir », avant tout
+    paiement. Apres la bascule test -> reel, celles ecrites pendant les essais designent des
+    clients que le compte reel ne connait pas : paiement et portail echouaient en « No such
+    customer » (vu en preparant la bascule, 30/09/2026 — le compte du proprietaire en portait
+    une). On verifie donc avant d'envoyer quelqu'un chez Stripe ; introuvable, le client est
+    recree et la correspondance remplacee. Toute AUTRE erreur remonte : recreer sur une panne
+    reseau fabriquerait des doublons."""
+    uid = (user_id or "").strip()
+    cid = get_or_create_stripe_customer(db, user_id=uid, email=email)
+    try:
+        client = _stripe_to_dict(stripe.Customer.retrieve(cid))  # type: ignore[attr-defined]
+        if not client.get("deleted"):
+            return cid
+    except Exception as e:
+        if not _client_introuvable(e):
+            raise
+    logger.warning("[STRIPE] client %s introuvable avec les cles en service (test/reel) : recree pour le compte %s",
+                   cid, uid)
+    nouveau = stripe.Customer.create(  # type: ignore[attr-defined]
+        email=(email or "").strip(), metadata={"user_id": uid}, preferred_locales=LANGUE_CLIENT)
+    nid = str(getattr(nouveau, "id", "") or "").strip()
+    if not nid:
+        raise RuntimeError("stripe_customer_create_failed")
+    upsert_customer_mapping(db, user_id=uid, stripe_customer_id=nid)
+    return nid
+
+
 def upsert_customer_mapping(db: Session, *, user_id: str, stripe_customer_id: str) -> None:
     uid = (user_id or "").strip()
     cid = (stripe_customer_id or "").strip()
@@ -845,7 +879,7 @@ def create_checkout_session_url(db: Session, *, user_id: str, email: str, plan_k
     if not uid:
         raise RuntimeError("missing_user_id")
 
-    customer_id = get_or_create_stripe_customer(db, user_id=uid, email=email)
+    customer_id = client_stripe_valide(db, user_id=uid, email=email)
     upsert_customer_mapping(db, user_id=uid, stripe_customer_id=customer_id)
     # Un client cree avant LANGUE_CLIENT recevrait ses factures en anglais.
     _client_en_francais(customer_id)
@@ -896,10 +930,7 @@ def create_billing_portal_url(db: Session, *, user_id: str, email: str, resilier
     if not uid:
         raise RuntimeError("missing_user_id")
 
-    customer_id = stripe_customer_id(db, user_id=uid)
-    if not customer_id:
-        customer_id = get_or_create_stripe_customer(db, user_id=uid, email=email)
-        upsert_customer_mapping(db, user_id=uid, stripe_customer_id=customer_id)
+    customer_id = client_stripe_valide(db, user_id=uid, email=email)
 
     sub_row = subscription_for_user(db, user_id=uid) if resilier else None
     sid = str(getattr(sub_row, "stripe_subscription_id", "") or "").strip()

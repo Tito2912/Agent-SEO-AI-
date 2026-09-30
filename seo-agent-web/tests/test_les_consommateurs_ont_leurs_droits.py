@@ -175,7 +175,7 @@ def test_le_bouton_ouvre_le_portail_SUR_la_resiliation(monkeypatch) -> None:
 
 def test_le_portail_recoit_le_PARCOURS_de_resiliation_et_s_en_passe_s_il_est_refuse(monkeypatch) -> None:
     _client_, uid, sid = _client(abonnement="active")
-    monkeypatch.setattr(billing, "stripe_customer_id", lambda db, *, user_id: "cus_x")
+    monkeypatch.setattr(billing, "client_stripe_valide", lambda db, **kw: "cus_x")
     appels = []
 
     def _creer(**kw):
@@ -350,7 +350,7 @@ def test_le_RENOUVELLEMENT_se_lit_dans_les_articles() -> None:
 def _session_de_paiement(monkeypatch) -> dict:
     vu = {}
     monkeypatch.setattr(billing.stripe.Customer, "modify", lambda _id, **kw: vu.setdefault("langue", (_id, kw)))
-    monkeypatch.setattr(billing, "get_or_create_stripe_customer", lambda db, **kw: "cus_x")
+    monkeypatch.setattr(billing, "client_stripe_valide", lambda db, **kw: "cus_x")
     monkeypatch.setattr(billing, "upsert_customer_mapping", lambda db, **kw: None)
     monkeypatch.setattr(billing, "public_base_url", lambda: "http://testserver")
     monkeypatch.setattr(billing.stripe.checkout.Session, "create",
@@ -395,7 +395,7 @@ def test_le_portail_et_la_facture_d_un_PASSAGE_de_plan_sont_en_francais(monkeypa
     monkeypatch.setattr(billing.stripe.Customer, "modify", lambda _id, **kw: langues.append((_id, kw)))
     monkeypatch.setattr(billing.stripe.billing_portal.Session, "create",
                         lambda **kw: portails.append(kw) or StripeObject.construct_from({"url": "https://p.test"}, "sk_test"))
-    monkeypatch.setattr(billing, "stripe_customer_id", lambda db, *, user_id: "cus_x")
+    monkeypatch.setattr(billing, "client_stripe_valide", lambda db, **kw: "cus_x")
     with m.DB.session() as db:
         billing.create_billing_portal_url(db, user_id=uid, email="x@exemple.fr", resilier=True)
         billing.create_billing_portal_url(db, user_id=uid, email="x@exemple.fr")
@@ -419,6 +419,83 @@ def test_une_langue_NON_FIXEE_ne_bloque_pas_le_paiement(monkeypatch) -> None:
     monkeypatch.setattr(billing.stripe.Customer, "modify", _panne)
     billing._client_en_francais("cus_x")  # ne lève pas
     assert vu["locale"] == "fr"
+
+
+# ── La bascule test -> réel ─────────────────────────────────────────────────────────────────
+# La correspondance compte -> client Stripe s'écrit au premier clic « Choisir ». Après la bascule,
+# celles des essais désignent des clients inconnus du compte réel : « No such customer ».
+
+def _introuvable(_id, **_k):
+    raise billing.stripe.InvalidRequestError("No such customer: %s" % _id, "id", code="resource_missing")
+
+
+def test_un_client_d_une_AUTRE_cle_est_recree_et_la_correspondance_remplacee(monkeypatch) -> None:
+    _c, uid, _sid = _client()
+    with m.DB.session() as db:
+        billing.upsert_customer_mapping(db, user_id=uid, stripe_customer_id="cus_bac_a_sable_" + uid[:8])
+    monkeypatch.setattr(billing.stripe.Customer, "retrieve", _introuvable)
+    crees = []
+    monkeypatch.setattr(billing.stripe.Customer, "create",
+                        lambda **kw: crees.append(kw) or StripeObject.construct_from({"id": "cus_reel_" + uid[:8]}, "sk_live"))
+    with m.DB.session() as db:
+        assert billing.client_stripe_valide(db, user_id=uid, email="x@exemple.fr") == "cus_reel_" + uid[:8]
+        assert billing.stripe_customer_id(db, user_id=uid) == "cus_reel_" + uid[:8], "la correspondance est remplacée"
+    assert crees[0]["preferred_locales"] == ["fr-FR"] and crees[0]["metadata"] == {"user_id": uid}
+
+
+def test_un_client_SUPPRIME_chez_Stripe_est_recree(monkeypatch) -> None:
+    """Un client supprimé ne lève pas d'erreur : Stripe le rend avec `deleted: true`."""
+    _c, uid, _sid = _client()
+    with m.DB.session() as db:
+        billing.upsert_customer_mapping(db, user_id=uid, stripe_customer_id="cus_supprime_" + uid[:8])
+    monkeypatch.setattr(billing.stripe.Customer, "retrieve",
+                        lambda _id, **_k: StripeObject.construct_from({"id": _id, "deleted": True}, "sk_live"))
+    monkeypatch.setattr(billing.stripe.Customer, "create",
+                        lambda **kw: StripeObject.construct_from({"id": "cus_neuf_" + uid[:8]}, "sk_live"))
+    with m.DB.session() as db:
+        assert billing.client_stripe_valide(db, user_id=uid, email="x@exemple.fr") == "cus_neuf_" + uid[:8]
+
+
+def test_un_client_EXISTANT_n_est_pas_recree(monkeypatch) -> None:
+    _c, uid, _sid = _client()
+    with m.DB.session() as db:
+        billing.upsert_customer_mapping(db, user_id=uid, stripe_customer_id="cus_ok_" + uid[:8])
+    monkeypatch.setattr(billing.stripe.Customer, "retrieve",
+                        lambda _id, **_k: StripeObject.construct_from({"id": _id}, "sk_live"))
+    monkeypatch.setattr(billing.stripe.Customer, "create", lambda **kw: pytest.fail("client recréé à tort"))
+    with m.DB.session() as db:
+        assert billing.client_stripe_valide(db, user_id=uid, email="x@exemple.fr") == "cus_ok_" + uid[:8]
+
+
+def test_une_PANNE_ne_recree_pas_de_client(monkeypatch) -> None:
+    """Recréer sur une erreur réseau fabriquerait des doublons : l'erreur remonte."""
+    _c, uid, _sid = _client()
+    with m.DB.session() as db:
+        billing.upsert_customer_mapping(db, user_id=uid, stripe_customer_id="cus_ok_" + uid[:8])
+
+    def _panne(_id, **_k):
+        raise billing.stripe.APIConnectionError("réseau coupé")
+
+    monkeypatch.setattr(billing.stripe.Customer, "retrieve", _panne)
+    monkeypatch.setattr(billing.stripe.Customer, "create", lambda **kw: pytest.fail("client recréé sur une panne"))
+    with m.DB.session() as db, pytest.raises(billing.stripe.APIConnectionError):
+        billing.client_stripe_valide(db, user_id=uid, email="x@exemple.fr")
+
+
+def test_le_paiement_et_le_portail_passent_par_la_VERIFICATION(monkeypatch) -> None:
+    _c, uid, _sid = _client(abonnement="active")
+    vus = []
+    monkeypatch.setattr(billing, "client_stripe_valide", lambda db, **kw: vus.append(kw["user_id"]) or "cus_v")
+    monkeypatch.setattr(billing.stripe.Customer, "modify", lambda _id, **kw: None)
+    monkeypatch.setattr(billing, "public_base_url", lambda: "http://testserver")
+    monkeypatch.setattr(billing.stripe.checkout.Session, "create",
+                        lambda **kw: StripeObject.construct_from({"url": "https://c.test"}, "sk_test"))
+    monkeypatch.setattr(billing.stripe.billing_portal.Session, "create",
+                        lambda **kw: StripeObject.construct_from({"url": "https://p.test"}, "sk_test"))
+    with m.DB.session() as db:
+        billing.create_checkout_session_url(db, user_id=uid, email="x@exemple.fr", plan_key="pro")
+        billing.create_billing_portal_url(db, user_id=uid, email="x@exemple.fr")
+    assert vus == [uid, uid]
 
 
 @pytest.mark.parametrize("taxe", [True, False])
