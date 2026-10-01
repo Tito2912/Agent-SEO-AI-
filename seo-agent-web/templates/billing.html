@@ -74,7 +74,7 @@
           </form>
           {% endif %}
         {% else %}
-          <span class="muted small">Stripe n'est pas configuré sur ce déploiement.</span>
+          <span class="muted small">Paiement en ligne momentanément indisponible.</span>
         {% endif %}
       </div>
     </div>
@@ -195,7 +195,7 @@
         (« Monitoring + alertes », « Suggestions IA avancées »), et pas de Free du tout. -#}
     {% include "_tarifs_styles.html" %}
     {% if not stripe_ready %}
-      <p class="muted">Stripe n'est pas encore configuré. Ajoute les variables `STRIPE_*` sur Render puis redeploy.</p>
+      <p class="muted">Le paiement en ligne est momentanément indisponible. Écris-nous à <a href="mailto:contact@noyaru.com">contact@noyaru.com</a> pour changer de plan.</p>
     {% else %}
       {% set rank = {'free': 0, 'solo': 1, 'pro': 2, 'business': 3} %}
       {% set current_rank = rank.get(plan_key, 0) %}

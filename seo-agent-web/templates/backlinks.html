@@ -267,14 +267,13 @@
 	                    Clique « Synchroniser ».
 	                  {% else %}
 	                    {% if ahrefs_plan %}
-	                      Ton plan Ahrefs ne permet pas la synchro pour ce domaine (API complète = Enterprise).
+	                      Ton abonnement Ahrefs ne permet pas la synchronisation pour ce domaine : l'API complète d'Ahrefs demande son offre Enterprise. L'import CSV ci-dessus fonctionne avec toutes les offres.
 	                    {% else %}
 	                      Impossible de vérifier le plan Ahrefs pour le moment.
 	                    {% endif %}
 	                  {% endif %}
 	                {% else %}
 	                  Importe un CSV Ahrefs via le formulaire ci-dessus (Source = Ahrefs).
-	                  <span class="muted">Pour la synchro API : <span class="mono">AHREFS_API_TOKEN</span> dans <span class="mono">.env</span> (plan Enterprise).</span>
 	                {% endif %}
 	              </p>
 	            {% else %}
