@@ -117,12 +117,13 @@ def operation(database, *, payer, project, action, key, row=None):
         _CURRENT.reset(token)
 
 
-def branch(value):
+def branch(value, *, owner, repo, base, base_sha):
     op = current()
     if not op:
         return value
     value += "-" + op.row.id[:8]
-    op.save(branch=value, writes_started=True)
+    op.save(branch=value, writes_started=True,
+            repository={"owner": owner, "repo": repo, "base": base, "base_sha": base_sha})
     return value
 
 

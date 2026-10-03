@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-03",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "Operator inspection and explicit abandonment of unpublished pending corrections, preserving branches, saved results and billing events.",
+  "previous_evidence": "validation-reprise-2026-10-03.json",
+  "changes_deployed_to_agent": false,
+  "client_sites_changed": 0,
+  "additional_claude_calls": 0,
+  "additional_live_github_calls": 0,
+  "publication": {
+    "branch": "codex/corrector-recovery-20261003",
+    "main_changed": false,
+    "scope": "Frozen repository snapshots, correction reconciliation module, operator CLI/runbook, focused tests and this validation evidence."
+  },
+  "operator_contract": {
+    "entrypoint": "python ops/correction_doctor.py",
+    "commands": ["list", "inspect", "abandon"],
+    "credentials": "Uses only the payer's stored user GitHub connection; no token arguments or saved preview content are printed.",
+    "frozen_repository": "Owner, repository, base branch and starting commit are saved before creating the unique operation branch in all four PR correction routes.",
+    "concurrency": "Inspection and abandonment acquire the same payer lock as application workers and re-read the receipt under that lock. Lost PostgreSQL leases prevent release.",
+    "github_reads": "Verify repository identity, search all PR states for the exact head without a base filter, read the frozen starting commit to verify code access, then inspect the correction ref.",
+    "abandonment": "Requires an operator and reason. Unpaid work with no saved preview/PR may be released if no write was intended, the branch is confirmed absent, or it still points at the starting commit.",
+    "partial_commits": "Changed unpublished branches require an explicit --retain-branch action after operator review. The remote branch and all commits remain untouched.",
+    "audit": "Record timestamp, operator, reason and observed evidence/SHA in the same transaction that marks the receipt abandoned and clears its request key.",
+    "billing": "No usage-event changes, refunds or charges. Previously paid previews remain available for confirmation without another provider call or debit.",
+    "refusals": "Any PR, charged work, saved preview/PR, missing legacy snapshot, inconsistent repository, unknown GitHub result, code-access denial, active worker or lost lease prevents abandonment.",
+    "non_destructive": "No GitHub write, branch deletion, merge, model call, worker startup, migration or automatic batch cleanup. Other pending operations continue to block their payer.",
+    "external_actor_limit": "Application locks cannot exclude manual GitHub changes; the runbook requires operators to avoid concurrent manual branch/PR operations."
+  },
+  "verified_scenarios": [
+    "Absent and unchanged branches: read-only inspection followed by explicit audited release",
+    "Changed partial branch refuses ordinary release; explicit retention preserves its SHA",
+    "Open, closed, merged, multiple and malformed nonempty PR results all refuse abandonment",
+    "Missing snapshots, invalid branch identity, malformed refs and inconsistent repositories refuse release",
+    "Missing contents permissions cannot be inferred as an absent branch from repository visibility",
+    "Authentication failures, rate limits, server errors and redirects fail closed",
+    "Provider crash before any external write can be abandoned without a GitHub call",
+    "Saved preview/PR and charged results are protected; usage-event totals stay unchanged",
+    "A payer's active worker prevents operator action on SQLite and PostgreSQL",
+    "Real PostgreSQL lease termination after GitHub reads prevents request-key release",
+    "A PR appearing after an earlier inspection is checked again and prevents abandonment",
+    "Releasing one operation does not release another pending operation",
+    "CLI list, inspect and abandon run in child processes against isolated SQLite and PostgreSQL databases",
+    "Real authenticated API: ambiguous confirmation write, blocked replay, operator reconciliation, fresh branch and one PR; one model call and one debit overall"
+  ],
+  "verification": {
+    "github_and_provider": "Injected responses; no real GitHub transport fault or Claude call in this phase.",
+    "full_local_suite": {
+      "database": "isolated_temporary_sqlite",
+      "passed": 2780,
+      "skipped": 42,
+      "warnings": 260,
+      "seconds": 212.07,
+      "source_edits_during_run": false,
+      "skip_note": "Nine PostgreSQL guard cases, two PostgreSQL API cases, thirty PostgreSQL reconciliation cases and one SQLite-inapplicable lease-termination case. PostgreSQL cases pass in the separate run."
+    },
+    "targeted_real_postgres_run": {
+      "passed": 166,
+      "skipped": 1,
+      "warnings": 36,
+      "seconds": 46.90,
+      "real_postgres_cases": 103,
+      "unit_or_sqlite_cases": 63,
+      "reconciliation_module_cases_passed": 67,
+      "skip_note": "Only the SQLite instance of the PostgreSQL lease-termination test is inapplicable."
+    },
+    "initial_targeted_sqlite_run_before_code_access_hardening": {
+      "passed": 183,
+      "skipped": 29,
+      "seconds": 32.46
+    },
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "bandit": "passed_on_correction_journal_reconciliation_and_operator_cli"
+  },
+  "postgres_isolation": {
+    "bind": "127.0.0.1:55473",
+    "production_database_used": false,
+    "server_stopped_after_tests": true,
+    "remaining_advisory_locks": 0,
+    "remaining_idle_in_transaction_sessions": 0
+  },
+  "remaining_release_checks": [
+    "Exercise actual GitHub transport failures and full worker-process restarts on owned fixtures.",
+    "Recover charged/saved outcomes and legacy operations that cannot be abandoned; do not delete their receipts or billing records.",
+    "Define receipt retention, production worker capacity and session-compatible PostgreSQL pooling.",
+    "Complete remaining Claude-written anomaly families and indexability-sensitive positive controls.",
+    "Validate onboarding and real billing lifecycle, then review/deploy and supervise customer pilots."
+  ],
+  "artifacts_windows": {
+    "full_suite": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-reconciliation-full-20261003-uw9715y0",
+    "postgres_targeted": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-reconciliation-pg-20261003-4dlkfaxz",
+    "initial_targeted_sqlite": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-reconciliation-target-20261003-9yixcw93"
+  }
+}

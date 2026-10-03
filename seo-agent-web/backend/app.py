@@ -18766,7 +18766,8 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             return JSONResponse({"ok": False, "stale_preview": True,
                                  "error": "Le fichier a change depuis cet apercu. Aucun contenu n'a ete ecrase."}, status_code=409)
         from datetime import datetime as _dt
-        fix_branch = correction_journal.branch(f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
+        fix_branch = correction_journal.branch(f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}",
+                                               owner=owner, repo=repo_name, base=branch, base_sha=base_sha)
         try:
             _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={
                 "ref": f"refs/heads/{fix_branch}",
@@ -18990,7 +18991,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
 
     from datetime import datetime as _dt
-    fix_branch = correction_journal.branch(f"seo-fix/bulk-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
+    fix_branch = correction_journal.branch(f"seo-fix/bulk-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}",
+                                           owner=owner, repo=repo_name, base=branch, base_sha=base_sha)
     try:
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={
             "ref": f"refs/heads/{fix_branch}", "sha": base_sha,
@@ -27615,7 +27617,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         base_sha = ref_data["object"]["sha"]
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
-    fix_branch = correction_journal.branch(f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
+    fix_branch = correction_journal.branch(f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}",
+                                           owner=owner, repo=repo_name, base=branch, base_sha=base_sha)
     try:
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
     except Exception as e:
@@ -29276,7 +29279,8 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         base_sha = ref_data["object"]["sha"]
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
-    fix_branch = correction_journal.branch(f"seo-keyword/{_safe_github_branch_suffix(query)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
+    fix_branch = correction_journal.branch(f"seo-keyword/{_safe_github_branch_suffix(query)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}",
+                                           owner=owner, repo=repo_name, base=branch, base_sha=base_sha)
     try:
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
     except Exception as e:

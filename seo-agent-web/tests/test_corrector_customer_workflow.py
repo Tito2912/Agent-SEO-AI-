@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 
 from sqlalchemy import delete, select
 
-from backend import app as m, auth, billing, correction_guard, correction_journal
+from backend import app as m, auth, billing, correction_guard, correction_journal, correction_reconciliation
 from backend.models import AccountMember, CorrectionOperation, IssueTask, User, Project
 
 URL = "https://fixture.test/"
@@ -589,3 +589,46 @@ def test_an_interrupted_partial_branch_blocks_retries_with_a_changed_request(cus
     with m.DB.session() as db:
         assert db.scalar(select(CorrectionOperation).where(
             CorrectionOperation.payer_id == payer, CorrectionOperation.state == "blocked"))
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_operator_reconciliation_unblocks_a_confirm_without_rebilling_its_preview(customer, monkeypatch, changed):
+    state, send, used, payer, _ = customer
+    original_get, original_post, original_put = m._github_api_get, m._github_api_post, m._github_api_put
+    def get(path, **kwargs):
+        return {"object": {"sha": "a" * 40}} if "/git/ref" in path else original_get(path, **kwargs)
+    def post(path, **kwargs):
+        if path.endswith("/git/refs"):
+            row = correction_journal.current().row
+            persisted = correction_journal.find(m.DB, key=row.request_key)
+            assert persisted.data["repository"] == {"owner": "client", "repo": "fixture", "base": "main", "base_sha": "a" * 40}
+            assert kwargs["json_body"]["ref"] == "refs/heads/" + persisted.data["branch"]
+        return original_post(path, **kwargs)
+    def interrupted(*args, **kwargs):
+        raise OSError("ambiguous file write")
+    monkeypatch.setattr(m, "_github_api_get", get)
+    monkeypatch.setattr(m, "_github_api_post", post)
+    preview = send().json()
+    body = {"confirm": True, "file_path": preview["file"], "patched_content": preview["patched_content"]}
+    monkeypatch.setattr(m, "_github_api_put", interrupted)
+    assert send(**body).status_code == 400 and send(**body).status_code == 503
+    row = correction_journal.pending(m.DB, payer=payer)
+    class Reader:
+        def get(self, path, **kwargs):
+            if path.endswith("/pulls"):
+                return []
+            if "/git/ref/" in path:
+                return {"ref": "refs/heads/" + row.data["branch"],
+                        "object": {"type": "commit", "sha": ("b" if changed else "a") * 40}}
+            if "/git/commits/" in path:
+                return {"sha": "a" * 40}
+            return {"full_name": "client/fixture"}
+    result = correction_reconciliation.reconcile(m.DB, row.id, lambda payer: Reader(), abandon=True,
+                                                 retain_branch=changed, operator="test", reason="interrupted confirm")
+    assert result["released"] is True and used() == 1
+    monkeypatch.setattr(m, "_github_api_put", original_put)
+    confirmed = send(**body)
+    assert confirmed.status_code == 200, confirmed.text
+    assert used() == 1 and state["models"] == 1
+    assert confirmed.json()["branch"] != row.data["branch"]
+    assert len([path for path, _ in state["posts"] if path.endswith("/pulls")]) == 1
