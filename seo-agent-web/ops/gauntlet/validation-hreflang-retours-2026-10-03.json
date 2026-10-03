@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-03",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "missing_reciprocal_hreflang: real missing return annotations and existing language-code collisions on isolated Hugo/Nuxt fixtures",
+  "previous_evidence": "validation-descriptions-2026-10-03.json",
+  "production_corrector_code_changed_in_this_phase": true,
+  "changes_deployed_to_agent": false,
+  "client_sites_changed": 0,
+  "production_database_used": false,
+  "additional_claude_calls": 0,
+  "additional_live_fixture_prs": 6,
+  "all_live_fixture_prs_closed_without_merge": true,
+  "publication_branch": "codex/corrector-recovery-20261003",
+  "agent_main_sha_unchanged": "28c7113e65609b4b7ef7acfb87dd844994bb0ed9",
+  "corrector_changes": {
+    "targeting": "Evidence identifies the translation receiving the return annotation. Resolved route files override the flagged source-page targets, including at a one-file limit.",
+    "nuxt": "Standalone literal link objects inside one parseable useHead object are cloned with quotes, property order, indentation and commas preserved. Computed/spread/ambiguous structures abstain.",
+    "collision": "An existing language code for another URL is never overwritten. Preparation refuses all-conflict batches before any file read; mixed batches retain repairable items and explain the conflict in the PR body.",
+    "safety": "Malformed language codes, non-HTTP URLs, control characters, angle brackets and contradictory evidence abstain. HTML attribute values and JavaScript quotes are escaped. Mixed HTML attribute shapes and unsupported JavaScript escapes abstain; entity-encoded existing language codes cannot create duplicate annotations.",
+    "ai": "The live bench forbids AI targeting and installs a hard zero-call provider budget. Return-tag generation is mechanical with AI rewrite fallback disabled; unresolved route targeting outside this controlled run is not universally certified as zero-cost."
+  },
+  "measurement": {
+    "mode": "counterfactual_fixture_preview_without_injected_header",
+    "raw_crawls_retained": true,
+    "raw_preview_family_counts_each_stack": {"before": 0, "after": 0, "used_as_repair_proof": false},
+    "projection": "A separate copy of structured URL fields maps the preview host to the production namespace, preserving URL paths/case/query. Only the exact noindex header on preview-host pages is removed; meta robots and all other directives remain. The original scorer uses the actual captured sitemap XML.",
+    "projection_is_production_deployment": false,
+    "link_classifications_recomputed": false,
+    "positive_control": "Three fixture translations form a genuine missing FR-to-EN return pair. The unchanged built baseline must expose the exact page/code/URL evidence before any repair.",
+    "raw_html_countercheck": "After the real correction build, the EN response is HTTP 200 and contains fr pointing to the FR translation. Its previous en, de and x-default annotations, canonical and meta robots are unchanged.",
+    "total_family_verdict": "partial: 2 to 1 per stack",
+    "repairable_occurrence_verdict": "resolved: 1 to 0 per stack",
+    "remaining_occurrence": "Legacy fr-code collision requires language ownership/arbitration and is deliberately unchanged."
+  },
+  "live_fixtures": [
+    {
+      "stack": "hugo",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-hugo",
+      "seed_sha": "8e6700c2899b42a7baaf66ae180d855f92c7541f",
+      "main_sha_before_and_after": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "baseline_branch": "gauntlet-hugo-hreflang-baseline-20261003-180335",
+      "correction_branch": "gauntlet-hugo-hreflang-correction-20261003-180335",
+      "max_files": 1,
+      "github_compare_changed_files": ["content/gauntlet/qa-reciprocal-en.md"],
+      "controlled_counts": {"before": 2, "after": 1, "repairable_before": 1, "repairable_after": 0},
+      "crawl": {"max_pages": 90, "before_html": 47, "after_html": 47, "missing_html_routes": [], "increases": [], "new_issue_routes": []},
+      "pull_requests": [
+        {"kind": "baseline", "number": 46, "head_sha": "6ac50f984e754f361619e94fa6ced0dedba93fff", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 47, "head_sha": "b58d1761fce15f579920e2ac13c055feff1e1ba2", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ],
+      "sha256": {
+        "baseline_raw_report": "e251d6a0d56955944341cfc1b443cd701935b0fafa6d25b7bd030693640ec180",
+        "correction_raw_report": "15c600655adb42c8e845f626733bd61ebd1b7f6f0762dcedc6e5b73d00b89f07",
+        "baseline_controlled_report": "89815b0d4209f2911a91965a8206ec809989842a8a0c7d539fb79ee0ba8e8be9",
+        "correction_controlled_report": "be6dc2fc5c468f4ab80d84f63d902bdc98ad28c1a00fa7d3a6fdb8c5831502ab",
+        "baseline_and_correction_sitemap": "d624b241798502d9875562756e7e23f5f227b294154ada91cc9cdaa916012978"
+      }
+    },
+    {
+      "stack": "nuxt",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-nuxt",
+      "seed_sha": "f11930be69231409e359cf3f82dd3872f9e57ac5",
+      "main_sha_before_and_after": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "baseline_branch": "gauntlet-nuxt-hreflang-baseline-20261003-180538",
+      "correction_branch": "gauntlet-nuxt-hreflang-correction-20261003-180538",
+      "max_files": 1,
+      "github_compare_changed_files": ["pages/gauntlet/qa-reciprocal-en.vue"],
+      "controlled_counts": {"before": 2, "after": 1, "repairable_before": 1, "repairable_after": 0},
+      "crawl": {"max_pages": 90, "before_html": 43, "after_html": 43, "missing_html_routes": [], "increases": [], "new_issue_routes": []},
+      "pull_requests": [
+        {"kind": "baseline", "number": 44, "head_sha": "9ebe722cb121c2570f34dabe5a5375fb5e39b217", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 45, "head_sha": "0f68d1eaa85e210b50e91a92321aa00ddc5e606d", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ],
+      "sha256": {
+        "baseline_raw_report": "c47bef891221a32a951162e75cd4b58c95490b33c259ea8b1c177f2b44ef1aa7",
+        "correction_raw_report": "6410ca5ea06b79c1a4a0f118f883c67278efe614551832747514a3823dce3028",
+        "baseline_controlled_report": "49e39668c47a8e21e5f0425b9143cd8cdef259ed0e898c737ba1eec7450770ea",
+        "correction_controlled_report": "e76081ff775c91c194bcb3ce85b1cca257ae65f0f4931bce3006ef2060bb71f8",
+        "baseline_and_correction_sitemap": "cb474bd45a92d0c64e96e1bf4d18393f4c8e662bc08ed7ea922f74412015a365"
+      }
+    }
+  ],
+  "initial_inconclusive_attempts": [
+    {"stack": "hugo", "pr": 44, "reason": "New translations absent from the served static sitemap and navigation; positive control not visited.", "repair_attempted": false, "state": "closed", "merged": false},
+    {"stack": "hugo", "pr": 45, "reason": "The served sitemap included the translations but its production-host URLs did not seed the preview crawl. Relative navigation links were required.", "repair_attempted": false, "state": "closed", "merged": false}
+  ],
+  "verification": {
+    "full_final_suite": {"database": "isolated_temporary_sqlite", "passed": 2877, "skipped": 42, "warnings": 260, "seconds": 216.18, "source_edits_during_run": false},
+    "new_tests_this_phase": 39,
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "new_bench_bandit_medium_or_high": "none",
+    "independent_countercheck": "GitHub main identities, PR draft/closed/unmerged state and exact built heads were re-read. Compare shows exactly one translation changed per stack. Raw HTML confirms the new return tag and unchanged existing annotations/canonical/meta robots. The final projection also preserves noindex on redirects leaving the preview host; its pages and removed-header lists match all four recorded live reports exactly.",
+    "postgresql": "No new PostgreSQL run in this content-only phase; earlier real recovery/concurrency evidence remains separate."
+  },
+  "limitations": [
+    "The preview remains noindex in reality. Its projected scores are not an actual production crawl or a proof of search-engine indexing.",
+    "Hugo raw_head and bounded literal Nuxt useHead are exercised. Arbitrary customer/shared/dynamic templates, multiline objects, quoted object keys and other frameworks are not universally certified.",
+    "The unresolved legacy language-code collision is not safely repairable without deciding which translation owns that language code.",
+    "Hreflang invalid-code and x-default families and remaining title/duplicate/content AI-written families were not exercised by this selection.",
+    "This does not certify customer billing, scheduling, live billable batches or partial-content-write crash recovery. No agent deployment or client write occurred."
+  ],
+  "remaining_release_checks": [
+    "Validate hreflang invalid codes and x-default with bounded Claude and independent positive controls.",
+    "Complete explicitly selected remaining AI-written families, including duplicate descriptions and titles.",
+    "Exercise real billable batch and partial-content-write recovery with GitHub and isolated PostgreSQL together.",
+    "Validate deployment startup/schedulers, capacity, receipt retention and onboarding/billing lifecycle, then supervise pilots."
+  ],
+  "artifacts_windows": {
+    "live_and_countercheck": "C:/Users/Caron/AppData/Local/Temp/seo-hreflang-live-20261003-2q36tsr8",
+    "earlier_inconclusive_runs": ["C:/Users/Caron/AppData/Local/Temp/seo-hreflang-live-20261003-ry3rydn8", "C:/Users/Caron/AppData/Local/Temp/seo-hreflang-live-20261003-hfqshv22"],
+    "full_final_suite": "C:/Users/Caron/AppData/Local/Temp/seo-hreflang-published-full-20261003-ztdjltba"
+  }
+}

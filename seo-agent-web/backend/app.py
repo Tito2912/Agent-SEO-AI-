@@ -24759,7 +24759,7 @@ def _inserer_og_complet(content: str, reporte: dict[str, str]) -> tuple[str, lis
 
 # Une annotation hreflang ECRITE EN BALISAGE, sous la forme qu'on saura cloner. Les formes objet
 # (next `alternates.languages`, nuxt `useHead({link})`) demandent de savoir ou s'inserer dans une
-# structure ; on s'y abstient, comme pour l'Open Graph.
+# structure ; seul le tableau link litteral de useHead est accepte ci-dessous.
 #
 # CETTE ABSTENTION A ETE LEVEE LE 19/09/2026, PUIS RETABLIE LE JOUR MEME, et la raison vaut
 # d'etre gardee. On avait ajoute un geste qui POSE `openGraph: { url: <canonical> }` sur une page
@@ -24780,6 +24780,82 @@ _HREFLANG_LIEN_RE = re.compile(
     r"""^([ \t]*)<link\s+rel\s*=\s*(['"])alternate\2\s+hreflang\s*=\s*(['"])(?P<code>[^'"]+)\3"""
     r"""\s+href\s*=\s*(['"])(?P<href>[^'"]*)\5\s*/?>[ \t]*$""",
     re.I | re.M)
+
+_HREFLANG_OBJECT_LINE_RE = re.compile(
+    r"(?m)^(?P<indent>[ \t]*)(?P<object>\{[^{}\n]*\})(?P<comma>,?)[ \t]*$")
+_HREFLANG_OBJECT_FIELD_RE = re.compile(
+    r"""\b(?P<key>rel|hreflang|href)\s*:\s*(?P<quote>['"])(?P<value>(?:\\.|(?!(?P=quote))[^\\\n])*)(?P=quote)""")
+
+
+def _add_reciprocal_hreflang_objects(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
+    """Clone only standalone, literal Nuxt link objects; computed/spread objects abstain."""
+    heads = list(re.finditer(r"(?m)^[ \t]*useHead\(\s*(\{)", content))
+    if len(heads) != 1:
+        return content, 0
+    try:
+        tokens = _tokens(content, heads[0].start(1))
+        _, error = _parse_literal(tokens, 0)
+        if error:
+            return content, 0
+    except (_Doubt, IndexError):
+        return content, 0
+    depth, bounds = 0, []
+    for index, (kind, value, offset) in enumerate(tokens):
+        if depth == 1 and kind == "KEY" and value == "link" and tokens[index + 2][0] == "[":
+            nested = 1
+            for end in range(index + 3, len(tokens)):
+                nested += (tokens[end][0] == "[") - (tokens[end][0] == "]")
+                if not nested:
+                    bounds.append((tokens[index + 2][2], tokens[end][2]))
+                    break
+        depth += (kind in {"{", "["}) - (kind in {"}", "]"})
+    if len(bounds) != 1:
+        return content, 0
+    models = []
+    present = set()
+    for match in _HREFLANG_OBJECT_LINE_RE.finditer(content):
+        obj = match.group("object")
+        if "hreflang" not in obj:
+            continue
+        if not bounds[0][0] < match.start() < match.end() < bounds[0][1]:
+            return content, 0
+        fields = list(_HREFLANG_OBJECT_FIELD_RE.finditer(obj))
+        if len(fields) != 3 or {f.group("key") for f in fields} != {"rel", "hreflang", "href"}:
+            return content, 0
+        if _HREFLANG_OBJECT_FIELD_RE.sub("", obj[1:-1]).strip(" ,\t"):
+            return content, 0
+        if any(re.search(r"""\\(?!['"\\/])""", f.group("value")) for f in fields):
+            return content, 0
+        values = {f.group("key"): _js_unescape(f.group("value")) for f in fields}
+        if values["rel"] != "alternate":
+            continue
+        present.add(values["hreflang"].lower())
+        models.append((match, fields))
+    if not models:
+        return content, 0
+    if len(re.findall(r"""\brel\s*:\s*(['"])alternate\1""", content)) != len(models):
+        return content, 0
+    model, fields = models[0]
+    additions = []
+    for item in items:
+        code = str(item["field"]).strip()
+        if code.lower() in present:
+            continue
+        present.add(code.lower())
+        obj = model.group("object")
+        replacements = {"hreflang": code, "href": str(item["value"]).strip()}
+        for field in reversed(fields):
+            if field.group("key") in replacements:
+                value = _js_escape(replacements[field.group("key")], field.group("quote"))
+                obj = obj[:field.start("value")] + value + obj[field.end("value"):]
+        additions.append(model.group("indent") + obj)
+    if not additions:
+        return content, 0
+    for index in range(len(additions)):
+        if index < len(additions) - 1 or model.group("comma"):
+            additions[index] += ","
+    prefix = content[:model.end()] + ("" if model.group("comma") else ",")
+    return prefix + "\n" + "\n".join(additions) + content[model.end():], len(additions)
 
 
 def _drop_hreflang_annotations(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
@@ -24848,14 +24924,27 @@ def _add_reciprocal_hreflang(content: str, items: list[dict[str, str]]) -> tuple
     a_poser = [it for it in items
                if _norm_url_for_match(str(it.get("page") or "")) == _moi
                and str(it.get("field") or "").strip() and str(it.get("value") or "").strip()]
+    a_poser = [it for it in a_poser
+               if re.fullmatch(r"(?:x-default|[a-z]{2}(?:-[a-z0-9]{2,8})*)", str(it["field"]).strip(), re.I)
+               and _verification_url(str(it["value"]))
+               and not any(char in str(it["value"]) for char in "<>")
+               and not any(ord(char) < 32 for char in str(it["value"]))]
     if not a_poser:
+        return content, 0
+    destinations: dict[str, set[str]] = {}
+    for item in a_poser:
+        destinations.setdefault(str(item["field"]).strip().lower(), set()).add(str(item["value"]).strip())
+    if any(len(values) > 1 for values in destinations.values()):
         return content, 0
     modele = None
     presents = set()
     for m in _HREFLANG_LIEN_RE.finditer(content):
         modele = modele or m
-        presents.add(m.group("code").strip().lower())
+        presents.add(html.unescape(m.group("code")).strip().lower())
     if modele is None:
+        return _add_reciprocal_hreflang_objects(content, a_poser)
+    if sum(bool(re.search(r"\bhreflang\s*=", tag.group(0), re.I))
+           for tag in _LINK_TAG_RE.finditer(content)) != len(list(_HREFLANG_LIEN_RE.finditer(content))):
         return content, 0
     indent, q_rel, q_code, q_href = (modele.group(1), modele.group(2),
                                      modele.group(3), modele.group(5))
@@ -24867,8 +24956,8 @@ def _add_reciprocal_hreflang(content: str, items: list[dict[str, str]]) -> tuple
             continue
         presents.add(code.lower())
         ajouts.append('%s<link rel=%salternate%s hreflang=%s%s%s href=%s%s%s%s'
-                      % (indent, q_rel, q_rel, q_code, code, q_code,
-                         q_href, str(it["value"]).strip(), q_href, fermeture))
+                      % (indent, q_rel, q_rel, q_code, html.escape(code, quote=True), q_code,
+                         q_href, html.escape(str(it["value"]).strip(), quote=True), q_href, fermeture))
         n += 1
     if not ajouts:
         return content, 0
@@ -26609,6 +26698,26 @@ def _prepare_issue_fix(
 
     if issue_key in _HREFLANG_RETURN_KEYS:
         _items = _issue_page_values(block)
+        _known = {_norm_url_for_match(str(p.get("final_url") or p.get("url") or "")):
+                  {str(c).lower(): str(h) for c, h in (p.get("hreflang") or {}).items()}
+                  for p in (pages or []) if isinstance(p, dict) and isinstance(p.get("hreflang"), dict)}
+        _conflicts, _safe = [], []
+        for _item in _items:
+            _page = str(_item.get("page") or "")
+            _code = str(_item.get("field") or "").strip().lower()
+            _existing = _known.get(_norm_url_for_match(_page), {}).get(_code)
+            if _existing and _norm_url_for_match(_existing) != _norm_url_for_match(str(_item.get("value") or "")):
+                _conflicts.append(f"{_page} : {_code} designe deja {_existing}")
+            else:
+                _safe.append(_item)
+        if _conflicts:
+            _warning = ("Ces retours exigeraient un code hreflang deja utilise pour une autre URL ; "
+                        "ils demandent un arbitrage et ne sont pas modifies :\n" + "\n".join(_conflicts))
+            out["side_effects"] = _warning
+            if not _safe:
+                out["refusal"] = _warning
+                return out
+        _items = _safe
         _cibles = [str(i.get("page") or "") for i in _items if str(i.get("page") or "")]
         if not _items:
             out["refusal"] = (
@@ -26619,6 +26728,10 @@ def _prepare_issue_fix(
             # fichier qui les MENTIONNE sans etre elles sera ecarte par le reecriveur lui-meme,
             # qui verifie le canonical avant d'ecrire.
             out["evidence"] = _cibles
+            _index = repo_index.build_repo_index(all_paths)
+            _resolved = [repo_index.route_files(_index, url) for url in _cibles]
+            if _resolved and all(_resolved):
+                out["targets_override"] = list(dict.fromkeys(path for hits in _resolved for path in hits))
             out["link_rewriter"] = (  # noqa: E731
                 lambda raw, _i=list(_items): _add_reciprocal_hreflang(raw, _i))
             # Aucun repli modele : les trois valeurs sont connues, et un modele qui « ajoute un

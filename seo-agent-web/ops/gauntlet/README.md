@@ -139,6 +139,44 @@ Les workers du banc ne demarrent pas les schedulers ni le lifespan de production
 commit exact et les controles de nettoyage. Aucun jeton n'y est inscrit. Le bilan du
 passage reel est `validation-github-recovery-2026-10-03.json`.
 
+## Retours Hreflang
+
+`hreflang_cycle.py` valide uniquement `missing_reciprocal_hreflang` sur Hugo/Nuxt.
+Il part de deux commits fixtures deja controles et refuse une origine qui aurait change.
+Trois traductions sont ajoutees sur des branches QA, avec un vrai retour manquant sur
+l'edition anglaise. Le sitemap statique et l'index du parcours sont etendus uniquement
+sur ces branches : les liens relatifs assurent leur decouverte sur les previews.
+
+```sh
+python ops/gauntlet/hreflang_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le correcteur produit est exerce avec un plafond d'un fichier et de zero appel IA.
+Il doit cibler la traduction anglaise, pas la page francaise signalee. Le conflit
+preexistant (code `fr` deja utilise pour une autre URL) reste intact et est explique.
+Les quatre PR brouillon sont fermees sans fusion, meme si la verification echoue.
+
+Les rapports bruts sont conserves. Ils ne prouvent PAS la correction par leur compteur
+zero : le `noindex` injecte par Netlify masque cette famille. Un rapport distinct,
+explicitement contrefactuel, remplace le domaine preview dans les champs URL structures
+par le domaine de production et retire seulement l'en-tete exact `noindex` des pages
+du domaine preview. Les meta robots et autres directives sont conserves. Le moteur
+d'audit d'origine recalcule les anomalies avec le sitemap XML effectivement servi.
+Cette projection ne reconstitue pas un crawl de production : les classifications de
+liens observees restent celles du crawl preview. Elle ne certifie pas l'indexabilite.
+
+Le temoin doit contenir la preuve precise du retour manquant. Apres build et recrawl,
+toutes les pages HTML doivent rester accessibles, cette preuve doit disparaitre et
+aucune hausse ou nouvelle route d'anomalie ne doit etre observee dans la comparaison.
+Le compteur total reste `partial` (2 vers 1), car le conflit non arbitrable subsiste ;
+l'occurrence corrigeable passe de 1 a 0. Le HTML brut confirme directement la nouvelle
+balise et la preservation du canonical et des annotations existantes.
+
+`validation-hreflang-retours-2026-10-03.json` conserve les limites, builds, empreintes,
+resultats et tentatives initiales refusees faute de pages effectivement visitees.
+Les autres familles hreflang, notamment `x-default` et les codes invalides, ne sont
+pas certifiees par ce passage.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,
