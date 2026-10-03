@@ -75,22 +75,51 @@ Le banc impose une base SQLite temporaire et n'utilise jamais la base client.
   disparition du reliquat Open Graph sur Hugo/Gatsby/Nuxt apres builds et recrawls reels.
 - `validation-reprise-2026-10-03.json` : journal durable des corrections, apercus payes
   recuperables, debit atomique et reprise d'une PR deja acceptee ; migration SQLite/PostgreSQL.
+- `validation-reconciliation-2026-10-03.json` : inspection et abandon explicite des operations
+  impayees interrompues ; conservation des branches, audit operateur et tests SQLite/PostgreSQL.
+- `validation-github-recovery-2026-10-03.json` : ecritures GitHub reelles, arrets de processus
+  et coupure de socket ; PR retrouvee sans doublon, puis fermee sans fusion. Suite finale :
+  2 800 tests reussis sur SQLite, avec les cas PostgreSQL deja exerces dans le bilan precedent.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
-ne sont pas deployees. Le dernier bilan conserve 2 741 tests reussis sur SQLite et 97 tests
-cibles reussis avec PostgreSQL isole. Les 11 cas PostgreSQL ignores dans le lancement SQLite
-ont tous ete exerces separement sur cette vraie base. Le serveur temporaire a ensuite ete arrete.
+ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
+166 tests cibles reussis, dont 103 sur PostgreSQL reel. Ses cas PostgreSQL ignores dans le
+lancement SQLite ont ete exerces separement. Le serveur temporaire a ensuite ete arrete.
 
 Le journal permet de retrouver une PR acceptee avant une perte de reponse ou un echec du debit,
 sans reecrire les fichiers ni facturer deux fois. Une branche partielle ou une PR impossible a
 confirmer reste bloquee : aucune relance automatique destructive n'est activee. L'outillage de
-reconciliation operateur, les pannes GitHub reelles et la conservation des recus restent a cadrer.
+reconciliation operateur est decrit dans `../CORRECTION_RECOVERY.md`. La conservation des recus reste a cadrer.
 La capacite du deploiement reel, les familles masquees par le noindex des previews et les lots IA
 incomplets restent a valider.
 
 Le bilan PostgreSQL/IA du 2 octobre corrige aussi l'explication historique du reliquat Open Graph : le canonical
 avait deja ete passe en HTTPS, mais son slash final differait encore d'og:url. Les anciens
 rapports restent conserves ; la nouvelle preuve et sa contre-verification sont dans ce bilan.
+
+## Reprise Apres Interruption
+
+`recovery_cycle.py` utilise uniquement `noyaru-stack-static-html`, une base SQLite temporaire
+et des comptes synthetiques. Sept processus API distincts exercent trois interruptions :
+apercu paye avant un arret brutal, processus tue apres creation de branche, puis socket ferme
+apres acceptation d'une PR par GitHub. La reprise doit retrouver cette PR, reconstruire sa
+trace, refuser un doublon et conserver un seul debit. Les ecritures GitHub sont reelles ;
+les pannes sont provoquees par un relais HTTP sur loopback, pas par une panne du service GitHub.
+
+```sh
+python ops/gauntlet/recovery_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le budget est strict : deux branches, un commit sur `gauntlet/missing-title.html`, une PR
+brouillon, aucune fusion et aucun appel Claude. Un generateur deterministe remplace l'IA :
+ce banc teste la reprise, pas la qualite des corrections SEO. Les branches sont conservees,
+la PR du banc est fermee sans fusion, son identite est reverifiee avant fermeture et `main`
+doit rester identique. Un resultat de nettoyage inconnu n'est jamais compte comme reussi.
+Les workers du banc ne demarrent pas les schedulers ni le lifespan de production.
+
+`recovery.json` conserve les effets distants, les sept codes de sortie/reponses API, le
+commit exact et les controles de nettoyage. Aucun jeton n'y est inscrit. Le bilan du
+passage reel est `validation-github-recovery-2026-10-03.json`.
 
 ## Reconstruire les pages
 
