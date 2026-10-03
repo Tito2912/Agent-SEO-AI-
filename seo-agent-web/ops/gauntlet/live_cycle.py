@@ -72,10 +72,15 @@ def html_checks(production: dict, baseline: dict, corrected: dict, families: set
     preview_host = urlsplit(corrected.get("meta", {}).get("base_url", "")).netloc
     checks = []
     for family in sorted(families & {"served_html_lang_mismatch", "canonical_points_to_4xx",
-                                     "https_page_has_internal_links_to_http"}):
+                                     "https_page_has_internal_links_to_http", "description",
+                                     "multiple_meta_description_tags"}):
         routes = _impacted_routes(production, family)
-        expected_count = max((int(v.get("count") or 0) for k, v in production.get("issues", {}).items()
-                              if base(k) == family and isinstance(v, dict)), default=0)
+        counts = {}
+        for key, block in production.get("issues", {}).items():
+            if base(key) == family and isinstance(block, dict):
+                real_key = key.removesuffix("_not_indexable").removesuffix("_indexable")
+                counts[real_key] = max(counts.get(real_key, 0), int(block.get("count") or 0))
+        expected_count = sum(counts.values())
         observations = []
         for route in sorted(routes):
             prod, old, new = pp.get(route), bp.get(route), ap.get(route)
@@ -107,13 +112,30 @@ def html_checks(production: dict, baseline: dict, corrected: dict, families: set
                                                 and parsed.scheme == "https"
                                                 and parsed.netloc in {production_host, preview_host}
                                                 and _route(canonical) in ap)
-                else:
+                elif family == "https_page_has_internal_links_to_http":
                     links = lambda p: set(p.get("internal_links", []) + p.get("external_links", []))  # noqa: E731
                     broken = {url for url in links(prod) if urlsplit(url).scheme == "http"
                               and urlsplit(url).netloc == production_host}
                     row["baseline_defect_observed"] = bool(broken and broken <= links(old))
                     row["after_correct"] = bool(broken and not (broken & links(new)) and all(
                         "https://" + url.removeprefix("http://") in links(new) for url in broken))
+                else:
+                    original = str(prod.get("meta_description") or "").strip()
+                    before = str(old.get("meta_description") or "").strip()
+                    after = str(new.get("meta_description") or "").strip()
+                    before_tags, after_tags = (old.get("meta_description_tag_count"),
+                                              new.get("meta_description_tag_count"))
+                    row.update({"before_length": len(before), "after_length": len(after),
+                                "before_tags": before_tags, "after_tags": after_tags})
+                    # These are the scorer's hard thresholds, not the preferred writing window.
+                    if isinstance(before_tags, int) and not isinstance(before_tags, bool):
+                        defective = (before_tags > 1 if family == "multiple_meta_description_tags"
+                                     else (not before and before_tags == 0)
+                                     or (bool(before) and before_tags > 0
+                                         and not 100 <= len(before) <= 160))
+                        row["baseline_defect_observed"] = bool(before == original and defective)
+                    if isinstance(after_tags, int) and not isinstance(after_tags, bool):
+                        row["after_correct"] = bool(after_tags == 1 and 100 <= len(after) <= 160)
                 if (_noindex(new.get("meta_robots")) and not _noindex(old.get("meta_robots"))) or (
                     _noindex(new.get("x_robots_tag")) and not _noindex(old.get("x_robots_tag"))
                 ):
@@ -181,6 +203,14 @@ def compare(production: Path, baseline: Path, corrected: Path, run: dict) -> dic
     if reasons:
         for check in direct:
             check["verdict"] = "unverified"
+    for check in direct:
+        if check["family"] not in {"description", "multiple_meta_description_tags"}:
+            continue
+        for row in rows:
+            if row["family"] == check["family"] and row["verdict"] == "resolved_in_preview_scope":
+                if check["verdict"] != "resolved_on_observed_html":
+                    row["verdict"] = check["verdict"]
+                    row["reasons"].append("rendered_description_evidence_not_resolved")
     return {"comparable": not reasons, "reasons": list(dict.fromkeys(reasons)),
             "before_html_pages": len(bp), "after_html_pages": len(ap),
             "missing_html_routes": sorted(bp.keys() - ap.keys()),
@@ -216,10 +246,11 @@ def crawl(stack: str, url: str, out: Path, max_pages: int, *, preview: bool) -> 
 
 
 def repair(stack: str, workdir: Path, *, branch: str = "", families: str = "",
-           max_files: int = 40) -> dict:
+           max_files: int = 40, max_ai_calls: int = 12) -> dict:
     env = dict(os.environ, GAUNTLET_STACK=stack, GAUNTLET_WORKDIR=str(workdir),
                GAUNTLET_FREE="" if families else "1", GAUNTLET_ONLY=families,
-               GAUNTLET_BRANCH=branch, GAUNTLET_MAX_FILES=str(max_files))
+               GAUNTLET_BRANCH=branch, GAUNTLET_MAX_FILES=str(max_files),
+               GAUNTLET_MAX_AI_CALLS=str(max_ai_calls if families else 0))
     with (workdir / ("claude.log" if families else "mechanical.log")).open(
         "w", encoding="utf-8"
     ) as log:
@@ -274,15 +305,19 @@ def close_prs(repo: str, token: str, prs: list[dict]) -> list[dict]:
 
 
 def cycle(m, token: str, stack: str, root: Path, *, max_pages: int = 90,
-          reuse: bool = False, ai_families: str = "", ai_max_files: int = 2) -> dict:
+          reuse: bool = False, ai_families: str = "", ai_max_files: int = 2,
+          ai_max_calls: int = 12) -> dict:
     if stack not in STACKS:
         raise ValueError("Only the allowlisted fixture stacks can be tested.")
+    if not 0 <= ai_max_calls <= 100:
+        raise ValueError("Claude call limit must be between 0 and 100.")
     repo = f"noyaru-stack-{stack}"
     workdir = root / stack
     workdir.mkdir(parents=True, exist_ok=True)
     result = {"stack": stack, "repository": f"{OWNER}/{repo}", "max_pages": max_pages,
               "ai_families_requested": [key for key in ai_families.split(",") if key],
               "ai_max_files_per_family": ai_max_files,
+              "ai_max_calls": ai_max_calls,
               "started_at": dt.datetime.now(dt.UTC).isoformat(), "pull_requests": []}
     try:
         main = m._github_api_get(m._github_ref_api_path(OWNER, repo, "main"), token=token)
@@ -309,7 +344,8 @@ def cycle(m, token: str, stack: str, root: Path, *, max_pages: int = 90,
             raise ValueError("The reused correction branch is based on an older fixture main.")
         if ai_families:
             print(f"[{stack}] Bounded Claude repairs ({ai_max_files} files/family)", flush=True)
-            run = repair(stack, workdir, branch=branch, families=ai_families, max_files=ai_max_files)
+            run = repair(stack, workdir, branch=branch, families=ai_families,
+                         max_files=ai_max_files, max_ai_calls=ai_max_calls)
         result["repairs"] = run
         stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%d-%H%M%S")
         baseline_branch = f"gauntlet-{stack}-baseline-{stamp}"
@@ -340,6 +376,9 @@ def cycle(m, token: str, stack: str, root: Path, *, max_pages: int = 90,
         comparison = result["comparison"]
         result["status"] = ("unverified" if not comparison["comparable"] else "regression_detected"
                             if comparison["increases"] or comparison["new_issue_routes"] else "measured")
+        if (run.get("ai_budget") or {}).get("exhausted"):
+            result["status"] = "unverified"
+            result["ai_budget_exhausted"] = True
     except Exception as exc:
         result["status"] = "failed"
         result["error_type"] = type(exc).__name__
@@ -363,16 +402,19 @@ def main() -> int:
     parser.add_argument("--reuse", action="store_true", help="Reuse this workdir's reference/fix branch.")
     parser.add_argument("--ai-families", default="", help="Explicit comma-separated families; Claude only.")
     parser.add_argument("--ai-max-files", type=int, default=2)
+    parser.add_argument("--ai-max-calls", type=int, default=12,
+                        help="Hard limit on Claude requests per stack, including retries.")
     args = parser.parse_args()
-    if args.max_pages < 1 or not 1 <= args.ai_max_files <= 5:
-        parser.error("max-pages must be positive; ai-max-files must be between 1 and 5.")
+    if args.max_pages < 1 or not 1 <= args.ai_max_files <= 5 or not 0 <= args.ai_max_calls <= 100:
+        parser.error("max-pages must be positive; ai-max-files 1..5; ai-max-calls 0..100.")
     root = args.workdir.resolve()
     root.mkdir(parents=True, exist_ok=True)
     m, token = _load_backend(root)
     results = []
     for stack in args.stacks:
         row = cycle(m, token, stack, root, max_pages=args.max_pages, reuse=args.reuse,
-                    ai_families=args.ai_families, ai_max_files=args.ai_max_files)
+                    ai_families=args.ai_families, ai_max_files=args.ai_max_files,
+                    ai_max_calls=args.ai_max_calls)
         results.append(row)
         save(root / "cycles.json", {"cycles": results})
         print(json.dumps({"stack": stack, "status": row["status"],

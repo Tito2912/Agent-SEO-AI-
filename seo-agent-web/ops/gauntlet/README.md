@@ -53,6 +53,17 @@ Par defaut, seules les corrections mecaniques sont appliquees. `--ai-families` p
 explicitement un petit lot a exercer avec Claude ; `--ai-max-files` vaut 2 fichiers par famille.
 Ce plafond est un budget de banc, pas une certification de toutes les occurrences du site.
 Les appels IA sont traces dans `claude.log`, jamais avec leurs cles.
+`--ai-max-calls` ajoute un plafond strict de 12 requetes Claude par stack par defaut,
+relances comprises. Les echecs du fournisseur comptent aussi, les preparations paralleles
+partagent ce plafond et aucun repli OpenAI n'est autorise. Le passage mecanique dispose
+de zero appel. Un budget epuise rend le cycle `unverified`.
+
+`--ai-families` selectionne des cles exactes. Demander `missing_meta_description` ne teste
+pas automatiquement les descriptions trop courtes ou trop longues : il faut aussi nommer
+une cle de longueur, qui regroupe ensuite ses deux variantes. `gauntlet_run.json` conserve
+les cles demandees et exercees, le budget, les URL impactees, les fichiers cibles/modifies,
+les refus et les fichiers ecartes par le plafond du passage courant. Le diagnostic sur
+le contenu d'origine est reserve aux reecriveurs mecaniques ; il n'appelle jamais Claude.
 
 Une famille absente de la preview temoin reste `unverified`, meme si son compteur vaut zero
 apres correction. Les settings, les pages HTML effectivement servies, les cibles revisitees et
@@ -62,6 +73,10 @@ Trois familles sensibles a l'indexabilite disposent aussi de controles directs d
 canonical vers une 4xx, liens internes HTTP et langue du HTML servi. Ces preuves sont rapportees
 separement des compteurs du crawler et seulement sur les pages effectivement observees.
 Le banc impose une base SQLite temporaire et n'utilise jamais la base client.
+Les descriptions disposent aussi d'un controle du HTML observe : le defaut doit etre present
+dans le temoin, toutes les occurrences doivent etre revisitees, et chaque page corrigee doit
+servir une seule balise description de 100 a 160 caracteres. Une mesure du nombre de balises
+absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zero.
 
 ## Bilans Conserves
 
@@ -80,6 +95,9 @@ Le banc impose une base SQLite temporaire et n'utilise jamais la base client.
 - `validation-github-recovery-2026-10-03.json` : ecritures GitHub reelles, arrets de processus
   et coupure de socket ; PR retrouvee sans doublon, puis fermee sans fusion. Suite finale :
   2 800 tests reussis sur SQLite, avec les cas PostgreSQL deja exerces dans le bilan precedent.
+- `validation-descriptions-2026-10-03.json` : familles de longueur et balises description
+  multiples, Claude reel sur Hugo/Nuxt, builds et recrawls avec temoins positifs. Les reliquats
+  passent de 4 a 0 sur Hugo et de 3 a 0 sur Nuxt, sans regression observee.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et

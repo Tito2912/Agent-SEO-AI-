@@ -165,6 +165,12 @@ def test_customer_repo_cannot_be_passed_to_the_cycle(tmp_path):
         bench.cycle(None, "unused", "customer", tmp_path)
 
 
+@pytest.mark.parametrize("limit", [-1, 101])
+def test_invalid_ai_budget_cannot_reach_github(tmp_path, limit):
+    with pytest.raises(ValueError, match="Claude call limit"):
+        bench.cycle(None, "unused", "astro", tmp_path, ai_max_calls=limit)
+
+
 def field_report(key, pages, count=1):
     return {"meta": {"base_url": "https://fixture.test/"}, "pages": pages,
             "issues": {key: {"count": count, "examples": ["https://fixture.test/broken"]}}}
@@ -235,17 +241,19 @@ def test_one_repaired_occurrence_cannot_hide_a_new_one_at_the_same_count(tmp_pat
     assert {"family": "page_in_multiple_sitemaps", "routes": ["/new-duplicate"]} in result["new_issue_routes"]
 
 
-@pytest.mark.parametrize("comparable,increases,added,expected", [
-    (True, [], [], "measured"),
-    (False, [], [], "unverified"),
-    (True, [{"family": "missing_title"}], [], "regression_detected"),
-    (True, [], [{"family": "page_in_multiple_sitemaps", "routes": ["/new"]}], "regression_detected"),
+@pytest.mark.parametrize("comparable,increases,added,exhausted,expected", [
+    (True, [], [], False, "measured"),
+    (False, [], [], False, "unverified"),
+    (True, [{"family": "missing_title"}], [], False, "regression_detected"),
+    (True, [], [{"family": "page_in_multiple_sitemaps", "routes": ["/new"]}], False, "regression_detected"),
+    (True, [], [], True, "unverified"),
 ])
-def test_cycle_exit_status_does_not_hide_a_bad_measurement(tmp_path, monkeypatch, comparable, increases, added, expected):
+def test_cycle_exit_status_does_not_hide_a_bad_measurement(tmp_path, monkeypatch, comparable, increases, added, exhausted, expected):
     work = tmp_path / "astro"
     (work / "before").mkdir(parents=True)
     report(work / "before", "report.json")
-    bench.save(work / "gauntlet_run.json", {"branch": "gauntlet-astro-test", "results": []})
+    bench.save(work / "gauntlet_run.json", {"branch": "gauntlet-astro-test", "results": [],
+                                           "ai_budget": {"exhausted": exhausted}})
     module = SimpleNamespace(
         _github_api_get=lambda *a, **kw: {"object": {"sha": "main-sha"},
                                         "merge_base_commit": {"sha": "main-sha"}},

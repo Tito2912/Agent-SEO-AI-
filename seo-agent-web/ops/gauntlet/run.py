@@ -33,6 +33,10 @@ os.environ.setdefault("SEO_AGENT_SECRET_KEY", "x" * 20)
 from backend import app as m  # noqa: E402
 from backend import audit_dashboard as dash  # noqa: E402
 from backend import repo_index  # noqa: E402
+from ops.gauntlet.ai_budget import ClaudeBudget  # noqa: E402
+
+ai_budget = ClaudeBudget(int(os.environ.get("GAUNTLET_MAX_AI_CALLS", "12")))
+ai_budget.install(m)
 
 # Where the "before" crawl was written, and where this run's result goes. Passed in, because a
 # scratchpad is session-scoped and this bench has to outlive the session that built it.
@@ -145,6 +149,7 @@ def _mordait_a_l_origine(rewriter, targets: list[str]) -> bool:
 
 file_state: dict[str, dict[str, str]] = {}
 results = [row for row in previous if row[0] not in ordered]
+scopes = {}
 for key in ordered:
     label = (dash.ISSUE_CATALOG[key].label if key in dash.ISSUE_CATALOG else key)
     fam = m._verification_family_keys(key)
@@ -183,13 +188,14 @@ for key in ordered:
         results.append((key, "IGNOREE (payante)", "", 0, 0))
         continue
     try:
+        capped = []
         applied = m._apply_prepared_issue_fix(
             owner=OWNER, repo_name=REPO, branch=BRANCH, token=TOKEN, fix_branch=fix_branch,
             all_paths=paths, issue_key=key, issue_label=label, impacted=impacted_l,
             site_name=SITE, file_state=file_state,
             max_files=int(os.environ.get("GAUNTLET_MAX_FILES", "40")),
             prep=prep, pages=report.get("pages"), index=idx,
-            allow_ai_targeting=not gratuit)
+            allow_ai_targeting=not gratuit, ecartes=capped)
         patched = list(dict.fromkeys(applied["patched"] + applied["config_changes"]))
         skipped, targets, ai = applied["skipped"], applied["targets"], applied["ai_files"]
         if applied.get("fatal"):
@@ -198,12 +204,16 @@ for key in ordered:
         results.append((key, "ERREUR patch", str(exc)[:80], 0, 0))
         continue
     verdict = "ok" if patched else ("AUCUN PATCH" if targets else "AUCUNE CIBLE")
-    if verdict == "AUCUN PATCH" and _mordait_a_l_origine(prep["link_rewriter"], targets):
+    if verdict == "AUCUN PATCH" and mecanique and _mordait_a_l_origine(prep["link_rewriter"], targets):
         verdict = "DEJA CORRIGE"
+    scopes[key] = {"family_keys": sorted(fam), "impacted_urls": impacted_l,
+                   "targets": targets, "patched": patched, "skipped": skipped,
+                   "ai_files": ai, "capped_files": capped}
     results.append((key, verdict, ",".join(targets[:2])[:70], len(patched), len(ai)))
     print(f"  {verdict:<12} {key:<46} cibles={len(targets)} patches={len(patched)} ia={len(ai)}")
 
-json.dump({"branch": fix_branch, "results": results},
+json.dump({"branch": fix_branch, "results": results, "scopes": scopes,
+           "requested_keys": only, "exercised_keys": ordered, "ai_budget": ai_budget.summary()},
           open(os.path.join(SD, "gauntlet_run.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("\n--- bilan ---")
 for v in ("ok", "DEJA CORRIGE", "IGNOREE (payante)", "AUCUN PATCH", "AUCUNE CIBLE",
