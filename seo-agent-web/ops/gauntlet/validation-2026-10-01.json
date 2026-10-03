@@ -1,0 +1,239 @@
+{
+  "date": "2026-10-01",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "changes_deployed_to_agent": false,
+  "local_verification": {
+    "passed": 2656,
+    "failed": 0,
+    "new_regression_cases": 63,
+    "new_bench_guard_cases": 43,
+    "ruff": "passed",
+    "compile": "passed",
+    "bandit_medium_high": "passed",
+    "installed_dependency_audit": "no_known_vulnerabilities_found",
+    "database": "isolated_temporary_sqlite"
+  },
+  "live_verification": {
+    "stack": "static-html",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "correction_pull_request": "https://github.com/pployeraffiliation-a11y/noyaru-stack-static-html/pull/42",
+    "baseline_pull_request": "https://github.com/pployeraffiliation-a11y/noyaru-stack-static-html/pull/43",
+    "pull_requests_closed_without_merge": true,
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "model_written_repairs": [
+      "missing_h1_indexable",
+      "missing_meta_description",
+      "missing_title"
+    ],
+    "estimated_model_cost_usd": 0.03059,
+    "crawl_max_pages": 60,
+    "production_reference_pages": 53,
+    "comparison": {
+      "comparability": true,
+      "before_pages": 48,
+      "after_pages": 47,
+      "targeted_families": [
+        {
+          "family": "canonical_points_to_4xx",
+          "production_before": 1,
+          "preview_before": 0,
+          "preview_after": 0,
+          "verdict": "unverified"
+        },
+        {
+          "family": "css_redirects",
+          "production_before": 2,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "description",
+          "production_before": 4,
+          "preview_before": 4,
+          "preview_after": 3,
+          "verdict": "partial"
+        },
+        {
+          "family": "double_slash_in_url",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "https_http_mixed_content",
+          "production_before": 4,
+          "preview_before": 3,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "production_before": 1,
+          "preview_before": 0,
+          "preview_after": 0,
+          "verdict": "unverified"
+        },
+        {
+          "family": "https_page_links_to_http_css",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "https_page_links_to_http_image",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "https_page_links_to_http_javascript",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "image_redirects",
+          "production_before": 2,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "inconsistent_ai_training_bot_policy",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "javascript_redirects",
+          "production_before": 2,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "missing_h1",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "missing_reciprocal_hreflang",
+          "production_before": 1,
+          "preview_before": 0,
+          "preview_after": 0,
+          "verdict": "unverified"
+        },
+        {
+          "family": "missing_title",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "more_than_one_page_for_same_language_in_hreflang",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "open_graph_url_not_matching_canonical",
+          "production_before": 5,
+          "preview_before": 5,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "page_has_links_to_redirect",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "page_has_redirected_css",
+          "production_before": 2,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "page_has_redirected_image",
+          "production_before": 2,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "page_has_redirected_javascript",
+          "production_before": 2,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "page_in_multiple_sitemaps",
+          "production_before": 1,
+          "preview_before": 1,
+          "preview_after": 0,
+          "verdict": "resolved_in_preview_scope"
+        },
+        {
+          "family": "served_html_lang_mismatch",
+          "production_before": 1,
+          "preview_before": 0,
+          "preview_after": 0,
+          "verdict": "unverified"
+        }
+      ],
+      "increases": []
+    },
+    "resolved_families_in_preview_scope": 18,
+    "notes": [
+      "Preview-to-preview comparisons avoid the noindex header Netlify adds to previews.",
+      "An occurrence absent from the baseline preview cannot prove a repair.",
+      "The description group remains partial because other short/long descriptions were deliberately not processed.",
+      "Counts validate the observed preview scope, not every production occurrence or every stack."
+    ]
+  },
+  "multistack_continuation_report": "validation-multistack-2026-10-01.json",
+  "interface_verification": {
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      },
+      {
+        "width": 320,
+        "height": 740
+      }
+    ],
+    "horizontal_overflow": false,
+    "javascript_errors": 0,
+    "unverified_filter": "passed"
+  },
+  "remaining_release_checks": [
+    "Exercise remaining model-written repair families and finish partial batches; the live tests were intentionally bounded.",
+    "Validate remaining hreflang/index-sensitive families in an environment where baseline defects are actually observable.",
+    "Repeat real build and recrawl validation on hugo, jekyll, gatsby, nuxt, sveltekit and next-pages.",
+    "Validate the complete paid-client workflow, including billing/quota concurrency, onboarding and recovery.",
+    "Review and deploy the local agent changes before claiming they are available in production.",
+    "Run supervised pilot clients before enabling broader automation."
+  ],
+  "artifacts_windows": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-corrector-live-aqrrokxu",
+  "screenshots_windows": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-corrector-ui-dnweuu14"
+}

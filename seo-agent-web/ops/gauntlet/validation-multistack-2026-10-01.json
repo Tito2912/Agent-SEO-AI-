@@ -1,0 +1,433 @@
+{
+  "date": "2026-10-01",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "changes_deployed_to_agent": false,
+  "scope": "Two additional fixture stacks; intentionally bounded Claude repairs, builds and recrawls.",
+  "provider": "anthropic",
+  "model": "claude-sonnet-4-6",
+  "local_verification": {
+    "passed": 2656,
+    "failed": 0,
+    "warnings": 232,
+    "duration_seconds": 177.94,
+    "new_cases_this_stage": 60,
+    "new_product_regression_cases": 17,
+    "new_bench_guard_cases": 43,
+    "ruff": "passed",
+    "compile": "passed",
+    "bandit_medium_high": "passed",
+    "database": "isolated_temporary_sqlite"
+  },
+  "live_totals": {
+    "claude_calls": 33,
+    "model_written_file_repairs": 30,
+    "estimated_model_cost_usd": 0.34467,
+    "pull_requests_closed_without_merge": 6,
+    "client_sites_changed": 0
+  },
+  "fixed_defect": {
+    "family": "page_in_multiple_sitemaps",
+    "trigger": "The mixed-content fixer upgraded an HTTP sitemap loc to an HTTPS loc already present.",
+    "symptom": "The original duplicate disappeared but a new duplicate appeared on another URL; the family count remained one.",
+    "fix": "Safely parse XML and deduplicate only loc destinations written by the upgrade; match exact URL identity and preserve distinct scheme, path case, query and slash.",
+    "regression_cases": 17,
+    "real_build_and_recrawl_confirmed": true,
+    "first_correction_pr": "https://github.com/pployeraffiliation-a11y/noyaru-stack-astro/pull/32",
+    "fixed_correction_pr": "https://github.com/pployeraffiliation-a11y/noyaru-stack-astro/pull/34"
+  },
+  "evidence_notes": [
+    "All fixtures remain defective on main; no corrective PR was merged.",
+    "The first Astro pass is preserved as regression_detected, not rewritten as a successful pass.",
+    "The fresh Astro regression pass contains mechanical repairs and the served-language repair, not a replay of the entire earlier Claude batch.",
+    "Netlify adds noindex to previews. Counter-based proof requires a defect present on the unchanged baseline preview.",
+    "Canonical 4xx, internal HTTP links and served HTML language are also checked directly against the observed HTML fields.",
+    "Descriptions and incomplete Open Graph remain partial in the bounded batches; not all affected files were processed.",
+    "Hreflang annotation validity and reciprocity still need validation without preview suppression.",
+    "Counts describe observed preview scopes, not every production occurrence or all client technologies.",
+    "The bench invokes the production repair helper, but full paid-client API/billing/onboarding workflows remain separate release checks."
+  ],
+  "cycles": [
+    {
+      "phase": "astro",
+      "stack": "astro",
+      "status": "regression_detected",
+      "main_sha": "25e26c86e35b3f715e627bcb619fb40edb860c28",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 31,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-astro/pull/31",
+          "build": {
+            "head_sha": "8c41a0192a5cad3e85b54d0f3343db294228aa92",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 32,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-astro/pull/32",
+          "build": {
+            "head_sha": "6e1b5fee0e6c237aa8b2d877a80f5cbbb318567c",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 31,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 32,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "pull_requests_closed_without_merge": true,
+      "crawl_max_pages": 90,
+      "production_reference_pages": 57,
+      "successful_html_pages": {
+        "before": 46,
+        "after": 46
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "html_lang_attribute_invalid",
+        "html_lang_attribute_missing",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "missing_alt_text",
+        "missing_h1",
+        "missing_title",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "multiple_h1",
+        "open_graph_tags_missing",
+        "open_graph_url_not_matching_canonical",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "structured_data_schema_org_validation_error",
+        "twitter_card_incomplete"
+      ],
+      "partial_families": [
+        {
+          "family": "description",
+          "before": 5,
+          "after": 4
+        },
+        {
+          "family": "open_graph_tags_incomplete",
+          "before": 4,
+          "after": 2
+        }
+      ],
+      "still_present": [
+        "page_in_multiple_sitemaps"
+      ],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "hreflang_annotation_invalid",
+        "https_page_has_internal_links_to_http",
+        "missing_reciprocal_hreflang"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [
+        {
+          "family": "page_in_multiple_sitemaps",
+          "routes": [
+            "/gauntlet/"
+          ]
+        }
+      ],
+      "claude_calls": 17,
+      "estimated_model_cost_usd": 0.17578,
+      "model_written_file_repairs": 16
+    },
+    {
+      "phase": "next-app",
+      "stack": "next-app",
+      "status": "measured",
+      "main_sha": "07f6eb27d4228afb4d2e34a7a78224f57e5b1fe7",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 36,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-next-app/pull/36",
+          "build": {
+            "head_sha": "26eed11867d3fb19532ad687d09ea78b942de92d",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 37,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-next-app/pull/37",
+          "build": {
+            "head_sha": "34593a9a3c2d1f1755cbd2d6f672d781b5c42094",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 36,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 37,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "pull_requests_closed_without_merge": true,
+      "crawl_max_pages": 90,
+      "production_reference_pages": 45,
+      "successful_html_pages": {
+        "before": 36,
+        "after": 36
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "missing_alt_text",
+        "missing_h1",
+        "missing_title",
+        "multiple_h1",
+        "open_graph_tags_missing",
+        "open_graph_url_not_matching_canonical",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "structured_data_schema_org_validation_error",
+        "twitter_card_incomplete"
+      ],
+      "partial_families": [
+        {
+          "family": "description",
+          "before": 3,
+          "after": 2
+        },
+        {
+          "family": "open_graph_tags_incomplete",
+          "before": 4,
+          "after": 1
+        }
+      ],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "hreflang_annotation_invalid",
+        "https_page_has_internal_links_to_http",
+        "served_html_lang_mismatch"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "served_html_lang_mismatch",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/",
+              "baseline_defect_observed": true,
+              "after_correct": true,
+              "expected_language": "en"
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "claude_calls": 13,
+      "estimated_model_cost_usd": 0.14134,
+      "model_written_file_repairs": 12
+    },
+    {
+      "phase": "regression/astro",
+      "stack": "astro",
+      "status": "measured",
+      "main_sha": "25e26c86e35b3f715e627bcb619fb40edb860c28",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 33,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-astro/pull/33",
+          "build": {
+            "head_sha": "3f6479d88ee2a38af8ad1344222c588a6fead492",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 34,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-astro/pull/34",
+          "build": {
+            "head_sha": "c9be61690458e536237162ede67de1abf8829364",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 33,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 34,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "pull_requests_closed_without_merge": true,
+      "crawl_max_pages": 90,
+      "production_reference_pages": 57,
+      "successful_html_pages": {
+        "before": 46,
+        "after": 46
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "open_graph_url_not_matching_canonical",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http",
+        "missing_reciprocal_hreflang",
+        "served_html_lang_mismatch"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "served_html_lang_mismatch",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/en",
+              "baseline_defect_observed": true,
+              "after_correct": true,
+              "expected_language": "en"
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "claude_calls": 3,
+      "estimated_model_cost_usd": 0.02755,
+      "model_written_file_repairs": 2
+    }
+  ],
+  "artifacts_windows": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-stack-validation-l4br6ywm",
+  "remaining_release_checks": [
+    "Validate the other six fixture stacks: hugo, jekyll, gatsby, nuxt, sveltekit and next-pages.",
+    "Exercise remaining model-written families and finish the partially repaired batches.",
+    "Validate hreflang/indexability-sensitive families where original defects are observable.",
+    "Test paid-client workflows, quota concurrency, onboarding, failure recovery and permissions.",
+    "Review/deploy the local agent changes, then start supervised pilots."
+  ]
+}

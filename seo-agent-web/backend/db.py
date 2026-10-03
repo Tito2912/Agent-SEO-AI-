@@ -44,6 +44,12 @@ class Database:
             future=True,
             connect_args=connect_args,
         )
+        if self.engine.dialect.name == "postgresql":
+            # Long correction leases must not consume the pool used by quota/auth queries.
+            self.correction_engine: Engine = create_engine(
+                url, pool_pre_ping=True, future=True, pool_size=4, max_overflow=0,
+                pool_timeout=0, connect_args={"connect_timeout": 5},
+            )
         if url.startswith("sqlite:///"):
             # SQLite ignores foreign keys unless asked, per connection. Without this, every
             # `ondelete="CASCADE"` in models.py is decoration: deleting a project leaves its

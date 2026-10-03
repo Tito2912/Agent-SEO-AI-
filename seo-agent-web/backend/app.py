@@ -35,7 +35,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
-from functools import lru_cache
+from functools import lru_cache, wraps
 from pathlib import Path
 from collections.abc import Callable
 from typing import Any, NamedTuple
@@ -95,9 +95,13 @@ except ImportError:
 try:
     # When running as `uvicorn backend.app:app` (recommended).
     from . import billing as billing  # type: ignore
+    from . import correction_guard
+    from . import correction_journal
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
+    import correction_guard
+    import correction_journal
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
@@ -2116,6 +2120,8 @@ def _github_api_get(path: str, *, token: str, params: dict[str, Any] | None = No
 
 
 def _github_api_post(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    correction_guard.ensure_active()
+    correction_journal.write_intent()
     resp = requests.post(
         _github_api_url(path),
         headers={
@@ -2151,11 +2157,13 @@ def _ouvrir_pull_request(*, owner: str, repo: str, token: str, title: str, body:
         # diff sans demander au client de les relire, et sans permettre de les fusionner. Une
         # pull request ordinaire serait deja une sollicitation.
         corps["draft"] = True
-    return _github_api_post(
+    result = _github_api_post(
         _github_api_path("repos", owner, repo, "pulls"),
         token=token,
         json_body=corps,
     )
+    correction_journal.pr_received(result)
+    return result
 
 
 _PR_VERIF_FENETRE_S = 30 * 60      # au-dela, on ne sait pas et on le dit
@@ -2298,6 +2306,8 @@ def _bloc_verification(pr_data: Any, *, fusion_auto: bool) -> dict[str, Any]:
 
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    correction_guard.ensure_active()
+    correction_journal.write_intent()
     resp = requests.put(
         _github_api_url(path),
         headers={
@@ -2318,6 +2328,8 @@ def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout
 
 
 def _github_api_delete(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
+    correction_guard.ensure_active()
+    correction_journal.write_intent()
     resp = requests.delete(
         _github_api_url(path),
         headers={
@@ -2357,13 +2369,15 @@ def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool
     return data.get("merged") or bool(data.get("merged_at")) or data.get("state") == "closed"
 
 
-def _github_pr_is_open(owner: str, repo: str, pr_number: int, token: str) -> bool:
+def _github_pr_is_open(owner: str, repo: str, pr_number: int, token: str, *, strict: bool = False) -> bool:
     """True only when GitHub CONFIRMS the pull request is still open.
 
     Deliberately the inverse of `_github_pr_merged`'s error handling: this one gates an action,
-    so anything unknown (network, rate limit, missing token, deleted PR) must return False and
-    let the user through rather than block them on a guess."""
+    so display-only callers retain the historical False on unknown. Correction gates use
+    `strict`: an unknown result must not permit another paid preview or conflicting PR."""
     if not token or not owner or not repo or pr_number <= 0:
+        if strict:
+            raise correction_guard.CorrectionStoreUnavailable()
         return False
     try:
         data = _github_api_get(
@@ -2371,9 +2385,13 @@ def _github_pr_is_open(owner: str, repo: str, pr_number: int, token: str) -> boo
             token=token,
             timeout_s=8,
         )
-    except Exception:
+    except Exception as exc:
+        if strict:
+            raise correction_guard.CorrectionStoreUnavailable() from exc
         return False
-    if not isinstance(data, dict):
+    if not isinstance(data, dict) or data.get("state") not in {"open", "closed"}:
+        if strict:
+            raise correction_guard.CorrectionStoreUnavailable()
         return False
     return data.get("state") == "open" and not data.get("merged") and not data.get("merged_at")
 
@@ -3667,8 +3685,8 @@ def _plafond_de_correction(user: Any, *, slug: str = "") -> _Plafond:
         with DB.session() as _db:
             restant = billing.remaining_quota(_db, user_id=payeur,
                                               metric="ai_corrections_month")
-    except Exception:
-        restant = None
+    except Exception as exc:
+        raise correction_guard.CorrectionStoreUnavailable() from exc
     if not isinstance(restant, int):
         return _Plafond(plan, plan, None, modele, False)
     if restant <= 0:
@@ -3676,7 +3694,160 @@ def _plafond_de_correction(user: Any, *, slug: str = "") -> _Plafond:
     return _Plafond(max(1, min(plan, restant)), plan, restant, modele, False)
 
 
-def _correction_gate(user: Any, *, slug: str = "") -> tuple[bool, str, int, str]:
+def _correction_operation(function):
+    @wraps(function)
+    def guarded(request: Request, slug: str, *args, **kwargs):
+        project = _db_project_or_404(request, slug)
+        user = getattr(request.state, "user", None)
+        payer = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
+        try:
+            with correction_guard.correction_lock(DB, payer):
+                active = correction_journal.current()
+                if active and active.row.project_id == str(project.id):
+                    return function(request, slug, *args, **kwargs)
+                import inspect
+                bound = inspect.signature(function).bind(request, slug, *args, **kwargs)
+                bound.apply_defaults()
+                values = {k: v.model_dump(mode="json") if isinstance(v, BaseModel) else v
+                          for k, v in bound.arguments.items() if k not in {"request", "slug"}}
+                payload = {"values": values, "github": _project_github_cfg(project)}
+                key = correction_journal.request_key(payer, str(project.id), function.__name__, payload)
+                row = correction_journal.find(DB, key=key)
+                if row and row.state == "completed":
+                    result = row.data.get("response", {}).get("body", {})
+                    if result.get("pr_number"):
+                        intent = row.data.get("pr_intent", {})
+                        token, _ = _effective_user_connection_value(user_id=payer, key="GITHUB_TOKEN")
+                        if _github_pr_is_open(intent.get("owner", ""), intent.get("repo", ""),
+                                              int(result["pr_number"]), token, strict=True):
+                            return JSONResponse({"ok": False, "duplicate": True, "pr_url": result["pr_url"],
+                                                 "error": "Une PR est deja ouverte pour cette correction."}, status_code=409)
+                        correction_journal.Operation(DB, row).save(state="archived", release=True)
+                        row = None
+                    else:
+                        body = values.get("body", {})
+                        url = body.get("url", "") if isinstance(body, dict) else ""
+                        cfg = _project_github_cfg(project)
+                        parts = _github_repo_parts(cfg["repo"])
+                        if parts and values.get("issue_key") and url:
+                            token, _ = _effective_user_connection_value(user_id=payer, key="GITHUB_TOKEN")
+                            link = _open_pr_for_issue(project_id=str(project.id), issue_key=values["issue_key"],
+                                                      url=url, owner=parts[0], repo_name=parts[1], token=token, strict=True)
+                            if link:
+                                return JSONResponse({"ok": False, "duplicate": True, "pr_url": link}, status_code=409)
+                        allowed, error, _, _ = _correction_gate(user, slug=slug, quota_required=False)
+                        if not allowed:
+                            return JSONResponse({"ok": False, "error": error}, status_code=402)
+                        if row.data.get("preview_source") and parts:
+                            import base64
+                            import hashlib
+                            token, _ = _effective_user_connection_value(user_id=payer, key="GITHUB_TOKEN")
+                            try:
+                                source = _github_api_get(_github_content_api_path(*parts, result["file"]),
+                                                         token=token, params={"ref": cfg["branch"]})
+                                content = base64.b64decode("".join(source["content"].split()), validate=True).decode("utf-8")
+                            except Exception as exc:
+                                raise correction_guard.CorrectionStoreUnavailable() from exc
+                            if hashlib.sha256(content.encode()).hexdigest() != row.data["preview_source"]:
+                                return JSONResponse({"ok": False, "stale_preview": True,
+                                                     "error": "Le fichier a change depuis cet apercu. Aucun contenu n'a ete ecrase."}, status_code=409)
+                        return JSONResponse({**result, "cached": True})
+                pending = correction_journal.pending(DB, payer=payer)
+                if pending and (row is None or pending.id != row.id):
+                    return JSONResponse({"ok": False, "recovery_required": True,
+                                         "error": "Une correction interrompue doit etre reprise avant une nouvelle demande."}, status_code=503)
+                with correction_journal.operation(DB, payer=payer, project=str(project.id),
+                                                   action=function.__name__, key=key, row=row) as op:
+                    if row:
+                        return _recover_correction(op, user=user, slug=slug)
+                    op.save(actor=str(getattr(user, "id", "") or ""))
+                    response = function(request, slug, *args, **kwargs)
+                    result = json.loads(response.body)
+                    if 200 <= response.status_code < 300 and result.get("pr_number"):
+                        correction_journal.pr_received({"number": result["pr_number"], "html_url": result["pr_url"]})
+                        _restore_correction_tasks(op, result)
+                    op.finish(response)
+                    return response
+        except correction_guard.CorrectionBusy:
+            return JSONResponse({"ok": False, "error": "Une correction est deja en cours sur ce compte. Reessaie dans un instant."},
+                                status_code=409, headers={"Retry-After": "5"})
+        except correction_guard.CorrectionStoreUnavailable:
+            return JSONResponse({"ok": False, "error": "Les corrections sont temporairement indisponibles. Reessaie dans un instant."},
+                                status_code=503)
+
+    return guarded
+
+
+def _restore_correction_tasks(op, result):
+    """Repair a lost task write from the intent saved before opening its PR."""
+    correction_guard.ensure_active()
+    verification = _bloc_verification(op.row.data.get("pr", {}), fusion_auto=False)
+    try:
+        with DB.session() as db:
+            for position, task in enumerate(op.row.data.get("pr_intent", {}).get("tasks", [])):
+                row = db.scalar(select(IssueTask).where(
+                    IssueTask.project_id == op.row.project_id,
+                    IssueTask.issue_key == task["issue_key"], IssueTask.url == task["url"]))
+                try:
+                    note = json.loads(row.note or "{}") if row else {}
+                except (TypeError, ValueError):
+                    note = {}
+                if isinstance(note, dict) and note.get("pr_number") == result["pr_number"]:
+                    continue
+                note = {**task.get("note", {}), "pr_url": result["pr_url"],
+                        "pr_number": result["pr_number"], "branch": op.row.data.get("branch", ""),
+                        "operation_id": op.row.id}
+                if position == 0:
+                    note["verification"] = verification
+                if row is None:
+                    row = IssueTask(project_id=op.row.project_id, user_id=op.row.payer_id,
+                                    created_by=op.row.data.get("actor"), issue_key=task["issue_key"], url=task["url"])
+                    db.add(row)
+                row.issue_label = task.get("issue_label", "")
+                row.crawl_ts = task.get("crawl_ts", "")
+                row.status = "in_progress"
+                row.note = json.dumps(note, ensure_ascii=False)
+            db.commit()
+    except Exception as exc:
+        raise correction_guard.CorrectionStoreUnavailable() from exc
+
+
+def _recover_correction(op, *, user, slug):
+    data = op.row.data
+    intent = data.get("pr_intent")
+    if intent:
+        token, source = _effective_user_connection_value(user_id=op.row.payer_id, key="GITHUB_TOKEN")
+        if not token or source != "user":
+            raise correction_guard.CorrectionStoreUnavailable()
+        path = _github_api_path("repos", intent["owner"], intent["repo"], "pulls")
+        try:
+            matches = _github_api_get(path, token=token, params={
+                "state": "all", "head": intent["owner"] + ":" + data["branch"], "base": intent["base"]})
+        except Exception as exc:
+            raise correction_guard.CorrectionStoreUnavailable() from exc
+        if (not isinstance(matches, list) or len(matches) != 1 or not isinstance(matches[0], dict)
+                or not correction_journal.matches_pr(matches[0], intent, data["branch"])):
+            return JSONResponse({"ok": False, "recovery_required": True,
+                                 "error": "La PR de cette correction ne peut pas encore etre confirmee. Aucun travail ne sera repete."}, status_code=503)
+        pr = matches[0]
+        correction_journal.pr_received(pr)
+        _correction_charge(user, int(intent["billable"]), slug=slug, motif=intent["motif"])
+        result = {"ok": True, "recovered": True, "pr_url": pr["html_url"], "pr_number": pr["number"],
+                  "branch": data["branch"], "merged": bool(pr.get("merged_at")), "verification": "en_attente"}
+        _restore_correction_tasks(op, result)
+        response = JSONResponse(result)
+        op.finish(response)
+        return response
+    if data.get("preview"):
+        _correction_charge(user, 1, slug=slug, motif=data.get("charge_motif", "preview"))
+        response = JSONResponse({**data["preview"], "cached": True, "recovered": True})
+        op.finish(response)
+        return response
+    return JSONResponse({"ok": False, "recovery_required": True,
+                         "error": "Cette correction a ete interrompue. Une verification est necessaire avant de la relancer."}, status_code=503)
+
+
+def _correction_gate(user: Any, *, slug: str = "", quota_required: bool = True) -> tuple[bool, str, int, str]:
     """Check whether the user may run an AI correction now.
 
     Returns (allowed, error_message, effective_max_files, model_override).
@@ -3691,7 +3862,7 @@ def _correction_gate(user: Any, *, slug: str = "") -> tuple[bool, str, int, str]
         return True, "", p.applique, p.modele
     if p.plan <= 0:
         return False, "Les corrections IA ne sont pas incluses dans ton forfait. Passe à un plan supérieur.", 0, ""
-    if isinstance(p.restant, int) and p.restant <= 0:
+    if quota_required and isinstance(p.restant, int) and p.restant <= 0:
         return False, "Quota de corrections IA atteint ce mois-ci. Va sur Abonnement pour upgrade.", 0, ""
     return True, "", p.applique, p.modele
 
@@ -3705,7 +3876,18 @@ def _correction_charge(user: Any, count: int, *, slug: str = "", motif: str = ""
     impossible a produire depuis un appelant."""
     if count <= 0 or bool(getattr(user, "is_admin", False)):
         return
+    correction_guard.ensure_active()
     compte = _compte_payeur(str(getattr(user, "id", "") or ""), slug) if slug else ""
+    operation = correction_journal.current()
+    if operation:
+        if operation.row.payer_id != (compte or str(getattr(user, "id", ""))):
+            raise correction_guard.CorrectionStoreUnavailable()
+        operation.save(charge_motif=motif)
+        operation.charge(lambda db: billing.usage_add(
+            db, user_id=operation.row.payer_id, metric="ai_corrections_month", amount=count,
+            meta={"slug": slug, "motif": motif, "par": str(getattr(user, "id", "") or ""),
+                  "operation_id": operation.row.id}, commit=False))
+        return
     try:
         with DB.session() as _db:
             billing.usage_add(
@@ -3722,8 +3904,9 @@ def _correction_charge(user: Any, count: int, *, slug: str = "", motif: str = ""
                 # etre un membre. Les deux se posent la question un jour.
                 meta={"slug": slug, "motif": motif,
                       "par": str(getattr(user, "id", "") or "")})
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.error("[corrections] quota write unavailable for payer=%s", compte or str(getattr(user, "id", "")))
+        raise correction_guard.CorrectionStoreUnavailable() from exc
 
 
 
@@ -4850,27 +5033,81 @@ def _collateral_introduced(
     return grown[: max(0, limit)]
 
 
-def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir: Path | None = None) -> None:
-    """#5 — After a fresh crawl, confirm whether applied corrections actually worked.
+def _verification_family_keys(issue_key: str) -> set[str]:
+    base = re.sub(r"_(?:not_)?indexable$", "", issue_key)
+    return _with_indexability_variants(_length_family_keys(base))
 
-    For each IssueTask that was pushed/applied (status in_progress/done), check if the
-    fresh crawl still flags the same (issue_key, url). Records the outcome inside the
-    task's `note` JSON (`verify` block) without inventing new status strings (the UI
-    buckets unknown statuses as "todo"). A merged ("done") fix that no longer appears is
-    confirmed resolved; one that still appears is flagged as a regression in the note.
-    """
+
+def _verification_scope_count(issue_key: str, issues: dict[str, Any]) -> int:
+    counts: dict[str, int] = {}
+    for key in _verification_family_keys(issue_key):
+        block = issues.get(key)
+        if not isinstance(block, dict):
+            continue
+        base = re.sub(r"_(?:not_)?indexable$", "", key)
+        counts[base] = max(counts.get(base, 0), int(block.get("count") or 0))
+    return sum(counts.values())
+
+
+def _verification_url(url: str) -> str:
+    """Keep scheme, path case, query and trailing slash significant for crawl evidence."""
+    from urllib.parse import urlsplit, urlunsplit
+    try:
+        parsed = urlsplit(str(url or "").strip())
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return ""
+        return urlunsplit((parsed.scheme, parsed.netloc.lower(), parsed.path or "/", parsed.query, ""))
+    except ValueError:
+        return ""
+
+
+def _verify_corrections_after_crawl(
+    slug: str, report: dict[str, Any], runs_dir: Path | None = None, *,
+    user_id: str | None = None, crawl_ts: str = "",
+) -> None:
+    """Resolve only defects whose scope was successfully revisited by a newer crawl."""
     try:
         issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
-        if not issues:
+        if not isinstance(report.get("issues"), dict):
             return
-        crawl_ts = ""
         meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
-        if isinstance(meta, dict):
-            crawl_ts = str(meta.get("timestamp") or meta.get("crawl_ts") or "")
+        crawl_ts = crawl_ts or str(meta.get("timestamp") or meta.get("crawl_ts") or meta.get("started_at") or "")
+        observed: set[str] = set()
+        observed_pages: dict[str, dict[str, Any]] = {}
+        for section in ("pages", "resources", "system_fetches"):
+            for row in report.get(section, []) or []:
+                if not isinstance(row, dict) or row.get("error"):
+                    continue
+                status = row.get("status_code")
+                if not isinstance(status, int) or not 200 <= status < 300:
+                    continue
+                if section == "pages":
+                    content_type = str(row.get("content_type") or "").lower()
+                    if content_type and "html" not in content_type:
+                        continue
+                    for field in ("url", "final_url"):
+                        observed_pages[_verification_url(str(row.get(field) or ""))] = row
+                observed.update(_verification_url(str(row.get(field) or ""))
+                                for field in ("url", "final_url", "resource_url"))
+        observed.discard("")
+
+        def _time(value: str) -> datetime | None:
+            dt = dash.parse_timestamp(value)
+            if dt is None:
+                try:
+                    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    return None
+            return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+
         with DB.session() as db:
-            proj = db.scalar(select(Project).where(Project.slug == slug))
-            if proj is None:
+            query = select(Project).where(Project.slug == slug)
+            if user_id is not None:
+                query = query.where(Project.owner_user_id == user_id)
+            projects = list(db.scalars(query).all())
+            if len(projects) != 1:
                 return
+            proj = projects[0]
             tasks = list(db.scalars(select(IssueTask).where(
                 IssueTask.project_id == str(proj.id),
                 IssueTask.status.in_(["in_progress", "done"]),
@@ -4882,7 +5119,7 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir:
             def _impacted_norm(key: str) -> set[str]:
                 if key not in impacted_cache:
                     raw = dash.extract_impacted_pages(key, issues.get(key))
-                    impacted_cache[key] = {_norm_url_for_match(u) for u in raw}
+                    impacted_cache[key] = {_verification_url(u) for u in raw} - {""}
                 return impacted_cache[key]
 
             # Collateral damage, measured against the crawl each fix was decided on. When several
@@ -4891,16 +5128,24 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir:
             after_counts = _report_issue_counts(report)
             window_sizes = Counter(str(t.crawl_ts or "") for t in tasks)
             baseline_cache: dict[str, dict[str, int]] = {}
+            baseline_reports: dict[str, dict[str, Any]] = {}
+
+            def _baseline_report(ts: str) -> dict[str, Any]:
+                if ts not in baseline_reports:
+                    old = None
+                    if ts and runs_dir is not None and ts != crawl_ts:
+                        try:
+                            old = dash.load_report_json(runs_dir, slug, ts)
+                        except Exception:
+                            pass
+                    baseline_reports[ts] = old if isinstance(old, dict) else {}
+                return baseline_reports[ts]
 
             def _baseline_counts(ts: str) -> dict[str, int]:
                 if ts not in baseline_cache:
                     base: dict[str, int] = {}
-                    if ts and runs_dir is not None and ts != crawl_ts:
-                        try:
-                            old = dash.load_report_json(runs_dir, slug, ts)
-                            base = _report_issue_counts(old) if isinstance(old, dict) else {}
-                        except Exception:
-                            base = {}
+                    old = _baseline_report(ts)
+                    base = _report_issue_counts(old) if old else {}
                     baseline_cache[ts] = base
                 return baseline_cache[ts]
 
@@ -4914,25 +5159,69 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir:
                     # verified — for a rewrite whose only real verdict is weeks of Search Console
                     # clicks. No reading beats a confident wrong one.
                     continue
-                block = issues.get(key)
-                count = int(block.get("count") or 0) if isinstance(block, dict) else 0
-                url_norm = _norm_url_for_match(str(t.url or ""))
-                if count <= 0:
-                    still_present = False
-                elif url_norm:
-                    still_present = url_norm in _impacted_norm(key)
-                else:
-                    still_present = True  # task without a specific URL: issue still exists
-                result = "still_present" if still_present else "resolved"
-                # PR opened but not merged + still present = expected, don't flag.
-                if t.status == "in_progress" and still_present:
-                    continue
                 try:
                     note_obj = json.loads(t.note) if t.note else {}
                     if not isinstance(note_obj, dict):
                         note_obj = {"_note": str(t.note)}
                 except Exception:
                     note_obj = {"_note": str(t.note)} if t.note else {}
+                family = _verification_family_keys(key)
+                positive = [k for k in family if isinstance(issues.get(k), dict)
+                            and int(issues[k].get("count") or 0) > 0]
+                flagged = set().union(*(_impacted_norm(k) for k in positive))
+                whole_family = bool(note_obj.get("deep") or note_obj.get("bulk"))
+                baseline = _baseline_report(str(t.crawl_ts or ""))
+                scope = {_verification_url(u) for u in note_obj.get("verification_urls", [])
+                         if isinstance(u, str)} - {""}
+                if not scope and whole_family and runs_dir is not None and t.crawl_ts:
+                    try:
+                        old_issues = baseline.get("issues", {}) if isinstance(baseline, dict) else {}
+                        scope = {_verification_url(u) for k in family
+                                 for u in dash.extract_impacted_pages(k, old_issues.get(k))} - {""}
+                    except Exception:
+                        pass
+                url = _verification_url(str(t.url or ""))
+                if not scope and url:
+                    scope = {url}
+                still_present = bool(positive) if whole_family or not scope else bool(flagged & scope)
+                reason = ""
+                before, after = _time(str(t.crawl_ts or "")), _time(crawl_ts)
+                expected = max(int(note_obj.get("verification_expected_count") or note_obj.get("pages") or 0),
+                               _verification_scope_count(key, baseline.get("issues", {})))
+                comparable = not baseline or dash._comparable_meta(meta, baseline.get("meta", {}))
+                old_pages = {_verification_url(str(row.get(field) or "")): row
+                             for row in baseline.get("pages", []) if isinstance(row, dict)
+                             for field in ("url", "final_url")}
+                masked_by_noindex = any(
+                    any("noindex" in str(observed_pages[u].get(field) or "").lower()
+                        for field in ("meta_robots", "x_robots_tag"))
+                    and not any("noindex" in str(old_pages[u].get(field) or "").lower()
+                                for field in ("meta_robots", "x_robots_tag"))
+                    for u in scope if u in observed_pages and u in old_pages)
+                unknown_noindex = not baseline and any(
+                    "noindex" in str(observed_pages[u].get(field) or "").lower()
+                    for u in scope if u in observed_pages
+                    for field in ("meta_robots", "x_robots_tag"))
+                if after is None or before is None or after <= before:
+                    reason = "Le crawl ne prouve pas une visite postérieure au crawl de référence."
+                elif not comparable:
+                    reason = "Les réglages du crawl de contrôle diffèrent de ceux de référence."
+                elif still_present:
+                    pass
+                elif masked_by_noindex or unknown_noindex:
+                    reason = "Une page est noindex ; la disparition peut masquer le défaut."
+                elif not scope or not scope <= observed:
+                    reason = "Certaines URL du correctif n'ont pas été revisitées avec succès."
+                elif whole_family and expected > len(scope):
+                    reason = "Le périmètre complet de cet ancien correctif est inconnu."
+                elif positive:
+                    # Examples are capped: an absent URL is not proof when occurrences remain.
+                    reason = "Des occurrences subsistent ; les exemples ne prouvent pas leur périmètre."
+                elif meta.get("stopped_on_time_budget") or (meta.get("blocked_by_host") or {}).get("count"):
+                    reason = "Le crawl est partiel ou certaines pages ont bloqué le robot."
+                result = "unverified" if reason else ("still_present" if still_present else "resolved")
+                if t.status == "in_progress" and result == "still_present":
+                    continue
                 prev = note_obj.get("verify") if isinstance(note_obj.get("verify"), dict) else {}
                 if prev.get("result") == result and prev.get("crawl_ts") == crawl_ts:
                     continue
@@ -4942,11 +5231,12 @@ def _verify_corrections_after_crawl(slug: str, report: dict[str, Any], runs_dir:
                     "result": result,
                     "verified_at": now_iso,
                     "crawl_ts": crawl_ts,
+                    "reason": reason,
                 }
                 # Only claim a collateral reading when the baseline report actually loaded.
                 # Diffing against an EMPTY baseline would report every surviving issue as newly
                 # introduced — a spectacular false positive on any pruned or unreadable run.
-                if _base_counts:
+                if _base_counts and comparable:
                     note_obj["verify"].update({
                         "baseline_ts": _base_ts,
                         "introduced": _collateral_introduced(_base_counts, after_counts),
@@ -9552,7 +9842,8 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                     actual_pages_crawled = int(pages_crawled)
                     job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
                 # #5 — verify previously applied corrections against this fresh crawl.
-                _verify_corrections_after_crawl(slug, report, runs_dir=_runs_dir_for_user(str(user_id)))
+                _verify_corrections_after_crawl(slug, report, runs_dir=_runs_dir_for_user(str(user_id)),
+                                                user_id=str(user_id), crawl_ts=timestamp)
             job.result = {
                 "type": "crawl",
                 "slug": slug,
@@ -18283,6 +18574,7 @@ def project_issue_detail(
 
 
 @app.get("/api/projects/{slug}/issues/{issue_key}/url-fix")
+@_correction_operation
 def api_issue_url_fix(
     request: Request,
     slug: str,
@@ -18328,6 +18620,7 @@ def api_issue_url_fix(
         else:
             msg = "Correction IA momentanément indisponible. Réessaie dans un instant."
         return JSONResponse({"error": msg}, status_code=503)
+    correction_journal.preview(result)
     _correction_charge(user, 1, slug=slug, motif=issue_key)
     return JSONResponse(result)
 
@@ -18390,6 +18683,7 @@ def api_github_status(request: Request, slug: str) -> JSONResponse:
 
 
 @app.post("/api/projects/{slug}/issues/{issue_key}/github-fix")
+@_correction_operation
 def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFixBody) -> JSONResponse:
     proj = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
@@ -18419,15 +18713,22 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Branche GitHub invalide."}, status_code=400)
     mode = cfg["mode"]
-    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user, slug=slug)
-    if not gate_ok:
-        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     url = (body.url or "").strip()
     if not url:
         return JSONResponse({"ok": False, "error": "URL manquante."}, status_code=400)
     url_error = _validate_settings_url(url)
     if url_error:
         return JSONResponse({"ok": False, "error": url_error}, status_code=400)
+    open_pr = _open_pr_for_issue(project_id=str(proj.id), issue_key=issue_key, url=url,
+                                owner=owner, repo_name=repo_name, token=token, strict=True)
+    if open_pr:
+        return JSONResponse({"ok": False, "duplicate": True, "pr_url": open_pr,
+                             "error": "Une PR est deja ouverte pour cette anomalie. Merge ou ferme celle-ci d'abord."},
+                            status_code=409)
+    # Confirmation commits an already billed preview and never calls the model again.
+    gate_ok, gate_msg, _gmax, gate_model = _correction_gate(user, slug=slug, quota_required=not body.confirm)
+    if not gate_ok:
+        return JSONResponse({"ok": False, "error": gate_msg, "billing_url": "/billing"}, status_code=402)
     meta = dash.issue_meta(issue_key)
     issue_label = meta.label if meta else issue_key
     site_name = str(proj.site_name or slug)
@@ -18452,8 +18753,20 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             base_sha = ref_data["object"]["sha"]
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
+        contenu_actuel = ""
+        try:
+            file_data = _github_api_get(_github_content_api_path(owner, repo_name, file_path), token=token, params={"ref": base_sha})
+            current_sha = file_data.get("sha", "")
+            contenu_actuel = _b64.b64decode(
+                str(file_data.get("content") or "").replace("\n", "")).decode("utf-8", errors="replace")
+        except Exception as exc:
+            raise correction_guard.CorrectionStoreUnavailable() from exc
+        if not correction_journal.unchanged_preview_source(
+                DB, project=str(proj.id), file=file_path, patched=body.patched_content, original=contenu_actuel):
+            return JSONResponse({"ok": False, "stale_preview": True,
+                                 "error": "Le fichier a change depuis cet apercu. Aucun contenu n'a ete ecrase."}, status_code=409)
         from datetime import datetime as _dt
-        fix_branch = f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        fix_branch = correction_journal.branch(f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
         try:
             _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={
                 "ref": f"refs/heads/{fix_branch}",
@@ -18461,16 +18774,6 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             })
         except Exception as e:
             return JSONResponse({"ok": False, "error": f"Impossible de créer la branche {fix_branch} : {e}"}, status_code=400)
-        contenu_actuel = ""
-        try:
-            file_data = _github_api_get(_github_content_api_path(owner, repo_name, file_path), token=token, params={"ref": branch})
-            current_sha = file_data.get("sha", "")
-            # Le fichier est deja lu pour son sha : ses fins de ligne sont a portee de main.
-            # Sans elles, un correctif d'une ligne produit un diff de tout le fichier.
-            contenu_actuel = _b64.b64decode(
-                str(file_data.get("content") or "").replace("\n", "")).decode("utf-8", errors="replace")
-        except Exception:
-            current_sha = ""
         encoded = _b64.b64encode(
             _respecter_les_fins_de_ligne(contenu_actuel, body.patched_content).encode("utf-8")
         ).decode("ascii")
@@ -18499,6 +18802,9 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
             f"Correction générée par [Noyaru](https://noyaru.com) pour **{site_name}**.\n\n"
             f"> Vérifie les changements avant de merger."
         )
+        correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=0, motif=issue_key,
+            tasks=[{"issue_key": issue_key, "issue_label": issue_label, "url": url,
+                    "crawl_ts": str(body.crawl_ts or ""), "note": {"file": file_path, "verification_urls": [url]}}])
         try:
             pr_data = _ouvrir_pull_request(
                           owner=owner, repo=repo_name, token=token,
@@ -18583,6 +18889,17 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     content_error = _github_patched_content_error(str(patch.get("patched_content") or ""), str(best.get("path") or ""))
     if content_error:
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
+    original_lines = best["content"].splitlines()
+    patched_lines = patch["patched_content"].splitlines()
+    preview = {
+        "ok": True, "mode": "review", "file": best["path"],
+        "pr_title": patch.get("pr_title", f"fix(seo): {issue_label}"),
+        "description": patch.get("description", ""),
+        "original_preview": "\n".join(original_lines[:30]),
+        "patched_preview": "\n".join(patched_lines[:30]),
+        "patched_content": patch["patched_content"],
+    }
+    correction_journal.preview(preview, original=best["content"])
     _correction_charge(user, 1, slug=slug, motif=issue_key)
 
     # In auto mode: apply immediately without confirm step
@@ -18596,21 +18913,11 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         return api_github_fix(request, slug, issue_key, auto_body)
 
     # Review mode: return preview
-    original_lines = best["content"].splitlines()
-    patched_lines = patch["patched_content"].splitlines()
-    return JSONResponse({
-        "ok": True,
-        "mode": "review",
-        "file": best["path"],
-        "pr_title": patch.get("pr_title", f"fix(seo): {issue_label}"),
-        "description": patch.get("description", ""),
-        "original_preview": "\n".join(original_lines[:30]),
-        "patched_preview": "\n".join(patched_lines[:30]),
-        "patched_content": patch["patched_content"],
-    })
+    return JSONResponse(preview)
 
 
 @app.post("/api/projects/{slug}/github/bulk-fix")
+@_correction_operation
 def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     """Generate and push fixes for all crawl errors in a single PR."""
     proj = _db_project_or_404(request, slug)
@@ -18657,8 +18964,20 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
 
     site_name = str(proj.site_name or slug)
 
-    # Keep this capped: each item can trigger GitHub + LLM calls.
-    fixable = _github_fixable_issue_candidates(report=report, proj=proj, limit=5)
+    report_issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
+    report_pages = report.get("pages") if isinstance(report.get("pages"), list) else None
+    fixable = _github_fixable_issue_candidates(report=report, proj=proj, limit=len(report_issues))
+    _plafond = _plafond_de_correction(user, slug=slug)
+    _ecartes: list[str] = []
+    # Length variants already share a rewriter; other variants may carry different evidence.
+    seen_keys: set[str] = set()
+    grouped = []
+    for issue in fixable:
+        if issue["key"] in seen_keys:
+            continue
+        seen_keys.update(_length_family_keys(issue["key"]))
+        grouped.append(issue)
+    fixable = grouped
 
     if not fixable:
         return JSONResponse({"ok": False, "error": "Aucune erreur corrigeable trouvée dans le dernier crawl."}, status_code=400)
@@ -18671,7 +18990,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
 
     from datetime import datetime as _dt
-    fix_branch = f"seo-fix/bulk-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+    fix_branch = correction_journal.branch(f"seo-fix/bulk-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
     try:
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={
             "ref": f"refs/heads/{fix_branch}", "sha": base_sha,
@@ -18703,75 +19022,64 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     any_premise_key = ""             # …and so is one fix that rests on a debatable assumption
     budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
     for issue in fixable:
+        issue_key, issue_label, url = issue["key"], issue["label"], issue["url"]
+        result = {"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False}
         if budget <= 0:
-            break
-        issue_key = issue["key"]
-        issue_label = issue["label"]
-        url = issue["url"]
-        impacted = sorted(dash.extract_impacted_pages(issue_key, report_issues.get(issue_key))) if report_issues else []
-        # Same preparation as the per-issue button: evidence, family hint, and the
-        # deterministic rewriter. Without it this path silently ran a free-form AI patch for
-        # every family, including on the routing config.
+            results.append({**result, "not_attempted": True, "error": "Plafond atteint."})
+            continue
+        family_keys = _verification_family_keys(issue_key)
+        impacted = sorted(set().union(*(
+            dash.extract_impacted_pages(key, report_issues.get(key)) for key in family_keys)))
+        open_pr = _open_pr_for_issue(project_id=str(proj.id), issue_key=issue_key, url=url,
+                                    owner=owner, repo_name=repo_name, token=token, strict=True)
+        if open_pr:
+            results.append({**result, "duplicate": True, "pr_url": open_pr,
+                            "error": "Une PR est déjà ouverte pour cette anomalie."})
+            continue
         _prep = _prepare_issue_fix(
             issue_key=issue_key, issues=report_issues, impacted=impacted, all_paths=all_paths,
             site_name=site_name, owner=owner, repo_name=repo_name, branch=branch, token=token,
-            model_override=gate_model,
-        )
+            model_override=gate_model, pages=report_pages)
         if _prep["refusal"]:
-            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
-                            "ok": False, "error": _prep["refusal"]})
+            results.append({**result, "error": _prep["refusal"]})
             continue
-        _cfg_changed: list[str] = []
-        _cfg_notes: list[str] = []
-        if _prep["loop_paths"]:
-            try:
-                _cfg_changed, _cfg_notes = _deep_fix_redirect_config_loops(
-                    owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
-                    all_paths=all_paths, loop_paths=_prep["loop_paths"][:6], file_state=file_state,
-                    index=idx,
-                )
-            except Exception:
-                _cfg_changed, _cfg_notes = [], []
-            config_changed.extend(_cfg_changed)
-            config_notes.extend(_cfg_notes)
-        if issue_key in _REDIRECT_CONFIG_KEYS:
-            # Config-only family: the rule prune above IS the repair; never let the content
-            # patcher near netlify.toml / next.config from a prompt.
-            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url,
-                            "ok": bool(_cfg_changed), "files": _cfg_changed})
-            continue
-        patched, skipped, targets, _ai_files = _deep_patch_issue_files(
+        ecartes: list[str] = []
+        applied = _apply_prepared_issue_fix(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
-            all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-            site_name=site_name, file_state=file_state, max_files=min(6, budget),
-            evidence=_prep["evidence"], extra_hint=_prep["extra_hint"], model_override=gate_model,
-            index=idx, link_rewriter=_prep["link_rewriter"],
-            rewriter_ai_fallback=_prep["rewriter_ai_fallback"],
-            rewriter_is_ai=bool(_prep["rewriter_is_ai"]),
-            canonical_masters=_prep.get("canonical_masters"),
-            # Pas de `site_og_image` ici : cet endpoint n'a pas les pages du crawl, donc l'image
-            # du site ne se MESURE pas. La completion Open Graph ajoutera les quatre balises
-            # deduites de la page et sautera og:image — un bloc incomplet plutot qu'une image
-            # inventee, qui serait fausse sur chaque partage social sans que rien ne le dise.
-        )
+            all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted=impacted,
+            site_name=site_name, file_state=file_state, max_files=budget, prep=_prep,
+            pages=report_pages, index=idx, model_override=gate_model, ecartes=ecartes)
+        if applied.get("fatal"):
+            return JSONResponse({"ok": False, "error": applied["error"], "results": results},
+                                status_code=422)
+        patched = list(dict.fromkeys(applied["patched"] + applied["config_changes"]))
+        _ai_files = applied["ai_files"]
+        config_changed.extend(applied["config_changes"])
+        config_notes.extend(applied["config_notes"])
+        _ecartes.extend(ecartes)
         any_ai_written = any_ai_written or bool(_ai_files)
         ai_billable += len(_ai_files)
-        if not any_premise_key and _fix_premise_note(issue_key):
+        if patched and not any_premise_key and _fix_premise_note(issue_key):
             any_premise_key = issue_key
-        patched = patched + [f for f in _cfg_changed if f not in patched]
-        if patched:
-            budget -= len(patched)
-            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": True, "files": patched})
-        else:
-            results.append({"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False,
-                            "error": ("Aucun fichier corrigeable trouvé" if not targets else "Aucun patch appliqué")})
+        budget -= len(patched)
+        results.append({
+            **result, "ok": bool(patched), "files": patched,
+            "verification_urls": impacted,
+            "verification_expected_count": _verification_scope_count(issue_key, report_issues),
+            "skipped": applied["skipped"],
+            "not_attempted_files": ecartes, "config_fixed": applied["config_notes"],
+            "partial": bool(applied["skipped"] or ecartes),
+            "notes": (_skipped_note(issue_key, applied["skipped"], applied["targets"])
+                      + _note_de_troncature(ecartes, _plafond)
+                      + str(_prep.get("side_effects") or "")),
+            "error": "" if patched else (applied["error"] or "Aucun patch appliqué")})
 
     fixed_results = [r for r in results if r.get("ok")]
     if not fixed_results:
-        return JSONResponse({"ok": False, "error": "Aucune correction n'a pu être appliquée.", "results": results}, status_code=500)
+        return JSONResponse({"ok": False, "error": "Aucune correction n'a pu être appliquée.", "results": results}, status_code=422)
 
     # Build PR
-    _files_total = sum(len(r.get("files") or []) for r in fixed_results)
+    _files_total = len({path for r in fixed_results for path in r.get("files", [])})
     pr_title = f"fix(seo): {len(fixed_results)} anomalie(s) corrigée(s) — {site_name}"
     pr_lines = [
         "## Corrections SEO automatiques — audit complet\n",
@@ -18783,10 +19091,19 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         files = r.get("files") or []
         detail = ", ".join(f"`{f}`" for f in files) if files else (r.get("error") or "")
         pr_lines.append(f"{icon} **{r['issue_label']}** — {detail}")
+        pr_lines.extend(f"- {note}" for note in r.get("config_fixed", []))
+        if r.get("notes"):
+            pr_lines.append(r["notes"])
     pr_lines.append(_fix_nature_note(any_ai_written, any_premise_key).strip())
     pr_lines.append("\nCorrection générée par [Noyaru](https://noyaru.com).")
     pr_body = "\n".join(pr_lines)
 
+    correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=ai_billable, motif="bulk",
+        tasks=[{"issue_key": r["issue_key"], "issue_label": r["issue_label"], "url": r["url"], "crawl_ts": ts,
+                "note": {"bulk": True, "deep": True, "files": r.get("files", []),
+                         "verification_urls": r.get("verification_urls", []),
+                         "verification_expected_count": r.get("verification_expected_count", 0),
+                         "partial": r.get("partial", False)}} for r in fixed_results])
     try:
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
@@ -18821,7 +19138,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     for r in fixed_results:
         try:
             _extra, _trace_verif = (_trace_verif or {}), None
-            _note = json.dumps({**pr_note_base, **_extra, "files": r.get("files", [])}, ensure_ascii=False)
+            _note = json.dumps({**pr_note_base, **_extra, "files": r.get("files", []),
+                               "verification_urls": r.get("verification_urls", []),
+                               "verification_expected_count": r.get("verification_expected_count", 0),
+                               "partial": r.get("partial", False)}, ensure_ascii=False)
             _meta = dash.issue_meta(r["issue_key"])
             with DB.session() as _db:
                 _ex = _db.scalar(select(IssueTask).where(
@@ -18831,6 +19151,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
                 ))
                 if _ex:
                     _ex.status = final_status
+                    _ex.crawl_ts = ts
                     _ex.note = _note
                 else:
                     _db.add(IssueTask(
@@ -18855,6 +19176,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         "fixed_count": len(fixed_results),
         "total_count": len(results),
         "results": results,
+        "partial": any(not r.get("ok") or r.get("partial") for r in results),
+        "not_attempted": _ecartes[:12], "not_attempted_count": len(_ecartes),
+        "not_attempted_issues_count": sum(bool(r.get("not_attempted")) for r in results),
+        "cap": {"files": _plafond.plan, "left": _plafond.restant},
     })
 
 
@@ -19541,6 +19866,21 @@ def _rewrite_http_to_https(content: str, hosts: list[str]) -> tuple[str, int]:
         pat = re.compile(r'http://' + re.escape(h) + r'(?=[/"\'\s>?#)\]])')
         new, n = pat.subn("https://" + h, new)
         total += n
+    if total and _looks_like_sitemap_xml(content):
+        from defusedxml import ElementTree as ET
+        from defusedxml.common import DefusedXmlException
+
+        try:
+            before, after = ET.fromstring(content), ET.fromstring(new)
+        except (ET.ParseError, DefusedXmlException):
+            return new, total
+        if before.tag.rsplit("}", 1)[-1] == "urlset":
+            old_locs = before.findall("./{*}url/{*}loc")
+            new_locs = after.findall("./{*}url/{*}loc")
+            # Upgrading an HTTP entry can collide with an existing HTTPS entry.
+            written = [(b.text or "").strip() for a, b in zip(old_locs, new_locs, strict=True)
+                       if a.text != b.text]
+            new, _ = _dedupe_sitemap_locs(new, written)
     return new, total
 
 
@@ -19635,7 +19975,8 @@ _PAGE_VALUE_KEYS = _with_indexability_variants({
 
 
 def _open_pr_for_issue(
-    *, project_id: str, issue_key: str, url: str, owner: str, repo_name: str, token: str
+    *, project_id: str, issue_key: str, url: str, owner: str, repo_name: str, token: str,
+    strict: bool = False,
 ) -> str:
     """URL of the still-open PR already covering this issue, or '' when there is none.
 
@@ -19651,19 +19992,27 @@ def _open_pr_for_issue(
                 IssueTask.url == url,
             ))
             raw_note = str(task.note or "") if task else ""
+    except Exception as exc:
+        if strict:
+            raise correction_guard.CorrectionStoreUnavailable() from exc
+        return ""
+    try:
         note = json.loads(raw_note) if raw_note else {}
-    except Exception:
-        return ""
+    except (TypeError, ValueError):
+        note = {}
     if not isinstance(note, dict):
-        return ""
+        note = {}
     pr_url = str(note.get("pr_url") or "")
     try:
         pr_number = int(note.get("pr_number") or 0)
     except Exception:
         pr_number = 0
     if not pr_url or pr_number <= 0:
-        return ""
-    return pr_url if _github_pr_is_open(owner, repo_name, pr_number, token) else ""
+        known = correction_journal.known_pr(DB, project=project_id, issue=issue_key, url=url) if strict else None
+        if not known:
+            return ""
+        pr_number, pr_url = known
+    return pr_url if _github_pr_is_open(owner, repo_name, pr_number, token, strict=strict) else ""
 
 
 # `redirect_3xx` lists every redirecting URL, and on a healthy site they are the site's OWN
@@ -20290,7 +20639,8 @@ def _dedupe_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
     On garde la PREMIERE occurrence : elle porte souvent les `<lastmod>` et `<priority>` d'origine,
     et l'ordre du fichier est celui que son auteur a voulu.
     """
-    vises = {_norm_url_for_match(u) for u in (urls or []) if str(u or "").strip()}
+    vises = {_verification_url(html.unescape(str(u))) for u in (urls or [])}
+    vises.discard("")
     if not vises:
         return content, 0
     vus: set[str] = set()
@@ -20301,7 +20651,7 @@ def _dedupe_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
         loc = _SITEMAP_LOC_RE.search(m.group(0))
         if not loc:
             return m.group(0)
-        cle = _norm_url_for_match(loc.group(2).strip())
+        cle = _verification_url(html.unescape(loc.group(2).strip()))
         if cle not in vises:
             return m.group(0)
         if cle in vus:
@@ -21118,7 +21468,7 @@ _OG_URL_INLINE_KEY_RE = re.compile(r"""(\burl\s*:\s*)(['"])(.*?)(\2)""", re.S)
 
 
 def _og_url_pairs_from_pages(
-    impacted: list[str], pages: list[dict[str, Any]] | None,
+    impacted: list[str], pages: list[dict[str, Any]] | None, *, allow_repaired_https: bool = False,
 ) -> list[dict[str, str]]:
     """(og:url actuel → canonical) for each flagged page, read from the crawl.
 
@@ -21155,6 +21505,7 @@ def _og_url_pairs_from_pages(
         canonical = str(page.get("canonical") or "").strip()
         if not og or not canonical or og == canonical:
             continue
+        required_canonical = ""
         # Comparer avec `_norm_url_for_match` etait le defaut : elle retire le schema et le slash
         # final, c'est-a-dire EXACTEMENT les deux differences que le crawler signale ici. Le
         # correcteur repondait donc « ces deux valeurs sont identiques » a propos de pages que le
@@ -21166,9 +21517,12 @@ def _og_url_pairs_from_pages(
         if og.lower().startswith("https://") and canonical.lower().startswith("http://"):
             # Premier alignement refuse : recopier un canonical en clair dans og:url ecrirait une
             # URL non securisee sur la page. Le defaut de cette page est son canonical, pas son
-            # og:url ; `canonical_from_https_to_http` le corrige, et la famille se resout alors
-            # d'elle-meme.
-            continue
+            # og:url. Une reprise mecanique peut cependant attendre que la branche ait DEJA
+            # ecrit exactement sa version HTTPS : un slash distinct peut rester a aligner.
+            if not allow_repaired_https or _norm_url_for_match(canonical) in absentes:
+                continue
+            required_canonical = "https://" + canonical[len("http://"):]
+            canonical = required_canonical
         if absentes and _norm_url_for_match(canonical) in absentes:
             # SECOND alignement refuse, et c'est le meme raisonnement : une destination qui
             # n'existe plus. Le canonical fait autorite tant qu'il designe quelque chose ; quand
@@ -21186,7 +21540,10 @@ def _og_url_pairs_from_pages(
         if (og, canonical) in vus:
             continue
         vus.add((og, canonical))
-        out.append({"page": str(page.get("url") or ""), "from": og, "to": canonical})
+        pair = {"page": str(page.get("url") or ""), "from": og, "to": canonical}
+        if required_canonical:
+            pair["requires_canonical"] = required_canonical
+        out.append(pair)
     return out
 
 
@@ -21207,7 +21564,7 @@ def _og_fallback_allowed(pairs: list[dict[str, str]]) -> bool:
     fichier, donc il ne peut pas se tromper de page — et une page dont la valeur ne s'y trouve
     pas n'est simplement pas celle-la.
     """
-    return len(pairs or []) == 1
+    return len(pairs or []) == 1 and not pairs[0].get("requires_canonical")
 
 
 _JSONLD_BLOCK_RE = re.compile(
@@ -24612,8 +24969,11 @@ def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int
     La destination est lue DANS LE FICHIER quand il porte un canonical litteral unique — voir
     `_canonical_ecrit_dans`. Le rapport de crawl ne sert plus que de repli.
     """
-    mapping = {_norm_url_for_match(p["from"]): p["to"]
-               for p in (pairs or []) if p.get("from") and p.get("to")}
+    canonical_du_fichier = _canonical_ecrit_dans(content)
+    mapping = {p["from"].strip(): p["to"]
+               for p in (pairs or []) if p.get("from") and p.get("to")
+               and (not p.get("requires_canonical")
+                    or canonical_du_fichier == p["requires_canonical"])}
     if not mapping:
         return content, 0
 
@@ -24630,8 +24990,6 @@ def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int
 
     # Lu UNE fois, sur le contenu d'origine, comme les reperes : ce que la branche porte
     # vraiment a cet instant, et non ce que le crawl avait mesure avant les autres familles.
-    canonical_du_fichier = _canonical_ecrit_dans(content)
-
     def _noter(debut: int, fin: int, valeur: str) -> None:
         """La valeur ecrite est-elle une de celles que le crawl a signalees ?
 
@@ -24639,10 +24997,12 @@ def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int
         clef `url` d'une page qui, elle, n'etait pas signalee. Le crawl decide donc toujours QUOI
         reecrire — il ne decide plus AVEC QUOI des que le fichier sait le dire lui-meme.
         """
-        voulu = mapping.get(_norm_url_for_match(valeur.strip()))
+        voulu = mapping.get(valeur.strip())
         if not voulu:
             return
         if canonical_du_fichier:
+            if valeur.lower().startswith("https://") and canonical_du_fichier.lower().startswith("http://"):
+                return
             voulu = canonical_du_fichier
         if voulu != valeur:
             reperes.append((debut, fin, voulu))
@@ -25445,7 +25805,8 @@ def _deep_fix_served_html_lang(
 def _deep_fix_redirect_config_loops(
     *, owner: str, repo_name: str, token: str, fix_branch: str,
     all_paths: list[str], loop_paths: list[str], file_state: dict[str, dict[str, str]],
-    index: dict[str, Any] | None = None,
+    index: dict[str, Any] | None = None, max_files: int | None = None,
+    ecartes: list[str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Fix clean URLs that self-redirect because of conflicting `_redirects` rules.
 
@@ -25513,6 +25874,11 @@ def _deep_fix_redirect_config_loops(
         if existing_flat or route_files:
             pass  # something already serves this URL — the rules are the only problem
         elif dir_index in all_paths and _github_file_path_allowed(flat):
+            # Reserve the config write as well as the two paths involved in the move.
+            if max_files is not None and len(set(changed)) + 3 > max_files:
+                if ecartes is not None:
+                    ecartes.extend([flat, dir_index])
+                continue
             # Self-heal a previous wrong dir-index conversion: move it back to a flat file.
             fr = _read(dir_index)
             if fr is None:
@@ -26176,7 +26542,7 @@ def _prepare_issue_fix(
                   "pas toi-meme :\n" + _lignes)
 
     if issue_key in _OG_URL_KEYS:
-        _og_pairs = _og_url_pairs_from_pages(list(impacted), pages)
+        _og_pairs = _og_url_pairs_from_pages(list(impacted), pages, allow_repaired_https=True)
         if _og_pairs:
             out["url_pairs"] = list(_og_pairs)
             out["evidence"] = [p["from"] for p in _og_pairs]
@@ -27053,12 +27419,96 @@ def _deep_patch_issue_files(
     return patched, skipped, targets, ai_files
 
 
+def _apply_prepared_issue_fix(
+    *, owner: str, repo_name: str, branch: str, token: str, fix_branch: str,
+    all_paths: list[str], issue_key: str, issue_label: str, impacted: list[str],
+    site_name: str, file_state: dict[str, dict[str, str]], max_files: int,
+    prep: dict[str, Any], pages: list[dict[str, Any]] | None,
+    index: dict[str, Any] | None, model_override: str = "",
+    ecartes: list[str] | None = None, allow_ai_targeting: bool = True,
+) -> dict[str, Any]:
+    """Execute the same bounded repair for individual and grouped pull requests."""
+    patched, skipped, targets, ai_files = [], [], [], []
+    config_changes, config_notes = [], []
+    if max_files <= 0:
+        return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
+                "config_changes": [], "config_notes": [], "error": "Plafond atteint."}
+
+    if issue_key in _SITEMAP_REPAIR_KEYS or issue_key in _SITEMAP_CREATE_KEYS:
+        package_json = ""
+        if "package.json" in all_paths:
+            try:
+                import base64
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, "package.json"),
+                                     token=token, params={"ref": fix_branch}, timeout_s=15)
+                package_json = base64.b64decode(str(fd.get("content") or "").replace("\n", "")).decode(
+                    "utf-8", errors="replace")
+            except Exception:
+                pass
+        repair = (_deep_reparer_le_sitemap if issue_key in _SITEMAP_REPAIR_KEYS
+                  else _deep_creer_le_sitemap)
+        try:
+            config_changes, config_notes = repair(
+                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, package_json=package_json, pages=pages)
+        except Exception as exc:
+            config_notes = [f"Correction du sitemap impossible : {exc}"]
+    elif issue_key in _SERVED_LANG_FIX_KEYS and _served_lang_strategy(all_paths) == "postbuild":
+        required = ["package.json"]
+        if _HTML_LANG_FIXER_PATH not in all_paths:
+            required.append(_HTML_LANG_FIXER_PATH)
+        if len(required) > max_files:
+            if ecartes is not None:
+                ecartes.extend(required)
+            config_notes = ["Le correctif de langue exige deux fichiers ; le plafond ne permet "
+                            "pas de les modifier ensemble."]
+        else:
+            try:
+                config_changes, config_notes = _deep_fix_served_html_lang(
+                    owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                    all_paths=all_paths, file_state=file_state)
+            except Exception as exc:
+                config_notes = [f"Correctif de langue impossible : {exc}"]
+            if config_changes and "package.json" not in config_changes:
+                return {"patched": [], "skipped": config_changes, "targets": required,
+                        "ai_files": [], "config_changes": [], "config_notes": config_notes,
+                        "error": " ".join(config_notes), "fatal": True}
+    else:
+        if prep["loop_paths"]:
+            config_changes, config_notes = _deep_fix_redirect_config_loops(
+                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, loop_paths=prep["loop_paths"], file_state=file_state,
+                index=index, max_files=max_files, ecartes=ecartes)
+        remaining = max_files - len(set(config_changes))
+        if issue_key not in _REDIRECT_CONFIG_KEYS and remaining > 0:
+            patched, skipped, targets, ai_files = _deep_patch_issue_files(
+                owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
+                all_paths=all_paths, issue_key=issue_key, issue_label=issue_label,
+                impacted_urls=impacted, site_name=site_name, file_state=file_state,
+                max_files=remaining, ecartes=ecartes, evidence=prep["evidence"],
+                allow_ai_targeting=allow_ai_targeting,
+                extra_hint=prep["extra_hint"], model_override=model_override, index=index,
+                link_rewriter=prep["link_rewriter"],
+                rewriter_ai_fallback=prep["rewriter_ai_fallback"],
+                rewriter_is_ai=bool(prep["rewriter_is_ai"]),
+                canonical_masters=prep.get("canonical_masters"),
+                targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
+                site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages))
+    for path in config_changes:
+        if path not in all_paths:
+            all_paths.append(path)
+    return {"patched": patched, "skipped": skipped, "targets": targets, "ai_files": ai_files,
+            "config_changes": config_changes, "config_notes": config_notes,
+            "error": " ".join(config_notes) if not patched and not config_changes else ""}
+
+
 class _DeepFixBody(BaseModel):
     url: str = ""
     crawl_ts: str = ""
 
 
 @app.post("/api/projects/{slug}/issues/{issue_key}/deep-fix")
+@_correction_operation
 def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepFixBody) -> JSONResponse:
     """Fix ALL occurrences of a single issue across the repo in one PR.
 
@@ -27107,14 +27557,14 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     issues = report.get("issues") if isinstance(report, dict) and isinstance(report.get("issues"), dict) else {}
     # Length issues (title/meta) are two faces of one problem: fix too-short AND too-long
     # together so a single pass brings every value into the optimal window (no whack-a-mole).
-    family_keys = _length_family_keys(issue_key)
+    family_keys = _verification_family_keys(issue_key)
     _impacted_set: set[str] = set()
     if issues:
         for _k in family_keys:
             if _k in issues:
                 _impacted_set |= dash.extract_impacted_pages(_k, issues.get(_k))
     impacted = sorted(_impacted_set)
-    if len(family_keys) > 1:
+    if _length_family_name(issue_key):
         issue_label = {"title": "Longueur des balises title", "meta": "Longueur des meta descriptions"}.get(
             _length_family_name(issue_key), issue_label
         )
@@ -27124,7 +27574,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Checked before any branch/tree work, so a duplicate click costs nothing.
     _open_pr = _open_pr_for_issue(
         project_id=str(proj.id), issue_key=issue_key, url=primary_url,
-        owner=owner, repo_name=repo_name, token=token,
+        owner=owner, repo_name=repo_name, token=token, strict=True,
     )
     if _open_pr:
         return JSONResponse({"ok": False, "duplicate": True, "pr_url": _open_pr, "error": (
@@ -27165,138 +27615,28 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         base_sha = ref_data["object"]["sha"]
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
-    fix_branch = f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+    fix_branch = correction_journal.branch(f"seo-fix/{_safe_github_branch_suffix(issue_key)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
     try:
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de créer la branche : {e}"}, status_code=400)
 
     evidence = _prep["evidence"]
-    extra_hint = _prep["extra_hint"]
-    _link_rewriter = _prep["link_rewriter"]
-    _rewriter_ai_fallback = _prep["rewriter_ai_fallback"]
-    _loop_paths = _prep["loop_paths"]
     file_state: dict[str, dict[str, str]] = {}
-    # Assigned only on the post-build path below, and read unconditionally further down: without
-    # this, EVERY stack that fixes itself at the source raised UnboundLocalError — a 500 on the
-    # eight stacks the routing exists to serve. Caught by the endpoint test, not by the decision
-    # tests, which is the whole reason that test was written.
-    _lang_changes: list[str] = []
-    _lang_notes: list[str] = []
-    if issue_key in _SITEMAP_REPAIR_KEYS:
-        patched_files, skipped, targets, _ai_files = [], [], [], []
-        _pkg_r = ""
-        if "package.json" in all_paths:
-            try:
-                import base64 as _b64r
-                _fdr = _github_api_get(
-                    _github_content_api_path(owner, repo_name, "package.json"),
-                    token=token, params={"ref": branch}, timeout_s=15)
-                _pkg_r = _b64r.b64decode(
-                    str(_fdr.get("content") or "").replace("\n", "")).decode(
-                        "utf-8", errors="replace")
-            except Exception:
-                _pkg_r = ""
-        try:
-            _lang_changes, _lang_notes = _deep_reparer_le_sitemap(
-                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
-                all_paths=all_paths, package_json=_pkg_r,
-                pages=_report_pages if isinstance(_report_pages, list) else None)
-        except Exception as exc:
-            _lang_changes, _lang_notes = [], ["Reparation du sitemap impossible : %s" % exc]
-        patched_files = list(_lang_changes)
-    elif issue_key in _SITEMAP_CREATE_KEYS:
-        # MEME FORME QUE LE CORRECTIF DE LANGUE CI-DESSOUS, et pour la meme raison : la boucle
-        # de patch MODIFIE des fichiers existants, elle ne sait pas en creer un. Une absence se
-        # repare en ecrivant, pas en reecrivant.
-        patched_files, skipped, targets, _ai_files = [], [], [], []
-        try:
-            _pkg = ""
-            if "package.json" in all_paths:
-                try:
-                    import base64 as _b64pkg
-                    _fd = _github_api_get(
-                        _github_content_api_path(owner, repo_name, "package.json"),
-                        token=token, params={"ref": branch}, timeout_s=15)
-                    _pkg = _b64pkg.b64decode(
-                        str(_fd.get("content") or "").replace("\n", "")).decode(
-                            "utf-8", errors="replace")
-                except Exception:
-                    _pkg = ""
-            _lang_changes, _lang_notes = _deep_creer_le_sitemap(
-                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
-                all_paths=all_paths, package_json=_pkg,
-                pages=_report_pages if isinstance(_report_pages, list) else None)
-        except Exception as exc:
-            _lang_changes, _lang_notes = [], ["Creation du sitemap impossible : %s" % exc]
-        patched_files = list(_lang_changes)
-    elif issue_key in _SERVED_LANG_FIX_KEYS and _served_lang_strategy(all_paths) == "postbuild":
-        # The ONE shape where no source fix exists: Next.js App Router with no locale segment,
-        # whose root layout never receives the route. Everywhere else the patcher runs, with the
-        # stack's own idiom in the hint — adding a build step to a project that can fix itself
-        # at the source would be a worse correction, not a safer one.
-        patched_files, skipped, targets, _ai_files = [], [], [], []
-        try:
-            _lang_changes, _lang_notes = _deep_fix_served_html_lang(
-                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
-                all_paths=all_paths, file_state=file_state,
-            )
-        except Exception as exc:
-            _lang_changes, _lang_notes = [], [f"Correctif impossible : {exc}"]
-        if not _lang_changes:
-            # Refused before the pull request exists, so a dead-end click leaves no branch and
-            # no PR behind — and the reason it refused is what the customer reads.
-            return JSONResponse({"ok": False, "error": " ".join(_lang_notes) or (
-                "Le correctif de langue n'a pas pu être appliqué sur ce dépôt."
-            )}, status_code=422)
-    elif issue_key in _REDIRECT_CONFIG_KEYS:
-        # Config-only family: the repair is the deterministic rule prune below. Never run the
-        # content patcher here — its candidate list for this key is netlify.toml / next.config,
-        # i.e. exactly the files that must not be rewritten from a prompt.
-        patched_files, skipped, targets, _ai_files = [], [], [], []
-    else:
-        patched_files, skipped, targets, _ai_files = _deep_patch_issue_files(
-            ecartes=_ecartes,
-            owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
-            all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted_urls=impacted,
-            site_name=site_name, file_state=file_state, max_files=gate_max_files, evidence=evidence,
-            extra_hint=extra_hint, model_override=gate_model,
-            link_rewriter=_link_rewriter, rewriter_ai_fallback=_rewriter_ai_fallback,
-            rewriter_is_ai=bool(_prep["rewriter_is_ai"]), index=idx,
-            targets_override=_prep.get("targets_override"),
-            page_side=bool(_prep.get("page_side")),
-            canonical_masters=_prep.get("canonical_masters"),
-            site_og_image=_dominant_site_og_image(
-                _report_pages if isinstance(_report_pages, list) else None),
-            # La langue que le crawl mesure sur le SITE, page par page. Un fichier partage ne
-            # peut pas la contredire : voir `_keep_site_lang`.
-            site_lang=_dominant_site_lang(
-                _report_pages if isinstance(_report_pages, list) else None),
-        )
-    # Fix any self-redirect loops at the config level (flat .html → dir-index + _redirects prune).
-    # The served-lang fixer above lands in the same two lists: both are deterministic repairs
-    # that touch build/routing files, so both take the same route through the PR body and the
-    # same refusal to auto-merge.
-    config_changes: list[str] = list(_lang_changes)
-    config_notes: list[str] = list(_lang_notes)
-    loop_notes: list[str] = []
-    if _loop_paths:
-        _loop_changes: list[str] = []
-        try:
-            _loop_changes, loop_notes = _deep_fix_redirect_config_loops(
-                owner=owner, repo_name=repo_name, token=token, fix_branch=fix_branch,
-                all_paths=all_paths, loop_paths=_loop_paths[:gate_max_files], file_state=file_state,
-                index=idx,
-            )
-        except Exception:
-            _loop_changes, loop_notes = [], []
-        # Extend, never assign: an assignment here would drop a language fix already committed to
-        # the branch from `all_changed`, and the pull request would list fewer files than it
-        # carries. Unreachable today — the served-lang family never yields loop paths — and now
-        # unreachable by construction rather than by luck.
-        config_changes += _loop_changes
-        config_notes += loop_notes
-    all_changed = patched_files + config_changes
+    _applied = _apply_prepared_issue_fix(
+        owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
+        all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted=impacted,
+        site_name=site_name, file_state=file_state, max_files=gate_max_files, prep=_prep,
+        pages=_report_pages if isinstance(_report_pages, list) else None,
+        index=idx, model_override=gate_model, ecartes=_ecartes)
+    patched_files, skipped, targets, _ai_files = (
+        _applied["patched"], _applied["skipped"], _applied["targets"], _applied["ai_files"])
+    config_changes, config_notes = _applied["config_changes"], _applied["config_notes"]
+    all_changed = list(dict.fromkeys(patched_files + config_changes))
+    if _applied.get("fatal") or (not all_changed and _applied["error"]):
+        return JSONResponse({"ok": False, "error": _applied["error"],
+                             "not_attempted": _ecartes, "not_attempted_count": len(_ecartes)},
+                            status_code=422)
     if not targets and not config_changes:
         return JSONResponse({"ok": False, "error": "Aucun fichier corrigeable trouvé pour cette anomalie dans le dépôt. Vérifie que le dépôt connecté contient le code source du site."}, status_code=422)
     if not all_changed:
@@ -27319,14 +27659,8 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # Each deterministic repair is announced under its OWN heading. The single hard-coded
     # "boucle de redirection" title dated from when only one family wrote here, and it went
     # out on a real customer's pull request describing a language fix as a redirect fix.
-    _config_note_block = "".join(
-        f"\n\n**{_heading} :**\n" + "\n".join(f"- {_n}" for _n in _notes)
-        for _heading, _notes in (
-            ("Correction post-build (langue du HTML servi)", list(_lang_notes)),
-            ("Correction config (boucle de redirection)", loop_notes),
-        )
-        if _notes
-    )
+    _config_note_block = ("\n\n**Correction structurelle :**\n"
+                          + "\n".join(f"- {_n}" for _n in config_notes)) if config_notes else ""
     pr_title = f"fix(seo): {issue_label} — {len(all_changed)} fichier(s)"
     pr_body = (
         f"## Correction SEO automatique (couverture étendue)\n\n"
@@ -27341,6 +27675,11 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
         + str(_prep.get("side_effects") or "")
         + f"\n\nGénéré par [Noyaru](https://noyaru.com) pour **{site_name}**."
     )
+    correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=len(_ai_files), motif=issue_key,
+        tasks=[{"issue_key": issue_key, "issue_label": issue_label, "url": primary_url, "crawl_ts": ts,
+                "note": {"deep": True, "files": all_changed, "pages": len(impacted),
+                         "verification_urls": impacted, "verification_expected_count": _verification_scope_count(issue_key, issues),
+                         "config": bool(config_changes)}}])
     try:
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,
@@ -27363,11 +27702,12 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     try:
         _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=_fusion_auto),
                             "pr_title": pr_title,
-                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "config": bool(config_changes)}, ensure_ascii=False)
+                            "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "verification_urls": impacted, "verification_expected_count": _verification_scope_count(issue_key, issues), "config": bool(config_changes)}, ensure_ascii=False)
         with DB.session() as _db:
             _ex = _db.scalar(select(IssueTask).where(IssueTask.project_id == proj.id, IssueTask.issue_key == issue_key, IssueTask.url == primary_url))
             if _ex:
                 _ex.status = "done" if _merged else "in_progress"
+                _ex.crawl_ts = ts
                 _ex.note = _note
             else:
                 _db.add(IssueTask(
@@ -28848,6 +29188,7 @@ def _same_site_url(candidate: str, base_url: str) -> bool:
 
 
 @app.post("/api/projects/{slug}/keywords/rewrite-pr")
+@_correction_operation
 def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBody) -> JSONResponse:
     """Rewrite one page's title and description to answer a query it already ranks for, in a PR.
 
@@ -28896,7 +29237,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
     # two lines, and the second PR would conflict with the first.
     _open_pr = _open_pr_for_issue(
         project_id=str(proj.id), issue_key=_KEYWORD_REWRITE_KEY, url=page_url,
-        owner=owner, repo_name=repo_name, token=token,
+        owner=owner, repo_name=repo_name, token=token, strict=True,
     )
     if _open_pr:
         return JSONResponse({"ok": False, "duplicate": True, "pr_url": _open_pr, "error": (
@@ -28935,7 +29276,7 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         base_sha = ref_data["object"]["sha"]
     except Exception as e:
         return JSONResponse({"ok": False, "error": f"Impossible de lire la branche {branch} : {e}"}, status_code=400)
-    fix_branch = f"seo-keyword/{_safe_github_branch_suffix(query)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}"
+    fix_branch = correction_journal.branch(f"seo-keyword/{_safe_github_branch_suffix(query)}-{_dt.utcnow().strftime('%Y%m%d-%H%M%S')}")
     try:
         _github_api_post(_github_api_path("repos", owner, repo_name, "git", "refs"), token=token, json_body={"ref": f"refs/heads/{fix_branch}", "sha": base_sha})
     except Exception as e:
@@ -28978,6 +29319,9 @@ def api_keyword_rewrite_pr(request: Request, slug: str, body: _KeywordRewriteBod
         + _fix_nature_note(True, _KEYWORD_REWRITE_KEY)
         + f"\n\nGénéré par [Noyaru](https://noyaru.com) pour **{site_name}**."
     )
+    correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=len(ai_files), motif="keyword_rewrite",
+        tasks=[{"issue_key": _KEYWORD_REWRITE_KEY, "issue_label": issue_label, "url": page_url, "crawl_ts": "",
+                "note": {"keyword": True, "query": query, "files": patched_files}}])
     try:
         pr_data = _ouvrir_pull_request(
                       owner=owner, repo=repo_name, token=token,

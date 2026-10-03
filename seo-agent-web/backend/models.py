@@ -462,6 +462,22 @@ class IssueTask(Base):
     )
 
 
+class CorrectionOperation(Base):
+    __tablename__ = "correction_operations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    payer_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    request_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default="running", index=True)
+    charged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
 class AccountMember(Base):
     """Un utilisateur qui travaille sur les projets d'un AUTRE compte.
 

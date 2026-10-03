@@ -1,0 +1,526 @@
+"""Read-only endpoint comparison: GitHub writes are recorded in memory."""
+
+import base64
+import json
+import os
+import sys
+import tempfile
+import uuid
+from pathlib import Path
+from types import SimpleNamespace
+from urllib.parse import unquote
+
+import pytest
+from starlette.requests import Request
+
+WEB = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(WEB))
+ROOT = Path(tempfile.mkdtemp(prefix="seo-operational-probes-"))
+os.environ.setdefault("SEO_AGENT_DATA_DIR", str(ROOT / "data"))
+os.environ.setdefault("SEO_AGENT_RUNS_DIR", str(ROOT / "runs"))
+os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
+os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
+from backend import app as m
+
+ORIGINAL_CANDIDATES = m._github_fixable_issue_candidates
+
+URL = "https://site.test/"
+DESCRIPTION = "Une description de cette page qui contient assez de texte pour rester au-dessus du seuil de cent caracteres du correcteur."
+HTML = (
+    '<!doctype html><html lang="fr"><head>\n'
+    '<title>Une page de test parfaitement lisible</title>\n'
+    '<meta name="description" content="' + DESCRIPTION + '" />\n'
+    '<link rel="canonical" href="' + URL + '" />\n'
+    '</head><body><h1>Une page de test</h1></body></html>\n'
+)
+
+
+@pytest.fixture
+def harness(monkeypatch):
+    state = {"sources": {}, "written": {}, "ai_calls": [], "report": {}, "key": "",
+             "budget": 40, "pr_bodies": [], "charges": [], "crawl_ts": "20261001-090000"}
+    user = SimpleNamespace(id=str(uuid.uuid4()), is_admin=True)
+    project = SimpleNamespace(id=str(uuid.uuid4()), site_name="site.test", slug="review")
+    from backend.models import User, Project
+    m.DB.create_tables()
+    with m.DB.session() as db:
+        db.add(User(id=user.id, email=user.id + "@example.invalid", password_hash="test", is_admin=True))
+        db.commit()
+        db.add(Project(id=project.id, owner_user_id=user.id, slug=project.slug,
+                       base_url=URL, site_name=project.site_name))
+        db.commit()
+    state.update({"user": user, "project": project})
+    request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
+    request.state.user = user
+
+    monkeypatch.setattr(m, "_db_project_or_404", lambda *a, **k: project)
+    monkeypatch.setattr(m, "_project_github_cfg", lambda *a, **k: {
+        "repo": "review/site", "branch": "main", "mode": "review"})
+    monkeypatch.setattr(m, "_compte_payeur", lambda *a, **k: user.id)
+    monkeypatch.setattr(m, "_effective_user_connection_value", lambda **k: ("fake-token", "user"))
+    monkeypatch.setattr(m, "_rate_limit_retry_after", lambda **k: None)
+    monkeypatch.setattr(m, "_correction_gate", lambda *a, **k: (True, "", state["budget"], ""))
+    monkeypatch.setattr(m, "_plafond_de_correction", lambda *a, **k: m._Plafond(state["budget"], state["budget"], None, "", True))
+    monkeypatch.setattr(m, "_correction_charge", lambda user, count, **k: state["charges"].append(count))
+    monkeypatch.setattr(m, "_open_pr_for_issue", lambda **k: "")
+    monkeypatch.setattr(m, "_runs_dir_pour_slug", lambda *a, **k: ROOT / "runs")
+    monkeypatch.setattr(m.dash, "list_project_crawls", lambda *a, **k: [state["crawl_ts"]])
+    monkeypatch.setattr(m.dash, "load_report_json", lambda *a, **k: state["report"])
+    monkeypatch.setattr(m, "_github_fixable_issue_candidates", lambda **k: [{
+        "key": state["key"], "label": state["key"], "url": URL}])
+    monkeypatch.setattr(m, "_ai_pick_repo_files", lambda *a, **k: [])
+    monkeypatch.setattr(m, "_ai_map_urls_to_files", lambda *a, **k: [])
+    monkeypatch.setattr(m, "_github_code_search_paths", lambda *a, **k: [])
+    monkeypatch.setattr(m, "_github_grep_repo_for_terms", lambda *a, **k: [])
+    monkeypatch.setattr(m, "_github_tarball_grep", lambda *a, **k: [
+        path for path, raw in state["sources"].items() if any(term in raw for term in a[4])])
+    monkeypatch.setattr(m, "_github_api_post", lambda *a, **k: {"ok": True})
+    def open_pr(**kwargs):
+        state["pr_bodies"].append(kwargs["body"])
+        assert kwargs["draft"] is True
+        return {"html_url": "https://github.com/review/site/pull/1", "number": 1}
+
+    monkeypatch.setattr(m, "_ouvrir_pull_request", open_pr)
+
+    def get(path, **kwargs):
+        if "/git/trees/" in path:
+            return {"tree": [{"type": "blob", "path": p} for p in state["sources"]]}
+        if "/git/ref" in path:
+            return {"object": {"sha": "base"}}
+        file_path = unquote(path.split("/contents/", 1)[1])
+        raw = state["written"].get(file_path, state["sources"].get(file_path))
+        if raw is None:
+            raise FileNotFoundError(file_path)
+        return {"sha": "original", "content": base64.b64encode(raw.encode()).decode()}
+
+    def put(path, *, json_body, **kwargs):
+        file_path = unquote(path.split("/contents/", 1)[1])
+        state["written"][file_path] = base64.b64decode(json_body["content"]).decode()
+        return {"content": {"sha": "patched"}, "commit": {"sha": "commit"}}
+
+    def model(**kwargs):
+        state["ai_calls"].append(kwargs["file_path"])
+        return {"no_change": True, "patched_content": kwargs["file_content"]}
+
+    monkeypatch.setattr(m, "_github_api_get", get)
+    monkeypatch.setattr(m, "_github_api_put", put)
+    monkeypatch.setattr(m, "_openai_generate_file_patch", model)
+
+    def run(mode):
+        state["written"].clear()
+        state["ai_calls"].clear()
+        if mode == "individual":
+            response = m.api_issue_deep_fix(request, "review", state["key"],
+                                          m._DeepFixBody(crawl_ts=state["crawl_ts"], url=URL))
+        else:
+            response = m.api_github_bulk_fix(request, "review")
+        result = {
+            "status": response.status_code,
+            "response": json.loads(response.body),
+            "written": dict(state["written"]),
+            "ai_calls": list(state["ai_calls"]),
+        }
+        return result
+
+    return state, run
+
+
+@pytest.mark.parametrize("case,key", [
+    ("http_links_control", "https_page_has_internal_links_to_http"),
+    ("og_url", "open_graph_url_not_matching_canonical"),
+    ("og_url_after_https_repair", "open_graph_url_not_matching_canonical"),
+    ("sitemap_missing", "sitemap_xml_not_found"),
+    ("sitemap_invalid", "sitemap_invalid_format"),
+    ("served_lang_next", "served_html_lang_mismatch"),
+    ("hreflang_in_page", "more_than_one_page_for_same_language_in_hreflang"),
+])
+def test_bulk_matches_individual_on_mechanical_cases(harness, case, key):
+    state, run = harness
+    state["key"] = key
+    state["sources"] = {"index.html": HTML, "robots.txt": "User-agent: *\nAllow: /\n"}
+    block = {"count": 1, "examples": [URL]}
+    page = {"url": URL, "final_url": URL, "status_code": 200, "canonical": URL, "lang": "fr"}
+    if case == "http_links_control":
+        state["sources"]["index.html"] = HTML.replace("</body>", '<a href="http://site.test/contact">Contact</a></body>')
+    elif case == "og_url":
+        state["sources"]["index.html"] = HTML.replace("</head>", '<meta property="og:url" content="https://site.test/obsolete" />\n</head>')
+        page["og_url"] = "https://site.test/obsolete"
+    elif case == "og_url_after_https_repair":
+        state["sources"]["index.html"] = HTML.replace("</head>", '<meta property="og:url" content="https://site.test" />\n</head>')
+        page["canonical"] = "http://site.test/"
+        page["og_url"] = "https://site.test"
+    elif case == "sitemap_invalid":
+        state["sources"]["sitemap.xml"] = "<urlset><url><loc>broken"
+    elif case == "served_lang_next":
+        state["sources"] = {
+            "package.json": json.dumps({"name": "review", "scripts": {"build": "next build"}}),
+            "app/layout.tsx": 'export default function Layout({children}) { return <html lang="fr"><body>{children}</body></html>; }\n',
+            "app/page.tsx": 'export default function Page() { return <h1>Une page de test</h1>; }\n',
+            "next.config.js": "module.exports = { output: 'export' };\n",
+        }
+        block["evidence"] = {"kind": "page_values", "items": [{"page": URL, "field": "lang", "value": "en"}]}
+    elif case == "hreflang_in_page":
+        state["sources"]["index.html"] = HTML.replace("</head>",
+            '<link rel="alternate" hreflang="fr" href="' + URL + '" />\n'
+            '<link rel="alternate" hreflang="fr" href="https://site.test/other" />\n</head>')
+        state["sources"]["sitemap.xml"] = m._sitemap_xml([URL])
+        block["evidence"] = {"kind": "hreflang_pairs", "items": [{
+            "page": URL, "code": "fr", "from": "https://site.test/other", "to": URL, "where": "page"}]}
+    state["report"] = {"issues": {key: block}, "pages": [page]}
+    individual = run("individual")
+    bulk = run("bulk")
+    print(json.dumps({"case": case, "individual": {"status": individual["status"], "files": list(individual["written"])},
+                      "bulk": {"status": bulk["status"], "files": list(bulk["written"]), "ai_calls": bulk["ai_calls"]}}))
+    assert individual["status"] == 200 and individual["written"], individual
+    assert bulk["status"] == 200 and bulk["written"], bulk
+    assert individual["written"] == bulk["written"]
+    assert len(set(individual["response"]["files"])) == individual["response"]["files_count"]
+    assert not individual["ai_calls"] and not bulk["ai_calls"]
+    assert state["charges"] == [0, 0]
+
+
+def test_og_url_does_not_rewrite_a_different_scheme():
+    raw = '<meta property="og:url" content="http://site.test/blog" />'
+    output, count = m._rewrite_og_url(raw, [{"from": "https://site.test/blog", "to": "https://site.test/blog/"}])
+    assert count == 0 and output == raw, "A value absent from the exact measured pair was rewritten."
+
+
+def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
+    state, run = harness
+    keys = ["missing_title", "missing_meta_description", "missing_alt_text", "viewport_not_set",
+            "multiple_h1", "open_graph_tags_missing", "twitter_card_missing"]
+    state["sources"] = {"index.html": HTML}
+    state["report"] = {"issues": {k: {"count": 1, "examples": [URL]} for k in keys},
+                       "pages": [{"url": URL, "status_code": 200}]}
+    monkeypatch.setattr(m, "_github_fixable_issue_candidates", ORIGINAL_CANDIDATES)
+    processed = []
+
+    def patch(**kwargs):
+        processed.append(kwargs["issue_key"])
+        return ["index.html"], [], ["index.html"], []
+
+    monkeypatch.setattr(m, "_deep_patch_issue_files", patch)
+    result = run("bulk")
+    print(json.dumps({"case": "bulk_seven_families", "status": result["status"],
+                      "eligible": len(keys), "processed": len(processed)}))
+    assert result["status"] == 200, result
+    assert len(processed) == len(keys), "Eligible families were dropped despite sufficient file budget."
+
+
+@pytest.mark.parametrize("case", ["other_page_still_broken", "target_not_crawled", "indexability_variant"])
+def test_verification_never_confirms_an_unproven_resolution(case):
+    from backend.models import IssueTask, Project, User
+    from sqlalchemy import select
+
+    m.DB.create_tables()
+    tag = uuid.uuid4().hex
+    key = "missing_h1_indexable"
+    other_url = "https://site.test/other"
+    with m.DB.session() as db:
+        user = User(email="review-" + tag + "@example.invalid", password_hash="unused")
+        db.add(user)
+        db.commit()
+        project = Project(owner_user_id=user.id, slug="review-" + tag,
+                          site_name="site.test", base_url=URL)
+        db.add(project)
+        db.commit()
+        slug, project_id = project.slug, project.id
+        task = IssueTask(project_id=project_id, user_id=user.id, issue_key=key,
+                         issue_label="Missing H1", crawl_ts="20261001-090000", url=URL,
+                         status="done", severity="warning",
+                         note=json.dumps({"deep": True, "pages": 2, "pr_number": 1}))
+        db.add(task)
+        db.commit()
+        task_id = task.id
+
+    after = {"meta": {"timestamp": "20261001-100000"},
+             "issues": {key: {"count": 1, "examples": [other_url]}},
+             "pages": [{"url": URL, "status_code": 200}, {"url": other_url, "status_code": 200}]}
+    if case == "target_not_crawled":
+        after["pages"] = [{"url": other_url, "status_code": 200}]
+    elif case == "indexability_variant":
+        after["issues"] = {"missing_h1_not_indexable": {"count": 1, "examples": [URL]}}
+    m._verify_corrections_after_crawl(slug, after)
+    with m.DB.session() as db:
+        task = db.scalar(select(IssueTask).where(IssueTask.id == task_id))
+        verification = json.loads(task.note).get("verify", {})
+    print(json.dumps({"case": case, "verification": verification}))
+    assert verification.get("result") != "resolved", "The product confirms a repair that the crawl does not prove."
+
+
+@pytest.fixture
+def verification_task():
+    from backend.models import IssueTask, Project, User
+
+    m.DB.create_tables()
+
+    def create(*, key="missing_h1_indexable", scope=None, slug=None, note=None):
+        tag = uuid.uuid4().hex
+        scope = scope if scope is not None else [URL, "https://site.test/other"]
+        with m.DB.session() as db:
+            user = User(email="review-" + tag + "@example.invalid", password_hash="unused")
+            db.add(user)
+            db.flush()
+            project = Project(owner_user_id=user.id, slug=slug or "review-" + tag,
+                              site_name="site.test", base_url=URL)
+            db.add(project)
+            db.flush()
+            task = IssueTask(project_id=project.id, user_id=user.id, issue_key=key,
+                             issue_label=key, crawl_ts="20261001-090000", url=scope[0] if scope else URL,
+                             status="done", severity="warning", note=json.dumps(note or {
+                                 "deep": True, "pages": len(scope), "verification_urls": scope}))
+            db.add(task)
+            db.flush()
+            result = {"slug": project.slug, "user_id": user.id, "task_id": task.id, "key": key}
+            db.commit()
+            return result
+
+    return create
+
+
+def _verify(task, report, **kwargs):
+    from backend.models import IssueTask
+    from sqlalchemy import select
+
+    m._verify_corrections_after_crawl(task["slug"], report, **kwargs)
+    with m.DB.session() as db:
+        row = db.scalar(select(IssueTask).where(IssueTask.id == task["task_id"]))
+        return json.loads(row.note).get("verify", {})
+
+
+@pytest.mark.parametrize("case,expected", [
+    ("clean", "resolved"), ("clean_empty_issues", "resolved"),
+    ("real_crawler_timestamp", "resolved"), ("worker_timestamp", "resolved"),
+    ("missing_target", "unverified"), ("target_error", "unverified"),
+    ("target_fetch_error", "unverified"), ("stale", "unverified"),
+    ("time_budget", "unverified"), ("blocked_host", "unverified"),
+    ("indexability_variant", "still_present"), ("other_page", "still_present"),
+    ("short_becomes_long", "still_present"), ("unknown_legacy_scope", "unverified"),
+    ("different_scheme", "unverified"), ("different_path_case", "unverified"),
+    ("capped_examples", "unverified"),
+])
+def test_verification_requires_a_fresh_successful_scope(verification_task, case, expected):
+    other = "https://site.test/other"
+    kwargs = {}
+    key = "title_too_short_indexable" if case == "short_becomes_long" else "missing_h1_indexable"
+    note = {"deep": True, "pages": 2} if case == "unknown_legacy_scope" else None
+    if case == "capped_examples":
+        note = {"verification_urls": [URL]}
+    scope = ["https://site.test/Page", other] if case == "different_path_case" else [URL, other]
+    task = verification_task(key=key, scope=scope, note=note)
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {key: {"count": 0}},
+              "pages": [{"url": url, "status_code": 200} for url in scope]}
+    if case == "clean_empty_issues":
+        report["issues"] = {}
+    elif case == "real_crawler_timestamp":
+        report["meta"] = {"started_at": "2026-10-01T10:00:00+00:00"}
+    elif case == "worker_timestamp":
+        report["meta"] = {}
+        kwargs["crawl_ts"] = "20261001-100000"
+    elif case == "missing_target":
+        report["pages"] = report["pages"][:1]
+    elif case == "target_error":
+        report["pages"][1]["status_code"] = 500
+    elif case == "target_fetch_error":
+        report["pages"][1]["error"] = "timeout"
+    elif case == "stale":
+        report["meta"]["timestamp"] = "20261001-090000"
+    elif case == "time_budget":
+        report["meta"]["stopped_on_time_budget"] = True
+    elif case == "blocked_host":
+        report["meta"]["blocked_by_host"] = {"count": 1, "urls": [other]}
+    elif case == "indexability_variant":
+        report["issues"] = {"missing_h1_not_indexable": {"count": 1, "examples": [URL]}}
+    elif case == "other_page":
+        report["issues"][key] = {"count": 1, "examples": [other]}
+    elif case == "short_becomes_long":
+        report["issues"] = {"title_too_long_not_indexable": {"count": 1, "examples": [other]}}
+    elif case == "different_scheme":
+        report["pages"][0]["url"] = "http://site.test/"
+    elif case == "different_path_case":
+        report["pages"][0]["url"] = "https://site.test/page"
+    elif case == "capped_examples":
+        report["issues"][key] = {"count": 2000, "examples": [other]}
+    assert _verify(task, report, **kwargs)["result"] == expected
+
+
+def test_verification_is_isolated_by_project_owner(verification_task):
+    first = verification_task()
+    second = verification_task(slug=first["slug"])
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {},
+              "pages": [{"url": URL, "status_code": 200},
+                        {"url": "https://site.test/other", "status_code": 200}]}
+    assert _verify(first, report) == {}
+    assert _verify(second, report, user_id=second["user_id"])["result"] == "resolved"
+    assert _verify(first, report) == {}
+
+
+def test_system_fetches_can_prove_a_sitemap_repair(verification_task):
+    url = "https://site.test/sitemap.xml"
+    task = verification_task(key="sitemap_invalid_format", scope=[url])
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {}, "pages": [],
+              "system_fetches": [{"url": url, "status_code": 200, "type": "sitemap"}]}
+    assert _verify(task, report)["result"] == "resolved"
+
+
+def test_truncated_original_examples_cannot_prove_a_whole_family(verification_task):
+    task = verification_task(scope=[URL], note={"deep": True, "verification_urls": [URL],
+                                                "verification_expected_count": 501})
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {},
+              "pages": [{"url": URL, "status_code": 200}]}
+    assert _verify(task, report)["result"] == "unverified"
+
+
+def test_different_crawl_settings_do_not_prove_a_resolution(verification_task, monkeypatch, tmp_path):
+    task = verification_task(scope=[URL])
+    baseline = {"meta": {"resources_checked": True}, "issues": {
+        task["key"]: {"count": 1, "examples": [URL]}}}
+    monkeypatch.setattr(m.dash, "load_report_json", lambda *a: baseline)
+    report = {"meta": {"timestamp": "20261001-100000", "resources_checked": False},
+              "issues": {}, "pages": [{"url": URL, "status_code": 200}]}
+    verification = _verify(task, report, runs_dir=tmp_path)
+    assert verification["result"] == "unverified" and "introduced" not in verification
+
+
+def test_a_non_html_response_does_not_prove_an_html_repair(verification_task):
+    task = verification_task(scope=[URL])
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {},
+              "pages": [{"url": URL, "status_code": 200, "content_type": "image/png"}]}
+    assert _verify(task, report)["result"] == "unverified"
+
+
+def test_noindex_cannot_hide_a_reciprocal_hreflang_defect(verification_task, monkeypatch, tmp_path):
+    task = verification_task(key="missing_reciprocal_hreflang", scope=[URL])
+    baseline = {"meta": {}, "issues": {task["key"]: {"count": 1, "examples": [URL]}},
+                "pages": [{"url": URL, "status_code": 200}]}
+    monkeypatch.setattr(m.dash, "load_report_json", lambda *a: baseline)
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {},
+              "pages": [{"url": URL, "status_code": 200, "x_robots_tag": "noindex"}]}
+    result = _verify(task, report, runs_dir=tmp_path)
+    assert result["result"] == "unverified" and "noindex" in result["reason"]
+
+
+def test_noindex_with_a_missing_baseline_is_not_proof(verification_task):
+    task = verification_task(key="missing_reciprocal_hreflang", scope=[URL])
+    report = {"meta": {"timestamp": "20261001-100000"}, "issues": {},
+              "pages": [{"url": URL, "status_code": 200, "x_robots_tag": "noindex"}]}
+    assert _verify(task, report)["result"] == "unverified"
+
+
+@pytest.mark.parametrize("raw_url", ["http://site.test/blog", "https://site.test/blog/",
+                                     "https://site.test/Blog", "https://site.test/blog?q=1"])
+def test_og_url_requires_the_exact_measured_value(raw_url):
+    raw = '<meta property="og:url" content="' + raw_url + '" />'
+    assert m._rewrite_og_url(raw, [{"from": "https://site.test/blog", "to": URL}]) == (raw, 0)
+
+
+def test_bulk_reports_every_family_excluded_by_the_budget(harness, monkeypatch):
+    state, run = harness
+    keys = ["missing_title", "missing_h1", "missing_alt_text", "viewport_not_set"]
+    state.update({"budget": 2, "sources": {"index.html": HTML},
+                  "report": {"issues": {k: {"count": 1, "examples": [URL]} for k in keys}}})
+    monkeypatch.setattr(m, "_github_fixable_issue_candidates", lambda **k: [
+        {"key": key, "label": key, "url": URL} for key in keys])
+    seen = []
+
+    def patch(**kwargs):
+        seen.append(kwargs["max_files"])
+        return ["index.html"], [], ["index.html"], ["index.html"]
+
+    monkeypatch.setattr(m, "_deep_patch_issue_files", patch)
+    result = run("bulk")["response"]
+    assert result["ok"] and result["partial"]
+    assert seen == [2, 1]
+    assert result["fixed_count"] == 2 and result["total_count"] == 4
+    assert result["not_attempted_issues_count"] == 2
+    assert state["charges"] == [2]
+    assert "Plafond atteint" in state["pr_bodies"][0]
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+def test_postbuild_language_repair_never_writes_half_a_fix(harness, mode):
+    state, run = harness
+    key = "served_html_lang_mismatch"
+    state.update({"key": key, "budget": 1, "sources": {
+        "package.json": json.dumps({"scripts": {"build": "next build"}}),
+        "app/layout.tsx": 'export default function Layout({children}) { return <html lang="fr"><body>{children}</body></html>; }',
+        "app/page.tsx": 'export default function Page() { return <h1>Test</h1>; }',
+    }, "report": {"issues": {key: {"count": 1, "examples": [URL], "evidence": {
+        "kind": "page_values", "items": [{"page": URL, "field": "lang", "value": "en"}]}}}}})
+    result = run(mode)
+    assert result["status"] == 422 and not result["written"] and not state["pr_bodies"]
+
+
+def test_bulk_does_not_cap_a_family_at_six_files(harness, monkeypatch):
+    state, run = harness
+    state["key"] = "missing_h1"
+    paths = ["page-%d.html" % i for i in range(9)]
+    state["sources"] = {path: HTML for path in paths}
+    state["report"] = {"issues": {"missing_h1": {"count": 9, "examples": [URL]}}}
+    seen = []
+
+    def patch(**kwargs):
+        seen.append(kwargs["max_files"])
+        return paths, [], paths, []
+
+    monkeypatch.setattr(m, "_deep_patch_issue_files", patch)
+    result = run("bulk")["response"]
+    assert seen == [40] and len(result["results"][0]["files"]) == 9
+
+
+def test_bulk_forwards_the_complete_preparation_and_site_context(harness, monkeypatch):
+    state, run = harness
+    state["key"] = "missing_h1"
+    state["sources"] = {"index.html": HTML}
+    pages = [{"url": URL, "lang": "fr", "og_image": "https://site.test/social.png"}]
+    state["report"] = {"issues": {"missing_h1": {"count": 1, "examples": [URL]}}, "pages": pages}
+    original = m._prepare_issue_fix
+    received = {}
+
+    def prepare(**kwargs):
+        assert kwargs["pages"] == pages
+        prep = original(**kwargs)
+        prep.update({"targets_override": ["index.html"], "page_side": True,
+                     "canonical_masters": {URL: URL}})
+        return prep
+
+    def patch(**kwargs):
+        received.update(kwargs)
+        return ["index.html"], [], ["index.html"], []
+
+    monkeypatch.setattr(m, "_prepare_issue_fix", prepare)
+    monkeypatch.setattr(m, "_deep_patch_issue_files", patch)
+    assert run("bulk")["status"] == 200
+    assert received["targets_override"] == ["index.html"] and received["page_side"]
+    assert received["canonical_masters"] == {URL: URL}
+    assert received["site_lang"] == m._dominant_site_lang(pages)
+    assert received["site_og_image"] == m._dominant_site_og_image(pages)
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+def test_a_new_fix_replaces_the_old_verdict_and_baseline(harness, monkeypatch, mode):
+    from backend.models import IssueTask
+    from sqlalchemy import select
+
+    state, run = harness
+    state["key"] = "missing_h1_indexable"
+    urls = [URL, "https://site.test/other"]
+    state["sources"] = {"index.html": HTML}
+    state["report"] = {"issues": {state["key"]: {"count": 2, "examples": urls}}}
+    m.DB.create_tables()
+    with m.DB.session() as db:
+        db.add(IssueTask(project_id=state["project"].id, user_id=state["user"].id,
+                         issue_key=state["key"], issue_label="H1", crawl_ts="20260901-090000",
+                         url=URL, status="done", severity="warning",
+                         note=json.dumps({"verify": {"result": "resolved"}})))
+        db.commit()
+    monkeypatch.setattr(m, "_deep_patch_issue_files", lambda **k: (
+        ["index.html"], [], ["index.html"], []))
+    assert run(mode)["status"] == 200
+    with m.DB.session() as db:
+        tasks = list(db.scalars(select(IssueTask).where(
+            IssueTask.project_id == state["project"].id)).all())
+        assert len(tasks) == 1 and tasks[0].crawl_ts == state["crawl_ts"]
+        note = json.loads(tasks[0].note)
+        assert "verify" not in note and tasks[0].status == "in_progress"
+        assert note["verification_urls"] == urls and note["verification_expected_count"] == 2
