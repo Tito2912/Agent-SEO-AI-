@@ -140,6 +140,11 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   Les deux temoins sont corriges, les 49 routes HTML et la redirection legitime
   restent intactes. Une occurrence preexistante non selectionnee demeure ;
   les lots mixtes conservent les refus et les paires valides separement.
+- `validation-canonical-residuel-2026-10-04.json` : le cas preexistant
+  `canonical-other` est ensuite corrige sur une branche issue du lot precedent.
+  Un seul attribut canonical change dans un seul fichier, sans IA. La famille
+  non canonique passe de 1 a 0 ; les anciennes corrections, les 49 routes HTML
+  et la vraie 301 sont conservees. Aucun compteur n'augmente dans ce controle.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -626,6 +631,50 @@ canonical. La projection des previews reste contrefactuelle, pas une preuve
 d'indexabilite en production. Le nouvel inventaire temporaire compte 17 familles
 sans reference nommee ; l'ancien inventaire Git reste une photographie historique,
 et les references ne deviennent jamais un score de corrections certifiees.
+
+## Canonical Residuel
+
+`canonical_completion_cycle.py` repart du SHA mesure du lot precedent, pas de
+`main`, et verifie sa branche, sa PR fermee sans fusion, son build et son ascendance.
+Le seul fichier correctible est `gauntlet/canonical-other.html`. Un seul PUT
+est permis, avec le SHA du blob et le contenu exact attendus : seul l'attribut
+canonical peut changer. Le banc n'ajoute aucune page ni regle, et n'utilise pas
+de modele. Les 32 nouveaux tests couvrent la portee des ecritures, les temoins,
+la conservation des routes et corrections, les compteurs et le nettoyage des PR.
+
+```sh
+python ops/gauntlet/canonical_completion_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+La source declare le relais `canonical-relay`, qui declare `missing-h1` comme
+maitresse. Cette derniere est observee HTML 200 avec son propre canonical.
+Le correcteur conserve cette intention : il remplace le relais par la maitresse,
+il ne rend pas arbitrairement `canonical-other` auto-canonique. Le H1 manquant
+de la destination et toutes ses autres anomalies restent hors de cette correction.
+
+Deux builds et deux vrais crawls portent les SHA exacts. La famille
+`non_canonical_page_specified_as_canonical_one` passe de 1 a 0 dans les 49 routes
+observees ; `canonical_points_to_redirect` reste a 0. Les cinq pages QA du lot
+precedent restent intactes, tout comme la vraie 301 et `_redirects`. Aucune autre
+valeur observee ne change, aucun compteur n'augmente. Les PR 57 et 58 sont fermees
+sans fusion, et `main` reste identique.
+
+Une nouvelle contre-verification en lecture seule controle les sources et les
+16 corps HTML servis, en distinguant uniquement le fragment exact de la barre
+Netlify. Les fins de ligne reelles, les alternate et le noindex natif sont
+conserves. Un rejeu local capture la proposition du correcteur sans PUT distant :
+elle egale le commit mesure. Une destination synthetique noindex est refusee.
+Les assertions initiales du controle sur les fins de ligne et les champs JSON
+optionnels sont corrigees et consignees, sans changement du produit.
+
+Le bilan `validation-canonical-residuel-2026-10-04.json` complete le bilan
+precedent sans le reecrire. Il n'apporte aucun nouveau correctif au moteur :
+celui-ci savait deja traiter ce cas, qui etait simplement hors du lot selectionne.
+La suite finale compte 3 322 tests reussis et 42 ignores sur SQLite isolee ;
+131 tests cibles passent. L'inventaire reste a 17 familles sans reference nommee.
+La projection des previews est toujours contrefactuelle. Ce resultat ne certifie
+ni l'indexation en production, ni toutes les piles, ni toutes les anomalies avant
+les premiers clients. Aucun deploiement de l'agent ni site client n'est modifie.
 
 ## Reconstruire les pages
 
