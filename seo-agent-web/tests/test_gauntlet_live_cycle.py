@@ -102,10 +102,29 @@ def test_latest_preview_build_status_wins():
 def test_bad_or_missing_preview_build_never_reaches_crawl(state, error):
     def get(path, **kw):
         return ({"head": {"sha": "exact-head"}} if "pulls" in path
-                else {"statuses": [{"id": 1, "context": "netlify/site/deploy-preview", "state": state}]})
+                else {"statuses": [{"id": 1, "context": "netlify/site/deploy-preview", "state": state,
+                                    "target_url": "https://deploy-preview-10--fixture.netlify.app"}]})
     module = SimpleNamespace(_github_api_get=get, _github_api_path=lambda *p: "/".join(p))
     with pytest.raises(error):
         bench.wait_build(module, "fixture", "not-a-real-token", 10, timeout=0)
+
+
+def test_green_status_for_another_pr_at_the_same_sha_cannot_prove_this_preview():
+    def get(path, **kw):
+        return ({"head": {"sha": "reused-sha"}} if "pulls" in path else {"statuses": [
+            {"id": 1, "context": "netlify/site/deploy-preview", "state": "success",
+             "target_url": "https://deploy-preview-9--fixture.netlify.app"}]})
+    module = SimpleNamespace(_github_api_get=get, _github_api_path=lambda *p: "/".join(p))
+    with pytest.raises(TimeoutError):
+        bench.wait_build(module, "fixture", "unused", 10, timeout=0)
+
+
+def test_current_preview_status_must_match_the_exact_https_host():
+    host = "deploy-preview-10--fixture.netlify.app"
+    status = {"id": 1, "context": "netlify/site/deploy-preview", "state": "success"}
+    for url in ("", "http://" + host, "https://" + host + ".example.com", "https://example.com/" + host):
+        assert bench.preview_status([{**status, "target_url": url}], preview_host=host) == "pending"
+    assert bench.preview_status([{**status, "target_url": "https://" + host}], preview_host=host) == "success"
 
 
 def test_failed_build_closes_all_created_prs_without_merging(tmp_path, monkeypatch):

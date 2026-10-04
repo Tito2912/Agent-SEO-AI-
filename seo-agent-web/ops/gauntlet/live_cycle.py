@@ -259,9 +259,11 @@ def repair(stack: str, workdir: Path, *, branch: str = "", families: str = "",
     return load(workdir / "gauntlet_run.json")
 
 
-def preview_status(statuses: list[dict]) -> str:
+def preview_status(statuses: list[dict], *, preview_host: str = "") -> str:
     relevant = [s for s in statuses if "netlify" in str(s.get("context", "")).lower()
-                and "deploy-preview" in str(s.get("context", "")).lower()]
+                and "deploy-preview" in str(s.get("context", "")).lower()
+                and (not preview_host or (urlsplit(str(s.get("target_url") or "")).scheme == "https"
+                                          and urlsplit(str(s.get("target_url") or "")).netloc == preview_host))]
     if not relevant:
         return "pending"
     latest = max(relevant, key=lambda row: row.get("id", 0))
@@ -276,7 +278,8 @@ def wait_build(m, repo: str, token: str, number: int, *, timeout: int = 600) -> 
         sha = pr["head"]["sha"]
         status = m._github_api_get(m._github_api_path("repos", OWNER, repo, "commits", sha, "status"),
                                   token=token)
-        verdict = preview_status(status.get("statuses", []))
+        verdict = preview_status(status.get("statuses", []),
+                                 preview_host=f"deploy-preview-{number}--{repo}.netlify.app")
         if verdict == "success":
             return {"head_sha": sha, "deploy_preview_status": verdict}
         if verdict in {"failure", "error"}:

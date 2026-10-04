@@ -1,0 +1,202 @@
+{
+  "date": "2026-10-04",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "Missing, multiple and out-of-bounds titles, followed by the duplicate-a/b title and description pair on isolated Hugo/Nuxt fixtures, with real bounded Claude calls",
+  "previous_evidence": "validation-hreflang-ia-2026-10-04.json",
+  "production_corrector_code_changed_in_this_phase": true,
+  "changes_deployed_to_agent": false,
+  "client_sites_changed": 0,
+  "production_database_used": false,
+  "additional_live_fixture_prs": 8,
+  "all_live_fixture_prs_closed_without_merge": true,
+  "publication_branch": "codex/corrector-recovery-20261003",
+  "agent_main_sha_unchanged": "28c7113e65609b4b7ef7acfb87dd844994bb0ed9",
+  "corrector_changes": {
+    "observed_uniqueness": "Reserve existing values on observed HTTP 200 HTML, unblocked, error-free, non-noindex, self-canonical non-target pages. Targeting uses actually selected files, not every impacted URL, so capped-out pages remain reserved. Also reserve literal values from earlier families in the cumulative file-state cache outside current targets.",
+    "final_values": "Compare stripped values after length ceilings and quote escaping, with HTML entities decoded for markup and the existing JavaScript unescape helper for other literals. Retry accepts a conforming unique proposal even when shorter. After source guards, recheck the actual content before GitHub PUT against reserved and successfully committed values.",
+    "source_scope": "These guards improve the shared per-page deep/bulk correction helper. Without a route index the observed fallback excludes impacted URLs; it is not certification of unknown route mappings, computed render values or every product API path.",
+    "hugo": "Read the actual head in valid leading TOML raw_head, not an unused front-matter title or body tag. Require the selected literal to occur verbatim in the TOML block and exactly once in the source. Invalid, source-encoded or ambiguous raw_head abstains; ordinary front matter without a nonempty raw_head remains readable.",
+    "length_placement": "Locate the rendered value, or its known template-affix split, inside the page's own field value and replace only that field literal. Do not replace an earlier front-matter, body or social copy. Refuse text that also names syntax in the literal; unknown or ambiguous placements leave the bounded path and retain the existing AI fallback.",
+    "floor_limit": "Existing retry/floor behavior for initially absent fields remains; a short best attempt is not declared complete by the live HTML gate. Build and recrawl are still required."
+  },
+  "measurement": {
+    "mode": "counterfactual_fixture_preview_without_injected_header",
+    "raw_crawls_retained": true,
+    "raw_duplicate_counts_each_stack": {"before": 0, "after": 0, "used_as_repair_proof": false},
+    "projection": "Separate report copies map structured preview URLs to the fixture production namespace and remove only the exact injected noindex header on preview-host source/final pages. Native meta robots and other directives remain. Scoring uses the sitemap XML actually served.",
+    "projection_is_production_deployment": false,
+    "link_classifications_recomputed": false,
+    "cumulative_not_isolated_family_pass": true,
+    "title_length_thresholds": {"minimum": 15, "maximum": 70},
+    "description_length_thresholds": {"minimum": 100, "maximum": 160},
+    "thresholds_are": "Crawler anomaly thresholds, not universal search-engine length recommendations",
+    "positive_controls": "Each selected occurrence must have an observed baseline defect and one correct final tag on HTTP 200 HTML. The duplicate pair must become distinct from every observed page, not just from each other. Native noindex on the long-title control remains unchanged. Missing controls or measurements cannot pass.",
+    "collateral_checks": "Preserve all observed HTML routes, canonical, robots, language, hreflang, h1/h2, social type/URL/images and untargeted title/description fields and tag counts. A social text copy may follow exactly its targeted field only when it originally equaled that field; other social changes refuse validation.",
+    "partial_duplicate_groups": "Only duplicate-a and duplicate-b are selected. Global counts remain partial. All other impacted URLs are retained explicitly in repair_scopes.unselected_impacted_urls; no certification of the complete large groups is claimed.",
+    "preview_readiness": "Require an HTTPS Netlify success status for the exact PR preview host and exact branch head, then wait for the served HTTP 200 HTML root and XML sitemap before crawling. A reused green SHA alone is insufficient."
+  },
+  "initial_attempts": [
+    {
+      "stack": "hugo",
+      "artifact": "seo-title-live-20261004-a_6yxejg",
+      "status": "failed",
+      "reason": "A same-SHA green status did not guarantee the new preview was ready. Four crawled pages returned 404 and sitemap fetch failed. No correction content was written and no Claude request was made.",
+      "budget": {"limit": 12, "attempted": 0, "denied": 0, "exhausted": false},
+      "estimated_cost_usd": 0,
+      "pull_requests": [
+        {"kind": "baseline", "number": 52, "head_sha": "6828ab00a3d93a276bb370bfde49812f2add0b0e", "state": "closed", "merged": false, "draft": true}
+      ]
+    },
+    {
+      "stack": "hugo",
+      "artifact": "seo-title-final-live-20261004-42950lui",
+      "status": "failed",
+      "reason": "The guard read the unused eight-character front-matter title Parcours rather than the added raw_head title. Three Claude attempts were refused. GitHub baseline-to-correction comparison was identical, with no changed files.",
+      "budget": {"limit": 12, "attempted": 3, "denied": 0, "exhausted": false},
+      "estimated_cost_usd": 0.033723,
+      "pull_requests": [
+        {"kind": "baseline", "number": 53, "head_sha": "6828ab00a3d93a276bb370bfde49812f2add0b0e", "state": "closed", "merged": false, "draft": true}
+      ]
+    },
+    {
+      "stack": "hugo",
+      "artifact": "seo-title-hugo-fixed-live-20261004-5wh5711p",
+      "status": "unverified",
+      "reason": "Build succeeded and the selected duplicates and missing/multiple titles were corrected, but length placement rewrote unused front-matter copies. Actual short and long titles remained four and 124 characters. Direct HTML checks rejected this apparent correction.",
+      "controlled_counts": {"title_too_short": {"before": 1, "after": 1}, "title_too_long": {"before": 1, "after": 1}},
+      "budget": {"limit": 12, "attempted": 10, "denied": 0, "exhausted": false},
+      "estimated_cost_usd": 0.109788,
+      "pull_requests": [
+        {"kind": "baseline", "number": 54, "head_sha": "6828ab00a3d93a276bb370bfde49812f2add0b0e", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 55, "head_sha": "d31be8edfc263cd66b02d0b68e7ca5ba93178646", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ]
+    }
+  ],
+  "live_fixtures": [
+    {
+      "stack": "hugo",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-hugo",
+      "seed_sha": "6828ab00a3d93a276bb370bfde49812f2add0b0e",
+      "main_sha_before_and_after": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "baseline_branch": "gauntlet-hugo-titles-baseline-20261004-075751",
+      "correction_branch": "gauntlet-hugo-titles-correction-20261004-075751",
+      "status": "measured_selected_occurrences",
+      "controlled_counts": {
+        "missing_title": {"before": 1, "after": 0},
+        "multiple_title_tags": {"before": 1, "after": 0},
+        "title_too_short": {"before": 1, "after": 0},
+        "title_too_long": {"before": 1, "after": 0},
+        "duplicate_titles": {"before": 33, "after": 31, "verdict": "partial"},
+        "duplicate_meta_descriptions": {"before": 34, "after": 32, "verdict": "partial"}
+      },
+      "selected_duplicate_occurrences": {"duplicate_titles": {"before": 2, "after": 0}, "duplicate_meta_descriptions": {"before": 2, "after": 0}},
+      "unselected_impacted_counts": {"duplicate_titles": 31, "duplicate_meta_descriptions": 32},
+      "not_exercised": [],
+      "crawl": {"max_pages": 90, "before_html": 47, "after_html": 47, "missing_html_routes": [], "increases": [], "new_issue_routes": []},
+      "budget": {"limit": 12, "attempted": 9, "denied": 0, "exhausted": false},
+      "file_writes_across_families": 8,
+      "github_compare_changed_files": ["content/gauntlet/duplicate-a.md", "content/gauntlet/duplicate-b.md", "content/gauntlet/missing-title.md", "content/gauntlet/multiple-title-tags.md", "content/gauntlet/noindex-long.md", "content/gauntlet/title-too-short.md"],
+      "capped_files": [],
+      "skipped_files": [],
+      "pull_requests": [
+        {"kind": "baseline", "number": 56, "head_sha": "6828ab00a3d93a276bb370bfde49812f2add0b0e", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 57, "head_sha": "929f8d04e8281d82b7ac7b8e68afb1b4b255db41", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ],
+      "sha256": {
+        "baseline/raw/report.json": "bbe1ab37ba0b72a28ac1664d2d1fba8679b5d168ecca80b9137011bfce600730",
+        "baseline/controlled/report.json": "d3ec46c0dedb472320c51f58343dc5c763ddd55b8e5a07a3eca19754a7fcb4fd",
+        "baseline/sitemap.xml": "d624b241798502d9875562756e7e23f5f227b294154ada91cc9cdaa916012978",
+        "correction/raw/report.json": "cec45e0c482682d9242526b2ec2e087a26f08a549307d334dbf2e46a52dcce86",
+        "correction/controlled/report.json": "ecaaf6d47b075928984de19eb937c54bb2d171653beed205e9ae05a2b9cc8a9a",
+        "correction/sitemap.xml": "d624b241798502d9875562756e7e23f5f227b294154ada91cc9cdaa916012978"
+      }
+    },
+    {
+      "stack": "nuxt",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-nuxt",
+      "seed_sha": "15c30e72377955ce73ad9844d44540ef0d146246",
+      "main_sha_before_and_after": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "baseline_branch": "gauntlet-nuxt-titles-baseline-20261004-080052",
+      "correction_branch": "gauntlet-nuxt-titles-correction-20261004-080052",
+      "status": "measured_selected_occurrences",
+      "controlled_counts": {
+        "missing_title": {"before": 1, "after": 0},
+        "multiple_title_tags": {"before": 0, "after": 0, "verdict": "not_exercised"},
+        "title_too_short": {"before": 1, "after": 0},
+        "title_too_long": {"before": 1, "after": 0},
+        "duplicate_titles": {"before": 29, "after": 27, "verdict": "partial"},
+        "duplicate_meta_descriptions": {"before": 30, "after": 28, "verdict": "partial"}
+      },
+      "selected_duplicate_occurrences": {"duplicate_titles": {"before": 2, "after": 0}, "duplicate_meta_descriptions": {"before": 2, "after": 0}},
+      "unselected_impacted_counts": {"duplicate_titles": 27, "duplicate_meta_descriptions": 28},
+      "not_exercised": [{"family": "multiple_title_tags", "reason": "absent_positive_control"}],
+      "crawl": {"max_pages": 90, "before_html": 43, "after_html": 43, "missing_html_routes": [], "increases": [], "new_issue_routes": []},
+      "budget": {"limit": 12, "attempted": 8, "denied": 0, "exhausted": false},
+      "file_writes_across_families": 7,
+      "github_compare_changed_files": ["pages/gauntlet/duplicate-a.vue", "pages/gauntlet/duplicate-b.vue", "pages/gauntlet/missing-title.vue", "pages/gauntlet/noindex-long.vue", "pages/gauntlet/title-too-short.vue"],
+      "capped_files": [],
+      "skipped_files": [],
+      "pull_requests": [
+        {"kind": "baseline", "number": 48, "head_sha": "15c30e72377955ce73ad9844d44540ef0d146246", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 49, "head_sha": "b94d21a119464df261210672b92da01e28d01607", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ],
+      "sha256": {
+        "baseline/raw/report.json": "20fe55510a576a36143d8e54cc0b33323ccd7b65cf2d1a758c9a5f683bb4c4d5",
+        "baseline/controlled/report.json": "7ba690cd75d5c2e8bd181c8b6e15cfa0613c31a9f7288da629b6c2efdaace423",
+        "baseline/sitemap.xml": "cb474bd45a92d0c64e96e1bf4d18393f4c8e662bc08ed7ea922f74412015a365",
+        "correction/raw/report.json": "2c535925b7d2eb51b71f6af8b76d06997043227fa240958d931dd25e08a6dc9e",
+        "correction/controlled/report.json": "12542d27dd22689d4853170c077b0e43a703152e4f33f17071ad5675e94c8b78",
+        "correction/sitemap.xml": "cb474bd45a92d0c64e96e1bf4d18393f4c8e662bc08ed7ea922f74412015a365"
+      }
+    }
+  ],
+  "claude_usage": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-6",
+    "failed_or_unverified_attempt_calls": 13,
+    "successful_pass_calls": 17,
+    "total_phase_calls": 30,
+    "estimated_cost_usd": 0.341394,
+    "estimated_cost_is_provider_invoice": false,
+    "secrets_or_prompts_recorded": false
+  },
+  "verification": {
+    "full_final_suite": {"database": "isolated_temporary_sqlite", "passed": 2980, "skipped": 42, "warnings": 260, "seconds": 330.90, "source_edits_during_run": false},
+    "prior_full_suite": {"database": "isolated_temporary_sqlite", "passed": 2976, "skipped": 42, "warnings": 260, "seconds": 278.97, "source_edits_during_run": false},
+    "new_tests_this_phase": 53,
+    "final_targeted_suite": {"passed": 137, "seconds": 2.83},
+    "red_tests_before_fixes": {"final_duplicate_values": {"failed": 5, "passed": 1}, "field_syntax_placement": {"failed": 4}},
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "new_bench_bandit_medium_or_high": "none",
+    "independent_countercheck": "Re-read fixture main identities, all eight draft/closed/unmerged PRs, final exact-head PR-specific success statuses and baseline-to-correction changed files. Actual source values match compiled observed HTML for every changed file. Recomputed direct HTML checks, comparisons, all four projected page lists and report/sitemap hashes match retained artifacts. The unverified placement result remains rejected.",
+    "post_live_syntax_guard": "The final conservative syntax-ambiguity guard was added after the successful real live pass. Four failing tests became green. A read-only replay of actual seed source using previously measured final values confirms the current placement accepts all four Hugo/Nuxt short/long-title repairs. No new build, GitHub write or Claude call was made for this replay.",
+    "postgresql": "No new PostgreSQL run in this content-only phase. Previous real concurrency/recovery evidence remains separate."
+  },
+  "limitations": [
+    "Raw previews remain noindex; projected scores do not prove production deployment or search-engine indexing.",
+    "Only the selected duplicate pair is completed; the larger duplicate groups retain 31/32 impacted pages on Hugo and 27/28 on Nuxt.",
+    "Multiple-title repair has a positive live control only on Hugo. Its absence on Nuxt is not proof of Nuxt repair capability for that family.",
+    "Valid literal Hugo raw_head and Nuxt useHead fixtures are exercised. Arbitrary customer, shared, computed, dynamic, escaped or suffix-bearing templates and other frameworks are not universally certified.",
+    "The final syntax-ambiguity guard is covered by unit tests and read-only replay, not a new live end-to-end run after that guard was added.",
+    "The preexisting reciprocal language-code collision remains unresolved without ownership arbitration.",
+    "This phase does not certify customer billing, scheduling, live billable batches, partial-content-write crash recovery or all remaining repairable anomaly families. No agent deployment or client write occurred."
+  ],
+  "remaining_release_checks": [
+    "Exercise larger duplicate groups through bounded successive batches, including caps, cached values, partial failures and final recrawl, without declaring global completion from selected occurrences.",
+    "Exercise a real billable batch and partial-content-write recovery with GitHub and isolated PostgreSQL together.",
+    "Complete remaining explicitly tracked repairable-family coverage and customer-template acceptance limits.",
+    "Validate deployment startup/schedulers, capacity, receipt retention and onboarding/billing lifecycle, then supervise pilots."
+  ],
+  "artifacts_windows": {
+    "initial_not_ready": "C:/Users/Caron/AppData/Local/Temp/seo-title-live-20261004-a_6yxejg",
+    "initial_wrong_head_value": "C:/Users/Caron/AppData/Local/Temp/seo-title-final-live-20261004-42950lui",
+    "unverified_wrong_placement": "C:/Users/Caron/AppData/Local/Temp/seo-title-hugo-fixed-live-20261004-5wh5711p",
+    "live_and_counterchecks": "C:/Users/Caron/AppData/Local/Temp/seo-title-placement-fixed-live-20261004-b4y8sj_g",
+    "prior_full_suite": "C:/Users/Caron/AppData/Local/Temp/seo-title-placement-fixed-full-20261004-0nzw1cot",
+    "final_full_suite": "C:/Users/Caron/AppData/Local/Temp/seo-title-placement-syntax-full-20261004-5pcc5sb7",
+    "final_targeted_suite": "C:/Users/Caron/AppData/Local/Temp/seo-title-placement-syntax-targeted-20261004-d2a7azal",
+    "duplicate_values_red": "C:/Users/Caron/AppData/Local/Temp/seo-duplicate-red-20261004-dfce28_q",
+    "syntax_placement_red": "C:/Users/Caron/AppData/Local/Temp/seo-title-placement-syntax-red-20261004-8ncjvyx4"
+  }
+}

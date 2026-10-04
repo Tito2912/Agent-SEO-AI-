@@ -20943,6 +20943,16 @@ def _find_head_text_value(content: str, field: str) -> tuple[str, str] | None:
     key = (field or "").strip().lower()
     if key not in _HEAD_TEXT_QUOTED_RE:
         return None
+    # Hugo's raw_head contains the actual head, independently of its front-matter title.
+    block = re.match(r"\A\ufeff?\+\+\+[ \t]*\r?\n(.*?)\r?\n\+\+\+[ \t]*(?:\r?\n|\Z)", content or "", re.S)
+    if block:
+        try:
+            raw_head = tomllib.loads(block.group(1)).get("raw_head")
+        except tomllib.TOMLDecodeError:
+            return None
+        if raw_head:
+            found = _find_head_text_in_markup(raw_head, key) if isinstance(raw_head, str) else None
+            return found if found and found[0] in block.group(1) and content.count(found[0]) == 1 else None
     # In a full HTML document the markup is the ONLY place to look. The attribute patterns below
     # would happily match a link's `title="tooltip"` and rewrite that instead of the page title —
     # the same shape as every other loose match this project has been bitten by.
@@ -21422,11 +21432,17 @@ def _rewrite_length_values(
             continue
         if len(rendered) < declared:
             continue  # truncated sample
+        found = _find_head_text_value(new, kind)
+        if not found:
+            continue
+        literal, current = found
         target, affix = rendered, 0
-        if rendered not in new:
-            target, affix = _value_without_template_affix(rendered, new)
+        if rendered not in current:
+            target, affix = _value_without_template_affix(rendered, current)
             if not target:
                 continue  # the value is assembled rather than written — AI fallback takes over
+        if literal.count(target) != 1:
+            continue  # the text also names syntax; the bounded replacement would be ambiguous
         value = _length_value_for_page(current=target, kind=kind, url=str(url),
                                        site_name=site_name, model_override=model_override,
                                        affix_len=affix)
@@ -21439,10 +21455,10 @@ def _rewrite_length_values(
             continue
         if _new_len > ceiling or _new_len < _LENGTH_FLOORS[kind]:
             continue
-        safe = _safe_inline_replacement(new, target, value)
+        safe = _safe_inline_replacement(literal, target, value)
         if safe is None:
             continue
-        new = new.replace(target, safe, 1)
+        new = new.replace(literal, literal.replace(target, safe, 1), 1)
         count += 1
     return new, count
 
@@ -27173,6 +27189,7 @@ def _deep_patch_issue_files(
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
     site_og_image: str = "",
     index: dict[str, Any] | None = None,
+    pages: list[dict[str, Any]] | None = None,
     # La langue que le crawl mesure sur le SITE. Un fichier partage ne peut pas la contredire :
     # voir `_keep_site_lang`. Vide = le crawl n'a pas su la dire, et le garde-fou reste inerte.
     site_lang: str = "",
@@ -27368,9 +27385,40 @@ def _deep_patch_issue_files(
     # deja posees. Seules ces familles paient la serialisation.
     _champ_unique = _WRITE_A_VALUE_KEYS.get(
         issue_key.removesuffix("_not_indexable").removesuffix("_indexable"))
+    _valeurs_conservees: set[str] = set()
+    if _champ_unique and pages:
+        _urls_cibles = {_verification_url(url) for path, url in _url_par_fichier.items() if path in targets}
+        if index is None:
+            _urls_cibles = {_verification_url(url) for url in impacted_urls}
+        _field = "title" if _champ_unique == "title" else "meta_description"
+        for _page in pages:
+            _own = _verification_url(str(_page.get("final_url") or _page.get("url") or ""))
+            _noindex = any("noindex" in re.split(r"[,;\s:]+", str(_page.get(k) or "").lower())
+                           for k in ("meta_robots", "x_robots_tag"))
+            if (_own and _own not in _urls_cibles and _page.get("status_code") == 200
+                    and "html" in str(_page.get("content_type") or "").lower()
+                    and not _page.get("error") and not _page.get("blocked_by_host") and not _noindex
+                    and _verification_url(str(_page.get("canonical") or _own)) == _own):
+                _value = str(_page.get(_field) or "").strip()
+                if _value:
+                    _valeurs_conservees.add(_value)
+
+    def _valeur_unique(content: str) -> str:
+        found = _find_head_text_value(content, _champ_unique) if _champ_unique else None
+        if not found:
+            return ""
+        literal, value = found
+        return (html.unescape(value) if literal.lstrip().startswith("<") else _js_unescape(value)).strip()
+
+    for _path, _state in file_state.items():
+        if _path not in targets:
+            _value = _valeur_unique(str(_state.get("content") or ""))
+            if _value:
+                _valeurs_conservees.add(_value)
+    _valeurs_committees = set(_valeurs_conservees)
     if targets and _champ_unique:
         prepared = []
-        _interdits: list[str] = []
+        _interdits: list[str] = sorted(_valeurs_conservees)
         _plancher = _LENGTH_FLOORS[_length_kind(_champ_unique)]
 
         def _valeur_ecrite(res: tuple[str, str | None, str, dict[str, Any] | None]) -> str:
@@ -27385,10 +27433,9 @@ def _deep_patch_issue_files(
             _p = res[3]
             if not _p or not _p.get("patched_content"):
                 return ""
-            _contenu, _ = _escape_quotes_in_written_values(
-                str(_p["patched_content"]), res[1] or "")
-            _lu = _find_head_text_value(_contenu, _champ_unique)
-            return _lu[1] if _lu else ""
+            _contenu, _ = _enforce_length_ceilings(str(_p["patched_content"]), res[1] or "")
+            _contenu, _ = _escape_quotes_in_written_values(_contenu, res[1] or "")
+            return _valeur_unique(_contenu)
 
         def _pourquoi_refuser(val: str, deja: list[str]) -> str:
             if not val:
@@ -27398,7 +27445,7 @@ def _deep_patch_issue_files(
                         "recree exactement le doublon qu'on corrige. Ecris-en une autre, propre "
                         "a cette page — et ne recopie pas l'Open Graph de la page, qui est "
                         "generique.")
-            if _rendered_len(val) < _plancher:
+            if len(val) < _plancher:
                 # On dit ce qui MANQUE, pas seulement le seuil. Mesure du 17/09/2026 : prevenu
                 # que le minimum etait 100, le modele a rendu 88 caracteres deux fois de suite —
                 # « le minimum est 100 » se lit comme un ordre de grandeur, « il manque 12
@@ -27406,7 +27453,7 @@ def _deep_patch_issue_files(
                 return ("La valeur que tu viens de proposer fait %d caracteres : c'est TROP "
                         "COURT, le minimum est %d — il manque au moins %d caracteres. Reecris-la "
                         "plus riche, en ajoutant du contenu propre a CETTE page."
-                        % (_rendered_len(val), _plancher, _plancher - _rendered_len(val)))
+                        % (len(val), _plancher, _plancher - len(val)))
             return ""
 
         for _path in targets:
@@ -27427,7 +27474,8 @@ def _deep_patch_issue_files(
                 _val2 = _valeur_ecrite(_res2)
                 # On garde la meilleure tentative, pas la derniere : un modele qui s'eloigne
                 # ne doit pas faire perdre ce qu'il avait deja approche.
-                if _val2 and _rendered_len(_val2) > _rendered_len(_val or ""):
+                if _val2 and (not _pourquoi_refuser(_val2, _interdits)
+                              or len(_val2) > len(_val or "")):
                     _res, _val = _res2, _val2
             # GARANTIE DURE, qui ne demande rien a personne : on ne commit jamais une valeur
             # deja ecrite dans ce passage. Mesure du 14/09/2026, next-app : prevenu que la
@@ -27453,9 +27501,9 @@ def _deep_patch_issue_files(
             _bloquant = ""
             if _val and _val in _interdits:
                 _bloquant = "valeur deja posee sur une autre page de ce lot"
-            elif _val and _avait_une_valeur and _rendered_len(_val) < _plancher:
+            elif _val and _avait_une_valeur and len(_val) < _plancher:
                 _bloquant = ("valeur de %d caracteres pour un plancher de %d, apres relance"
-                             % (_rendered_len(_val), _plancher))
+                             % (len(_val), _plancher))
             if _bloquant:
                 logger.info("[correction] %s: %s — %s, fichier laisse tel quel",
                             issue_key, _path, _bloquant)
@@ -27597,6 +27645,12 @@ def _deep_patch_issue_files(
             logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _refus)
             skipped.append(path)
             continue
+        # Source guards can change the value after preparation; check the actual PUT content.
+        _valeur_finale = _valeur_unique(new_content)
+        if _valeur_finale and _valeur_finale in _valeurs_committees:
+            logger.warning("[correction] %s: %s refuse : valeur finale deja presente", issue_key, path)
+            skipped.append(path)
+            continue
         _default = (x_default_targets or {}).get(_url_par_fichier.get(path, ""), "")
         if issue_key in _X_DEFAULT_KEYS and _default and not _x_default_matches_target(new_content, _default):
             logger.warning("[correction] %s: %s refuse : x-default doit reprendre %s", issue_key, path, _default)
@@ -27619,6 +27673,8 @@ def _deep_patch_issue_files(
             new_sha = str((put_resp.get("content") or {}).get("sha") or "")
             file_state[path] = {"sha": new_sha, "content": new_content}
             patched.append(path)
+            if _valeur_finale:
+                _valeurs_committees.add(_valeur_finale)
             # LE MODELE N'A ECRIT QUE SI SA SORTIE DIFFERE DE L'ORIGINAL. Le drapeau
             # `deterministic` ne repond qu'a « le reecriveur a-t-il trouve quelque chose ? » ;
             # son absence etait lue comme « c'est le modele qui a ecrit », ce qui est faux des
@@ -27715,7 +27771,7 @@ def _apply_prepared_issue_fix(
                 canonical_masters=prep.get("canonical_masters"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
-                site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages))
+                site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)
     for path in config_changes:
         if path not in all_paths:
             all_paths.append(path)

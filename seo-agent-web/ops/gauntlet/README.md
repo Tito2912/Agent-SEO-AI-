@@ -104,6 +104,11 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   sur Hugo/Nuxt. Un mauvais choix de destination detecte au premier passage est conserve ;
   le correcteur reprend maintenant les choix explicites du groupe observe et les verifie
   avant ecriture. Suite finale : 2 927 tests reussis, sans deploiement de l'agent.
+- `validation-titres-et-doublons-2026-10-04.json` : titres manquants, multiples et hors
+  limites, puis paire de titres/descriptions dupliques, Claude reel sur Hugo/Nuxt. Les bugs
+  de lecture et de placement du `raw_head` Hugo sont corriges ; les autres occurrences des
+  grands groupes de doublons restent hors perimetre. Huit PR fermees sans fusion et
+  2 980 tests reussis sur SQLite temporaire ; aucune correction deployee sur l'agent.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -236,6 +241,61 @@ codes de langue possibles, ni les autres familles IA, ni une indexation en produ
 La [documentation Google](https://developers.google.com/search/docs/specialty/international/localized-versions)
 decrit le role de destination de repli de `x-default` ; le choix concret du client reste
 une decision de son groupe de traductions.
+
+## Titres Et Doublons
+
+`title_cycle.py` exerce les titres manquants, multiples et hors limites, puis les titres
+et descriptions dupliques des seules pages `duplicate-a` et `duplicate-b`, sur Hugo/Nuxt.
+Il part des commits verifies du banc hreflang IA. Les deux branches QA restent separees
+de `main`, les PR sont des brouillons et se ferment sans fusion. Les temoins titre
+sont propres a chaque stack : une famille absente reste explicitement
+`not_exercised`, notamment les balises titre multiples que Nuxt deduplique deja au build.
+
+```sh
+python ops/gauntlet/title_cycle.py --workdir <dossier-vide-temporaire> --ai-max-calls 12
+```
+
+Le budget est de 12 appels Claude au maximum par stack, relances et erreurs comprises.
+Le ciblage n'utilise pas d'IA ; une famille doit modifier exactement ses fichiers resolus
+par les routes, avec au plus six fichiers. Le banc travaille dans une base SQLite
+temporaire, sans comptes clients ni schedulers. Les familles sont appliquees sur une
+meme branche de correction : la verification porte sur ce passage cumulatif, pas sur
+chaque famille executee independamment. `usage.json` conserve les tokens et le cout
+estime par le code, pas une facture du fournisseur, sans cles ni prompts.
+
+Les familles de longueur regroupent les titres trop courts et trop longs, y compris
+le temoin natif `noindex`, dont la directive doit rester intacte. Le HTML doit contenir
+une seule balise titre de 15 a 70 caracteres ou une seule description de 100 a 160
+caracteres. Ce sont les seuils du crawler, pas une recommandation universelle de longueur.
+Les deux pages du groupe selectionne doivent devenir distinctes aussi des autres pages
+observees. Canonical, robots, langues, hreflang, titres de contenu, images sociales et
+metadonnees non ciblees sont controles sur toutes les pages HTML revisitees. Une copie
+sociale du texte cible peut suivre exactement sa nouvelle valeur ; les autres changements
+ne sont pas acceptes. Une mesure absente, un temoin absent ou une page perdue ne vaut pas
+une correction, meme quand un compteur tombe a zero.
+
+Les gros groupes de doublons volontaires du parcours ne sont PAS tous reecrits par ce
+budget : `unselected_impacted_urls` conserve chaque occurrence hors de la paire. Un
+resultat `measured_selected_occurrences` certifie uniquement les controles selectionnes ;
+les compteurs globaux des doublons restent `partial`. Les rapports bruts, le sitemap
+servi, les rapports contrefactuels et les limites de la projection sont conserves comme
+dans le banc hreflang. Les previews restent reellement `noindex`, sans preuve d'indexation.
+
+Le statut Netlify doit correspondre au domaine de la PR exacte, pas a une ancienne PR
+au meme SHA. Le banc attend aussi que la racine et le sitemap XML soient servis avant
+le crawl : un statut vert au meme SHA ne garantit pas une nouvelle preview disponible.
+Les premiers essais interrompus restent conserves : preview pas encore prete,
+lecture du titre front matter au lieu de `raw_head`, puis remplacement de la premiere
+copie du texte dans le fichier sans corriger la balise effectivement servie.
+
+Le correcteur lit desormais le head litteral d'un `raw_head` TOML valide, avec abstention
+si son literal source est ambigu. Le raccourcisseur remplace le literal du champ cible
+plutot qu'une copie quelconque du texte et refuse un texte qui nomme aussi sa syntaxe.
+L'anti-doublon compare les valeurs apres
+raccourcissement et echappement, prefere une relance conforme meme plus courte, reserve
+les valeurs observees hors des fichiers cibles ainsi que celles du cache du lot, puis
+reverifie le contenu final avant PUT GitHub. Cela ne remplace pas un build et un recrawl
+pour des templates clients arbitraires, dynamiques ou comportant des suffixes.
 
 ## Reconstruire les pages
 
