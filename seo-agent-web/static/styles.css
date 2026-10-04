@@ -276,10 +276,10 @@ a:hover { text-decoration: underline; }
   top: 0;
   z-index: 10;
 }
-.crumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.crumbs { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; flex-wrap: wrap; }
 .crumb-sep     { color: var(--muted); }
 .crumb-current { color: var(--text); font-weight: 600; }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 /* ═══════════════════════════════════════════════════════
    Content
@@ -2049,6 +2049,40 @@ dialog.modal .tab-btn.active {
 /* ═══════════════════════════════════════════════════════
    Responsive
 ═══════════════════════════════════════════════════════ */
+/* MOBILE (04/10/2026). Le menu : la barre laterale devient un tiroir ouvert par « Menu ». */
+.nav-mobile-case, .nav-mobile-voile, .nav-mobile-bouton { display: none; }
+@media (max-width: 980px) {
+  .nav-mobile-bouton {
+    display: inline-flex; flex-direction: row; align-items: center; gap: 7px; flex-shrink: 0;
+    min-height: 38px; padding: 0 12px; border: 1px solid var(--border-2); border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; user-select: none;
+  }
+  .nav-mobile-bouton svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; }
+  .nav-mobile-case:checked ~ .sidebar {
+    display: flex; position: fixed; inset: 0 auto 0 0; width: min(290px, 86vw); height: 100%;
+    z-index: 60; box-shadow: var(--shadow-lg); overflow-y: auto;
+  }
+  .nav-mobile-case:checked ~ .nav-mobile-voile {
+    display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0, 0, 0, .55);
+  }
+  .topbar { flex-wrap: wrap; gap: 10px 12px; padding: 10px 14px; justify-content: flex-start; }
+  .topbar-actions { margin-left: auto; }
+  .content { padding: 16px 14px 88px; }
+  /* Un element de grille ne descend pas sous sa largeur de contenu sans min-width: 0 : un
+     historique de crawls ou un tableau elargissait toute la page (669 px pour 360 a l'ecran). */
+  .grid > *, .grid.two > *, .grid.three > * { min-width: 0; }
+  /* Titre de carte + boutons : « Tout corriger en 1 PR » sortait de 140 px a droite. */
+  .card-title-row { flex-wrap: wrap; }
+  .card-title-row > div, .card-title-actions { flex-wrap: wrap; min-width: 0; }
+}
+@media (max-width: 640px) {
+  .topbar-actions { width: 100%; margin-left: 0; }
+  .topbar-actions .btn { flex: 1 1 auto; justify-content: center; }
+}
+/* Des cibles a la taille d'un doigt, sur les ecrans tactiles seulement. */
+@media (pointer: coarse) {
+  .btn, button.btn, a.btn, .src-btn, select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]) { min-height: 38px; }
+}
 @media (max-width: 980px) {
   .sidebar    { display: none; }
   .grid       { grid-template-columns: 1fr; }
@@ -2285,6 +2319,20 @@ dialog.modal .tab-btn.active {
   .ov-hero { gap: 24px; }
   .ov-body { grid-template-columns: 1fr; }
   .ov-body-main { border-right: none; border-bottom: 1px solid var(--border); }
+}
+/* Telephone (04/10/2026) : la jauge garde le nom du site a cote d'elle, mais les chiffres
+   prennent toute la largeur, en deux colonnes, au lieu de s'empiler dans 190 px. */
+@media (max-width: 640px) {
+  .ov-hero { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 0 16px; padding: 20px 0 24px; align-items: center; }
+  .ov-info { display: contents; }
+  .ov-ring-wrap { width: 88px; height: 88px; grid-row: span 2; }
+  .ov-ring-n { font-size: 22px; }
+  .ov-blocked { order: -1; grid-column: 1 / -1; }
+  .ov-info h1 { font-size: 22px; align-self: end; overflow-wrap: anywhere; }
+  .ov-info-sub { margin-bottom: 0; align-self: start; overflow-wrap: anywhere; }
+  .ov-kpis { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; margin-top: 20px; }
+  .ov-kpi, .ov-kpi + .ov-kpi { padding: 0; border-left: none; }
+  .ov-hero-breakdown { grid-column: 1 / -1; margin-top: 22px; }
 }
 
 /* URL breakdown inline bars */

@@ -6,14 +6,19 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}Noyaru{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=23" />
+    <link rel="stylesheet" href="/static/styles.css?v=24" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
     <div class="app">
+      {#- MENU MOBILE (04/10/2026) : sous 980 px la barre laterale etait masquee sans rien pour la
+          remplacer — aucun acces a l'abonnement, aux comptes ni aux sections d'un projet. Une case
+          a cocher (sans JavaScript) l'ouvre en tiroir ; le voile la referme. -#}
+      <input type="checkbox" id="nav-mobile" class="nav-mobile-case" aria-hidden="true" tabindex="-1" autocomplete="off" />
+      <label for="nav-mobile" class="nav-mobile-voile" aria-hidden="true"></label>
 
       <!-- SIDEBAR -->
-      <aside class="sidebar">
+      <aside class="sidebar" id="barre-laterale">
 
         <!-- Brand -->
         {# Logo du pack Noyaru (28/09/2026) : symbole ET lettrage, prevus pour un fond sombre. Il
@@ -222,6 +227,11 @@
       <!-- MAIN -->
       <main class="main">
         <header class="topbar">
+          <label for="nav-mobile" class="nav-mobile-bouton" role="button" tabindex="0" aria-controls="barre-laterale"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <span>Menu</span>
+          </label>
           <div class="crumbs">
             {% block crumbs %}
               <a href="/">Projets</a>
