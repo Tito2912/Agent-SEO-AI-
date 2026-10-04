@@ -135,6 +135,11 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   Trois PR fermees sans fusion, dont le premier temoin incomplet refuse, zero IA
   et 3 240 tests reussis. Des defauts de liens et de langues deviennent visibles
   avec les pages accessibles/auto-canoniques ; leurs hausses restent explicites.
+- `validation-destinations-canonical-2026-10-04.json` : canonical vers une
+  redirection et vers une page non canonique, sans IA sur le depot statique.
+  Les deux temoins sont corriges, les 49 routes HTML et la redirection legitime
+  restent intactes. Une occurrence preexistante non selectionnee demeure ;
+  les lots mixtes conservent les refus et les paires valides separement.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -571,6 +576,56 @@ empreintes et les limites. Un nouvel inventaire temporaire compte 19 familles
 sans reference nommee, contre 22 avant ce bilan. Cela inclut une preuve de
 refus et une famille exposee mais non reparee : ce n'est pas un score de reussite.
 L'ancien inventaire suivi dans Git est conserve comme photographie historique.
+
+## Destinations Canonical
+
+`canonical_target_cycle.py` exerce `canonical_points_to_redirect` et
+`non_canonical_page_specified_as_canonical_one` sur le seul depot fixture statique.
+Cinq nouvelles pages QA portent deux temoins, un relais, une destination et
+un controle. Huit PUT de setup et deux PUT correctifs sont permis sur les seules
+branches QA. Aucune ecriture sur `main`, aucune IA, aucune fusion.
+
+```sh
+python ops/gauntlet/canonical_target_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+La preuve doit etre corroboree par les pages observees : canonical actuel de
+la source, relation de redirection ou canonical declare par l'ancienne cible,
+destination HTML 200 sans erreur, blocage ou noindex, sans canonical vers
+une autre adresse. Les identites d'URL restent exactes. Une absence de preuve
+ne permet plus une correction guidee uniquement par une consigne IA.
+Les fichiers ambigus ou non resolus ne declenchent pas de ciblage IA non plus.
+
+Les paires de canonical sont rattachees a leur propre fichier. Une valeur
+appartenant a une autre page n'est pas reecrite. Pour une URL relative, le
+protocole et le domaine de la source restent significatifs : une destination
+sur un autre domaine est ecrite en absolu, pas en chemin relatif local.
+Les parametres, fragments, hreflang et liens ordinaires sont conserves.
+Dans un lot mixte, les paires verifiees restent corrigeables et les fichiers
+des autres pages sont explicitement ecartes, sans PUT ni appel modele.
+
+Les deux builds portent leur SHA exact ; les deux crawls observent les memes
+49 routes HTML. Le canonical vers la 301 passe de 1 a 0. La famille non canonique
+passe de 2 a 1 : le nouveau temoin passe bien de 1 a 0, mais l'ancien cas
+`/gauntlet/canonical-other` reste hors de ce lot. Il n'est pas compte comme repare.
+La vraie redirection 301 est utile et reste en place, ainsi que `_redirects`.
+Aucun compteur n'augmente dans cette comparaison controlee.
+
+Une contre-verification relit les PR fermees sans fusion, leurs builds, les
+sources et le HTML servi. Les corps HTTP bruts conservent le noindex et la
+barre Netlify ; seul son fragment exact est distingue du source. Le parseur
+HTML confirme les canonical et les alternate. Les propositions du correcteur
+final sont capturees sans ecriture distante et egalent les commits mesures.
+Le refus d'une destination noindex et les lots mixtes sont testes separement.
+Une assertion initiale exigeant a tort un refus global malgre d'autres paires
+valides est corrigee dans la mesure, sans changement du comportement produit.
+
+Le bilan `validation-destinations-canonical-2026-10-04.json` distingue cette
+preuve statique des templates partages, URL calculees et autres schemas de
+canonical. La projection des previews reste contrefactuelle, pas une preuve
+d'indexabilite en production. Le nouvel inventaire temporaire compte 17 familles
+sans reference nommee ; l'ancien inventaire Git reste une photographie historique,
+et les references ne deviennent jamais un score de corrections certifiees.
 
 ## Reconstruire les pages
 

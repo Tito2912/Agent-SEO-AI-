@@ -19979,6 +19979,56 @@ def _issue_url_pairs(issue_block: Any) -> list[dict[str, str]]:
     return out[:40]
 
 
+def _verified_canonical_pairs(issue_key: str, pairs: list[dict[str, str]],
+                              pages: list[dict[str, Any]] | None) -> tuple[list[dict[str, str]], list[str]]:
+    """Keep only source/destination relationships corroborated by observed HTML."""
+    requested: dict[str, list[dict[str, Any]]] = {}
+    observed: dict[str, list[dict[str, Any]]] = {}
+    for row in pages or []:
+        if not isinstance(row, dict):
+            continue
+        original = _verification_url(row.get("url"))
+        final = _verification_url(row.get("final_url") or row.get("url"))
+        if original:
+            requested.setdefault(original, []).append(row)
+        for identity in {original, final} - {""}:
+            observed.setdefault(identity, []).append(row)
+
+    def healthy(row: dict[str, Any]) -> bool:
+        return (type(row.get("status_code")) is int and row["status_code"] == 200
+                and not row.get("error") and not row.get("blocked_by_host")
+                and str(row.get("content_type") or "").split(";", 1)[0].strip().lower()
+                in {"text/html", "application/xhtml+xml"})
+
+    def at(rows: list[dict[str, Any]], identity: str) -> bool:
+        return bool(rows) and all(healthy(r) and _verification_url(r.get("final_url") or r.get("url")) == identity
+                                  for r in rows)
+
+    accepted, refused, seen = [], [], set()
+    for pair in pairs:
+        source, old, new = (_verification_url(pair.get(k)) for k in ("page", "from", "to"))
+        sources, destinations, previous = observed.get(source, []), observed.get(new, []), requested.get(old, [])
+        source_known = at(sources, source) and all(_verification_url(r.get("canonical")) == old for r in sources)
+        destination_known = at(destinations, new) and all(
+            (not r.get("canonical") or _verification_url(r["canonical"]) == new)
+            and not any("noindex" in re.split(r"[,;\s:]+", str(r.get(k) or "").lower())
+                        for k in ("meta_robots", "x_robots_tag")) for r in destinations)
+        if issue_key == "canonical_points_to_redirect":
+            relation_known = at(previous, new) and all(
+                any(type(c) is int and 300 <= c < 400 for c in r.get("redirect_statuses") or [])
+                for r in previous)
+        else:
+            relation_known = at(previous, old) and all(_verification_url(r.get("canonical")) == new for r in previous)
+        if not all((source, old, new)) or old == new or not (source_known and destination_known and relation_known):
+            refused.append(str(pair.get("page") or "page inconnue") + " : relation canonical ou destination non verifiee")
+            continue
+        identity = (source, old, new)
+        if identity not in seen:
+            accepted.append(pair)
+            seen.add(identity)
+    return accepted, refused
+
+
 # Issues whose fix needs the page's CURRENT state (which tag is absent, what an invalid or
 # duplicated value contains). Unlike url_pairs there is no mechanical rewrite here — the AI
 # still writes the tag — but it works from the real page instead of a generic instruction.
@@ -25265,10 +25315,15 @@ def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]], *,
             except ValueError:
                 pass
             else:
-                if source.scheme and source.netloc and destination.scheme and destination.netloc:
+                page = urlsplit(_verification_url(pair.get("page")))
+                origin = lambda p: (p.scheme, p.netloc.lower())  # noqa: E731
+                if (source.scheme and source.netloc and destination.scheme and destination.netloc
+                        and (not pair.get("page") or origin(source) == origin(page))):
                     # A relative canonical retains query/fragment identity, not just its path.
-                    variants.append(tuple(urlunsplit(("", "", p.path or "/", p.query, p.fragment))
-                                          for p in (source, destination)))
+                    relative_old = urlunsplit(("", "", source.path or "/", source.query, source.fragment))
+                    relative_new = (urlunsplit(("", "", destination.path or "/", destination.query, destination.fragment))
+                                    if not pair.get("page") or origin(destination) == origin(page) else to)
+                    variants.append((relative_old, relative_new))
         else:
             variants = _url_value_variants(pair)
         for old, new in variants:
@@ -26806,6 +26861,14 @@ def _prepare_issue_fix(
             hint = _build_url_pair_hint(url_pairs)
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
             out["evidence"] = [p["from"] for p in url_pairs]
+    if issue_key in {"canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"}:
+        url_pairs, refusals = _verified_canonical_pairs(issue_key, url_pairs, pages)
+        out["canonical_refusals"] = refusals
+        if url_pairs:
+            out["canonical_pairs"] = list(url_pairs)
+        else:
+            out["refusal"] = ("Aucune relation canonical vers une destination HTML 200 canonique et indexable verifiee. "
+                              + "; ".join(refusals[:4]))
     if issues and issue_key in _PAGE_VALUE_KEYS:
         values = _issue_page_values(block)
         if values:
@@ -27070,7 +27133,7 @@ def _prepare_issue_fix(
             "non_canonical_page_specified_as_canonical_one", "canonical_from_https_to_http"}
         out["link_rewriter"] = (lambda raw, _p=url_pairs, _c=_canonical_only:
                                 _rewrite_head_url_values(raw, _p, canonical_only=_c))
-        out["rewriter_ai_fallback"] = True
+        out["rewriter_ai_fallback"] = "canonical_pairs" not in out
     elif content_pairs:
         out["link_rewriter"] = lambda raw, _p=content_pairs: _rewrite_redirect_links(raw, _p)  # noqa: E731
     elif issue_key in _MIXED_CONTENT_KEYS:
@@ -27376,7 +27439,7 @@ def _deep_patch_issue_files(
             all_paths=all_paths, index=index, issue_key=issue_key, issue_label=issue_label,
             impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
             wants_page_targeting=link_rewriter is not None, page_side=page_side,
-            allow_ai=allow_ai_targeting, ecartes=ecartes,
+            allow_ai=allow_ai_targeting and canonical_pairs is None, ecartes=ecartes,
         )
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     _idiom = repo_index.stack_idiom_hint(index) if index else ""

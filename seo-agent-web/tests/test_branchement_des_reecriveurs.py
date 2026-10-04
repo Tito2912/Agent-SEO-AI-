@@ -174,10 +174,17 @@ SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED
 
 
 def _prepare(cle: str, bloc: dict) -> dict:
+    pages = list(PAGES)
+    if cle in {"canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"}:
+        pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": S + "/a"},
+                 {"url": S + "/a", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"},
+                 {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
+        if cle == "canonical_points_to_redirect":
+            pages[1].update(final_url=S + "/b", redirect_statuses=[301])
     return m._prepare_issue_fix(
         issue_key=cle, issues={cle: dict(bloc)}, impacted=[P], all_paths=list(CHEMINS),
         site_name=SITE, owner="o", repo_name="r", branch="main", token="",
-        pages=list(PAGES))
+        pages=pages)
 
 
 def _emises() -> "set[str]":

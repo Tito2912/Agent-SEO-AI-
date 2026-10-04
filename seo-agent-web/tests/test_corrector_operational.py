@@ -203,6 +203,28 @@ def test_shared_dead_canonical_keeps_each_page_and_its_alternates(harness, mode)
     assert not result["ai_calls"] and state["charges"] == [0]
 
 
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("key", ["canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"])
+def test_verified_canonical_destination_is_mechanical_in_both_endpoints(harness, mode, key):
+    state, run = harness
+    old, destination = URL + "old", URL + "master"
+    source = HTML.replace('rel="canonical" href="' + URL, 'rel="canonical" href="' + old).replace(
+        "</head>", '<link rel="alternate" hreflang="fr" href="' + old + '" /></head>')
+    rows = [{"url": URL, "status_code": 200, "content_type": "text/html", "canonical": old},
+            {"url": old, "status_code": 200, "content_type": "text/html", "canonical": destination},
+            {"url": destination, "status_code": 200, "content_type": "text/html", "canonical": destination}]
+    if key == "canonical_points_to_redirect":
+        rows[1].update(final_url=destination, redirect_statuses=[301])
+    state.update(key=key, sources={"index.html": source, "control.html": source}, report={"pages": rows,
+        "issues": {key: {"count": 1, "examples": [URL], "evidence": {"kind": "url_pairs", "items": [
+            {"page": URL, "from": old, "to": destination}]}}}})
+    result = run(mode)
+    assert result["status"] == 200 and set(result["written"]) == {"index.html"}
+    assert result["written"]["index.html"] == source.replace('rel="canonical" href="' + old,
+                                                              'rel="canonical" href="' + destination)
+    assert not result["ai_calls"] and state["charges"] == [0]
+
+
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
     state, run = harness
     keys = ["missing_title", "missing_meta_description", "missing_alt_text", "viewport_not_set",
