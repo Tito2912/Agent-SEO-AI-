@@ -139,7 +139,7 @@ def test_bulk_matches_individual_on_mechanical_cases(harness, case, key):
     state["key"] = key
     state["sources"] = {"index.html": HTML, "robots.txt": "User-agent: *\nAllow: /\n"}
     block = {"count": 1, "examples": [URL]}
-    page = {"url": URL, "final_url": URL, "status_code": 200, "canonical": URL, "lang": "fr"}
+    page = {"url": URL, "final_url": URL, "status_code": 200, "content_type": "text/html", "canonical": URL, "lang": "fr"}
     if case == "http_links_control":
         state["sources"]["index.html"] = HTML.replace("</body>", '<a href="http://site.test/contact">Contact</a></body>')
     elif case == "og_url":

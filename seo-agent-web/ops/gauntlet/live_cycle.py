@@ -270,20 +270,23 @@ def preview_status(statuses: list[dict], *, preview_host: str = "") -> str:
     return str(latest.get("state", "pending"))
 
 
-def wait_build(m, repo: str, token: str, number: int, *, timeout: int = 600) -> dict:
+def wait_build(m, repo: str, token: str, number: int, *, timeout: int = 600,
+               expected_sha: str = "") -> dict:
     deadline = time.monotonic() + timeout
     while True:
         pr = m._github_api_get(m._github_api_path("repos", OWNER, repo, "pulls", str(number)),
                               token=token)
         sha = pr["head"]["sha"]
-        status = m._github_api_get(m._github_api_path("repos", OWNER, repo, "commits", sha, "status"),
-                                  token=token)
-        verdict = preview_status(status.get("statuses", []),
-                                 preview_host=f"deploy-preview-{number}--{repo}.netlify.app")
-        if verdict == "success":
-            return {"head_sha": sha, "deploy_preview_status": verdict}
-        if verdict in {"failure", "error"}:
-            raise RuntimeError(f"Netlify build failed for {repo} PR #{number} ({sha}).")
+        # A just-updated PR can still expose its previous head and successful build.
+        if not expected_sha or sha == expected_sha:
+            status = m._github_api_get(m._github_api_path("repos", OWNER, repo, "commits", sha, "status"),
+                                      token=token)
+            verdict = preview_status(status.get("statuses", []),
+                                     preview_host=f"deploy-preview-{number}--{repo}.netlify.app")
+            if verdict == "success":
+                return {"head_sha": sha, "deploy_preview_status": verdict}
+            if verdict in {"failure", "error"}:
+                raise RuntimeError(f"Netlify build failed for {repo} PR #{number} ({sha}).")
         if time.monotonic() >= deadline:
             raise TimeoutError(f"Netlify preview timeout for {repo} PR #{number}.")
         time.sleep(10)

@@ -25800,17 +25800,19 @@ def _urls_indexables_du_rapport(pages: list[dict[str, Any]] | None) -> list[str]
     for page in pages or []:
         if not isinstance(page, dict):
             continue
-        if int(page.get("status_code") or 0) != 200 or page.get("error"):
+        if (type(page.get("status_code")) is not int or page["status_code"] != 200
+                or page.get("error") or page.get("blocked_by_host")
+                or "html" not in str(page.get("content_type") or "").lower()):
             continue
         for champ in ("meta_robots", "x_robots_tag"):
             if "noindex" in str(page.get(champ) or "").lower():
                 break
         else:
-            url = str(page.get("final_url") or page.get("url") or "").strip()
+            url = _verification_url(str(page.get("final_url") or page.get("url") or ""))
             canonical = str(page.get("canonical") or "").strip()
-            if canonical and _norm_url_for_match(canonical) != _norm_url_for_match(url):
+            if canonical and _verification_url(canonical) != url:
                 continue
-            if url.lower().startswith(("http://", "https://")) and url not in out:
+            if url and url not in out:
                 out.append(url)
     return sorted(out)
 
@@ -25961,9 +25963,29 @@ def _deep_reparer_le_sitemap(
     try:
         fd = _github_api_get(_github_content_api_path(owner, repo_name, cible),
                              token=token, params={"ref": fix_branch}, timeout_s=20)
-        sha = str(fd.get("sha") or "")
+        sha = fd.get("sha")
+        encoded = fd.get("content")
+        known_empty = fd.get("encoding") == "base64" and type(fd.get("size")) is int and fd["size"] == 0
+        if (not isinstance(sha, str) or not sha or not isinstance(encoded, str)
+                or (not encoded and not known_empty) or fd.get("encoding") not in (None, "base64")):
+            return [], ["Le contenu actuel de `%s` ou son SHA est inconnu : aucune reecriture." % cible]
+        current = _b64.b64decode("".join(encoded.split()), validate=True)
     except Exception as exc:
         return [], ["Lecture de %s impossible : %s" % (cible, exc)]
+    from defusedxml import ElementTree as ET
+    from defusedxml.common import DefusedXmlException
+
+    # The crawl may be stale: prove the current blob is still malformed before replacing it.
+    try:
+        ET.fromstring(current)
+    except ET.ParseError:
+        pass
+    except DefusedXmlException:
+        return [], ["Le XML actuel de `%s` est refuse par le parseur securise : verification manuelle." % cible]
+    except (LookupError, ValueError):
+        return [], ["L'encodage du XML actuel de `%s` est inconnu ou non pris en charge : aucune reecriture." % cible]
+    else:
+        return [], ["`%s` est deja un XML lisible : le rapport est perime ou le probleme vient du service." % cible]
     try:
         _github_api_put(
             _github_content_api_path(owner, repo_name, cible), token=token,

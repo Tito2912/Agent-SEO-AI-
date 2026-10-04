@@ -127,6 +127,48 @@ def test_current_preview_status_must_match_the_exact_https_host():
     assert bench.preview_status([{**status, "target_url": "https://" + host}], preview_host=host) == "success"
 
 
+@pytest.mark.parametrize("old_state", ["success", "failure", "error"])
+def test_expected_sha_ignores_stale_pr_head_and_its_build(monkeypatch, old_state):
+    heads = iter(("old-head", "expected-head", "expected-head"))
+    queried = []
+    states = iter(("pending", "success"))
+
+    def get(path, **kw):
+        if "pulls" in path:
+            return {"head": {"sha": next(heads)}}
+        queried.append(path)
+        state = old_state if "old-head" in path else next(states)
+        return {"statuses": [{"id": 1, "context": "netlify/site/deploy-preview", "state": state,
+                              "target_url": "https://deploy-preview-10--fixture.netlify.app"}]}
+
+    module = SimpleNamespace(_github_api_get=get, _github_api_path=lambda *p: "/".join(p))
+    monkeypatch.setattr(bench.time, "sleep", lambda _: None)
+    result = bench.wait_build(module, "fixture", "unused", 10, expected_sha="expected-head")
+    assert result == {"head_sha": "expected-head", "deploy_preview_status": "success"}
+    assert len(queried) == 2 and all("expected-head" in path for path in queried)
+
+
+def test_stale_pr_head_times_out_without_inspecting_its_status():
+    def get(path, **kw):
+        assert "pulls" in path
+        return {"head": {"sha": "old-head"}}
+
+    module = SimpleNamespace(_github_api_get=get, _github_api_path=lambda *p: "/".join(p))
+    with pytest.raises(TimeoutError):
+        bench.wait_build(module, "fixture", "unused", 10, expected_sha="expected-head", timeout=0)
+
+
+def test_expected_sha_build_failure_remains_a_failure():
+    def get(path, **kw):
+        return ({"head": {"sha": "expected-head"}} if "pulls" in path else {"statuses": [
+            {"id": 1, "context": "netlify/site/deploy-preview", "state": "failure",
+             "target_url": "https://deploy-preview-10--fixture.netlify.app"}]})
+
+    module = SimpleNamespace(_github_api_get=get, _github_api_path=lambda *p: "/".join(p))
+    with pytest.raises(RuntimeError):
+        bench.wait_build(module, "fixture", "unused", 10, expected_sha="expected-head", timeout=0)
+
+
 def test_failed_build_closes_all_created_prs_without_merging(tmp_path, monkeypatch):
     work = tmp_path / "astro"
     work.mkdir()

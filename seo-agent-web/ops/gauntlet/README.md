@@ -124,6 +124,11 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   independamment par Node. Un repli borne vers le fichier complet recupere deux editions
   ciblees invalides. Huit titres et huit descriptions valides apres build et recrawl,
   sans regression observee ; 3 122 tests reussis et deux PR fermees sans fusion.
+- `validation-sitemaps-et-inventaire-2026-10-04.json` : creation et reparation du sitemap,
+  recrawl intermediaire puis declaration robots, sans IA sur le depot statique. Deux
+  cycles de 44 routes HTML et 37 entrees, quatre PR fermees sans fusion et 3 200 tests
+  reussis. Un defaut hreflang preexistant revele par le sitemap reste explicite ;
+  l'inventaire des 66 familles ne les certifie pas toutes.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -458,6 +463,57 @@ Les PR 52/53 sont des brouillons fermes sans fusion, `main` est inchange.
 Les 19 autres titres et 20 autres descriptions en doublon restent hors perimetre.
 Le bilan `validation-nuxt-syntaxe-2026-10-04.json` ne certifie ni tous les groupes,
 ni tous les templates clients, ni le demarrage ou le deploiement de l'agent.
+
+## Sitemaps Et Inventaire
+
+`sitemap_lifecycle_cycle.py` exerce deux temoins sur le seul depot fixture statique :
+un sitemap absent, puis un XML volontairement casse. Chaque cas part du `main`
+inspecte sur une nouvelle branche QA. Seuls `sitemap.xml` et `robots.txt` peuvent
+etre ecrits ; une suppression du sitemap sur le temoin absent est reservee au setup.
+Le budget modele est zero, les donnees et la base sont temporaires, les deux PR
+par cas sont des brouillons fermes sans fusion et `main` reste inchange.
+
+```sh
+python ops/gauntlet/sitemap_lifecycle_cycle.py --workdir <dossier-vide-temporaire>
+python ops/gauntlet/acceptance_inventory.py --output <nouveau-fichier-json>
+```
+
+La selection des URL exige maintenant une reponse HTML 200 observee, sans erreur,
+blocage ni noindex, et un canonical absent ou identique a l'URL finale. Le schema,
+la casse du chemin et des parametres et le slash final restent significatifs.
+La reparation relit le blob courant : un XML redevenu lisible, un contenu inconnu
+ou un XML refuse par le parseur securise ne sont jamais ecrases. Un encodage
+inconnu est refuse avec une note, sans exception non geree. Un blob vide
+explicitement confirme reste reparable ; le SHA courant protege le PUT concurrent.
+
+Apres la correction du sitemap, un vrai recrawl intermediaire fournit le rapport
+qui debloque sa declaration dans robots. Les trois builds doivent porter le SHA
+exact attendu. La mise a jour differee du head de PR ne permet plus d'accepter le
+build du commit precedent. Le premier essai arrete avant le crawl final reste
+conserve comme echec, avec ses PR fermees, et ne vaut pas preuve de correction.
+
+Les crawls bruts restent noindex. Le rapport controle projette seulement le host
+fixture et le header injecte exact ; son XML vient du corps HTTP sauvegarde de
+LA preview concernee. Le crawler brut peut suivre la declaration robots absolue
+vers le domaine de production : cette decouverte n'est pas presentee comme celle
+du sitemap modifie de la preview. L'indexation de production n'est pas certifiee.
+
+Les deux nouveaux cycles observent 44 routes HTML preservees et 37 entrees de
+sitemap admissibles. Le XML et la declaration robots sont corriges, mais le
+compteur `missing_reciprocal_hreflang` passe de 0 a 1. Une contre-verification
+sans ecriture reproduit cette hausse sur le HTML INCHANGE du temoin avec le
+nouveau sitemap : ce defaut preexistant devient mesurable, il n'est pas repare
+par cette passe. Il n'y a donc pas de verdict global "tous les compteurs verts".
+
+`acceptance-inventory-2026-10-04.json` recense 203 cles et 66 familles declarees
+corrigibles, dont 65 exposees ; `missing_canonical` est un ancien cas non propose.
+Les variantes d'indexabilite sont groupees, pas les familles editoriales distinctes.
+Une reference nommee dans un bilan, meme en echec, reste une simple reference,
+JAMAIS une certification. Apres ce bilan, 22 familles n'ont aucune reference
+nommee exacte ; ce chiffre ne prouve pas qu'elles sont toutes non testees.
+L'inventaire garde les empreintes des bilans et la certification clients a faux.
+Le bilan `validation-sitemaps-et-inventaire-2026-10-04.json` distingue les preuves
+de ce perimetre statique des sitemaps generes, multisitemaps et templates clients.
 
 ## Reconstruire les pages
 
