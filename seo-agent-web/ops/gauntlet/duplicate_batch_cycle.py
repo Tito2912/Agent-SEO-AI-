@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ops.gauntlet import title_cycle as titles  # noqa: E402
 from ops.gauntlet.ai_budget import ClaudeBudget  # noqa: E402
+from ops.gauntlet.source_capture import FixtureSourceCapture  # noqa: E402
 
 live = titles.live
 SEEDS = {
@@ -221,10 +222,11 @@ def cycle(m, token: str, stack: str, work: Path, budget: ClaudeBudget) -> dict:
                                             "expected_files": sorted(allowed_paths), "batches": []}
         branch(corrected, seed["sha"])
         writable_branch = corrected
-        for key, scope in result["repair_scopes"].items():
-            result["stage"] = key
-            apply_family(m, token, stack, before, production, baseline, corrected, paths, index, state, key, scope)
-            live.save(work / "cycle.json", result)
+        with FixtureSourceCapture(m, work / "source_diagnostics", stack=stack, paths=allowed_paths):
+            for key, scope in result["repair_scopes"].items():
+                result["stage"] = key
+                apply_family(m, token, stack, before, production, baseline, corrected, paths, index, state, key, scope)
+                live.save(work / "cycle.json", result)
         result["final_sources"] = source_checks(m, state, sorted(allowed_paths), KEYS[-1])["sources"]
         result["file_writes"] = writes
         result["stage"] = "correction_preview"

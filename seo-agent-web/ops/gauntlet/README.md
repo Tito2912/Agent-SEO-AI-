@@ -120,6 +120,10 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   corrige et rejoue sur ces sources ; une nouvelle passe refuse ensuite deux propositions
   de titres au controle de syntaxe. Les echecs sont conserves, pas comptes comme reussites.
   Suite finale : 3 088 tests reussis ; quatre PR fermees sans fusion, sans deploiement de l'agent.
+- `validation-nuxt-syntaxe-2026-10-04.json` : propositions Nuxt capturees et controlees
+  independamment par Node. Un repli borne vers le fichier complet recupere deux editions
+  ciblees invalides. Huit titres et huit descriptions valides apres build et recrawl,
+  sans regression observee ; 3 122 tests reussis et deux PR fermees sans fusion.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -420,11 +424,40 @@ Ce nouvel essai Nuxt est lui aussi un ECHEC : sur six propositions de titres, qu
 fichiers sont ecrits et deux sont refuses par le controle de litteraux non termines
 (`mixed-css`, `mixed-js`). Les deux fichiers refuses restent inchanges. Le banc
 s'arrete avant les descriptions et avant une PR de correction ; le temoin est ferme.
-Les propositions refusees n'ont pas ete conservees, donc leur cause precise n'est
-PAS diagnostiquee. Il reste a les capturer dans un environnement isole, examiner
-les refus, puis repasser build et recrawl Nuxt. On ne contourne pas le refus pour
-obtenir un statut vert. Le bilan detaille distingue le succes Hugo, le rejeu de
-source du correctif de plafond et ces deux essais Nuxt non verifies sur HTML corrige.
+Pour cet essai historique, les propositions refusees n'avaient pas ete conservees :
+leur cause precise n'etait donc pas diagnostiquee. Le bilan precedent garde cet echec,
+le succes Hugo et le rejeu de source du correctif de plafond distincts.
+
+## Diagnostic Nuxt
+
+Le passage suivant conserve les sources fixtures d'origine, les propositions ciblees,
+le repli complet eventuel et le contenu soumis au refus dans `source_diagnostics/`.
+Les empreintes et refus sont dans `sources.json`, sans cles, prompts ni reponses brutes
+du fournisseur. La capture est limitee aux huit sources Hugo/Nuxt du banc et a leur
+hostname fixture ; les fonctions temporaires sont restaurees meme en cas d'exception.
+
+Une sonde Claude sans ecriture distante a reproduit une ligne `title` avec un guillemet
+orphelin apres sa virgule. Node confirme que la proposition etait deja invalide avant
+les garde-fous : le refus protegeait correctement le depot. Une edition qui trouve son
+texte n'est donc pas necessairement une edition syntaxiquement valable.
+
+Le generateur essaie maintenant les reparations mecaniques existantes sur une copie
+de la proposition ciblee. Si le parseur de litteraux de tete constate encore une erreur
+certaine, il utilise UNE fois le repli complet existant, a partir du fichier original
+et avec ce diagnostic. Une expression que le parseur ne sait pas lire n'est pas un
+motif de relance. Les refus finaux, plafonds et controles d'unicite avant PUT restent
+obligatoires ; une seconde proposition invalide n'est pas acceptee pour finir le lot.
+
+Le nouveau cycle reel a reproduit ce defaut sur `mixed-css` et `mixed-js`, puis livre
+seize commits sur huit fichiers apres deux replis complets. Les builds exacts et le
+recrawl des 43 pages passent : huit doublons cibles de chaque champ deviennent zero,
+sans regression observee. Les descriptions finales font 147 a 159 caracteres.
+La contre-verification sans IA relit GitHub, les sources et le HTML ; Node valide les
+huit scripts et les templates restent identiques au commit de depart.
+Les PR 52/53 sont des brouillons fermes sans fusion, `main` est inchange.
+Les 19 autres titres et 20 autres descriptions en doublon restent hors perimetre.
+Le bilan `validation-nuxt-syntaxe-2026-10-04.json` ne certifie ni tous les groupes,
+ni tous les templates clients, ni le demarrage ou le deploiement de l'agent.
 
 ## Reconstruire les pages
 

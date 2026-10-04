@@ -4945,10 +4945,22 @@ def _openai_generate_file_patch(
         file_path=file_path, file_content=file_content, issue_key=issue_key, issue_label=issue_label,
         url=url, site_name=site_name, occurrences_hint=occurrences_hint, model_override=model_override,
     )
-    # 1) Targeted edits (cheap: small output). 2) Full-file fallback (reliable) if no edit applied.
+    # Matched edits may still leave broken syntax (Nuxt: an orphan quote after the title).
+    # Preview the existing mechanical repairs before spending the single full-file fallback.
     res = _patch_via_edits(**kw)
     if res.get("no_change"):
         return res
+    if res.get("patched_content"):
+        preview, _ = _escape_quotes_in_written_values(str(res["patched_content"]), file_content)
+        preview, _ = _drop_duplicate_object_keys(preview, file_content)
+        preview, _ = _add_missing_object_commas(preview)
+        syntax_error = _object_literal_error(preview, file_path)
+        if syntax_error:
+            kw["occurrences_hint"] += (
+                " L'edition ciblee precedente laisse une erreur de syntaxe certaine : " + syntax_error
+                + ". Repars du fichier ORIGINAL fourni et rends un fichier complet valide, "
+                "sans guillemet orphelin ni modification etrangere a l'anomalie.")
+            res = {}
     if not res.get("patched_content"):
         res = _patch_via_full_file(**kw)
     if res.get("no_change"):

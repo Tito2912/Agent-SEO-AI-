@@ -184,6 +184,7 @@ def fake_cycle(tmp_path, monkeypatch, *, bad_write="", changed_seed=False, bad_p
         _github_api_path=m._github_api_path, _github_ref_api_path=m._github_ref_api_path,
         _github_content_api_path=m._github_content_api_path, _github_branch_allowed=m._github_branch_allowed,
         _ouvrir_pull_request=pr, _prepare_issue_fix=lambda **kw: {"refusal": None},
+        _openai_generate_file_patch=lambda **kw: {},
         _find_head_text_value=m._find_head_text_value, _refus_de_format=m._refus_de_format,
         _js_unescape=m._js_unescape, html=m.html)
 
