@@ -7,6 +7,7 @@ import io
 import hashlib
 import hmac
 import html
+from html.parser import HTMLParser
 import importlib.util
 import ipaddress
 import json
@@ -24787,18 +24788,18 @@ _HREFLANG_OBJECT_FIELD_RE = re.compile(
     r"""\b(?P<key>rel|hreflang|href)\s*:\s*(?P<quote>['"])(?P<value>(?:\\.|(?!(?P=quote))[^\\\n])*)(?P=quote)""")
 
 
-def _add_reciprocal_hreflang_objects(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
-    """Clone only standalone, literal Nuxt link objects; computed/spread objects abstain."""
+def _literal_usehead_link_bounds(content: str) -> tuple[int, int] | None:
+    """Locate one parseable useHead link array without interpreting computed JavaScript."""
     heads = list(re.finditer(r"(?m)^[ \t]*useHead\(\s*(\{)", content))
     if len(heads) != 1:
-        return content, 0
+        return None
     try:
         tokens = _tokens(content, heads[0].start(1))
         _, error = _parse_literal(tokens, 0)
         if error:
-            return content, 0
+            return None
     except (_Doubt, IndexError):
-        return content, 0
+        return None
     depth, bounds = 0, []
     for index, (kind, value, offset) in enumerate(tokens):
         if depth == 1 and kind == "KEY" and value == "link" and tokens[index + 2][0] == "[":
@@ -24809,7 +24810,13 @@ def _add_reciprocal_hreflang_objects(content: str, items: list[dict[str, str]]) 
                     bounds.append((tokens[index + 2][2], tokens[end][2]))
                     break
         depth += (kind in {"{", "["}) - (kind in {"}", "]"})
-    if len(bounds) != 1:
+    return bounds[0] if len(bounds) == 1 else None
+
+
+def _add_reciprocal_hreflang_objects(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
+    """Clone only standalone, literal Nuxt link objects; computed/spread objects abstain."""
+    bounds = _literal_usehead_link_bounds(content)
+    if bounds is None:
         return content, 0
     models = []
     present = set()
@@ -24817,7 +24824,7 @@ def _add_reciprocal_hreflang_objects(content: str, items: list[dict[str, str]]) 
         obj = match.group("object")
         if "hreflang" not in obj:
             continue
-        if not bounds[0][0] < match.start() < match.end() < bounds[0][1]:
+        if not bounds[0] < match.start() < match.end() < bounds[1]:
             return content, 0
         fields = list(_HREFLANG_OBJECT_FIELD_RE.finditer(obj))
         if len(fields) != 3 or {f.group("key") for f in fields} != {"rel", "hreflang", "href"}:
@@ -25432,6 +25439,85 @@ _SERVED_LANG_STACK_IDIOM: dict[str, str] = {
 
 
 _X_DEFAULT_KEYS = _with_indexability_variants({"x_default_hreflang_missing"})
+
+
+def _x_default_group_targets(
+    impacted: list[str], pages: list[dict[str, Any]] | None,
+) -> tuple[dict[str, str], list[str]]:
+    """Reuse explicit, consistent defaults from directly linked translations, never site-wide guesses."""
+    rows = {_verification_url(str(p.get("final_url") or p.get("url") or "")): p
+            for p in (pages or []) if isinstance(p, dict)}
+    targets, conflicts = {}, []
+
+    def usable(row: dict[str, Any]) -> bool:
+        noindex = any("noindex" in re.split(r"[,;\s:]+", str(row.get(k) or "").lower())
+                      for k in ("meta_robots", "x_robots_tag"))
+        own = _verification_url(str(row.get("final_url") or row.get("url") or ""))
+        return bool(own and row.get("status_code") == 200 and "html" in str(row.get("content_type") or "").lower()
+                    and not row.get("error") and not row.get("blocked_by_host") and not noindex
+                    and _verification_url(str(row.get("canonical") or own)) == own)
+
+    for url in impacted:
+        source = rows.get(_verification_url(url), {})
+        if not usable(source):
+            continue
+        language_map = source.get("hreflang") or {}
+        if not isinstance(language_map, dict):
+            continue
+        defaults = set()
+        for code, href in language_map.items():
+            if str(code).strip().lower() == "x-default" or _verification_url(str(href)) == _verification_url(url):
+                continue
+            peer = rows.get(_verification_url(str(href)), {})
+            if not usable(peer) or not isinstance(peer.get("hreflang"), dict):
+                continue
+            if not any(_verification_url(str(h)) == _verification_url(url)
+                       for c, h in peer["hreflang"].items() if str(c).strip().lower() != "x-default"):
+                continue
+            for c, destination in peer["hreflang"].items():
+                if str(c).strip().lower() == "x-default":
+                    value = _verification_url(str(destination))
+                    if value:
+                        defaults.add(value)
+        if len(defaults) > 1:
+            conflicts.append(url)
+        elif defaults:
+            destination = next(iter(defaults))
+            target = rows.get(destination)
+            if target is not None and not usable(target):
+                conflicts.append(url)
+            elif target is not None:
+                targets[url] = destination
+    return targets, conflicts
+
+
+def _x_default_matches_target(content: str, expected: str) -> bool:
+    """Verify a single literal default before a per-page AI patch reaches GitHub."""
+    urls: list[str] = []
+
+    class Defaults(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            if tag == "link" and "alternate" in str(values.get("rel") or "").lower().split():
+                if str(values.get("hreflang") or "").lower() == "x-default":
+                    keys = [k for k, _ in attrs if k in {"href", "rel", "hreflang"}]
+                    urls.append(str(values.get("href") or "") if len(keys) == len(set(keys)) else "")
+
+    parser = Defaults()
+    parser.feed(content)
+    bounds = _literal_usehead_link_bounds(content)
+    if bounds:
+        for match in _HREFLANG_OBJECT_LINE_RE.finditer(content):
+            if bounds[0] < match.start() < match.end() < bounds[1]:
+                fields = list(_HREFLANG_OBJECT_FIELD_RE.finditer(match.group("object")))
+                values = {f.group("key"): _js_unescape(f.group("value")) for f in fields}
+                if values.get("rel") == "alternate" and values.get("hreflang") == "x-default":
+                    literal = len(fields) == 3 and not any(
+                        re.search(r"""\\(?!['"\\/])""", f.group("value")) for f in fields)
+                    urls.append(values.get("href", "") if literal else "")
+    return len(urls) == 1 and bool(_verification_url(expected)) and _verification_url(urls[0]) == _verification_url(expected)
+
+
 _SERVED_LANG_FIX_KEYS = _with_indexability_variants({"served_html_lang_mismatch"})
 _HTML_LANG_FIXER_PATH = "scripts/fix-html-lang.mjs"
 _HTML_LANG_FIXER_CALL = "node scripts/fix-html-lang.mjs"
@@ -26403,6 +26489,7 @@ def _prepare_issue_fix(
         # Le conflit vit-il dans la PAGE plutot que dans le sitemap ? Voir la branche hreflang.
         "page_side": False,
         "targets_override": None,
+        "x_default_targets": {},
         # A bounded rewriter is not necessarily a model-free one. See `_deep_patch_issue_files`.
         "rewriter_is_ai": False,
         "loop_paths": [],
@@ -26471,6 +26558,19 @@ def _prepare_issue_fix(
     if issue_key in _HREFLANG_HINTS:
         out["extra_hint"] = _HREFLANG_HINTS[issue_key]
     if issue_key in _X_DEFAULT_KEYS:
+        _defaults, _conflicts = _x_default_group_targets(impacted, pages)
+        if _conflicts:
+            out["refusal"] = ("Les traductions du groupe indiquent des x-default contradictoires "
+                              "ou une destination observee non indexable ; un arbitrage est necessaire : "
+                              + ", ".join(_conflicts))
+            return out
+        out["x_default_targets"] = _defaults
+        if _defaults:
+            out["extra_hint"] += (
+                "\nChoix DEJA explicites sur les autres traductions du MEME groupe. "
+                "Reprends ces URL EXACTEMENT pour les pages nommees, sans choisir leur propre URL "
+                "ni la racine du site a leur place :\n"
+                + "\n".join(f"- {url} : x-default = {target}" for url, target in _defaults.items()))
         # x-default belongs to the GROUP, not to a page. Where one helper builds the alternates
         # for every page, the flagged pages are the data and that helper is the fix — editing a
         # handful of them would touch files that do not control the languages map at all.
@@ -27068,6 +27168,7 @@ def _deep_patch_issue_files(
     # valeur ecrite est VERIFIEE et non pas seulement suggeree au modele : voir
     # `_duplicate_canonical_masters` et la boucle canonique du 16/09/2026.
     canonical_masters: dict[str, str] | None = None,
+    x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
     site_og_image: str = "",
@@ -27496,6 +27597,11 @@ def _deep_patch_issue_files(
             logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _refus)
             skipped.append(path)
             continue
+        _default = (x_default_targets or {}).get(_url_par_fichier.get(path, ""), "")
+        if issue_key in _X_DEFAULT_KEYS and _default and not _x_default_matches_target(new_content, _default):
+            logger.warning("[correction] %s: %s refuse : x-default doit reprendre %s", issue_key, path, _default)
+            skipped.append(path)
+            continue
         try:
             put_body: dict[str, Any] = {
                 "message": f"fix(seo): {issue_key} — {path}\n\nGenerated by Noyaru",
@@ -27607,6 +27713,7 @@ def _apply_prepared_issue_fix(
                 rewriter_ai_fallback=prep["rewriter_ai_fallback"],
                 rewriter_is_ai=bool(prep["rewriter_is_ai"]),
                 canonical_masters=prep.get("canonical_masters"),
+                x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages))
     for path in config_changes:
