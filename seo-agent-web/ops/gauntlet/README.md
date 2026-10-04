@@ -109,6 +109,11 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   de lecture et de placement du `raw_head` Hugo sont corriges ; les autres occurrences des
   grands groupes de doublons restent hors perimetre. Huit PR fermees sans fusion et
   2 980 tests reussis sur SQLite temporaire ; aucune correction deployee sur l'agent.
+- `validation-lots-et-reprise-2026-10-04.json` : lots simules de 14 pages, echec partiel,
+  puis trois fichiers GitHub reels avec PostgreSQL temporaire. Une branche interrompue
+  est retenue explicitement, une PR et un debit retrouves sans doublon. Le resume du lot
+  reste disponible apres reprise ; un ancien recu sans resume reste de perimetre inconnu.
+  Suite finale : 3 014 tests reussis ; 159 tests reussis sur PostgreSQL reel, ensuite arrete.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -296,6 +301,59 @@ raccourcissement et echappement, prefere une relance conforme meme plus courte, 
 les valeurs observees hors des fichiers cibles ainsi que celles du cache du lot, puis
 reverifie le contenu final avant PUT GitHub. Cela ne remplace pas un build et un recrawl
 pour des templates clients arbitraires, dynamiques ou comportant des suffixes.
+
+## Lots Et Reprise
+
+`bulk_recovery_cycle.py` exerce la vraie route `github/bulk-fix` avec session, CSRF,
+compte synthetique non administrateur, quota de trois corrections et journal durable.
+Le fournisseur est simule : cela ne reteste pas la qualite des reponses Claude.
+Les effets GitHub, arrets de processus et deconnexions du relais sont reels.
+
+```sh
+python ops/gauntlet/bulk_recovery_cycle.py --workdir <dossier-vide-temporaire>
+python ops/gauntlet/bulk_recovery_cycle.py --workdir <autre-dossier-vide> --postgres-url postgresql+psycopg://fixture@127.0.0.1:<port>/seo_corrector_test_bulk_<id>
+```
+
+Sans URL, SQLite reste strictement dans le dossier du banc. PostgreSQL doit etre une
+base NEUVE sans tables, dans un cluster temporaire sur loopback, sous le role `fixture`,
+sans mot de passe ni options de connexion. Une base existante ou un autre hote est refuse
+avant les effets GitHub. Le banc n'initialise ni ne demarre un service PostgreSQL.
+
+Le relais n'autorise que `pployeraffiliation-a11y/noyaru-stack-static-html`, deux nouvelles
+branches `seo-fix/bulk-*` depuis le `main` capture, quatre commits de contenu exact et une
+PR brouillon. Les seuls fichiers modifiables sont `gauntlet/duplicate-a.html`,
+`gauntlet/duplicate-b.html` et `gauntlet/missing-title.html`. Toute fusion, suppression,
+ecriture de `main` ou autre contenu est refusee. Le rapport limite a ces deux familles
+est synthetique et derive des sources capturees, pas d'un nouveau crawl de production.
+
+Le premier worker est tue apres l'acceptation du premier fichier, avant son accuse de
+reception et avant la PR. La relance repond 503 sans modele, debit ou nouvelle ecriture.
+L'operateur doit reconnaitre les changements non publies et conserver explicitement la
+branche avant de liberer la demande impayee. Cela ne constitue PAS une reprise automatique
+des fichiers restants : le lot suivant repart du `main` intact, sur une autre branche.
+
+Le lot suivant ecrit ses trois fichiers. Le relais perd ensuite la reponse a la PR acceptee.
+Un nouveau worker retrouve la PR et est arrete apres la transaction du debit de trois
+unites. Le processus suivant restaure les deux taches de famille et la trace du commit
+exact, sans nouveaux fichiers, appel modele ou debit. Une nouvelle demande identique est
+refusee avec 409. La PR est fermee sans fusion ; les deux branches restent conservables.
+
+Le resume du lot est maintenant fige dans l'intention PR, avant publication : compteurs,
+resultats, plafonds, fichiers exclus et drapeau partiel restent presents a la reprise.
+Une ancienne intention sans resume exploitable retourne `partial` et `scope_unknown` ;
+elle ne certifie pas un perimetre complet. Le resume ne peut pas ecraser l'identite verifiee
+de la PR. Aucun nouveau schema de base n'est requis.
+
+Les tests unitaires exercent aussi 14 pages en trois lots plafonnes a 6, 6 et 2 fichiers,
+avec une collision contre une valeur d'un lot precedent. Les valeurs observees et celles
+du cache restent reservees, MEME sur les fichiers selectionnes : un refus de source ou un
+PUT en echec ne doit pas permettre de reprendre leur ancienne valeur sur une autre page.
+Cela n'est pas une preuve de reecriture Claude de tous les grands groupes des fixtures.
+
+Le bilan conserve les recus et empreintes, ainsi que la contre-verification independante
+de la PR fermee, du `main`, des trois contenus, de la branche partielle et du seul debit
+PostgreSQL. Le quota interne est teste ; aucun paiement Stripe, site client, deploiement,
+build ou recrawl SEO n'est exerce dans cette passe.
 
 ## Reconstruire les pages
 

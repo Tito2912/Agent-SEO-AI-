@@ -156,11 +156,14 @@ def unchanged_preview_source(database, *, project, file, patched, original):
     return True
 
 
-def pr_intent(*, owner, repo, base, tasks, billable, motif):
+def pr_intent(*, owner, repo, base, tasks, billable, motif, result=None):
     op = current()
     if op:
-        op.save(pr_intent={"owner": owner, "repo": repo, "base": base,
-                           "tasks": tasks, "billable": billable, "motif": motif})
+        intent = {"owner": owner, "repo": repo, "base": base,
+                  "tasks": tasks, "billable": billable, "motif": motif}
+        if result is not None:
+            intent["result"] = result
+        op.save(pr_intent=intent)
 
 
 def pr_received(data):

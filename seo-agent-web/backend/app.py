@@ -3833,7 +3833,15 @@ def _recover_correction(op, *, user, slug):
         pr = matches[0]
         correction_journal.pr_received(pr)
         _correction_charge(user, int(intent["billable"]), slug=slug, motif=intent["motif"])
-        result = {"ok": True, "recovered": True, "pr_url": pr["html_url"], "pr_number": pr["number"],
+        summary = {}
+        if op.row.action == "api_github_bulk_fix":
+            saved = intent.get("result")
+            if isinstance(saved, dict) and type(saved.get("partial")) is bool:
+                summary = {k: saved[k] for k in ("fixed_count", "total_count", "results", "partial",
+                           "not_attempted", "not_attempted_count", "not_attempted_issues_count", "cap") if k in saved}
+            else:
+                summary = {"partial": True, "scope_unknown": True}
+        result = {**summary, "ok": True, "recovered": True, "pr_url": pr["html_url"], "pr_number": pr["number"],
                   "branch": data["branch"], "merged": bool(pr.get("merged_at")), "verification": "en_attente"}
         _restore_correction_tasks(op, result)
         response = JSONResponse(result)
@@ -19101,7 +19109,14 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     pr_lines.append("\nCorrection générée par [Noyaru](https://noyaru.com).")
     pr_body = "\n".join(pr_lines)
 
-    correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=ai_billable, motif="bulk",
+    bulk_result = {
+        "fixed_count": len(fixed_results), "total_count": len(results), "results": results,
+        "partial": any(not r.get("ok") or r.get("partial") for r in results),
+        "not_attempted": _ecartes[:12], "not_attempted_count": len(_ecartes),
+        "not_attempted_issues_count": sum(bool(r.get("not_attempted")) for r in results),
+        "cap": {"files": _plafond.plan, "left": _plafond.restant},
+    }
+    correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=ai_billable, motif="bulk", result=bulk_result,
         tasks=[{"issue_key": r["issue_key"], "issue_label": r["issue_label"], "url": r["url"], "crawl_ts": ts,
                 "note": {"bulk": True, "deep": True, "files": r.get("files", []),
                          "verification_urls": r.get("verification_urls", []),
@@ -19176,13 +19191,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         "ok": True,
         "pr_url": pr_url, "pr_number": pr_number,
         "branch": fix_branch, "merged": _merged, "verification": "en_attente",
-        "fixed_count": len(fixed_results),
-        "total_count": len(results),
-        "results": results,
-        "partial": any(not r.get("ok") or r.get("partial") for r in results),
-        "not_attempted": _ecartes[:12], "not_attempted_count": len(_ecartes),
-        "not_attempted_issues_count": sum(bool(r.get("not_attempted")) for r in results),
-        "cap": {"files": _plafond.plan, "left": _plafond.restant},
+        **bulk_result,
     })
 
 
@@ -27387,15 +27396,13 @@ def _deep_patch_issue_files(
         issue_key.removesuffix("_not_indexable").removesuffix("_indexable"))
     _valeurs_conservees: set[str] = set()
     if _champ_unique and pages:
-        _urls_cibles = {_verification_url(url) for path, url in _url_par_fichier.items() if path in targets}
-        if index is None:
-            _urls_cibles = {_verification_url(url) for url in impacted_urls}
         _field = "title" if _champ_unique == "title" else "meta_description"
         for _page in pages:
             _own = _verification_url(str(_page.get("final_url") or _page.get("url") or ""))
             _noindex = any("noindex" in re.split(r"[,;\s:]+", str(_page.get(k) or "").lower())
                            for k in ("meta_robots", "x_robots_tag"))
-            if (_own and _own not in _urls_cibles and _page.get("status_code") == 200
+            # A selected page may fail later; its old value must remain reserved too.
+            if (_own and _page.get("status_code") == 200
                     and "html" in str(_page.get("content_type") or "").lower()
                     and not _page.get("error") and not _page.get("blocked_by_host") and not _noindex
                     and _verification_url(str(_page.get("canonical") or _own)) == _own):
@@ -27411,10 +27418,9 @@ def _deep_patch_issue_files(
         return (html.unescape(value) if literal.lstrip().startswith("<") else _js_unescape(value)).strip()
 
     for _path, _state in file_state.items():
-        if _path not in targets:
-            _value = _valeur_unique(str(_state.get("content") or ""))
-            if _value:
-                _valeurs_conservees.add(_value)
+        _value = _valeur_unique(str(_state.get("content") or ""))
+        if _value:
+            _valeurs_conservees.add(_value)
     _valeurs_committees = set(_valeurs_conservees)
     if targets and _champ_unique:
         prepared = []

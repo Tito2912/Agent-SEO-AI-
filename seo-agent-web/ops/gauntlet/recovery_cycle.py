@@ -139,8 +139,9 @@ class FaultRelay:
                     self.prs.append({"number": pr["number"], "url": pr["html_url"], "branch": body["head"]})
                     event["pr_number"] = pr["number"]
                 self.events.append(event)
-                fault = self.fault if response.status_code == 201 else ""
-                if (fault == "hold_branch" and kind == "branch") or (fault == "drop_pr" and kind == "pr"):
+                fault = self.fault if response.status_code in {200, 201} else ""
+                if ((fault == "hold_branch" and kind == "branch") or (fault == "drop_pr" and kind == "pr")
+                        or (fault == "hold_file" and kind == "file")):
                     self.fault = ""
                     event["fault"] = fault
                 else:
@@ -148,7 +149,7 @@ class FaultRelay:
                 self.checkpoint()
             if fault:
                 self.accepted.set()
-                if fault == "hold_branch":
+                if fault in {"hold_branch", "hold_file"}:
                     self.release.wait(60)
                 handler.close_connection = True
                 try:
