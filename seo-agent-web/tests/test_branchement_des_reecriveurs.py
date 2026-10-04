@@ -176,6 +176,9 @@ SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED
 
 def _prepare(cle: str, bloc: dict) -> dict:
     pages = list(PAGES)
+    if cle == "canonical_from_https_to_http":
+        bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": "http://exemple.fr/", "to": P}]})
+        pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": "http://exemple.fr/"}]
     if cle in {"canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"}:
         pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": S + "/a"},
                  {"url": S + "/a", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"},

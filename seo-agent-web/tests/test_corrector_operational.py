@@ -264,6 +264,54 @@ def test_verified_canonical_destination_is_mechanical_in_both_endpoints(harness,
     assert not result["ai_calls"] and state["charges"] == [0]
 
 
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("observed", [True, False])
+def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints(harness, mode, observed):
+    state, run = harness
+    key, old, destination = "canonical_from_https_to_http", "http://master.test/target", "https://master.test/target"
+    source = HTML.replace('rel="canonical" href="' + URL, 'rel="canonical" href="' + old)
+    rows = [{"url": URL, "status_code": 200, "content_type": "text/html", "canonical": old}]
+    if observed:
+        rows.append({"url": destination, "status_code": 200, "content_type": "text/html", "canonical": destination})
+    state.update(key=key, sources={"index.html": source, "control.html": source}, report={"pages": rows,
+        "issues": {key: {"count": 1, "examples": [URL], "evidence": {"kind": "url_pairs", "items": [
+            {"page": URL, "from": old, "to": destination}]}}}})
+    result = run(mode)
+    assert not result["ai_calls"]
+    if observed:
+        assert result["status"] == 200 and set(result["written"]) == {"index.html"}
+        assert result["written"]["index.html"] == source.replace('rel="canonical" href="' + old,
+                                                                  'rel="canonical" href="' + destination)
+        assert state["charges"] == [0]
+    else:
+        assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
+        assert result["response"].get("error") or result["response"].get("results")
+
+
+@pytest.mark.parametrize("mode", ["url_preview", "github_preview", "github_confirm"])
+def test_https_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode):
+    state, _ = harness
+    key = "canonical_from_https_to_http"
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Use the evidence-bound deep fixer, never a cached or model-generated canonical preview")
+
+    for name in ("_github_api_get", "_github_api_post", "_github_api_put", "_openai_url_fix",
+                 "_openai_generate_file_patch", "_correction_gate", "_correction_charge"):
+        monkeypatch.setattr(m, name, forbidden)
+    for name in ("find", "pending", "operation"):
+        monkeypatch.setattr(m.correction_journal, name, forbidden)
+    request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
+    request.state.user = state["user"]
+    if mode == "url_preview":
+        response = m.api_issue_url_fix(request, "review", key, url=URL)
+    else:
+        response = m.api_github_fix(request, "review", key, m._GithubFixBody(url=URL,
+            confirm=mode == "github_confirm", file_path="index.html", patched_content=HTML))
+    assert response.status_code == 422 and json.loads(response.body)["needs_deep_fix"] is True
+    assert not state["charges"] and not state["pr_bodies"]
+
+
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
     state, run = harness
     keys = ["missing_title", "missing_meta_description", "missing_alt_text", "viewport_not_set",

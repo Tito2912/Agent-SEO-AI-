@@ -3704,6 +3704,12 @@ def _correction_operation(function):
         # Reclassified advice must also block replay of an older cached preview.
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
+        if (str(bound.arguments.get("issue_key") or "").strip().lower() == "canonical_from_https_to_http"
+                and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
+            return JSONResponse({"ok": False, "needs_deep_fix": True,
+                "error": "Cette correction canonical exige les destinations observees dans le rapport. "
+                         "Utilise la correction etendue : aucun apercu IA libre ni ancien apercu ne peut l'appliquer."},
+                status_code=422)
         user = getattr(request.state, "user", None)
         payer = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
         try:
@@ -20014,11 +20020,18 @@ def _verified_canonical_pairs(issue_key: str, pairs: list[dict[str, str]],
         source, old, new = (_verification_url(pair.get(k)) for k in ("page", "from", "to"))
         sources, destinations, previous = observed.get(source, []), observed.get(new, []), requested.get(old, [])
         source_known = at(sources, source) and all(_verification_url(r.get("canonical")) == old for r in sources)
+        # A self upgrade repairs this very document's HTTP canonical, not a different master.
+        self_upgrade = issue_key == "canonical_from_https_to_http" and new == source
         destination_known = at(destinations, new) and all(
-            (not r.get("canonical") or _verification_url(r["canonical"]) == new)
+            (not r.get("canonical") or _verification_url(r["canonical"]) == (old if self_upgrade else new))
             and not any("noindex" in re.split(r"[,;\s:]+", str(r.get(k) or "").lower())
                         for k in ("meta_robots", "x_robots_tag")) for r in destinations)
-        if issue_key == "canonical_points_to_redirect":
+        if issue_key == "canonical_from_https_to_http":
+            relation_known = (source.startswith("https://") and old.startswith("http://") and new == "https:" + old[5:]
+                and all(_verification_url(r.get("final_url") or r.get("url")) in {old, new}
+                        and (not r.get("canonical") or _verification_url(r["canonical"]) in {old, new})
+                        for r in previous))
+        elif issue_key == "canonical_points_to_redirect":
             relation_known = at(previous, new) and all(
                 any(type(c) is int and 300 <= c < 400 for c in r.get("redirect_statuses") or [])
                 for r in previous)
@@ -26869,7 +26882,8 @@ def _prepare_issue_fix(
             hint = _build_url_pair_hint(url_pairs)
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
             out["evidence"] = [p["from"] for p in url_pairs]
-    if issue_key in {"canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"}:
+    if issue_key in {"canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one",
+                     "canonical_from_https_to_http"}:
         url_pairs, refusals = _verified_canonical_pairs(issue_key, url_pairs, pages)
         out["canonical_refusals"] = refusals
         if url_pairs:

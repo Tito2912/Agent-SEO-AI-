@@ -736,6 +736,60 @@ aucune PR distante, aucun site client ni deploiement de l'agent n'est implique.
 La suite finale compte 3 370 tests reussis, 42 ignores, et 190 tests cibles reussis.
 Les 48 nouveaux cas couvrent aussi le refus avant toute relecture d'ancien apercu.
 
+## Canonical HTTP sur une page HTTPS (04/10/2026)
+
+`https_canonical_cycle.py` teste maintenant directement
+`canonical_from_https_to_http`, sur la fixture statique deja corrigee par les
+cycles precedents. Le crawler fournit une proposition `http` vers `https`, mais
+ce changement de protocole ne prouve pas a lui seul que la destination existe.
+Le correcteur exige des observations HTML 200 coherentes pour la source et la
+destination, conserve exactement l'hote, le port, le chemin et la query, et
+refuse une destination non canonique ou `noindex`. Quand la destination est la
+source elle-meme, son ancien canonical HTTP est justement la valeur a reparer.
+Un maitre HTTP observe qui contredit cette destination interdit aussi l'upgrade.
+
+Les paires validees sont liees a leur fichier de page par le resolveur existant.
+Seule la balise canonical litterale change : ni alternate/hreflang, ni og:url,
+ni lien de navigation. Un composant partage, une route inconnue ou une valeur
+calculee restent sans repli modele. Les apercus libres par URL/GitHub et leur
+confirmation sont refuses avant la relecture d'un ancien apercu, l'IA ou le
+quota ; la correction etendue et le lot restent disponibles avec ces preuves.
+Les anciens recus et historiques de facturation ne sont ni supprimes ni migres.
+
+```sh
+python ops/gauntlet/https_canonical_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le cycle epingle la fixture `pployeraffiliation-a11y/noyaru-stack-static-html`
+sur `8f7877b0ce4ad49202677e804944e50069bd1d85`, apres la PR #58 fermee sans
+fusion. Il autorise un seul PUT, sur `gauntlet/canonical-http.html`, avec la
+branche QA, le blob SHA et les octets attendus. Deux builds Netlify reussis et
+deux vrais crawls comparent les memes 49 routes. L'anomalie passe de 1 a 0 ;
+le commit de fixture `dd9cea5389a4ce6c1242696d63eb2f2bcae66ff8` ne change que
+le protocole d'un attribut canonical. Les PR #59 et #60 sont fermees sans fusion,
+la branche principale de la fixture reste inchangee, et aucun fournisseur IA
+n'est appele. Le contre-controle frais est strictement en lecture seule.
+
+Ce resultat n'est pas un site tout vert : `duplicate_titles` et
+`duplicate_meta_descriptions` passent chacun de 32 a 33, et
+`page_has_only_one_dofollow_incoming_internal_link_indexable` de 34 a 35.
+Chaque nouveau temoin est cette seule page, desormais canonique dans le scoring
+controle ; les textes et liens etaient deja presents et restent identiques.
+La comparaison des corps servis conserve aussi l'injection native Netlify et
+neutralise uniquement son identifiant de build observe, qui varie entre previews.
+
+Les previews brutes gardent leur `X-Robots-Tag: noindex`. Leurs observations
+sont reprojetees comme dans les cycles precedents pour tester les familles
+indexables : ce n'est pas une preuve d'indexation en production. Le canonical
+HTTP disparait egalement des observations brutes, sans retirer la page du crawl.
+Cette preuve renforce une famille deja mentionnee dans un ancien bilan ; elle
+ne ferme pas une nouvelle lacune de l'inventaire des references nommees.
+Les limites, hashes, essais et resultats sont conserves dans
+`validation-canonical-https-2026-10-04.json`. Aucune certification universelle,
+aucun site client et aucun deploiement de l'agent ne sont inclus.
+La suite finale compte 3 444 tests reussis et 42 ignores ; les 279 tests cibles
+passent aussi. Les 74 nouveaux cas incluent les refus et les garde-fous du banc.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,
