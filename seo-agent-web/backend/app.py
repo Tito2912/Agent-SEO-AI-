@@ -3699,6 +3699,11 @@ def _correction_operation(function):
     @wraps(function)
     def guarded(request: Request, slug: str, *args, **kwargs):
         project = _db_project_or_404(request, slug)
+        import inspect
+        bound = inspect.signature(function).bind(request, slug, *args, **kwargs)
+        # Reclassified advice must also block replay of an older cached preview.
+        if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
+            return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         user = getattr(request.state, "user", None)
         payer = _compte_payeur(str(getattr(user, "id", "") or ""), slug)
         try:
@@ -3706,7 +3711,6 @@ def _correction_operation(function):
                 active = correction_journal.current()
                 if active and active.row.project_id == str(project.id):
                     return function(request, slug, *args, **kwargs)
-                import inspect
                 bound = inspect.signature(function).bind(request, slug, *args, **kwargs)
                 bound.apply_defaults()
                 values = {k: v.model_dump(mode="json") if isinstance(v, BaseModel) else v
@@ -4610,11 +4614,18 @@ def _github_issue_auto_fixable(issue_key: str) -> bool:
 
 
 # Issues that are real but NOT mechanically code-fixable — the agent advises instead of patching.
+_HTTP_CANONICAL_ADVICE_KEYS = _with_indexability_variants({"canonical_from_http_to_https"})
+_HTTP_CANONICAL_ADVICE = (
+    "Cette page reste servie en HTTP alors que son canonical designe HTTPS. "
+    "Ne pas modifier ce canonical pour cette anomalie : verifier la destination HTTPS et son certificat, "
+    "puis configurer la redirection HTTP vers HTTPS au niveau de l'hebergement, du serveur ou du proxy. "
+    "Le rapport ne prouve pas quelle configuration controle cet acces ; aucune correction HTML automatique."
+)
 _ADVISORY_ISSUE_KEYS = {
     "low_word_count", "slow_page", "page_size_exceeds_2mb", "content_is_not_sized_correctly",
     "font_size_too_small", "tap_targets_too_small_or_close", "not_compressed", "timed_out",
     "page_from_sitemap_timed_out", "orphan_page_indexable", "orphan_page_not_indexable",
-}
+} | _HTTP_CANONICAL_ADVICE_KEYS
 _ADVISORY_ISSUE_TOKENS = (
     "word_count", "poor_cls", "poor_fid", "poor_inp", "poor_lcp", "cwv", "core_web_vital",
     "high_ai_content", "organic_traffic", "referring_domain", "serp_title", "and_serp_titles",
@@ -19721,12 +19732,6 @@ _HEAD_HINTS: dict[str, str] = {
         "Le canonical de ces pages pointe vers une URL non-canonique. Fais pointer le canonical "
         "vers l'URL canonique réelle de la page (sa version indexable définitive). Ne touche qu'au canonical."
     ),
-    "canonical_from_http_to_https": (
-        "Ces pages sont servies en http:// alors que leur canonical pointe (correctement) vers "
-        "la version https://. Le canonical est BON : ne le modifie pas. Corrige ce qui expose "
-        "la page en http — un lien interne, une URL de sitemap ou une règle de redirection "
-        "manquante http→https. Si rien de tel n'est dans ce fichier, ne change rien."
-    ),
     "canonical_from_https_to_http": (
         "Le canonical passe de https vers http. Corrige-le en https:// (même host/chemin). Ne touche qu'au canonical."
     ),
@@ -26683,6 +26688,9 @@ def _prepare_issue_fix(
         "refusal": None,
     }
 
+    if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
+        out["refusal"] = _HTTP_CANONICAL_ADVICE
+        return out
     # Redirect config: only a URL redirecting to ITSELF is repairable. Everything else is the
     # site's deliberate canonicalisation and must not reach a patcher.
     if issue_key in _REDIRECT_CONFIG_KEYS:

@@ -145,6 +145,11 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   Un seul attribut canonical change dans un seul fichier, sans IA. La famille
   non canonique passe de 1 a 0 ; les anciennes corrections, les 49 routes HTML
   et la vraie 301 sont conservees. Aucun compteur n'augmente dans ce controle.
+- `validation-http-canonical-conseil-2026-10-04.json` : une page servie en HTTP
+  avec canonical HTTPS est un probleme d'hebergement, pas de balise a remplacer.
+  Le correcteur refuse ce cas, y compris via un ancien apercu ; l'anomalie reste
+  visible. Un temoin local HTTP/TLS reste a 1 apres le refus puis passe a 0
+  uniquement apres une 301 ajoutee manuellement au serveur, sans changer le HTML.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -675,6 +680,61 @@ La suite finale compte 3 322 tests reussis et 42 ignores sur SQLite isolee ;
 La projection des previews est toujours contrefactuelle. Ce resultat ne certifie
 ni l'indexation en production, ni toutes les piles, ni toutes les anomalies avant
 les premiers clients. Aucun deploiement de l'agent ni site client n'est modifie.
+
+## HTTP Et Canonical HTTPS
+
+`canonical_from_http_to_https` se leve quand la page reste servie en HTTP et
+declare HTTPS comme canonical. Le canonical HTTPS n'est pas a remplacer pour
+cette famille ; il faut verifier la destination et le certificat, puis corriger
+l'acces HTTP au niveau de l'hebergement, du serveur ou du proxy. Reecrire les
+liens ou le sitemap ne prouve pas que l'ancienne URL HTTP cesse de servir en 200.
+
+Le produit proposait pourtant cette famille au correcteur generique de tete,
+avec des candidats comme un layout partage et sans preuve du fichier qui pilote
+le serveur. La consigne au modele disait de conserver le canonical, mais ce
+n'etait pas un refus garanti. Le cas devient donc consultatif, sans supprimer
+sa detection ni son affichage. Son conseil demande aussi de revisiter l'ancienne
+URL HTTP, pas de la retirer du controle pour obtenir artificiellement un zero.
+
+Le refus s'applique a la preparation et au garde-fou commun des operations, apres
+l'autorisation du projet mais avant le journal, les anciens apercus, le quota ou
+GitHub. Il protege les corrections individuelles, les apercus par URL/GitHub et
+les confirmations, meme avec les variantes d'indexabilite, la casse et les espaces.
+Le lot automatique exclut cette famille. Le cas inverse,
+`canonical_from_https_to_http`, reste propose : sa valeur de canonical est bien
+le probleme a traiter, mais sa preuve de reparation sera validee separement.
+
+`http_canonical_advice_cycle.py` ne modifie aucun depot. Il cree uniquement deux
+serveurs loopback sur des ports ephemeres, dont un TLS avec certificat temporaire.
+Requests verifie ce certificat ; le vrai extracteur Playwright et le scorer de
+l'agent observent HTTP 200 et canonical HTTPS, puis le refus laisse le compteur
+a 1. L'operateur ajoute ensuite une 301 dans le serveur du temoin : l'ancienne
+URL redirige vers HTTPS 200 et le compteur passe a 0. Les trois corps HTML sont
+identiques et leur canonical reste inchange. Cette intervention manuelle n'est
+jamais comptabilisee comme une reparation par le correcteur.
+Les compteurs de redirection deviennent visibles, ainsi qu'une notice de page
+orpheline indexable dans ce temoin minimal : ce controle manuel n'est pas tout vert.
+
+```sh
+python ops/gauntlet/http_canonical_advice_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Les serveurs et navigateurs sont fermes, la cle privee generee est supprimee,
+et aucun fichier existant n'est ecrase. Le controle loopback n'assouplit pas la
+politique SSRF de production. Une contre-verification relit les rapports et les
+corps servis avec un autre parseur, verifie la fermeture des ports et teste les
+quatre refus d'API avant toute consultation d'apercu ou de quota. La fixture
+publique Netlify confirme HTTP 301 et HTTPS 200 : elle ne peut pas fournir le
+temoin positif HTTP 200 que cette famille exige.
+
+Le bilan `validation-http-canonical-conseil-2026-10-04.json` conserve ce resultat
+negatif et le changement de promesse : 66 vers 65 familles revendiquees, 65 vers
+64 exposees comme corrigibles. Le nombre de familles revendiquees sans reference
+nommee passe de 17 a 16 uniquement par ce reclassement, pas par une reparation
+reussie. Les inventaires et preuves historiques restent inchanges. Aucune IA,
+aucune PR distante, aucun site client ni deploiement de l'agent n'est implique.
+La suite finale compte 3 370 tests reussis, 42 ignores, et 190 tests cibles reussis.
+Les 48 nouveaux cas couvrent aussi le refus avant toute relecture d'ancien apercu.
 
 ## Reconstruire les pages
 

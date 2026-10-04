@@ -194,6 +194,29 @@ def suggest_issue_fix(
     # repli generique — mesure du 15/09/2026 : 28 familles dans ce cas, dont trois `error`.
     lk = key.lower().removesuffix("_not_indexable").removesuffix("_indexable")
 
+    if lk == "canonical_from_http_to_https":
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort, "sample_urls": sample_urls,
+            "why": ("La page reste servie en HTTP et declare un canonical HTTPS. Cette famille "
+                    "signale l'acces HTTP, pas une balise canonical a remplacer."),
+            "fix": [
+                "Conserver le canonical HTTPS ; ne pas le remplacer par une URL HTTP pour faire taire l'anomalie.",
+                "Verifier d'abord que la destination HTTPS repond en HTML 200 avec un certificat valide et sans boucle.",
+                "Faire configurer la redirection HTTP vers HTTPS sur l'hebergement, le serveur ou le proxy concerne.",
+                "Traiter separement les liens internes et entrees de sitemap HTTP signales par leurs propres familles.",
+            ],
+            "verify": [
+                "Tester directement l'URL HTTP : elle doit renvoyer une 301 ou 308 vers la destination HTTPS voulue.",
+                "Suivre la redirection : verifier HTML 200, le certificat et le canonical conserve, sans boucle.",
+                "Recrawler aussi l'ancienne URL HTTP et verifier canonical_from_http_to_https, sans retirer cette URL du test.",
+            ],
+            "auto_fixable": False,
+            "auto_fix_note": ("Intervention d'hebergement : le rapport ne prouve pas quel fichier "
+                              "controle l'acces HTTP. Aucune correction HTML automatique."),
+            "mode": "suggest-only",
+        }
+
     if lk.startswith("page_has_only_one_dofollow_incoming_internal_link"):
         rows = _under_linked_context(report, key)
         why = ("Ces pages ne reçoivent qu'UN seul lien interne en dofollow. Un lien unique rend "

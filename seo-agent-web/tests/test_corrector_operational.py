@@ -185,6 +185,45 @@ def test_og_url_does_not_rewrite_a_different_scheme():
     assert count == 0 and output == raw, "A value absent from the exact measured pair was rewritten."
 
 
+@pytest.mark.parametrize("mode", ["individual", "url_preview", "github_preview", "github_confirm"])
+@pytest.mark.parametrize("variant", ["", "_indexable", "_not_indexable", "uppercase", "whitespace"])
+def test_http_served_https_canonical_refuses_manual_endpoints_without_writes_or_charges(harness, monkeypatch, mode, variant):
+    state, run = harness
+    key = "canonical_from_http_to_https" + (variant if variant.startswith("_") else "")
+    if variant == "uppercase":
+        key = key.upper()
+    elif variant == "whitespace":
+        key = " " + key + " "
+    state["key"] = key
+    state["sources"] = {"index.html": HTML, "netlify.toml": "[build]\ncommand = 'build'\n"}
+    state["report"] = {"issues": {key: {"count": 1, "examples": ["http://site.test/"]}}}
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("No GitHub, model, quota gate or charge for hosting advice")
+
+    for name in ("_github_api_get", "_github_api_post", "_github_api_put", "_openai_generate_file_patch",
+                 "_openai_url_fix", "_correction_gate", "_correction_charge"):
+        monkeypatch.setattr(m, name, forbidden)
+    for name in ("find", "pending", "operation"):
+        monkeypatch.setattr(m.correction_journal, name, forbidden)
+    if mode == "individual":
+        result = run("individual")
+        assert result["status"] == 422 and not result["written"] and not result["ai_calls"]
+        body = result["response"]
+    else:
+        request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
+        request.state.user = state["user"]
+        if mode == "url_preview":
+            response = m.api_issue_url_fix(request, "review", key, url="http://site.test/")
+        else:
+            response = m.api_github_fix(request, "review", key, m._GithubFixBody(url="http://site.test/",
+                confirm=mode == "github_confirm", file_path="index.html", patched_content=HTML))
+        assert response.status_code == 422
+        body = json.loads(response.body)
+    assert body["advisory"] is True and "canonical" in body["error"]
+    assert not state["charges"] and not state["pr_bodies"]
+
+
 @pytest.mark.parametrize("mode", ["individual", "bulk"])
 def test_shared_dead_canonical_keeps_each_page_and_its_alternates(harness, mode):
     state, run = harness

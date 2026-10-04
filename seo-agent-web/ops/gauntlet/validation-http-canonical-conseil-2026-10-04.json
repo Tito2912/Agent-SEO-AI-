@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-04",
+  "status": "unsafe_html_fix_claim_replaced_by_explicit_hosting_advice_with_real_http_tls_control",
+  "family": "canonical_from_http_to_https",
+  "corrector_repaired_http_exposure": false,
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "fixture_repository_writes": 0,
+  "fixture_pull_requests_created": 0,
+  "tested_agent_parent_commit": "d74297284d6e253cb239aeeb4466d7360b0af1ba",
+  "finding": {
+    "http_html_200_with_https_canonical_is_a_hosting_problem": true,
+    "canonical_tag_is_not_the_repair_target_for_this_family": true,
+    "old_auto_fix_claim": "The head hint correctly asked to preserve the HTTPS canonical, but routed to generic shared head/layout candidates and allowed a model patch without identifying which server, proxy or hosting configuration controlled HTTP exposure.",
+    "changing_links_or_sitemap_does_not_prove_http_exposure_resolved": true,
+    "scorer_and_issue_catalog_unchanged": true,
+    "anomaly_still_visible_and_tracked": true
+  },
+  "production_changes": [
+    "Remove canonical_from_http_to_https from the head-handler claims and declare it advisory, including indexability variants. Bulk correction candidates no longer include it.",
+    "Preparation returns a precise hosting refusal before GitHub or model access. The common correction-operation guard refuses after project authorization and before journal replay, quota gates or provider/GitHub activity, so an older cached preview or manual confirmation cannot bypass the reclassification. Key case and surrounding whitespace are normalized for this guard.",
+    "The visible advice preserves the HTTPS canonical, first requires checking the destination and certificate, then directs an operator to the actual server/proxy/hosting redirect. It requires revisiting the old HTTP URL instead of dropping it from the test. Internal HTTP links and HTTP sitemap entries remain separate repair families.",
+    "canonical_from_https_to_http remains offered and unchanged. This phase does not certify its repair or redirect every site automatically. Existing correction receipts, billing history and pending recoveries are neither deleted nor migrated."
+  ],
+  "real_local_control": {
+    "entrypoint": "python ops/gauntlet/http_canonical_advice_cycle.py --workdir EMPTY_TEMP_DIRECTORY",
+    "only_listener_host": "127.0.0.1",
+    "listeners": "Two ephemeral ports, HTTP and HTTPS, using a generated one-day loopback-only certificate.",
+    "tls_verified_by_requests_with_generated_certificate": true,
+    "extraction": "The real auditor Playwright extractor and scorer, not a synthetic PageData-only witness or projected Netlify preview.",
+    "scope": "One HTTP URL and its declared HTTPS destination, both actual HTML 200 before the manual change.",
+    "counts_before_advice_after_advice_after_manual_redirect": [1, 1, 0],
+    "direct_http_status_before_after_manual_redirect": [200, 301],
+    "final_https_status": 200,
+    "redirect_added_by_operator_in_local_fixture_not_corrector": true,
+    "source_html_and_canonical_unchanged": true,
+    "html_body_sha256_before_http_before_https_after_manual_redirect": "4957efcbea233b4aca4cc1474ca176e4300e35df78f05f5fbc0fa554135ce579",
+    "increased_counts_after_manual_operator_redirect": {
+      "redirect_3xx": [0, 1],
+      "http_to_https_redirect": [0, 1],
+      "orphan_page_indexable": [0, 1]
+    },
+    "manual_control_is_not_all_green_or_a_corrector_repair": true,
+    "servers_and_browser_stopped": true,
+    "generated_private_key_removed": true,
+    "existing_certificate_files_never_overwritten_or_deleted": true,
+    "production_ssrf_policy_unchanged": true,
+    "no_private_host_allowance_enabled": true,
+    "cycle_sha256": "58b379f513cf3c11acb55d523716e41973d969df06067e578a3da8d537fece9e"
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "fresh_isolated_process": true,
+    "description": "An independent HTML parser confirms the same one HTTPS canonical in all three identical saved HTTP bodies. The captured real page statuses, final URLs and redirect history support one HTTP-served occurrence before and zero after the manually added 301. Both loopback ports are closed and the generated private key is absent. Current preparation refuses. Four actual wrapped endpoint function calls return advisory 422 before account/cache/quota/GitHub access, with only project authorization stubbed to the owned local fixture. A read-only public Netlify probe confirms HTTP 301 to the exact HTTPS URL and HTTPS 200, so that hosting cannot provide this family's positive HTTP-200 witness.",
+    "public_fixture_http_status": 301,
+    "public_fixture_https_status": 200,
+    "public_fixture_is_not_positive_http_200_witness": true,
+    "countercheck_sha256": "df512c5e41ee677c8a5245928f61404a21820d86f350493ee6f960fd27ff366d",
+    "countercheck_script_sha256": "da45a33c8c581a974df1af64022c6a5ed488f89e8808ef973fb8d175cdbc2ef4",
+    "artifacts_sha256": {
+      "before.json": "19bf28395afc4f96acf6796c1817f0f401aee91f10038fef80c052585232f26a",
+      "after-manual-redirect.json": "7ab543ebfab3a104d6742e7b2864d3710730ade5fe938c06f6d92872a432c942",
+      "before-http.html": "4957efcbea233b4aca4cc1474ca176e4300e35df78f05f5fbc0fa554135ce579",
+      "before-https.html": "4957efcbea233b4aca4cc1474ca176e4300e35df78f05f5fbc0fa554135ce579",
+      "after-manual-redirect.html": "4957efcbea233b4aca4cc1474ca176e4300e35df78f05f5fbc0fa554135ce579",
+      "source-manifest.json": "4d6ad283eaa1862dfdc6a3e884e0bb6a68bf25848229d88270f5ef855ac2cf35"
+    }
+  },
+  "acceptance_inventory": {
+    "catalog_keys_unchanged": 203,
+    "claimed_families_before_after": [66, 65],
+    "visible_offered_families_before_after": [65, 64],
+    "claimed_families_without_exact_named_record_before_after": [17, 16],
+    "gap_count_decreased_only_because_family_became_advisory": true,
+    "no_successful_repair_or_new_claimed_family_acceptance_credit": true,
+    "historical_tracked_inventory_and_validation_records_preserved": true,
+    "post_reclassification_before_record_sha256": "2fb02d7ea8be70d79ba86cb0f3a154d784e640b487d21d12d99985a2ee2fad0c",
+    "after_snapshot": "acceptance-after-http-advice.json in the live temporary directory",
+    "client_readiness_certified": false
+  },
+  "provider_usage": {"all_live_and_countercheck_requests": 0, "claude_budget": 0, "openai_fallback_allowed": false},
+  "verification": {
+    "red_before_guard": {"failed": 25, "passed": 1, "deselected": 53, "seconds": 19.08},
+    "red_counts_are_cases_not_distinct_product_bugs": true,
+    "initial_green_wiring_guard": {"failed": 1, "passed": 167,
+      "reason": "The new advisory preparation group had not yet been declared in the exhaustive wiring test. Add the explicit refusal group, do not weaken or remove the completeness assertion."},
+    "full_final_suite": {"database": "isolated_temporary_sqlite", "passed": 3370, "skipped": 42,
+      "warnings": 266, "seconds": 227.04, "source_or_test_edits_during_run": false},
+    "targeted_final_suite": {"passed": 190, "skipped": 0, "warnings": 28, "seconds": 11.03},
+    "new_tests_this_phase": 48,
+    "advisory_claim_preparation_and_advice_tests": 22,
+    "four_endpoint_modes_times_five_key_variants": 20,
+    "real_loopback_and_cleanup_tests": 5,
+    "new_exhaustive_wiring_group_case": 1,
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "new_bench_bandit_medium_or_high": "none",
+    "full_junit_sha256": "7f5bbedd5efe1e433a1b965f87475e7fd133701d1b5a465d36a293d102fc58a8",
+    "targeted_junit_sha256": "1cb3a70f5ed0ebb1864d8100aaaf3bf6de40f7549a612218f5318d77a441e556",
+    "red_junit_sha256": "3578a0dfe948577177573863458601d44bc00d84e555de6c0fdb18411711e98a",
+    "source_manifest_uses_normalized_lf_sha256": true,
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "This is a measured safe refusal and hosting advice, not a corrector-written redirect or an additional repair success. A hosting-aware automatic repair would need evidence of the controlling server/proxy configuration, a healthy verified HTTPS destination and a real build/deploy/recrawl of the old HTTP URL.",
+    "The loopback fixture has different ephemeral HTTP/TLS ports and a generated self-signed certificate trusted only by its Requests session. It is not a production infrastructure, DNS or certificate validation. Playwright uses the existing auditor TLS behavior; the separate Requests probes verify the fixture certificate.",
+    "The local extractor is invoked on explicitly owned loopback URLs. No production private-host allowance, customer URL or network security policy is changed.",
+    "The manual redirect control introduces tracked redirect and indexability/orphan notices. Those changes are retained explicitly, not presented as an all-green audit or attributed to corrector writes.",
+    "The inverse HTTPS-page/HTTP-canonical family remains offered, not newly certified. Existing receipts, old PRs and billing history are not migrated; any historical pending correction still requires the existing operator recovery procedure.",
+    "No agent deployment, fixture GitHub write, customer site, new PostgreSQL run, payment/onboarding acceptance or production capacity check is included. The 42 SQLite-suite skips remain outside this phase."
+  ],
+  "next_acceptance_check": "Verify canonical_from_https_to_http with destination/source evidence, refusal controls and a real owned-fixture build/recrawl, then remaining visible families and customer onboarding.",
+  "artifacts": {
+    "live_and_countercheck_windows": "C:/Users/Caron/AppData/Local/Temp/seo-http-canonical-advice-final-local-live-20261004-h3dp85_z",
+    "full_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-http-canonical-advice-full-20261004-5hruuzt2",
+    "targeted_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-http-canonical-advice-final-targeted-confirm-20261004-gw4d82eb",
+    "red_before_guard_windows": "C:/Users/Caron/AppData/Local/Temp/seo-http-canonical-advice-red-20261004-x1anl7gf"
+  }
+}

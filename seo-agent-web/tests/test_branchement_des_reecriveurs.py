@@ -146,6 +146,7 @@ FORMES: "dict[str, tuple[set[str], dict, str]]" = {
     "_SITEMAP_ADD_KEYS": (m._SITEMAP_ADD_KEYS, _bloc(), ""),
     # Refuse par decision : voir le motif rendu par la branche elle-meme.
     "_REDIRECT_CONFIG_KEYS": (m._REDIRECT_CONFIG_KEYS, _bloc(), ""),
+    "_HTTP_CANONICAL_ADVICE_KEYS": (m._HTTP_CANONICAL_ADVICE_KEYS, _bloc(), ""),
     "_X_DEFAULT_KEYS": (m._X_DEFAULT_KEYS, _bloc("page_values", _VALEURS), ""),
     "_SERVED_LANG_FIX_KEYS": (m._SERVED_LANG_FIX_KEYS, _bloc(
         "page_values", [{"page": P, "field": "lang", "value": "fr"}]), ""),
@@ -170,7 +171,7 @@ def _nom_du_reecriveur(rw) -> str:
 SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED_LANG_FIX_KEYS",
                            "_X_DEFAULT_KEYS", "_ROBOTS_KEYS", "_SITEMAP_REMOVE_KEYS",
                            "_HEAD_HINTS", "_HREFLANG_HINTS", "_PAGE_VALUE_KEYS",
-                           "_SITEMAP_ADD_KEYS", "_REDIRECT_CONFIG_KEYS"}
+                           "_SITEMAP_ADD_KEYS", "_REDIRECT_CONFIG_KEYS", "_HTTP_CANONICAL_ADVICE_KEYS"}
 
 
 def _prepare(cle: str, bloc: dict) -> dict:
