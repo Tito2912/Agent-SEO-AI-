@@ -20206,31 +20206,36 @@ def _canonical_self_pairs(issue_block: Any, pages: list[dict[str, Any]] | None,
     en 403 est peut-etre protegee, une cible en 500 peut etre debout dans dix minutes : leur
     canonical est vraisemblablement JUSTE, et le reecrire serait casser ce qui marche.
     """
-    statuts: dict[str, int] = {}
+    statuts: dict[str, set[int | None]] = {}
     for page in pages or []:
         if not isinstance(page, dict):
             continue
         code = page.get("status_code")
-        if isinstance(code, int):
-            for champ in ("url", "final_url"):
-                cle = _norm_url_for_match(str(page.get(champ) or ""))
-                if cle:
-                    statuts.setdefault(cle, code)
+        if type(code) is not int or page.get("error") or page.get("blocked_by_host"):
+            code = None
+        original = _verification_url(str(page.get("url") or ""))
+        final = _verification_url(str(page.get("final_url") or page.get("url") or ""))
+        if final:
+            statuts.setdefault(final, set()).add(code)
+        if original and original != final:
+            statuts.setdefault(original, set()).add(None)
     paires: list[dict[str, str]] = []
     refuses: list[str] = []
-    vus: set[str] = set()
+    vus: set[tuple[str, str]] = set()
     for brut in (issue_block.get("examples") if isinstance(issue_block, dict) else None) or []:
         m = _EXEMPLE_FLECHE_RE.match(str(brut or ""))
         if not m:
             continue
         page_url, canon = m.group(1), m.group(2)
-        if not page_url.startswith("http") or canon in vus:
+        identite = (_verification_url(page_url), _verification_url(canon))
+        if not all(identite) or identite in vus:
             continue
-        code = statuts.get(_norm_url_for_match(canon))
-        if code not in _STATUTS_ABSENCE_DEFINITIVE:
-            refuses.append("%s (statut %s)" % (canon, code if code is not None else "inconnu"))
+        codes = statuts.get(identite[1], set())
+        if not codes or not codes <= _STATUTS_ABSENCE_DEFINITIVE:
+            libelle = ", ".join(sorted(str(c) if c is not None else "inconnu" for c in codes)) or "inconnu"
+            refuses.append("%s (statut %s)" % (canon, libelle))
             continue
-        vus.add(canon)
+        vus.add(identite)
         paires.append({"page": page_url, "from": canon, "to": page_url})
     return paires, refuses
 # Ou chaque generateur ecrit son `robots.txt`, dans l'ordre d'essai. Mesure sur les neuf
@@ -24581,7 +24586,7 @@ def _keep_canonical_master(new_content: str, maitresse: str) -> tuple[str, list[
     ecrit = _canonical_ecrit_dans(new_content)
     if not ecrit or _norm_url_for_match(ecrit) == _norm_url_for_match(maitresse):
         return new_content, []
-    out, n = _rewrite_head_url_values(new_content, [{"from": ecrit, "to": maitresse}])
+    out, n = _rewrite_head_url_values(new_content, [{"from": ecrit, "to": maitresse}], canonical_only=True)
     if not n:
         return new_content, []
     return out, ["canonical redirige vers la maitresse du groupe : %s (le modele avait ecrit %s)"
@@ -25240,7 +25245,8 @@ def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int
     return "".join(morceaux), count
 
 
-def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]], *,
+                             canonical_only: bool = False) -> tuple[str, int]:
     """DETERMINISTIC canonical/hreflang value rewrite (no AI).
 
     Only rewrites a URL that sits where a canonical or hreflang value belongs — a
@@ -25251,15 +25257,31 @@ def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple
     Returns (new_content, replacements)."""
     mapping: dict[str, str] = {}
     for pair in pairs or []:
-        for old, new in _url_value_variants(pair):
-            mapping.setdefault(old, new)
+        if canonical_only:
+            frm, to = str(pair.get("from") or ""), str(pair.get("to") or "")
+            variants = [(frm, to)]
+            try:
+                source, destination = urlsplit(frm), urlsplit(to)
+            except ValueError:
+                pass
+            else:
+                if source.scheme and source.netloc and destination.scheme and destination.netloc:
+                    # A relative canonical retains query/fragment identity, not just its path.
+                    variants.append(tuple(urlunsplit(("", "", p.path or "/", p.query, p.fragment))
+                                          for p in (source, destination)))
+        else:
+            variants = _url_value_variants(pair)
+        for old, new in variants:
+            if old and new and old != new:
+                mapping.setdefault(old, new)
     if not mapping:
         return content, 0
     count = 0
 
     def _swap_href(tag: str) -> str:
         nonlocal count
-        if not _REL_CANONICAL_RE.search(tag):
+        rel_pattern = _REL_CANONICAL_SEUL_RE if canonical_only else _REL_CANONICAL_RE
+        if not rel_pattern.search(tag):
             return tag
 
         def _one(m: "re.Match[str]") -> str:
@@ -25289,6 +25311,9 @@ def _rewrite_head_url_values(content: str, pairs: list[dict[str, str]]) -> tuple
         return _HREF_KEY_RE.sub(_one_prop, m.group(0))
 
     new = _CANONICAL_OBJECT_RE.sub(_one_object, new)
+
+    if canonical_only:
+        return new, count
 
     # `languages: { 'en': '/en', ... }` — scoped to the block so a short key elsewhere
     # (`to:`, `id:`) whose value happens to match can never be rewritten.
@@ -26321,7 +26346,7 @@ def _resolve_issue_targets(
             # have made the sitemap point at a redirecting URL) while fixing 3 hreflang tags.
             # Other page-targeting families keep their located files: for mixed-content the
             # http:// references ARE the fix and legitimately live outside the flagged pages.
-            if issue_key in _URL_PAIR_KEYS and index_resolved_all:
+            if (issue_key in _URL_PAIR_KEYS or issue_key in _CANONICAL_BROKEN_KEYS) and index_resolved_all:
                 targets = priority
             elif issue_key in _PAGE_TARGETED_ASSET_KEYS:
                 # L'image peut vivre dans un COMPOSANT partage, que seule la preuve trouve : ce
@@ -26803,8 +26828,9 @@ def _prepare_issue_fix(
         _cp, _refuses = _canonical_self_pairs(block, pages)
         if _cp:
             out["url_pairs"] = list(_cp)
+            out["canonical_pairs"] = list(_cp)
             out["evidence"] = [p["from"] for p in _cp]
-            out["link_rewriter"] = lambda raw, _p=_cp: _rewrite_head_url_values(raw, _p)  # noqa: E731
+            out["link_rewriter"] = lambda raw, _p=_cp: _rewrite_head_url_values(raw, _p, canonical_only=True)  # noqa: E731
             # AUCUN repli IA, meme avec une seule paire. La bonne valeur est l'URL de la page
             # elle-meme : montrer cette valeur a un modele qui edite un AUTRE fichier revient a
             # lui demander d'y poser le canonical d'une page voisine, et c'est exactement ce
@@ -27040,7 +27066,10 @@ def _prepare_issue_fix(
         # An unmatched src is a bundled asset: the redirect lives in the CDN, not the page.
         out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_asset_srcs(raw, _p)  # noqa: E731
     elif url_pairs:
-        out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_head_url_values(raw, _p)  # noqa: E731
+        _canonical_only = issue_key in {"canonical_points_to_redirect",
+            "non_canonical_page_specified_as_canonical_one", "canonical_from_https_to_http"}
+        out["link_rewriter"] = (lambda raw, _p=url_pairs, _c=_canonical_only:
+                                _rewrite_head_url_values(raw, _p, canonical_only=_c))
         out["rewriter_ai_fallback"] = True
     elif content_pairs:
         out["link_rewriter"] = lambda raw, _p=content_pairs: _rewrite_redirect_links(raw, _p)  # noqa: E731
@@ -27275,6 +27304,7 @@ def _deep_patch_issue_files(
     # valeur ecrite est VERIFIEE et non pas seulement suggeree au modele : voir
     # `_duplicate_canonical_masters` et la boucle canonique du 16/09/2026.
     canonical_masters: dict[str, str] | None = None,
+    canonical_pairs: list[dict[str, str]] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27367,6 +27397,13 @@ def _deep_patch_issue_files(
         for _u in impacted_urls or []:
             for _f in repo_index.route_files(index, _u) or []:
                 _url_par_fichier.setdefault(_f, _u)
+    _canonical_pairs_par_fichier: dict[str, list[dict[str, str]]] = {}
+    if canonical_pairs is not None:
+        _canonical_index = index or repo_index.build_repo_index(all_paths)
+        for _pair in canonical_pairs:
+            for _f in repo_index.route_files(_canonical_index, _pair["page"]) or []:
+                if not repo_index.is_shared_path(_canonical_index, _f):
+                    _canonical_pairs_par_fichier.setdefault(_f, []).append(_pair)
     # Ce qu'une page devra REPRENDRE de sa mise en page si elle declare un openGraph. Calcule
     # a la demande et memoise : un projet a une ou deux mises en page pour vingt pages, et les
     # relire a chaque fichier ferait vingt appels pour deux reponses.
@@ -27423,6 +27460,14 @@ def _deep_patch_issue_files(
                 return (path, None, "", None)
         if len(raw) > 80_000:
             return (path, None, "", None)
+        if canonical_pairs is not None:
+            # A shared dead URL can require a different destination for every source page.
+            propres = _canonical_pairs_par_fichier.get(path, [])
+            if len({_verification_url(p["page"]) for p in propres}) != 1:
+                return (path, raw, cur_sha, {"error": "Canonical refuse : page source non resolue ou ambigue."})
+            new_content, n = _rewrite_head_url_values(raw, propres, canonical_only=True)
+            return (path, raw, cur_sha, {"patched_content": new_content,
+                    "deterministic": True, "no_change": not n})
         # Mechanical link families: deterministic rewrite, no AI (avoids the prefix-link and
         # relative→absolute mistakes an LLM makes; e.g. /en/ vs /en/guide, code literals).
         if link_rewriter is not None:
@@ -27865,6 +27910,7 @@ def _apply_prepared_issue_fix(
                 rewriter_ai_fallback=prep["rewriter_ai_fallback"],
                 rewriter_is_ai=bool(prep["rewriter_is_ai"]),
                 canonical_masters=prep.get("canonical_masters"),
+                canonical_pairs=prep.get("canonical_pairs"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

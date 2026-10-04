@@ -1,0 +1,181 @@
+{
+  "date": "2026-10-04",
+  "status": "two_shared_404_canonicals_and_one_forced_self_redirect_measured",
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "measurement_mode": "counterfactual_fixture_preview_without_injected_header",
+  "scope": {
+    "positive_repair_families": ["canonical_points_to_4xx", "redirect_3xx"],
+    "negative_source_only_refusal_family": "canonical_points_to_5xx",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "setup_writable_paths": [
+      "gauntlet/qa-canonical-a.html", "gauntlet/qa-canonical-b.html",
+      "gauntlet/qa-self-loop.html", "index.html", "sitemap.xml", "_redirects"
+    ],
+    "correction_writable_paths": [
+      "gauntlet/qa-canonical-a.html", "gauntlet/qa-canonical-b.html", "_redirects"
+    ],
+    "maximum_successful_file_puts_per_cycle": 9,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/canonical_redirect_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "production_changes": [
+    "A shared disappeared canonical target no longer deduplicates away the other source pages. Each source URL keeps its own self-canonical destination, resolved against its own nonshared route file. Multiple source identities resolving to one file, shared templates and unresolved files are explicitly skipped rather than guessed or passed to a model.",
+    "Definitive absence requires all observed statuses of the exact target identity to be integer 404/410, without an error or host block. Scheme, path/query case and trailing slash remain distinct; host case and fragments use the existing verification URL normalization. A redirect destination status cannot be assigned to its original URL. Unknown, conflicting, protected and temporary error observations are refused.",
+    "Canonical-only rewrites preserve neighboring alternate/hreflang declarations and ordinary links. Their relative URL variants retain query and fragment components in both observed and replacement values, rather than using the path-only link representation. A queryless relative canonical cannot match an observed target with a query. Existing general hreflang rewriting remains available. Canonical repair and duplicate-master preservation explicitly select the canonical-only mode.",
+    "When every flagged canonical source resolves to its route, targeting drops unrelated grep matches. A control page mentioning the same dead URL is not edited. Individual and bulk product endpoints exercise the same source-scoped pipeline with zero AI and zero AI quota debit."
+  ],
+  "first_live_attempt": {
+    "status": "failed",
+    "stage": "canonical_points_to_4xx",
+    "failure_code": "repair_refused_canonical_points_to_4xx",
+    "baseline_branch": "gauntlet-static-html-canonical-baseline-20261004-111612",
+    "unused_correction_branch": "gauntlet-static-html-canonical-correction-20261004-111612",
+    "baseline_sha": "c24b12e3448011ac35461515457b1cb67e687f19",
+    "baseline_pr": 52,
+    "setup_file_puts": 6,
+    "corrective_file_puts": 0,
+    "pull_request_closed_unmerged": true,
+    "main_unchanged": true,
+    "diagnosis": "The direct HTTP witness was 404, but absolute production-host body links left the target unvisited by the preview crawler. No exact target observation existed in the repair input, so the corrector appropriately refused. The fixture links were made relative for the new measured cycle. This failed run is retained, not credited as a successful correction.",
+    "cycle_sha256": "633ee8186292e50c1a8c59315992051a74539e8f05fe8e1e8a8810122caa06bb"
+  },
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-canonical-baseline-20261004-112019",
+    "correction_branch": "gauntlet-static-html-canonical-correction-20261004-112019",
+    "baseline_sha": "bdda74fa00993672cc274d8e961da3d8d33b9519",
+    "final_sha": "83a47bcbc33dc7b086088cead2b451ece3732d97",
+    "baseline_pr": 53,
+    "correction_pr": 54,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "setup_file_puts": 6,
+    "corrective_file_puts": 3,
+    "observed_html_routes": [46, 47],
+    "previously_observed_html_routes_and_other_fields_preserved": true,
+    "canonical_points_to_4xx": [2, 0],
+    "each_selected_canonical_is_its_own_source_url": true,
+    "other_source_bytes_and_alternate_annotations_preserved": true,
+    "redirect_3xx": [3, 2],
+    "self_loop_direct_http_status": [301, 200],
+    "loop_html_source_unchanged": true,
+    "only_forced_self_rule_removed": true,
+    "other_redirects_intentionally_retained": true,
+    "cycle_sha256": "d2ec5ce92c711b5bfd9e5b6816cf6d1a75c1f686b5923c5504057e3e05245299"
+  },
+  "explicit_counter_increases": {
+    "counts": {
+      "internal_pages": [51, 52],
+      "page_has_only_one_dofollow_incoming_internal_link": [42, 43],
+      "page_has_only_one_dofollow_incoming_internal_link_indexable": [34, 37],
+      "page_has_links_to_broken_page_indexable": [0, 3],
+      "page_has_only_one_dofollow_incoming_internal_link_links": [42, 43],
+      "hreflang_to_redirect_or_broken_page": [0, 3],
+      "x_default_hreflang_missing": [4, 7]
+    },
+    "independently_reproduced_counts_and_examples": true,
+    "replay": "Re-score the saved baseline pages with only the two new self-canonical values and the previously inaccessible loop row replaced by its observed final row. The loop HTML source is byte-identical between commits. Every increased count and example is reproduced without any other change to the baseline pages.",
+    "cause": "Restored availability of the loop page and canonical indexability of the two other pages expose existing single incoming links, broken links and incomplete hreflang. Their original HTML links and language annotations are deliberately unchanged.",
+    "exposed_defects_repaired_this_phase": false,
+    "all_anomaly_counts_nonincreasing": false,
+    "global_nonregression_verdict": false
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "description": "A fresh isolated process re-read the closed draft unmerged PRs, their exact successful build heads, unchanged fixture main, and three corrective commits on exactly the allowed files. An independent HTML parser checked canonical and alternate values on GitHub sources and freshly served HTTP. Current HTTP bytes equal the retained snapshots. The single self rule is absent, the other rules and loop source are unchanged, and a synthetic 503 repair input is refused before PUT.",
+    "initial_source_equals_served_html_assertion_failed": true,
+    "diagnosis": "Netlify adds its deploy-preview toolbar div and script to the served HTML. Removing exactly one pinned owned-site toolbar fragment, with its observed fixed attributes and script path, yields the unchanged GitHub source apart from the two intended canonical replacements. No arbitrary HTML is excluded.",
+    "native_preview_noindex_retained": true,
+    "countercheck_sha256": "4b9b3d7f8ce4b004dd033784e90137d1f641845bea55ecc616aa35461fae67fc",
+    "countercheck_script_sha256": "c81f4d02ea423a23bc5211c2cc8966ef108f7b0fc794f08939f53c47d6a5e260",
+    "snapshots_sha256": {
+      "baseline/raw/report.json": "e09671b5f5bea12272ec16503092d815d42438ca14953b9a0f2d8f9d008349d7",
+      "baseline/controlled/report.json": "fb427ea6384c97725fbda2086704a49ebaa4ae2c04e64fe753b68c5e4777b1f1",
+      "baseline/http.json": "dd0ea67a5d31b91c930950181e5926a021fc8028232cf41636c5b59ecc81ee0e",
+      "final/raw/report.json": "438aee26eb830fcd73df3697ae8afd5b6f06d3c8364f4f62b4f8f543a03379b2",
+      "final/controlled/report.json": "9015d6abd903d3fdd569223223798e3ad64c45247036a2bf530315864ae8bd72",
+      "final/http.json": "9dbdfa33fadfeb2528c1a0165863cfb10ae9d38151e88e5bac3d8c2a9c643305"
+    }
+  },
+  "acceptance_inventory": {
+    "entrypoint": "python ops/gauntlet/acceptance_inventory.py --output NEW_PATH",
+    "historical_tracked_snapshot_preserved": "acceptance-inventory-2026-10-04.json",
+    "catalog_keys": 203,
+    "claimed_families": 66,
+    "visible_offered_families": 65,
+    "families_without_exact_named_record_before_this_record": 22,
+    "families_without_exact_named_record_after_this_record": 19,
+    "new_mentions_include_a_negative_refusal_and_an_unrepaired_exposed_family": true,
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "before_snapshot_sha256": "ecdf0581336384b7b7a5fa7cd0f70881485bdda2fd01499cba1c846d79dd6c55",
+    "after_snapshot": "acceptance-final-canonical.json in the successful live temporary directory"
+  },
+  "current_source_only_replay_after_relative_guard": {
+    "status": "passed",
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "current_helper_proposals_byte_identical_to_measured_commit": true,
+    "proposal_count": 3,
+    "closed_draft_unmerged_prs_rechecked": [52, 53, 54],
+    "replay_inputs": "The saved controlled baseline and pinned baseline GitHub blobs. Reads of the already-repaired correction branch files are projected to that baseline SHA; PUTs are captured locally and compared byte-for-byte with the measured final commit. No remote branch is created or altered.",
+    "no_new_build_or_crawl": true,
+    "sha256": "c3abe7b55234c4d9a21c0fddf512c7b377e8990ebafa97476f1f1e7d36a956ca",
+    "script_sha256": "c8efffe5dc6b0d62e83787bcb3a2245c248b20ce6f8dbcfbb84a9292ae6079f5"
+  },
+  "provider_usage": {
+    "all_live_attempts_and_countercheck_requests": 0,
+    "claude_budget_per_cycle": 0,
+    "ai_targeting_allowed": false,
+    "openai_fallback_allowed": false
+  },
+  "verification": {
+    "red_regressions_before_fix": {"failed": 12, "passed": 11},
+    "relative_query_guard_red_regressions": {"failed": 2, "passed": 1, "deselected": 27},
+    "full_final_suite": {
+      "database": "isolated_temporary_sqlite", "passed": 3240, "skipped": 42,
+      "warnings": 262, "seconds": 224.79, "source_edits_during_run": false
+    },
+    "prior_full_suite_before_relative_guard": {"passed": 3237, "skipped": 42, "sha256": "7487659a584107ffa5b9cb102eeb8240d03f555efddaa344a6aa475e1fe33d2a"},
+    "targeted_final_suite": {"passed": 149, "skipped": 0, "warnings": 24, "seconds": 41.95},
+    "new_tests_this_phase": 40,
+    "canonical_scope_tests": 30,
+    "individual_and_bulk_product_endpoint_tests": 2,
+    "fixture_cycle_tests": 8,
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "new_bench_bandit_medium_or_high": "none",
+    "full_junit_sha256": "3bfc5dc352a11e9c2626d9d435cec214f00b0de39519a166c8b321faf30c9138",
+    "targeted_junit_sha256": "70a03b049a2f19cd8328f6933e8e479b3de35aa70908a735f89d0cc16ce93531",
+    "red_junit_sha256": "e90e5be4883e0c06f60b8c97b1c96f0c36f7b5f559d024cd0f67e4965330d7ee",
+    "relative_query_red_junit_sha256": "89fd42be1ae7ef35c02cb2435c561602a35b7a0cdbacbe1201f1155ee93c3269",
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "Only two page-local canonicals sharing a measured 404 and one forced self-redirect on the owned static HTML fixture have live positive repair evidence here. Other canonical/redirect families, redirect policies, computed canonical values and arbitrary customer templates are not certified.",
+    "The 503 witness uses synthetic repair input, not a live 503 endpoint or a successful 5xx correction. Refusal is intentional; rewriting a temporarily failing canonical would be unsafe.",
+    "Source scoping refuses shared or ambiguous files. This prevents collateral edits but does not guarantee correction of every route emitted by a shared template.",
+    "Raw previews remain noindex. The controlled score projects only the exact preview host/header into the fixture production namespace and uses saved preview sitemap bytes. This is not a production deployment, proof of production indexing or full discovery equivalence.",
+    "Several existing link/hreflang defects become visible. Their counter increases are retained and independently reproduced; there is no global all-green or nonregression verdict.",
+    "The inventory includes negative, failed and unrepaired named records. Fewer unnamed families does not mean more certified repairs or first-client readiness.",
+    "The real builds/crawls precede the final relative query/fragment refinement. It is exercised by three new unit witnesses and the final full suite; a read-only current-code replay yields byte-identical corrective proposals for the measured fixture, but is not an additional post-change build/recrawl or live query-canonical witness.",
+    "No agent deployment/startup/scheduler, payment acceptance, customer onboarding, production capacity or new PostgreSQL run is included. The 42 full-suite skips remain outside this SQLite validation."
+  ],
+  "next_acceptance_check": "Exercise remaining canonical/redirect evidence gaps with positive witnesses and source-scope guards, then address other visible family gaps and production/customer onboarding before first-client readiness.",
+  "artifacts": {
+    "first_failed_live_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-redirect-live-20261004-yqdusdo3",
+    "successful_live_and_countercheck_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-redirect-referenced-live-20261004-3fqa97lc",
+    "full_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-relative-final-full-20261004-po_2z8f6",
+    "targeted_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-relative-targeted-final-20261004-7dsen8zv",
+    "red_regression_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-scope-red-20261004-2_s97yon",
+    "relative_query_red_regression_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-relative-red-20261004-u4av7stz",
+    "prior_full_suite_before_relative_guard_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-full-20261004-xke6lfjk",
+    "prior_targeted_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-all-targeted-20261004-fm_itdo8",
+    "targeted_collection_error_not_counted_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-relative-targeted-20261004-sk03dzot"
+  }
+}

@@ -185,6 +185,24 @@ def test_og_url_does_not_rewrite_a_different_scheme():
     assert count == 0 and output == raw, "A value absent from the exact measured pair was rewritten."
 
 
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+def test_shared_dead_canonical_keeps_each_page_and_its_alternates(harness, mode):
+    state, run = harness
+    key, dead, other = "canonical_points_to_4xx", URL + "gone", URL + "other"
+    source = HTML.replace('rel="canonical" href="' + URL, 'rel="canonical" href="' + dead).replace(
+        "</head>", '<link rel="alternate" hreflang="fr" href="' + dead + '" /></head>')
+    state.update(key=key, sources={"index.html": source, "other.html": source, "control.html": source},
+        report={"issues": {key: {"count": 2, "examples": [u + " -> " + dead for u in (URL, other)]}},
+                "pages": [{"url": u, "status_code": 200, "canonical": dead} for u in (URL, other)]
+                         + [{"url": dead, "status_code": 404}]})
+    result = run(mode)
+    assert result["status"] == 200 and set(result["written"]) == {"index.html", "other.html"}
+    for name, own in (("index.html", URL), ("other.html", other)):
+        assert result["written"][name] == source.replace('rel="canonical" href="' + dead,
+                                                          'rel="canonical" href="' + own)
+    assert not result["ai_calls"] and state["charges"] == [0]
+
+
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
     state, run = harness
     keys = ["missing_title", "missing_meta_description", "missing_alt_text", "viewport_not_set",

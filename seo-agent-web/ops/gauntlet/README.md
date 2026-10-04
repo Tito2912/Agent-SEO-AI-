@@ -129,6 +129,12 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   cycles de 44 routes HTML et 37 entrees, quatre PR fermees sans fusion et 3 200 tests
   reussis. Un defaut hreflang preexistant revele par le sitemap reste explicite ;
   l'inventaire des 66 familles ne les certifie pas toutes.
+- `validation-canonical-et-redirections-2026-10-04.json` : deux pages partageant
+  une cible 404 retrouvent chacune leur propre canonical, sans toucher aux hreflang.
+  Une boucle forcee revient en HTTP 200 ; les autres redirections sont conservees.
+  Trois PR fermees sans fusion, dont le premier temoin incomplet refuse, zero IA
+  et 3 240 tests reussis. Des defauts de liens et de langues deviennent visibles
+  avec les pages accessibles/auto-canoniques ; leurs hausses restent explicites.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -514,6 +520,57 @@ nommee exacte ; ce chiffre ne prouve pas qu'elles sont toutes non testees.
 L'inventaire garde les empreintes des bilans et la certification clients a faux.
 Le bilan `validation-sitemaps-et-inventaire-2026-10-04.json` distingue les preuves
 de ce perimetre statique des sitemaps generes, multisitemaps et templates clients.
+
+## Canonical Et Redirections
+
+`canonical_redirect_cycle.py` cree trois pages QA sur une nouvelle branche du
+seul depot statique : deux canonical vers la meme cible disparue et une regle
+301 forcee redirigeant une page vers elle-meme. Les liens relatifs font visiter
+la cible 404 au crawler ; une simple observation HTTP externe ne suffit pas
+a autoriser sa correction. Le premier essai refuse pour cette raison est conserve.
+
+```sh
+python ops/gauntlet/canonical_redirect_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Six fichiers de setup et trois PUT correctifs sont permis, uniquement sur les
+branches QA. La correction doit modifier les deux pages et `_redirects`, sans
+IA. Le canonical de chaque page est rattache a son propre fichier, pas a la
+premiere page partageant cette cible. Un fichier partage, une identite ambigue
+ou un statut inconnu, contradictoire, protege ou temporairement en erreur est
+refuse. Schema, casse du chemin/parametres et slash restent significatifs.
+Les balises alternate/hreflang et les liens ordinaires sont conserves. Les variantes
+relatives du canonical gardent leurs parametres et fragments : une URL sans
+parametre ne peut pas correspondre a une cible mesuree avec parametre.
+
+Les deux builds portent leur SHA exact. Les 46 routes HTML initiales restent
+presentes, une 47e devient accessible, les canonical fautifs passent de 2 a 0
+et la boucle passe de 301 a 200. Les deux autres redirections sont legitimes
+et restent en place. Les deux PR brouillon sont fermees sans fusion ; `main`
+reste identique. Le HTML source de la page auparavant en boucle est inchange.
+
+La comparaison independante conserve le noindex natif et les corps HTTP bruts.
+Netlify ajoute une barre de preview aux pages de controle : la comparaison
+au source identifie seulement ce fragment exact, sans ignorer d'autre contenu.
+Les deux canonical servis et les alternate sont aussi verifies par un parseur
+HTML independant. Les corps HTTP relus sont identiques aux captures conservees.
+
+Les pages desormais accessibles/auto-canoniques revelent des liens casses,
+des hreflang incomplets et des liens entrants uniques. Le rejeu du rapport
+initial avec seulement ces deux canonical et la page redevenue accessible
+reproduit chaque hausse et exemple. Ces defauts restent non corriges ici :
+ce passage ne certifie ni tous les compteurs verts ni toutes les redirections.
+Le refus d'une cible 503 est teste sur une entree synthetique, pas en HTTP reel.
+Le dernier garde-fou sur les URL relatives est couvert par trois tests unitaires
+et la suite complete. Un rejeu du code final capture localement les trois PUT,
+a partir des sources du temoin : ils sont identiques aux corrections mesurees.
+Ce rejeu n'est pas un nouveau build/recrawl ni un temoin HTTP de canonical a parametres.
+
+Le bilan `validation-canonical-et-redirections-2026-10-04.json` conserve les
+empreintes et les limites. Un nouvel inventaire temporaire compte 19 familles
+sans reference nommee, contre 22 avant ce bilan. Cela inclut une preuve de
+refus et une famille exposee mais non reparee : ce n'est pas un score de reussite.
+L'ancien inventaire suivi dans Git est conserve comme photographie historique.
 
 ## Reconstruire les pages
 
