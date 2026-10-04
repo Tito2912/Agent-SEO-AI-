@@ -114,6 +114,12 @@ absente ou inconnue reste `unverified`, meme si le compteur d'anomalies vaut zer
   est retenue explicitement, une PR et un debit retrouves sans doublon. Le resume du lot
   reste disponible apres reprise ; un ancien recu sans resume reste de perimetre inconnu.
   Suite finale : 3 014 tests reussis ; 159 tests reussis sur PostgreSQL reel, ensuite arrete.
+- `validation-doublons-par-lots-2026-10-04.json` : huit pages Hugo corrigees avec Claude
+  en lots plafonnes, puis build et recrawl sans regression observee. Nuxt reste NON VALIDE :
+  deux descriptions de 169 caracteres ont revele un plafond absent des objets meta nommes,
+  corrige et rejoue sur ces sources ; une nouvelle passe refuse ensuite deux propositions
+  de titres au controle de syntaxe. Les echecs sont conserves, pas comptes comme reussites.
+  Suite finale : 3 088 tests reussis ; quatre PR fermees sans fusion, sans deploiement de l'agent.
 
 Ces bilans ne certifient pas toutes les anomalies ni tous les clients. Les corrections locales
 ne sont pas deployees. Le bilan de reconciliation conserve 2 780 tests reussis sur SQLite et
@@ -354,6 +360,71 @@ Le bilan conserve les recus et empreintes, ainsi que la contre-verification inde
 de la PR fermee, du `main`, des trois contenus, de la branche partielle et du seul debit
 PostgreSQL. Le quota interne est teste ; aucun paiement Stripe, site client, deploiement,
 build ou recrawl SEO n'est exerce dans cette passe.
+
+## Doublons Par Lots
+
+`duplicate_batch_cycle.py` reprend les commits valides du banc titres sur Hugo/Nuxt.
+Il selectionne huit autres pages du grand groupe commun : `link-http`, `missing-alt`,
+`missing-h1`, `mixed-css`, `mixed-image`, `mixed-js`, `multiple-h1` et `redirected-css`.
+Les titres puis descriptions sont reecrits avec Claude reel sur la meme branche QA,
+en deux lots plafonnes a six puis deux fichiers pour chaque famille.
+
+```sh
+python ops/gauntlet/duplicate_batch_cycle.py --workdir <dossier-vide-temporaire> --ai-max-calls 24
+```
+
+Le plafond de 24 appels par stack inclut les relances et erreurs ; aucun ciblage IA ni
+repli OpenAI n'est permis. La base SQLite et les dossiers sont temporaires, sans
+comptes clients, startup de production ou schedulers. Seuls seize PUT de contenu sur
+les huit fichiers resolus sont autorises, sur une nouvelle branche de correction.
+`main`, les configurations, les autres fichiers et depots ne sont pas modifiables.
+Les branches partent de commits QA dont l'identite et l'ascendance sont verifiees.
+Les deux PR par stack sont des brouillons fermes sans fusion, y compris apres echec.
+
+Chaque lot doit partager exactement les fichiers restants entre `patched` et
+`deferred_files`, sans exclusion silencieuse ni nouvelle cible. Le cache de contenu
+reste partage entre lots et familles. Les valeurs finales lisibles sont controlees
+sur tous les fichiers deja traites, avec leurs bornes, SHA de blob et empreinte source.
+Ces observations de source ne remplacent pas la mesure HTML du dernier commit.
+
+Le banc attend le build de la PR exacte puis son HTML et sitemap, conserve le crawl
+brut et applique la meme projection contrefactuelle que les bancs hreflang/titres.
+Toutes les routes doivent etre revisitees. Chaque valeur cible doit avoir un temoin
+dupliquant positif, changer, respecter les bornes, n'avoir qu'une balise et devenir
+unique aussi contre les pages non selectionnees. Les metadonnees non ciblees et les
+champs observes de contenu, liens, images et donnees structurees sont compares.
+Les compteurs de toutes les familles ne doivent pas augmenter ni introduire de
+nouvelles routes en anomalie. Les ressources generees a nom de fichier variable ne
+font pas l'objet d'une comparaison octet pour octet entre builds.
+
+Le resultat `measured_selected_occurrences` ne vaut que pour ces huit pages et ce
+passage cumulatif, pas pour tous les membres du groupe ni pour chaque famille
+executee independamment. `unselected_impacted_urls` garde les autres occurrences ;
+`all_group_occurrences_certified` reste faux. Les previews restent `noindex` en
+realite : aucune indexation, fusion ou mise en production de l'agent n'est certifiee.
+`usage.json` mesure les tokens et le cout estime du code, sans facture fournisseur,
+cles ou prompts. La reprise HTTP/quota, les paiements et les templates clients
+arbitraires ne sont pas retestes par ce banc.
+
+Le premier passage Nuxt est conserve comme ECHEC : apres huit titres et six
+descriptions ecrits, deux descriptions nommees faisaient 169 caracteres. Le plafond
+lisait `description: '...'`, pas l'objet `name: 'description', content: '...'`.
+Il couvre maintenant ce literal, ses apostrophes et les copies sociales exactes
+ecrites par le patch, sans couper une expression ou une ancienne valeur non modifiee.
+La mesure est refaite apres reparation des guillemets, et une valeur cible qui
+redeviendrait trop longue apres un autre garde-fou est refusee avant PUT.
+Cette branche partielle n'est pas certifiee : l'essai suivant repart du meme commit
+initial sur une NOUVELLE branche, sans reprise automatique du contenu interrompu.
+
+Ce nouvel essai Nuxt est lui aussi un ECHEC : sur six propositions de titres, quatre
+fichiers sont ecrits et deux sont refuses par le controle de litteraux non termines
+(`mixed-css`, `mixed-js`). Les deux fichiers refuses restent inchanges. Le banc
+s'arrete avant les descriptions et avant une PR de correction ; le temoin est ferme.
+Les propositions refusees n'ont pas ete conservees, donc leur cause precise n'est
+PAS diagnostiquee. Il reste a les capturer dans un environnement isole, examiner
+les refus, puis repasser build et recrawl Nuxt. On ne contourne pas le refus pour
+obtenir un statut vert. Le bilan detaille distingue le succes Hugo, le rejeu de
+source du correctif de plafond et ces deux essais Nuxt non verifies sur HTML corrige.
 
 ## Reconstruire les pages
 

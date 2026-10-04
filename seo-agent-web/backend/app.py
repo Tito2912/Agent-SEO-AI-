@@ -24327,6 +24327,54 @@ def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, l
 
     out = _JS_VALUE_LINE_RE.sub(_one_js, out)
 
+    # Nuxt names the description in a meta object, rather than a description property.
+    old_named = set()
+    for obj in _META_NOMME_RE["description"].finditer(old_content):
+        item = _META_CONTENU_RE.search(obj.group(0))
+        if item:
+            old_named.add(_js_unescape(item.group("value")))
+    trimmed_named: dict[str, str] = {}
+
+    def _replace_meta_value(obj: str, item: "re.Match[str]", fixed: str) -> str:
+        return obj[:item.start("value")] + _js_escape(fixed, item.group(2)) + obj[item.end("value"):]
+
+    def _one_named(match: "re.Match[str]") -> str:
+        obj = match.group(0)
+        item = _META_CONTENU_RE.search(obj)
+        if not item or not re.match(r"\s*(?:,|\})", obj[item.end():]):
+            return obj  # A literal prefix of an expression is not the whole description.
+        plain = _js_unescape(item.group("value"))
+        if plain in old_named:
+            return obj
+        fixed = _trim(plain, "description")
+        if fixed == plain:
+            return obj
+        trimmed_named[plain] = fixed
+        return _replace_meta_value(obj, item, fixed)
+
+    out = _META_NOMME_RE["description"].sub(_one_named, out)
+    if trimmed_named:
+        social_pattern = re.compile(
+            r"""\{[^{}]*?\b(?:name|property)\s*:\s*(['"])(?P<name>og:description|twitter:description)\1[^{}]*?\}""",
+            re.S | re.I)
+        old_social: dict[str, set[str]] = {}
+        for obj in social_pattern.finditer(old_content):
+            item = _META_CONTENU_RE.search(obj.group(0))
+            if item:
+                old_social.setdefault(obj.group("name").lower(), set()).add(_js_unescape(item.group("value")))
+
+        def _one_social(match: "re.Match[str]") -> str:
+            obj = match.group(0)
+            item = _META_CONTENU_RE.search(obj)
+            if not item or not re.match(r"\s*(?:,|\})", obj[item.end():]):
+                return obj
+            plain = _js_unescape(item.group("value"))
+            if plain not in trimmed_named or plain in old_social.get(match.group("name").lower(), set()):
+                return obj
+            return _replace_meta_value(obj, item, trimmed_named[plain])
+
+        out = social_pattern.sub(_one_social, out)
+
     # Front matter (MDX, Markdown, Jekyll): the same values, written as YAML — inside the leading
     # `---` block ONLY. Everywhere else that line shape belongs to somebody else's syntax; see
     # `_FRONTMATTER_BLOCK_RE`. A file with no such block leaves this pass with nothing to do.
@@ -27441,6 +27489,7 @@ def _deep_patch_issue_files(
                 return ""
             _contenu, _ = _enforce_length_ceilings(str(_p["patched_content"]), res[1] or "")
             _contenu, _ = _escape_quotes_in_written_values(_contenu, res[1] or "")
+            _contenu, _ = _enforce_length_ceilings(_contenu, res[1] or "")
             return _valeur_unique(_contenu)
 
         def _pourquoi_refuser(val: str, deja: list[str]) -> str:
@@ -27541,6 +27590,9 @@ def _deep_patch_issue_files(
         # raccourcie peut se terminer sur une apostrophe tout comme celle d'origine. Echapper
         # avant eux laisserait passer ce qu'ils viennent d'ecrire.
         new_content, _quote_notes = _escape_quotes_in_written_values(new_content, raw)
+        # Quote repair can make the full literal readable for the first time.
+        new_content, _post_quote_length_notes = _enforce_length_ceilings(new_content, raw)
+        _len_notes += _post_quote_length_notes
         # APRES l'echappement, et c'est tout l'enjeu. Ce controle LIT une valeur pour la mesurer ;
         # avant l'echappement il lisait des litteraux mal formes. Mesure du 14/09/2026 : le modele
         # ecrit `'Page du parcours d'obstacles : ...'` — apostrophe NON echappee — et le litteral
@@ -27653,6 +27705,10 @@ def _deep_patch_issue_files(
             continue
         # Source guards can change the value after preparation; check the actual PUT content.
         _valeur_finale = _valeur_unique(new_content)
+        if _valeur_finale and len(_valeur_finale) > _LENGTH_CEILINGS[_length_kind(_champ_unique)]:
+            logger.warning("[correction] %s: %s refuse : valeur finale depasse le plafond", issue_key, path)
+            skipped.append(path)
+            continue
         if _valeur_finale and _valeur_finale in _valeurs_committees:
             logger.warning("[correction] %s: %s refuse : valeur finale deja presente", issue_key, path)
             skipped.append(path)

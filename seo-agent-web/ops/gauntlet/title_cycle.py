@@ -63,7 +63,8 @@ def select_urls(m, before: dict, key: str) -> tuple[list[str], list[str]]:
     return selected, [u for u in all_urls if u not in selected]
 
 
-def html_checks(before: dict, after: dict, scopes: dict) -> list[dict]:
+def html_checks(before: dict, after: dict, scopes: dict, *, duplicate_routes: set[str] | None = None) -> list[dict]:
+    expected_duplicates = PAIR if duplicate_routes is None else duplicate_routes
     bp, ap = live._html_pages(before), live._html_pages(after)
     checks, permitted = [], {}
     for key, scope in scopes.items():
@@ -96,7 +97,7 @@ def html_checks(before: dict, after: dict, scopes: dict) -> list[dict]:
         # Family-wide counts are not the selected scope: duplicate groups remain partial.
         positive = (expected > 0 and before.get("issues", {}).get(key, {}).get("count", 0) > 0
                     and len({r["route"] for r in rows}) == expected
-                    and (key not in DUPLICATES or {r["route"] for r in rows} == PAIR))
+                    and (key not in DUPLICATES or {r["route"] for r in rows} == expected_duplicates))
         checks.append({"family": key, "verdict": "resolved_on_selected_observed_html"
                        if positive and all(r["baseline_defect_observed"] and r["after_correct"] for r in rows)
                        else "unverified", "observations": rows})
