@@ -1066,6 +1066,45 @@ avec le deploiement ; une future restauration ou une absence temporaire reste
 possible. Aucun site client ni merge main n'est implique. La prochaine etape
 porte sur les URL HTTP presentes dans le sitemap d'un site HTTPS.
 
+## URL HTTP du sitemap d'un site HTTPS (05/10/2026)
+
+Une reponse HTTPS du domaine ne prouve pas celle de chaque chemin. Le correcteur
+exige maintenant une observation directe HTML 200, canonique ou sans canonical,
+sans `noindex` ni `none`. Il relit la source HTML litterale et les regles de
+routing, puis revalide chaque destination HTTPS avant l'unique PUT XML. Un
+temoin devenu indisponible bloque toute l'ecriture. Les apercus IA libres ou
+anciens ne contournent pas ces preuves, et aucun appel Claude n'est necessaire.
+
+Le parseur XML conserve les chemins, requetes, fragments distincts, commentaires,
+extensions et entrees non visees. En cas de collision, l'entree HTTPS existante
+reste entiere, avec ses propres metadonnees ; sans collision, seul son `<loc>`
+HTTP change. Les sitemaps engendres, index, sources ambigues et alternates
+multilingues non verifies d'une entree deplacee sont refuses.
+
+```sh
+python ops/gauntlet/sitemap_https_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `7a29cdf61167d4613d714abae6638b011bfe3716` : un PUT de preparation
+et un PUT correctif, tous deux exclusivement dans `sitemap.xml`. Trois entrees
+HTTP sont corrigees : deux collisions et une conversion conservant les
+metadonnees. Deux temoins HTTP restent intacts, vers une page `noindex` et une
+destination HTTPS 404. La famille controlee passe donc de **5 a 2**, avec les
+trois occurrences visees de 3 a 0 ; le sitemap passe de 51 a 49 entrees. Deux
+builds et deux crawls conservent les 52 routes HTML saines, les temoins manquants,
+les corrections anterieures et leurs controles negatifs, sans hausse de compteur.
+Les PR #71 et #72 sont fermees en brouillon sans fusion ; main reste intact.
+
+Les previews natives gardent leur `noindex` et leurs URL de production : les
+compteurs bruts 0 vers 0 ne prouvent aucune correction. Le banc controle seulement
+leur hote et l'en-tete exact injecte par Netlify, sans inventer de statut ni de
+corps. Le controle de cette famille, execute hors `_score_issues` par l'auditeur,
+est recalcule a partir des vrais `<loc>` servis. La contre-verification relit les
+sources, metadonnees, XML, builds et HTTP, et confirme que la sonde du produit
+refuse toujours les previews natives. Ce n'est pas une preuve d'indexation en
+production ni une validation globale du correcteur. Le bilan est dans
+`validation-sitemap-https-2026-10-05.json` ; aucun site client n'est modifie.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

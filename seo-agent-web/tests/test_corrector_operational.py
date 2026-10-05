@@ -294,7 +294,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "sitemap_non_canonical_page", "sitemap_non_canonical_page_indexable", " SITEMAP_NON_CANONICAL_PAGE ",
     "sitemap_3xx_redirect", "sitemap_3xx_redirect_indexable", " SITEMAP_3XX_REDIRECT ",
     "sitemap_noindex_page", "sitemap_noindex_page_not_indexable", " SITEMAP_NOINDEX_PAGE ",
-    "sitemap_4xx_page", "sitemap_4xx_page_not_indexable", " SITEMAP_4XX_PAGE "])
+    "sitemap_4xx_page", "sitemap_4xx_page_not_indexable", " SITEMAP_4XX_PAGE ",
+    "sitemap_http_urls_for_https", "sitemap_http_urls_for_https_indexable", " SITEMAP_HTTP_URLS_FOR_HTTPS "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -522,6 +523,40 @@ def test_sitemap_error_endpoints_delist_only_still_missing_entries_with_human_re
         assert verification and not any(verification)
         if case == "partial_verified":
             assert any(protected in body for body in state["pr_bodies"])
+    else:
+        assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("case", ["verified", "collision", "unobserved", "stale_head", "fresh_http_refused", "partial_verified"])
+def test_sitemap_https_endpoints_only_upgrade_verified_entries_without_ai(harness, monkeypatch, mode, case):
+    state, run = harness
+    key, old, control = "sitemap_http_urls_for_https", "http://site.test/", "http://site.test/control"
+    alias = '<url><loc>' + old + '</loc><priority>0.1</priority></url>'
+    xml = '<urlset>' + alias + '<url><loc>' + control + '</loc></url></urlset>'
+    if case == "collision":
+        xml = xml.replace('</urlset>', '<url><loc>' + URL + '</loc><priority>0.9</priority></url></urlset>')
+    state.update(key=key, sources={"sitemap.xml": xml, "index.html": HTML,
+                                  "control.html": HTML.replace(URL, URL + "control")})
+    rows = [{"url": URL, "final_url": URL, "status_code": 200, "content_type": "text/html", "canonical": URL}]
+    impacted = [old]
+    if case == "unobserved":
+        rows = []
+    elif case == "stale_head":
+        state["sources"]["index.html"] = HTML.replace(URL, URL + "control")
+    elif case == "partial_verified":
+        impacted.append(control)
+        rows.append(dict(rows[0], url=URL + "control", final_url=URL + "control", canonical=URL + "control", meta_robots="noindex"))
+    state["report"] = {"issues": {key: {"count": len(impacted), "examples": impacted}}, "pages": rows}
+    monkeypatch.setattr(m, "_sitemap_https_page", lambda *a: case != "fresh_http_refused")
+    result = run(mode)
+    assert not result["ai_calls"]
+    if case in {"verified", "collision", "partial_verified"}:
+        expected = xml.replace(alias, '') if case == "collision" else xml.replace('<loc>' + old + '</loc>', '<loc>' + URL + '</loc>')
+        assert result["status"] == 200 and result["written"] == {"sitemap.xml": expected}
+        assert state["charges"] == [0] and state["pr_bodies"]
+        if case == "partial_verified":
+            assert any(control in body for body in state["pr_bodies"])
     else:
         assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
 

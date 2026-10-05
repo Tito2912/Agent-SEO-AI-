@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -20462,24 +20462,19 @@ def _add_sitemap_to_robots(content: str, sitemap_url: str) -> tuple[str, int]:
         return content, 0
     base = content.rstrip("\n")
     return base + "\n\nSitemap: " + sitemap_url + "\n", 1
-# Le sitemap d'un site en https qui liste des URL en http. La destination ne se DEVINE pas : la
-# regle du crawler ne se declenche que lorsque le site est servi en https, donc son hote repond
-# en https par definition. On s'y limite strictement — une URL http vers un hote TIERS reste
-# intacte, personne ne sait si ce tiers sert le https.
+# Same-host scheme proposals still require an observed, indexable HTTPS destination.
 _SITEMAP_HTTPS_KEYS = {"sitemap_http_urls_for_https"}
 _SITEMAP_FAMILY_KEYS = (_SITEMAP_ADD_KEYS | _SITEMAP_REWRITE_KEYS | _SITEMAP_ALTERNATE_KEYS
                         | _SITEMAP_REMOVE_KEYS | _SITEMAP_HTTPS_KEYS | _SITEMAP_DEDUPE_KEYS)
 
 
 def _sitemap_https_pairs(issue_block: Any, site_name: str) -> list[dict[str, str]]:
-    """(URL http listee dans le sitemap → la meme en https), pour le seul hote du site.
-
-    Le crawler donne la liste des `<loc>` en clair ; il ne fournit pas de destination parce
-    qu'il n'y a rien a mesurer — passer `http://` a `https://` sur l'hote qui sert deja le site
-    en https est une reecriture de schema, pas un choix. La restriction a cet hote est ce qui
-    empeche la regle de deborder sur un domaine tiers.
-    """
-    hote = (site_name or "").strip().lower().split("//")[-1].split("/")[0]
+    """Propose same-host scheme pairs, not proof that each HTTPS page is healthy."""
+    value = (site_name or "").strip()
+    try:
+        hote = urlsplit(value if "://" in value else "https://" + value).netloc.lower()
+    except ValueError:
+        return []
     if not hote or not isinstance(issue_block, dict):
         return []
     out: list[dict[str, str]] = []
@@ -20488,7 +20483,13 @@ def _sitemap_https_pairs(issue_block: Any, site_name: str) -> list[dict[str, str
         url = str(brut or "").strip()
         if not url.lower().startswith("http://") or url in vus:
             continue
-        if urlsplit(url).netloc.lower() != hote:
+        try:
+            parsed = urlsplit(url)
+            valid = (parsed.netloc.lower() == hote and not parsed.username and not parsed.password
+                     and not parsed.fragment and parsed.port is None)
+        except ValueError:
+            valid = False
+        if not valid:
             continue
         vus.add(url)
         out.append({"from": url, "to": "https://" + url[len("http://"):]})
@@ -20758,6 +20759,37 @@ def _sitemap_error_status(url: str) -> int | None:
     return None
 
 
+def _sitemap_https_page(url: str, canonical: str) -> bool:
+    """Recheck bounded public HTTPS HTML, without redirects or preview exemptions."""
+    try:
+        from . import sitemap_https
+    except ImportError:
+        import sitemap_https
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme != "https" or parsed.username or parsed.password or _validate_public_crawl_target(url):
+            return False
+        response = requests.get(url, allow_redirects=False, stream=True, timeout=(5, 10))
+        try:
+            if (type(response.status_code) is not int or response.status_code != 200 or response.history
+                    or _verification_url(response.url) != _verification_url(url)
+                    or response.headers.get("retry-after") or sitemap_https.excluded(response.headers.get("x-robots-tag"))
+                    or response.headers.get("content-type", "").split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}):
+                return False
+            chunks, size = [], 0
+            for chunk in response.iter_content(chunk_size=8192):
+                size += len(chunk)
+                if size > 80_000:
+                    return False
+                chunks.append(chunk)
+            return sitemap_https.literal_destination(b"".join(chunks).decode("utf-8"), canonical,
+                lambda raw, **kw: _duplicate_html_document(raw, allow_body_scripts=True, **kw), _verification_url)
+        finally:
+            response.close()
+    except Exception:
+        return False
+
+
 def _remove_sitemap_locs(content: str, urls: list[str], *, verified: bool = False) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): drop the whole `<url>` block of each flagged page.
 
@@ -20846,7 +20878,8 @@ def _dedupe_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
     return out, count
 
 
-def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]], *, canonical: bool = False) -> tuple[str, int]:
+def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]], *, canonical: bool = False,
+                          scheme_upgrade: bool = False) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): replace a flagged `<loc>` with the URL that belongs
     there — the redirect's destination, or the target's declared canonical.
 
@@ -20854,11 +20887,13 @@ def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]], *, canonica
     same URLs and are tempting to "keep consistent", but they are a separate issue with its own
     family; widening the blast radius here is exactly how a sitemap fix once rewrote a `<loc>`
     it had no business touching. Returns (new_content, replacements)."""
-    if canonical:
+    if canonical or scheme_upgrade:
         try:
             from . import sitemap_rewrite
         except ImportError:
             import sitemap_rewrite
+        if scheme_upgrade:
+            return sitemap_rewrite.upgrade_schemes(content, pairs, _verification_url)
         return sitemap_rewrite.rewrite_canonicals(content, pairs, _verification_url)
     mapping: dict[str, str] = {}
     for pair in pairs or []:
@@ -24741,7 +24776,8 @@ def _duplicate_canonical_masters(
     return out
 
 
-def _duplicate_html_document(raw: str, *, allow_noindex: bool = False) -> dict[str, Any] | None:
+def _duplicate_html_document(raw: str, *, allow_noindex: bool = False,
+                             allow_body_scripts: bool = False) -> dict[str, Any] | None:
     """Inspect literal HTML without treating JS/template strings as page markup."""
     if re.search(r"\{\{|\{%|<%|\$\{", raw):
         return None
@@ -24757,6 +24793,7 @@ def _duplicate_html_document(raw: str, *, allow_noindex: bool = False) -> dict[s
             self.literal_stack = []
             self.nested_robots = False
             self.scripts = 0
+            self.head_scripts = 0
             self.ambiguous = False
 
         def source_offset(self):
@@ -24776,6 +24813,7 @@ def _duplicate_html_document(raw: str, *, allow_noindex: bool = False) -> dict[s
                 self.nested_robots |= self.literal_stack != ["html", "head"]
             if tag == "script":
                 self.scripts += 1
+                self.head_scripts += "body" not in self.literal_stack or "head" in self.literal_stack
             if tag == "link" and "canonical" in str(values.get("rel") or "").lower().split():
                 self.canonicals.append(values.get("href"))
                 self.canonical_positions.append(self.source_offset())
@@ -24795,7 +24833,7 @@ def _duplicate_html_document(raw: str, *, allow_noindex: bool = False) -> dict[s
         parser.close()
     except Exception:
         return None
-    if parser.scripts or parser.ambiguous or any(len(parser.starts.get(t, [])) != 1 or len(parser.ends.get(t, [])) != 1
+    if (parser.scripts and not allow_body_scripts) or parser.head_scripts or parser.ambiguous or any(len(parser.starts.get(t, [])) != 1 or len(parser.ends.get(t, [])) != 1
                              for t in ("html", "head", "body")):
         return None
     positions = [parser.starts["html"][0], parser.starts["head"][0], parser.ends["head"][0],
@@ -27132,6 +27170,30 @@ def _prepare_issue_fix(
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
     sitemap_family = issue_key.removesuffix("_not_indexable").removesuffix("_indexable")
+    if sitemap_family in _SITEMAP_HTTPS_KEYS:
+        try:
+            from . import sitemap_https
+        except ImportError:
+            import sitemap_https
+        out["sitemap_https_pairs"] = []
+        pairs, refused = sitemap_https.verified_pairs(_sitemap_https_pairs(block, site_name), pages, _verification_url)
+        refused = sorted(set(refused) | (set(impacted) - {p["from"] for p in pairs}))
+        candidates = _fichiers_sitemap_du_depot(all_paths)
+        roots = {"sitemap.xml", *(folder + "/sitemap.xml" for folder in _DOSSIERS_STATIQUES)}
+        if not pairs:
+            out["refusal"] = "Aucune destination HTTPS directe HTML 200 canonique et indexable observee."
+        elif len(candidates) != 1 or candidates[0] not in roots or _sitemap_deja_engendre(all_paths):
+            out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : aucun remplacement de protocole devine."
+        else:
+            out["sitemap_https_pairs"] = pairs
+            out["url_pairs"] = pairs
+            out["targets_override"] = candidates
+            out["evidence"] = [p["from"] for p in pairs]
+            out["link_rewriter"] = lambda raw, _p=pairs: _rewrite_sitemap_locs(raw, _p, scheme_upgrade=True)
+            out["extra_hint"] = _build_url_pair_hint(pairs)
+            if refused:
+                out["side_effects"] += "\nEntrees HTTP laissees sans correction faute de destination verifiee : " + ", ".join(refused)
+        return out
     if sitemap_family == "sitemap_4xx_page":
         try:
             from . import sitemap_errors
@@ -27721,6 +27783,7 @@ def _deep_patch_issue_files(
     sitemap_redirect_pairs: list[dict[str, str]] | None = None,
     sitemap_noindex_urls: list[str] | None = None,
     sitemap_error_statuses: dict[str, int] | None = None,
+    sitemap_https_pairs: list[dict[str, str]] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27753,7 +27816,7 @@ def _deep_patch_issue_files(
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
     if (sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None or sitemap_noindex_urls is not None
-            or sitemap_error_statuses is not None):
+            or sitemap_error_statuses is not None or sitemap_https_pairs is not None):
         sitemap_pairs = sitemap_redirect_pairs if sitemap_redirect_pairs is not None else sitemap_canonical_pairs
         candidates = _fichiers_sitemap_du_depot(all_paths)
         if max_files < 1 or len(candidates) != 1 or targets_override != candidates:
@@ -27771,6 +27834,17 @@ def _deep_patch_issue_files(
             current_index = index or repo_index.build_repo_index(all_paths)
             observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
             direct_routes = set()
+            if sitemap_https_pairs is not None:
+                try:
+                    from . import sitemap_https, sitemap_rewrite
+                except ImportError:
+                    import sitemap_https
+                    import sitemap_rewrite
+                verified, refused = sitemap_https.verified_pairs(sitemap_https_pairs, pages, _verification_url)
+                if refused or not verified or verified != sitemap_https_pairs:
+                    raise ValueError("observations HTTPS contradictoires")
+                sitemap_pairs, sitemap_redirect_pairs = verified, []
+                direct_routes = {p["to"] for p in verified}
             if sitemap_error_statuses is not None:
                 try:
                     from . import sitemap_errors
@@ -27799,7 +27873,7 @@ def _deep_patch_issue_files(
                 except ImportError:
                     import sitemap_redirects
                 redirect_pairs = sitemap_redirect_pairs
-                if sitemap_noindex_urls is None and sitemap_error_statuses is None:
+                if sitemap_noindex_urls is None and sitemap_error_statuses is None and sitemap_https_pairs is None:
                     verified, refused = sitemap_redirects.verified_pairs(sitemap_pairs, pages, _verification_url)
                     if refused or verified != sitemap_pairs:
                         raise ValueError("observations de redirection contradictoires")
@@ -27852,6 +27926,10 @@ def _deep_patch_issue_files(
                         raise ValueError("instruction noindex actuelle contradictoire ou non litterale")
                     continue
                 expected_canonical = _verification_url(observed[url].get("canonical"))
+                if sitemap_https_pairs is not None:
+                    if not sitemap_https.literal_destination(source, expected_canonical, _duplicate_html_document, _verification_url):
+                        raise ValueError("destination HTTPS actuelle non indexable ou non litterale")
+                    continue
                 if not document or [_verification_url(u) for u in document["canonicals"]] != (
                         [expected_canonical] if expected_canonical else []):
                     raise ValueError("canonical actuel contradictoire ou non litteral")
@@ -27866,12 +27944,15 @@ def _deep_patch_issue_files(
             if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
                 raise ValueError("source non verifiable")
             removal_urls = list(sitemap_error_statuses) if sitemap_error_statuses is not None else sitemap_noindex_urls
-            new, count = (_remove_sitemap_locs(raw, removal_urls, verified=True) if removal_urls is not None
+            new, count = (sitemap_rewrite.upgrade_schemes(raw, sitemap_https_pairs, _verification_url) if sitemap_https_pairs is not None
+                          else _remove_sitemap_locs(raw, removal_urls, verified=True) if removal_urls is not None
                           else _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True))
             if not count:
                 return [], [path], [path], []
             if sitemap_error_statuses is not None and any(_sitemap_error_status(url) != code for url, code in sitemap_error_statuses.items()):
                 raise ValueError("statut HTTP actuel modifie ou non verifiable")
+            if sitemap_https_pairs is not None and any(not _sitemap_https_page(p["to"], _verification_url(observed[p["to"]].get("canonical"))) for p in sitemap_https_pairs):
+                raise ValueError("destination HTTPS actuelle modifiee ou non verifiable")
             response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
                 json_body={"branch": fix_branch, "sha": sha, "message": "fix(seo): canonical sitemap cleanup\n\nGenerated by Noyaru",
                            "content": _b64.b64encode(new.encode("utf-8")).decode("ascii")})
@@ -28513,6 +28594,7 @@ def _apply_prepared_issue_fix(
                 sitemap_redirect_pairs=prep.get("sitemap_redirect_pairs"),
                 sitemap_noindex_urls=prep.get("sitemap_noindex_urls"),
                 sitemap_error_statuses=prep.get("sitemap_error_statuses"),
+                sitemap_https_pairs=prep.get("sitemap_https_pairs"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

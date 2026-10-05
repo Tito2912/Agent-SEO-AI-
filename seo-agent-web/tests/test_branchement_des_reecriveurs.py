@@ -177,6 +177,9 @@ SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED
 def _prepare(cle: str, bloc: dict) -> dict:
     pages = list(PAGES)
     chemins = list(CHEMINS)
+    if cle in m._SITEMAP_HTTPS_KEYS:
+        pages = [{"url": S + suffix, "final_url": S + suffix, "status_code": 200,
+                  "content_type": "text/html", "canonical": S + suffix} for suffix in ("/a", "/b")]
     if cle == "canonical_from_https_to_http":
         bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": "http://exemple.fr/", "to": P}]})
         pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": "http://exemple.fr/"}]

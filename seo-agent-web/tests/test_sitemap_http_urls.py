@@ -1,18 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Un sitemap de site https qui liste des URL en clair : la destination ne se devine pas.
-
-Premiere famille reprise dans la liste d'attente mesuree le 15/09/2026 — 104 familles montrees
-au client sans correcteur. Celle-ci y etait alors qu'elle est parfaitement mecanique : le
-crawler ne leve `sitemap_http_urls_for_https` QUE lorsque le site est servi en https, donc son
-hote repond en https par definition. Passer `http://` a `https://` sur cet hote est une
-reecriture de schema, pas un choix editorial.
-
-La restriction a l'hote du site est ce qui empeche la regle de deborder : une URL en clair vers
-un domaine TIERS reste intacte, parce que personne ne sait si ce tiers sert le https.
-
-La reecriture elle-meme reutilise `_rewrite_sitemap_locs`, deja eprouve par deux familles
-soeurs — seule la construction des paires est nouvelle, et c'est elle que ce fichier mesure.
-"""
+"""Same-host scheme proposals need separate evidence of healthy HTTPS destinations."""
 
 from __future__ import annotations
 
@@ -94,7 +81,9 @@ def test_le_correcteur_prepare_bien_un_reecriveur_sans_modele():
         issue_key="sitemap_http_urls_for_https",
         issues={"sitemap_http_urls_for_https": _bloc("http://exemple.fr/a")},
         impacted=["http://exemple.fr/a"], all_paths=["public/sitemap.xml"], site_name=SITE,
-        owner="o", repo_name="r", branch="main", token="t", model_override="", pages=[])
+        owner="o", repo_name="r", branch="main", token="t", model_override="", pages=[{
+            "url": "https://exemple.fr/a", "final_url": "https://exemple.fr/a", "status_code": 200,
+            "content_type": "text/html", "canonical": "https://exemple.fr/a"}])
     assert prep["refusal"] is None
     assert prep["link_rewriter"] is not None
     assert prep["evidence"] == ["http://exemple.fr/a"]

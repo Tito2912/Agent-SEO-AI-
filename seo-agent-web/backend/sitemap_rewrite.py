@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from html import escape
 from xml.parsers import expat
+from urllib.parse import urlsplit
 
 from defusedxml import ElementTree as ET
 from defusedxml.common import DefusedXmlException
@@ -21,7 +22,19 @@ def remove_urls(content: str, urls: list[str], identify: Callable[[str], str]) -
     return _rewrite(content, [{"from": url, "to": ""} for url in urls], identify, remove=True)
 
 
-def _rewrite(content, pairs, identify, *, remove):
+def upgrade_schemes(content: str, pairs: list[dict[str, str]], identify: Callable[[str], str]) -> tuple[str, int]:
+    """Change only loc text; prefer an existing HTTPS entry over converted metadata."""
+    if any(not identify(p.get("from", "")).startswith("http://")
+           or identify(p.get("to", "")) != "https:" + identify(p.get("from", ""))[5:] for p in pairs):
+        return content, 0
+    def exact(value):
+        identity = identify(value)
+        fragment = urlsplit(value).fragment
+        return identity + '#' + fragment if identity and fragment else identity
+    return _rewrite(content, pairs, exact, remove=False, scheme_only=True)
+
+
+def _rewrite(content, pairs, identify, *, remove, scheme_only=False):
     mapping = {}
     for pair in pairs:
         source, target = (identify(pair.get(k, "")) for k in ("from", "to"))
@@ -76,6 +89,14 @@ def _rewrite(content, pairs, identify, *, remove):
             replacement = b""
             if not remove and target not in present:
                 present.add(target)
+                if scheme_only:
+                    # A moved entry must not introduce unverified language annotations.
+                    if any(node["name"] == "http://www.w3.org/1999/xhtml}link" for node in frame["children"]):
+                        return content, 0
+                    start = data.find(b">", loc["start"]) + 1
+                    edits.append((start, loc["close"], escape(target, quote=False).encode("utf-8")))
+                    count += 1
+                    continue
                 # Reuse only in-scope qualified names, not lastmod/images from a different URL.
                 url_open = data[frame["start"]:data.find(b">", frame["start"]) + 1]
                 loc_open = data[loc["start"]:data.find(b">", loc["start"]) + 1]
