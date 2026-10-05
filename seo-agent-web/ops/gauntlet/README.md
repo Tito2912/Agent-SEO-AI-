@@ -1105,6 +1105,55 @@ refuse toujours les previews natives. Ce n'est pas une preuve d'indexation en
 production ni une validation globale du correcteur. Le bilan est dans
 `validation-sitemap-https-2026-10-05.json` ; aucun site client n'est modifie.
 
+## Pages indexables absentes du sitemap (05/10/2026)
+
+`indexable_page_not_in_sitemap` ajoute uniquement les pages HTTPS observees en
+HTML 200 direct, canoniques ou sans canonical, sans `noindex` ni `none`. Le
+correcteur exige le vrai hote du projet, un sitemap litteral unique, une source
+HTML actuelle non ambigue et des regles simples. Chaque page est recontrolee en
+HTTP juste avant le PUT ; un temoin devenu non indexable bloque toute l'ecriture.
+Les apercus IA ne contournent pas ces preuves. Aucun appel Claude n'est necessaire.
+
+Le parseur ajoute des noeuds `<url><loc>...</loc></url>` minimaux, avec namespace
+et echappement XML structures, sans resserialiser les entrees existantes. Aucun
+`lastmod`, `priority` ou hreflang n'est invente. Les octets, metadonnees et doublons
+non vises restent intacts ; une seconde correction est sans effet. Sitemaps
+engendres, index, DTD, XML ambigu, texte mixte et racine autofermee sont refuses.
+
+```sh
+python ops/gauntlet/sitemap_add_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `b347b9b98437fd679d0f3c55ea0c1ee2b7ad9e2d` et retire trois
+entrees completes, puis le correcteur ajoute seulement leurs loc manquants : le
+sitemap passe de **46 a 49** entrees et la famille controlee de **3 a 0**. Les
+46 anciennes entrees restent intactes ; les metadonnees retirees par le setup
+ne sont pas devinees lors de l'ajout. Deux builds et deux vrais crawls conservent
+52 routes HTML saines, les corrections anterieures et les controles negatifs,
+sans hausse des autres compteurs. Les PR #75 et #76 sont fermees en brouillon
+sans fusion ; main reste intact. Les sondes immediates portent sur les trois pages.
+
+Le premier cycle #73/#74 reste classe en echec : son comparateur refusait les
+exemples des sondes HTTP/www dont le numero de preview changeait. Le banc accepte
+desormais seulement cette variation d'hote, sur les sondes racine des deux
+previews exactes possedees. Protocole, www, chemin, requete, fragment, port,
+identifiants, hote tiers et compteurs ne peuvent pas etre masques. Les observations
+de production et les rapports bruts restent inchanges. 27 tests encadrent ce
+correctif, suivi d'un nouveau cycle complet reussi ; l'ancien echec est conserve.
+
+Les previews natives gardent leur `noindex` : les compteurs bruts 0 vers 0 ne
+prouvent aucune reparation. La projection controlee et le XML reellement servi
+mesurent 3 vers 0. Une contre-verification en lecture seule relit les sources,
+XML, builds et HTTP, et confirme six refus par la sonde normale du produit sur
+les previews natives. Ce n'est pas une preuve d'indexation en production.
+
+La suite complete passe **4 281 tests**, avec 42 ignores ; la suite ciblee passe
+1 062 tests. 142 cas sont ajoutes dans cette etape. L'inventaire passe de dix a
+neuf familles revendiquees sans mention exacte dans un bilan : une mention
+n'est pas une reparation prouvee. Le bilan est dans
+`validation-sitemap-ajouts-2026-10-05.json`. Aucun site client n'est modifie,
+l'agent n'est pas deploye et la mise en service globale n'est pas certifiee.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

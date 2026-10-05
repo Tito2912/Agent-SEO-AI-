@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -27170,6 +27170,33 @@ def _prepare_issue_fix(
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
     sitemap_family = issue_key.removesuffix("_not_indexable").removesuffix("_indexable")
+    if sitemap_family in _SITEMAP_ADD_KEYS:
+        try:
+            from . import sitemap_https, sitemap_rewrite
+        except ImportError:
+            import sitemap_https
+            import sitemap_rewrite
+        out['sitemap_add_urls'] = []
+        try:
+            host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
+        except ValueError:
+            host = ''
+        urls, refused = sitemap_https.verified_urls(impacted, pages, _verification_url, host=host)
+        candidates = _fichiers_sitemap_du_depot(all_paths)
+        roots = {'sitemap.xml', *(folder + '/sitemap.xml' for folder in _DOSSIERS_STATIQUES)}
+        if not urls:
+            out['refusal'] = 'Aucune page HTTPS directe HTML 200 canonique et indexable observee sur cet hote.'
+        elif len(candidates) != 1 or candidates[0] not in roots or _sitemap_deja_engendre(all_paths):
+            out['refusal'] = 'Le sitemap source est engendre, absent ou ambigu : aucun ajout devine.'
+        else:
+            out['sitemap_add_urls'] = urls
+            out['targets_override'] = candidates
+            out['evidence'] = urls
+            out['link_rewriter'] = lambda raw, _u=urls: sitemap_rewrite.add_urls(raw, _u, _verification_url)
+            out['extra_hint'] = _build_sitemap_hint(urls)
+            if refused:
+                out['side_effects'] += '\nPages laissees sans ajout faute d\'indexabilite verifiee : ' + ', '.join(refused)
+        return out
     if sitemap_family in _SITEMAP_HTTPS_KEYS:
         try:
             from . import sitemap_https
@@ -27784,6 +27811,7 @@ def _deep_patch_issue_files(
     sitemap_noindex_urls: list[str] | None = None,
     sitemap_error_statuses: dict[str, int] | None = None,
     sitemap_https_pairs: list[dict[str, str]] | None = None,
+    sitemap_add_urls: list[str] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27816,7 +27844,7 @@ def _deep_patch_issue_files(
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
     if (sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None or sitemap_noindex_urls is not None
-            or sitemap_error_statuses is not None or sitemap_https_pairs is not None):
+            or sitemap_error_statuses is not None or sitemap_https_pairs is not None or sitemap_add_urls is not None):
         sitemap_pairs = sitemap_redirect_pairs if sitemap_redirect_pairs is not None else sitemap_canonical_pairs
         candidates = _fichiers_sitemap_du_depot(all_paths)
         if max_files < 1 or len(candidates) != 1 or targets_override != candidates:
@@ -27834,6 +27862,17 @@ def _deep_patch_issue_files(
             current_index = index or repo_index.build_repo_index(all_paths)
             observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
             direct_routes = set()
+            if sitemap_add_urls is not None:
+                try:
+                    from . import sitemap_https, sitemap_rewrite
+                except ImportError:
+                    import sitemap_https
+                    import sitemap_rewrite
+                verified, refused = sitemap_https.verified_urls(sitemap_add_urls, pages, _verification_url)
+                if refused or not verified or verified != sitemap_add_urls:
+                    raise ValueError('observations d\'indexabilite contradictoires')
+                sitemap_pairs = [{'from': url, 'to': url} for url in verified]
+                sitemap_redirect_pairs, direct_routes = [], set(verified)
             if sitemap_https_pairs is not None:
                 try:
                     from . import sitemap_https, sitemap_rewrite
@@ -27873,7 +27912,8 @@ def _deep_patch_issue_files(
                 except ImportError:
                     import sitemap_redirects
                 redirect_pairs = sitemap_redirect_pairs
-                if sitemap_noindex_urls is None and sitemap_error_statuses is None and sitemap_https_pairs is None:
+                if (sitemap_noindex_urls is None and sitemap_error_statuses is None and sitemap_https_pairs is None
+                        and sitemap_add_urls is None):
                     verified, refused = sitemap_redirects.verified_pairs(sitemap_pairs, pages, _verification_url)
                     if refused or verified != sitemap_pairs:
                         raise ValueError("observations de redirection contradictoires")
@@ -27926,7 +27966,7 @@ def _deep_patch_issue_files(
                         raise ValueError("instruction noindex actuelle contradictoire ou non litterale")
                     continue
                 expected_canonical = _verification_url(observed[url].get("canonical"))
-                if sitemap_https_pairs is not None:
+                if sitemap_https_pairs is not None or sitemap_add_urls is not None:
                     if not sitemap_https.literal_destination(source, expected_canonical, _duplicate_html_document, _verification_url):
                         raise ValueError("destination HTTPS actuelle non indexable ou non litterale")
                     continue
@@ -27944,7 +27984,8 @@ def _deep_patch_issue_files(
             if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
                 raise ValueError("source non verifiable")
             removal_urls = list(sitemap_error_statuses) if sitemap_error_statuses is not None else sitemap_noindex_urls
-            new, count = (sitemap_rewrite.upgrade_schemes(raw, sitemap_https_pairs, _verification_url) if sitemap_https_pairs is not None
+            new, count = (sitemap_rewrite.add_urls(raw, sitemap_add_urls, _verification_url) if sitemap_add_urls is not None
+                          else sitemap_rewrite.upgrade_schemes(raw, sitemap_https_pairs, _verification_url) if sitemap_https_pairs is not None
                           else _remove_sitemap_locs(raw, removal_urls, verified=True) if removal_urls is not None
                           else _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True))
             if not count:
@@ -27953,6 +27994,8 @@ def _deep_patch_issue_files(
                 raise ValueError("statut HTTP actuel modifie ou non verifiable")
             if sitemap_https_pairs is not None and any(not _sitemap_https_page(p["to"], _verification_url(observed[p["to"]].get("canonical"))) for p in sitemap_https_pairs):
                 raise ValueError("destination HTTPS actuelle modifiee ou non verifiable")
+            if sitemap_add_urls is not None and any(not _sitemap_https_page(url, _verification_url(observed[url].get('canonical'))) for url in sitemap_add_urls):
+                raise ValueError('page a ajouter modifiee ou non verifiable')
             response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
                 json_body={"branch": fix_branch, "sha": sha, "message": "fix(seo): canonical sitemap cleanup\n\nGenerated by Noyaru",
                            "content": _b64.b64encode(new.encode("utf-8")).decode("ascii")})
@@ -28595,6 +28638,7 @@ def _apply_prepared_issue_fix(
                 sitemap_noindex_urls=prep.get("sitemap_noindex_urls"),
                 sitemap_error_statuses=prep.get("sitemap_error_statuses"),
                 sitemap_https_pairs=prep.get("sitemap_https_pairs"),
+                sitemap_add_urls=prep.get('sitemap_add_urls'),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

@@ -6,6 +6,7 @@ from xml.parsers import expat
 from urllib.parse import urlsplit
 
 from defusedxml import ElementTree as ET
+from defusedxml import minidom
 from defusedxml.common import DefusedXmlException
 
 NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -27,21 +28,29 @@ def upgrade_schemes(content: str, pairs: list[dict[str, str]], identify: Callabl
     if any(not identify(p.get("from", "")).startswith("http://")
            or identify(p.get("to", "")) != "https:" + identify(p.get("from", ""))[5:] for p in pairs):
         return content, 0
-    def exact(value):
-        identity = identify(value)
-        fragment = urlsplit(value).fragment
-        return identity + '#' + fragment if identity and fragment else identity
-    return _rewrite(content, pairs, exact, remove=False, scheme_only=True)
+    return _rewrite(content, pairs, lambda value: _loc_identity(value, identify), remove=False, scheme_only=True)
 
 
-def _rewrite(content, pairs, identify, *, remove, scheme_only=False):
+def _loc_identity(value, identify):
+    identity = identify(value)
+    fragment = urlsplit(value).fragment
+    return identity + '#' + fragment if identity and fragment else identity
+
+
+def add_urls(content: str, urls: list[str], identify: Callable[[str], str]) -> tuple[str, int]:
+    """Append minimal URL nodes without serializing or replacing existing entries."""
+    return _rewrite(content, [{'from': url, 'to': url} for url in urls],
+                    lambda value: _loc_identity(value, identify), remove=False, add=True)
+
+
+def _rewrite(content, pairs, identify, *, remove, scheme_only=False, add=False):
     mapping = {}
     for pair in pairs:
         source, target = (identify(pair.get(k, "")) for k in ("from", "to"))
-        if not source or (not remove and not target) or source == target or mapping.get(source, target) != target:
+        if not source or (not remove and not target) or (source == target and not add) or mapping.get(source, target) != target:
             return content, 0
         mapping[source] = target
-    if not mapping or set(mapping) & set(mapping.values()):
+    if not mapping or (not add and set(mapping) & set(mapping.values())):
         return content, 0
     try:
         ET.fromstring(content, forbid_dtd=True)
@@ -80,6 +89,31 @@ def _rewrite(content, pairs, identify, *, remove, scheme_only=False):
             if not value or loc["attrs"] or loc["children"] or b"<" in inner:
                 return content, 0
             entries.append((frame, loc, value))
+        if add:
+            if any(text.strip() for frame in [root, *(entry[0] for entry in entries)] for text in frame['text']):
+                return content, 0
+            missing = [url for url in mapping if url not in {value for _, _, value in entries}]
+            if not missing or data[root['close']:root['close'] + 2] != b'</':
+                return content, 0
+            document = minidom.parseString(data, forbid_dtd=True)
+            try:
+                element = document.documentElement
+                prefix = (element.prefix + ':') if element.prefix else ''
+                newline = b'\r\n' if b'\r\n' in data else b'\n'
+                blocks = []
+                for url in missing:
+                    node = document.createElementNS(element.namespaceURI, prefix + 'url')
+                    loc = document.createElementNS(element.namespaceURI, prefix + 'loc')
+                    loc.appendChild(document.createTextNode(url))
+                    node.appendChild(loc)
+                    blocks.append(node.toxml(encoding='utf-8') + newline)
+                output = data[:root['close']] + b''.join(blocks) + data[root['close']:]
+                if len(output) > 80_000:
+                    return content, 0
+                ET.fromstring(output, forbid_dtd=True)
+                return output.decode('utf-8'), len(missing)
+            finally:
+                document.unlink()
         present = {value for _, _, value in entries if value not in mapping}
         edits, count = [], 0
         for frame, loc, value in entries:

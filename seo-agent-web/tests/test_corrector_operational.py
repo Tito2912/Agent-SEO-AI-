@@ -295,7 +295,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "sitemap_3xx_redirect", "sitemap_3xx_redirect_indexable", " SITEMAP_3XX_REDIRECT ",
     "sitemap_noindex_page", "sitemap_noindex_page_not_indexable", " SITEMAP_NOINDEX_PAGE ",
     "sitemap_4xx_page", "sitemap_4xx_page_not_indexable", " SITEMAP_4XX_PAGE ",
-    "sitemap_http_urls_for_https", "sitemap_http_urls_for_https_indexable", " SITEMAP_HTTP_URLS_FOR_HTTPS "])
+    "sitemap_http_urls_for_https", "sitemap_http_urls_for_https_indexable", " SITEMAP_HTTP_URLS_FOR_HTTPS ",
+    "indexable_page_not_in_sitemap", "indexable_page_not_in_sitemap_indexable", " INDEXABLE_PAGE_NOT_IN_SITEMAP "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -559,6 +560,37 @@ def test_sitemap_https_endpoints_only_upgrade_verified_entries_without_ai(harnes
             assert any(control in body for body in state["pr_bodies"])
     else:
         assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
+
+
+@pytest.mark.parametrize('mode', ['individual', 'bulk'])
+@pytest.mark.parametrize('case', ['verified', 'unobserved', 'stale_noindex', 'fresh_http_refused', 'partial', 'already_present'])
+def test_sitemap_add_endpoints_only_add_observed_currently_indexable_pages(harness, monkeypatch, mode, case):
+    state, run = harness
+    key, control = 'indexable_page_not_in_sitemap', URL + 'control'
+    xml = '<urlset><url><loc>' + control + '</loc><priority>0.9</priority></url></urlset>'
+    state.update(key=key, sources={'sitemap.xml': xml, 'index.html': HTML})
+    rows = [{'url': URL, 'final_url': URL, 'status_code': 200, 'content_type': 'text/html', 'canonical': URL}]
+    impacted = [URL]
+    if case == 'unobserved':
+        rows = []
+    elif case == 'stale_noindex':
+        state['sources']['index.html'] = HTML.replace('</head>', '<meta name="robots" content="noindex" /></head>')
+    elif case == 'partial':
+        impacted.append(control)
+        rows.append(dict(rows[0], url=control, final_url=control, canonical=control, meta_robots='noindex'))
+    elif case == 'already_present':
+        state['sources']['sitemap.xml'] = xml.replace('</urlset>', '<url><loc>' + URL + '</loc></url></urlset>')
+    state['report'] = {'issues': {key: {'count': len(impacted), 'examples': impacted}}, 'pages': rows}
+    monkeypatch.setattr(m, '_sitemap_https_page', lambda *a: case != 'fresh_http_refused')
+    result = run(mode)
+    assert not result['ai_calls']
+    if case in {'verified', 'partial'}:
+        assert result['status'] == 200 and result['written'] == {'sitemap.xml': xml.replace('</urlset>', '<url><loc>' + URL + '</loc></url>\n</urlset>')}
+        assert state['charges'] == [0] and state['pr_bodies']
+        if case == 'partial':
+            assert any(control in body for body in state['pr_bodies'])
+    else:
+        assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
 
 
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):

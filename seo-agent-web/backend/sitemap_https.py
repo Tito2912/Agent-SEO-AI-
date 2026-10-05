@@ -1,4 +1,4 @@
-"""Prove exact HTTPS destinations before upgrading literal sitemap entries."""
+"""Proof of direct indexable HTTPS pages and exact sitemap scheme proposals."""
 
 import re
 from html.parser import HTMLParser
@@ -9,18 +9,19 @@ def excluded(value) -> bool:
     return bool({"noindex", "none"} & set(re.split(r"[,;\s:]+", str(value or "").lower())))
 
 
-def verified_pairs(pairs: list[dict], pages: list[dict] | None, identify) -> tuple[list[dict], list[str]]:
+def verified_urls(urls: list[str], pages: list[dict] | None, identify, *, host: str | None = None) -> tuple[list[str], list[str]]:
+    """Prove coherent independently requested, direct, indexable HTTPS documents."""
     requested = {}
     for row in pages or []:
         if isinstance(row, dict):
             requested.setdefault(identify(row.get("url")), []).append(row)
     accepted, refused = [], []
-    for pair in pairs:
-        source, target = (identify(pair.get(k)) for k in ("from", "to"))
+    for value in urls:
+        target = identify(value)
         try:
-            parsed = urlsplit(str(pair.get("from") or ""))
-            valid = (parsed.scheme == "http" and parsed.netloc and not parsed.username and not parsed.password
-                     and not parsed.fragment and parsed.port is None and target == "https:" + source[5:])
+            parsed = urlsplit(str(value or ""))
+            valid = (parsed.scheme == "https" and parsed.netloc and not parsed.username and not parsed.password
+                     and not parsed.fragment and parsed.port is None and (host is None or parsed.netloc.lower() == host))
         except ValueError:
             valid = False
         rows = requested.get(target, [])
@@ -33,11 +34,30 @@ def verified_pairs(pairs: list[dict], pages: list[dict] | None, identify) -> tup
             and identify(row.get("canonical")) in {"", target}
             and not any(excluded(row.get(k)) for k in ("meta_robots", "x_robots_tag")) for row in rows)
         if valid and len({identify(row.get("canonical")) for row in rows}) == 1:
-            normalized = {"from": source, "to": target}
+            if target not in accepted:
+                accepted.append(target)
+        else:
+            refused.append(target or "URL inconnue")
+    return accepted, sorted(set(refused))
+
+
+def verified_pairs(pairs: list[dict], pages: list[dict] | None, identify) -> tuple[list[dict], list[str]]:
+    targets, _ = verified_urls([pair.get('to') for pair in pairs], pages, identify)
+    accepted, refused = [], []
+    for pair in pairs:
+        source, target = (identify(pair.get(k)) for k in ('from', 'to'))
+        try:
+            parsed = urlsplit(str(pair.get('from') or ''))
+            valid = (parsed.scheme == 'http' and parsed.netloc and not parsed.username and not parsed.password
+                     and not parsed.fragment and parsed.port is None and target == 'https:' + source[5:])
+        except ValueError:
+            valid = False
+        normalized = {'from': source, 'to': target}
+        if valid and target in targets:
             if normalized not in accepted:
                 accepted.append(normalized)
         else:
-            refused.append(source or "URL inconnue")
+            refused.append(source or 'URL inconnue')
     return accepted, sorted(set(refused))
 
 
