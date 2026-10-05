@@ -1205,6 +1205,65 @@ Le bilan est dans `validation-viewport-2026-10-05.json`. Les frameworks et sourc
 generees restent a valider separement. Aucun site client n'est modifie, l'agent
 n'est pas deploye et sa mise en service globale n'est pas certifiee.
 
+## Twitter Card absente (05/10/2026)
+
+`twitter_card_missing` suit maintenant un chemin mecanique sans IA, partage par
+les corrections individuelle et groupee. Chaque page doit avoir des observations
+coherentes HTTPS HTML 200 directes, indexables et de l'hote du projet. Les champs
+Twitter doivent etre connus, et titre, description et image doivent deja exister
+sur cette meme page, directement ou via ses propres balises OG et metadonnees.
+L'exemption de l'auditeur pour les pages OG seules est conservee.
+
+Le correcteur relit le fichier HTML litteral et le routing actuels, puis verifie
+la reponse HTTPS servie : type de carte toujours absent, memes valeurs sociales,
+canonical et indexabilite coherentes. Les temoins contradictoires, champs inconnus,
+sources partagees ou non litterales, scripts, templates, doublons, balises vides,
+routes ambigues et images relatives, HTTP ou locales sont refuses sans repli IA.
+Une image n'est jamais inventee ou empruntee a une autre page. Les valeurs deja
+presentes, y compris `twitter:image:src`, ne sont ni remplacees ni dupliquees.
+
+Seules les balises manquantes sont ajoutees : `twitter:card=summary_large_image`
+et les champs absents pour lesquels cette page fournit deja une valeur utilisable.
+Les attributs sont echappes, les octets et fins de ligne existants sont conserves,
+et l'ajout est idempotent. Les limites de 80 000 octets, le plafond couvrant tout
+le lot et les verifications avant le premier PUT restent communs au viewport.
+Les ecritures sont protegees par SHA, mais un lot multifichier n'est pas atomique.
+Les apercus libres ou anciens ne peuvent pas contourner ce chemin.
+
+```sh
+python ops/gauntlet/twitter_card_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `21bf75fcbca71d940d8b20291da385b8705bc348`, sans PUT de setup.
+Un seul PUT ajoute le type de carte et la description OG deja disponible a
+`gauntlet/twitter-missing.html`, en gardant son titre et son image Twitter.
+Deux builds et deux vrais crawls mesurent **1 carte absente a 0**, dans les rapports
+bruts comme controles : les trois cartes incompletes existantes restent a trois.
+Les 52 routes HTML saines et 62 lignes de rapport restent presentes, ainsi que
+les cartes saines, viewports, sitemap, canonical, navigation et corrections
+precedentes. Les PR #79 et #80 sont fermees en brouillon sans fusion ; main reste intact.
+
+La contre-verification en lecture seule relit les SHA, builds, sources, XML et
+HTTP reels, puis reprepare le correctif sur le code final et verifie l'idempotence.
+Le HTML servi ne change que par les deux lignes attendues, avec uniquement
+l'identifiant de deploy Netlify possede normalise. L'image PNG existante est
+verifiee identique sur les deux builds ; ce controle d'asset concerne uniquement
+cette fixture, pas toutes les images des futurs sites.
+
+La suite complete finale passe **4 623 tests**, avec 42 ignores ; la suite ciblee
+passe **1 491 tests**. Les refus et regressions comprennent 205 nouveaux cas.
+L'inventaire passe de huit a sept familles sans mention exacte dans un bilan,
+sans promouvoir le diagnostic historique de canonical absente volontairement cache.
+Les previews gardent leur `noindex` natif : deux nouvelles sondes
+normales les refusent. La projection d'hote/en-tete de ce banc reste strictement
+bornee a la fixture possedee. Le rendu reel sur X, les dimensions de chaque image,
+le DOM JavaScript et l'indexation de production ne sont pas verifies.
+
+Le bilan est dans `validation-twitter-card-2026-10-05.json`. Les cartes incompletes
+et les frameworks restent a valider separement. Une mention dans un bilan n'est
+pas une reparation prouvee. Aucun site client n'est modifie, l'agent n'est pas
+deploye et sa mise en service globale n'est pas certifiee.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

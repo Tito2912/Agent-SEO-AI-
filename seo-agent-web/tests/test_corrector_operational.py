@@ -297,7 +297,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "sitemap_4xx_page", "sitemap_4xx_page_not_indexable", " SITEMAP_4XX_PAGE ",
     "sitemap_http_urls_for_https", "sitemap_http_urls_for_https_indexable", " SITEMAP_HTTP_URLS_FOR_HTTPS ",
     "indexable_page_not_in_sitemap", "indexable_page_not_in_sitemap_indexable", " INDEXABLE_PAGE_NOT_IN_SITEMAP ",
-    "viewport_not_set", "viewport_not_set_indexable", " VIEWPORT_NOT_SET "])
+    "viewport_not_set", "viewport_not_set_indexable", " VIEWPORT_NOT_SET ",
+    "twitter_card_missing", "twitter_card_missing_not_indexable", " TWITTER_CARD_MISSING "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -631,6 +632,46 @@ def test_viewport_endpoints_add_only_one_verified_tag_without_ai_or_charge(harne
         assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
 
 
+@pytest.mark.parametrize('mode', ['individual', 'bulk'])
+@pytest.mark.parametrize('case', ['verified', 'unobserved', 'unknown_fields', 'no_image', 'current_card', 'stale_values',
+    'stale_noindex', 'fresh_http_refused', 'partial', 'scripted'])
+def test_twitter_endpoints_preserve_existing_values_and_never_invent_an_image(harness, monkeypatch, mode, case):
+    from tests.test_verified_twitter_card import HTML as TW_HTML, page as tw_page, TAGS, A
+    state, run = harness
+    key, other = 'twitter_card_missing', URL + 'other'
+    source = TW_HTML.replace(A, URL)
+    rows, impacted = [tw_page(URL)], [URL]
+    state.update(key=key, sources={'index.html': source, 'other.html': source.replace(URL, other)})
+    if case == 'unobserved':
+        rows = []
+    elif case == 'unknown_fields':
+        del rows[0]['twitter_card']
+    elif case == 'no_image':
+        rows[0].update(twitter_image=None, og_image=None)
+    elif case == 'current_card':
+        state['sources']['index.html'] = source.replace('</head>', TAGS[0] + '</head>')
+    elif case == 'stale_values':
+        state['sources']['index.html'] = source.replace('OG description', 'Other description')
+    elif case == 'stale_noindex':
+        state['sources']['index.html'] = source.replace('</head>', '<meta name="robots" content="noindex" /></head>')
+    elif case == 'scripted':
+        state['sources']['index.html'] = source.replace('</body>', '<script src="/app.js"></script></body>')
+    elif case == 'partial':
+        impacted.append(other)
+        rows.append(tw_page(other, meta_robots='noindex'))
+    state['report'] = {'issues': {key: {'count': len(impacted), 'examples': impacted}}, 'pages': rows}
+    monkeypatch.setattr(m, '_twitter_missing_page', lambda *a: case != 'fresh_http_refused')
+    result = run(mode)
+    assert not result['ai_calls']
+    if case in {'verified', 'partial'}:
+        assert result['status'] == 200 and result['written'] == {'index.html': source.replace('</head>', '\n'.join(TAGS) + '\n</head>')}
+        assert state['charges'] == [0] and state['pr_bodies']
+        if case == 'partial':
+            assert any(other in body for body in state['pr_bodies'])
+    else:
+        assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
+
+
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
     state, run = harness
     keys = ["missing_title", "missing_meta_description", "missing_alt_text", "viewport_not_set",
@@ -638,7 +679,9 @@ def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
     state["sources"] = {"index.html": HTML}
     state["report"] = {"issues": {k: {"count": 1, "examples": [URL]} for k in keys},
                        "pages": [{"url": URL, "final_url": URL, "status_code": 200, "content_type": "text/html",
-                                  "canonical": URL, "meta_viewport": None, "meta_viewport_tag_count": 0}]}
+                                  "canonical": URL, "meta_viewport": None, "meta_viewport_tag_count": 0,
+                                  "twitter_card": None, "twitter_title": 'Own title', "twitter_description": DESCRIPTION,
+                                  "twitter_image": 'https://site.test/social.png'}]}
     monkeypatch.setattr(m, "_github_fixable_issue_candidates", ORIGINAL_CANDIDATES)
     processed = []
 

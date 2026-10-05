@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -20759,7 +20759,7 @@ def _sitemap_error_status(url: str) -> int | None:
     return None
 
 
-def _sitemap_https_page(url: str, canonical: str) -> bool:
+def _sitemap_https_page(url: str, canonical: str, *, verify=None) -> bool:
     """Recheck bounded public HTTPS HTML, without redirects or preview exemptions."""
     try:
         from . import sitemap_https
@@ -20782,12 +20782,22 @@ def _sitemap_https_page(url: str, canonical: str) -> bool:
                 if size > 80_000:
                     return False
                 chunks.append(chunk)
-            return sitemap_https.literal_destination(b"".join(chunks).decode("utf-8"), canonical,
-                lambda raw, **kw: _duplicate_html_document(raw, allow_body_scripts=True, **kw), _verification_url)
+            raw = b"".join(chunks).decode("utf-8")
+            return sitemap_https.literal_destination(raw, canonical,
+                lambda raw, **kw: _duplicate_html_document(raw, allow_body_scripts=True, **kw), _verification_url) and (verify(raw) if verify else True)
         finally:
             response.close()
     except Exception:
         return False
+
+
+def _twitter_missing_page(url: str, canonical: str, observed: dict[str, Any]) -> bool:
+    try:
+        from . import twitter_card
+    except ImportError:
+        import twitter_card
+    return _sitemap_https_page(url, canonical, verify=lambda raw: twitter_card.matches(raw, canonical, observed,
+        lambda value, **kw: _duplicate_html_document(value, allow_body_scripts=True, **kw), _verification_url))
 
 
 def _remove_sitemap_locs(content: str, urls: list[str], *, verified: bool = False) -> tuple[str, int]:
@@ -26975,6 +26985,26 @@ def _prepare_issue_fix(
     if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
         out["refusal"] = _HTTP_CANONICAL_ADVICE
         return out
+    if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'twitter_card_missing':
+        try:
+            from . import twitter_card
+        except ImportError:
+            import twitter_card
+        out['twitter_missing_urls'] = []
+        try:
+            host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
+        except ValueError:
+            host = ''
+        urls, refused = twitter_card.verified_urls(impacted, pages, _verification_url, host=host)
+        if not urls:
+            out['refusal'] = 'Aucune carte Twitter absente avec titre, description et image HTTPS prouves sur une page directe indexable de cet hote.'
+        else:
+            out['twitter_missing_urls'] = urls
+            out['evidence'] = urls
+            out['extra_hint'] = _HEAD_HINTS['twitter_card_missing']
+            if refused:
+                out['side_effects'] = '\nPages laissees sans correction Twitter faute de preuve : ' + ', '.join(refused)
+        return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'viewport_not_set':
         try:
             from . import viewport
@@ -27833,6 +27863,7 @@ def _deep_patch_issue_files(
     sitemap_https_pairs: list[dict[str, str]] | None = None,
     sitemap_add_urls: list[str] | None = None,
     viewport_urls: list[str] | None = None,
+    twitter_missing_urls: list[str] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27864,18 +27895,21 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
-    if viewport_urls is not None:
+    if viewport_urls is not None or twitter_missing_urls is not None:
         try:
-            from . import viewport, sitemap_redirects
+            from . import viewport, twitter_card, sitemap_redirects
         except ImportError:
             import viewport
+            import twitter_card
             import sitemap_redirects
         targets, plans = [], {}
+        head_rewriter = twitter_card if twitter_missing_urls is not None else viewport
+        head_urls = twitter_missing_urls if twitter_missing_urls is not None else viewport_urls
         try:
             host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
-            verified, refused = viewport.verified_urls(viewport_urls, pages, _verification_url, host=host)
-            if refused or not verified or verified != viewport_urls:
-                raise ValueError('observations viewport non verifiables')
+            verified, refused = head_rewriter.verified_urls(head_urls, pages, _verification_url, host=host)
+            if refused or not verified or verified != head_urls:
+                raise ValueError('observations de metadonnees non verifiables')
             current_index = index or repo_index.build_repo_index(all_paths)
             bindings = {}
             observed = {_verification_url(row.get('url')): row for row in pages or [] if isinstance(row, dict)}
@@ -27887,7 +27921,7 @@ def _deep_patch_issue_files(
                 bindings[files[0]] = url
             targets = list(bindings)
             if len(targets) > max_files:
-                raise ValueError('plafond insuffisant pour le lot viewport')
+                raise ValueError('plafond insuffisant pour le lot de metadonnees')
             configs = [p for p in all_paths if p.rsplit('/', 1)[-1] == '_redirects']
             roots = {'_redirects', *(folder + '/_redirects' for folder in _DOSSIERS_STATIQUES)}
             if (configs and (len(configs) != 1 or configs[0] not in roots)
@@ -27914,22 +27948,29 @@ def _deep_patch_issue_files(
                     raw = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
                     sha = fd.get('sha', '')
                 canonical = _verification_url(observed[url].get('canonical'))
-                if not isinstance(sha, str) or not sha.strip() or not viewport.literal(raw, canonical, _duplicate_html_document, _verification_url):
-                    raise ValueError('source viewport actuelle non litterale')
-                new, count = viewport.add(raw, canonical, _duplicate_html_document, _verification_url)
+                if not isinstance(sha, str) or not sha.strip() or not head_rewriter.literal(raw, canonical, _duplicate_html_document, _verification_url):
+                    raise ValueError('source de metadonnees actuelle non litterale')
+                if twitter_missing_urls is not None and not twitter_card.matches(raw, canonical, observed[url], _duplicate_html_document, _verification_url):
+                    raise ValueError('metadonnees Twitter actuelles contradictoires')
+                new, count = head_rewriter.add(raw, canonical, _duplicate_html_document, _verification_url)
                 if count:
                     if _github_patched_content_error(new, path) or _refus_de_format(path, new):
-                        raise ValueError('format viewport ambigu')
+                        raise ValueError('format de metadonnees ambigu')
                     plans[path] = (new, sha)
-            if any(not _sitemap_https_page(bindings[path], _verification_url(observed[bindings[path]].get('canonical'))) for path in plans):
-                raise ValueError('page actuelle non verifiable')
+            for path in plans:
+                url = bindings[path]
+                canonical = _verification_url(observed[url].get('canonical'))
+                valid = (_twitter_missing_page(url, canonical, observed[url]) if twitter_missing_urls is not None
+                         else _sitemap_https_page(url, canonical))
+                if not valid:
+                    raise ValueError('page actuelle non verifiable')
         except Exception:
-            return [], targets or ['Viewport refuse : source ou observations non verifiables.'], targets, []
+            return [], targets or ['Metadonnees refusees : source ou observations non verifiables.'], targets, []
         patched = []
         for path, (new, sha) in plans.items():
             try:
                 response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
-                    json_body={'branch': fix_branch, 'sha': sha, 'message': 'fix(seo): add verified viewport\n\nGenerated by Noyaru',
+                    json_body={'branch': fix_branch, 'sha': sha, 'message': 'fix(seo): add verified ' + ('Twitter Card' if twitter_missing_urls is not None else 'viewport') + '\n\nGenerated by Noyaru',
                                'content': _b64.b64encode(new.encode('utf-8')).decode('ascii')})
                 file_state[path] = {'content': new, 'sha': str((response.get('content') or {}).get('sha') or '')}
                 patched.append(path)
@@ -28733,6 +28774,7 @@ def _apply_prepared_issue_fix(
                 sitemap_https_pairs=prep.get("sitemap_https_pairs"),
                 sitemap_add_urls=prep.get('sitemap_add_urls'),
                 viewport_urls=prep.get('viewport_urls'),
+                twitter_missing_urls=prep.get('twitter_missing_urls'),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)
