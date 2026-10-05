@@ -1011,6 +1011,61 @@ et les effets possibles sur les partenaires hreflang sont des avertissements,
 pas une reparation multilingue atomique. Aucun site client ni deploiement n'est
 implique. La prochaine validation porte sur les pages en erreur du sitemap.
 
+## Pages en erreur dans le sitemap (05/10/2026)
+
+`sitemap_4xx_page` ne retire plus toute URL signalee aveuglement. Seules les
+404/410 directes HTML, observees sans contradiction, erreur de fetch ou blocage,
+peuvent etre preparees. Les 401/403, 429, autres 4xx, 5xx et redirections finissant
+en erreur restent intactes. Ce sous-ensemble prudent n'est pas la totalite de la
+famille suivie. [Google distingue aussi le 429 des autres erreurs client](https://developers.google.com/crawling/docs/troubleshooting/http-status-codes).
+
+Le sitemap doit etre litteral, unique et dans un dossier statique connu, sans
+generateur. Une source de page resolue dans l'index du depot interdit le retrait,
+tout comme une regle configuree sur cette URL, un routing ambigu ou concurrent.
+Juste avant le PUT, le correcteur relit le statut HTTP avec GET, sans suivre les
+redirections ni consommer le corps, en reutilisant la garde de cible publique.
+La meme 404/410 directe HTML doit encore etre observable, sans `Retry-After`.
+Une URL redevenue accessible ou un fetch impossible bloque toute l'ecriture.
+Le parseur XML exact des phases precedentes conserve les autres entrees et leurs
+octets ; aucune page n'est creee, aucun contenu, lien ou routing n'est modifie.
+Le chemin etendu et le parcours groupe ne font aucun appel IA, les apercus libres
+ne contournent pas les preuves, et une note de premise impose la revue humaine :
+une absence observee ne prouve pas l'intention d'abandonner la page.
+
+```sh
+python ops/gauntlet/sitemap_error_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `86837f38ec7298bfff5a66659dcb765a46a9cc24`. Deux PUT de
+preparation ajoutent au sitemap et a la navigation deux URL absentes, sans creer
+de page. Les statuts 404 sont revalides avant un seul PUT correctif dans le XML.
+Le banc traduit uniquement ces deux URL controlees vers leur hote de preview
+observe, puis utilise la sonde HTTP du produit sans fabriquer de reponse. Le
+sitemap passe de 50 a 48 entrees et la famille controlee de 2 a 0, avec deux builds
+et deux crawls. Les memes 52 routes HTML saines et 62 lignes de rapport restent
+observees ; les deux URL absentes restent en 404 et dans la navigation apres le
+retrait. Les corrections et temoins negatifs anterieurs restent intacts, sans
+hausse de compteur. Les PR #69 et #70 sont fermees en brouillon sans fusion et
+main ne change pas. La contre-verification fraiche relit les sources, SHA, builds,
+statuts HTTP, corps sains et XML servi, sans ecriture distante ni appel IA.
+
+Les previews natives gardent leur politique `noindex`. Leur sitemap sert des URL
+de production, avec zero seed sitemap dans le crawl brut : ses compteurs 0 vers 0
+ne prouvent pas la correction. La projection controlee avec le XML effectivement
+servi mesure 2 vers 0, et les HTTP/sources/octets sont contre-verifies separement.
+Ce n'est pas une preuve d'indexation en production ni un deploiement de l'agent.
+Le bilan est dans `validation-sitemap-erreurs-2026-10-05.json`.
+
+La suite finale compte 4 002 tests reussis et 42 ignores, avec 757 tests cibles
+reussis et 121 nouveaux cas. Les 410 et cas proteges/transitoires sont testes
+synthetiquement, pas mesures sur toutes les previews ou stacks. L'inventaire
+reste a 203 cles, 65 familles revendiquees et 64 proposees ; les familles sans
+reference nommee passent de 12 a 11. Une reference ne certifie pas toutes les
+occurrences. Les lectures Git et HTTP ne forment pas une transaction atomique
+avec le deploiement ; une future restauration ou une absence temporaire reste
+possible. Aucun site client ni merge main n'est implique. La prochaine etape
+porte sur les URL HTTP presentes dans le sitemap d'un site HTTPS.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

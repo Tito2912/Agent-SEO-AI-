@@ -41,7 +41,10 @@ def _prep(cle: str = "sitemap_4xx_page") -> dict:
     return m._prepare_issue_fix(
         issue_key=cle, issues={cle: {"count": 1, "examples": [ABSENTE]}}, impacted=[ABSENTE],
         all_paths=["public/sitemap.xml"], site_name="x.fr", owner="o", repo_name="r",
-        branch="main", token="t", model_override="", pages=[])
+        branch="main", token="t", model_override="", pages=[{
+            "url": ABSENTE, "final_url": ABSENTE, "status_code": 404, "content_type": "text/html",
+            "error": None, "blocked_by_host": False, "redirect_chain": [], "redirect_statuses": [],
+        }])
 
 
 def test_l_entree_fautive_est_retiree():

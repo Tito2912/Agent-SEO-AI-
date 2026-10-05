@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -20737,6 +20737,27 @@ def _looks_like_sitemap_xml(content: str) -> bool:
     return "<urlset" in head or "<sitemapindex" in head
 
 
+def _sitemap_error_status(url: str) -> int | None:
+    """Recheck a direct public response without following redirects or reading its body."""
+    try:
+        parsed = urlsplit(url)
+        if parsed.username or parsed.password or _validate_public_crawl_target(url):
+            return None
+        response = requests.get(url, allow_redirects=False, stream=True, timeout=(5, 10))
+        try:
+            code = response.status_code
+            if (type(code) is int and code in {404, 410} and not response.history
+                    and _verification_url(response.url) == _verification_url(url)
+                    and not response.headers.get("retry-after")
+                    and response.headers.get("content-type", "").split(";", 1)[0].strip().lower() in {"text/html", "application/xhtml+xml"}):
+                return code
+        finally:
+            response.close()
+    except Exception:
+        return None
+    return None
+
+
 def _remove_sitemap_locs(content: str, urls: list[str], *, verified: bool = False) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): drop the whole `<url>` block of each flagged page.
 
@@ -26729,6 +26750,11 @@ _FIX_PREMISE_NOTES: dict[str, str] = {
         "intentionnel. Si ces pages doivent au contraire etre indexees, c'est le `noindex` "
         "qu'il faut retirer — et cette PR va dans le mauvais sens."
     ),
+    "sitemap_4xx_page": (
+        "Ce correctif retire seulement les entrees du **sitemap** encore en 404/410. "
+        "Il ne restaure pas les pages absentes : si elles doivent exister, leur restauration "
+        "reste a traiter. Une absence observee ne prouve pas ton intention de suppression."
+    ),
     "more_than_one_page_for_same_language_in_hreflang": (
         "Ce correctif aligne le **sitemap** sur ce que déclarent tes **pages**, en tenant la page "
         "pour la source d'autorité (c'est elle que Google lit à chaque passage). Si c'est ton "
@@ -27106,6 +27132,34 @@ def _prepare_issue_fix(
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
     sitemap_family = issue_key.removesuffix("_not_indexable").removesuffix("_indexable")
+    if sitemap_family == "sitemap_4xx_page":
+        try:
+            from . import sitemap_errors
+        except ImportError:
+            import sitemap_errors
+        out["sitemap_error_statuses"] = {}
+        statuses, refused = sitemap_errors.verified_urls(impacted, pages, _verification_url)
+        candidates = _fichiers_sitemap_du_depot(all_paths)
+        roots = {"sitemap.xml", *(folder + "/sitemap.xml" for folder in _DOSSIERS_STATIQUES)}
+        out["extra_hint"] = ("Ces URL repondent en ERREUR (4xx), uniquement 404/410 observees et revalidees. "
+            "Retire EXACTEMENT leurs entrees ; ne cherche pas a CREER les pages manquantes. "
+            "Aucun motif d'URL ni exclusion IA devinee. Les autres erreurs restent intactes.")
+        if not statuses:
+            out["refusal"] = "Aucune absence directe HTML 404/410 coherente observee. Un acces protege ou temporairement limite reste intact."
+        elif len(candidates) != 1 or candidates[0] not in roots or _sitemap_deja_engendre(all_paths):
+            out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : aucune exclusion devinee."
+        else:
+            out["sitemap_error_statuses"] = statuses
+            out["targets_override"] = candidates
+            out["evidence"] = list(statuses)
+            out["link_rewriter"] = lambda raw, _u=list(statuses): _remove_sitemap_locs(raw, _u, verified=True)
+            partners = _sitemap_removal_side_effects(list(statuses), pages,
+                dash.extract_impacted_pages("indexable_page_not_in_sitemap", issues.get("indexable_page_not_in_sitemap")))
+            if partners:
+                out["side_effects"] = "\nEffet de bord prevu : ces pages peuvent perdre une reciproque hreflang : " + ", ".join(partners)
+            if refused:
+                out["side_effects"] += "\nEntrees laissees sans correction faute d'absence prouvee : " + ", ".join(refused)
+        return out
     if sitemap_family == "sitemap_noindex_page":
         try:
             from . import sitemap_noindex
@@ -27666,6 +27720,7 @@ def _deep_patch_issue_files(
     sitemap_canonical_pairs: list[dict[str, str]] | None = None,
     sitemap_redirect_pairs: list[dict[str, str]] | None = None,
     sitemap_noindex_urls: list[str] | None = None,
+    sitemap_error_statuses: dict[str, int] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27697,7 +27752,8 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
-    if sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None or sitemap_noindex_urls is not None:
+    if (sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None or sitemap_noindex_urls is not None
+            or sitemap_error_statuses is not None):
         sitemap_pairs = sitemap_redirect_pairs if sitemap_redirect_pairs is not None else sitemap_canonical_pairs
         candidates = _fichiers_sitemap_du_depot(all_paths)
         if max_files < 1 or len(candidates) != 1 or targets_override != candidates:
@@ -27714,7 +27770,18 @@ def _deep_patch_issue_files(
                 return [], ["Sitemap engendre : correction de sa source necessaire."], [], []
             current_index = index or repo_index.build_repo_index(all_paths)
             observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
-            direct_noindex = set()
+            direct_routes = set()
+            if sitemap_error_statuses is not None:
+                try:
+                    from . import sitemap_errors
+                except ImportError:
+                    import sitemap_errors
+                verified, refused = sitemap_errors.verified_urls(list(sitemap_error_statuses), pages, _verification_url)
+                if refused or not verified or verified != sitemap_error_statuses:
+                    raise ValueError("observations d'absence contradictoires")
+                if any(repo_index.route_files(current_index, url) for url in verified):
+                    raise ValueError("une source actuelle existe pour la page absente")
+                sitemap_pairs, sitemap_redirect_pairs, direct_routes = [], [], set(verified)
             if sitemap_noindex_urls is not None:
                 try:
                     from . import sitemap_noindex
@@ -27725,14 +27792,14 @@ def _deep_patch_issue_files(
                     raise ValueError("observations noindex contradictoires")
                 sitemap_pairs = [{"page": url, "from": url, "to": _verification_url(observed[url].get("final_url") or url)} for url in verified]
                 sitemap_redirect_pairs = [p for p in sitemap_pairs if p["from"] != p["to"]]
-                direct_noindex = {p["to"] for p in sitemap_pairs}
+                direct_routes = {p["to"] for p in sitemap_pairs}
             if sitemap_redirect_pairs is not None:
                 try:
                     from . import sitemap_redirects
                 except ImportError:
                     import sitemap_redirects
                 redirect_pairs = sitemap_redirect_pairs
-                if sitemap_noindex_urls is None:
+                if sitemap_noindex_urls is None and sitemap_error_statuses is None:
                     verified, refused = sitemap_redirects.verified_pairs(sitemap_pairs, pages, _verification_url)
                     if refused or verified != sitemap_pairs:
                         raise ValueError("observations de redirection contradictoires")
@@ -27747,7 +27814,7 @@ def _deep_patch_issue_files(
                 if config:
                     fd = _github_api_get(_github_content_api_path(owner, repo_name, config), token=token, params={"ref": fix_branch})
                     rules = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
-                    if not fd.get("sha") or not sitemap_redirects.rules_match(rules, redirect_pairs, pages or [], _verification_url, shadowed, direct=direct_noindex):
+                    if not fd.get("sha") or not sitemap_redirects.rules_match(rules, redirect_pairs, pages or [], _verification_url, shadowed, direct=direct_routes):
                         raise ValueError("regles de redirection actuelles contradictoires")
                 if "netlify.toml" in all_paths:
                     import tomllib
@@ -27798,10 +27865,13 @@ def _deep_patch_issue_files(
                 sha = fd.get("sha", "")
             if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
                 raise ValueError("source non verifiable")
-            new, count = (_remove_sitemap_locs(raw, sitemap_noindex_urls, verified=True) if sitemap_noindex_urls is not None
+            removal_urls = list(sitemap_error_statuses) if sitemap_error_statuses is not None else sitemap_noindex_urls
+            new, count = (_remove_sitemap_locs(raw, removal_urls, verified=True) if removal_urls is not None
                           else _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True))
             if not count:
                 return [], [path], [path], []
+            if sitemap_error_statuses is not None and any(_sitemap_error_status(url) != code for url, code in sitemap_error_statuses.items()):
+                raise ValueError("statut HTTP actuel modifie ou non verifiable")
             response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
                 json_body={"branch": fix_branch, "sha": sha, "message": "fix(seo): canonical sitemap cleanup\n\nGenerated by Noyaru",
                            "content": _b64.b64encode(new.encode("utf-8")).decode("ascii")})
@@ -28442,6 +28512,7 @@ def _apply_prepared_issue_fix(
                 sitemap_canonical_pairs=prep.get("sitemap_canonical_pairs"),
                 sitemap_redirect_pairs=prep.get("sitemap_redirect_pairs"),
                 sitemap_noindex_urls=prep.get("sitemap_noindex_urls"),
+                sitemap_error_statuses=prep.get("sitemap_error_statuses"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)
