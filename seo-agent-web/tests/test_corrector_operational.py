@@ -292,7 +292,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
 @pytest.mark.parametrize("key", ["canonical_from_https_to_http", "duplicate_pages_without_canonical",
     "duplicate_pages_without_canonical_indexable", " DUPLICATE_PAGES_WITHOUT_CANONICAL ",
     "sitemap_non_canonical_page", "sitemap_non_canonical_page_indexable", " SITEMAP_NON_CANONICAL_PAGE ",
-    "sitemap_3xx_redirect", "sitemap_3xx_redirect_indexable", " SITEMAP_3XX_REDIRECT "])
+    "sitemap_3xx_redirect", "sitemap_3xx_redirect_indexable", " SITEMAP_3XX_REDIRECT ",
+    "sitemap_noindex_page", "sitemap_noindex_page_not_indexable", " SITEMAP_NOINDEX_PAGE "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -429,6 +430,51 @@ def test_sitemap_redirect_endpoints_keep_rules_html_and_verified_master_metadata
         assert state["charges"] == [0] and state["pr_bodies"]
         if case == "partial_verified":
             assert any(dead in body for body in state["pr_bodies"])
+    else:
+        assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("case", ["verified", "unobserved", "stale_robots", "partial_verified"])
+def test_sitemap_noindex_endpoints_delist_only_verified_entries_and_require_review(harness, monkeypatch, mode, case):
+    state, run = harness
+    key, control = "sitemap_noindex_page", URL + "control"
+    entry = '<url><loc>' + URL + '</loc><priority>0.1</priority></url>'
+    xml = '<urlset>' + entry + '<url><loc>' + control + '</loc></url></urlset>'
+    source = HTML.replace('</head>', '<meta name="robots" content="noindex, follow" /></head>')
+    state.update(key=key, sources={"sitemap.xml": xml, "index.html": source,
+                                  "control.html": HTML.replace(URL, control)})
+    rows = [{"url": URL, "final_url": URL, "status_code": 200, "content_type": "text/html",
+             "canonical": URL, "meta_robots": "noindex, follow", "meta_robots_tag_count": 1,
+             "redirect_chain": [], "redirect_statuses": []}]
+    impacted = [URL]
+    if case == "unobserved":
+        rows = []
+    elif case == "stale_robots":
+        state["sources"]["index.html"] = source.replace("noindex, follow", "index, follow")
+    elif case == "partial_verified":
+        impacted.append(control)
+        rows.append(dict(rows[0], url=control, final_url=control, meta_robots="index, follow"))
+    state["report"] = {"issues": {key: {"count": len(impacted), "examples": impacted}}, "pages": rows}
+    monkeypatch.setattr(m, "_project_github_cfg", lambda *a, **k: {"repo": "review/site", "branch": "main", "mode": "auto"})
+    verification, original = [], m._bloc_verification
+    def capture(data, *, fusion_auto):
+        verification.append(fusion_auto)
+        return original(data, fusion_auto=fusion_auto)
+    monkeypatch.setattr(m, "_bloc_verification", capture)
+    def forbidden(*a, **k):
+        pytest.fail("No model or inferred target for a noindex sitemap repair")
+    for name in ("_openai_generate_file_patch", "_ai_map_urls_to_files", "_ai_pick_repo_files"):
+        monkeypatch.setattr(m, name, forbidden)
+    result = run(mode)
+    assert not result["ai_calls"]
+    if case in {"verified", "partial_verified"}:
+        assert result["status"] == 200 and result["written"] == {"sitemap.xml": xml.replace(entry, "")}
+        assert state["charges"] == [0] and state["pr_bodies"]
+        assert all("noindex" in body.lower() for body in state["pr_bodies"])
+        assert verification and not any(verification)
+        if case == "partial_verified":
+            assert any(control in body for body in state["pr_bodies"])
     else:
         assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
 

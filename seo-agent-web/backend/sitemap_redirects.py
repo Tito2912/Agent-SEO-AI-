@@ -66,11 +66,12 @@ def verified_pairs(pairs: list[dict], pages: list[dict] | None, identify) -> tup
     return accepted, sorted(set(refused))
 
 
-def rules_match(content: str, pairs: list[dict], pages: list[dict], identify, shadowed: set[str] | None = None) -> bool:
+def rules_match(content: str, pairs: list[dict], pages: list[dict], identify, shadowed: set[str] | None = None,
+                *, direct: set[str] | None = None) -> bool:
     """Require exact flat rules, never infer wildcard precedence or condition semantics."""
-    if not pairs or len(content) > 80_000:
+    if (not pairs and not direct) or len(content) > 80_000:
         return False
-    origin = pairs[0]["from"]
+    origin = pairs[0]["from"] if pairs else min(direct)
     rules = {}
     try:
         for line in content.splitlines():
@@ -88,6 +89,8 @@ def rules_match(content: str, pairs: list[dict], pages: list[dict], identify, sh
                    or urlsplit(value).fragment for value in (source, target)) or source in rules:
                 return False
             rules[source] = (target, int(tokens[2].removesuffix("!")), tokens[2].endswith("!"))
+        if set(direct or []) & rules.keys():
+            return False
         requested = {identify(row.get("url")): row for row in pages if isinstance(row, dict)}
         for pair in pairs:
             if pair["to"] in rules:

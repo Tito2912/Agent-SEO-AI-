@@ -1,4 +1,4 @@
-"""Surgical canonical cleanup using validated XML nodes and their byte offsets."""
+"""Surgical verified sitemap cleanup using validated XML nodes and byte offsets."""
 
 from collections.abc import Callable
 from html import escape
@@ -13,10 +13,19 @@ NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 def rewrite_canonicals(content: str, pairs: list[dict[str, str]],
                        identify: Callable[[str], str]) -> tuple[str, int]:
     """Keep an existing master's entire entry; new masters never inherit alias metadata."""
+    return _rewrite(content, pairs, identify, remove=False)
+
+
+def remove_urls(content: str, urls: list[str], identify: Callable[[str], str]) -> tuple[str, int]:
+    """Delete only exact URL entries, keeping every byte outside their nodes unchanged."""
+    return _rewrite(content, [{"from": url, "to": ""} for url in urls], identify, remove=True)
+
+
+def _rewrite(content, pairs, identify, *, remove):
     mapping = {}
     for pair in pairs:
         source, target = (identify(pair.get(k, "")) for k in ("from", "to"))
-        if not source or not target or source == target or mapping.get(source, target) != target:
+        if not source or (not remove and not target) or source == target or mapping.get(source, target) != target:
             return content, 0
         mapping[source] = target
     if not mapping or set(mapping) & set(mapping.values()):
@@ -65,7 +74,7 @@ def rewrite_canonicals(content: str, pairs: list[dict[str, str]],
                 continue
             target = mapping[value]
             replacement = b""
-            if target not in present:
+            if not remove and target not in present:
                 present.add(target)
                 # Reuse only in-scope qualified names, not lastmod/images from a different URL.
                 url_open = data[frame["start"]:data.find(b">", frame["start"]) + 1]

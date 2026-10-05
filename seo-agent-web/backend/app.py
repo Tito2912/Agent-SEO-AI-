@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -20737,7 +20737,7 @@ def _looks_like_sitemap_xml(content: str) -> bool:
     return "<urlset" in head or "<sitemapindex" in head
 
 
-def _remove_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
+def _remove_sitemap_locs(content: str, urls: list[str], *, verified: bool = False) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): drop the whole `<url>` block of each flagged page.
 
     A sitemap listing a `noindex` page tells Google two opposite things at once. Removing the
@@ -20749,6 +20749,12 @@ def _remove_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
     that also carry a `<loc>`, and deleting one of those would take an entire sitemap out of the
     file; `_SITEMAP_URL_BLOCK_RE` cannot match them, which is the property this relies on.
     """
+    if verified:
+        try:
+            from . import sitemap_rewrite
+        except ImportError:
+            import sitemap_rewrite
+        return sitemap_rewrite.remove_urls(content, urls, _verification_url)
     wanted = {_norm_url_for_match(u) for u in (urls or []) if str(u or "").strip()}
     if not wanted:
         return content, 0
@@ -24714,7 +24720,7 @@ def _duplicate_canonical_masters(
     return out
 
 
-def _duplicate_html_document(raw: str) -> dict[str, Any] | None:
+def _duplicate_html_document(raw: str, *, allow_noindex: bool = False) -> dict[str, Any] | None:
     """Inspect literal HTML without treating JS/template strings as page markup."""
     if re.search(r"\{\{|\{%|<%|\$\{", raw):
         return None
@@ -24726,6 +24732,9 @@ def _duplicate_html_document(raw: str) -> dict[str, Any] | None:
             self.starts, self.ends, self.canonicals, self.og = {}, {}, [], []
             self.canonical_positions, self.lang = [], ""
             self.noindex = False
+            self.robots = []
+            self.literal_stack = []
+            self.nested_robots = False
             self.scripts = 0
             self.ambiguous = False
 
@@ -24742,6 +24751,8 @@ def _duplicate_html_document(raw: str) -> dict[str, Any] | None:
                 self.lang = str(values.get("lang") or "").strip().lower()
             if tag == "meta" and str(values.get("name") or "").lower() in {"robots", "googlebot"}:
                 self.noindex |= "noindex" in re.split(r"[,;\s:]+", str(values.get("content") or "").lower())
+                self.robots.append((self.source_offset(), str(values.get("name") or "").lower(), values.get("content")))
+                self.nested_robots |= self.literal_stack != ["html", "head"]
             if tag == "script":
                 self.scripts += 1
             if tag == "link" and "canonical" in str(values.get("rel") or "").lower().split():
@@ -24749,9 +24760,13 @@ def _duplicate_html_document(raw: str) -> dict[str, Any] | None:
                 self.canonical_positions.append(self.source_offset())
             if tag == "meta" and str(values.get("property") or values.get("name") or "").lower() == "og:url":
                 self.og.append((self.source_offset(), self.get_starttag_text(), values.get("content")))
+            if tag not in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}:
+                self.literal_stack.append(tag)
 
         def handle_endtag(self, tag):
             self.ends.setdefault(tag, []).append(self.source_offset())
+            if self.literal_stack and self.literal_stack[-1] == tag:
+                self.literal_stack.pop()
 
     parser = Document()
     try:
@@ -24766,12 +24781,16 @@ def _duplicate_html_document(raw: str) -> dict[str, Any] | None:
                  parser.starts["body"][0], parser.ends["body"][0], parser.ends["html"][0]]
     if positions != sorted(positions) or len(set(positions)) != len(positions):
         return None
-    if (not parser.lang or parser.noindex or parser.starts.get("base")
+    if (not parser.lang or (parser.noindex and not allow_noindex) or parser.starts.get("base")
             or any(not positions[1] < p < positions[2] for p in parser.canonical_positions)):
+        return None
+    if allow_noindex and (parser.nested_robots or parser.starts.get("template") or parser.starts.get("noscript")
+                          or any(not positions[1] < p < positions[2] for p, _, _ in parser.robots)):
         return None
     return {"head_start": positions[1], "head_end": positions[2],
             "body": raw[positions[3]:positions[4]].replace("\r\n", "\n"),
-            "canonicals": parser.canonicals, "og": parser.og, "lang": parser.lang}
+            "canonicals": parser.canonicals, "og": parser.og, "lang": parser.lang,
+            **({"robots": [(name, value) for _, name, value in parser.robots]} if allow_noindex else {})}
 
 
 def _add_duplicate_canonical(raw: str, master: str) -> tuple[str, int]:
@@ -27087,6 +27106,32 @@ def _prepare_issue_fix(
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
     sitemap_family = issue_key.removesuffix("_not_indexable").removesuffix("_indexable")
+    if sitemap_family == "sitemap_noindex_page":
+        try:
+            from . import sitemap_noindex
+        except ImportError:
+            import sitemap_noindex
+        out["sitemap_noindex_urls"] = []
+        urls, refused = sitemap_noindex.verified_urls(impacted, pages, _verification_url)
+        candidates = _fichiers_sitemap_du_depot(all_paths)
+        roots = {"sitemap.xml", *(folder + "/sitemap.xml" for folder in _DOSSIERS_STATIQUES)}
+        out["extra_hint"] = "Retire EXACTEMENT les entrees noindex prouvees ; conserve les pages et leur noindex. Aucun motif d'URL ni repli IA."
+        if not urls:
+            out["refusal"] = "Aucune instruction meta noindex HTML 200 coherente observee. Les en-tetes seuls ne prouvent pas une source litterale."
+        elif len(candidates) != 1 or candidates[0] not in roots or _sitemap_deja_engendre(all_paths):
+            out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : exclusion a traiter dans sa vraie source."
+        else:
+            out["sitemap_noindex_urls"] = urls
+            out["targets_override"] = candidates
+            out["evidence"] = urls
+            out["link_rewriter"] = lambda raw, _u=urls: _remove_sitemap_locs(raw, _u, verified=True)
+            partners = _sitemap_removal_side_effects(urls, pages,
+                dash.extract_impacted_pages("indexable_page_not_in_sitemap", issues.get("indexable_page_not_in_sitemap")))
+            if partners:
+                out["side_effects"] = "\nEffet de bord prevu : ces pages peuvent perdre une reciproque hreflang : " + ", ".join(partners)
+            if refused:
+                out["side_effects"] += "\nEntrees laissees sans correction faute de noindex prouve : " + ", ".join(refused)
+        return out
     if sitemap_family in {"sitemap_non_canonical_page", "sitemap_3xx_redirect"}:
         try:
             from . import sitemap_redirects
@@ -27620,6 +27665,7 @@ def _deep_patch_issue_files(
     canonical_pairs: list[dict[str, str]] | None = None,
     sitemap_canonical_pairs: list[dict[str, str]] | None = None,
     sitemap_redirect_pairs: list[dict[str, str]] | None = None,
+    sitemap_noindex_urls: list[str] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27651,7 +27697,7 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
-    if sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None:
+    if sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None or sitemap_noindex_urls is not None:
         sitemap_pairs = sitemap_redirect_pairs if sitemap_redirect_pairs is not None else sitemap_canonical_pairs
         candidates = _fichiers_sitemap_du_depot(all_paths)
         if max_files < 1 or len(candidates) != 1 or targets_override != candidates:
@@ -27667,25 +27713,42 @@ def _deep_patch_issue_files(
             if _sitemap_deja_engendre(all_paths, package):
                 return [], ["Sitemap engendre : correction de sa source necessaire."], [], []
             current_index = index or repo_index.build_repo_index(all_paths)
+            observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
+            direct_noindex = set()
+            if sitemap_noindex_urls is not None:
+                try:
+                    from . import sitemap_noindex
+                except ImportError:
+                    import sitemap_noindex
+                verified, refused = sitemap_noindex.verified_urls(sitemap_noindex_urls, pages, _verification_url)
+                if refused or not verified or verified != sitemap_noindex_urls:
+                    raise ValueError("observations noindex contradictoires")
+                sitemap_pairs = [{"page": url, "from": url, "to": _verification_url(observed[url].get("final_url") or url)} for url in verified]
+                sitemap_redirect_pairs = [p for p in sitemap_pairs if p["from"] != p["to"]]
+                direct_noindex = {p["to"] for p in sitemap_pairs}
             if sitemap_redirect_pairs is not None:
                 try:
                     from . import sitemap_redirects
                 except ImportError:
                     import sitemap_redirects
-                verified, refused = sitemap_redirects.verified_pairs(sitemap_pairs, pages, _verification_url)
-                if refused or verified != sitemap_pairs:
-                    raise ValueError("observations de redirection contradictoires")
+                redirect_pairs = sitemap_redirect_pairs
+                if sitemap_noindex_urls is None:
+                    verified, refused = sitemap_redirects.verified_pairs(sitemap_pairs, pages, _verification_url)
+                    if refused or verified != sitemap_pairs:
+                        raise ValueError("observations de redirection contradictoires")
                 config = sitemap_redirects.config_path(all_paths, path)
-                if not config or any(p in all_paths for p in (".htaccess", "vercel.json")):
+                if (not config and (redirect_pairs or any(p.rsplit("/", 1)[-1] == "_redirects" for p in all_paths))
+                        or any(p in all_paths for p in (".htaccess", "vercel.json"))):
                     raise ValueError("configuration de redirection ambigue")
-                fd = _github_api_get(_github_content_api_path(owner, repo_name, config), token=token, params={"ref": fix_branch})
-                rules = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
-                sources = {p["from"] for p in sitemap_pairs}
+                sources = {p["from"] for p in redirect_pairs}
                 hops = {_verification_url(url) for row in pages or [] if isinstance(row, dict)
                         and _verification_url(row.get("url")) in sources for url in row.get("redirect_chain") or []}
                 shadowed = {url for url in hops if repo_index.route_files(current_index, url)}
-                if not fd.get("sha") or not sitemap_redirects.rules_match(rules, sitemap_pairs, pages or [], _verification_url, shadowed):
-                    raise ValueError("regles de redirection actuelles contradictoires")
+                if config:
+                    fd = _github_api_get(_github_content_api_path(owner, repo_name, config), token=token, params={"ref": fix_branch})
+                    rules = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                    if not fd.get("sha") or not sitemap_redirects.rules_match(rules, redirect_pairs, pages or [], _verification_url, shadowed, direct=direct_noindex):
+                        raise ValueError("regles de redirection actuelles contradictoires")
                 if "netlify.toml" in all_paths:
                     import tomllib
                     fd = _github_api_get(_github_content_api_path(owner, repo_name, "netlify.toml"), token=token, params={"ref": fix_branch})
@@ -27693,7 +27756,6 @@ def _deep_patch_issue_files(
                     if tomllib.loads(config).get("redirects"):
                         raise ValueError("autres regles de redirection presentes")
             # Re-read the literal heads too: a once-consolidated URL may now be self-canonical.
-            observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
             bindings = {}
             for pair in sitemap_pairs:
                 current, visited = pair["to"] if sitemap_redirect_pairs is not None else pair["from"], set()
@@ -27705,7 +27767,7 @@ def _deep_patch_issue_files(
                         raise ValueError("source de page absente ou ambigue")
                     bindings[files[0]] = current
                     declared = _verification_url(observed[current].get("canonical"))
-                    if not declared or declared == current:
+                    if sitemap_noindex_urls is not None or not declared or declared == current:
                         break
                     current = declared
             for source_path, url in bindings.items():
@@ -27715,7 +27777,13 @@ def _deep_patch_issue_files(
                     fd = _github_api_get(_github_content_api_path(owner, repo_name, source_path),
                                          token=token, params={"ref": fix_branch})
                     source = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
-                document = _duplicate_html_document(source) if len(source) <= 80_000 else None
+                document = _duplicate_html_document(source, allow_noindex=sitemap_noindex_urls is not None) if len(source) <= 80_000 else None
+                if sitemap_noindex_urls is not None:
+                    robots = document.get("robots", []) if document else []
+                    if (len(robots) != 1 or robots[0][0] != "robots"
+                            or sitemap_noindex.robots_tokens(robots[0][1]) != sitemap_noindex.robots_tokens(observed[url].get("meta_robots"))):
+                        raise ValueError("instruction noindex actuelle contradictoire ou non litterale")
+                    continue
                 expected_canonical = _verification_url(observed[url].get("canonical"))
                 if not document or [_verification_url(u) for u in document["canonicals"]] != (
                         [expected_canonical] if expected_canonical else []):
@@ -27730,7 +27798,8 @@ def _deep_patch_issue_files(
                 sha = fd.get("sha", "")
             if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
                 raise ValueError("source non verifiable")
-            new, count = _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True)
+            new, count = (_remove_sitemap_locs(raw, sitemap_noindex_urls, verified=True) if sitemap_noindex_urls is not None
+                          else _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True))
             if not count:
                 return [], [path], [path], []
             response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
@@ -28372,6 +28441,7 @@ def _apply_prepared_issue_fix(
                 canonical_pairs=prep.get("canonical_pairs"),
                 sitemap_canonical_pairs=prep.get("sitemap_canonical_pairs"),
                 sitemap_redirect_pairs=prep.get("sitemap_redirect_pairs"),
+                sitemap_noindex_urls=prep.get("sitemap_noindex_urls"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

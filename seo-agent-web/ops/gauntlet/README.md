@@ -958,6 +958,59 @@ ni tous les stacks. Aucun site client, deploiement, merge main ou migration de
 recus n'est implique. La prochaine validation portera sur les pages `noindex`
 presentes dans le sitemap, puis sur les autres familles et l'onboarding client.
 
+## Pages noindex dans le sitemap (05/10/2026)
+
+`sitemap_noindex_page` exige maintenant une instruction generique meta robots
+`noindex` explicite, unique et coherente dans des observations HTML 200. Le fichier
+HTML actuel est relu avant toute ecriture : son head litteral doit encore porter
+la meme instruction. Un en-tete seul ne suffit pas a ce chemin source, meme si
+[Google prend aussi en charge le noindex HTTP](https://developers.google.com/search/docs/crawling-indexing/block-indexing).
+Les faux marqueurs dans un commentaire, attribut, body, titre, template ou contenu
+inerte, les robots contradictoires et les sources calculees sont refuses sans IA.
+
+Le correcteur retire seulement les blocs XML exacts, en conservant les pages et
+leur choix d'indexation. Casse, slash et query significatifs ne sont plus confondus
+dans cette famille. Les autres entrees, metadonnees, extensions, commentaires et
+octets restent intacts. Le sitemap doit etre litteral, unique et dans un dossier
+statique connu. Les sitemaps engendres ne declenchent plus d'exclusion IA devinee.
+Une entree redirigee exige une cible noindex observee independamment et des regles
+actuelles litterales prouvees. Les refus restent nommes pour un sous-ensemble
+partiel, et la note de premise impose une revue humaine meme en mode automatique.
+Les parcours individuel et groupe partagent ces gardes ; les apercus libres ou
+anciens ne les contournent pas, et aucun token IA n'est facture.
+
+```sh
+python ops/gauntlet/sitemap_noindex_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `751fafff93a5def142562f1a3d1bed6ba8930f85`, sans preparation
+des sources. Un seul PUT retire `noindex-long`, `noindex-no-description` et
+`qa-sitemap-noindex`, dont la 302 aboutit a `noindex-long`. Le sitemap passe de
+51 a 48 entrees et la famille controlee de 3 a 0. Les deux builds et les deux
+crawls conservent 52 routes HTML et 60 lignes de rapport, toutes les pages noindex
+restent observees avec leurs balises intactes. La famille des URL redirigees dans
+le sitemap passe aussi de 2 a 1 ; son autre temoin negatif reste liste. Aucun
+compteur n'augmente, et les temoins canonical et doublons anterieurs restent
+intacts. Les PR #67 et #68 sont fermees en brouillon sans fusion ; main ne change
+pas. La contre-verification fraiche relit les SHA, builds, sources, reponses HTTP
+et entrees XML, puis reproduit la preparation, sans ecriture distante ni appel IA.
+
+Les previews natives gardent leur en-tete `noindex`. Le XML servi utilise les URL
+de production, avec zero seed sitemap dans les crawls bruts : leurs compteurs
+0 vers 0 ne prouvent rien. La projection controlee de l'hote/en-tete, avec le XML
+reellement servi et les meta noindex explicites conservees, mesure 3 vers 0.
+Cela ne prouve pas l'indexation en production et ne deploie pas l'agent. Le bilan
+est dans `validation-sitemap-noindex-2026-10-05.json`.
+
+La suite finale compte 3 881 tests reussis et 42 ignores, avec 636 tests cibles
+reussis et 115 nouveaux cas. L'inventaire reste a 203 cles, 65 familles revendiquees
+et 64 proposees ; les familles sans reference nommee passent de 13 a 12. Une
+reference ne certifie ni toutes les occurrences ni tous les stacks. Les cas
+header-only, Googlebot seul, generes, multi-sources ou calcules restent limites,
+et les effets possibles sur les partenaires hreflang sont des avertissements,
+pas une reparation multilingue atomique. Aucun site client ni deploiement n'est
+implique. La prochaine validation porte sur les pages en erreur du sitemap.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

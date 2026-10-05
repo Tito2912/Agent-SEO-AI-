@@ -88,24 +88,23 @@ def test_the_family_is_claimed_targeted_and_never_auto_merged() -> None:
     assert app_module._fix_premise_note(key), "the premise note is what blocks auto-merge"
 
 
-def test_the_hint_forbids_the_other_half_of_the_contradiction() -> None:
-    """A model told only "make them agree" can just as well delete the noindex. On a generated
-    sitemap it must reach for the generator's exclusion rule instead of an XML file."""
+def test_unobserved_generated_sitemap_refuses_without_model_fallback() -> None:
+    """Neither an unobserved noindex nor an inferred generator edit authorizes a repair."""
     prep = app_module._prepare_issue_fix(
         issue_key="sitemap_noindex_page", issues={}, impacted=["https://x.fr/blog/tag/a/"],
         all_paths=["astro.config.mjs"], site_name="x.fr", owner="o", repo_name="r",
         branch="main", token="t", model_override="",
     )
     hint = prep["extra_hint"]
-    assert "noindex" in hint and "exclusion" in hint
-    assert "astro.config" in hint, "a generated sitemap has no <loc> to delete"
+    assert "noindex" in hint and "conserve les pages" in hint
     # Measured on creativeai-tools.com: told only "exclude these paths", the model wrote
     # /blog/(category|tag)/ — 32 entries dropped where 31 are flagged, and the extra one serves
     # `index, follow`. A correction that removes an indexable page is a new defect.
     assert "motif d'URL" in hint, "nothing steers the model away from a path pattern"
     assert "EXACTEMENT" in hint
-    assert prep["link_rewriter"] is not None
-    assert prep["rewriter_ai_fallback"] is True
+    assert prep["refusal"] and prep["sitemap_noindex_urls"] == []
+    assert prep["link_rewriter"] is None
+    assert prep["rewriter_ai_fallback"] is False
 
 
 def test_a_second_dead_sitemap_is_not_handed_to_the_model() -> None:
@@ -174,6 +173,9 @@ PAGES = [
                   "x-default": "https://x.fr/blog/category/case-studies/"}},
     # itself removed — it cannot lose a partner it is leaving with
     {"url": "https://x.fr/de/blog/category/case-studies/",
+     "final_url": "https://x.fr/de/blog/category/case-studies/",
+     "status_code": 200, "content_type": "text/html", "meta_robots": "noindex, follow",
+     "meta_robots_tag_count": 1, "redirect_chain": [], "redirect_statuses": [],
      "hreflang": {"en": "https://x.fr/blog/category/case-studies/"}},
     # untouched
     {"url": "https://x.fr/contact", "hreflang": {}},
