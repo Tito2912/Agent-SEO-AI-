@@ -1,0 +1,161 @@
+{
+  "date": "2026-10-05",
+  "status": "guarded_missing_root_language_from_unique_self_hreflang_measured_on_pinned_owned_fixture",
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "6bb40a1bb09659b6e606c8e874643a2b03240a30",
+  "scope": {
+    "family": "hreflang_defined_but_html_lang_missing",
+    "secondary_family": "html_lang_attribute_missing",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "seed_branch": "gauntlet-static-html-twitter-correction-20261005-115031",
+    "seed_sha": "1c0c40130306afcf200c0e54a2cca8fce8c480cc",
+    "seed_pr_closed_draft_unmerged": 80,
+    "setup_file_puts": 0,
+    "corrective_paths": ["gauntlet/hreflang-no-html-lang.html"],
+    "maximum_file_put_attempts": 1,
+    "write_requires_exact_qa_branch_blob_sha_expected_bytes_and_no_retry": true,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/hreflang_lang_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "product_guards": [
+    "Require coherent independently requested same-host direct HTTPS HTML typed 200 observations, self canonical, no errors/blocked hosts/redirects/noindex/none and explicit lang, served_lang, hreflang map/raw fields. Both languages must be observed absent; unknown/malformed fields and contradictory duplicate observations refuse. Name refused URLs when a verified subset exists.",
+    "Use exactly one non-x-default self annotation already declared by the actual page. Validate codes using the auditor's syntax shape and require coherent raw/map values without duplicate codes. Competing self languages or regions refuse. Do not infer language from prose, URL, project defaults or another page; preserve every translation and x-default annotation without fixing their destinations.",
+    "Re-read current SHA/content and uniquely bound nonshared literal HTML files with bounded simple routing checks. Refuse scripts/templates/base/refresh, malformed structure, ambiguous/shared/query-colliding routes, missing files/SHA, unknown encoding, duplicate attributes and any existing root lang or xml:lang, including empty/valueless attributes. Require the literal source and observations to agree on every hreflang pair. Refuse an insufficient whole-set file budget before any write.",
+    "Fresh bounded streamed direct public-target HTTPS probes must attest actual language absence, the same self language, canonical/indexability and every alternate. All source/routing/network preflight checks complete before the first PUT. Add an explicit opt-in for this missing-language probe/reader only; their default missing-language refusal remains unchanged for prior repairs. No production preview exemption is added.",
+    "Insert one lowercased declared language attribute only at the parsed actual root tag end, preserving all other source bytes and line endings. Comments containing HTML are not active tags. Refuse ambiguous source offsets and input/output above 80000 UTF-8 bytes; repeat application changes nothing. Individual and grouped deep routes use the same zero-provider/zero-AI-charge path. Empty refusal plans prevent heuristic/model fallback and free-form/cached/confirmed previews cannot bypass it. Each PUT is SHA-guarded; stop and report remaining files on failure, without an atomic multi-file guarantee."
+  ],
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-self-lang-baseline-20261005-123832",
+    "correction_branch": "gauntlet-static-html-self-lang-correction-20261005-123832",
+    "baseline_sha": "1c0c40130306afcf200c0e54a2cca8fce8c480cc",
+    "final_sha": "a055e8ee5c2843ed4140a4509560034715cd2b93",
+    "baseline_pr": 81,
+    "correction_pr": 82,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "setup_file_puts": 0,
+    "corrective_file_puts": 1,
+    "corrective_path": "gauntlet/hreflang-no-html-lang.html",
+    "minimal_new_root_attributes": 1,
+    "added_attribute": "lang=fr derived only from the existing unique literal French self hreflang",
+    "all_hreflang_values_preserved": true,
+    "observed_healthy_html_routes": [52, 52],
+    "report_rows": [62, 62],
+    "controlled_whole_family_counts": {
+      "hreflang_defined_but_html_lang_missing": [1, 0],
+      "html_lang_attribute_missing": [2, 1]
+    },
+    "raw_whole_family_counts": {
+      "hreflang_defined_but_html_lang_missing": [1, 0],
+      "html_lang_attribute_missing": [2, 1]
+    },
+    "other_missing_html_language_left_unmodified_without_self_evidence": true,
+    "raw_sitemap_seed_urls": [0, 0],
+    "sitemap_entries_unchanged": [49, 49],
+    "preput_https_rechecks": 1,
+    "preput_http_namespace": "Map only the exact owned production-namespace target to its actual baseline preview and remove only the verified exact native Netlify noindex header. Actual status/body/canonical/meta robots and streamed HTML remain real and are checked. This projection is confined to the test harness; native previews themselves fail the product guard.",
+    "only_one_expected_root_attribute_changes_source_and_served_html": true,
+    "healthy_languages_hreflang_viewports_canonicals_social_tags_navigation_and_routing_preserved": true,
+    "requested_observation_multiset_preserved": true,
+    "previous_repairs_and_negative_controls_preserved": true,
+    "increased_counts": {},
+    "all_selected_occurrences_resolved": true,
+    "all_primary_family_occurrences_on_this_controlled_fixture_resolved": true,
+    "all_missing_html_language_occurrences_resolved": false,
+    "example_comparison": "Use the existing bounded normalizer only for protocol/www root probe examples of the two exact owned PR previews; do not normalize production-namespace requested observations or raw reports.",
+    "cycle_sha256": "d509057f959839281f2b00eead36fd5bbd7d8a49c27564ed0a765287e65affb0"
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "fresh_isolated_process_against_final_code": true,
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "checks": "Re-read exact branch heads, two closed draft unmerged PRs, successful builds, one-commit/one-file Git comparison, source bindings, sitemap/routing and fresh served XML/HTML. A separate HTMLParser identifies the actual root tag despite the HTML-like comment, independently derives the one insertion, checks all annotations and metadata, compares full served bodies allowing only the owned Netlify deploy-id to vary, and re-prepares/verifies idempotence without models/targeting/writes/quota calls. Match all six current normalized source/test hashes to the frozen final manifests.",
+    "fresh_default_probe_calls_on_native_preview_urls": 2,
+    "all_native_preview_probes_rejected": true,
+    "native_preview_noindex_preserved": true,
+    "production_indexation_not_proven": true,
+    "countercheck_sha256": "3fc6a7f2f707254a26537f9ffe10826486a95e69b26171c3fd94176d8fa93404",
+    "countercheck_script_sha256": "2baea337f8ed0cb73185433f9ecf11daf3f643a717b800508ceedbb153093333",
+    "artifact_file": "countercheck.json",
+    "script_file": "countercheck.py"
+  },
+  "acceptance_inventory": {
+    "historical_tracked_snapshot_preserved": "acceptance-inventory-2026-10-04.json",
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_exact_named_record_before": 7,
+    "families_without_exact_named_record_after": 6,
+    "new_named_mentions": ["hreflang_defined_but_html_lang_missing"],
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "before_snapshot_sha256": "56be172b2cb45af1364c31d5274f5bb90a50069aefe4648972fdadf460187ac4",
+    "legacy_hidden_diagnostic_not_promoted": "The intentionally non-offered legacy absent-canonical diagnostic remains unchanged; no task is enabled merely to reduce the named-reference gap."
+  },
+  "provider_usage": {
+    "all_live_and_countercheck_requests": 0,
+    "claude_budget": 0,
+    "openai_fallback_allowed": false
+  },
+  "verification": {
+    "full_final_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 4825,
+      "skipped": 42,
+      "warnings": 377,
+      "seconds": 239.67,
+      "real_provider_keys": "empty",
+      "provider_selection": "auto_for_existing_mocked_provider_tests",
+      "source_or_test_edits_during_run": false,
+      "junit_sha256": "3cf8632e6f873eddb4b1b089e72a276630fdb44a4b4aea83aa404325f2078a00"
+    },
+    "targeted_final_suite": {
+      "passed": 1744,
+      "skipped": 0,
+      "warnings": 142,
+      "seconds": 83.84,
+      "junit_sha256": "8f681d94fd044487fc3540728a2f7637f4c15e830cb81b8fb2a824367f4a3c96"
+    },
+    "new_tests_this_phase": 202,
+    "new_module_tests": 129,
+    "new_benchmark_tests": 44,
+    "new_endpoint_tests": 29,
+    "initial_red": {
+      "failed": 102,
+      "passed": 0,
+      "seconds": 1.69,
+      "junit_sha256": "2241261af6b2a6db6c0c862c7ce3439a2a8d576abf73e60685dd8266542dde3a",
+      "explanation": "Witnesses expose the missing protected plan/rewriter/probe, but this first run also contains duplicate-keyword mistakes in the new page test helper. These are not 102 independent production defects; correct the helper before accepting the green results."
+    },
+    "development_checks": [
+      "The first benchmark preflight had two synthetic-test failures: root-route replacement retained aliases, and a conditional generator predicate selected no healthy witness. Correct the selector, then exclude shared final-URL aliases rather than weakening the mandatory 52-route guard. The following preflight passes all 755 selected tests, including the positive report and all 27 collateral-change rejection cases.",
+      "All implementation and test files are frozen before the full suite, expanded targeted suite and live cycle. Both final suites have identical six-file normalized source manifests; the independent fresh countercheck matches them and succeeds without modifying product sources or test fixtures."
+    ],
+    "ruff_F_E9": "passed_on_all_six_phase_source_and_test_files",
+    "compileall": "passed",
+    "new_module_and_bench_bandit_medium_or_high": "none",
+    "source_manifest_sha256": "dd327b6cbb0c1783eb0557cfc76ad8cafdcaf825c13c9cea78e007a3ce89c249",
+    "normalized_LF_tested_source_sha256": {
+      "backend/app.py": "b0f6a617dd6b253596c48052eb1d922e525a337b2c07aaf8ab5093b457833865",
+      "backend/hreflang_lang.py": "97cf32672d339d88d0a9db48ff1f7ba0965fadae5c311373ebb02fb246a5cd0b",
+      "tests/test_verified_hreflang_lang.py": "a4c7cb722170f591a1c4ee6ff45fa62b06f76ba05afcc8e19d217cf24548a0fc",
+      "tests/test_corrector_operational.py": "513f7654d7bacd4ac5d07048679058ba24549b4477ce12bf8eb73732aa644a7c",
+      "ops/gauntlet/hreflang_lang_cycle.py": "38eb5adcebe2db6b949d709f2e18f163fb68da5d94e94ff2eeb31a7cf3acc80d",
+      "tests/test_gauntlet_hreflang_lang_cycle.py": "ec2a3e144e8a72a51cf0126e098541cfa9fe99e7914f603ece17ac4fd5befdcf"
+    },
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "Only a missing root language with unique coherent already-declared self evidence on one owned literal static HTML fixture is repaired here. The other missing-language page deliberately remains missing without self evidence. Existing/empty/invalid language attributes, competing regions/languages, ambiguous or nonliteral/shared/framework sources and nonindexable/redirecting pages refuse this path; no all-stacks/all-occurrences guarantee is claimed.",
+    "A declared self annotation supplies the attribute, not a content-language detector. The code-shape validator matches the current auditor; it is not a full language/subtag registry validator. Translation targets and annotation reciprocity are preserved, not certified semantically correct or repaired by this change.",
+    "Native previews retain noindex and production canonical-host context with zero raw sitemap seeds. The two language families are still scored on healthy noindex HTML, so raw and controlled counts agree at 1 to 0 and 2 to 1. This corroborates literal metadata repair, not production indexability. The bounded owned header/host projection and actual served XML also verify preservation of prior repairs; no actual status/body/meta directive is invented.",
+    "Reads, SHA-guarded writes, network probes and future deployments are not atomic; a multi-file failure can leave an explicitly reported partial branch. The existing public-target validator is reused, not a full SSRF/DNS-rebinding audit. JavaScript DOM execution and production indexation are not verified.",
+    "No agent deployment, client onboarding, fresh real Claude integration, production recovery replay, scheduler/payment acceptance, capacity test or fresh PostgreSQL run is included. SQLite keeps 42 skipped tests. Six claimed families still have no exact named record, including one deliberately hidden legacy diagnostic; named references are not passed repairs or client-readiness certification."
+  ]
+}

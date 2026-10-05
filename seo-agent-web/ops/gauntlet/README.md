@@ -1264,6 +1264,67 @@ et les frameworks restent a valider separement. Une mention dans un bilan n'est
 pas une reparation prouvee. Aucun site client n'est modifie, l'agent n'est pas
 deploye et sa mise en service globale n'est pas certifiee.
 
+## Langue HTML issue du self hreflang (05/10/2026)
+
+`hreflang_defined_but_html_lang_missing` dispose d'un chemin mecanique sans IA,
+commun aux corrections individuelle et groupee. La page doit etre HTML HTTPS 200
+directe, indexable et self-canonical sur l'hote du projet, avec des observations
+coherentes attestant l'absence de `lang` et `served_lang`. Une seule annotation
+`hreflang` litterale non `x-default` doit designer cette URL exacte. Aucune langue
+n'est devinee depuis le texte, l'URL, les reglages du projet ou une autre page.
+
+Le correcteur relit le fichier et son routing actuels, puis verifie la reponse
+HTTPS servie : langue toujours absente et memes annotations, canonical et
+indexabilite. Champs inconnus, observations contradictoires, doublons ou langues
+auto-referencees concurrentes, sources non litterales ou partagees, scripts,
+templates, routes ambigues et tout attribut `lang` ou `xml:lang` deja present
+(meme vide) sont refuses sans repli IA. Le lecteur et la sonde HTTPS precedents
+gardent leur refus par defaut pour les documents sans langue : seule cette
+nouvelle correction active l'option qui permet de les inspecter.
+
+Un seul attribut est insere dans la vraie balise racine `<html>`, en gardant tous
+les autres octets, fins de ligne et liens `hreflang`. Les commentaires contenant
+`<html>` ne sont pas des balises actives. Les positions ambigues et les sources
+ou sorties au-dessus de 80 000 octets sont refusees. Les controles de tout le lot
+finissent avant le premier PUT ; chaque ecriture est protegee par SHA, mais les
+lots multifichiers ne sont pas atomiques. Les apercus libres ou anciens ne
+contournent pas ce chemin, et une seconde application n'ajoute rien.
+
+```sh
+python ops/gauntlet/hreflang_lang_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `1c0c40130306afcf200c0e54a2cca8fce8c480cc`, sans PUT de setup.
+Un seul PUT ajoute `lang="fr"` a `gauntlet/hreflang-no-html-lang.html` depuis son
+annotation francaise existante. Deux builds et deux vrais crawls mesurent
+**1 anomalie de cette famille a 0**, dans les rapports bruts comme controles.
+Le compteur general de langue HTML absente passe de **2 a 1** : l'autre page
+reste volontairement inchangee faute d'annotation auto-referencee. Les 52 routes,
+62 lignes de rapport, 49 entrees sitemap, metadonnees et corrections precedentes
+restent presentes. Les PR #81 et #82 sont fermees en brouillon sans fusion ;
+main reste intact et tous les liens `hreflang` restent identiques.
+
+La contre-verification en lecture seule relit les SHA, builds, sources, XML et
+HTTP reels. Un parseur independant localise la racine malgre le commentaire
+contenant du HTML, compare les annotations et le HTML entier, puis reprepare
+le correctif et controle son idempotence contre les empreintes du code teste.
+Seul l'identifiant de deploy Netlify possede est normalise entre les deux builds.
+Les previews conservent leur `noindex` natif : deux nouvelles sondes ordinaires
+les refusent. La projection d'hote/en-tete du banc reste strictement bornee au
+site de test ; elle ne prouve pas l'indexabilite en production.
+
+La suite complete finale passe **4 825 tests**, avec 42 ignores ; la suite ciblee
+passe **1 744 tests**. Les nouveaux controles comprennent 202 cas. L'inventaire
+passe de sept a six familles sans mention exacte dans un bilan ; cette mention
+n'est pas une certification. Le diagnostic historique de canonical absente reste
+volontairement cache et n'est pas active pour reduire ce chiffre.
+
+Le bilan est dans `validation-hreflang-lang-2026-10-05.json`. Le contenu linguistique,
+le registre complet des codes, les destinations et la reciprocite des traductions,
+les frameworks, le DOM JavaScript et l'indexation de production restent a valider
+separement. Aucun site client n'est modifie, l'agent n'est pas deploye et sa mise
+en service globale n'est pas certifiee.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,
