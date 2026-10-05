@@ -3704,7 +3704,8 @@ def _correction_operation(function):
         # Reclassified advice must also block replay of an older cached preview.
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
-        if (str(bound.arguments.get("issue_key") or "").strip().lower() == "canonical_from_https_to_http"
+        if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction canonical exige les destinations observees dans le rapport. "
@@ -24575,47 +24576,174 @@ def _duplicate_canonical_masters(
 
     Les GROUPES ne sont pas dans le rapport — la famille n'y est qu'une liste plate d'URL — mais
     ils sont reconstituables : le crawler groupe par TITRE ou DESCRIPTION partages
-    (`title_counts`, `description_counts`), et le rapport porte ces deux champs page par page. On
-    applique donc la meme regle plutot que de demander au crawler de la publier.
+    (`title_counts`, `description_counts`). Ces metadonnees ne suffisent pas a prouver une
+    duplication de contenu. Les observations du corps, de la
+    langue, des images et des liens doivent aussi concorder ; les corps HTML actuels sont
+    ensuite compares avant toute ecriture. Les groupes incomplets ou ambigus sont refuses.
 
     Choisir une maitresse par groupe, et jamais une pour TOUT : fusionner deux groupes distincts
     sur un meme canonical desindexerait des pages sans rapport.
 
-    La maitresse est l'URL la plus COURTE du groupe, a egalite la premiere dans l'ordre
+    Une maitresse deja auto-referencee et verifiee est prioritaire. Sinon, la maitresse est
+    l'URL la plus COURTE du groupe, a egalite la premiere dans l'ordre
     alphabetique. C'est une CONVENTION — la page la plus proche de la racine est le choix usuel —
     et elle vaut surtout parce qu'elle est stable : rejouee sur le meme groupe elle rend la meme
     reponse, ce qu'aucune reponse de modele ne garantit. Le choix reste discutable par le
     proprietaire, et la PR le dit (voir `_FIX_PREMISE_NOTES`).
     """
-    if not impacted or not pages:
-        return {}
-    vises = {_norm_url_for_match(u) for u in impacted}
-    groupes: dict[tuple[str, str], list[str]] = {}
-    for page in pages:
-        if not isinstance(page, dict):
-            continue
-        url = str(page.get("url") or "")
-        if _norm_url_for_match(url) not in vises:
-            continue
-        titre = str(page.get("title") or "").strip()
-        description = str(page.get("meta_description") or "").strip()
-        # Le titre d'abord : c'est le premier critere du crawler, et deux pages qui partagent un
-        # titre partagent presque toujours la description. Une page sans titre se groupe sur sa
-        # description ; sans les deux, elle n'a pas de jumelle identifiable et on l'ecarte.
-        cle = ("titre", titre) if titre else (("description", description) if description else None)
-        if cle is None:
-            continue
-        groupes.setdefault(cle, []).append(url)
-    out: dict[str, str] = {}
-    for membres in groupes.values():
-        if len(membres) < 2:
-            # Seule de son groupe dans ce lot : rien ne dit qui serait la maitresse, et se
-            # designer soi-meme n'apprend rien. On s'abstient.
-            continue
-        maitresse = sorted(membres, key=lambda u: (len(u), u))[0]
-        for u in membres:
-            out[u] = maitresse
+    vises = {_verification_url(u) for u in impacted} - {""}
+    observations: dict[str, list[dict[str, Any]]] = {}
+    for page in pages or []:
+        if isinstance(page, dict) and (url := _verification_url(page.get("url"))):
+            observations.setdefault(url, []).append(page)
+
+    def signature(url, page):
+        sketch = page.get("content_sketch")
+        if (type(page.get("status_code")) is not int or page["status_code"] != 200
+                or page.get("error") or page.get("blocked_by_host")
+                or _verification_url(page.get("final_url") or page.get("url")) != url
+                or str(page.get("content_type") or "").split(";", 1)[0].strip().lower()
+                not in {"text/html", "application/xhtml+xml"}
+                or any("noindex" in re.split(r"[,;\s:]+", str(page.get(k) or "").lower())
+                       for k in ("meta_robots", "x_robots_tag"))
+                or not isinstance(sketch, (list, tuple)) or not sketch
+                or not all(type(v) is int and v >= 0 for v in sketch)
+                or type(page.get("text_word_count")) is not int or page["text_word_count"] <= 0
+                or page.get("ld_json_blocks") != 0 or not page.get("lang")
+                or not all(isinstance(page.get(k), list) for k in ("h1", "image_urls", "internal_links", "external_links"))):
+            return None
+        canonical = _verification_url(page.get("canonical"))
+        if page.get("canonical") and canonical != url:
+            return None
+        lists = [page[k] for k in ("h1", "image_urls", "internal_links", "external_links")]
+        if not all(isinstance(v, str) for values in lists for v in values):
+            return None
+        parts = urlsplit(url)
+        return ((parts.scheme, parts.netloc), str(page["lang"]).lower(), tuple(page["h1"]),
+                page["text_word_count"], tuple(sorted(set(sketch))),
+                *(tuple(sorted(set(values))) for values in lists[1:]))
+
+    known, profiles = {}, {}
+    for url, rows in observations.items():
+        identities = [(signature(url, r), str(r.get("title") or "").strip(),
+                       str(r.get("meta_description") or "").strip(), _verification_url(r.get("canonical"))) for r in rows]
+        if identities[0][0] is not None and all(identity == identities[0] for identity in identities):
+            known[url] = identities[0]
+            profiles.setdefault(identities[0][0], []).append(url)
+    out = {}
+    for members in profiles.values():
+        # Refuse transitive metadata bridges without a common group key.
+        remaining = set(members)
+        while remaining:
+            group, frontier = set(), {min(remaining)}
+            while frontier:
+                current = frontier.pop()
+                group.add(current)
+                remaining.discard(current)
+                frontier.update(u for u in remaining if any(known[current][i] and known[current][i] == known[u][i]
+                                                             for i in (1, 2)))
+            if len(group) < 2 or not any(len({known[u][i] for u in group}) == 1 and known[next(iter(group))][i]
+                                         for i in (1, 2)):
+                continue
+            existing = {u for u in group if known[u][3]}
+            missing = group - existing
+            if len(existing) > 1 or not missing or not missing <= vises:
+                continue
+            master = next(iter(existing)) if existing else min(group, key=lambda u: (len(u), u))
+            out.update({u: master for u in sorted(missing)})
     return out
+
+
+def _duplicate_html_document(raw: str) -> dict[str, Any] | None:
+    """Inspect literal HTML without treating JS/template strings as page markup."""
+    if re.search(r"\{\{|\{%|<%|\$\{", raw):
+        return None
+    lines = raw.splitlines(keepends=True)
+
+    class Document(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.starts, self.ends, self.canonicals, self.og = {}, {}, [], []
+            self.canonical_positions, self.lang = [], ""
+            self.noindex = False
+            self.scripts = 0
+            self.ambiguous = False
+
+        def source_offset(self):
+            line, column = self.getpos()
+            return sum(map(len, lines[:line - 1])) + column
+
+        def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            if tag in {"html", "head", "body", "link", "meta"} and len(values) != len(attrs):
+                self.ambiguous = True
+            self.starts.setdefault(tag, []).append(self.source_offset())
+            if tag == "html":
+                self.lang = str(values.get("lang") or "").strip().lower()
+            if tag == "meta" and str(values.get("name") or "").lower() in {"robots", "googlebot"}:
+                self.noindex |= "noindex" in re.split(r"[,;\s:]+", str(values.get("content") or "").lower())
+            if tag == "script":
+                self.scripts += 1
+            if tag == "link" and "canonical" in str(values.get("rel") or "").lower().split():
+                self.canonicals.append(values.get("href"))
+                self.canonical_positions.append(self.source_offset())
+            if tag == "meta" and str(values.get("property") or values.get("name") or "").lower() == "og:url":
+                self.og.append((self.source_offset(), self.get_starttag_text(), values.get("content")))
+
+        def handle_endtag(self, tag):
+            self.ends.setdefault(tag, []).append(self.source_offset())
+
+    parser = Document()
+    try:
+        parser.feed(raw)
+        parser.close()
+    except Exception:
+        return None
+    if parser.scripts or parser.ambiguous or any(len(parser.starts.get(t, [])) != 1 or len(parser.ends.get(t, [])) != 1
+                             for t in ("html", "head", "body")):
+        return None
+    positions = [parser.starts["html"][0], parser.starts["head"][0], parser.ends["head"][0],
+                 parser.starts["body"][0], parser.ends["body"][0], parser.ends["html"][0]]
+    if positions != sorted(positions) or len(set(positions)) != len(positions):
+        return None
+    if (not parser.lang or parser.noindex or parser.starts.get("base")
+            or any(not positions[1] < p < positions[2] for p in parser.canonical_positions)):
+        return None
+    return {"head_start": positions[1], "head_end": positions[2],
+            "body": raw[positions[3]:positions[4]].replace("\r\n", "\n"),
+            "canonicals": parser.canonicals, "og": parser.og, "lang": parser.lang}
+
+
+def _add_duplicate_canonical(raw: str, master: str) -> tuple[str, int]:
+    document = _duplicate_html_document(raw)
+    if not document or document["canonicals"] or len(document["og"]) > 1 or not _verification_url(master):
+        return raw, 0
+    edits = []
+    if document["og"]:
+        offset, tag, value = document["og"][0]
+        attributes = list(_CONTENT_ATTR_RE.finditer(tag))
+        attr = attributes[0] if len(attributes) == 1 else None
+        if (not document["head_start"] < offset < document["head_end"] or not attr
+                or not attr.start() or not tag[attr.start() - 1].isspace()
+                or html.unescape(attr.group(3)) != value
+                or not _verification_url(value)
+                or (urlsplit(value).scheme == "https" and urlsplit(master).scheme == "http")):
+            return raw, 0
+        if value != master:
+            edits.append((offset + attr.start(3), offset + attr.end(3), html.escape(master, quote=True)))
+    end = document["head_end"]
+    line_start = raw.rfind("\n", 0, end) + 1
+    indent = raw[line_start:end]
+    tag = '<link rel="canonical" href="' + html.escape(master, quote=True) + '" />'
+    if not indent.strip():
+        newline = "\r\n" if "\r\n" in raw else "\n"
+        edits.append((line_start, line_start, indent + tag + newline))
+    else:
+        edits.append((end, end, tag))
+    output = raw
+    for start, finish, replacement in sorted(edits, reverse=True):
+        output = output[:start] + replacement + output[finish:]
+    return output, 1
 
 
 def _og_url_ecrit_dans(content: str) -> str:
@@ -26940,6 +27068,7 @@ def _prepare_issue_fix(
         _maitres = _duplicate_canonical_masters(list(impacted), pages)
         if _maitres:
             out["canonical_masters"] = dict(_maitres)
+            out["rewriter_ai_fallback"] = False
             _lignes = "\n".join("  %s  ->  %s" % (u, m) for u, m in sorted(_maitres.items()))
             out["extra_hint"] = (
                 (out["extra_hint"] + "\n" if out["extra_hint"] else "")
@@ -26949,6 +27078,14 @@ def _prepare_issue_fix(
                   "vers l'autre : ce serait une boucle, et une boucle vaut moins que pas de "
                   "canonical du tout. La maitresse de chaque page est donnee ici, ne la choisis "
                   "pas toi-meme :\n" + _lignes)
+            _refuses = [u for u in impacted if _verification_url(u) not in _maitres]
+            out["duplicate_refusals"] = _refuses
+            if _refuses:
+                out["side_effects"] = "\nPages laissees sans correction canonical faute de groupe verifie : " + ", ".join(_refuses)
+        else:
+            out["refusal"] = ("Aucun groupe complet de pages jumelles suffisamment observees. "
+                              "Un titre ou une description partages ne prouvent pas un contenu duplique ; "
+                              "aucun maitre canonical ne sera invente par l'IA.")
 
     if issue_key in _OG_URL_KEYS:
         _og_pairs = _og_url_pairs_from_pages(list(impacted), pages, allow_repaired_https=True)
@@ -27421,6 +27558,61 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
+    if canonical_masters is not None:
+        # Preflight the complete group, including an existing master, before any PUT.
+        # GitHub's per-file writes are not an atomic multi-file transaction.
+        duplicate_index = index or repo_index.build_repo_index(all_paths)
+        bindings: dict[str, str] = {}
+        for url in sorted(set(canonical_masters) | set(canonical_masters.values())):
+            files = repo_index.route_files(duplicate_index, url) or []
+            if (len(files) != 1 or files[0] not in all_paths or not files[0].lower().endswith(".html")
+                    or repo_index.is_shared_path(duplicate_index, files[0]) or files[0] in bindings):
+                return [], ["Canonical refuse : route HTML absente, partagee ou ambigue."], [], []
+            bindings[files[0]] = url
+        required = sorted(path for path, url in bindings.items() if url in canonical_masters)
+        if not required or len(required) > max_files:
+            return [], ["Canonical refuse : plafond insuffisant pour le groupe complet."], [], []
+        bodies: dict[str, set[tuple[str, str]]] = {}
+        duplicate_patches: dict[str, tuple[str, str, str]] = {}
+        for path, url in bindings.items():
+            try:
+                if path in file_state:
+                    raw, sha = file_state[path]["content"], file_state[path]["sha"]
+                else:
+                    fd = _github_api_get(_github_content_api_path(owner, repo_name, path),
+                                         token=token, params={"ref": fix_branch})
+                    raw = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                    sha = fd.get("sha", "")
+                document = _duplicate_html_document(raw) if len(raw) <= 80_000 else None
+                if not document or not sha:
+                    raise ValueError("source non litterale ou non verifiable")
+                master = canonical_masters.get(url, url)
+                if url in canonical_masters:
+                    new, count = _add_duplicate_canonical(raw, master)
+                    if not count or _github_patched_content_error(new, path) or _refus_de_format(path, new):
+                        raise ValueError("source modifiee ou format ambigu")
+                    duplicate_patches[path] = (raw, new, sha)
+                elif document["canonicals"] != [url]:
+                    raise ValueError("maitresse actuelle non auto-referencee")
+                bodies.setdefault(master, set()).add((document["lang"], document["body"]))
+            except Exception:
+                return [], [f"Canonical refuse : source actuelle non verifiable ({path})."], [], []
+        if any(len(group) != 1 for group in bodies.values()):
+            return [], ["Canonical refuse : les corps HTML actuels sont differents."], [], []
+        patched, skipped = [], []
+        for path in required:
+            raw, new, sha = duplicate_patches[path]
+            try:
+                response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
+                    json_body={"branch": fix_branch, "sha": sha,
+                        "message": f"fix(seo): {issue_key} - {path}\n\nGenerated by Noyaru",
+                        "content": _b64.b64encode(new.encode("utf-8")).decode("ascii")})
+                file_state[path] = {"content": new, "sha": str((response.get("content") or {}).get("sha") or "")}
+                patched.append(path)
+            except Exception:
+                skipped.extend(required[len(patched):])
+                break
+        return patched, skipped, required, []
     targets: list[str] = []
     # 1) Deterministic: files that reference the evidence (e.g. image srcs). Tarball grep is
     #    complete (scans every file in 1 download); code search / per-file grep are fallbacks.

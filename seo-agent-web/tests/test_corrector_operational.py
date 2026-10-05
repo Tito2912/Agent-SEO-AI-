@@ -289,9 +289,10 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
 
 
 @pytest.mark.parametrize("mode", ["url_preview", "github_preview", "github_confirm"])
-def test_https_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode):
+@pytest.mark.parametrize("key", ["canonical_from_https_to_http", "duplicate_pages_without_canonical",
+    "duplicate_pages_without_canonical_indexable", " DUPLICATE_PAGES_WITHOUT_CANONICAL "])
+def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
-    key = "canonical_from_https_to_http"
 
     def forbidden(*args, **kwargs):
         pytest.fail("Use the evidence-bound deep fixer, never a cached or model-generated canonical preview")
@@ -310,6 +311,54 @@ def test_https_canonical_cannot_bypass_evidence_through_model_preview(harness, m
             confirm=mode == "github_confirm", file_path="index.html", patched_content=HTML))
     assert response.status_code == 422 and json.loads(response.body)["needs_deep_fix"] is True
     assert not state["charges"] and not state["pr_bodies"]
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("case", ["verified", "different_observations", "different_current_body", "partial_verified"])
+def test_duplicate_canonical_endpoints_are_free_bounded_and_require_human_review(harness, monkeypatch, mode, case):
+    state, run = harness
+    key, other, control = "duplicate_pages_without_canonical", URL + "other", URL + "control"
+    source = HTML.replace('<link rel="canonical" href="' + URL + '" />\n', '')
+    state.update(key=key, sources={"index.html": source, "other.html": source, "control.html": HTML})
+    def observation(url, **extra):
+        return {"url": url, "final_url": url, "status_code": 200, "content_type": "text/html", "canonical": None,
+            "title": "Shared title", "meta_description": DESCRIPTION, "lang": "fr", "h1": ["Shared heading"],
+            "text_word_count": 80, "content_sketch": list(range(30)), "image_urls": [], "internal_links": [],
+            "external_links": [], "ld_json_blocks": 0, **extra}
+    impacted = [URL, other]
+    rows = [observation(URL), observation(other)]
+    if case == "different_observations":
+        rows[1]["content_sketch"] = list(range(1, 31))
+    elif case == "different_current_body":
+        state["sources"]["other.html"] = source.replace("<h1>", "<h1>Changed ")
+    elif case == "partial_verified":
+        impacted.append(control)
+        rows.append(observation(control, content_sketch=list(range(1, 31))))
+    state["report"] = {"issues": {key: {"count": len(impacted), "examples": impacted}}, "pages": rows}
+    monkeypatch.setattr(m, "_project_github_cfg", lambda *a, **k: {"repo": "review/site", "branch": "main", "mode": "auto"})
+    verification = []
+    original = m._bloc_verification
+    def capture(data, *, fusion_auto):
+        verification.append(fusion_auto)
+        return original(data, fusion_auto=fusion_auto)
+    monkeypatch.setattr(m, "_bloc_verification", capture)
+    def forbidden(*a, **k):
+        pytest.fail("A canonical convention must not call a model")
+    for name in ("_openai_generate_file_patch", "_ai_map_urls_to_files", "_ai_pick_repo_files"):
+        monkeypatch.setattr(m, name, forbidden)
+    result = run(mode)
+    assert not result["ai_calls"]
+    if case in {"verified", "partial_verified"}:
+        assert result["status"] == 200 and set(result["written"]) == {"index.html", "other.html"}
+        assert all(raw == source.replace("</head>", '<link rel="canonical" href="' + URL + '" />\n</head>')
+                   for raw in result["written"].values())
+        assert state["charges"] == [0] and state["pr_bodies"]
+        assert all("CONVENTION" in body.upper() for body in state["pr_bodies"])
+        assert verification and not any(verification)
+        if case == "partial_verified":
+            assert any(control in body for body in state["pr_bodies"])
+    else:
+        assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
 
 
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):

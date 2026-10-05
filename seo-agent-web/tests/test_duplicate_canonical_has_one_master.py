@@ -41,7 +41,10 @@ A, B = f"{S}/gauntlet/no-canonical-a", f"{S}/gauntlet/no-canonical-bis"
 
 
 def _page(url: str, titre: str, description: str = "") -> dict[str, object]:
-    return {"url": url, "title": titre, "meta_description": description}
+    return {"url": url, "final_url": url, "status_code": 200, "content_type": "text/html",
+            "canonical": None, "title": titre, "meta_description": description, "lang": "fr",
+            "h1": ["Page"], "text_word_count": 80, "content_sketch": list(range(30)),
+            "image_urls": [], "internal_links": [], "external_links": [], "ld_json_blocks": 0}
 
 
 def test_les_deux_jumelles_recoivent_LA_MEME_maitresse() -> None:

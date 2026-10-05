@@ -790,6 +790,68 @@ aucun site client et aucun deploiement de l'agent ne sont inclus.
 La suite finale compte 3 444 tests reussis et 42 ignores ; les 279 tests cibles
 passent aussi. Les 74 nouveaux cas incluent les refus et les garde-fous du banc.
 
+## Consolidation de copies sans canonical (05/10/2026)
+
+`duplicate_pages_without_canonical` est une detection heuristique : le crawler
+signale aussi des pages qui partagent seulement leur titre ou leur description.
+Ces metadonnees seules ne permettent plus de choisir un maitre. Le correcteur
+exige des observations HTML 200 coherentes, sans `noindex`, avec les memes
+empreinte de contenu, H1, langue, images et liens. Il refuse les groupes
+incomplets, les observations contradictoires et les ponts ambigus de metadonnees.
+Un unique maitre deja auto-reference et observe est prioritaire ; sinon le choix
+stable de l'URL la plus courte reste une convention soumise a revue humaine.
+Cette famille ne peut pas etre fusionnee automatiquement, meme sans appel IA.
+
+Avant le premier PUT, tous les fichiers du groupe et son eventuel maitre
+existant doivent etre resolus sans ambiguite vers des pages HTML litterales.
+Les corps actuels et leurs langues sont compares, les canonicals sont relus,
+et le plafond doit permettre la correction complete. Scripts, templates,
+`noindex`, base URL, attributs ambigus et sources devenues incompatibles sont
+refuses sans repli IA. Les ecritures GitHub restent des operations par fichier :
+une panne reseau peut laisser une branche partiellement modifiee, jamais une
+transaction atomique garantie ni une fusion automatique.
+
+La correction ajoute uniquement le canonical et aligne l'og:url litteral deja
+present. Elle preserve les corps, les autres metadonnees, alternate/hreflang,
+navigation et fins de ligne. Les apercus libres par URL/GitHub et leur
+confirmation sont bloques avant ancien apercu, modele ou quota ; les parcours
+etendu et groupe utilisent les memes preuves et ne facturent aucun appel IA.
+
+```sh
+python ops/gauntlet/duplicate_canonical_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le cycle epingle `pployeraffiliation-a11y/noyaru-stack-static-html` sur
+`dd9cea5389a4ce6c1242696d63eb2f2bcae66ff8`. Il ajoute deux vraies copies
+et une page de controle sur une branche QA, avec navigation et sitemap : cinq
+PUT de preparation strictement bornes. Il conserve les anciennes pages
+`no-canonical-a` et `no-canonical-b` comme temoins negatifs car leurs contenus
+different. Seuls `qa-dupe-a.html` et `qa-dupe-b.html` recoivent ensuite le
+correctif. Deux builds et deux crawls reussis conservent les memes 52 routes.
+Les occurrences selectionnees passent de 2 a 0 ; la famille globale passe de
+4 a 2, les deux refus restent visibles. Les PR #61 et #62 sont fermees sans
+fusion ; main, les redirections et les temoins negatifs restent inchanges.
+
+Le resultat n'est pas tout vert : `sitemap_non_canonical_page` passe de 7 a 8
+et `page_has_only_one_dofollow_incoming_internal_link_not_indexable` de 5 a 6.
+Le nouveau temoin est `qa-dupe-b`, desormais consolide vers `qa-dupe-a` mais
+encore liste dans le sitemap. Son retrait du sitemap est une correction
+separee a valider, pas une reparation obtenue dans ce cycle.
+Les previews brutes restent `noindex` et leur compteur de cette famille vaut
+0 avant comme apres ; seule la projection controlee mesure 4 vers 2.
+Les corps bruts prouvent bien l'ajout des canonicals, sans preuve d'indexation
+en production. Le contre-controle frais est strictement en lecture seule et
+neutralise uniquement l'identifiant natif du build Netlify pour comparer les
+corps servis. Le bilan `validation-canonical-doublons-2026-10-05.json` conserve
+les preuves, hashes et limites. Aucun client ni deploiement de l'agent n'est
+inclus ; une reference nommee n'est pas une certification universelle.
+La suite finale compte 3 557 tests reussis et 42 ignores ; les 283 tests cibles
+passent aussi, avec 113 nouveaux cas. L'inventaire garde 203 cles, 65 familles
+revendiquees et 64 proposees. Les familles sans reference nommee passent de
+16 a 14 : la consolidation est mesuree, mais la seconde nouvelle mention
+concerne justement le sitemap restant a corriger. Ce chiffre ne mesure donc
+ni les reparations reussies ni la preparation aux premiers clients.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,
