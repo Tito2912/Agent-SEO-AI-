@@ -898,6 +898,66 @@ cette famille etait deja mentionnee comme avertissement dans le bilan precedent.
 Une reference nommee ne certifie ni toutes les occurrences ni tous les stacks,
 et la preparation aux premiers clients reste a valider.
 
+## URL redirigees dans le sitemap (05/10/2026)
+
+`sitemap_3xx_redirect` utilise maintenant le meme parseur XML borne que le
+nettoyage canonical. Une proposition ne suffit plus : sa source doit avoir une
+chaine de redirection observee, complete et coherente, vers une destination HTML
+200 observee independamment, canonique et sans `noindex`. Boucles, contradictions,
+sauts externes, downgrade HTTPS et codes non suivables restent refuses sans IA.
+Une destination deja listee conserve son entree complete ; les metadonnees de
+l'ancienne URL ne la remplacent jamais. La creation minimale d'une entree absente
+reste couverte par les tests synthetiques, pas par ce cycle distant.
+
+Le chemin est volontairement limite au sitemap litteral unique et a un fichier
+`_redirects` unique dans le meme dossier servi. Avant le PUT, chaque regle actuelle
+doit encore correspondre aux sauts et aux codes observes. Une route ayant un
+fichier statique exige une regle forcee. Cette precaution suit le comportement
+de shadowing [documente par Netlify](https://docs.netlify.com/manage/routing/redirects/redirect-options/#force-redirects).
+Les heads actuels des destinations sont aussi relus. Regles conditionnelles,
+wildcards, placeholders, queries non prouvees, configuration concurrente et
+sitemap engendre sont refuses ; ce n'est pas un correcteur universel de routing.
+Les apercus libres et anciens apercus ne contournent pas ces preuves. Les
+parcours etendu et groupe ne facturent aucun token et ne modifient que le XML.
+
+```sh
+python ops/gauntlet/sitemap_redirect_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `ab31afaddafdf86c26649a1f3e908647b22045ed` apres le nettoyage
+canonical. Trois PUT de preparation ajoutent navigation, cinq entrees de sitemap
+et trois regles de test, sans ajouter de page HTML. Un seul PUT correctif retire
+les trois entrees prouvees : deux redirections simples et une chaine 302 puis
+301. Le sitemap passe de 54 a 51 entrees, les occurrences selectionnees de 3 a
+0, et la famille globale de 5 a 2. Les deux temoins negatifs restent listes :
+`qa-sitemap-noindex` aboutit a une page `noindex`, et `qa-sitemap-noncanonical`
+aboutit a une page dont le canonical designe un autre maitre. Leur refus ne
+compte pas comme une reparation. Les deux maitres deja presents sont preserves.
+
+Deux builds et deux crawls conservent les memes 52 routes HTML, tous les temoins
+de redirection restent observes grace a la navigation, et aucun compteur
+n'augmente entre ces deux rapports controles. Les regles, les contenus et les
+temoins des cycles precedents restent inchanges par la correction. Les PR #65 et
+#66 sont fermees en brouillon sans fusion, et main reste inchangee. La
+contre-verification fraiche relit aussi les sources, les PR, les builds, les
+reponses HTTP et les blocs XML conserves, sans ecriture distante ni appel IA.
+
+Les previews natives gardent `noindex`. Leur sitemap sert des URL dans l'espace
+de noms de production, avec zero seed dans le crawl brut : son compteur vaut
+0 avant comme apres et ne prouve pas la correction. La projection controlee
+avec le XML effectivement servi mesure 5 vers 2 ; les reponses HTTP et les octets
+du XML sont contre-verifies independamment. Ce n'est pas un deploiement de
+l'agent ni une preuve d'indexation en production. Le bilan est conserve dans
+`validation-sitemap-redirections-2026-10-05.json`.
+
+La suite finale compte 3 766 tests reussis, 42 ignores, et 440 tests cibles reussis,
+avec 115 nouveaux cas. L'inventaire reste a 203 cles, 65 familles revendiquees et
+64 proposees ; les familles sans reference nommee passent de 14 a 13, par une
+nouvelle preuve dediee. Les references ne certifient ni toutes les occurrences
+ni tous les stacks. Aucun site client, deploiement, merge main ou migration de
+recus n'est implique. La prochaine validation portera sur les pages `noindex`
+presentes dans le sitemap, puis sur les autres familles et l'onboarding client.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

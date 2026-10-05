@@ -176,6 +176,7 @@ SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED
 
 def _prepare(cle: str, bloc: dict) -> dict:
     pages = list(PAGES)
+    chemins = list(CHEMINS)
     if cle == "canonical_from_https_to_http":
         bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": "http://exemple.fr/", "to": P}]})
         pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": "http://exemple.fr/"}]
@@ -189,8 +190,14 @@ def _prepare(cle: str, bloc: dict) -> dict:
         bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": P, "to": S + "/b"}]})
         pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": S + "/b"},
                  {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
+    if cle == "sitemap_3xx_redirect":
+        bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": P, "to": S + "/b"}]})
+        pages = [{"url": P, "final_url": S + "/b", "status_code": 200, "content_type": "text/html",
+                  "canonical": S + "/b", "redirect_chain": [P], "redirect_statuses": [301]},
+                 {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
+        chemins.append("public/_redirects")
     return m._prepare_issue_fix(
-        issue_key=cle, issues={cle: dict(bloc)}, impacted=[P], all_paths=list(CHEMINS),
+        issue_key=cle, issues={cle: dict(bloc)}, impacted=[P], all_paths=chemins,
         site_name=SITE, owner="o", repo_name="r", branch="main", token="",
         pages=pages)
 

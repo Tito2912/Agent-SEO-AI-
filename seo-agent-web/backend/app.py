@@ -3705,10 +3705,10 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
-                "error": "Cette correction canonical exige les destinations observees dans le rapport. "
+                "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
                          "Utilise la correction etendue : aucun apercu IA libre ni ancien apercu ne peut l'appliquer."},
                 status_code=422)
         user = getattr(request.state, "user", None)
@@ -27086,8 +27086,17 @@ def _prepare_issue_fix(
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
-    if issue_key.removesuffix("_not_indexable").removesuffix("_indexable") == "sitemap_non_canonical_page":
-        url_pairs, refusals = _verified_sitemap_canonical_pairs(_issue_url_pairs(block), pages)
+    sitemap_family = issue_key.removesuffix("_not_indexable").removesuffix("_indexable")
+    if sitemap_family in {"sitemap_non_canonical_page", "sitemap_3xx_redirect"}:
+        try:
+            from . import sitemap_redirects
+        except ImportError:
+            import sitemap_redirects
+        is_redirect = sitemap_family == "sitemap_3xx_redirect"
+        if is_redirect:
+            out["sitemap_redirect_pairs"] = []
+        url_pairs, refusals = (sitemap_redirects.verified_pairs(_issue_url_pairs(block), pages, _verification_url)
+                              if is_redirect else _verified_sitemap_canonical_pairs(_issue_url_pairs(block), pages))
         refused_pages = set(refusals) | (set(impacted) - {p["from"] for p in url_pairs})
         candidates = _fichiers_sitemap_du_depot(all_paths)
         literal_roots = {"sitemap.xml", *(folder + "/sitemap.xml" for folder in _DOSSIERS_STATIQUES)}
@@ -27095,8 +27104,10 @@ def _prepare_issue_fix(
             out["refusal"] = "Aucune destination canonical HTML 200 indexable verifiee pour ces entrees du sitemap."
         elif len(candidates) != 1 or candidates[0] not in literal_roots or _sitemap_deja_engendre(all_paths):
             out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : aucune reecriture devinee."
+        elif is_redirect and not sitemap_redirects.config_path(all_paths, candidates[0]):
+            out["refusal"] = "La source litterale unique des redirections n'est pas verifiable."
         else:
-            out["sitemap_canonical_pairs"] = list(url_pairs)
+            out["sitemap_redirect_pairs" if is_redirect else "sitemap_canonical_pairs"] = list(url_pairs)
             out["url_pairs"] = list(url_pairs)
             out["targets_override"] = candidates
             out["evidence"] = [p["from"] for p in url_pairs]
@@ -27608,6 +27619,7 @@ def _deep_patch_issue_files(
     canonical_masters: dict[str, str] | None = None,
     canonical_pairs: list[dict[str, str]] | None = None,
     sitemap_canonical_pairs: list[dict[str, str]] | None = None,
+    sitemap_redirect_pairs: list[dict[str, str]] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27639,7 +27651,8 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
-    if sitemap_canonical_pairs is not None:
+    if sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None:
+        sitemap_pairs = sitemap_redirect_pairs if sitemap_redirect_pairs is not None else sitemap_canonical_pairs
         candidates = _fichiers_sitemap_du_depot(all_paths)
         if max_files < 1 or len(candidates) != 1 or targets_override != candidates:
             return [], ["Sitemap source absent ou ambigu."], [], []
@@ -27653,12 +27666,37 @@ def _deep_patch_issue_files(
                 json.loads(package)
             if _sitemap_deja_engendre(all_paths, package):
                 return [], ["Sitemap engendre : correction de sa source necessaire."], [], []
+            current_index = index or repo_index.build_repo_index(all_paths)
+            if sitemap_redirect_pairs is not None:
+                try:
+                    from . import sitemap_redirects
+                except ImportError:
+                    import sitemap_redirects
+                verified, refused = sitemap_redirects.verified_pairs(sitemap_pairs, pages, _verification_url)
+                if refused or verified != sitemap_pairs:
+                    raise ValueError("observations de redirection contradictoires")
+                config = sitemap_redirects.config_path(all_paths, path)
+                if not config or any(p in all_paths for p in (".htaccess", "vercel.json")):
+                    raise ValueError("configuration de redirection ambigue")
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, config), token=token, params={"ref": fix_branch})
+                rules = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                sources = {p["from"] for p in sitemap_pairs}
+                hops = {_verification_url(url) for row in pages or [] if isinstance(row, dict)
+                        and _verification_url(row.get("url")) in sources for url in row.get("redirect_chain") or []}
+                shadowed = {url for url in hops if repo_index.route_files(current_index, url)}
+                if not fd.get("sha") or not sitemap_redirects.rules_match(rules, sitemap_pairs, pages or [], _verification_url, shadowed):
+                    raise ValueError("regles de redirection actuelles contradictoires")
+                if "netlify.toml" in all_paths:
+                    import tomllib
+                    fd = _github_api_get(_github_content_api_path(owner, repo_name, "netlify.toml"), token=token, params={"ref": fix_branch})
+                    config = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                    if tomllib.loads(config).get("redirects"):
+                        raise ValueError("autres regles de redirection presentes")
             # Re-read the literal heads too: a once-consolidated URL may now be self-canonical.
             observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
-            current_index = index or repo_index.build_repo_index(all_paths)
             bindings = {}
-            for pair in sitemap_canonical_pairs:
-                current, visited = pair["from"], set()
+            for pair in sitemap_pairs:
+                current, visited = pair["to"] if sitemap_redirect_pairs is not None else pair["from"], set()
                 while current and current not in visited:
                     visited.add(current)
                     files = repo_index.route_files(current_index, current) or []
@@ -27692,7 +27730,7 @@ def _deep_patch_issue_files(
                 sha = fd.get("sha", "")
             if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
                 raise ValueError("source non verifiable")
-            new, count = _rewrite_sitemap_locs(raw, sitemap_canonical_pairs, canonical=True)
+            new, count = _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True)
             if not count:
                 return [], [path], [path], []
             response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
@@ -28333,6 +28371,7 @@ def _apply_prepared_issue_fix(
                 canonical_masters=prep.get("canonical_masters"),
                 canonical_pairs=prep.get("canonical_pairs"),
                 sitemap_canonical_pairs=prep.get("sitemap_canonical_pairs"),
+                sitemap_redirect_pairs=prep.get("sitemap_redirect_pairs"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

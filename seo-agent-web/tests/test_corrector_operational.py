@@ -291,7 +291,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
 @pytest.mark.parametrize("mode", ["url_preview", "github_preview", "github_confirm"])
 @pytest.mark.parametrize("key", ["canonical_from_https_to_http", "duplicate_pages_without_canonical",
     "duplicate_pages_without_canonical_indexable", " DUPLICATE_PAGES_WITHOUT_CANONICAL ",
-    "sitemap_non_canonical_page", "sitemap_non_canonical_page_indexable", " SITEMAP_NON_CANONICAL_PAGE "])
+    "sitemap_non_canonical_page", "sitemap_non_canonical_page_indexable", " SITEMAP_NON_CANONICAL_PAGE ",
+    "sitemap_3xx_redirect", "sitemap_3xx_redirect_indexable", " SITEMAP_3XX_REDIRECT "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -393,6 +394,41 @@ def test_canonical_sitemap_cleanup_is_free_and_keeps_other_entries_and_all_html(
         assert state["charges"] == [0] and state["pr_bodies"]
         if case == "partial_verified":
             assert any(control in body for body in state["pr_bodies"])
+    else:
+        assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("case", ["verified", "unobserved", "stale_rule", "partial_verified"])
+def test_sitemap_redirect_endpoints_keep_rules_html_and_verified_master_metadata(harness, mode, case):
+    state, run = harness
+    key, master, dead = "sitemap_3xx_redirect", URL + "other", URL + "dead"
+    alias = '<url><loc>' + URL + '</loc><lastmod>2001-01-01</lastmod></url>'
+    master_entry = '<url><loc>' + master + '</loc><lastmod>2026-01-01</lastmod></url>'
+    dead_entry = '<url><loc>' + dead + '</loc></url>'
+    xml = '<urlset>' + alias + master_entry + dead_entry + '</urlset>'
+    rules = "/ /other 301!\n/dead /absent 301\n"
+    state.update(key=key, sources={"sitemap.xml": xml, "_redirects": rules,
+        "index.html": HTML, "other.html": HTML.replace(URL, master)})
+    rows = [{"url": URL, "final_url": master, "status_code": 200, "content_type": "text/html", "canonical": master,
+             "redirect_chain": [URL], "redirect_statuses": [301]},
+            {"url": master, "status_code": 200, "content_type": "text/html", "canonical": master}]
+    pairs = [{"page": URL, "from": URL, "to": master}]
+    if case == "unobserved":
+        rows = rows[:1]
+    elif case == "stale_rule":
+        state["sources"]["_redirects"] = rules.replace("/ /other", "/ /absent")
+    elif case == "partial_verified":
+        pairs.append({"page": dead, "from": dead, "to": URL + "absent"})
+    state["report"] = {"issues": {key: {"count": len(pairs), "examples": [p["from"] for p in pairs],
+        "evidence": {"kind": "url_pairs", "items": pairs}}}, "pages": rows}
+    result = run(mode)
+    assert not result["ai_calls"]
+    if case in {"verified", "partial_verified"}:
+        assert result["status"] == 200 and result["written"] == {"sitemap.xml": xml.replace(alias, "")}
+        assert state["charges"] == [0] and state["pr_bodies"]
+        if case == "partial_verified":
+            assert any(dead in body for body in state["pr_bodies"])
     else:
         assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
 
