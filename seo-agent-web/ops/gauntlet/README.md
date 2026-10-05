@@ -852,6 +852,52 @@ revendiquees et 64 proposees. Les familles sans reference nommee passent de
 concerne justement le sitemap restant a corriger. Ce chiffre ne mesure donc
 ni les reparations reussies ni la preparation aux premiers clients.
 
+## Nettoyage des alias canonical du sitemap (05/10/2026)
+
+`sitemap_non_canonical_page` dispose maintenant d'un chemin sans IA borne aux
+sitemaps XML litteraux uniques. Chaque alias et chaque etape de sa chaine doivent
+avoir des observations HTML 200 coherentes ; le maitre final doit etre canonique
+et sans `noindex`. Boucles, observations absentes ou contradictoires, changement
+d'hote et downgrade HTTPS sont refuses. Avant le PUT, les heads HTML actuels sont
+relus via des routes non partagees, et leurs canonicals doivent encore correspondre
+au rapport. Sources calculees, scripts, templates et sitemap engendre restent
+sans repli IA. Les apercus libres ne contournent pas ces preuves.
+
+Le parseur XML securise identifie les vrais noeuds et leurs offsets UTF-8, sans
+toucher les commentaires ni confondre casse, query ou slash des chemins. Une
+entree du maitre deja presente conserve son bloc complet, meme si l'alias apparait
+avant elle. Si le maitre manque, seule une entree minimale est creee : les dates,
+images et priorites de l'alias ne lui sont pas transferees. Les tests couvrent ce
+second cas ; le cycle distant mesure uniquement des maitres deja presents.
+Sitemap index, DTD, sources multiples ou ambigues et fichiers trop grands sont
+refuses. Les autres familles de reecriture du sitemap restent inchangees.
+
+```sh
+python ops/gauntlet/canonical_sitemap_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le cycle epingle la fixture sur `c31d4b1370735f7938b96bc45e841d81cb0b7fc8`,
+apres la consolidation des copies. Un seul PUT modifie `sitemap.xml`, qui passe
+de 55 a 49 entrees. Deux builds et deux vrais crawls conservent les memes 52
+routes HTML et leurs champs observes. Les six occurrences selectionnees passent
+de 6 a 0 ; la famille globale passe de 8 a 2. `blog` et `canonical-404` restent
+listes faute de destination finale saine observee : leur refus n'est pas une
+reparation. Les trois maitres, les autres entrees, les redirections et les
+temoins du cycle precedent sont preserves. Aucun compteur ne progresse dans ce
+cycle controle. Les PR #63 et #64 sont fermees en brouillon sans fusion, et main
+reste inchangee. Le contre-controle frais ne fait aucune ecriture distante.
+
+Les previews brutes restent `noindex` : leur compteur vaut 0 avant comme apres.
+La projection controlee avec le sitemap servi mesure 8 vers 2, pas l'indexation
+en production. Le bilan `validation-sitemap-canonical-2026-10-05.json` conserve
+les hashes, essais et limites. Aucun appel IA, site client ni deploiement de
+l'agent n'est implique. La suite finale compte 3 651 tests reussis et 42 ignores,
+les 323 tests cibles passent aussi, avec 94 nouveaux cas. L'inventaire reste a
+203 cles, 65 familles revendiquees, 64 proposees et 14 sans reference nommee :
+cette famille etait deja mentionnee comme avertissement dans le bilan precedent.
+Une reference nommee ne certifie ni toutes les occurrences ni tous les stacks,
+et la preparation aux premiers clients reste a valider.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

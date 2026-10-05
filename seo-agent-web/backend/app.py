@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction canonical exige les destinations observees dans le rapport. "
@@ -20048,6 +20048,60 @@ def _verified_canonical_pairs(issue_key: str, pairs: list[dict[str, str]],
     return accepted, refused
 
 
+def _verified_sitemap_canonical_pairs(pairs: list[dict[str, str]], pages: list[dict[str, Any]] | None,
+                                      ) -> tuple[list[dict[str, str]], list[str]]:
+    """Resolve declared canonical chains only through coherent, observed HTML pages."""
+    observations: dict[str, list[dict[str, Any]]] = {}
+    for row in pages or []:
+        if isinstance(row, dict):
+            for url in {_verification_url(row.get("url")), _verification_url(row.get("final_url") or row.get("url"))} - {""}:
+                observations.setdefault(url, []).append(row)
+
+    def declared(url):
+        rows = observations.get(url, [])
+        if not rows or any(type(r.get("status_code")) is not int or r["status_code"] != 200
+                or r.get("error") or r.get("blocked_by_host")
+                or _verification_url(r.get("final_url") or r.get("url")) != url
+                or str(r.get("content_type") or "").split(";", 1)[0].strip().lower()
+                not in {"text/html", "application/xhtml+xml"} for r in rows):
+            return None
+        values = {_verification_url(r.get("canonical")) for r in rows}
+        if len(values) != 1 or any(r.get("canonical") and not _verification_url(r["canonical"]) for r in rows):
+            return None
+        return values.pop()
+
+    intentions: dict[str, set[str]] = {}
+    for pair in pairs:
+        intentions.setdefault(_verification_url(pair.get("from")), set()).add(_verification_url(pair.get("to")))
+    accepted, refused, seen = [], [], set()
+    for pair in pairs:
+        source, target = (_verification_url(pair.get(k)) for k in ("from", "to"))
+        if (not source or not target or source == target or _verification_url(pair.get("page")) != source
+                or len(intentions[source]) != 1 or declared(source) != target):
+            refused.append(source or "URL inconnue")
+            continue
+        visited, current = {source}, target
+        while current not in visited:
+            visited.add(current)
+            canonical = declared(current)
+            if canonical is None or urlsplit(current).netloc != urlsplit(source).netloc:
+                break
+            if not canonical or canonical == current:
+                noindex = any("noindex" in re.split(r"[,;\s:]+", str(r.get(k) or "").lower())
+                              for r in observations[current] for k in ("meta_robots", "x_robots_tag"))
+                if not noindex and not (source.startswith("https://") and current.startswith("http://")):
+                    identity = (source, current)
+                    if identity not in seen:
+                        seen.add(identity)
+                        accepted.append({"page": source, "from": source, "to": current})
+                    break
+                break
+            current = canonical
+        if source not in {p["from"] for p in accepted}:
+            refused.append(source)
+    return accepted, sorted(set(refused))
+
+
 # Issues whose fix needs the page's CURRENT state (which tag is absent, what an invalid or
 # duplicated value contains). Unlike url_pairs there is no mechanical rewrite here — the AI
 # still writes the tag — but it works from the real page instead of a generic instruction.
@@ -20765,7 +20819,7 @@ def _dedupe_sitemap_locs(content: str, urls: list[str]) -> tuple[str, int]:
     return out, count
 
 
-def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
+def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]], *, canonical: bool = False) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): replace a flagged `<loc>` with the URL that belongs
     there — the redirect's destination, or the target's declared canonical.
 
@@ -20773,6 +20827,12 @@ def _rewrite_sitemap_locs(content: str, pairs: list[dict[str, str]]) -> tuple[st
     same URLs and are tempting to "keep consistent", but they are a separate issue with its own
     family; widening the blast radius here is exactly how a sitemap fix once rewrote a `<loc>`
     it had no business touching. Returns (new_content, replacements)."""
+    if canonical:
+        try:
+            from . import sitemap_rewrite
+        except ImportError:
+            import sitemap_rewrite
+        return sitemap_rewrite.rewrite_canonicals(content, pairs, _verification_url)
     mapping: dict[str, str] = {}
     for pair in pairs or []:
         frm, to = str(pair.get("from") or "").strip(), str(pair.get("to") or "").strip()
@@ -27026,6 +27086,26 @@ def _prepare_issue_fix(
             out["extra_hint"] = (out["extra_hint"] + "\n" + hint) if out["extra_hint"] else hint
 
     out["url_pairs"] = list(url_pairs)  # the values the rewrite rests on, for the PR body
+    if issue_key.removesuffix("_not_indexable").removesuffix("_indexable") == "sitemap_non_canonical_page":
+        url_pairs, refusals = _verified_sitemap_canonical_pairs(_issue_url_pairs(block), pages)
+        refused_pages = set(refusals) | (set(impacted) - {p["from"] for p in url_pairs})
+        candidates = _fichiers_sitemap_du_depot(all_paths)
+        literal_roots = {"sitemap.xml", *(folder + "/sitemap.xml" for folder in _DOSSIERS_STATIQUES)}
+        if not url_pairs:
+            out["refusal"] = "Aucune destination canonical HTML 200 indexable verifiee pour ces entrees du sitemap."
+        elif len(candidates) != 1 or candidates[0] not in literal_roots or _sitemap_deja_engendre(all_paths):
+            out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : aucune reecriture devinee."
+        else:
+            out["sitemap_canonical_pairs"] = list(url_pairs)
+            out["url_pairs"] = list(url_pairs)
+            out["targets_override"] = candidates
+            out["evidence"] = [p["from"] for p in url_pairs]
+            out["link_rewriter"] = lambda raw, _p=url_pairs: _rewrite_sitemap_locs(raw, _p, canonical=True)
+            out["rewriter_ai_fallback"] = False
+            out["extra_hint"] = _build_url_pair_hint(url_pairs)
+            if refused_pages:
+                out["side_effects"] = "\nEntrees laissees sans correction faute de destination verifiee : " + ", ".join(sorted(refused_pages))
+        return out
 
     if issue_key in _STRUCTURED_DATA_KEYS:
         out["link_rewriter"] = lambda raw: _rewrite_jsonld_numeric_strings(raw)  # noqa: E731
@@ -27527,6 +27607,7 @@ def _deep_patch_issue_files(
     # `_duplicate_canonical_masters` et la boucle canonique du 16/09/2026.
     canonical_masters: dict[str, str] | None = None,
     canonical_pairs: list[dict[str, str]] | None = None,
+    sitemap_canonical_pairs: list[dict[str, str]] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27558,6 +27639,69 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
+    if sitemap_canonical_pairs is not None:
+        candidates = _fichiers_sitemap_du_depot(all_paths)
+        if max_files < 1 or len(candidates) != 1 or targets_override != candidates:
+            return [], ["Sitemap source absent ou ambigu."], [], []
+        path = candidates[0]
+        try:
+            package = ""
+            if "package.json" in all_paths:
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, "package.json"),
+                                     token=token, params={"ref": fix_branch})
+                package = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                json.loads(package)
+            if _sitemap_deja_engendre(all_paths, package):
+                return [], ["Sitemap engendre : correction de sa source necessaire."], [], []
+            # Re-read the literal heads too: a once-consolidated URL may now be self-canonical.
+            observed = {_verification_url(row.get("url")): row for row in pages or [] if isinstance(row, dict)}
+            current_index = index or repo_index.build_repo_index(all_paths)
+            bindings = {}
+            for pair in sitemap_canonical_pairs:
+                current, visited = pair["from"], set()
+                while current and current not in visited:
+                    visited.add(current)
+                    files = repo_index.route_files(current_index, current) or []
+                    if (len(files) != 1 or not files[0].lower().endswith(".html")
+                            or bindings.get(files[0], current) != current or current not in observed):
+                        raise ValueError("source de page absente ou ambigue")
+                    bindings[files[0]] = current
+                    declared = _verification_url(observed[current].get("canonical"))
+                    if not declared or declared == current:
+                        break
+                    current = declared
+            for source_path, url in bindings.items():
+                if source_path in file_state:
+                    source = file_state[source_path]["content"]
+                else:
+                    fd = _github_api_get(_github_content_api_path(owner, repo_name, source_path),
+                                         token=token, params={"ref": fix_branch})
+                    source = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                document = _duplicate_html_document(source) if len(source) <= 80_000 else None
+                expected_canonical = _verification_url(observed[url].get("canonical"))
+                if not document or [_verification_url(u) for u in document["canonicals"]] != (
+                        [expected_canonical] if expected_canonical else []):
+                    raise ValueError("canonical actuel contradictoire ou non litteral")
+            if path in file_state:
+                raw, sha = file_state[path]["content"], file_state[path]["sha"]
+            else:
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token, params={"ref": fix_branch})
+                if fd.get("encoding", "base64") != "base64":
+                    raise ValueError("encodage inconnu")
+                raw = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                sha = fd.get("sha", "")
+            if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
+                raise ValueError("source non verifiable")
+            new, count = _rewrite_sitemap_locs(raw, sitemap_canonical_pairs, canonical=True)
+            if not count:
+                return [], [path], [path], []
+            response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
+                json_body={"branch": fix_branch, "sha": sha, "message": "fix(seo): canonical sitemap cleanup\n\nGenerated by Noyaru",
+                           "content": _b64.b64encode(new.encode("utf-8")).decode("ascii")})
+            file_state[path] = {"content": new, "sha": str((response.get("content") or {}).get("sha") or "")}
+            return [path], [], [path], []
+        except Exception:
+            return [], [path], [path], []
     if canonical_masters is not None:
         # Preflight the complete group, including an existing master, before any PUT.
         # GitHub's per-file writes are not an atomic multi-file transaction.
@@ -28188,6 +28332,7 @@ def _apply_prepared_issue_fix(
                 rewriter_is_ai=bool(prep["rewriter_is_ai"]),
                 canonical_masters=prep.get("canonical_masters"),
                 canonical_pairs=prep.get("canonical_pairs"),
+                sitemap_canonical_pairs=prep.get("sitemap_canonical_pairs"),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

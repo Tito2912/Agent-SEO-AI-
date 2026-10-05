@@ -185,6 +185,10 @@ def _prepare(cle: str, bloc: dict) -> dict:
                  {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
         if cle == "canonical_points_to_redirect":
             pages[1].update(final_url=S + "/b", redirect_statuses=[301])
+    if cle == "sitemap_non_canonical_page":
+        bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": P, "to": S + "/b"}]})
+        pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": S + "/b"},
+                 {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
     return m._prepare_issue_fix(
         issue_key=cle, issues={cle: dict(bloc)}, impacted=[P], all_paths=list(CHEMINS),
         site_name=SITE, owner="o", repo_name="r", branch="main", token="",

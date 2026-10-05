@@ -290,7 +290,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
 
 @pytest.mark.parametrize("mode", ["url_preview", "github_preview", "github_confirm"])
 @pytest.mark.parametrize("key", ["canonical_from_https_to_http", "duplicate_pages_without_canonical",
-    "duplicate_pages_without_canonical_indexable", " DUPLICATE_PAGES_WITHOUT_CANONICAL "])
+    "duplicate_pages_without_canonical_indexable", " DUPLICATE_PAGES_WITHOUT_CANONICAL ",
+    "sitemap_non_canonical_page", "sitemap_non_canonical_page_indexable", " SITEMAP_NON_CANONICAL_PAGE "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -355,6 +356,41 @@ def test_duplicate_canonical_endpoints_are_free_bounded_and_require_human_review
         assert state["charges"] == [0] and state["pr_bodies"]
         assert all("CONVENTION" in body.upper() for body in state["pr_bodies"])
         assert verification and not any(verification)
+        if case == "partial_verified":
+            assert any(control in body for body in state["pr_bodies"])
+    else:
+        assert not result["written"] and not state["pr_bodies"] and not any(state["charges"])
+
+
+@pytest.mark.parametrize("mode", ["individual", "bulk"])
+@pytest.mark.parametrize("case", ["verified", "unobserved", "stale_head", "partial_verified"])
+def test_canonical_sitemap_cleanup_is_free_and_keeps_other_entries_and_all_html(harness, mode, case):
+    state, run = harness
+    key, master, control = "sitemap_non_canonical_page", URL + "other", URL + "control"
+    alias = '<url><loc>' + URL + '</loc><lastmod>2001-01-01</lastmod></url>'
+    master_entry = '<url><loc>' + master + '</loc><lastmod>2026-01-01</lastmod></url>'
+    control_entry = '<url><loc>' + control + '</loc></url>'
+    xml = '<urlset>' + alias + master_entry + control_entry + '</urlset>'
+    state.update(key=key, sources={"sitemap.xml": xml, "index.html": HTML.replace(URL, master),
+        "other.html": HTML.replace(URL, master), "control.html": HTML.replace(URL, control)})
+    pair = {"page": URL, "from": URL, "to": master}
+    rows = [{"url": u, "final_url": u, "status_code": 200, "content_type": "text/html", "canonical": master}
+            for u in (URL, master)]
+    pairs = [pair]
+    if case == "unobserved":
+        rows = rows[:1]
+    elif case == "stale_head":
+        state["sources"]["index.html"] = HTML
+    elif case == "partial_verified":
+        pairs.append({"page": control, "from": control, "to": URL + "absent"})
+        rows.append({"url": control, "status_code": 200, "content_type": "text/html", "canonical": URL + "absent"})
+    state["report"] = {"issues": {key: {"count": len(pairs), "examples": [p["from"] for p in pairs],
+        "evidence": {"kind": "url_pairs", "items": pairs}}}, "pages": rows}
+    result = run(mode)
+    assert not result["ai_calls"]
+    if case in {"verified", "partial_verified"}:
+        assert result["status"] == 200 and result["written"] == {"sitemap.xml": xml.replace(alias, "")}
+        assert state["charges"] == [0] and state["pr_bodies"]
         if case == "partial_verified":
             assert any(control in body for body in state["pr_bodies"])
     else:
