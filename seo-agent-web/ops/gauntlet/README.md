@@ -1154,6 +1154,57 @@ n'est pas une reparation prouvee. Le bilan est dans
 `validation-sitemap-ajouts-2026-10-05.json`. Aucun site client n'est modifie,
 l'agent n'est pas deploye et la mise en service globale n'est pas certifiee.
 
+## Viewport absent (05/10/2026)
+
+`viewport_not_set` ne delegue plus l'ajout d'une balise connue a un modele. La
+correction exige des observations HTTPS HTML 200 directes, canoniques ou sans
+canonical et indexables, avec un compteur viewport explicitement entier a zero.
+Elle relit la source HTML litterale de chaque page, sa canonical et son routing.
+Les comptages inconnus, temoins contradictoires, sources calculees, templates,
+scripts et routes ambigues sont refuses sans repli IA. Un viewport deja present,
+meme vide ou personnalise, n'est pas remplace ni duplique.
+
+Seule la balise `<meta name="viewport" content="width=device-width, initial-scale=1" />`
+est ajoutee a la fin du head litteral. Les octets existants, commentaires et fins
+de ligne restent intacts ; les sources et sorties sont bornees a 80 000 octets
+UTF-8. Toutes les sources et sondes HTTPS du lot sont verifiees avant le premier
+PUT. Le plafond doit couvrir tout le lot ; une erreur d'ecriture arrete les PUT
+suivants et laisse les fichiers non ecrits explicitement signales. Les ecritures
+multifichiers ne sont pas atomiques. Les deux endpoints profonds utilisent ce
+chemin gratuit sans IA ; les apercus libres ou anciens ne le contournent pas.
+
+```sh
+python ops/gauntlet/viewport_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `e42e0f58eb69128317c2ec912f3ce92d33c7e82a`, sans PUT de setup.
+Un seul PUT ajoute une seule balise a `gauntlet/viewport-not-set.html`. Deux
+builds et deux vrais crawls mesurent la famille controlee de **1 a 0**, avec les
+52 routes HTML saines et 62 lignes de rapport conservees. Sitemap, navigation,
+canonical, balises sociales, viewports sains et corrections precedentes restent
+intacts, sans hausse d'autre compteur. Les PR #77 et #78 sont fermees en brouillon
+sans fusion et main reste intact.
+
+La contre-verification relit les sources, SHA, builds, XML et HTTP reels sans
+ecriture. Le HTML servi ne change que par la balise attendue, avec uniquement
+l'identifiant de deploy Netlify possede normalise. L'ajout est idempotent et
+deux nouvelles sondes normales refusent bien les previews natives `noindex`.
+Les compteurs bruts 0 vers 0 ne prouvent aucune reparation : seul le recrawl
+controle et ses preuves de source/HTTP mesurent 1 vers 0. Le layout mobile en
+navigateur, le DOM JavaScript et l'indexation de production ne sont pas verifies.
+
+La suite complete passe **4 418 tests**, avec 42 ignores ; la suite ciblee passe
+1 232 tests. 137 cas sont ajoutes. L'ancien temoin du lot de sept familles fournit
+maintenant les observations requises, sans affaiblir son assertion. L'inventaire
+passe de neuf a huit familles sans mention exacte dans un bilan ; une mention
+n'est pas une reparation prouvee. Le diagnostic historique de canonical absente
+reste volontairement non propose : aucune nouvelle tache n'est activee pour
+reduire artificiellement ce chiffre.
+
+Le bilan est dans `validation-viewport-2026-10-05.json`. Les frameworks et sources
+generees restent a valider separement. Aucun site client n'est modifie, l'agent
+n'est pas deploye et sa mise en service globale n'est pas certifiee.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

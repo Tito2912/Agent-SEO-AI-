@@ -296,7 +296,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "sitemap_noindex_page", "sitemap_noindex_page_not_indexable", " SITEMAP_NOINDEX_PAGE ",
     "sitemap_4xx_page", "sitemap_4xx_page_not_indexable", " SITEMAP_4XX_PAGE ",
     "sitemap_http_urls_for_https", "sitemap_http_urls_for_https_indexable", " SITEMAP_HTTP_URLS_FOR_HTTPS ",
-    "indexable_page_not_in_sitemap", "indexable_page_not_in_sitemap_indexable", " INDEXABLE_PAGE_NOT_IN_SITEMAP "])
+    "indexable_page_not_in_sitemap", "indexable_page_not_in_sitemap_indexable", " INDEXABLE_PAGE_NOT_IN_SITEMAP ",
+    "viewport_not_set", "viewport_not_set_indexable", " VIEWPORT_NOT_SET "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -593,13 +594,51 @@ def test_sitemap_add_endpoints_only_add_observed_currently_indexable_pages(harne
         assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
 
 
+@pytest.mark.parametrize('mode', ['individual', 'bulk'])
+@pytest.mark.parametrize('case', ['verified', 'unobserved', 'unknown_count', 'current_viewport', 'stale_noindex',
+    'fresh_http_refused', 'partial', 'scripted'])
+def test_viewport_endpoints_add_only_one_verified_tag_without_ai_or_charge(harness, monkeypatch, mode, case):
+    state, run = harness
+    key, other = 'viewport_not_set', URL + 'other'
+    state.update(key=key, sources={'index.html': HTML, 'other.html': HTML.replace(URL, other)})
+    rows = [{'url': URL, 'final_url': URL, 'status_code': 200, 'content_type': 'text/html', 'canonical': URL,
+             'meta_viewport': None, 'meta_viewport_tag_count': 0}]
+    impacted = [URL]
+    if case == 'unobserved':
+        rows = []
+    elif case == 'unknown_count':
+        del rows[0]['meta_viewport_tag_count']
+    elif case == 'current_viewport':
+        state['sources']['index.html'] = HTML.replace('</head>', '<meta name="viewport" content="custom" /></head>')
+    elif case == 'stale_noindex':
+        state['sources']['index.html'] = HTML.replace('</head>', '<meta name="robots" content="noindex" /></head>')
+    elif case == 'scripted':
+        state['sources']['index.html'] = HTML.replace('</body>', '<script src="/app.js"></script></body>')
+    elif case == 'partial':
+        impacted.append(other)
+        rows.append(dict(rows[0], url=other, final_url=other, canonical=other, meta_robots='noindex'))
+    state['report'] = {'issues': {key: {'count': len(impacted), 'examples': impacted}}, 'pages': rows}
+    monkeypatch.setattr(m, '_sitemap_https_page', lambda *a: case != 'fresh_http_refused')
+    result = run(mode)
+    assert not result['ai_calls']
+    if case in {'verified', 'partial'}:
+        tag = '<meta name="viewport" content="width=device-width, initial-scale=1" />\n'
+        assert result['status'] == 200 and result['written'] == {'index.html': HTML.replace('</head>', tag + '</head>')}
+        assert state['charges'] == [0] and state['pr_bodies']
+        if case == 'partial':
+            assert any(other in body for body in state['pr_bodies'])
+    else:
+        assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
+
+
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
     state, run = harness
     keys = ["missing_title", "missing_meta_description", "missing_alt_text", "viewport_not_set",
             "multiple_h1", "open_graph_tags_missing", "twitter_card_missing"]
     state["sources"] = {"index.html": HTML}
     state["report"] = {"issues": {k: {"count": 1, "examples": [URL]} for k in keys},
-                       "pages": [{"url": URL, "status_code": 200}]}
+                       "pages": [{"url": URL, "final_url": URL, "status_code": 200, "content_type": "text/html",
+                                  "canonical": URL, "meta_viewport": None, "meta_viewport_tag_count": 0}]}
     monkeypatch.setattr(m, "_github_fixable_issue_candidates", ORIGINAL_CANDIDATES)
     processed = []
 

@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -26975,6 +26975,26 @@ def _prepare_issue_fix(
     if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
         out["refusal"] = _HTTP_CANONICAL_ADVICE
         return out
+    if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'viewport_not_set':
+        try:
+            from . import viewport
+        except ImportError:
+            import viewport
+        out['viewport_urls'] = []
+        try:
+            host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
+        except ValueError:
+            host = ''
+        urls, refused = viewport.verified_urls(impacted, pages, _verification_url, host=host)
+        if not urls:
+            out['refusal'] = 'Aucun viewport absent prouve sur une page HTTPS HTML 200 directe et indexable de cet hote.'
+        else:
+            out['viewport_urls'] = urls
+            out['evidence'] = urls
+            out['extra_hint'] = _HEAD_HINTS['viewport_not_set']
+            if refused:
+                out['side_effects'] = '\nPages laissees sans correction viewport faute de preuve : ' + ', '.join(refused)
+        return out
     # Redirect config: only a URL redirecting to ITSELF is repairable. Everything else is the
     # site's deliberate canonicalisation and must not reach a patcher.
     if issue_key in _REDIRECT_CONFIG_KEYS:
@@ -27812,6 +27832,7 @@ def _deep_patch_issue_files(
     sitemap_error_statuses: dict[str, int] | None = None,
     sitemap_https_pairs: list[dict[str, str]] | None = None,
     sitemap_add_urls: list[str] | None = None,
+    viewport_urls: list[str] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27843,6 +27864,78 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
+    if viewport_urls is not None:
+        try:
+            from . import viewport, sitemap_redirects
+        except ImportError:
+            import viewport
+            import sitemap_redirects
+        targets, plans = [], {}
+        try:
+            host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
+            verified, refused = viewport.verified_urls(viewport_urls, pages, _verification_url, host=host)
+            if refused or not verified or verified != viewport_urls:
+                raise ValueError('observations viewport non verifiables')
+            current_index = index or repo_index.build_repo_index(all_paths)
+            bindings = {}
+            observed = {_verification_url(row.get('url')): row for row in pages or [] if isinstance(row, dict)}
+            for url in verified:
+                files = repo_index.route_files(current_index, url)
+                if (len(files) != 1 or files[0] not in all_paths or not files[0].lower().endswith('.html')
+                        or repo_index.is_shared_path(current_index, files[0]) or files[0] in bindings):
+                    raise ValueError('route HTML absente partagee ou ambigue')
+                bindings[files[0]] = url
+            targets = list(bindings)
+            if len(targets) > max_files:
+                raise ValueError('plafond insuffisant pour le lot viewport')
+            configs = [p for p in all_paths if p.rsplit('/', 1)[-1] == '_redirects']
+            roots = {'_redirects', *(folder + '/_redirects' for folder in _DOSSIERS_STATIQUES)}
+            if (configs and (len(configs) != 1 or configs[0] not in roots)
+                    or any(p.rsplit('/', 1)[-1] in {'.htaccess', 'vercel.json'} for p in all_paths)):
+                raise ValueError('configuration de redirection ambigue')
+            if configs:
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, configs[0]), token=token, params={'ref': fix_branch})
+                rules = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
+                if not fd.get('sha') or not sitemap_redirects.rules_match(rules, [], pages or [], _verification_url, direct=set(verified)):
+                    raise ValueError('regles actuelles contradictoires')
+            if 'netlify.toml' in all_paths:
+                import tomllib
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, 'netlify.toml'), token=token, params={'ref': fix_branch})
+                raw = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
+                if not fd.get('sha') or tomllib.loads(raw).get('redirects'):
+                    raise ValueError('autres regles presentes')
+            for path, url in bindings.items():
+                if path in file_state:
+                    raw, sha = file_state[path]['content'], file_state[path]['sha']
+                else:
+                    fd = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token, params={'ref': fix_branch})
+                    if fd.get('encoding', 'base64') != 'base64':
+                        raise ValueError('encodage inconnu')
+                    raw = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
+                    sha = fd.get('sha', '')
+                canonical = _verification_url(observed[url].get('canonical'))
+                if not isinstance(sha, str) or not sha.strip() or not viewport.literal(raw, canonical, _duplicate_html_document, _verification_url):
+                    raise ValueError('source viewport actuelle non litterale')
+                new, count = viewport.add(raw, canonical, _duplicate_html_document, _verification_url)
+                if count:
+                    if _github_patched_content_error(new, path) or _refus_de_format(path, new):
+                        raise ValueError('format viewport ambigu')
+                    plans[path] = (new, sha)
+            if any(not _sitemap_https_page(bindings[path], _verification_url(observed[bindings[path]].get('canonical'))) for path in plans):
+                raise ValueError('page actuelle non verifiable')
+        except Exception:
+            return [], targets or ['Viewport refuse : source ou observations non verifiables.'], targets, []
+        patched = []
+        for path, (new, sha) in plans.items():
+            try:
+                response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
+                    json_body={'branch': fix_branch, 'sha': sha, 'message': 'fix(seo): add verified viewport\n\nGenerated by Noyaru',
+                               'content': _b64.b64encode(new.encode('utf-8')).decode('ascii')})
+                file_state[path] = {'content': new, 'sha': str((response.get('content') or {}).get('sha') or '')}
+                patched.append(path)
+            except Exception:
+                break
+        return patched, [p for p in targets if p not in patched], targets, []
     if (sitemap_canonical_pairs is not None or sitemap_redirect_pairs is not None or sitemap_noindex_urls is not None
             or sitemap_error_statuses is not None or sitemap_https_pairs is not None or sitemap_add_urls is not None):
         sitemap_pairs = sitemap_redirect_pairs if sitemap_redirect_pairs is not None else sitemap_canonical_pairs
@@ -28639,6 +28732,7 @@ def _apply_prepared_issue_fix(
                 sitemap_error_statuses=prep.get("sitemap_error_statuses"),
                 sitemap_https_pairs=prep.get("sitemap_https_pairs"),
                 sitemap_add_urls=prep.get('sitemap_add_urls'),
+                viewport_urls=prep.get('viewport_urls'),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)
