@@ -1388,6 +1388,60 @@ traductions, les groupes plus larges, frameworks, DOM JavaScript, Claude reel,
 PostgreSQL et l'indexation de production restent a valider separement. Aucun
 site client n'est modifie et la mise en service globale n'est pas certifiee.
 
+## Retrait d'une fausse langue hreflang (07/10/2026)
+
+`page_referenced_for_more_than_one_language_in_hreflang` dispose d'un plan
+protege sans IA : le rapport seul ne suffit plus a autoriser une suppression.
+Deux pages HTTPS directes, indexables et self-canonical du meme hote doivent
+etre observees avec leurs langues et annotations. La source pointe deux codes
+de langues primaires differentes vers une meme cible. Cette cible doit declarer
+sa propre langue et un retour vers la source. Seul le code qui contredit sa
+langue actuelle peut etre retire ; les groupes inconnus ou ambigus sont refuses.
+
+Le correcteur relit le HTML litteral, son SHA et le routing, puis sonde la source
+et la cible servies avant tout PUT. Le canonical actuel doit aussi correspondre
+litteralement : un fragment ne peut pas etre masque par la normalisation d'URL.
+Seule la vraie balise de head visee est supprimee ; les autres octets, espaces,
+fins de ligne, langue racine, canonical, annotation correcte, navigation et
+metadonnees restent identiques. Les scripts/templates, attributs ambigus,
+sources partagees/frameworks et routes incertaines sont refuses sans repli IA.
+Les apercus libres ou anciens ne contournent pas ce chemin. Le controle couvre
+tout le lot avant la premiere ecriture, sans atomicite multifichier.
+
+```sh
+python ops/gauntlet/hreflang_drop_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `14ba42a4104fb9439d8045c811846a0a7ef6660a`. Quatre PUT de setup
+ajoutent trois controles et leurs liens d'index. Un PUT retire la fausse balise
+francaise de `gauntlet/qa-hreflang-drop-fr.html`, sans toucher l'annotation anglaise.
+Deux builds et deux crawls mesurent **2 anomalies a 1 dans le rapport controle**,
+avec le cas selectionne de **1 a 0**. Le temoin vers une cible sans langue connue
+reste a un, nomme et refuse. Les 58 routes HTML, 68 lignes, 49 entrees sitemap et
+corrections precedentes sont conservees ; aucun autre compteur n'augmente.
+Les PR #85 et #86 sont fermees en brouillon sans fusion ; main reste intact.
+
+La famille reste a **0 a 0 dans les rapports bruts**, les previews natives
+portant `noindex`. La projection d'hote/en-tete est strictement bornee au site
+possede. La contre-verification en lecture seule relit les SHA, builds, sources,
+XML et HTML entier. Un parseur independant derive la seule suppression ; seul
+l'identifiant de deploy Netlify possede est normalise. La cible sans langue est
+relue sur les deux builds et six sondes normales refusent vraiment les previews.
+
+La suite complete passe **5 269 tests**, avec 42 ignores ; la suite ciblee passe
+**2 756 tests**, avec deux ignores. Cette phase ajoute 211 cas. Les huit empreintes
+du code/test fige concordent avec les suites et la contre-verification. Le bilan
+est dans `validation-hreflang-drop-2026-10-07.json` ; l'inventaire passe de cinq a
+quatre familles sans mention exacte, sans activer le diagnostic historique cache.
+
+Cette suppression ne reconstitue pas un groupe hreflang complet : aucune balise
+francaise auto-referencee n'est ajoutee a la source. La configuration complete
+demande aussi les annotations de chaque version, elle-meme comprise, selon la
+[documentation Google](https://developers.google.com/search/docs/specialty/international/localized-versions).
+La baisse du compteur ne certifie donc ni ce groupe complet ni l'indexabilite.
+Semantique des traductions, frameworks, DOM JavaScript, Claude reel, PostgreSQL
+et mise en service globale restent a valider. Aucun site client n'est modifie.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

@@ -243,6 +243,14 @@ def test_le_branchement_fournit_LE_BON_reecriveur(groupe: str, cle: str, bloc: d
                                                   attendu: str) -> None:
     """Debrancher la famille, ou la router ailleurs, doit se voir ici et nulle part ailleurs."""
     out = _prepare(cle, bloc)
+    if cle == 'page_referenced_for_more_than_one_language_in_hreflang':
+        from tests.test_verified_hreflang_drop import prepare, ITEM
+        assert out['refusal'] and out['hreflang_drop_items'] == []
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+        verified = prepare()
+        assert not verified['refusal'] and verified['hreflang_drop_items'] == [ITEM]
+        assert verified['link_rewriter'] is None and not verified['rewriter_ai_fallback']
+        return
     if cle == 'hreflang_to_non_canonical':
         from tests.test_verified_hreflang_canonical import prepare, PAIR
         assert out['refusal'] and out['hreflang_canonical_pairs'] == []

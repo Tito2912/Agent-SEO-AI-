@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical", "page_referenced_for_more_than_one_language_in_hreflang"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -20819,6 +20819,15 @@ def _hreflang_canonical_page(url: str, canonical: str, observed: dict[str, Any])
         observed, lambda value, **kw: _duplicate_html_document(value, allow_body_scripts=True, **kw), _verification_url))
 
 
+def _hreflang_drop_page(url: str, canonical: str, observed: dict[str, Any]) -> bool:
+    try:
+        from . import hreflang_drop
+    except ImportError:
+        import hreflang_drop
+    return _sitemap_https_page(url, canonical, verify=lambda raw: hreflang_drop.matches(raw, canonical,
+        observed, lambda value, **kw: _duplicate_html_document(value, allow_body_scripts=True, **kw), _verification_url))
+
+
 def _remove_sitemap_locs(content: str, urls: list[str], *, verified: bool = False) -> tuple[str, int]:
     """DETERMINISTIC sitemap fix (no AI): drop the whole `<url>` block of each flagged page.
 
@@ -27004,6 +27013,28 @@ def _prepare_issue_fix(
     if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
         out["refusal"] = _HTTP_CANONICAL_ADVICE
         return out
+    if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _HREFLANG_DROP_KEYS:
+        try:
+            from . import hreflang_drop
+        except ImportError:
+            import hreflang_drop
+        out['hreflang_drop_items'] = []
+        try:
+            host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
+        except ValueError:
+            host = ''
+        selected = [item for item in _issue_page_values(block) if item.get('page') in impacted]
+        items, refused = hreflang_drop.verified_items(selected, pages, _verification_url, host=host)
+        refused = sorted(set(refused) | (set(impacted) - {item['page'] for item in items}))
+        if not items:
+            out['refusal'] = 'Aucune annotation superflue prouvee : source et cible HTTPS directe, langues observees et groupe bilingue avec retour requis.'
+        else:
+            out['hreflang_drop_items'] = items
+            out['evidence'] = [item['page'] for item in items]
+            out['extra_hint'] = 'Retirer uniquement la balise hreflang dont la langue contredit la cible verifiee, sans inventer de traduction.'
+            if refused:
+                out['side_effects'] = '\nPages laissees sans suppression hreflang faute de groupe verifie : ' + ', '.join(refused)
+        return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'hreflang_to_non_canonical':
         try:
             from . import hreflang_canonical
@@ -27494,28 +27525,6 @@ def _prepare_issue_fix(
                                     "il est déjà correct.")
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
-    if issue_key in _HREFLANG_DROP_KEYS:
-        _items = _issue_page_values(block)
-        if not _items:
-            out["refusal"] = (
-                "Le rapport ne dit pas quelle annotation retirer : la cible n'a pas ete crawlee, "
-                "ou ne declare aucune langue, donc rien ne designe celle qui a raison.")
-        else:
-            out["evidence"] = [str(i.get("page") or "") for i in _items
-                               if str(i.get("page") or "")]
-            out["link_rewriter"] = (  # noqa: E731
-                lambda raw, _i=list(_items): _drop_hreflang_annotations(raw, _i))
-            # Aucun repli modele : les deux valeurs sont connues, et « enleve le hreflang en
-            # trop » sans dire lequel est exactement la question que le modele ne peut trancher.
-            out["rewriter_ai_fallback"] = False
-            out["extra_hint"] = (
-                "Ces pages designent la MEME URL sous plusieurs langues. Retire EXACTEMENT les "
-                "annotations listees, aucune autre : celle qui reste est celle dont le code "
-                "correspond a la langue que la page cible declare.\n"
-                + "\n".join("- %s : retirer hreflang=%s vers %s"
-                             % (i.get("page"), i.get("field"), i.get("value"))
-                             for i in _items[:20]))
-
     if issue_key in _ANCHOR_TEXT_KEYS:
         _items = _issue_page_values(block)
         if not _items:
@@ -27928,6 +27937,7 @@ def _deep_patch_issue_files(
     twitter_missing_urls: list[str] | None = None,
     hreflang_lang_urls: list[str] | None = None,
     hreflang_canonical_pairs: list[dict[str, str]] | None = None,
+    hreflang_drop_items: list[dict[str, str]] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27959,14 +27969,15 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
-    if viewport_urls is not None or twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None:
+    if viewport_urls is not None or twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None or hreflang_drop_items is not None:
         try:
-            from . import viewport, twitter_card, hreflang_lang, hreflang_canonical, sitemap_redirects
+            from . import viewport, twitter_card, hreflang_lang, hreflang_canonical, hreflang_drop, sitemap_redirects
         except ImportError:
             import viewport
             import twitter_card
             import hreflang_lang
             import hreflang_canonical
+            import hreflang_drop
             import sitemap_redirects
         targets, plans = [], {}
         head_rewriter = hreflang_lang if hreflang_lang_urls is not None else twitter_card if twitter_missing_urls is not None else viewport
@@ -27974,9 +27985,17 @@ def _deep_patch_issue_files(
         if hreflang_canonical_pairs is not None:
             head_rewriter = hreflang_canonical
             head_urls = [pair['page'] for pair in hreflang_canonical_pairs]
+        if hreflang_drop_items is not None:
+            head_rewriter = hreflang_drop
+            head_urls = [item['page'] for item in hreflang_drop_items]
         try:
             host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
-            if hreflang_canonical_pairs is not None:
+            if hreflang_drop_items is not None:
+                verified_items, refused = hreflang_drop.verified_items(hreflang_drop_items, pages, _verification_url, host=host)
+                if verified_items != hreflang_drop_items:
+                    raise ValueError('suppression hreflang contradictoire')
+                verified = [item['page'] for item in verified_items]
+            elif hreflang_canonical_pairs is not None:
                 verified_pairs, refused = hreflang_canonical.verified_pairs(hreflang_canonical_pairs, pages, _verification_url, host=host)
                 if verified_pairs != hreflang_canonical_pairs:
                     raise ValueError('groupe hreflang contradictoire')
@@ -28023,13 +28042,16 @@ def _deep_patch_issue_files(
                     raw = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
                     sha = fd.get('sha', '')
                 canonical = _verification_url(observed[url].get('canonical'))
-                literal = head_rewriter.document if hreflang_canonical_pairs is not None else head_rewriter.literal
+                literal = head_rewriter.document if hreflang_canonical_pairs is not None or hreflang_drop_items is not None else head_rewriter.literal
                 if not isinstance(sha, str) or not sha.strip() or not literal(raw, canonical, _duplicate_html_document, _verification_url):
                     raise ValueError('source de metadonnees actuelle non litterale')
-                if ((twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None)
+                if ((twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None or hreflang_drop_items is not None)
                         and not head_rewriter.matches(raw, canonical, observed[url], _duplicate_html_document, _verification_url)):
                     raise ValueError('metadonnees actuelles contradictoires')
-                if hreflang_canonical_pairs is not None:
+                if hreflang_drop_items is not None:
+                    item = next(item for item in hreflang_drop_items if item['page'] == url)
+                    new, count = hreflang_drop.rewrite(raw, item, observed[url], _duplicate_html_document, _verification_url)
+                elif hreflang_canonical_pairs is not None:
                     pair = next(pair for pair in hreflang_canonical_pairs if pair['page'] == url)
                     new, count = hreflang_canonical.rewrite(raw, pair, observed[url], _duplicate_html_document, _verification_url)
                 else:
@@ -28041,7 +28063,11 @@ def _deep_patch_issue_files(
             for path in plans:
                 url = bindings[path]
                 canonical = _verification_url(observed[url].get('canonical'))
-                if hreflang_canonical_pairs is not None:
+                if hreflang_drop_items is not None:
+                    item = next(item for item in hreflang_drop_items if item['page'] == url)
+                    valid = all(_hreflang_drop_page(value, _verification_url(observed[value].get('canonical')), observed[value])
+                                for value in (item['page'], item['value']))
+                elif hreflang_canonical_pairs is not None:
                     pair = next(pair for pair in hreflang_canonical_pairs if pair['page'] == url)
                     valid = all(_hreflang_canonical_page(value, _verification_url(observed[value].get('canonical')), observed[value])
                                 for value in (pair['page'], pair['from'], pair['to']))
@@ -28058,7 +28084,7 @@ def _deep_patch_issue_files(
             try:
                 response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
                     json_body={'branch': fix_branch, 'sha': sha, 'message': 'fix(seo): add verified ' + (
-                        'hreflang canonical destination' if hreflang_canonical_pairs is not None else 'self-hreflang HTML language' if hreflang_lang_urls is not None else 'Twitter Card' if twitter_missing_urls is not None else 'viewport') + '\n\nGenerated by Noyaru',
+                        'verified hreflang language removal' if hreflang_drop_items is not None else 'hreflang canonical destination' if hreflang_canonical_pairs is not None else 'self-hreflang HTML language' if hreflang_lang_urls is not None else 'Twitter Card' if twitter_missing_urls is not None else 'viewport') + '\n\nGenerated by Noyaru',
                                'content': _b64.b64encode(new.encode('utf-8')).decode('ascii')})
                 file_state[path] = {'content': new, 'sha': str((response.get('content') or {}).get('sha') or '')}
                 patched.append(path)
@@ -28865,6 +28891,7 @@ def _apply_prepared_issue_fix(
                 twitter_missing_urls=prep.get('twitter_missing_urls'),
                 hreflang_lang_urls=prep.get('hreflang_lang_urls'),
                 hreflang_canonical_pairs=prep.get('hreflang_canonical_pairs'),
+                hreflang_drop_items=prep.get('hreflang_drop_items'),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)
