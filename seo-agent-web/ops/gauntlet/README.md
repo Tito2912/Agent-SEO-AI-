@@ -1325,6 +1325,69 @@ les frameworks, le DOM JavaScript et l'indexation de production restent a valide
 separement. Aucun site client n'est modifie, l'agent n'est pas deploye et sa mise
 en service globale n'est pas certifiee.
 
+## Destination canonical du hreflang (07/10/2026)
+
+`hreflang_to_non_canonical` utilise un chemin mecanique sans IA pour un groupe
+bilingue deja declare et observe. Trois URL HTTPS directes du meme hote doivent
+etre verifiees : source self-canonical, alias non canonical et destination
+self-canonical. Les langues, annotations et retours doivent former le meme
+groupe a deux langues ; une canonical seule ne prouve pas une traduction.
+Les observations manquantes, contradictoires ou ambigues sont refusees, avec
+les pages non corrigees nommees lorsqu'un sous-ensemble est accepte.
+
+Le correcteur relit le fichier HTML litteral, son SHA et le routing, puis sonde
+les trois pages servies avant toute ecriture. Seule la valeur du vrai attribut
+`href` de l'annotation concernee change. Canonical, langue, navigation, OG,
+commentaires et autres octets restent identiques. Doublons, attributs ambigus,
+scripts/templates, sources partagees ou frameworks, routes incertaines et
+contenu perime sont refuses sans repli IA. Les apercus libres ou anciens ne
+contournent pas ce chemin. Les controles couvrent tout le lot avant le premier
+PUT ; chaque ecriture est protegee par SHA, sans atomicite multifichier.
+
+```sh
+python ops/gauntlet/hreflang_canonical_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `a055e8ee5c2843ed4140a4509560034715cd2b93`. Quatre PUT de setup
+ajoutent trois controles et leurs liens dans l'index de la fixture possedee.
+Un seul PUT correctif remplace l'alias anglais dans le hreflang de la page
+francaise. Deux builds et deux crawls du 05/10/2026 observent 55 routes HTML,
+65 lignes de rapport et les memes 49 entrees sitemap. Les PR #83 et #84 sont
+fermees en brouillon sans fusion ; main reste intact.
+
+Le premier verdict du banc est **en echec et conserve** : son assertion exigeait
+que la reciprocite reste inchangee, alors que le meme href corrige aussi le
+retour de la destination prouvee. Le banc final exige exactement cet effet et
+ses exemples, sans assouplir les autres gardes. La reevaluation des builds
+existants est en lecture seule, sans nouvelles ecritures ni modification du
+produit teste. Dans les rapports controles, la famille passe de **3 a 2**,
+l'occurrence selectionnee de **1 a 0** et la reciprocite de **2 a 1**. Les deux
+anciens controles ambigus restent refuses. Aucun autre compteur n'augmente.
+
+Ces deux familles restent a **0 a 0 dans les rapports bruts** : les previews
+portent `noindex` et sont filtrees par ces controles d'indexabilite. Les chiffres
+3 a 2 et 2 a 1 viennent uniquement de la projection d'hote/en-tete strictement
+bornee au site possede. Elle ne prouve pas l'indexabilite en production.
+La contre-verification fraiche du 07/10/2026 relit les SHA, sources, builds,
+XML et six reponses HTML entieres. Un parseur independant derive le changement
+de href ; seul l'identifiant de deploy Netlify possede est normalise. Six
+sondes ordinaires refusent reellement les previews natives. Les huit empreintes
+du code/test final concordent et l'idempotence ainsi que les refus sont controles.
+
+La suite complete finale passe **5 058 tests**, avec 42 ignores ; la suite ciblee
+passe **2 012 tests**. Cette phase ajoute 233 cas. Le test CI existant demande
+explicitement un lot couvrant sa base partagee ; le plafond et le fonctionnement
+du planificateur produit ne changent pas. Ce n'est pas un test de capacite.
+L'inventaire passe de six a cinq familles sans mention exacte dans un bilan :
+une mention n'est toujours pas une reparation certifiee et le diagnostic
+historique cache n'est pas active pour reduire ce chiffre.
+
+Le bilan est dans `validation-hreflang-canonical-2026-10-07.json`, avec l'echec
+initial, la reevaluation et la contre-verification distincts. La semantique des
+traductions, les groupes plus larges, frameworks, DOM JavaScript, Claude reel,
+PostgreSQL et l'indexation de production restent a valider separement. Aucun
+site client n'est modifie et la mise en service globale n'est pas certifiee.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

@@ -300,7 +300,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "viewport_not_set", "viewport_not_set_indexable", " VIEWPORT_NOT_SET ",
     "twitter_card_missing", "twitter_card_missing_not_indexable", " TWITTER_CARD_MISSING ",
     "hreflang_defined_but_html_lang_missing", "hreflang_defined_but_html_lang_missing_not_indexable",
-    " HREFLANG_DEFINED_BUT_HTML_LANG_MISSING "])
+    " HREFLANG_DEFINED_BUT_HTML_LANG_MISSING ",
+    "hreflang_to_non_canonical", "hreflang_to_non_canonical_not_indexable", " HREFLANG_TO_NON_CANONICAL "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -708,6 +709,52 @@ def test_self_hreflang_language_endpoints_add_only_proved_root_lang_without_ai(h
     assert not result['ai_calls']
     if case in {'verified', 'partial'}:
         assert result['status'] == 200 and result['written'] == {'index.html': source.replace('<html>', '<html lang="fr">')}
+        assert state['charges'] == [0] and state['pr_bodies']
+        if case == 'partial':
+            assert any(other in body for body in state['pr_bodies'])
+    else:
+        assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
+
+
+@pytest.mark.parametrize('mode', ['individual', 'bulk'])
+@pytest.mark.parametrize('case', ['verified', 'unobserved', 'unknown_fields', 'wrong_language', 'no_return',
+    'stale_values', 'stale_noindex', 'fresh_http_refused', 'partial', 'scripted'])
+def test_canonical_hreflang_endpoints_preserve_other_head_fields_without_ai(harness, monkeypatch, mode, case):
+    from tests.test_verified_hreflang_canonical import source, page, S, OLD, NEW
+    state, run = harness
+    key, other = 'hreflang_to_non_canonical', URL + 'other'
+    raw = source().replace(S, URL)
+    rows = [page(URL, 'fr', URL, [('fr', URL), ('en', OLD)]),
+            page(OLD, 'en', NEW, [('fr', URL), ('en', NEW)], served=None),
+            page(NEW, 'en', NEW, [('fr', URL), ('en', NEW)])]
+    impacted, pairs = [URL], [{'page': URL, 'from': OLD, 'to': NEW}]
+    state.update(key=key, sources={'index.html': raw})
+    if case == 'unobserved':
+        rows = []
+    elif case == 'unknown_fields':
+        del rows[2]['served_lang']
+    elif case == 'wrong_language':
+        rows[2]['lang'] = 'fr'
+    elif case == 'no_return':
+        rows[2]['hreflang'] = {'en': NEW}
+        rows[2]['hreflang_raw'] = [{'hreflang': 'en', 'href': NEW}]
+    elif case == 'stale_values':
+        state['sources']['index.html'] = raw.replace('hreflang="en"', 'hreflang="de"')
+    elif case == 'stale_noindex':
+        state['sources']['index.html'] = raw.replace('</head>', '<meta name="robots" content="noindex" /></head>')
+    elif case == 'scripted':
+        state['sources']['index.html'] = raw.replace('</body>', '<script src="/app.js"></script></body>')
+    elif case == 'partial':
+        impacted.append(other)
+        pairs.append({'page': other, 'from': OLD, 'to': NEW})
+    state['report'] = {'issues': {key: {'count': len(impacted), 'examples': impacted,
+        'evidence': {'kind': 'url_pairs', 'items': pairs}}}, 'pages': rows}
+    monkeypatch.setattr(m, '_hreflang_canonical_page', lambda *a: case != 'fresh_http_refused')
+    result = run(mode)
+    assert not result['ai_calls']
+    if case in {'verified', 'partial'}:
+        assert result['status'] == 200 and result['written'] == {
+            'index.html': raw.replace('hreflang="en" href="' + OLD, 'hreflang="en" href="' + NEW, 1)}
         assert state['charges'] == [0] and state['pr_bodies']
         if case == 'partial':
             assert any(other in body for body in state['pr_bodies'])

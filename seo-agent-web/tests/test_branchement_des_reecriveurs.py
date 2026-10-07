@@ -243,6 +243,14 @@ def test_le_branchement_fournit_LE_BON_reecriveur(groupe: str, cle: str, bloc: d
                                                   attendu: str) -> None:
     """Debrancher la famille, ou la router ailleurs, doit se voir ici et nulle part ailleurs."""
     out = _prepare(cle, bloc)
+    if cle == 'hreflang_to_non_canonical':
+        from tests.test_verified_hreflang_canonical import prepare, PAIR
+        assert out['refusal'] and out['hreflang_canonical_pairs'] == []
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+        verified = prepare()
+        assert not verified['refusal'] and verified['hreflang_canonical_pairs'] == [PAIR]
+        assert verified['link_rewriter'] is None and not verified['rewriter_ai_fallback']
+        return
     assert not str(out.get("refusal") or "").strip(), (cle, out.get("refusal"))
     rw = out.get("link_rewriter")
     assert callable(rw), (
