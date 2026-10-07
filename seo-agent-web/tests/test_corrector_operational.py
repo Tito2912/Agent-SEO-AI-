@@ -304,7 +304,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "hreflang_to_non_canonical", "hreflang_to_non_canonical_not_indexable", " HREFLANG_TO_NON_CANONICAL ",
     "page_referenced_for_more_than_one_language_in_hreflang",
     "page_referenced_for_more_than_one_language_in_hreflang_not_indexable",
-    " PAGE_REFERENCED_FOR_MORE_THAN_ONE_LANGUAGE_IN_HREFLANG "])
+    " PAGE_REFERENCED_FOR_MORE_THAN_ONE_LANGUAGE_IN_HREFLANG ",
+    "links_with_no_anchor_text", "links_with_no_anchor_text_not_indexable", " LINKS_WITH_NO_ANCHOR_TEXT "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -801,6 +802,55 @@ def test_extra_hreflang_language_endpoints_remove_only_the_proved_tag_without_ai
     if case in {'verified', 'partial'}:
         assert result['status'] == 200 and result['written'] == {'index.html': text.replace(tag, '', 1)}
         assert state['charges'] == [0] and state['pr_bodies']
+        if case == 'partial':
+            assert any(other in body for body in state['pr_bodies'])
+    else:
+        assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
+
+
+@pytest.mark.parametrize('mode', ['individual', 'bulk'])
+@pytest.mark.parametrize('case', ['verified', 'unobserved', 'wrong_name', 'unknown_fields', 'no_link',
+    'source_named', 'target_stale', 'target_missing', 'source_probe', 'target_probe', 'scripted', 'partial'])
+def test_anchor_name_endpoints_require_current_source_and_target_without_ai(harness, monkeypatch, mode, case):
+    from tests.test_verified_anchor_text import KEY, ITEM, T, source, pages, OPENING
+    state, run = harness
+    rows, items, impacted = pages(), [dict(ITEM)], [URL]
+    raw, other = source(), URL + 'other'
+    state.update(key=KEY, sources={'index.html': raw, 'contact.html': source(T, True)})
+    if case == 'unobserved':
+        rows = []
+    elif case == 'wrong_name':
+        items[0]['value'] = 'Autre nom'
+    elif case == 'unknown_fields':
+        del rows[1]['h1_tag_count']
+    elif case == 'no_link':
+        rows[0]['links_without_anchor_text'] = []
+    elif case == 'source_named':
+        state['sources']['index.html'] = raw.replace(OPENING, OPENING[:-1] + ' title="Contact">')
+    elif case == 'target_stale':
+        state['sources']['contact.html'] = source(T, True).replace('Contactez-nous', 'Autre nom')
+    elif case == 'target_missing':
+        del state['sources']['contact.html']
+    elif case == 'scripted':
+        state['sources']['index.html'] = raw.replace('</body>', '<script src="/app.js"></script></body>')
+    elif case == 'partial':
+        impacted.append(other)
+        items.append(dict(ITEM, page=other))
+    state['report'] = {'issues': {KEY: {'count': len(impacted), 'examples': impacted,
+        'evidence': {'kind': 'page_values', 'items': items}}}, 'pages': rows}
+    probes = []
+    def probe(url, canonical, observed, evidence):
+        probes.append(url)
+        return url != {'source_probe': URL, 'target_probe': T}.get(case)
+    monkeypatch.setattr(m, '_anchor_text_page', probe)
+    for name in ('_openai_generate_file_patch', '_ai_map_urls_to_files', '_ai_pick_repo_files'):
+        monkeypatch.setattr(m, name, lambda *a, **kw: pytest.fail('No anchor model or inferred target'))
+    result = run(mode)
+    assert not result['ai_calls']
+    if case in {'verified', 'partial'}:
+        assert result['status'] == 200 and result['written'] == {
+            'index.html': raw.replace(OPENING, OPENING[:-1] + ' aria-label="Contactez-nous">', 1)}
+        assert probes == [URL, T] and state['charges'] == [0] and state['pr_bodies']
         if case == 'partial':
             assert any(other in body for body in state['pr_bodies'])
     else:

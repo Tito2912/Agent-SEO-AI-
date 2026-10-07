@@ -182,17 +182,18 @@ def _prepare(items: list[dict[str, str]]) -> dict[str, object]:
 
 
 def test_le_BRANCHEMENT_fournit_vraiment_le_reecriveur() -> None:
-    """Sans ce test, la famille peut etre declaree, rangee, couverte — et muette en production."""
+    """La preuve seule n'autorise plus le callback partage ; le plan protege est executable."""
     out = _prepare(ITEMS)
-    assert out.get("refusal") in (None, ""), out.get("refusal")
-    assert out.get("evidence") == [S + "/"], out.get("evidence")
-    # Aucun repli modele : le nom vient de la cible, deja mesure.
-    assert out.get("rewriter_ai_fallback") is False
-    rw = out.get("link_rewriter")
-    assert callable(rw), out
-    sortie, n = rw(MUET)
-    assert n == 1, sortie
-    assert 'aria-label="Contactez-nous"' in sortie, sortie
+    assert out['refusal'] and out['anchor_text_items'] == []
+    assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+    from backend import anchor_proof
+    from tests.test_verified_anchor_text import prepare, source, pages, ITEM, OPENING
+    plan = prepare()
+    assert not plan['refusal'] and plan['anchor_text_items'] == [ITEM]
+    assert plan['link_rewriter'] is None and not plan['rewriter_ai_fallback']
+    expected = source().replace(OPENING, OPENING[:-1] + ' aria-label="Contactez-nous">', 1)
+    assert anchor_proof.rewrite(source(), plan['anchor_text_items'], pages()[0],
+                               app_module._duplicate_html_document, app_module._verification_url) == (expected, 1)
 
 
 def test_le_BRANCHEMENT_refuse_quand_la_preuve_manque() -> None:

@@ -3705,7 +3705,7 @@ def _correction_operation(function):
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical", "page_referenced_for_more_than_one_language_in_hreflang"}
+                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical", "page_referenced_for_more_than_one_language_in_hreflang", "links_with_no_anchor_text"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -20297,10 +20297,8 @@ _HREFLANG_RETURN_KEYS = {"missing_reciprocal_hreflang"}
 # QUELLE page ; le nom de la famille ne dit ni l'un ni l'autre. Difference avec elle : ici
 # la page signalee EST le fichier a editer, donc le ciblage par page reste le bienvenu.
 _HREFLANG_DROP_KEYS = {"page_referenced_for_more_than_one_language_in_hreflang"}
-# Un lien interne qui n'offre aucune ancre. La preuve dit quel lien (son href, tel que le fichier
-# l'ecrit) et comment la CIBLE se nomme ; ce qu'on pose est un `aria-label`, jamais un texte
-# visible. Le ciblage par page ne s'applique pas : ces liens vivent dans un en-tete partage, qui
-# n'est la page de personne. Voir `_poser_aria_label_sur_liens_sans_ancre`.
+# Le nom accessible d'un lien vide exige une source et une destination verifiees.
+# Le chemin protege refuse les composants partages et les routes HTML ambigues.
 _ANCHOR_TEXT_KEYS = {"links_with_no_anchor_text"}
 # `robots.txt` existe mais ne declare aucun sitemap. La reparation est UNE ligne, et elle se fait
 # dans robots.txt — pas dans le sitemap, malgre le nom de la famille.
@@ -20826,6 +20824,15 @@ def _hreflang_drop_page(url: str, canonical: str, observed: dict[str, Any]) -> b
         import hreflang_drop
     return _sitemap_https_page(url, canonical, verify=lambda raw: hreflang_drop.matches(raw, canonical,
         observed, lambda value, **kw: _duplicate_html_document(value, allow_body_scripts=True, **kw), _verification_url))
+
+
+def _anchor_text_page(url: str, canonical: str, observed: dict[str, Any], items: list[dict[str, str]]) -> bool:
+    try:
+        from . import anchor_proof
+    except ImportError:
+        import anchor_proof
+    return _sitemap_https_page(url, canonical, verify=lambda raw: anchor_proof.matches(raw, canonical, observed,
+        lambda value, **kw: _duplicate_html_document(value, allow_body_scripts=True, **kw), _verification_url, items))
 
 
 def _remove_sitemap_locs(content: str, urls: list[str], *, verified: bool = False) -> tuple[str, int]:
@@ -26942,6 +26949,28 @@ def _prepare_issue_fix(
     if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
         out["refusal"] = _HTTP_CANONICAL_ADVICE
         return out
+    if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _ANCHOR_TEXT_KEYS:
+        try:
+            from . import anchor_proof
+        except ImportError:
+            import anchor_proof
+        out['anchor_text_items'] = []
+        try:
+            host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
+        except ValueError:
+            host = ''
+        selected = [item for item in anchor_proof.evidence(block) if isinstance(item, dict) and item.get('page') in impacted]
+        items, refused = anchor_proof.verified_items(selected, pages, _verification_url, host=host)
+        refused = sorted(set(refused) | (set(impacted) - {item['page'] for item in items}))
+        if not items:
+            out['refusal'] = 'Aucun nom de lien prouve : source et cible HTTPS directe, indexables, auto-canoniques et nom actuel observe requis.'
+        else:
+            out['anchor_text_items'] = items
+            out['evidence'] = list(dict.fromkeys(item['page'] for item in items))
+            out['extra_hint'] = 'Ajouter uniquement le nom accessible deja observe sur la cible, sans changer le href ni le contenu visible.'
+            if refused:
+                out['side_effects'] = '\nPages laissees sans nom de lien faute de preuve : ' + ', '.join(refused)
+        return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _HREFLANG_DROP_KEYS:
         try:
             from . import hreflang_drop
@@ -27454,32 +27483,6 @@ def _prepare_issue_fix(
                                     "il est déjà correct.")
 
     # ── Deterministic rewriter for the mechanical families (no AI) ──
-    if issue_key in _ANCHOR_TEXT_KEYS:
-        _items = _issue_page_values(block)
-        if not _items:
-            out["refusal"] = (
-                "Le rapport ne dit pas comment nommer ces liens : les pages qu'ils visent n'ont "
-                "pas ete crawlees, ou ne portent ni h1 unique ni titre. Inventer un texte "
-                "d'ancre serait ecrire a la place du site.")
-        else:
-            # La preuve nomme les pages SOURCES : ce sont bien elles qui portent le lien muet.
-            # Le reecriveur, lui, vise par le href et se moque du fichier ou il tombe — un
-            # en-tete partage n'est la page de personne.
-            out["evidence"] = [str(i.get("page") or "") for i in _items
-                               if str(i.get("page") or "")]
-            out["link_rewriter"] = (  # noqa: E731
-                lambda raw, _i=list(_items): _poser_aria_label_sur_liens_sans_ancre(raw, _i))
-            # Aucun repli modele : le nom vient de la cible, qui a ete crawlee. « Donne une ancre
-            # a ce lien » sans dire laquelle est precisement l'invitation a rediger, et rediger
-            # a la place du client est ce qu'on a refuse en ouvrant ce chantier.
-            out["rewriter_ai_fallback"] = False
-            out["extra_hint"] = (
-                "Ces liens internes n'offrent aucune ancre. Pose sur CHACUN l'attribut "
-                "aria-label indique, sans toucher au texte visible ni au href :\n"
-                + "\n".join("- %s : href=%s -> aria-label=%s"
-                            % (i.get("page"), i.get("field"), i.get("value"))
-                            for i in _items[:20]))
-
     if issue_key in _HREFLANG_RETURN_KEYS:
         _items = _issue_page_values(block)
         _known = {_norm_url_for_match(str(p.get("final_url") or p.get("url") or "")):
@@ -27867,6 +27870,7 @@ def _deep_patch_issue_files(
     hreflang_lang_urls: list[str] | None = None,
     hreflang_canonical_pairs: list[dict[str, str]] | None = None,
     hreflang_drop_items: list[dict[str, str]] | None = None,
+    anchor_text_items: list[dict[str, str]] | None = None,
     x_default_targets: dict[str, str] | None = None,
     # L'image sociale que le SITE utilise. Seule des cinq balises Open Graph exigees a ne pas se
     # deduire de la page : voir `_dominant_site_og_image`. Vide = on n'ajoute pas og:image.
@@ -27898,15 +27902,18 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
-    if viewport_urls is not None or twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None or hreflang_drop_items is not None:
+    if (anchor_text_items is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _ANCHOR_TEXT_KEYS):
+        return [], ['Ancres refusees : plan source et destination verifie requis.'], [], []
+    if viewport_urls is not None or twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None or hreflang_drop_items is not None or anchor_text_items is not None:
         try:
-            from . import viewport, twitter_card, hreflang_lang, hreflang_canonical, hreflang_drop, sitemap_redirects
+            from . import viewport, twitter_card, hreflang_lang, hreflang_canonical, hreflang_drop, anchor_proof, sitemap_redirects
         except ImportError:
             import viewport
             import twitter_card
             import hreflang_lang
             import hreflang_canonical
             import hreflang_drop
+            import anchor_proof
             import sitemap_redirects
         targets, plans = [], {}
         head_rewriter = hreflang_lang if hreflang_lang_urls is not None else twitter_card if twitter_missing_urls is not None else viewport
@@ -27917,9 +27924,18 @@ def _deep_patch_issue_files(
         if hreflang_drop_items is not None:
             head_rewriter = hreflang_drop
             head_urls = [item['page'] for item in hreflang_drop_items]
+        if anchor_text_items is not None:
+            head_rewriter = anchor_proof
+            head_urls = []
         try:
             host = urlsplit(site_name if '://' in site_name else 'https://' + site_name).netloc.lower()
-            if hreflang_drop_items is not None:
+            if anchor_text_items is not None:
+                verified_items, refused = anchor_proof.verified_items(anchor_text_items, pages, _verification_url, host=host)
+                if verified_items != anchor_text_items:
+                    raise ValueError('noms de liens contradictoires')
+                verified = list(dict.fromkeys(item['page'] for item in verified_items))
+                head_urls = verified
+            elif hreflang_drop_items is not None:
                 verified_items, refused = hreflang_drop.verified_items(hreflang_drop_items, pages, _verification_url, host=host)
                 if verified_items != hreflang_drop_items:
                     raise ValueError('suppression hreflang contradictoire')
@@ -27943,6 +27959,16 @@ def _deep_patch_issue_files(
                     raise ValueError('route HTML absente partagee ou ambigue')
                 bindings[files[0]] = url
             targets = list(bindings)
+            proof_bindings = dict(bindings)
+            if anchor_text_items is not None:
+                for item in anchor_text_items:
+                    url = anchor_proof.destination(item, _verification_url, host)
+                    files = repo_index.route_files(current_index, url)
+                    if (len(files) != 1 or files[0] not in all_paths or not files[0].lower().endswith('.html')
+                            or repo_index.is_shared_path(current_index, files[0])
+                            or files[0] in proof_bindings and proof_bindings[files[0]] != url):
+                        raise ValueError('route de destination HTML absente partagee ou ambigue')
+                    proof_bindings[files[0]] = url
             if len(targets) > max_files:
                 raise ValueError('plafond insuffisant pour le lot de metadonnees')
             configs = [p for p in all_paths if p.rsplit('/', 1)[-1] == '_redirects']
@@ -27953,7 +27979,7 @@ def _deep_patch_issue_files(
             if configs:
                 fd = _github_api_get(_github_content_api_path(owner, repo_name, configs[0]), token=token, params={'ref': fix_branch})
                 rules = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
-                if not fd.get('sha') or not sitemap_redirects.rules_match(rules, [], pages or [], _verification_url, direct=set(verified)):
+                if not fd.get('sha') or not sitemap_redirects.rules_match(rules, [], pages or [], _verification_url, direct=set(proof_bindings.values())):
                     raise ValueError('regles actuelles contradictoires')
             if 'netlify.toml' in all_paths:
                 import tomllib
@@ -27961,23 +27987,28 @@ def _deep_patch_issue_files(
                 raw = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
                 if not fd.get('sha') or tomllib.loads(raw).get('redirects'):
                     raise ValueError('autres regles presentes')
+            def read_literal_source(path):
+                if path in file_state and anchor_text_items is None:
+                    return file_state[path]['content'], file_state[path]['sha']
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token, params={'ref': fix_branch})
+                if fd.get('encoding', 'base64') != 'base64':
+                    raise ValueError('encodage inconnu')
+                return _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8'), fd.get('sha', '')
             for path, url in bindings.items():
-                if path in file_state:
-                    raw, sha = file_state[path]['content'], file_state[path]['sha']
-                else:
-                    fd = _github_api_get(_github_content_api_path(owner, repo_name, path), token=token, params={'ref': fix_branch})
-                    if fd.get('encoding', 'base64') != 'base64':
-                        raise ValueError('encodage inconnu')
-                    raw = _b64.b64decode(fd.get('content', '').replace('\n', ''), validate=True).decode('utf-8')
-                    sha = fd.get('sha', '')
+                raw, sha = read_literal_source(path)
                 canonical = _verification_url(observed[url].get('canonical'))
-                literal = head_rewriter.document if hreflang_canonical_pairs is not None or hreflang_drop_items is not None else head_rewriter.literal
+                literal = head_rewriter.document if hreflang_canonical_pairs is not None or hreflang_drop_items is not None or anchor_text_items is not None else head_rewriter.literal
                 if not isinstance(sha, str) or not sha.strip() or not literal(raw, canonical, _duplicate_html_document, _verification_url):
                     raise ValueError('source de metadonnees actuelle non litterale')
                 if ((twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None or hreflang_drop_items is not None)
                         and not head_rewriter.matches(raw, canonical, observed[url], _duplicate_html_document, _verification_url)):
                     raise ValueError('metadonnees actuelles contradictoires')
-                if hreflang_drop_items is not None:
+                if anchor_text_items is not None:
+                    items = [item for item in anchor_text_items if item['page'] == url]
+                    if not anchor_proof.matches(raw, canonical, observed[url], _duplicate_html_document, _verification_url, items):
+                        raise ValueError('ancres actuelles contradictoires')
+                    new, count = anchor_proof.rewrite(raw, items, observed[url], _duplicate_html_document, _verification_url)
+                elif hreflang_drop_items is not None:
                     item = next(item for item in hreflang_drop_items if item['page'] == url)
                     new, count = hreflang_drop.rewrite(raw, item, observed[url], _duplicate_html_document, _verification_url)
                 elif hreflang_canonical_pairs is not None:
@@ -27989,10 +28020,22 @@ def _deep_patch_issue_files(
                     if _github_patched_content_error(new, path) or _refus_de_format(path, new):
                         raise ValueError('format de metadonnees ambigu')
                     plans[path] = (new, sha)
+            if anchor_text_items is not None:
+                for path, url in proof_bindings.items():
+                    if url in verified:
+                        continue
+                    raw, sha = read_literal_source(path)
+                    if (not isinstance(sha, str) or not sha.strip()
+                            or not anchor_proof.matches(raw, url, observed[url], _duplicate_html_document, _verification_url, [])):
+                        raise ValueError('nom actuel de destination contradictoire')
             for path in plans:
                 url = bindings[path]
                 canonical = _verification_url(observed[url].get('canonical'))
-                if hreflang_drop_items is not None:
+                if anchor_text_items is not None:
+                    items = [item for item in anchor_text_items if item['page'] == url]
+                    urls = [url, *dict.fromkeys(anchor_proof.destination(item, _verification_url, host) for item in items)]
+                    valid = all(_anchor_text_page(value, value, observed[value], items if value == url else []) for value in urls)
+                elif hreflang_drop_items is not None:
                     item = next(item for item in hreflang_drop_items if item['page'] == url)
                     valid = all(_hreflang_drop_page(value, _verification_url(observed[value].get('canonical')), observed[value])
                                 for value in (item['page'], item['value']))
@@ -28013,7 +28056,7 @@ def _deep_patch_issue_files(
             try:
                 response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
                     json_body={'branch': fix_branch, 'sha': sha, 'message': 'fix(seo): add verified ' + (
-                        'verified hreflang language removal' if hreflang_drop_items is not None else 'hreflang canonical destination' if hreflang_canonical_pairs is not None else 'self-hreflang HTML language' if hreflang_lang_urls is not None else 'Twitter Card' if twitter_missing_urls is not None else 'viewport') + '\n\nGenerated by Noyaru',
+                        'anchor accessible name' if anchor_text_items is not None else 'verified hreflang language removal' if hreflang_drop_items is not None else 'hreflang canonical destination' if hreflang_canonical_pairs is not None else 'self-hreflang HTML language' if hreflang_lang_urls is not None else 'Twitter Card' if twitter_missing_urls is not None else 'viewport') + '\n\nGenerated by Noyaru',
                                'content': _b64.b64encode(new.encode('utf-8')).decode('ascii')})
                 file_state[path] = {'content': new, 'sha': str((response.get('content') or {}).get('sha') or '')}
                 patched.append(path)
@@ -28821,6 +28864,7 @@ def _apply_prepared_issue_fix(
                 hreflang_lang_urls=prep.get('hreflang_lang_urls'),
                 hreflang_canonical_pairs=prep.get('hreflang_canonical_pairs'),
                 hreflang_drop_items=prep.get('hreflang_drop_items'),
+                anchor_text_items=prep.get('anchor_text_items'),
                 x_default_targets=prep.get("x_default_targets"),
                 targets_override=prep.get("targets_override"), page_side=bool(prep.get("page_side")),
                 site_lang=_dominant_site_lang(pages), site_og_image=_dominant_site_og_image(pages), pages=pages)

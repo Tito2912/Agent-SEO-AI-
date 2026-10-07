@@ -1479,6 +1479,62 @@ Fraicheur source/cible, correspondance des routes, composants partages,
 frameworks et cycle deployee/crawl restent a securiser et a mesurer. Aucun site
 client, fixture distante ou main n'est modifie par ce controle.
 
+## Ancres avec preuves source et cible (07/10/2026)
+
+Cette phase remplace le callback de rapport ci-dessus par un plan protege de
+`links_with_no_anchor_text`. Source et destination doivent etre deux pages HTTPS
+directes du meme hote, indexables et auto-canoniques, avec langue racine,
+titre/H1 et comptes explicites. Les lignes de liens doivent prouver le href
+litteral, sa cible, sa source et son absence de nom. Les propositions mal typees,
+contradictoires ou non observees sont refusees sans IA ; un sous-ensemble accepte
+nomme les pages laissees intactes.
+
+Le correcteur individuel et par lot relit les fichiers/SHA actuels, meme avec
+un cache, et exige une route HTML litterale unique non partagee pour chaque
+source et chaque cible. Routage, metadonnees et liens actuels sont controles,
+puis source et cible sont resondees en HTTPS avant le premier PUT du lot.
+Le plafond porte sur les fichiers sources ecrits ; la cible qui donne le nom
+reste en lecture seule. Les anciens apercus IA ne peuvent pas contourner ce
+chemin. Seul `aria-label` est insere ; aucun autre octet, commentaire, href ou
+contenu visible n'est change. Les erreurs multifichiers restent explicites,
+sans promesse d'atomicite ni cout IA pour ces corrections mecaniques.
+
+```sh
+python ops/gauntlet/anchor_text_cycle.py --workdir <dossier-vide-temporaire>
+```
+
+Le banc epingle `d949b4d86a2eacc123a4ec475bf2def4f35df863`. Quatre PUT ajoutent
+trois controles et leurs liens d'index ; un PUT corrige seulement l'ancre de
+`gauntlet/qa-anchor-source.html`. Deux builds et deux crawls mesurent **2 a 1**
+dans les rapports bruts et controles, et **1 a 0** pour le lien selectionne.
+Le lien vers une cible sans langue racine connue reste a un, refuse et intact.
+Les 61 routes HTML, 71 lignes et 49 entrees sitemap sont conservees ; aucun
+autre compteur n'augmente. Les PR #89/#90 sont fermees en brouillon sans fusion.
+Le premier essai #87/#88 reste en echec : le banc attendait a tort `served_lang`
+sur des pages sans hreflang. Aucun champ absent n'a ete invente pour le faire passer.
+
+La projection d'hote et du seul en-tete natif `noindex` reste bornee au site
+possede dans le banc. Une contre-verification en lecture seule relit les SHA,
+builds, HTML entier et XML ; un parseur independant derive l'insertion exacte.
+Six vraies sondes normales refusent les previews natives. Chromium verifie
+le nouveau nom accessible et les trois autres liens inchanges ; les captures
+avant/apres des corps servis sauvegardes sont identiques en 1280x800 et 390x844.
+Cela ne certifie pas un DOM JavaScript client ni un CSS reagissant a cet attribut.
+
+La suite finale passe **5 671 tests**, avec les memes 42 ignores ; la suite
+ciblee passe **3 002 tests** sur 62 modules, avec deux ignores. Les 249 nouveaux
+cas s'ajoutent aux anciens, tous conserves. Les neuf empreintes source/test
+figees concordent avec les deux suites, le cycle et la contre-verification.
+Le bilan `validation-anchor-text-2026-10-07.json` reduit les absences de mention
+exacte de quatre a trois, sans transformer les mentions en verdict de reussite
+globale ni activer le diagnostic historique cache.
+
+Seul le sous-ensemble litteral prouve est mesure, pas la famille complete ni
+tous les frameworks. Les sources de depot script/template sont refusees ;
+le lecteur HTTP existant tolere les scripts de body mais n'atteste pas leur
+execution. Indexabilite de production, Claude reel, PostgreSQL et preparation
+globale aux clients restent a valider. Aucun site client ni main n'est modifie.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

@@ -193,10 +193,12 @@ def test_the_existing_prepared_callback_uses_the_same_literal_guard():
         'evidence': {'kind': 'page_values', 'items': [ITEM]}}}, impacted=[ITEM['page']],
         all_paths=['index.html'], site_name='site.test', owner='fixture', repo_name='fixture',
         branch='baseline', token='unused')
-    assert not plan['refusal'] and callable(plan['link_rewriter']) and not plan['rewriter_ai_fallback']
+    # The unverified legacy callback is now blocked; the underlying literal guard is retained.
+    assert plan['refusal'] and plan['anchor_text_items'] == [] and plan['link_rewriter'] is None
+    assert not plan['rewriter_ai_fallback']
     raw = '<!-- ' + LINK + ' -->' + LINK
     expected = '<!-- ' + LINK + ' -->' + LINK.replace('"><svg', '"' + LABEL + '><svg')
-    assert plan['link_rewriter'](raw) == (expected, 1)
+    assert rewrite(raw) == (expected, 1)
 
 
 def test_both_source_and_evidence_are_not_mutated():

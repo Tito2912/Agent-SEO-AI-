@@ -1,0 +1,289 @@
+{
+  "date": "2026-10-07",
+  "status": "guarded_anchor_name_subset_measured_on_pinned_owned_fixture",
+  "client_readiness_certified": false,
+  "universal_corrector_certification": false,
+  "all_primary_family_occurrences_on_this_fixture_resolved": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "ca94e3d04857ee9960f219fd00cb8e197b17a882",
+  "scope": {
+    "family": "links_with_no_anchor_text",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "seed_branch": "gauntlet-static-html-href-drop-correction-20261007-164104",
+    "seed_sha": "d949b4d86a2eacc123a4ec475bf2def4f35df863",
+    "seed_pr_closed_draft_unmerged": 86,
+    "setup_paths": [
+      "gauntlet/index.html",
+      "gauntlet/qa-anchor-source.html",
+      "gauntlet/qa-anchor-target.html",
+      "gauntlet/qa-anchor-unproved.html"
+    ],
+    "corrective_paths": [
+      "gauntlet/qa-anchor-source.html"
+    ],
+    "setup_file_puts": 4,
+    "corrective_file_puts": 1,
+    "maximum_file_put_attempts_per_cycle": 5,
+    "write_requires_exact_qa_branch_blob_sha_expected_bytes_and_no_retry": true,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/anchor_text_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "product_guards": [
+    "Replace the report-only generic callback with a typed protected plan. Independently observe each source and destination as distinct same-host direct HTTPS typed-200 self-canonical HTML pages, with no errors, blocked hosts, redirects or noindex/none. Require exact requested/final/canonical identities and coherent duplicate snapshots. Require explicit root language, title/count and H1/count; select the actual unique H1 or unique title fallback without inventing a name.",
+    "Source evidence must identify actual empty internal link rows by literal href, resolved target, exact source identity, rel multiplicity and empty typed text/title/aria-label. Refuse conflicting/untyped proposals and unproved whole source groups. Accepted subsets name all unproved source pages and never fall back to AI or heuristic targeting.",
+    "Individual and bulk correction endpoints share the protected plan. Free-form, cached and confirmed model previews cannot bypass it. Refuse legacy generic callbacks without that plan before repository or provider access. Mechanically corrected files incur zero AI quota.",
+    "Bind source and every destination to unique nonshared literal .html routes in the repository. Check bounded current redirect configuration for both. Re-read source and destination bytes/SHA even if a file-state cache exists; attest exact canonical, language, title/H1 and selected literal links before planning. Reject nonliteral/shared/framework sources, scripts/templates in repository files, malformed attributes/structure and competing currently named links to equivalent destinations.",
+    "Finish the complete lot's source/destination/routing preflight and fresh bounded streamed public-target direct HTTPS probes before the first PUT. Match actual served source links and both metadata snapshots; refuse stale names, health, canonical fragments, uncertain routes and insufficient write budgets. No native preview/noindex exemption is added to the product.",
+    "Reuse the literal anchor parser and quoted-attribute lexer to insert only escaped aria-label, preserving href, content, comments, casing, quotes, line endings and all other bytes. Keep the 80000-byte UTF-8 limit and idempotence. SHA-guard each source write, never write the name-giving destination, and explicitly stop/report remaining files on a partial failure without claiming atomicity."
+  ],
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-anchor-baseline-20261007-180323",
+    "correction_branch": "gauntlet-static-html-anchor-correction-20261007-180323",
+    "baseline_sha": "8266a48f1fe471467c00d3818ebdcbb21febe945",
+    "final_sha": "05ff4c231528a024f7f639a625edd1a5058dbd1e",
+    "baseline_pr": 89,
+    "correction_pr": 90,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "observed_healthy_html_routes": [
+      61,
+      61
+    ],
+    "report_rows": [
+      71,
+      71
+    ],
+    "controlled_whole_family_counts": {
+      "links_with_no_anchor_text": [
+        2,
+        1
+      ]
+    },
+    "raw_whole_family_counts": {
+      "links_with_no_anchor_text": [
+        2,
+        1
+      ]
+    },
+    "selected_counts": [
+      1,
+      0
+    ],
+    "unproved_controls": [
+      1,
+      1
+    ],
+    "sitemap_entries_unchanged": [
+      49,
+      49
+    ],
+    "preput_https_rechecks": 2,
+    "preput_http_namespace": "Only the exact owned production-namespace source/target URLs are mapped to the actual baseline preview; remove only the verified exact native Netlify noindex header. Status/body/canonical/meta robots and streamed HTML remain real. This test-only projection is not a product bypass: six fresh default probes really fetch and reject native previews.",
+    "one_actual_aria_label_inserted": true,
+    "comment_decoy_unchanged": true,
+    "requested_observation_multiset_preserved": true,
+    "existing_canonicals_languages_hreflang_titles_h1_navigation_social_tags_and_routing_preserved": true,
+    "unknown_language_target_left_unmodified": "gauntlet/html-lang-missing.html",
+    "increased_counts": {},
+    "all_selected_occurrences_resolved": true,
+    "all_primary_family_occurrences_resolved": false
+  },
+  "first_measurement_preserved": {
+    "status": "failed",
+    "baseline_pr": 87,
+    "correction_pr": 88,
+    "pull_requests_closed_draft_unmerged": true,
+    "main_unchanged": true,
+    "failure_code": "literal_or_unproved_control_changed",
+    "explanation": "The actual edit and both builds succeeded, but the benchmark incorrectly required served_lang=fr on controls with no hreflang. This crawler field is absent there. Retain the failed cycle unchanged, require the observed None rather than inventing a value, correct synthetic fixtures and add typed heading/title count refusal cases. A separate new cycle passes the final guard.",
+    "successful_receipt_does_not_relabel_failed_run": true
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "fresh_isolated_process_against_final_code": true,
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "checks": "Fresh exact heads, closed draft unmerged PRs, successful builds, four setup commits/files and one corrective commit/file. A separate HTMLParser derives the sole actual anchor attribute insertion, excluding its comment decoy. Compare current repository and full fresh served bodies while normalizing only the owned Netlify deploy-id. Re-read unchanged routing/index/targets/negative/unknown source and two unchanged XML documents. Re-read the actual missing root language on both builds. Re-prepare the proved subset and named refusal; verify idempotence and all nine frozen source hashes.",
+    "fresh_served_html_reads": 8,
+    "fresh_served_xml_reads": 2,
+    "fresh_actual_unknown_target_root_lang_absent": [
+      true,
+      true
+    ],
+    "fresh_default_probe_calls_on_native_preview_urls": 6,
+    "all_native_preview_probes_rejected": true,
+    "native_preview_noindex_preserved": true,
+    "production_indexation_not_proven": true,
+    "twelve_original_report_html_xml_snapshots_retained": true
+  },
+  "browser_check": {
+    "status": "passed_on_saved_real_owned_served_source_bodies",
+    "browser": "Chromium",
+    "viewports": [
+      [
+        1280,
+        800
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "selected_accessible_name_counts": [
+      0,
+      1
+    ],
+    "unchanged_other_links": 3,
+    "whole_dom_other_than_one_label_preserved": true,
+    "before_after_png_bytes_identical_at_both_viewports": true,
+    "http_requests_sent": 0,
+    "github_writes": 0,
+    "provider_requests": 0,
+    "screenshot_sha256": [
+      "c46e37824bb81d04aff806806ac04e49472f14235f0c537f4c6e087edc3a24fa",
+      "4c7562837d1b4ae43f3993ba9c5278d5c39655b46105eff8c095ca4c7ac8854c"
+    ],
+    "limitation": "Pixel equality and accessible-name proof concern this literal saved fixture, not arbitrary customer CSS or live JavaScript."
+  },
+  "acceptance_inventory": {
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_exact_named_record_before": 4,
+    "families_without_exact_named_record_after": 3,
+    "new_named_mentions": [
+      "links_with_no_anchor_text"
+    ],
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "historical_records_preserved": true,
+    "hidden_legacy_diagnostic_not_promoted": true
+  },
+  "provider_usage": {
+    "all_live_and_countercheck_requests": 0,
+    "claude_budget": 0,
+    "openai_fallback_allowed": false
+  },
+  "verification": {
+    "full_final_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 5671,
+      "skipped": 42,
+      "warnings": 431,
+      "seconds": 245.7,
+      "real_provider_keys": "empty"
+    },
+    "targeted_final_suite": {
+      "passed": 3002,
+      "skipped": 2,
+      "warnings": 220,
+      "seconds": 49.57,
+      "selected_modules": 62
+    },
+    "new_tests_this_phase": 249,
+    "new_module_tests": 158,
+    "new_benchmark_tests": 58,
+    "new_endpoint_tests": 33,
+    "all_previous_test_case_ids_retained": 5464,
+    "all_42_old_skipped_case_ids_unchanged": true,
+    "initial_red": {
+      "failed": 136,
+      "passed": 2,
+      "errors": 0,
+      "seconds": 1.42,
+      "explanation": "Repeated missing-module/protected-plan witnesses, not 136 independent defects."
+    },
+    "development_checks": [
+      "Keep every prior case ID. Three existing binding cases now reject the old unobserved callback and independently accept the protected literal fixture; all prior helper assertions and other matrix families remain.",
+      "The first green pass has one source-ambiguity fixture error: index/index.html does not compete for the root route, whereas public/index.html does. Fix the fixture rather than the product guard. The strengthened pipeline/endpoint preflight passes 739 cases.",
+      "An independent malformed direct utility call raised TypeError/KeyError. Reorder the invalid-target refusal before item indexing and add three direct no-write/no-exception regression cases; the last module/benchmark preflight passes 216 tests.",
+      "The first frozen suites pass 5666 plus 42 skips and 2997 plus two skips. They predate the final malformed-item and benchmark corrections, so only the fresh final suites and new live cycle are authoritative here.",
+      "Freeze nine source/test files before final full/targeted/live runs. No edits to those files occur during the final runs, and the fresh read-only countercheck matches the same nine hashes."
+    ],
+    "ruff_F_E9": "passed_on_all_nine_phase_source_and_test_files",
+    "compileall": "passed_on_all_nine_phase_source_and_test_files",
+    "new_module_and_bench_bandit_medium_or_high": "none",
+    "normalized_LF_tested_source_sha256": {
+      "backend/app.py": "b0a1b4b91cad870bc440fde9c069d6b885662cba811b4fb761c83d28d6b71266",
+      "backend/anchor_proof.py": "6322a23e56e5cc89b2e34068734fad77b87a18c56c49f2e9f227fc5279e97340",
+      "tests/test_verified_anchor_text.py": "5f8d2c65e1bad2edbc5b6897bc246e069043b81cd10a23f3f98a39d57bed8253",
+      "tests/test_corrector_operational.py": "89a9aa2440a6a4a45c1dec7874234bee2da30293146e9074dd6b7981edcdc68c",
+      "tests/test_anchor_text_is_named.py": "8ce3d83b92fe64845654b201929a49557506dac283030be149363c7634b81384",
+      "tests/test_anchor_text_literal_rewriter.py": "450e9018536b54617166b2f687141a88e8a19e1a5ef43c6488103896f73d3a67",
+      "tests/test_branchement_des_reecriveurs.py": "b2fec45accb3253c2598370bec0f822ba1b46976f78859ba4664c814290ee444",
+      "ops/gauntlet/anchor_text_cycle.py": "383ad87de5f7fda7b2d50c319c837e307a9b749b171e0c1939b826e8066006d1",
+      "tests/test_gauntlet_anchor_text_cycle.py": "3155e231be4f817eb8897678c1830792a40caa376b8895ca13e063fdf7cca48c"
+    },
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "artifacts": {
+    "full_junit": {
+      "path": "seo-anchor-proof-final2-full-20261007-1cfy0y60/junit.xml",
+      "sha256": "6b6434d319e25588de8f25dd953cf030c22d450256115b1b4fc6edeb3402f0c3"
+    },
+    "full_manifest": {
+      "path": "seo-anchor-proof-final2-full-20261007-1cfy0y60/manifest.json",
+      "sha256": "231d30c288f95f7b7e6008aaf7b7e69eba90958fa210799be6b1e1da7d9a87a8"
+    },
+    "target_junit": {
+      "path": "seo-anchor-proof-final2-targeted-20261007-0_0mfgih/junit.xml",
+      "sha256": "c292340655375312525130ca4d9c766cf6faefc75d1bf0fa3bbbf406bb24bb4f"
+    },
+    "target_manifest": {
+      "path": "seo-anchor-proof-final2-targeted-20261007-0_0mfgih/manifest.json",
+      "sha256": "231d30c288f95f7b7e6008aaf7b7e69eba90958fa210799be6b1e1da7d9a87a8"
+    },
+    "target_selection": {
+      "path": "seo-anchor-proof-final2-targeted-20261007-0_0mfgih/selection.json",
+      "sha256": "a5c864f8c079044103829de66ef8a086a07d716f42dea7be68049c09d5b1e281"
+    },
+    "live_cycle": {
+      "path": "seo-anchor-proof-live2-20261007-ht50nmqw/cycle/cycle.json",
+      "sha256": "860903070e04be99762d7cc91cc8ecb622c999e244260bd65ab0002bacc09a1d"
+    },
+    "live_manifest": {
+      "path": "seo-anchor-proof-live2-20261007-ht50nmqw/manifest.json",
+      "sha256": "231d30c288f95f7b7e6008aaf7b7e69eba90958fa210799be6b1e1da7d9a87a8"
+    },
+    "countercheck": {
+      "path": "seo-anchor-proof-live2-20261007-ht50nmqw/countercheck.json",
+      "sha256": "a2530da88ffdc0c8f82d1dcbe0bfa6b495afa33b96fdbfd509e239e8461b6f3b"
+    },
+    "counter_script": {
+      "path": "seo-anchor-proof-live-20261007-hvle4jo1/countercheck.py",
+      "sha256": "15c9ad724728dfc832671258863e13cd81da74c727ed2c23f9788713ca0e84fe"
+    },
+    "browsercheck": {
+      "path": "seo-anchor-proof-live2-20261007-ht50nmqw/browsercheck.json",
+      "sha256": "4f45ba45493a5c118cafb6fd2850f2e6b01259fd4c683906f2cd7044b5d71071"
+    },
+    "browser_script": {
+      "path": "seo-anchor-proof-live2-20261007-ht50nmqw/browsercheck.py",
+      "sha256": "4af473a224fdd59ea159d74a8efc7ca88f5559b4d4c539ceef261ec3fc167ecc"
+    },
+    "failed_live_cycle": {
+      "path": "seo-anchor-proof-live-20261007-hvle4jo1/cycle/cycle.json",
+      "sha256": "6d1dc88ca87833700b4da855af0cd87fa116e57054f3012e7131170fa571fe63"
+    },
+    "inventory_before": {
+      "path": "seo-anchor-proof-inventory-20261007-zykk4u6k/before.json",
+      "sha256": "e66beef983bfc799b21cb8867bd45daa18abaa0451183971e54b7adfd8936476"
+    },
+    "initial_red_junit": {
+      "path": "seo-anchor-proof-red-20261007-a16yrprw/junit.xml",
+      "sha256": "9b54ad4d094c02b20672020468bb2a140e132e2ad9a15b227fa5d42edc534dce"
+    }
+  },
+  "limitations": [
+    "This proves only a same-host direct indexable self-canonical literal HTML subset and its protected endpoints. A real unproved destination/source remains unmodified and counted, so even this fixture's entire family is not resolved. Unknown metadata, other origins, redirects/noindex, shared/framework/nonliteral/dynamic sources and ambiguous routes refuse rather than guess.",
+    "The inserted accessible name is observed from the destination; it is neither semantic link-intent proof nor a promise of Google anchor-text interpretation. H1/title selection is not a language detector. Byte preservation cannot promise visual invariance for arbitrary CSS selecting aria-label.",
+    "Native previews remain noindex, production canonical-host context and zero raw sitemap seeds. Unlike indexability-filtered previous families, this crawler's healthy-HTML anchor family measures two to one in raw and controlled reports. The bounded owned host/header projection does not prove production indexability, deployment or customer acceptance.",
+    "Repository sources containing scripts/templates are refused. The existing fresh HTTP reader tolerates body scripts, including owned platform injection; it compares literal source/target metadata and links but does not execute and certify a dynamic DOM. The independent saved-body browser check is confined to this fixture.",
+    "Repository reads, current SHA writes, HTTP probes and future deployments are not atomic. Multi-file failures can leave an explicitly reported partial branch. Existing public-target validation is reused, not certified as a complete SSRF/DNS-rebinding audit.",
+    "No agent deployment, client onboarding, fresh real Claude integration, production recovery replay, scheduler/payment acceptance, capacity test or fresh PostgreSQL run is included. Forty-two SQLite skips remain. Three claimed families still lack exact named references, including one deliberately hidden legacy diagnostic; references are not readiness verdicts."
+  ]
+}
