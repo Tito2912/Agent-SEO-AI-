@@ -1442,6 +1442,43 @@ La baisse du compteur ne certifie donc ni ce groupe complet ni l'indexabilite.
 Semantique des traductions, frameworks, DOM JavaScript, Claude reel, PostgreSQL
 et mise en service globale restent a valider. Aucun site client n'est modifie.
 
+## Reecriture locale des ancres (07/10/2026)
+
+Le reecriveur de `links_with_no_anchor_text` utilisait une regex qui confondait
+`data-href` avec `href` et modifiait des commentaires ou du texte de scripts.
+`backend/anchor_text.py` lit maintenant les vraies balises HTML et leurs attributs
+litteraux, puis insere seulement l'attribut `aria-label` au bon offset.
+Les autres octets, guillemets, casse, href et fins de ligne restent identiques.
+Noms contradictoires, preuves mal typees, balises dupliquees/mal fermees,
+contextes non rendus et contenu dynamique ambigu sont refuses. Un nom existant,
+y compris `aria-labelledby`, le texte alternatif d'une image ou un autre lien
+nomme avec le meme href litteral, n'est pas ecrase. Source et resultat sont bornes
+a 80 000 octets UTF-8 ; une seconde passe n'ecrit rien.
+
+```sh
+python ops/gauntlet/anchor_text_rewriter_check.py --workdir <nouveau-dossier-temporaire>
+```
+
+Ce controle Chromium est **local et sans reseau** : il verifie le vrai nom
+accessible du lien selectionne, cinq autres liens inchanges et des captures
+avant/apres identiques en 1280x800 et 390x844. Les comparaisons DOM, le changement
+exact et l'idempotence ont leurs propres tests de refus des faux succes.
+L'egalite des pixels concerne ce temoin, pas un CSS client utilisant cet attribut.
+Un nom accessible ne garantit pas son utilisation comme ancre par Google.
+
+La suite complete passe 5 422 tests, avec les memes 42 ignores ; la suite ciblee
+passe 1 602 tests sur 46 modules, avec deux ignores. Les 153 nouveaux cas ne
+remplacent aucun ancien test. Les cinq empreintes source/test du code final
+concordent entre les deux suites et le controle Chromium.
+
+Le bilan `anchor-text-rewriter-check-2026-10-07.json` est volontairement distinct
+des fichiers `validation-*.json` : **cette phase ne certifie pas la famille** et
+ne reduit pas les quatre absences de mention de l'inventaire. La preparation
+actuelle consomme encore une preuve de rapport sans revalider la cible servie.
+Fraicheur source/cible, correspondance des routes, composants partages,
+frameworks et cycle deployee/crawl restent a securiser et a mesurer. Aucun site
+client, fixture distante ou main n'est modifie par ce controle.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

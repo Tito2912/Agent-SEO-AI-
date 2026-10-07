@@ -25434,89 +25434,18 @@ def _add_reciprocal_hreflang(content: str, items: list[dict[str, str]]) -> tuple
     return content[:fin] + "\n" + "\n".join(ajouts) + content[fin:], n
 
 
-# Une balise ouvrante <a ...> et ce qu'elle entoure, jusqu'a sa fermeture. Les <a> ne s'imbriquent
-# pas en HTML, donc le non-gourmand ne peut pas sauter par-dessus une fermeture.
-_BALISE_A_RE = re.compile(r"<a\b([^>]*)>(.*?)</a\s*>", re.IGNORECASE | re.DOTALL)
-# Le href tel que le FICHIER l'ecrit, avec son guillemet : c'est lui qu'on clone.
-#
-# Distincte de `_HREF_ATTR_RE`, sa voisine, et pas par negligence : cette version-ci exige une
-# FRONTIERE de mot devant `href`. Sans elle, `<a data-href="/x" href="/y">` rend `/x` au premier
-# `search`, et on nommerait le lien d'apres la mauvaise cible. La voisine s'en passe parce qu'elle
-# balaie des balises <link> ou l'attribut est seul.
-#
-# Elle s'est d'abord appelee `_HREF_ATTR_RE`, ce qui ECRASAIT la voisine — meme module, derniere
-# definition gagnante. Les tests de cette famille-ci passaient tous ; 45 autres sont tombes. Voir
-# `test_aucun_nom_de_module_n_est_defini_deux_fois`, ecrit ce jour-la.
-_A_HREF_ATTR_RE = re.compile(r"\bhref\s*=\s*([\"'])(.*?)\1", re.IGNORECASE | re.DOTALL)
-_A_DEJA_NOMME_RE = re.compile(r"\b(aria-label|title)\s*=", re.IGNORECASE)
-
-
 def _poser_aria_label_sur_liens_sans_ancre(content: str, items: list[dict[str, str]]) -> tuple[str, int]:
-    """DETERMINISTE : nommer un lien interne qui n'offre aucune ancre, sans rien changer de visible.
+    """Nommer uniquement un vrai lien litteral vide, sans modifier les autres octets.
 
-    La famille `links_with_no_anchor_text` dit quel lien est muet ; elle ne dit pas comment
-    l'appeler. C'est la CIBLE qui tranche, et c'est une MESURE : elle a ete crawlee et se nomme
-    elle-meme (h1 unique, sinon <title>). Rien n'est redige ici — le nom vient du site.
-
-    On pose `aria-label`, pas un texte visible : le rendu de la page du client ne bouge pas, les
-    lecteurs d'ecran gagnent le nom qui leur manquait, et Google lit cet attribut comme ancre. Un
-    texte visible injecte dans un lien vide servant d'overlay casserait la mise en page.
-
-    TROIS GARDES, et chacune couvre un accident different :
-
-      - le href du fichier doit etre LITTERALEMENT celui que le crawl a vu. On ne resout aucune
-        URL, on ne devine aucun chemin : deux liens differents ne sont jamais confondus ;
-      - un <a> qui porte deja `aria-label` ou `title` n'est pas touche. C'est aussi ce qui rend
-        l'operation idempotente : repasser sur un fichier deja corrige n'ecrit rien ;
-      - ce que le <a> ENTOURE doit etre VIDE. Le moindre texte signifie que le fichier n'est pas
-        celui que le crawl a vu, ou qu'il a ete corrige entre-temps, et on s'abstient. Un
-        `{label}` de gabarit compte comme du texte : on ne sait pas ce qu'il rend, donc on n'y
-        touche pas. Une URL visible aussi — Ahrefs la compte comme une ancre valide (voir
-        `_nomme_la_cible` dans le crawler), et le correcteur n'a pas a etre plus severe que la
-        detection qui l'alimente.
-
-    Le guillemet et la valeur sont CLONES du href voisin, que le fichier vient d'ecrire, plutot
-    que supposes. Le nom, lui, est echappe : un h1 qui contient une apostrophe ou un & ne doit pas
-    pouvoir fermer l'attribut qu'on ouvre.
-
-    ON NE CHERCHE PAS QUELLE PAGE EST LE FICHIER, contrairement a `_add_reciprocal_hreflang`, et
-    c'est delibere. Son geste a lui ne vaut que sur une page precise, d'ou la lecture du canonical.
-    Ici le lien muet vit presque toujours dans un en-tete ou un pied PARTAGE — le fichier n'a alors
-    aucun canonical, et exiger qu'il se nomme reviendrait a ne jamais corriger le cas le plus
-    courant. Le href suffit a viser : nommer partout le meme lien muet est exactement ce qu'il
-    faut, puisque le crawl l'a signale sur chacune des pages qui l'affichent.
+    Le nom provient de la preuve de crawl ; ce geste ne revalide pas sa fraicheur.
+    Un aria-label apporte un nom accessible, sans garantir son usage comme ancre par Google.
+    Les commentaires, contextes non rendus, noms existants et gabarits ambigus restent intacts.
     """
-    voulus: dict[str, str] = {}
-    for it in (items or []):
-        href = str(it.get("field") or "").strip()
-        nom = str(it.get("value") or "").strip()
-        if href and nom:
-            voulus.setdefault(href, nom)
-    if not voulus:
-        return content, 0
-
-    compteur = {"n": 0}
-
-    def _nommer(m: "re.Match[str]") -> str:
-        attrs, interieur = m.group(1), m.group(2)
-        href_m = _A_HREF_ATTR_RE.search(attrs)
-        if not href_m:
-            return m.group(0)
-        nom = voulus.get(href_m.group(2).strip())
-        if not nom:
-            return m.group(0)
-        if _A_DEJA_NOMME_RE.search(attrs):
-            return m.group(0)
-        texte = re.sub(r"<[^>]*>", " ", interieur)
-        texte = html.unescape(texte).strip()
-        if texte:
-            return m.group(0)
-        q = href_m.group(1)
-        pose = ' aria-label=%s%s%s' % (q, html.escape(nom, quote=True), q)
-        compteur["n"] += 1
-        return "<a" + attrs[:href_m.end()] + pose + attrs[href_m.end():] + ">" + interieur + "</a>"
-
-    return _BALISE_A_RE.sub(_nommer, content), compteur["n"]
+    try:
+        from . import anchor_text
+    except ImportError:
+        import anchor_text
+    return anchor_text.rewrite(content, items)
 
 
 def _rewrite_og_url(content: str, pairs: list[dict[str, str]]) -> tuple[str, int]:
