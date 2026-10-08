@@ -1577,6 +1577,45 @@ HTTP ; les sources script/template de depot sont refusees. Aucun temoignage
 de ce banc ne certifie tous les frameworks, PostgreSQL, l'indexabilite de
 production ou la preparation globale aux clients.
 
+## Diagnostic historique canonical : retrait et refus (08/10/2026)
+
+`missing_canonical` etait deja masque, mais le correcteur le revendiquait encore
+et le conseil promettait un ajout systematique. Cette revendication est retiree,
+pas transformee en nouvelle reparation. Google peut choisir une URL canonique
+sans declaration explicite ; l'absence seule ne prouve pas un defaut a corriger
+([Search Central](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls?hl=fr)).
+Les doublons prouves gardent leur famille et leurs protections propres.
+
+Les variantes historiques restent dans le rapport brut mais sont masquees.
+Les API individuelles, apercus et confirmations refusent avant journal/cache,
+quota, GitHub ou IA, apres controle d'acces au projet. Preparation, execution
+interne et patch direct refusent aussi, meme avec un plan forge. Le groupe de
+refus est maintenant surveille par la garde existante des branchements ; aucune
+exception de couverture ni aucun test ignore n'est ajoute.
+
+`missing_canonical_policy_cycle.py --workdir EMPTY_TEMP_DIRECTORY` lit seulement
+la branche deja construite de la PR 96, fermee en brouillon sans fusion, au SHA
+`3a4a8c19c1d47c6d8a9453b5288545ec54349c8c`. Deux crawls conservent les 64 routes
+HTML, les autres comptes/exemples et le diagnostic a deux occurrences : 2 -> 2,
+pas une correction. Sources, SHA de blobs, corps HTTPS et XML sont inchanges.
+Les 49 entrees XML representent 48 URL distinctes ; le doublon volontaire de
+page absente reste intact. Les previews natives gardent leur noindex ; seule
+la mesure possedee utilise la projection de test existante, sans exemption produit.
+
+Le bilan `validation-missing-canonical-policy-2026-10-08.json` conserve aussi les
+premiers echecs du banc et les empreintes. La suite finale passe 6 009 tests,
+avec les memes 42 ignores ; les 115 nouveaux cas conservent les 5 936 anciens.
+La suite ciblee passe 3 492 tests sur 77 modules, avec deux ignores. Les neuf
+empreintes concordent entre les suites, le cycle et la contre-verification
+independante par HTMLParser/XML. Aucun appel IA, aucune ecriture distante,
+aucune nouvelle branche ou PR, aucun site client ni main modifies.
+
+L'inventaire passe de 65 a 64 familles revendiquees, pour les memes 64 familles
+visibles proposees. Les absences de mention exacte passent de deux a une par
+retrait du diagnostic cache, pas par preuve d'une reparation supplementaire.
+Cela ne certifie ni toutes les anomalies ni tous les frameworks, PostgreSQL,
+l'indexabilite de production ou la preparation globale aux premiers clients.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

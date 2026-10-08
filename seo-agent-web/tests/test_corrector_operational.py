@@ -231,6 +231,59 @@ def test_http_served_https_canonical_refuses_manual_endpoints_without_writes_or_
     assert not state["charges"] and not state["pr_bodies"]
 
 
+@pytest.mark.parametrize("mode", ["individual", "url_preview", "github_preview", "github_confirm"])
+@pytest.mark.parametrize("variant", ["", "_indexable", "_not_indexable", "uppercase", "whitespace"])
+def test_legacy_missing_canonical_refuses_before_journal_replay_or_any_cost(harness, monkeypatch, mode, variant):
+    state, run = harness
+    key = "missing_canonical" + (variant if variant.startswith("_") else "")
+    if variant == "uppercase":
+        key = key.upper()
+    elif variant == "whitespace":
+        key = " " + key + " "
+    state.update(key=key, sources={"index.html": HTML}, report={"issues": {key: {"count": 1, "examples": [URL]}}})
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Retired diagnostic must refuse before journal replay, quota, GitHub or AI")
+
+    for name in ("_github_api_get", "_github_api_post", "_github_api_put", "_openai_generate_file_patch",
+                 "_openai_url_fix", "_correction_gate", "_correction_charge", "_compte_payeur"):
+        monkeypatch.setattr(m, name, forbidden)
+    for name in ("find", "pending", "operation"):
+        monkeypatch.setattr(m.correction_journal, name, forbidden)
+    if mode == "individual":
+        result = run("individual")
+        assert result["status"] == 422 and not result["written"] and not result["ai_calls"]
+        body = result["response"]
+    else:
+        request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
+        request.state.user = state["user"]
+        response = (m.api_issue_url_fix(request, "review", key, url=URL) if mode == "url_preview"
+                    else m.api_github_fix(request, "review", key, m._GithubFixBody(url=URL,
+                        confirm=mode == "github_confirm", file_path="index.html", patched_content=HTML)))
+        assert response.status_code == 422
+        body = json.loads(response.body)
+    assert body["advisory"] is True and "diagnostic" in body["error"]
+    assert not state["charges"] and not state["pr_bodies"]
+
+
+@pytest.mark.parametrize("key", ["missing_canonical", "missing_canonical_indexable",
+                                "missing_canonical_not_indexable", "MISSING_CANONICAL", " missing_canonical "])
+def test_bulk_with_only_legacy_canonical_diagnostics_never_reads_or_writes_github(harness, monkeypatch, key):
+    state, run = harness
+    state.update(key=key, sources={"index.html": HTML}, report={"issues": {key: {"count": 1, "examples": [URL]}}})
+    monkeypatch.setattr(m, "_github_fixable_issue_candidates", ORIGINAL_CANDIDATES)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("A bulk report containing only retired diagnostics must not touch GitHub or spend tokens")
+
+    for name in ("_github_api_get", "_github_api_post", "_github_api_put", "_openai_generate_file_patch",
+                 "_correction_charge"):
+        monkeypatch.setattr(m, name, forbidden)
+    result = run("bulk")
+    assert result["status"] == 400 and result["response"]["ok"] is False
+    assert not result["written"] and not result["ai_calls"] and not state["charges"] and not state["pr_bodies"]
+
+
 @pytest.mark.parametrize("mode", ["individual", "bulk"])
 def test_shared_dead_canonical_keeps_each_page_and_its_alternates(harness, mode):
     state, run = harness

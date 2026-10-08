@@ -3704,6 +3704,8 @@ def _correction_operation(function):
         # Reclassified advice must also block replay of an older cached preview.
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
+        if str(bound.arguments.get("issue_key") or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
+            return JSONResponse({"ok": False, "advisory": True, "error": _LEGACY_CANONICAL_ADVICE}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
                 in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical", "page_referenced_for_more_than_one_language_in_hreflang", "links_with_no_anchor_text", "meta_description_too_short"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
@@ -4551,7 +4553,6 @@ _GENERIC_CONTENT_FIX_KEYS = {
     "missing_title", "missing_meta_description", "missing_h1",
     "duplicate_titles", "duplicate_meta_descriptions",
     "multiple_meta_description_tags", "duplicate_pages_without_canonical",
-    "missing_canonical",
 }
 
 
@@ -4628,11 +4629,17 @@ _HTTP_CANONICAL_ADVICE = (
     "puis configurer la redirection HTTP vers HTTPS au niveau de l'hebergement, du serveur ou du proxy. "
     "Le rapport ne prouve pas quelle configuration controle cet acces ; aucune correction HTML automatique."
 )
+_LEGACY_CANONICAL_ADVICE_KEYS = dash.LEGACY_CANONICAL_KEYS
+_LEGACY_CANONICAL_ADVICE = (
+    "L'absence seule de canonical est un diagnostic historique, pas la preuve d'un defaut SEO. "
+    "Aucune balise n'est ajoutee automatiquement. Examiner les doublons et les signaux existants ; "
+    "les groupes prouves relevent de la famille duplicate_pages_without_canonical, traitee separement."
+)
 _ADVISORY_ISSUE_KEYS = {
     "low_word_count", "slow_page", "page_size_exceeds_2mb", "content_is_not_sized_correctly",
     "font_size_too_small", "tap_targets_too_small_or_close", "not_compressed", "timed_out",
     "page_from_sitemap_timed_out", "orphan_page_indexable", "orphan_page_not_indexable",
-} | _HTTP_CANONICAL_ADVICE_KEYS
+} | _HTTP_CANONICAL_ADVICE_KEYS | _LEGACY_CANONICAL_ADVICE_KEYS
 _ADVISORY_ISSUE_TOKENS = (
     "word_count", "poor_cls", "poor_fid", "poor_inp", "poor_lcp", "cwv", "core_web_vital",
     "high_ai_content", "organic_traffic", "referring_domain", "serp_title", "and_serp_titles",
@@ -19797,9 +19804,8 @@ _PER_PAGE_ONLY_KEYS = _with_indexability_variants({
 })
 
 # Per-page content tags: the fix belongs in the flagged page's own source, so these page-target.
-# `missing_canonical` is here too (the page must be reached) but deliberately NOT in the
-# per-page-only set above: a shared layout that computes the canonical from the route is a
-# perfectly good fix, unlike a shared literal title.
+# The pure locator retains legacy `missing_canonical` compatibility, including computed
+# shared layouts. Correction entry points refuse this diagnostic before using the locator.
 # `canonical_points_to_4xx/5xx` : la bonne valeur est l'URL de la page ELLE-MEME, donc elle
 # differe pour chaque fichier. Mesure du 15/09/2026 : sans ciblage par page, le resolveur a
 # rendu CINQ fichiers pour UNE page signalee, et le modele a ecrit l'URL de cette page sur le
@@ -26985,6 +26991,9 @@ def _prepare_issue_fix(
     if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
         out["refusal"] = _HTTP_CANONICAL_ADVICE
         return out
+    if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
+        out["refusal"] = _LEGACY_CANONICAL_ADVICE
+        return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'meta_description_too_short':
         try:
             from . import short_description
@@ -27969,6 +27978,8 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
+    if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
+        return [], [_LEGACY_CANONICAL_ADVICE], [], []
     if (short_description_urls is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'meta_description_too_short'):
         return [], ['Description refusee : plan de page et contenu verifie requis.'], [], []
     if (anchor_text_items is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _ANCHOR_TEXT_KEYS):
@@ -28895,6 +28906,9 @@ def _apply_prepared_issue_fix(
     """Execute the same bounded repair for individual and grouped pull requests."""
     patched, skipped, targets, ai_files = [], [], [], []
     config_changes, config_notes = [], []
+    if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
+        return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
+                "config_changes": [], "config_notes": [], "error": _LEGACY_CANONICAL_ADVICE}
     if _length_family_name(issue_key) == 'meta' and prep.get('refusal'):
         return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
                 "config_changes": [], "config_notes": [], "error": prep['refusal']}

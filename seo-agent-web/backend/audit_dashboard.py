@@ -53,15 +53,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Keys that are present in report.json but are not shown as "issues" in the UI.
 # (Some are legacy catch-alls or noisy counters; keep them in report.json for debugging.)
+LEGACY_CANONICAL_KEYS = frozenset({
+    "missing_canonical", "missing_canonical_indexable", "missing_canonical_not_indexable",
+})
 NON_ISSUE_KEYS: set[str] = {
     "internal_pages",
     "bad_status",
-    # Parité Ahrefs, vérifiée sur le catalogue des 173 types : Ahrefs n'a AUCUNE anomalie
-    # « canonical manquant ». L'absence de canonical n'est pas un défaut en soi ; le cas nuisible
-    # est « Duplicate pages without canonical », que nous levons séparément. Consequence assumée :
-    # le correcteur garde un gestionnaire pour cette clé (elle reste corrigeable si elle remonte
-    # un jour) mais ne recevra jamais de tâche — ce n'est donc pas un trou du banc d'essai.
-    "missing_canonical",
+    # Absence alone is a legacy diagnostic, not an automatic canonical repair.
+    # Proven duplicate groups are handled separately; old report variants stay hidden too.
     # CWV helper issues (used for drilldowns from the CWV card).
     "cwv_lcp_pages_to_fix",
     "cwv_tbt_pages_to_fix",
@@ -71,7 +70,7 @@ NON_ISSUE_KEYS: set[str] = {
     "page_has_only_one_dofollow_incoming_internal_link_links",
     # Duplicate of css_not_minified + javascript_not_minified combined — suppressed to avoid triple-counting.
     "unminified_javascript_and_css_files",
-}
+} | LEGACY_CANONICAL_KEYS
 
 _RUNS_LOCALIZER: Callable[[Path], bool] | None = None
 
@@ -1231,7 +1230,7 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         return str(issue_key or "") in exports
 
     for key, block in issues.items():
-        if key in NON_ISSUE_KEYS:
+        if key in NON_ISSUE_KEYS or str(key).strip().lower() in LEGACY_CANONICAL_KEYS:
             continue
         if key in skip_keys:
             continue

@@ -194,6 +194,24 @@ def suggest_issue_fix(
     # repli generique — mesure du 15/09/2026 : 28 familles dans ce cas, dont trois `error`.
     lk = key.lower().removesuffix("_not_indexable").removesuffix("_indexable")
 
+    if lk == "missing_canonical":
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort, "sample_urls": sample_urls,
+            "why": "L'absence seule de canonical ne prouve pas un defaut SEO ni quelle URL devrait etre preferee.",
+            "fix": [
+                "Examiner les vrais doublons et les signaux existants avant de choisir une URL preferee.",
+                "Traiter les groupes prouves dans leur famille duplicate_pages_without_canonical, sans ajout systematique.",
+            ],
+            "verify": [
+                "Verifier les URL finales, les redirections, les canonicals et les entrees de sitemap du groupe concerne.",
+                "Recrawler la famille de doublons concernee ; ne pas utiliser ce compteur historique comme objectif de correction.",
+            ],
+            "auto_fixable": False,
+            "auto_fix_note": "Ce diagnostic historique n'autorise aucune correction HTML automatique.",
+            "mode": "suggest-only",
+        }
+
     if lk == "canonical_from_http_to_https":
         return {
             "key": key, "label": label, "category": category, "severity": severity,
@@ -312,16 +330,6 @@ def suggest_issue_fix(
         ]
 
     # Duplication / canonicals / variants
-    elif lk == "missing_canonical":
-        why = "Sans canonical, tu augmentes le risque de duplication (paramètres, variantes, etc.)."
-        fix = [
-            "Ajouter une balise canonical auto-référente sur les pages indexables.",
-            "Définir une politique d’URL (HTTPS, www ou non-www, trailing slash) et s’y tenir.",
-        ]
-        verify = [
-            "Relancer un crawl et vérifier « missing_canonical » et les issues liées aux canonicals.",
-            "Vérifier la cohérence canonicals ↔︎ URLs finales (pas de redirect/4xx/5xx).",
-        ]
     elif lk == "duplicate_titles":
         why = "Des titres dupliqués peuvent indiquer des pages trop proches (ou des variantes http/https/www) et nuisent au ciblage."
         if _looks_like_host_variant(sample_urls):
