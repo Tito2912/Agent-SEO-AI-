@@ -2952,12 +2952,12 @@ def _issue_fix_hint_lines(issue_key: str) -> list[str]:
             "Activer cache/CDN, lazy‑load, et définir width/height pour réduire les sauts de mise en page.",
         ],
         "structured_data_schema_org_validation_error": [
-            "Corriger le JSON‑LD (champs requis, types/schema) et re‑valider (Schema.org validator).",
-            "Vérifier que les valeurs (url, dates, auteur, image) sont au bon format.",
+            "Examiner les erreurs locales de syntaxe JSON-LD et le type declare avec le proprietaire du contenu.",
+            "Ne pas deviner de type ou de faits ; un prix price sous forme de texte est valide.",
         ],
         "structured_data_google_rich_results_validation_error": [
-            "Corriger les données structurées pour être éligible aux résultats enrichis (Rich Results Test).",
-            "S’assurer que les propriétés requises sont présentes et cohérentes avec le contenu de la page.",
+            "Examiner les questions et reponses FAQ incompletes signalees par le controle local.",
+            "Google a arrete les resultats enrichis FAQ le 7 mai 2026 ; ne pas inventer de contenu pour ce diagnostic.",
         ],
         "indexable_page_not_in_sitemap": [
             "Ajouter les pages indexables au sitemap XML et soumettre dans GSC.",
@@ -3706,6 +3706,9 @@ def _correction_operation(function):
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _LEGACY_CANONICAL_ADVICE}, status_code=422)
+        issue_key = str(bound.arguments.get("issue_key") or "").strip().lower()
+        if issue_key in _STRUCTURED_DATA_KEYS:
+            return JSONResponse({"ok": False, "advisory": True, "error": _structured_data_refusal(issue_key)}, status_code=422)
         if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
                 in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical", "page_referenced_for_more_than_one_language_in_hreflang", "links_with_no_anchor_text", "meta_description_too_short"}
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
@@ -4635,11 +4638,29 @@ _LEGACY_CANONICAL_ADVICE = (
     "Aucune balise n'est ajoutee automatiquement. Examiner les doublons et les signaux existants ; "
     "les groupes prouves relevent de la famille duplicate_pages_without_canonical, traitee separement."
 )
+_STRUCTURED_DATA_KEYS = _with_indexability_variants({
+    "structured_data_google_rich_results_validation_error",
+    "structured_data_schema_org_validation_error",
+})
+
+
+def _structured_data_refusal(issue_key: str) -> str:
+    key = issue_key.strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
+    reason = (
+        "Le diagnostic FAQ est un controle local, pas une validation Google. "
+        "Google a arrete les resultats enrichis FAQ le 7 mai 2026. "
+        if key == "structured_data_google_rich_results_validation_error" else
+        "Le diagnostic JSON-LD est un controle local de syntaxe et de type, pas une validation Schema.org externe. "
+    )
+    return (reason + "Aucune correction automatique : faire verifier les donnees existantes sans inventer "
+            "de type, de question ou de reponse. Un prix price en texte est valide et ne doit pas etre converti pour ce diagnostic.")
+
+
 _ADVISORY_ISSUE_KEYS = {
     "low_word_count", "slow_page", "page_size_exceeds_2mb", "content_is_not_sized_correctly",
     "font_size_too_small", "tap_targets_too_small_or_close", "not_compressed", "timed_out",
     "page_from_sitemap_timed_out", "orphan_page_indexable", "orphan_page_not_indexable",
-} | _HTTP_CANONICAL_ADVICE_KEYS | _LEGACY_CANONICAL_ADVICE_KEYS
+} | _HTTP_CANONICAL_ADVICE_KEYS | _LEGACY_CANONICAL_ADVICE_KEYS | _STRUCTURED_DATA_KEYS
 _ADVISORY_ISSUE_TOKENS = (
     "word_count", "poor_cls", "poor_fid", "poor_inp", "poor_lcp", "cwv", "core_web_vital",
     "high_ai_content", "organic_traffic", "referring_domain", "serp_title", "and_serp_titles",
@@ -19778,15 +19799,6 @@ _HEAD_HINTS: dict[str, str] = {
         "La Twitter Card est incomplète. Ajoute uniquement les balises twitter:* manquantes "
         "(twitter:card, twitter:title, twitter:description, twitter:image) sans dupliquer l'existant."
     ),
-    "structured_data_schema_org_validation_error": (
-        "Le JSON-LD schema.org de ces pages a une erreur de validation. Corrige UNIQUEMENT les "
-        "champs invalides/manquants requis par le type de schéma déclaré (garde le type et les "
-        "données existantes). Ne casse pas le JSON."
-    ),
-    "structured_data_google_rich_results_validation_error": (
-        "Le balisage structuré a une erreur de validation Google Rich Results. Corrige les champs "
-        "requis manquants/invalides du type déclaré, sans changer le type ni inventer de données."
-    ),
 }
 
 
@@ -21895,10 +21907,6 @@ _JSONLD_BLOCK_RE = re.compile(
     re.I | re.S)
 _NUMERIC_STRING_FIELD_RE = re.compile(
     r'("(?:price|lowPrice|highPrice|offerCount)"\s*:\s*)"(\d+(?:\.\d+)?)"')
-_STRUCTURED_DATA_KEYS = _with_indexability_variants({
-    "structured_data_google_rich_results_validation_error",
-    "structured_data_schema_org_validation_error",
-})
 
 
 # `[^<]*`, not `.*?`: a <title> can never contain a tag, and the lazy version happily matched
@@ -24700,12 +24708,10 @@ def _enforce_length_ceilings(new_content: str, old_content: str) -> tuple[str, l
 
 
 def _rewrite_jsonld_numeric_strings(content: str) -> tuple[str, int]:
-    """DETERMINISTIC JSON-LD repair (no AI): unquote numeric fields that are quoted.
+    """Legacy explicit numeric coercion, not a structured-data validation repair.
 
-    `"price": "0"` becomes `"price": 0`. Only inside a ld+json block, only for the four fields
-    schema.org types as Number, and only when the text is a bare number — `"29.99 USD"` stays a
-    string, because unquoting it would produce JSON that does not parse. `priceCurrency` is Text
-    by definition and never moves.
+    Price accepts Text as well as Number. Correction paths must not invoke this utility
+    merely because a local JSON-LD or FAQ diagnostic is present.
     """
     count = 0
 
@@ -26994,6 +27000,9 @@ def _prepare_issue_fix(
     if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
         out["refusal"] = _LEGACY_CANONICAL_ADVICE
         return out
+    if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
+        out["refusal"] = _structured_data_refusal(issue_key)
+        return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'meta_description_too_short':
         try:
             from . import short_description
@@ -27481,16 +27490,6 @@ def _prepare_issue_fix(
             if refused_pages:
                 out["side_effects"] = "\nEntrees laissees sans correction faute de destination verifiee : " + ", ".join(sorted(refused_pages))
         return out
-
-    if issue_key in _STRUCTURED_DATA_KEYS:
-        out["link_rewriter"] = lambda raw: _rewrite_jsonld_numeric_strings(raw)  # noqa: E731
-        # A framework builds the JSON-LD in code, where no literal block exists to repair.
-        out["rewriter_ai_fallback"] = True
-        out["extra_hint"] += (
-            "\nDans le JSON-LD, les champs numeriques de schema.org (price, lowPrice, highPrice, "
-            "offerCount) doivent etre des NOMBRES, pas des chaines : `\"price\": \"0\"` devient "
-            "`\"price\": 0`. Ne touche pas a priceCurrency (c'est du texte), ne change aucune "
-            "valeur, et laisse une chaine qui n'est pas un nombre pur (\"29.99 USD\") telle quelle.")
 
     if issue_key in _CANONICAL_BROKEN_KEYS:
         _cp, _refuses = _canonical_self_pairs(block, pages)
@@ -27980,6 +27979,8 @@ def _deep_patch_issue_files(
     import base64 as _b64
     if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
         return [], [_LEGACY_CANONICAL_ADVICE], [], []
+    if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
+        return [], [_structured_data_refusal(issue_key)], [], []
     if (short_description_urls is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'meta_description_too_short'):
         return [], ['Description refusee : plan de page et contenu verifie requis.'], [], []
     if (anchor_text_items is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _ANCHOR_TEXT_KEYS):
@@ -28909,6 +28910,9 @@ def _apply_prepared_issue_fix(
     if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
         return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
                 "config_changes": [], "config_notes": [], "error": _LEGACY_CANONICAL_ADVICE}
+    if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
+        return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
+                "config_changes": [], "config_notes": [], "error": _structured_data_refusal(issue_key)}
     if _length_family_name(issue_key) == 'meta' and prep.get('refusal'):
         return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
                 "config_changes": [], "config_notes": [], "error": prep['refusal']}

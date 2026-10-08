@@ -1,12 +1,6 @@
-"""A numeric schema.org field quoted as a string — one character per file.
+"""Compatibility tests of explicit coercion; price strings are valid, not repair targets.
 
-Measured on videocaptionstudio.com: `"offers": {"price": "0", "priceCurrency": "USD"}` on the
-four home pages (the fourth appeared only once the homepage stopped returning 404).
-
-Deliberately narrow. schema.org types `price`, `lowPrice`, `highPrice` and `offerCount` as
-Number; `priceCurrency` is Text and must never move. A quoted value that is not a bare number
-stays quoted, because unquoting it would produce JSON that does not parse — and the block is
-re-parsed before anything is written, so a repair can never leave invalid JSON-LD behind.
+The historical helper stays tested, but neither structured-data diagnostic may invoke it.
 """
 
 from __future__ import annotations
@@ -72,10 +66,11 @@ def test_a_block_that_would_stop_parsing_is_left_alone() -> None:
 
 
 def test_the_family_now_has_a_deterministic_rewriter() -> None:
+    """Keep the historical case: its former binding must now be refused, not silently run."""
     prep = app_module._prepare_issue_fix(
         issue_key="structured_data_google_rich_results_validation_error", issues={},
         impacted=["https://x.fr/"], all_paths=["index.html"], site_name="x.fr", owner="o",
         repo_name="r", branch="main", token="t", model_override="")
-    assert prep["link_rewriter"] is not None
-    assert prep["rewriter_is_ai"] is False, "unquoting a number must not be billed as model work"
-    assert "priceCurrency" in prep["extra_hint"]
+    assert prep["refusal"] and "price" in prep["refusal"]
+    assert prep["link_rewriter"] is None and not prep["rewriter_is_ai"] and not prep["rewriter_ai_fallback"]
+    assert not app_module._github_issue_auto_fixable("structured_data_google_rich_results_validation_error")

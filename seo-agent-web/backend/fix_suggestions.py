@@ -194,6 +194,24 @@ def suggest_issue_fix(
     # repli generique — mesure du 15/09/2026 : 28 familles dans ce cas, dont trois `error`.
     lk = key.lower().removesuffix("_not_indexable").removesuffix("_indexable")
 
+    if lk in {"structured_data_schema_org_validation_error", "structured_data_google_rich_results_validation_error"}:
+        faq = lk == "structured_data_google_rich_results_validation_error"
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort, "sample_urls": sample_urls,
+            "why": ("Le controle local detecte une FAQ incomplete, pas une validation Google. "
+                    "Les resultats enrichis FAQ ont ete arretes le 7 mai 2026." if faq else
+                    "Le controle local detecte du JSON invalide ou un @type manquant ; aucun validateur Schema.org externe n'est appele."),
+            "fix": (["Verifier les questions et reponses reellement publiees avant de completer ou retirer un balisage FAQ obsolete."] if faq else
+                    ["Verifier la syntaxe JSON et le type voulu avec le proprietaire du contenu avant toute modification."])
+                   + ["Ne pas inventer de type, de faits ou de contenu pour faire baisser le compteur."],
+            "verify": ["Recrawler la meme page et verifier les codes d'erreur locaux ; conserver les erreurs non resolues.",
+                       "Ce controle n'atteste ni validation externe ni affichage dans les resultats de recherche."],
+            "auto_fixable": False,
+            "auto_fix_note": "Aucune correction automatique prouvee. price accepte un texte ou un nombre : ne pas convertir un prix valide.",
+            "mode": "suggest-only",
+        }
+
     if lk == "missing_canonical":
         return {
             "key": key, "label": label, "category": category, "severity": severity,

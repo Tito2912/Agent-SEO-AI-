@@ -1616,6 +1616,43 @@ retrait du diagnostic cache, pas par preuve d'une reparation supplementaire.
 Cela ne certifie ni toutes les anomalies ni tous les frameworks, PostgreSQL,
 l'indexabilite de production ou la preparation globale aux premiers clients.
 
+## Donnees structurees : controles locaux et refus (08/10/2026)
+
+Les familles `structured_data_schema_org_validation_error` et
+`structured_data_google_rich_results_validation_error` restent visibles, avec
+leurs codes et compteurs, mais ne promettent plus une correction automatique.
+Le crawler mesure du JSON invalide, un type manquant et quatre cas de FAQ
+incomplete ; il n'appelle aucun validateur externe. L'ancien correcteur
+convertissait surtout les prix en nombres puis pouvait solliciter une IA libre.
+Or [price accepte aussi Text](https://schema.org/price) et
+[Google a arrete les resultats enrichis FAQ le 7 mai 2026](https://developers.google.com/search/updates?hl=fr).
+Le type voulu et les reponses manquantes exigent des donnees verifiees.
+
+Preparation, patch direct, execution interne et anciennes confirmations
+refusent avant GitHub, modele ou facturation. Les API verifient d'abord l'acces
+au projet et refusent avant journal/cache et quota. Le lot normal exclut ces
+familles. Les anciens cas de branchement prouvent desormais le refus du mauvais
+convertisseur, sans suppression de test ni nouvel ignore.
+
+`structured_data_policy_cycle.py --workdir EMPTY_TEMP_DIRECTORY` utilise huit
+routes HTTP possedees sur loopback et le vrai extracteur du crawler. Apres
+conseil, les erreurs JSON/type restent a 2 et les FAQ a 4 ; les deux prix valides
+restent sans erreur. Les octets ne changent pas et les serveurs sont arretes.
+Ce n'est ni une correction ni une attestation HTTPS publique. Une lecture
+distante independante de la PR 96 fermee, non fusionnee, conserve le prix texte,
+le type manquant et le noindex natif : compte JSON/type 1 -> 1, FAQ 0 -> 0.
+Cette fixture distante ne contient pas de temoin FAQ positif.
+
+Le bilan `validation-structured-data-policy-2026-10-08.json` conserve les preuves,
+les premieres tentatives et les empreintes. La suite complete passe 6 164 tests
+avec les memes 42 ignores ; les 155 nouveaux cas conservent les 6 051 anciens.
+La suite ciblee passe 3 663 tests sur 81 modules, avec deux ignores. Les 36
+anciens bilans sont inchanges. Aucun appel IA ni ecriture distante, aucun site
+client ni main modifies. L'inventaire passe de 64 a 62 familles automatiques
+visibles et de une a zero absences de mention exacte par retrait de promesses,
+pas par preuve de reparations supplementaires. Cela ne certifie pas la
+preparation globale aux clients, tous les frameworks ou PostgreSQL.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

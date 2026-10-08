@@ -284,6 +284,47 @@ def test_bulk_with_only_legacy_canonical_diagnostics_never_reads_or_writes_githu
     assert not result["written"] and not result["ai_calls"] and not state["charges"] and not state["pr_bodies"]
 
 
+@pytest.mark.parametrize("family", ["structured_data_schema_org_validation_error", "structured_data_google_rich_results_validation_error"])
+@pytest.mark.parametrize("variant", ["", "_indexable", "_not_indexable", "uppercase", "whitespace"])
+@pytest.mark.parametrize("mode", ["individual", "url_preview", "github_preview", "github_confirm", "bulk"])
+def test_structured_data_advice_blocks_old_endpoints_cache_and_costs(harness, monkeypatch, family, variant, mode):
+    state, run = harness
+    key = family + (variant if variant.startswith("_") else "")
+    key = key.upper() if variant == "uppercase" else " " + key + " " if variant == "whitespace" else key
+    state.update(key=key, sources={"index.html": HTML}, report={"issues": {key: {"count": 1, "examples": [URL]}}})
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Local JSON-LD advice must not rewrite content, replay an old preview or bill a model")
+
+    for name in ("_github_api_get", "_github_api_post", "_github_api_put", "_openai_generate_file_patch",
+                 "_openai_url_fix", "_correction_charge"):
+        monkeypatch.setattr(m, name, forbidden)
+    if mode == "bulk":
+        monkeypatch.setattr(m, "_github_fixable_issue_candidates", ORIGINAL_CANDIDATES)
+        result = run("bulk")
+        assert result["status"] == 400 and result["response"]["ok"] is False
+        assert not result["written"] and not result["ai_calls"]
+    else:
+        for name in ("_correction_gate", "_compte_payeur"):
+            monkeypatch.setattr(m, name, forbidden)
+        for name in ("find", "pending", "operation"):
+            monkeypatch.setattr(m.correction_journal, name, forbidden)
+        if mode == "individual":
+            result = run("individual")
+            assert result["status"] == 422 and not result["written"] and not result["ai_calls"]
+            body = result["response"]
+        else:
+            request = Request({"type": "http", "method": "POST", "path": "/", "headers": []})
+            request.state.user = state["user"]
+            response = (m.api_issue_url_fix(request, "review", key, url=URL) if mode == "url_preview"
+                        else m.api_github_fix(request, "review", key, m._GithubFixBody(url=URL,
+                            confirm=mode == "github_confirm", file_path="index.html", patched_content=HTML)))
+            assert response.status_code == 422
+            body = json.loads(response.body)
+        assert body["advisory"] is True and "local" in body["error"] and "automatique" in body["error"]
+    assert not state["charges"] and not state["pr_bodies"]
+
+
 @pytest.mark.parametrize("mode", ["individual", "bulk"])
 def test_shared_dead_canonical_keeps_each_page_and_its_alternates(harness, mode):
     state, run = harness

@@ -234,13 +234,13 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     ),
     "structured_data_schema_org_validation_error": IssueMeta(
         "structured_data_schema_org_validation_error",
-        "Structured data has schema.org validation error",
+        "JSON-LD invalide (controle local)",
         "Other",
         "notice",
     ),
     "structured_data_google_rich_results_validation_error": IssueMeta(
         "structured_data_google_rich_results_validation_error",
-        "Structured data has Google rich results validation error",
+        "FAQ JSON-LD incomplet (controle local)",
         "Other",
         "notice",
     ),

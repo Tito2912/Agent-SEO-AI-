@@ -245,6 +245,12 @@ def test_le_branchement_fournit_LE_BON_reecriveur(groupe: str, cle: str, bloc: d
                                                   attendu: str) -> None:
     """Debrancher la famille, ou la router ailleurs, doit se voir ici et nulle part ailleurs."""
     out = _prepare(cle, bloc)
+    if cle in m._STRUCTURED_DATA_KEYS:
+        # Preserve these historical parameter IDs while proving the old coercion is unreachable.
+        assert out['refusal'] and 'local' in out['refusal'] and 'price' in out['refusal']
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback'] and not out['rewriter_is_ai']
+        assert not m._github_issue_auto_fixable(cle)
+        return
     if cle == 'links_with_no_anchor_text':
         from tests.test_verified_anchor_text import prepare, ITEM
         assert out['refusal'] and out['anchor_text_items'] == []

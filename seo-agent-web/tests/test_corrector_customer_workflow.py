@@ -113,6 +113,35 @@ def test_last_credit_preview_can_be_confirmed_without_a_second_charge(customer):
     assert state["posts"][-1][1]["draft"] is True
 
 
+@pytest.mark.parametrize("family", ["structured_data_schema_org_validation_error", "structured_data_google_rich_results_validation_error"])
+@pytest.mark.parametrize("confirm", [False, True])
+@pytest.mark.parametrize("owned", [False, True])
+def test_real_customer_structured_advice_checks_access_before_refusal_without_spending(customer, monkeypatch, family, confirm, owned):
+    state, _, used, uid, slug = customer
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("A customer advisory request must not reach journal, quota, GitHub or model")
+
+    for name in ("_compte_payeur", "_correction_gate", "_correction_charge", "_github_api_get",
+                 "_github_api_post", "_github_api_put", "_openai_generate_file_patch"):
+        monkeypatch.setattr(m, name, forbidden)
+    for name in ("find", "pending", "operation"):
+        monkeypatch.setattr(m.correction_journal, name, forbidden)
+    try:
+        client = state["client"]
+        route = f"/api/projects/{slug if owned else 'unowned-project'}/issues/{family}/github-fix"
+        response = client.post(route, json={"url": URL, "confirm": confirm, "file_path": "index.html", "patched_content": NEW},
+            headers={m._CSRF_HEADER_NAME: client.cookies.get(m._CSRF_COOKIE_NAME, "")})
+        assert response.status_code == (422 if owned else 404), response.text
+        if owned:
+            assert response.json()["advisory"] is True and "local" in response.json()["error"]
+        assert used() == 0 and not state["models"] and not state["writes"] and not state["posts"]
+    finally:
+        with m.DB.session() as db:
+            db.execute(delete(User).where(User.id == uid))
+            db.commit()
+
+
 def test_auto_mode_can_apply_the_patch_written_with_the_last_credit(customer):
     state, send, used, _, _ = customer
     state["mode"] = "auto"
