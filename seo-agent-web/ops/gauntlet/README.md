@@ -1535,6 +1535,48 @@ le lecteur HTTP existant tolere les scripts de body mais n'atteste pas leur
 execution. Indexabilite de production, Claude reel, PostgreSQL et preparation
 globale aux clients restent a valider. Aucun site client ni main n'est modifie.
 
+## Descriptions courtes : extrait existant prouve (08/10/2026)
+
+`short_description_cycle.py --workdir EMPTY_TEMP_DIRECTORY` part du SHA
+`05ff4c231528a024f7f639a625edd1a5058dbd1e` du seul site HTML possede.
+Il ajoute trois temoins : description courte, description absente et langue
+racine inconnue. Chaque cycle autorise quatre PUT de preparation, deux PUT
+correctifs et au maximum deux appels Claude, sans reprise ni autre fournisseur.
+Les PR restent en brouillon et sont fermees sans fusion ; main reste intact.
+
+Le correcteur exige des observations typees coherentes, une page HTTPS directe
+indexable auto-canonique, une route HTML non partagee et des octets/SHA actuels.
+Toutes les sources et leurs paragraphes sont revus par HTTP avant le modele ;
+toutes les selections du lot precedent le premier PUT. Claude ne redige rien :
+il choisit un indice entier parmi des extraits existants de 100 a 160 caracteres,
+termines par une ponctuation. Le lexer commun borne le seul attribut content
+modifie ou l'unique balise head ajoutee. Cache obsolete, ambiguite, contexte
+masque, doublon connu et repli fichier libre sont refuses. Les descriptions
+longues sans echantillon litteral valide ne permettent pas de contourner ce
+plan ; l'application interne respecte aussi ce refus avant lecture ou IA.
+Les fichiers choisis avec IA restent factures et soumis a relecture, y compris
+lorsqu'ils ne contiennent qu'un extrait. Un PUT partiel n'est pas atomique.
+
+Le bilan `validation-short-description-2026-10-08.json` conserve les mesures,
+les tentatives precedentes et les empreintes. La suite finale passe 5 894 tests
+avec les memes 42 ignores ; les 223 nouveaux cas conservent tous les anciens.
+La suite ciblee passe 3 311 tests sur 71 modules, avec deux ignores. Le dernier
+cycle conserve les 64 routes HTML et les 49 entrees XML ; les deux sources
+selectionnees passent de deux anomalies a zero, mais la famille entiere reste
+a trois occurrences. Les PR 95/96 sont fermees sans fusion. Les sept empreintes
+figees concordent avec les suites, le cycle et la contre-verification fraiche.
+Six sondes normales refusent reellement les previews natives ; Chromium lit
+les balises head et conserve six paires de captures identiques en 1280x800 et
+390x844. Trois cycles ont utilise six appels Claude au total, dont deux sur la
+version finale. Le nettoyage du harness ne retire que ses propres donnees de
+test ; aucun plafond produit ni ancien test ignore n'est modifie.
+La preuve porte sur le contenu
+litteral publie, pas sur sa pertinence editoriale ni sur une visibilite CSS
+universelle. Les scripts de body servis ne sont pas executes dans l'attestation
+HTTP ; les sources script/template de depot sont refusees. Aucun temoignage
+de ce banc ne certifie tous les frameworks, PostgreSQL, l'indexabilite de
+production ou la preparation globale aux clients.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

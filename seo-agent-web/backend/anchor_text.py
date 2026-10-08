@@ -19,12 +19,12 @@ TOKEN = re.compile(r'''\s+([^\s=<>/"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'))?''')
 NAME = re.compile(r'[a-z_:][a-z0-9_.:-]*', re.I)
 
 
-def literal_attributes(text, tag, attrs):
+def literal_tokens(text, tag, attrs):
     prefix = re.match(r'<' + re.escape(tag) + r'\b', text, re.I)
     close = re.search(r'\s*/?>$', text)
     if not prefix or not close or len(dict(attrs)) != len(attrs):
         return None
-    tokens, href, position = [], None, prefix.end()
+    tokens, spans, position = [], {}, prefix.end()
     while position < close.start():
         match = TOKEN.match(text, position, close.start())
         if not match or not NAME.fullmatch(match[1]):
@@ -35,10 +35,19 @@ def literal_attributes(text, tag, attrs):
         if value and any(marker in value for marker in ('{', '}', '<%', '%>')):
             return None
         tokens.append((key, value))
-        if key == 'href' and group:
-            href = (match.end(group) + 1, text[match.start(group) - 1])
+        if group:
+            spans[key] = (match.start(group), match.end(group), text[match.start(group) - 1])
         position = match.end()
-    return (dict(tokens), href) if tokens == attrs else None
+    return (dict(tokens), spans) if tokens == attrs else None
+
+
+def literal_attributes(text, tag, attrs):
+    parsed = literal_tokens(text, tag, attrs)
+    if not parsed:
+        return None
+    values, spans = parsed
+    href = spans.get('href')
+    return values, (href[1] + 1, href[2]) if href else None
 
 
 def uncertain(attrs):

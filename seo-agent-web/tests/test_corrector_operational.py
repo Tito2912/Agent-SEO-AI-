@@ -122,7 +122,14 @@ def harness(monkeypatch):
         }
         return result
 
-    return state, run
+    try:
+        yield state, run
+    finally:
+        # Own fixture rows must not fill the bounded PR sweep in later modules.
+        from sqlalchemy import delete
+        with m.DB.session() as db:
+            db.execute(delete(User).where(User.id == user.id))
+            db.commit()
 
 
 @pytest.mark.parametrize("case,key", [
@@ -305,7 +312,8 @@ def test_https_canonical_upgrade_requires_observed_destination_in_both_endpoints
     "page_referenced_for_more_than_one_language_in_hreflang",
     "page_referenced_for_more_than_one_language_in_hreflang_not_indexable",
     " PAGE_REFERENCED_FOR_MORE_THAN_ONE_LANGUAGE_IN_HREFLANG ",
-    "links_with_no_anchor_text", "links_with_no_anchor_text_not_indexable", " LINKS_WITH_NO_ANCHOR_TEXT "])
+    "links_with_no_anchor_text", "links_with_no_anchor_text_not_indexable", " LINKS_WITH_NO_ANCHOR_TEXT ",
+    "meta_description_too_short", "meta_description_too_short_not_indexable", " META_DESCRIPTION_TOO_SHORT "])
 def test_canonical_cannot_bypass_evidence_through_model_preview(harness, monkeypatch, mode, key):
     state, _ = harness
 
@@ -855,6 +863,58 @@ def test_anchor_name_endpoints_require_current_source_and_target_without_ai(harn
             assert any(other in body for body in state['pr_bodies'])
     else:
         assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
+
+
+@pytest.mark.parametrize('mode', ['individual', 'bulk'])
+@pytest.mark.parametrize('case', ['verified', 'absent', 'unobserved', 'stale', 'source_probe', 'invalid_model',
+    'invented_model', 'unknown_fields', 'shared', 'no_excerpt', 'partial', 'existing_duplicate'])
+def test_short_description_endpoints_use_verified_excerpts_and_charge_only_written_ai_files(harness, monkeypatch, mode, case):
+    from tests.test_verified_short_description import KEY, SHORT, FACT, source, page
+    state, run = harness
+    absent = case == 'absent'
+    raw, rows, impacted = source(absent=absent), [page(absent=absent)], [URL]
+    state.update(key=KEY, sources={'index.html': raw})
+    if case == 'unobserved':
+        rows = []
+    elif case == 'stale':
+        state['sources']['index.html'] = raw.replace(SHORT, 'Changed', 1)
+    elif case == 'unknown_fields':
+        del rows[0]['meta_description_tag_count']
+    elif case == 'shared':
+        state['sources'] = {'src/components/index.html': raw}
+    elif case == 'no_excerpt':
+        state['sources']['index.html'] = raw.replace(FACT, 'Un texte court.')
+    elif case == 'partial':
+        impacted.append(URL + 'unknown')
+    elif case == 'existing_duplicate':
+        existing = page(URL + 'existing')
+        existing['meta_description'] = FACT
+        rows.append(existing)
+    state['report'] = {'issues': {KEY: {'count': len(impacted), 'examples': impacted, 'length_samples': {
+        URL: {'rendered': '' if absent else SHORT, 'len': 0 if absent else len(SHORT)}}}}, 'pages': rows}
+    probes, selections = [], []
+    def probe(url, *args):
+        probes.append(url)
+        return case != 'source_probe'
+    def ai(**kw):
+        assert probes == [URL]
+        selections.append(kw)
+        return {'candidate': True} if case == 'invalid_model' else {'value': 'invented'} if case == 'invented_model' else {'candidate': 0}
+    monkeypatch.setattr(m, '_short_description_page', probe)
+    monkeypatch.setattr(m, '_correction_ai_json', ai)
+    for name in ('_openai_generate_file_patch', '_ai_map_urls_to_files', '_ai_pick_repo_files'):
+        monkeypatch.setattr(m, name, lambda *a, **kw: pytest.fail('No short-description model fallback'))
+    result = run(mode)
+    if case in {'verified', 'absent', 'partial'}:
+        expected = (raw.replace('</head>', '<meta name="description" content="' + FACT + '" />\n</head>', 1)
+                    if absent else raw.replace('content="' + SHORT + '"', 'content="' + FACT + '"', 1))
+        assert result['status'] == 200 and result['written'] == {'index.html': expected}
+        assert len(selections) == 1 and state['charges'] == [1] and state['pr_bodies']
+        if case == 'partial':
+            assert any(URL + 'unknown' in body for body in state['pr_bodies'])
+    else:
+        assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
+        assert len(selections) == (1 if case in {'invalid_model', 'invented_model'} else 0)
 
 
 def test_bulk_does_not_silently_stop_at_five_families(harness, monkeypatch):
