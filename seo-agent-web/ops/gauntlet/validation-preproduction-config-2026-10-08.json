@@ -1,0 +1,159 @@
+{
+  "date": "2026-10-08",
+  "status": "isolated_preproduction_configuration_prepared_and_locally_measured_not_created",
+  "client_readiness_certified": false,
+  "universal_corrector_certification": false,
+  "preproduction_resources_created": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "paid_model_calls": 0,
+  "tested_agent_parent_commit": "e7245650b0fd00fcd7fb4c7ee2eff40f66713d20",
+  "change": {
+    "reason": "The owner confirmed no preproduction exists. Prepare a distinct Blueprint and explicit initial guards before actual hosting acceptance.",
+    "blueprint": "render.preproduction.yaml",
+    "creation_guide": "ops/gauntlet/PREPRODUCTION.md",
+    "new_resource_names": ["noyaru-preproduction-web", "noyaru-preproduction-worker", "noyaru-preproduction-db", "noyaru-preproduction-shared"],
+    "branch": "codex/corrector-recovery-20261003",
+    "production_blueprint_or_existing_services_modified": false,
+    "paid_infrastructure_requires_explicit_creation_and_dashboard_cost_review": true,
+    "service_auto_deploy_on_commit_disabled": true,
+    "blueprint_auto_sync_requires_separate_dashboard_action_after_creation": true,
+    "cron_services_preview_environments_and_custom_domains_declared": false,
+    "dedicated_database_and_generated_shared_encryption_seed": true,
+    "external_credentials_initially_blank": true,
+    "signup_initially_closed_except_existing_bootstrap_policy": true,
+    "opt_in_web_scheduler_startup_guard": "SEO_AGENT_DISABLE_SCHEDULERS",
+    "scheduler_guard_stops_worker_jobs_manual_cron_routes_or_already_running_threads": false,
+    "opt_in_response_noindex_guard": "SEO_AGENT_NOINDEX",
+    "noindex_is_access_control": false,
+    "default_web_behavior_preserved_when_flags_absent_or_false": true,
+    "new_successfully_repaired_families_claimed": 0
+  },
+  "official_schema_validation": {
+    "artifact": "schema-validation-final.json",
+    "sha256": "ad202024ca0e9428951a1b8c1c7571b4414633fcd603dd786998e398aa94476b",
+    "schema_url": "https://render.com/schema/render.yaml.json",
+    "schema_sha256": "a0d4e8a3eb119a1b63657741757e3c25c091b3ce463c4be8c90e8026678d8163",
+    "blueprint_sha256": "7cd4f50111806cc5f6fd3a66280746054a0c8b1c90c9cf677e6601d352a6f2e3",
+    "valid": true,
+    "validator": "jsonschema 4.26.0, Draft 2020-12, disposable Linux runtime only",
+    "validation_scope": "Local structural validation against the downloaded official schema; not authenticated Render CLI/API validation, resource resolution or provisioning.",
+    "render_cli_or_api_validation": false,
+    "generated_values_and_remote_service_references_resolved": false,
+    "primary_documentation": ["https://render.com/docs/blueprint-spec", "https://render.com/docs/infrastructure-as-code", "https://render.com/docs/postgresql-creating-connecting"],
+    "postgres_major_version": "16",
+    "postgres_version_scope": "Matches historical owned local PostgreSQL 16.15 evidence, not an observation of the production or future Render database version/capacity.",
+    "actual_cost_estimate_or_capacity_certified": false
+  },
+  "owned_linux_opt_in_guard_measurement": {
+    "artifact": "guards-cycle/result.json",
+    "result_sha256": "05e8fdfaebffb33f98c89346436aebad062667f2cb92e9cb8e59264a632c9d7e",
+    "web_log_sha256": "41a8d4552531cd58f2d380047ef8b928f825600c9651325913a43279a3766302",
+    "migration_log_sha256": "a838253959ffe9192b07483a98572bf48d9952ed750302612f89e6e5ed4165ce",
+    "real_alembic_and_uvicorn_without_bootstrap_stubs": true,
+    "database_and_http_scope": "New owned loopback fixture, SQLite migrated to 20261003_0013, synthetic keys and Basic auth; no Render resource or customer database.",
+    "actual_http_checks": 10,
+    "all_measured_responses_include_noindex": true,
+    "head_and_early_401_403_303_responses_measured": true,
+    "valid_fixture_basic_auth_positive_control": true,
+    "pr_scheduler_started": false,
+    "content_scheduler_started": false,
+    "web_worker_threads": 0,
+    "local_plan_restoration_and_shutdown_observed": true,
+    "external_child_network_attempts": 0,
+    "all_owned_children_stopped": true,
+    "render_docker_postgres_or_external_integrations_exercised": false
+  },
+  "owned_linux_default_behavior_measurement": {
+    "artifact": "default-process-cycle/result.json",
+    "result_sha256": "3fae19d955c4160a1ffc56dfe01f4a21d0d96efcc5e6d3a546bbe5246b94c656",
+    "migration_log_sha256": "a838253959ffe9192b07483a98572bf48d9952ed750302612f89e6e5ed4165ce",
+    "entrypoint": "python ops/gauntlet/startup_policy_cycle.py --workdir NEW_TEMP_DIRECTORY",
+    "web_start_stop_cycles": 2,
+    "valid_separate_worker_start_stop_cycles": 2,
+    "both_web_schedulers_started_without_opt_in_guard": true,
+    "invalid_encryption_worker_refused_before_threads_or_queue_claim": true,
+    "synthetic_unsupported_jobs_processed_once": 6,
+    "synthetic_unknown_dispatch_is_not_a_correction": true,
+    "local_plan_restored_in_both_roles_after_restart": true,
+    "external_child_network_attempts": 0,
+    "all_children_stopped": true,
+    "shutdown_scope": "SIGTERM after synthetic jobs finish, not interrupted real crawl recovery; no assertion that all background threads are joined.",
+    "docker_or_render_exercised": false,
+    "postgres_or_customer_capacity_certified": false
+  },
+  "final_tests": {
+    "windows_full": {
+      "artifact": "final-windows-full/junit.xml", "passed": 7406, "skipped": 42,
+      "failed": 0, "errors": 0, "warnings": 455, "junit_seconds": 269.524,
+      "python": "3.13.7", "junit_sha256": "02206f89ebb46a41c2d5fc893a0a60a63e5bb2f17614c75801c9fe0c0896b668"
+    },
+    "windows_targeted": {
+      "artifact": "final-windows-targeted/junit.xml", "passed": 5001, "skipped": 2,
+      "failed": 0, "errors": 0, "warnings": 276, "junit_seconds": 86.856, "modules": 91,
+      "python": "3.13.7", "junit_sha256": "c8977cc3380f2c4205c9fc4d6d1ab5cde142885c82314563f0f11b3b80b5c32f"
+    },
+    "linux_targeted": {
+      "artifact": "final-linux-targeted/junit.xml", "passed": 5001, "skipped": 2,
+      "failed": 0, "errors": 0, "warnings": 276, "junit_seconds": 405.838, "modules": 91,
+      "python": "3.12.3", "junit_sha256": "80c821c71f54f792cb2f8d238d03e42dd057ef0a388827d6480c10ee2400693b"
+    },
+    "linux_full_suite_run_in_this_phase": false,
+    "old_full_case_occurrences_retained": 7417,
+    "new_case_occurrences": 31,
+    "same_42_skipped_cases_and_reasons": true,
+    "historical_records_unchanged": 39,
+    "frozen_sources_match_final_suites_process_measurements_and_staged_code": true,
+    "provider_keys_blank_and_background_worker_disabled_in_unit_test_environments": true
+  },
+  "frozen_normalized_sha256": {
+    "backend/app.py": "ac781d920eeab835b696299c820e50b5ad4e5f4725d7f2263895284e4a0f9a47",
+    "../render.preproduction.yaml": "7cd4f50111806cc5f6fd3a66280746054a0c8b1c90c9cf677e6601d352a6f2e3",
+    "tests/test_preproduction_configuration.py": "0663cbb54a059fbbfbf2db35a7024894c8516f30223a9ca1c6b3908e2cfc8b10"
+  },
+  "earlier_attempts_retained": [
+    {"artifact": "red-windows/junit.xml", "passed": 4, "failed": 13, "errors": 14,
+      "sha256": "b0ccae7039a3a91b02620030d07ef9ceab672ab7a494412d9eadfe85063f54c4",
+      "reason": "Frozen pre-change app lacked opt-in guards: 13 semantic failures, four passing default controls. The 14 FileNotFoundError fixture errors only reflect the then-absent new Blueprint, not runtime failures."},
+    {"artifact": "focused-windows/junit.xml", "passed": 30, "failed": 1,
+      "sha256": "c08ae0c5cdbcba34475d8f65c32f6642ef2bef7de04cc6ea9419699a2db80e6c",
+      "reason": "Unquoted YAML off was parsed as boolean false by PyYAML. Quoted all three off values, retaining the string contract and unchanged assertions."},
+    {"artifact": "schema-validation.json", "valid": false,
+      "sha256": "3055c7c97a7a611b5e27a12bb7188026b7f1056e82f19d3e1f21561b44c2852d",
+      "reason": "The same unquoted off values failed the official schema. The final structural validation follows the corrected quoted YAML, not a weakened schema."}
+  ],
+  "read_only_inventory": {
+    "artifact": "inventory-before-receipt.json",
+    "sha256": "2199ef09e405e28b8ae5ac7cfbd286e4eb051e2b895a4f9f1bf1bc538949ea10",
+    "catalog_keys": 203, "manual_catalog_keys": 131,
+    "claimed_and_visible_offered_families": 62,
+    "preview_capable_families": 47, "deep_only_families": 15,
+    "family_claims_and_individual_policy_changed": false,
+    "inventory_mentions_are_not_repair_certification": true
+  },
+  "evidence_provenance": {
+    "baseline_artifact": "baseline.json",
+    "baseline_sha256": "e2f3f9769c2cedc30af057dbaa5345c98166f5bcb42b4cc5f2c765685c58dd86",
+    "verification_artifact": "verification.json",
+    "verification_sha256": "daa7fed8fc29e8950851c449e653ef44c175e3cd89d27bbe4b6ecbebfa7c3c9d",
+    "verification_script_sha256": "464ab1cfb6ea16d9bae7a2f87084f69f2add90cd37e61643ee8c98d2d2320f6c",
+    "test_runner_sha256": "e47c2ed09fab5779575a3ca1c926b9eb7e0e5bef6e70aa805efd3dc34e73ec14",
+    "guard_measurement_script_sha256": "a8b7657cef5a465b870d731c4bc482530a14385d65d4c6bd83265451abe0735a",
+    "linux_runtime": "Reused disposable Python 3.12.3 overlay and extracted browser libraries from validation-service-startup-policy-2026-10-08.json. Added JSON Schema validator dependencies only to that overlay, not system packages or product requirements.",
+    "production_render_dockerfile_requirements_and_worker_source_unchanged": true
+  },
+  "evidence_root": "C:/Users/Caron/AppData/Local/Temp/seo-preproduction-config-20261008-lIgvYB",
+  "remaining_release_gates": [
+    "Review cost and explicitly create a new isolated Render Blueprint; disable its Auto Sync, retain manual service deployment, verify both actually deployed Git revisions and generated/reference-resolved configuration.",
+    "Build and measure actual Docker/Render startup, concurrent migrations, PostgreSQL pool, bounded workload, shutdown/restart and dedicated shared S3 artefacts. A diskless worker and web disk do not share files without external storage.",
+    "Configure only dedicated service test credentials, bounded explicitly authorized Claude calls, non-admin onboarding, owned GitHub permissions, Stripe test payments and repeated/delayed webhooks; shared initial plan JSON does not synchronize later UI or disk overrides.",
+    "Set operational receipt retention, backup/restore and operator recovery; define explicit stacks/sources/families admitted to a supervised draft-PR pilot with before/after recrawls, builds and retained refusals."
+  ],
+  "remaining_limits": [
+    "No hosted preproduction, agent deployment, customer change, paid service creation, live payment, paid model call or main merge in this phase.",
+    "Blueprint syntax and local opted-in HTTP/startup guards are measured, not correction of additional anomaly families or universal/customer readiness certification.",
+    "noindex is a robot instruction, not confidentiality; public routes remain accessible and unhandled server errors are not guaranteed covered. The scheduler flag requires restart and does not disable queued/manual work or retention by itself.",
+    "Initial external keys are blank and both model providers set to none. Integrations and cross-service artefact sharing cannot be exercised until dedicated test configuration is supplied; the YAML is not a ready customer workflow.",
+    "No actual Render reference resolution, generated-secret validation, capacity/cost measurement, new PostgreSQL proof or interrupted real crawl recovery. Docker and psql are unavailable locally. Historical unchanged PostgreSQL proofs remain bounded to their own evidence."
+  ]
+}

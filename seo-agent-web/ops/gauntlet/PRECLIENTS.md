@@ -46,6 +46,13 @@ recette Docker/Render ou une mesure de charge PostgreSQL. Un override de plan
 disponible localement n'est pas pour autant partage entre deux machines : leur
 coherence et leur persistance doivent etre verifiees sur l'hebergement cible.
 
+La preproduction n'existe pas encore. Une configuration de **nouveau** Blueprint
+et [son guide de creation](PREPRODUCTION.md) sont prepares, avec base/secrets
+dedies, integrations initialement vides et boucles PR/contenu desactivees.
+Le schema officiel Render et les garde-fous ont ete controles localement ;
+[le bilan](validation-preproduction-config-2026-10-08.json) distingue ces preuves
+d'une creation payante, d'un build Docker et d'une recette sur l'hebergeur.
+
 Les derniers tests SQLite ignores ne retirent pas les preuves PostgreSQL
 historiques. Ils ne constituent pas non plus une nouvelle verification de la
 configuration, du pool ou de la charge du futur hebergement.

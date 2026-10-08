@@ -10071,8 +10071,11 @@ def _startup() -> None:
     _initialize_service(service_mode="web")
     _start_job_worker()
     _start_retention()
-    _start_verification_pr()
-    _start_contenu_auto()
+    if _env_bool("SEO_AGENT_DISABLE_SCHEDULERS"):
+        logger.warning("[SCHEDULERS] PR verification and automatic content disabled by SEO_AGENT_DISABLE_SCHEDULERS")
+    else:
+        _start_verification_pr()
+        _start_contenu_auto()
 
 
 def _shutdown() -> None:
@@ -11559,6 +11562,14 @@ async def csrf_middleware(request: Request, call_next):  # type: ignore[no-untyp
     response = await call_next(request)
     if needs_cookie_set:
         _set_lax_cookie(response, request=request, name=_CSRF_COOKIE_NAME, value=csrf_token)
+    return response
+
+
+@app.middleware("http")
+async def noindex_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
+    response = await call_next(request)
+    if _env_bool("SEO_AGENT_NOINDEX"):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
 

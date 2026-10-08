@@ -177,6 +177,20 @@ Depuis `seo-agent-web/`, le banc Linux `ops/gauntlet/startup_policy_cycle.py` te
 possédés, SQLite migré et une file synthétique. Il ne remplace ni une recette
 Docker/Render, ni une mesure du pool PostgreSQL, ni l'arrêt d'un vrai crawl en vol.
 
+### Preproduction isolee
+
+Suivre [le guide de creation](seo-agent-web/ops/gauntlet/PREPRODUCTION.md) avec
+`render.preproduction.yaml` dans un **nouveau** Blueprint. Cette configuration
+prepare des ressources payantes, sans les creer ni deployer. Ne pas synchroniser
+le Blueprint de production ; desactiver aussi Auto Sync dans Render apres creation.
+
+`SEO_AGENT_DISABLE_SCHEDULERS=true` empeche au demarrage les boucles PR/contenu
+du web, sans couper les jobs, le worker ou les routes cron manuelles.
+`SEO_AGENT_NOINDEX=true` ajoute un en-tete aux reponses traitees, pas une
+protection d'acces. Les deux options sont inactives par defaut et demandent une
+configuration explicite. Les credentials externes sont initialement vides :
+configurer uniquement les integrations de recette avant de les tester.
+
 ## Rotation clé de chiffrement (secrets)
 
 Les secrets côté serveur sont chiffrés (préfixe `enc:`). Pour faire une rotation sans casser la lecture des anciens secrets :

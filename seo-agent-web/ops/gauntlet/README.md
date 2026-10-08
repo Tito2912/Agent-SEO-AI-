@@ -1717,6 +1717,33 @@ extraites dans un runtime temporaire, sans changer le systeme ou le Dockerfile.
 Le banc de processus valide deux cycles et six refus de dispatch synthetiques,
 pas six corrections SEO. Aucun deploiement ou appel IA payant dans cette phase.
 
+## Preparer la preproduction (08/10/2026)
+
+`render.preproduction.yaml` prepare un **nouveau** Blueprint : deux services,
+une base et un groupe de variables dedies, sans reutiliser les ressources de
+production. Aucun service n'a ete cree ou deploye. Le schema JSON officiel
+Render accepte sa structure ; ce controle local ne resout pas les references
+Render et ne remplace pas une validation API, un build ou la recette hebergee.
+Les ressources sont payantes. Suivre [le guide](PREPRODUCTION.md), verifier le
+cout puis desactiver Auto Sync ; `autoDeployTrigger: "off"` ne coupe que le
+deploiement sur commit des services, pas la synchronisation du Blueprint.
+
+Deux garde-fous opt-in couvrent le premier demarrage :
+`SEO_AGENT_DISABLE_SCHEDULERS=true` empeche les boucles PR/contenu du web,
+sans couper worker, jobs ou routes cron manuelles ; `SEO_AGENT_NOINDEX=true`
+ajoute un en-tete, sans rendre les pages publiques confidentielles. Les
+credentials externes sont initialement vides et les integrations non testees.
+L'absence des options conserve le comportement habituel, mesure sur deux
+cycles de vrais processus et six refus de dispatch synthetiques.
+
+Le bilan `validation-preproduction-config-2026-10-08.json` conserve 31 nouveaux
+cas : 7 406 tests passent sous Windows avec les memes 42 ignores ; les 91
+modules cibles passent 5 001 tests et deux ignores sous Windows et Linux.
+Les 7 417 anciens cas et les 39 bilans historiques sont conserves. Un autre
+vrai Uvicorn local valide dix reponses HTTP avec noindex, y compris les refus
+d'acces, et l'absence des deux schedulers. Cela ne prouve ni Docker/Render,
+ni PostgreSQL cible, stockage partage, Stripe, GitHub, Claude ou recette client.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,
