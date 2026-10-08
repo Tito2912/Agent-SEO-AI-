@@ -1653,6 +1653,32 @@ visibles et de une a zero absences de mention exacte par retrait de promesses,
 pas par preuve de reparations supplementaires. Cela ne certifie pas la
 preparation globale aux clients, tous les frameworks ou PostgreSQL.
 
+## Politique individuelle et recette clients (08/10/2026)
+
+La selection opt-in du lot ne suffisait pas : les routes individuelles et la
+fiche pouvaient encore proposer une IA libre pour des diagnostics manuels.
+Elles utilisent maintenant la meme politique. Les 131 cles manuelles du
+catalogue refusent avant payeur, journal/cache, quota, GitHub ou modele, meme
+avec une confirmation ancienne ou un plan forge. Les diagnostics, conseils,
+exports et suivis restent accessibles ; un ancien plan ne reactive pas les
+boutons. L'execution normalise les cles, mais retrouve aussi un recu anterieur
+correspondant a la cle exacte sans reecrire son identite ni repayer l'apercu.
+Les 15 familles protegees utilisent la route etendue, sans apercu
+libre ; les 47 autres familles revendiquees conservent leur parcours d'apercu.
+Ces autorisations ne certifient pas toutes leurs occurrences.
+
+Depuis `seo-agent-web`, `python ops/gauntlet/preclients_audit.py --output
+NEW_TEMP_REPORT.json` reconstruit la matrice des 203 cles et les mentions des
+bilans, dans une base temporaire, sans IA ni acces GitHub. Ce CLI ne teste pas
+les API et n'atteste pas une reparation ou une mise en production.
+
+[La recette avant pilote](PRECLIENTS.md) distingue les preuves deja acquises
+des controles restants : preproduction isolee, reprise operateur, parcours de
+compte/paiement en mode test et perimetre explicite de sites admis. Le bilan
+`validation-correction-capability-policy-2026-10-08.json` conserve les tests
+des API, les controles navigateur et les echecs intermediaires. Aucun
+deploiement, fusion dans main ou changement de site client dans cette phase.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

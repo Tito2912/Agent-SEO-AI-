@@ -3701,16 +3701,22 @@ def _correction_operation(function):
         project = _db_project_or_404(request, slug)
         import inspect
         bound = inspect.signature(function).bind(request, slug, *args, **kwargs)
+        bound.apply_defaults()
         # Reclassified advice must also block replay of an older cached preview.
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _HTTP_CANONICAL_ADVICE}, status_code=422)
         if str(bound.arguments.get("issue_key") or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _LEGACY_CANONICAL_ADVICE}, status_code=422)
-        issue_key = str(bound.arguments.get("issue_key") or "").strip().lower()
+        raw_issue_key = bound.arguments.get("issue_key")
+        issue_key = str(raw_issue_key or "").strip().lower()
         if issue_key in _STRUCTURED_DATA_KEYS:
             return JSONResponse({"ok": False, "advisory": True, "error": _structured_data_refusal(issue_key)}, status_code=422)
-        if (str(bound.arguments.get("issue_key") or "").strip().lower().removesuffix("_not_indexable").removesuffix("_indexable")
-                in {"canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page", "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https", "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing", "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical", "page_referenced_for_more_than_one_language_in_hreflang", "links_with_no_anchor_text", "meta_description_too_short"}
+        if "issue_key" in bound.arguments:
+            if not _github_issue_auto_fixable(issue_key):
+                return JSONResponse({"ok": False, "advisory": True, "error": _UNCLAIMED_CORRECTION_ADVICE}, status_code=422)
+            # Eligibility and execution must use the same key, including journal replay.
+            bound.arguments["issue_key"] = issue_key
+        if (issue_key.removesuffix("_not_indexable").removesuffix("_indexable") in _ISSUE_DEEP_FIX_ONLY_KEYS
                 and function.__name__ in {"api_issue_url_fix", "api_github_fix"}):
             return JSONResponse({"ok": False, "needs_deep_fix": True,
                 "error": "Cette correction d'URL exige les destinations observees dans le rapport. "
@@ -3722,14 +3728,19 @@ def _correction_operation(function):
             with correction_guard.correction_lock(DB, payer):
                 active = correction_journal.current()
                 if active and active.row.project_id == str(project.id):
-                    return function(request, slug, *args, **kwargs)
-                bound = inspect.signature(function).bind(request, slug, *args, **kwargs)
-                bound.apply_defaults()
+                    return function(*bound.args, **bound.kwargs)
                 values = {k: v.model_dump(mode="json") if isinstance(v, BaseModel) else v
                           for k, v in bound.arguments.items() if k not in {"request", "slug"}}
                 payload = {"values": values, "github": _project_github_cfg(project)}
                 key = correction_journal.request_key(payer, str(project.id), function.__name__, payload)
                 row = correction_journal.find(DB, key=key)
+                if row is None and "issue_key" in values and raw_issue_key != issue_key:
+                    # Recover an exact pre-normalization receipt without rewriting its identity.
+                    legacy_payload = {"values": {**values, "issue_key": raw_issue_key}, "github": payload["github"]}
+                    legacy_key = correction_journal.request_key(payer, str(project.id), function.__name__, legacy_payload)
+                    row = correction_journal.find(DB, key=legacy_key)
+                    if row:
+                        key = legacy_key
                 if row and row.state == "completed":
                     result = row.data.get("response", {}).get("body", {})
                     if result.get("pr_number"):
@@ -3778,7 +3789,7 @@ def _correction_operation(function):
                     if row:
                         return _recover_correction(op, user=user, slug=slug)
                     op.save(actor=str(getattr(user, "id", "") or ""))
-                    response = function(request, slug, *args, **kwargs)
+                    response = function(*bound.args, **bound.kwargs)
                     result = json.loads(response.body)
                     if 200 <= response.status_code < 300 and result.get("pr_number"):
                         correction_journal.pr_received({"number": result["pr_number"], "html_url": result["pr_url"]})
@@ -4666,6 +4677,25 @@ _ADVISORY_ISSUE_TOKENS = (
     "high_ai_content", "organic_traffic", "referring_domain", "serp_title", "and_serp_titles",
     "dropped_from_top", "receives_organic",
 )
+_UNCLAIMED_CORRECTION_ADVICE = (
+    "Cette anomalie n'a pas de correction automatique prise en charge. "
+    "Conserver le diagnostic et suivre ses recommandations manuelles ; "
+    "aucun apercu IA, patch GitHub ou ancien apercu ne peut l'appliquer."
+)
+_ISSUE_DEEP_FIX_ONLY_KEYS = frozenset({
+    "canonical_from_https_to_http", "duplicate_pages_without_canonical", "sitemap_non_canonical_page",
+    "sitemap_3xx_redirect", "sitemap_noindex_page", "sitemap_4xx_page", "sitemap_http_urls_for_https",
+    "indexable_page_not_in_sitemap", "viewport_not_set", "twitter_card_missing",
+    "hreflang_defined_but_html_lang_missing", "hreflang_to_non_canonical",
+    "page_referenced_for_more_than_one_language_in_hreflang", "links_with_no_anchor_text", "meta_description_too_short",
+})
+
+
+def _issue_correction_controls(issue_key: str) -> dict[str, bool]:
+    key = str(issue_key or "").strip().lower()
+    claimed = _github_issue_auto_fixable(key)
+    return {"deep_fix": claimed, "url_fix": claimed and
+            key.removesuffix("_not_indexable").removesuffix("_indexable") not in _ISSUE_DEEP_FIX_ONLY_KEYS}
 
 
 def _project_github_cfg(proj) -> dict[str, str]:
@@ -18581,7 +18611,8 @@ def project_issue_detail(
         _ensure_runs_file_local(fix_path_obj)
     fix_path = str(fix_path_obj) if (fix_path_obj and fix_path_obj.exists()) else ""
     fix_suggestion = _load_fix_suggestion_for_issue(runs_dir, slug, ts, issue_key) if ts else None
-    if not fix_suggestion:
+    correction_controls = _issue_correction_controls(issue_key)
+    if not fix_suggestion or not correction_controls["deep_fix"]:
         report = dash.load_report_json(runs_dir, slug, ts) if ts else None
         report = report if isinstance(report, dict) else {}
         issue_node = data.get("issue") if isinstance(data.get("issue"), dict) else {}
@@ -18634,6 +18665,7 @@ def project_issue_detail(
             "fix_suggestion": fix_suggestion,
             "fix_suggestions_path": fix_path,
             "gh_tasks": gh_tasks,
+            "correction_controls": correction_controls,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -26978,6 +27010,7 @@ def _prepare_issue_fix(
     redirect-config refusal, so it would hand netlify.toml (HSTS, CSP) to a free-form patch."""
     issues = issues if isinstance(issues, dict) else {}
     block = issues.get(issue_key)
+    issue_key = str(issue_key or "").strip().lower()
     out: dict[str, Any] = {
         "evidence": _issue_evidence_srcs(block) if issues else [],
         "extra_hint": "",
@@ -27002,6 +27035,9 @@ def _prepare_issue_fix(
         return out
     if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
         out["refusal"] = _structured_data_refusal(issue_key)
+        return out
+    if not _github_issue_auto_fixable(issue_key):
+        out["refusal"] = _UNCLAIMED_CORRECTION_ADVICE
         return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'meta_description_too_short':
         try:
@@ -27977,10 +28013,16 @@ def _deep_patch_issue_files(
     entry is enough to require a human before merging, and it is what billing must count, since a
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
+    issue_key = str(issue_key or "").strip().lower()
     if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
         return [], [_LEGACY_CANONICAL_ADVICE], [], []
     if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
         return [], [_structured_data_refusal(issue_key)], [], []
+    if (not _github_issue_auto_fixable(issue_key)
+            and (issue_key in dash.ISSUE_CATALOG
+                 or issue_key.removesuffix("_not_indexable").removesuffix("_indexable") in dash.ISSUE_CATALOG
+                 or link_rewriter is None)):
+        return [], [_UNCLAIMED_CORRECTION_ADVICE], [], []
     if (short_description_urls is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'meta_description_too_short'):
         return [], ['Description refusee : plan de page et contenu verifie requis.'], [], []
     if (anchor_text_items is None and str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') in _ANCHOR_TEXT_KEYS):
@@ -28905,6 +28947,7 @@ def _apply_prepared_issue_fix(
     ecartes: list[str] | None = None, allow_ai_targeting: bool = True,
 ) -> dict[str, Any]:
     """Execute the same bounded repair for individual and grouped pull requests."""
+    issue_key = str(issue_key or "").strip().lower()
     patched, skipped, targets, ai_files = [], [], [], []
     config_changes, config_notes = [], []
     if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
@@ -28913,6 +28956,9 @@ def _apply_prepared_issue_fix(
     if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
         return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
                 "config_changes": [], "config_notes": [], "error": _structured_data_refusal(issue_key)}
+    if not _github_issue_auto_fixable(issue_key):
+        return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
+                "config_changes": [], "config_notes": [], "error": _UNCLAIMED_CORRECTION_ADVICE}
     if _length_family_name(issue_key) == 'meta' and prep.get('refusal'):
         return {"patched": [], "skipped": [], "targets": [], "ai_files": [],
                 "config_changes": [], "config_notes": [], "error": prep['refusal']}
