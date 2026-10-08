@@ -8419,7 +8419,9 @@ def _run_alembic_upgrade_head() -> None:
         raise RuntimeError(f"alembic upgrade head failed: {detail[:2000]}")
 
 
-def _validate_startup_config() -> None:
+def _validate_startup_config(*, service_mode: str = "web") -> None:
+    if service_mode not in {"web", "worker"}:
+        raise ValueError("Unknown service mode")
     if not _strict_config_enabled():
         return
 
@@ -8432,9 +8434,9 @@ def _validate_startup_config() -> None:
     if not _safe_env("DATABASE_URL"):
         errors.append("DATABASE_URL is required when SEO_AGENT_STRICT_CONFIG is enabled")
 
-    if not public_base:
+    if service_mode == "web" and not public_base:
         errors.append("PUBLIC_BASE_URL is required when SEO_AGENT_STRICT_CONFIG is enabled")
-    else:
+    elif service_mode == "web":
         parsed = urlsplit(public_base)
         host = (parsed.hostname or "").lower()
         if parsed.scheme != "https":
@@ -8442,7 +8444,7 @@ def _validate_startup_config() -> None:
         if host in {"localhost", "127.0.0.1", "::1"}:
             errors.append("PUBLIC_BASE_URL must not point to localhost in strict config")
 
-    if _weak_secret(session_secret):
+    if service_mode == "web" and _weak_secret(session_secret):
         errors.append("SEO_AGENT_SECRET_KEY must be a long random value")
 
     if _weak_secret(encryption_seed):
@@ -8450,7 +8452,7 @@ def _validate_startup_config() -> None:
     elif session_secret and encryption_seed == session_secret:
         errors.append("SEO_AGENT_ENCRYPTION_KEY must be distinct from SEO_AGENT_SECRET_KEY")
 
-    if _weak_secret(cron_secret):
+    if service_mode == "web" and _weak_secret(cron_secret):
         errors.append("CRON_SECRET must be set to a long random value")
 
     if errors:
@@ -10048,8 +10050,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 
-def _startup() -> None:
-    _validate_startup_config()
+def _initialize_service(*, service_mode: str) -> None:
+    _validate_startup_config(service_mode=service_mode)
     # Render entrypoint runs Alembic before web/worker startup. Local SQLite needs
     # the same migration path because `create_all()` does not alter stale tables.
     if (not _safe_env("DATABASE_URL")) or _env_bool("SEO_AGENT_DB_AUTO_MIGRATE"):
@@ -10063,6 +10065,10 @@ def _startup() -> None:
         _apply_effective_env("PLAN_CONFIG_JSON")
     except Exception:
         pass
+
+
+def _startup() -> None:
+    _initialize_service(service_mode="web")
     _start_job_worker()
     _start_retention()
     _start_verification_pr()

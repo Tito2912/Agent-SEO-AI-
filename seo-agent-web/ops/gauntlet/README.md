@@ -1679,6 +1679,44 @@ compte/paiement en mode test et perimetre explicite de sites admis. Le bilan
 des API, les controles navigateur et les echecs intermediaires. Aucun
 deploiement, fusion dans main ou changement de site client dans cette phase.
 
+## Demarrage web et worker separe (08/10/2026)
+
+Depuis `seo-agent-web`, sous Linux/POSIX avec les dependances du projet :
+
+```bash
+python ops/gauntlet/startup_policy_cycle.py --workdir NEW_TEMP_DIRECTORY
+```
+
+Le CLI refuse un dossier deja existant et les fichiers de secrets a la racine
+du depot. Il utilise uniquement sa base SQLite, ses fichiers et des sockets
+loopback possedes, sans recopier les secrets de l'environnement. Les enfants
+refusent les connexions externes. Le banc applique les vraies migrations,
+demarre Uvicorn puis le vrai `worker_main`, sans simuler leur initialisation.
+Les trois taches par cycle ont un type volontairement inconnu : la file et
+le refus du dispatch sont testes, pas une correction SEO ou un appel Claude.
+Un worker a cle invalide doit sortir avant de toucher la file.
+
+Deux cycles reutilisent la meme base. SIGTERM arrive une fois les taches
+synthetiques terminees ; cela ne prouve pas la reprise d'un crawl interrompu.
+Le banc observe le shutdown web avant la reemission du signal par Uvicorn.
+`/healthz` ne prouve que la reponse HTTP. Les revisions Alembic, plans locaux,
+threads et lignes de file sont controles separement. Les enfants sont arretes
+et un `result.json` est conserve meme en cas d'echec.
+
+Ce banc ne construit pas d'image Docker et n'exerce ni Render ni PostgreSQL.
+Le worker relit les overrides de plan disponibles, sans synchroniser le disque
+du web avec un autre hote. La preproduction, le stockage partage, les migrations
+concurrentes et la capacite du futur hebergement restent a mesurer.
+
+Le bilan `validation-service-startup-policy-2026-10-08.json` conserve les
+empreintes, les echecs initiaux et leurs limites : 7 375 tests passent sous
+Windows avec les memes 42 ignores ; les 90 modules cibles passent 4 970 tests
+et deux ignores sous Windows et Linux. Les 7 383 anciens cas et les 38 anciens
+bilans sont conserves. Les bibliotheques Chromium manquantes sous WSL ont ete
+extraites dans un runtime temporaire, sans changer le systeme ou le Dockerfile.
+Le banc de processus valide deux cycles et six refus de dispatch synthetiques,
+pas six corrections SEO. Aucun deploiement ou appel IA payant dans cette phase.
+
 ## Reconstruire les pages
 
 `build_pages.py` (les 31 pages) puis `build_scaffold.py` (index, ressources, redirection,

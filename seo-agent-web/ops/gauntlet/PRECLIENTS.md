@@ -36,6 +36,16 @@ L'inventaire ne teste pas lui-meme les API ou un agent deploye.
   pas certifies par cumul des bilans. Les descriptions courtes, ancres et groupes
   hreflang gardent notamment des occurrences volontairement refusees.
 
+Le demarrage commun web/worker est couvert par les tests de politique locale
+et un banc de vrais processus Linux : deux cycles, SQLite migre et six taches
+synthetiques de type inconnu, prises une seule fois. Le worker refuse une cle
+stricte invalide avant ses threads ; les schedulers PR/contenu restent sur le
+web. SIGTERM intervient apres ces taches, pas pendant un crawl reel. Voir
+[le bilan](validation-service-startup-policy-2026-10-08.json). Ce n'est pas une
+recette Docker/Render ou une mesure de charge PostgreSQL. Un override de plan
+disponible localement n'est pas pour autant partage entre deux machines : leur
+coherence et leur persistance doivent etre verifiees sur l'hebergement cible.
+
 Les derniers tests SQLite ignores ne retirent pas les preuves PostgreSQL
 historiques. Ils ne constituent pas non plus une nouvelle verification de la
 configuration, du pool ou de la charge du futur hebergement.
