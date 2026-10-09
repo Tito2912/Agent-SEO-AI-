@@ -72,9 +72,19 @@ def test_the_override_reaches_the_patcher(monkeypatch) -> None:
         repo_name="r", branch="main", token="t", model_override="")
     assert prep["targets_override"] == ["lib/seo.ts"]
     assert "une seule fois" in prep["extra_hint"]
-    import inspect
-    src = inspect.getsource(app_module.api_issue_deep_fix)
-    assert 'targets_override=_prep.get("targets_override")' in src
+    received = {}
+
+    def patch(**kwargs):
+        received.update(kwargs)
+        return [], [], [], []
+
+    monkeypatch.setattr(app_module, "_deep_patch_issue_files", patch)
+    app_module._apply_prepared_issue_fix(
+        owner="o", repo_name="r", branch="main", token="t", fix_branch="fix",
+        all_paths=["lib/seo.ts", "content/es/a.mdx"], issue_key="x_default_hreflang_missing",
+        issue_label="x-default", impacted=["https://x.fr/es/a"], site_name="x.fr",
+        file_state={}, max_files=8, prep=prep, pages=None, index=None)
+    assert received["targets_override"] == ["lib/seo.ts"]
 
 
 def test_without_a_shared_builder_nothing_is_forced(monkeypatch) -> None:

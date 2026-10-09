@@ -29,8 +29,12 @@ déploiement, un cache, parfois un CDN, et l'hypothèse que le correctif était 
 À la fin de chaque crawl, le produit reprend les tâches de correction du projet et confronte
 chacune au rapport tout juste produit :
 
-- l'anomalie a **disparu** du rapport, ou l'URL concernée n'y figure plus → **résolue** ;
-- l'URL est **toujours** listée sous cette anomalie → **toujours présente**.
+- les URL du correctif ont été revisitées avec succès dans un crawl plus récent et
+  l'anomalie a disparu → **résolue** ;
+- l'anomalie subsiste, y compris sur une autre page pour une correction globale ou sous
+  une variante d'indexabilité → **toujours présente** ;
+- des URL n'ont pas été explorées, le crawl est partiel ou le périmètre du correctif est
+  inconnu → **non vérifiable**. L'absence d'une URL dans les exemples ne suffit pas à conclure.
 
 Une tâche confirmée résolue passe automatiquement en **Fait**. Vous n'avez rien à cocher.
 
@@ -45,6 +49,7 @@ Une tâche confirmée résolue passe automatiquement en **Fait**. Vous n'avez ri
 | **Résolue** | Le crawl postérieur ne voit plus l'anomalie sur cette URL. C'est la seule preuve qui compte. |
 | **Toujours présente** | Le correctif est dans le dépôt, l'anomalie est encore en ligne. Voir ci-dessous. |
 | **Pas encore vérifiée** | Aucun crawl n'a eu lieu depuis la correction. Lancez-en un. |
+| **Non vérifiable** | Le crawl ne couvre pas assez le correctif pour conclure. Consultez le motif sur la tâche et relancez un crawl complet. |
 
 La page **Corrections** du projet affiche ces compteurs en tête : combien de corrections
 vérifiées résolues, combien encore présentes, combien portent une pull request.

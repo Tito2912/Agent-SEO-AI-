@@ -1,0 +1,182 @@
+{
+  "date": "2026-10-07",
+  "status": "local_literal_rewriter_only",
+  "scope": "links_with_no_anchor_text: literal attribute insertion, not complete correction acceptance",
+  "issue_family_acceptance_certified": false,
+  "client_readiness_certified": false,
+  "branch": "codex/corrector-recovery-20261003",
+  "parent_commit": "7d8249e8779e2edb20fd317c07517fdab4845982",
+  "source_sha256_lf": {
+    "backend/app.py": "12bd1389aaadc67bf89c2540e9f366c00b4f7c970fa9f023907bc3430453a1c7",
+    "backend/anchor_text.py": "1cedaa55aee2e7f2834b76956aa597d6e318c5e6d91508d21d2f181c66decf85",
+    "tests/test_anchor_text_literal_rewriter.py": "c95c7c0bd394b7cfbefb95cf4e07cbe7799f805effb69b4aa22f96e3212aaed2",
+    "ops/gauntlet/anchor_text_rewriter_check.py": "1a226886989588e9978b030e117de50edcba7b6378228bcc520af903ed498986",
+    "tests/test_gauntlet_anchor_text_rewriter_check.py": "760a2fd62e365a897edc766984a0963ed6a38fc4ab347c2efbcfc898a82c580f"
+  },
+  "changes": [
+    "Replace regex anchor matching with HTMLParser plus an exact quoted-attribute lexer.",
+    "Insert only an aria-label at the actual href attribute offset; preserve other bytes, case, quotes and line endings.",
+    "Do not confuse data-href, namespaced attributes or a href decoy inside another attribute with the real href.",
+    "Preserve comments, script/style data, templates and other non-rendered contexts.",
+    "Preserve existing accessible names, image alt text and aria-labelledby, including uncertain existing declarations.",
+    "A named link elsewhere exonerates empty links with the same literal href, without guessing URL equivalence.",
+    "Refuse conflicting/untyped evidence, uncertain dynamic content, malformed nesting and duplicate attributes.",
+    "Bound source and output to 80000 UTF-8 bytes and require idempotence.",
+    "Remove the unsupported comment promising that Google uses aria-label as anchor text."
+  ],
+  "reproduction": {
+    "red_initial": {
+      "tests": 134,
+      "failed": 100,
+      "passed": 32,
+      "errors": 2,
+      "note": "A huge generated test ID exceeded the Windows environment-variable limit at setup. These setup errors are harness errors, not corrector defects."
+    },
+    "red_after_shortening_only_the_test_id": {
+      "tests": 133,
+      "failed": 101,
+      "passed": 32,
+      "errors": 0,
+      "note": "The pre-change app is frozen in the red manifest. Repeated parameterized witnesses are not 101 independent product defects."
+    },
+    "first_green_attempt": {
+      "passed": 221,
+      "failed": 2,
+      "note": "The initial parser accepted an unfinished comment and refused an image with empty alt. Product handling was corrected; expectations were not weakened."
+    },
+    "preflight": {"passed": 223, "failed": 0},
+    "preflight_with_benchmark_tests": {"passed": 243, "failed": 0},
+    "first_browser_attempt": {
+      "status": "failed_harness",
+      "artifact_directory": "seo-anchor-rewriter-browser-20261007-zkkzmzss",
+      "note": "BrowserContext.new_page does not take viewport. The harness now sets the page viewport explicitly. No successful check.json was emitted by this attempt."
+    }
+  },
+  "final_tests": {
+    "full": {"passed": 5422, "skipped": 42, "failed": 0, "errors": 0, "warnings": 411, "pytest_seconds": 238.71},
+    "targeted": {"passed": 1602, "skipped": 2, "failed": 0, "errors": 0, "warnings": 200, "pytest_seconds": 46.41, "modules": 46},
+    "new_cases": {"literal_rewriter": 133, "benchmark_false_success_checks": 20, "total": 153},
+    "environment": "Windows Python 3.13, isolated temporary SQLite databases, workers disabled, real provider keys blank",
+    "old_test_case_ids_preserved": 5311,
+    "old_skipped_case_ids_unchanged": true,
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "bandit_medium_high_new_runtime_files": "passed",
+    "final_full_targeted_and_browser_source_manifests_match": true
+  },
+  "browser_countercheck": {
+    "engine": "Real local Playwright Chromium; independent DOM, accessible-role and PNG checks",
+    "http_requests": 0,
+    "github_writes": 0,
+    "ai_calls": 0,
+    "desktop": {
+      "viewport": {"width": 1280, "height": 800},
+      "selected_named_link_counts": [0, 1],
+      "unchanged_other_links": 5,
+      "before_png_sha256": "2d3af11e3d3a83a262e732f6ad6755dbac7c061338a464a79ff7377402c9f114",
+      "after_png_sha256": "2d3af11e3d3a83a262e732f6ad6755dbac7c061338a464a79ff7377402c9f114"
+    },
+    "mobile": {
+      "viewport": {"width": 390, "height": 844},
+      "selected_named_link_counts": [0, 1],
+      "unchanged_other_links": 5,
+      "before_png_sha256": "35086869a729a6cba235f2a1f08d08523cd01f85adbf998abe7c566aa8314aba",
+      "after_png_sha256": "35086869a729a6cba235f2a1f08d08523cd01f85adbf998abe7c566aa8314aba"
+    },
+    "note": "Counts measure a real accessible name on this local witness, not crawler issue totals or Google indexing."
+  },
+  "inventory": {
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_named_validation_record_before_and_after": [
+      "links_with_no_anchor_text",
+      "meta_description_too_short",
+      "missing_canonical",
+      "structured_data_google_rich_results_validation_error"
+    ],
+    "gap_unchanged": 4,
+    "note": "This intentionally non-validation-prefixed local receipt does not promote this issue family or reduce named-record gaps. Mentions are not successful repairs."
+  },
+  "artifacts_base": "C:/Users/Caron/AppData/Local/Temp",
+  "artifacts": {
+    "red1_junit": {
+      "path": "seo-anchor-rewriter-red-20261007-2cxervv5/junit.xml",
+      "sha256": "f498a4dada980db06c3c7af47c238adf4dd2cb5f6ed16e1f440e145834037900"
+    },
+    "red2_junit": {
+      "path": "seo-anchor-rewriter-red2-20261007-c8pdj5f0/junit.xml",
+      "sha256": "10f4539209ef7e13e55b6d000c839cfca446b3cad46b5039eee18ca214a2b37f"
+    },
+    "green_junit": {
+      "path": "seo-anchor-rewriter-green-20261007-di4qcgcw/junit.xml",
+      "sha256": "98febb6c47a63105458563d1104e9aa2a3a90224e21e982883d82a5a65222a76"
+    },
+    "preflight_junit": {
+      "path": "seo-anchor-rewriter-preflight-20261007-sg34wzrk/junit.xml",
+      "sha256": "88c502831d32f0deaafd11031a81f807af128df786ad98827a8362b9e15bef99"
+    },
+    "preflight2_junit": {
+      "path": "seo-anchor-rewriter-preflight2-20261007-69jcdtr4/junit.xml",
+      "sha256": "f455510b284023cae79680e14367fb6cbbdd055f6031d460e8081c5531744fb6"
+    },
+    "full_junit": {
+      "path": "seo-anchor-rewriter-final-full-20261007-wlz30lka/junit.xml",
+      "sha256": "930aa2170aaa55fd3bb09cd278bf6856e5cefca004d583d926f1f4cb5acee9f5"
+    },
+    "target_junit": {
+      "path": "seo-anchor-rewriter-final-targeted-20261007-cim_bo7n/junit.xml",
+      "sha256": "61e613134794a665f3ac786b01a63b5946a97c01d5438619fe0648cc955c02ab"
+    },
+    "full_manifest": {
+      "path": "seo-anchor-rewriter-final-full-20261007-wlz30lka/manifest.json",
+      "sha256": "d802abb5a60366dbab17d063358868bc4668a3b159121f2a176c47d0e54c5e05"
+    },
+    "target_manifest": {
+      "path": "seo-anchor-rewriter-final-targeted-20261007-cim_bo7n/manifest.json",
+      "sha256": "d802abb5a60366dbab17d063358868bc4668a3b159121f2a176c47d0e54c5e05"
+    },
+    "target_selection": {
+      "path": "seo-anchor-rewriter-final-targeted-20261007-cim_bo7n/selection.json",
+      "sha256": "0db3a7b7d62f5d8b2f40b1f6bd9049b9c2818b9e6e73f97278f1e2ebafe76692"
+    },
+    "browser_check": {
+      "path": "seo-anchor-rewriter-browser2-20261007-zop94gj2/browser/check.json",
+      "sha256": "57e8c7ae0b103537c5cf8c45354fec9a68f5b2a636bf23e064738e46cca3dcdc"
+    },
+    "inventory_before": {
+      "path": "seo-anchor-rewriter-acceptance-before-20261007.json",
+      "sha256": "e66beef983bfc799b21cb8867bd45daa18abaa0451183971e54b7adfd8936476"
+    },
+    "inventory_after": {
+      "path": "seo-anchor-rewriter-acceptance-after-20261007.json",
+      "sha256": "e66beef983bfc799b21cb8867bd45daa18abaa0451183971e54b7adfd8936476"
+    },
+    "index_audit_script": {
+      "path": "seo-anchor-rewriter-browser2-20261007-zop94gj2/index-audit.py",
+      "sha256": "5b89bf44738ee3c5429d4e8bf1d3d0d9a553a7d5ecc6ddca8bba089909c8caf8"
+    }
+  },
+  "not_certified": [
+    "The existing prepare path still trusts report evidence; served source and destination names are not re-attested by this phase.",
+    "This family does not yet have a protected source/route/destination plan, including through free-form or old previews.",
+    "Relative href meaning across shared components and routes remains to be proven.",
+    "The parser is not a JavaScript/JSX/Vue/Astro compiler or a complete rendered accessible-name algorithm.",
+    "Conservative literal refusal can leave valid optional-end-tag, unquoted or dynamic HTML uncorrected.",
+    "CSS depending on aria-label can change other sites' appearance; fixture pixel equality is not universal.",
+    "No deployed fixture, production crawl, live Google validation, real Claude response or fresh PostgreSQL acceptance was run.",
+    "Corrector-wide client readiness is not certified."
+  ],
+  "primary_sources_checked": [
+    "https://www.w3.org/WAI/WCAG22/Techniques/aria/ARIA8",
+    "https://developers.google.com/search/docs/crawling-indexing/links-crawlable",
+    "https://docs.python.org/3/library/html.parser.html"
+  ],
+  "safety": {
+    "customer_sites_changed": false,
+    "remote_fixture_changed": false,
+    "agent_deployed": false,
+    "main_changed": false,
+    "historical_validation_records_changed": false
+  }
+}

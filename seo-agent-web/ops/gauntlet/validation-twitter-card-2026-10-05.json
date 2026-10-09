@@ -1,0 +1,183 @@
+{
+  "date": "2026-10-05",
+  "status": "guarded_same_page_missing_twitter_card_addition_measured_on_pinned_owned_fixture",
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "dc706f7e193d664b0b1d184dc534aa0e05215f08",
+  "scope": {
+    "family": "twitter_card_missing",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "seed_branch": "gauntlet-static-html-viewport-correction-20261005-110644",
+    "seed_sha": "21bf75fcbca71d940d8b20291da385b8705bc348",
+    "seed_pr_closed_draft_unmerged": 78,
+    "setup_file_puts": 0,
+    "corrective_paths": [
+      "gauntlet/twitter-missing.html"
+    ],
+    "maximum_file_put_attempts": 1,
+    "write_requires_exact_qa_branch_blob_sha_expected_bytes_and_no_retry": true,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/twitter_card_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "product_guards": [
+    "Require coherent independently requested same-host direct HTTPS HTML 200 observations with known typed Twitter fields, unchanged self/absent canonical and no errors, blocked hosts, redirects or noindex/none instructions. Unknown/malformed fields and conflicting duplicate observations refuse. Keep the auditor exemption for OG-only pages and name refused URLs when a verified subset exists.",
+    "Require a title, description and HTTPS image already present on that very page. Preserve existing Twitter values and support the twitter:image:src alias. Fill missing fields only from this page's OG or ordinary title/description metadata; do not invent text/images, borrow a dominant site image, upgrade HTTP images, overwrite custom/empty metadata or introduce an incomplete card. Refuse nonpublic URLs used as card text irrespective of scheme case.",
+    "Re-read one uniquely bound nonshared literal HTML file per page and its simple flat routing configuration. Refuse missing/ambiguous/query-colliding bindings, nonliteral shared/framework sources, scripts/templates/base/refresh, duplicated/empty/nested metadata, conflicting rules and a budget insufficient for the entire set. The structured HTML reader proves actual source tag absence; no invented crawl tag-count metric is required.",
+    "Immediately before any PUT, stream every pending direct public-target HTTPS page and verify the actual served social fields against the coherent observation, in addition to canonical/indexability. Reuse the bounded transport with an optional content predicate; no production preview exemption is added. All source/routing/network preflight checks finish before the first write. Refuse input/output above 80000 UTF-8 bytes.",
+    "Append only absent tags at the literal head end, HTML-escape attribute values, preserve all existing bytes/line endings and make repeated additions idempotent. Individual and grouped deep endpoints use the same zero-provider/zero-AI-charge path; empty refusal plans prevent heuristic/model fallback. Free-form/cached/confirmed preview routes cannot bypass it. SHA-guard each PUT, stop on write failure and report unpatched files; multi-file writes are not atomic."
+  ],
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-twitter-baseline-20261005-115031",
+    "correction_branch": "gauntlet-static-html-twitter-correction-20261005-115031",
+    "baseline_sha": "21bf75fcbca71d940d8b20291da385b8705bc348",
+    "final_sha": "1c0c40130306afcf200c0e54a2cca8fce8c480cc",
+    "baseline_pr": 79,
+    "correction_pr": 80,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "setup_file_puts": 0,
+    "corrective_file_puts": 1,
+    "corrective_path": "gauntlet/twitter-missing.html",
+    "minimal_new_tags": 2,
+    "added_tags": [
+      "twitter:card=summary_large_image",
+      "twitter:description copied from the same page's existing og:description"
+    ],
+    "existing_twitter_title_and_image_preserved": true,
+    "observed_healthy_html_routes": [
+      52,
+      52
+    ],
+    "report_rows": [
+      62,
+      62
+    ],
+    "controlled_whole_family_counts": [
+      1,
+      0
+    ],
+    "raw_whole_family_counts": [
+      1,
+      0
+    ],
+    "existing_incomplete_card_counts": [
+      3,
+      3
+    ],
+    "raw_sitemap_seed_urls": [
+      0,
+      0
+    ],
+    "sitemap_entries_unchanged": [
+      49,
+      49
+    ],
+    "preput_https_rechecks": 1,
+    "preput_http_namespace": "Only the exact owned production-namespace page is mapped to the actual baseline preview. Project response URL and remove only the verified exact native Netlify noindex header; actual status, body, canonical, meta robots and stream are preserved. The real served Twitter fields are checked too. Native previews themselves do not pass the product guard.",
+    "only_two_expected_tags_change_source_and_served_html": true,
+    "healthy_cards_viewports_canonicals_social_tags_navigation_and_routing_preserved": true,
+    "requested_observation_multiset_preserved": true,
+    "previous_repairs_and_negative_controls_preserved": true,
+    "increased_counts": {},
+    "all_selected_occurrences_resolved": true,
+    "all_family_occurrences_on_this_controlled_fixture_resolved": true,
+    "example_comparison": "Reuse the strictly bounded normalizer only for protocol/www root probe examples of the two exact owned PR previews; do not normalize production-namespace requested observations or raw reports.",
+    "cycle_sha256": "813cafd7e77046759f76663113b0013873f18ce56542a8d46bdb714c10a5f74a"
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "fresh_isolated_process_against_final_code": true,
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "checks": "Re-read exact branch heads, two closed draft unmerged PRs, successful builds, one-commit/one-file Git comparison, source bindings, sitemap/routing and fresh served XML/HTML. Independently derive the expected two lines from the actual original page metadata, compare entire served bodies allowing only the actual owned Netlify deploy-id to vary, re-prepare and verify idempotence without models/targeting/writes/quota calls. Match all six current normalized source/test hashes to the final test manifest.",
+    "fresh_default_probe_calls_on_native_preview_urls": 2,
+    "all_native_preview_probes_rejected": true,
+    "native_preview_noindex_preserved": true,
+    "production_indexation_not_proven": true,
+    "same_page_image_on_both_owned_builds": "Direct HTML-associated /og.png returns HTTP 200 image/png with PNG signature and identical bytes; this asset check is fixture-specific, not a general product asset-validation guarantee.",
+    "owned_image_sha256": "bf780d1105e7cbb81732af82d45fa3c8a359a130cb5cc6083abdf296e1445e2a",
+    "countercheck_sha256": "89723971cbc8592389cde5493538db40c3dc6364e750d4aa4be16fde603c7991",
+    "countercheck_script_sha256": "97ae9e7080f8f486f256f9777b2ed5fb130ebdc9a2950d88d4819f707fc4cf8b",
+    "artifact_file": "countercheck2.json",
+    "script_file": "countercheck2.py"
+  },
+  "acceptance_inventory": {
+    "historical_tracked_snapshot_preserved": "acceptance-inventory-2026-10-04.json",
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_exact_named_record_before": 8,
+    "families_without_exact_named_record_after": 7,
+    "new_named_mentions": [
+      "twitter_card_missing"
+    ],
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "before_snapshot_sha256": "98c15df34c76860a253c3ced2abab4e91860a7eee2a6e4711862d2c41ee7104a",
+    "legacy_hidden_diagnostic_not_promoted": "The intentionally non-offered legacy absent-canonical diagnostic remains unchanged; no task is enabled merely to reduce the named-reference gap."
+  },
+  "provider_usage": {
+    "all_live_and_countercheck_requests": 0,
+    "claude_budget": 0,
+    "openai_fallback_allowed": false
+  },
+  "verification": {
+    "full_final_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 4623,
+      "skipped": 42,
+      "warnings": 360,
+      "seconds": 258.96,
+      "real_provider_keys": "empty",
+      "provider_selection": "auto_for_existing_mocked_provider_tests",
+      "source_or_test_edits_during_run": false,
+      "junit_sha256": "c71675ea95ab4b26844eb0089edad676f2e55f0b61138b7e9a58ea34dee7b266"
+    },
+    "targeted_final_suite": {
+      "passed": 1491,
+      "skipped": 0,
+      "warnings": 122,
+      "seconds": 59.07,
+      "junit_sha256": "c7f63b3c1db47c6fe2e77009e778e6e06e35f50fc941662e0fb4fe16ca81b561"
+    },
+    "new_tests_this_phase": 205,
+    "initial_red": {
+      "failed": 91,
+      "passed": 2,
+      "seconds": 38.59,
+      "junit_sha256": "68dc8cf11c0d32a79e62c096144e05edc9c7f04b8b8c20b42e4ef26150e31e06",
+      "explanation": "Repeated witnesses expose missing guard plans/rewriter and generic head targeting, not 91 independent production defects."
+    },
+    "development_checks": [
+      "First implementation run had four collection errors from a newly introduced indentation mistake, fixed before any live run.",
+      "The seven-family bulk positive fixture initially lacked Twitter observations. Supply existing same-page values and retain the original seven-family assertion; no assertion is weakened.",
+      "The first benchmark golden output failed on apostrophe escaping. Escape the independently expected description using the standard HTML API, matching the valid attribute representation rather than changing product values.",
+      "The first full suite passed 4615 tests, then final review added eight private/local text-URL witnesses and a case-insensitive refusal. Re-run the full and targeted suites on the final frozen code. The live positive source remains unchanged, and the final read-only countercheck re-prepares/re-writes it and matches final source hashes.",
+      "The initial final-source countercheck hash comparison used double-escaped CRLF bytes. Correct that temporary checker only, use fresh scratch state, and re-run; retain the earlier countercheck artifacts. Product sources are unchanged during final tests."
+    ],
+    "ruff_F_E9": "passed_on_all_six_phase_source_and_test_files",
+    "compileall": "passed",
+    "new_module_and_bench_bandit_medium_or_high": "none",
+    "source_manifest_sha256": "b081d5721ad6a39a1f40a090bf612bd658cb8503c0b40bcf3b6a25e94d1aad33",
+    "normalized_LF_tested_source_sha256": {
+      "backend/app.py": "fc7eea1d2d77d826eb8e3d55fb46a7f04d40194c96cc1e5b217067892f60fad3",
+      "backend/twitter_card.py": "5ccea694e51aa74892eb0768bd13be6fe1283b117e25b0413ac11257f5d1fc31",
+      "tests/test_verified_twitter_card.py": "509077308e9305bfbe55c6fcaf7a55a2def8d2d97d6246f528a6d02c46524c29",
+      "tests/test_corrector_operational.py": "b3ac045b70d5c1542706453212e2e7c6333c369051a662a96e6e42ad0e33c1c1",
+      "ops/gauntlet/twitter_card_cycle.py": "3b0b499826c4c6a3a6cf38e5ff2ef4b6441bf18076bc2e307c18d41fc558822e",
+      "tests/test_gauntlet_twitter_card_cycle.py": "9b8fe0422d3b9f041a3ef60b33cd15c12a18c5fc253025d5e85ad8f2ebf81215"
+    },
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "Only the missing-card family on one owned literal static HTML fixture is repaired here. Shared/nonliteral/framework sources, ambiguous routing, protected/nonindexable/redirecting pages and unproved data intentionally refuse. A literal bound file is inspected as such; no universal generator/stack detector or all-stacks/all-occurrences success is claimed.",
+    "Existing incomplete cards remain outside this new path and their fixture count stays three. No absent content or image is fabricated. The product checks literal HTTPS image syntax and rejects local/private literal hosts/IPs; it does not fetch arbitrary image assets or prove DNS reachability, image dimensions, CDN authorization, MIME, all assets' status or actual rendering on X. Only this fixture's existing PNG is separately fetched and checked unchanged.",
+    "Native previews retain noindex and production canonical-host context with zero raw sitemap seeds. This social family is still scored on those healthy noindex HTML pages: its raw and controlled counts both move 1 to 0. This corroborates metadata repair, not production indexability. Controlled exact host/header projection and the actual served XML check eligibility and preservation of earlier repairs; no actual status/body/meta directive is invented.",
+    "Reads, SHA-guarded writes, network probes and future deployments are not atomic. A multi-file failure can leave an explicitly reported partial branch; no rollback/atomic batch guarantee is claimed. The existing public-target validator is reused, not a full SSRF/DNS-rebinding audit. Browser JavaScript DOM execution and production indexation are not verified.",
+    "No agent deployment, client onboarding, fresh real Claude integration, production recovery replay, scheduler/payment acceptance, capacity test or fresh PostgreSQL run is included. SQLite keeps 42 skipped tests. Seven claimed families still have no exact named record, including one deliberately hidden legacy diagnostic; named references are not passed repairs or client-readiness certification."
+  ]
+}

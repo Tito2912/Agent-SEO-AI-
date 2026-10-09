@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-08",
+  "status": "local_web_and_separate_worker_startup_policy_measured",
+  "client_readiness_certified": false,
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "304fafdaa5bd6501d63880f9341ebf1b1b145b7b",
+  "change": {
+    "reason": "The separate worker bypassed FastAPI startup: it initialized only Sentry, without strict configuration validation, the local migration policy or available plan override restoration.",
+    "common_initialization_before_background_tasks": true,
+    "strict_worker_requires_database_and_explicit_strong_encryption_seed": true,
+    "worker_does_not_require_web_url_session_or_cron_secret": true,
+    "configured_session_secret_must_remain_distinct_from_encryption_seed": true,
+    "default_web_validation_retained": true,
+    "unknown_service_role_refused": true,
+    "render_worker_explicit_strict_flag_added_but_not_deployed": true,
+    "web_pr_and_content_schedulers_not_started_by_worker": true,
+    "available_plan_config_restored": true,
+    "cross_host_plan_config_synchronization_implemented": false,
+    "database_connectivity_or_schema_readiness_added_to_healthz": false,
+    "new_successfully_repaired_families_claimed": 0
+  },
+  "owned_linux_process_measurement": {
+    "entrypoint": "python ops/gauntlet/startup_policy_cycle.py --workdir NEW_TEMP_DIRECTORY",
+    "artifact": "process-cycle3/result.json",
+    "result_sha256": "e766053483a391df29832a2824e22e26aa859ddbd411f78d6b3f18ff93d502e2",
+    "migration_log_sha256": "a838253959ffe9192b07483a98572bf48d9952ed750302612f89e6e5ed4165ce",
+    "migration_revision": "20261003_0013",
+    "real_alembic_uvicorn_and_worker_main_without_bootstrap_stubs": true,
+    "loopback_http_health_responses": 2,
+    "web_start_stop_cycles": 2,
+    "valid_separate_worker_start_stop_cycles": 2,
+    "worker_threads_per_valid_process": 2,
+    "invalid_encryption_worker_refused_before_threads_or_queue_claim": true,
+    "synthetic_unsupported_jobs_processed_once": 6,
+    "synthetic_job_owner_and_foreign_keys_checked": true,
+    "synthetic_jobs_intentionally_fail_unknown_dispatch": true,
+    "available_local_plan_restored_in_both_roles_after_restart": true,
+    "web_shutdown_hook_observed_before_uvicorn_reraises_sigterm": true,
+    "expected_web_exit_code": -15,
+    "expected_valid_worker_exit_code": 0,
+    "all_children_stopped": true,
+    "external_child_network_attempts": 0,
+    "github_provider_or_payment_requests": 0,
+    "no_inherited_service_credentials_or_customer_database": true,
+    "shutdown_scope": "SIGTERM after synthetic jobs finish, not interrupted real crawl recovery; background threads are not asserted joined.",
+    "docker_or_render_exercised": false,
+    "postgres_or_customer_capacity_certified": false
+  },
+  "final_tests": {
+    "windows_full": {
+      "artifact": "final2-windows-full/junit.xml", "passed": 7375, "skipped": 42,
+      "failed": 0, "errors": 0, "warnings": 455, "junit_seconds": 263.561,
+      "python": "3.13.7", "junit_sha256": "23289bb29947cdeede7f60ccb984139ac351be8fc5085ded36af11da03993c12"
+    },
+    "windows_targeted": {
+      "artifact": "final2-windows-targeted/junit.xml", "passed": 4970, "skipped": 2,
+      "failed": 0, "errors": 0, "warnings": 276, "junit_seconds": 82.071, "modules": 90,
+      "python": "3.13.7", "junit_sha256": "dc205a22282b2246950d335f24b81ee5b6ee22a58802626d2351a124a12187f9"
+    },
+    "linux_targeted": {
+      "artifact": "final2-linux-targeted/junit.xml", "passed": 4970, "skipped": 2,
+      "failed": 0, "errors": 0, "warnings": 276, "junit_seconds": 365.291, "modules": 90,
+      "python": "3.12.3", "junit_sha256": "120fccf1fa3a95125501acc3e9a02dea0f3f05788952e19cde55aadd75d84ad1"
+    },
+    "linux_full_suite_run_in_this_phase": false,
+    "old_full_case_occurrences_retained": 7383,
+    "new_case_occurrences": 34,
+    "new_startup_policy_cases": 26,
+    "new_fixture_guard_cases": 8,
+    "same_42_skipped_cases_and_reasons": true,
+    "historical_records_unchanged": 38,
+    "frozen_sources_match_final_suites_process_bench_and_staged_code": true,
+    "provider_keys_blank_and_background_worker_disabled_in_unit_test_environments": true
+  },
+  "linux_runtime": {
+    "python": "3.12.3", "uvicorn": "0.48.0", "playwright": "1.60.0",
+    "declared_requirements_checked": 26, "declared_version_mismatches": 0,
+    "dependency_scope": "Disposable venv referencing the original Linux repo packages read-only; installed missing Markdown/tzdata and the declared urllib3 pin in the overlay only.",
+    "temporary_browser_libraries": ["libnspr4", "libnss3", "libasound2t64"],
+    "browser_dependency_scope": "Downloaded Ubuntu packages extracted under the disposable runtime; LD_LIBRARY_PATH used for Linux targeted tests, no system package installation.",
+    "runtime_versions_and_package_sha256_artifact": "verified.json",
+    "verified_artifact_sha256": "9253265493d0c24c02ad9734bfb937a342bc98665d6ad1af4c0f132607272e33",
+    "verification_script_sha256": "040129550eea7361a8320a02b9a042aaef63c30d11cb4ea0e74bde90e5adcda6",
+    "dockerfile_or_requirements_changed": false,
+    "docker_image_built_or_certified": false
+  },
+  "frozen_normalized_sha256": {
+    "backend/app.py": "5d6240091b3bd2af99f9290d33b3a2ca1bb1500f5fecb8001190d737c3418eef",
+    "backend/worker_main.py": "86f1e599f3ee224d0225ed551ac0e6885973bbace52ccc208fd0a545d19d51ff",
+    "../render.yaml": "4200d9d5f0b052305838b14295a7d3a67d90a6135c6044e9095a5de6a57e4c47",
+    "tests/test_service_startup_policy.py": "81ccb47ad41af716779f0dae071919e85c72306cd6c48bf6fe7a8f33c8ed149c",
+    "ops/gauntlet/startup_policy_cycle.py": "c3d4d235f57e69adc3a12f42a5bcec27c54e111063a5c85c5c8d6b1696a54265",
+    "tests/test_startup_policy_cycle.py": "3b1449f0256df1d2acfc24aeaf9d18c47df657f16425c6f0955baa44aa8d8d09"
+  },
+  "earlier_attempts_retained": [
+    {"artifact": "red/junit.xml", "errors": 1,
+      "sha256": "7201f10f0dff236680b1244575e01a1fe009ed5a6b5501145fb64d6172c6e92e",
+      "reason": "Original Linux environment lacked Markdown and failed collection. Not a semantic pre-change startup regression proof."},
+    {"artifact": "red-windows/junit.xml", "passed": 1, "failed": 22,
+      "sha256": "82fef29be1a6e5e54acc2a92b42c196783cb7d9c1b5e33bbb402f8fc30639212",
+      "reason": "Frozen pre-change source lacked role-specific worker validation and common initialization. Default web validation positive control passed."},
+    {"artifact": "process-cycle1/result.json", "sha256": "34faf5022360ae2fb43ef91073eda275d5cff1825f38e37ca074415b09581a8c", "all_children_stopped": true,
+      "reason": "Web answered health but the bench marker was lost when Uvicorn reraised SIGTERM after shutdown. Fixed observation of the actual shutdown hook, not product shutdown behavior."},
+    {"artifact": "process-cycle2/result.json", "sha256": "39b21937874e066fde6dcd5ba333a34ec0f1e040bdc25e58a47e70ae16ab365b", "all_children_stopped": true,
+      "reason": "Synthetic SQL seeding omitted owner_user_id required by the migrated jobs table. Added a synthetic non-admin owner and foreign-key validation, not a schema change."},
+    {"artifact": "final-linux-targeted/junit.xml", "passed": 4968, "failed": 2, "skipped": 2,
+      "sha256": "387d19df7254e6d1edbb1f14f5ec8383925dd3a566a194eb4a64a14bbd0d461f",
+      "reason": "Two existing real loopback crawler controls could not launch Chromium: libnspr4/libnss3/libasound were absent. The unchanged tests pass with isolated extracted browser libraries; no control removed or newly skipped."},
+    {"artifact": "final-windows-full/junit.xml", "passed": 7375, "skipped": 42,
+      "sha256": "65a28d77cc550148e666d609de455fcb19c8423630aa6843027ea180248f7265",
+      "scope": "Green intermediate process-bench version before the valid owner fixture fix; final suite rerun on all six frozen source files."}
+  ],
+  "read_only_inventory": {
+    "artifact": "inventory-before-receipt.json",
+    "sha256": "7904551d447eabba40786cc78a0ec63298f7736dcba4aac23e35d56a4e730aa5",
+    "catalog_keys": 203, "manual_catalog_keys": 131,
+    "claimed_and_visible_offered_families": 62,
+    "preview_capable_families": 47, "deep_only_families": 15,
+    "family_claims_changed": false,
+    "inventory_mentions_are_not_repair_certification": true
+  },
+  "evidence_root": "C:/Users/Caron/AppData/Local/Temp/seo-startup-policy-20261008-i79qda_n",
+  "remaining_release_gates": [
+    "Review and test this exact version in isolated preproduction: actual Docker/Render startup, schedulers, worker restart, shared storage, matching encryption keys and plan configuration, concurrent migrations, PostgreSQL pool and bounded load.",
+    "Operational receipt retention, backup/restore and operator procedures for ambiguous branches, token revocation, network errors and real in-flight worker loss.",
+    "Non-admin onboarding with owned GitHub repository and real service test modes: permissions, test payment, delayed/repeated webhook, renewal, plan change and provider outage.",
+    "Explicit customer stack/source/family allowlist and supervised draft-PR pilots with before/after crawl, build, review, bounded Claude costs and retained refusals."
+  ],
+  "remaining_limits": [
+    "Local startup and unsupported synthetic queue dispatch are measured, not additional SEO repairs or certification of every correctable anomaly.",
+    "healthz is HTTP liveness only; strict configuration validation does not prove database connectivity, schema readiness or customer capacity.",
+    "PLAN_CONFIG_JSON restoration only reads configuration available to that process. A web-disk override is not automatically shared with a diskless worker on another host.",
+    "No new real PostgreSQL measurement here. Unchanged unit-test skips do not invalidate historical PostgreSQL/GitHub proofs but do not certify the future hosting configuration.",
+    "No paid model call, customer site, live payment, main merge or agent deployment in this phase. Docker and psql are unavailable in the current local environment."
+  ]
+}

@@ -33,6 +33,10 @@ os.environ.setdefault("SEO_AGENT_SECRET_KEY", "x" * 20)
 from backend import app as m  # noqa: E402
 from backend import audit_dashboard as dash  # noqa: E402
 from backend import repo_index  # noqa: E402
+from ops.gauntlet.ai_budget import ClaudeBudget  # noqa: E402
+
+ai_budget = ClaudeBudget(int(os.environ.get("GAUNTLET_MAX_AI_CALLS", "12")))
+ai_budget.install(m)
 
 # Where the "before" crawl was written, and where this run's result goes. Passed in, because a
 # scratchpad is session-scoped and this bench has to outlive the session that built it.
@@ -78,9 +82,22 @@ paths = [b["path"] for b in tree.get("tree", []) if b.get("type") == "blob"]
 idx = repo_index.build_repo_index(paths)
 base = m._github_api_get(m._github_api_path("repos", OWNER, REPO, "git", "ref", f"heads/{BRANCH}"),
                          token=TOKEN)["object"]["sha"]
-fix_branch = f"gauntlet-{STACK}-{dt.datetime.now(dt.UTC).strftime('%Y%m%d-%H%M%S')}"
-m._github_api_post(m._github_api_path("repos", OWNER, REPO, "git", "refs"), token=TOKEN,
-                   json_body={"ref": f"refs/heads/{fix_branch}", "sha": base})
+fix_branch = os.environ.get("GAUNTLET_BRANCH", "").strip()
+previous = []
+if fix_branch:
+    if not fix_branch.startswith(f"gauntlet-{STACK}-") or not m._github_branch_allowed(fix_branch):
+        raise SystemExit("La branche de test doit etre une branche gauntlet, jamais main.")
+    m._github_api_get(m._github_ref_api_path(OWNER, REPO, fix_branch), token=TOKEN)
+    saved = os.path.join(SD, "gauntlet_run.json")
+    if os.path.isfile(saved):
+        with open(saved, encoding="utf-8") as fh:
+            prior = json.load(fh)
+        if prior.get("branch") == fix_branch:
+            previous = prior.get("results", [])
+else:
+    fix_branch = f"gauntlet-{STACK}-{dt.datetime.now(dt.UTC).strftime('%Y%m%d-%H%M%S')}"
+    m._github_api_post(m._github_api_path("repos", OWNER, REPO, "git", "refs"), token=TOKEN,
+                       json_body={"ref": f"refs/heads/{fix_branch}", "sha": base})
 print("branche :", fix_branch)
 
 _origines: dict[str, str] = {}
@@ -131,10 +148,11 @@ def _mordait_a_l_origine(rewriter, targets: list[str]) -> bool:
 
 
 file_state: dict[str, dict[str, str]] = {}
-results = []
+results = [row for row in previous if row[0] not in ordered]
+scopes = {}
 for key in ordered:
     label = (dash.ISSUE_CATALOG[key].label if key in dash.ISSUE_CATALOG else key)
-    fam = m._length_family_keys(key)
+    fam = m._verification_family_keys(key)
     impacted: set[str] = set()
     for k in fam:
         if k in issues:
@@ -160,44 +178,42 @@ for key in ordered:
     # `GAUNTLET_FREE=1` ne garde que les mecaniques : un passage de non-regression sur les neuf
     # stacks a cout nul, qu'on peut donc lancer aussi souvent qu'on veut. C'est exactement la
     # part qui attrape les defauts de CIBLAGE et d'IDIOME — les trois de ce jour en etaient.
-    mecanique = prep["link_rewriter"] is not None and not prep["rewriter_ai_fallback"]
+    structural = (key in m._SITEMAP_CREATE_KEYS or key in m._SITEMAP_REPAIR_KEYS
+                  or key in m._REDIRECT_CONFIG_KEYS
+                  or (key in m._SERVED_LANG_FIX_KEYS and m._served_lang_strategy(paths) == "postbuild"))
+    mecanique = structural or (prep["link_rewriter"] is not None
+                              and not prep["rewriter_ai_fallback"] and not prep["rewriter_is_ai"])
     gratuit = bool(os.environ.get("GAUNTLET_FREE"))
     if gratuit and not mecanique:
         results.append((key, "IGNOREE (payante)", "", 0, 0))
         continue
     try:
-        patched, skipped, targets, ai = m._deep_patch_issue_files(
+        capped = []
+        applied = m._apply_prepared_issue_fix(
             owner=OWNER, repo_name=REPO, branch=BRANCH, token=TOKEN, fix_branch=fix_branch,
-            all_paths=paths, issue_key=key, issue_label=label, impacted_urls=impacted_l,
-            site_name=SITE, file_state=file_state, max_files=6, evidence=prep["evidence"],
-            extra_hint=prep["extra_hint"], model_override="",
-            link_rewriter=prep["link_rewriter"], rewriter_ai_fallback=prep["rewriter_ai_fallback"],
-            rewriter_is_ai=bool(prep["rewriter_is_ai"]), index=idx,
-            targets_override=prep.get("targets_override"),
-            page_side=bool(prep.get("page_side")),
-            canonical_masters=prep.get("canonical_masters"),
-            site_og_image=m._dominant_site_og_image(report.get("pages")),
-            # Une famille mecanique ECRIT sans modele, mais le CHOIX du fichier en appelait un
-            # quand meme : `_resolve_issue_targets` finit par deux selecteurs IA, et pour les
-            # familles d'actifs `want_page_targeting` est faux, donc ils partaient a chaque fois.
-            # Mesure du 16/09/2026 sur static-html : sept appels dans une passe annoncee gratuite,
-            # tous repris par le repli OpenAI donc factures. En mode gratuit, on s'en tient au
-            # ciblage deterministe — et une famille qui n'a plus de cible sans le modele le dit,
-            # ce qui est le renseignement qu'on veut.
-            allow_ai_targeting=not gratuit,
-            # Le meme fait que l'endpoint passe : la langue mesuree sur le site. Sans elle, le
-            # banc ne testerait pas ce que le produit fait.
-            site_lang=m._dominant_site_lang(report.get("pages")))
+            all_paths=paths, issue_key=key, issue_label=label, impacted=impacted_l,
+            site_name=SITE, file_state=file_state,
+            max_files=int(os.environ.get("GAUNTLET_MAX_FILES", "40")),
+            prep=prep, pages=report.get("pages"), index=idx,
+            allow_ai_targeting=not gratuit, ecartes=capped)
+        patched = list(dict.fromkeys(applied["patched"] + applied["config_changes"]))
+        skipped, targets, ai = applied["skipped"], applied["targets"], applied["ai_files"]
+        if applied.get("fatal"):
+            raise RuntimeError(applied["error"])
     except Exception as exc:
         results.append((key, "ERREUR patch", str(exc)[:80], 0, 0))
         continue
     verdict = "ok" if patched else ("AUCUN PATCH" if targets else "AUCUNE CIBLE")
-    if verdict == "AUCUN PATCH" and _mordait_a_l_origine(prep["link_rewriter"], targets):
+    if verdict == "AUCUN PATCH" and mecanique and _mordait_a_l_origine(prep["link_rewriter"], targets):
         verdict = "DEJA CORRIGE"
+    scopes[key] = {"family_keys": sorted(fam), "impacted_urls": impacted_l,
+                   "targets": targets, "patched": patched, "skipped": skipped,
+                   "ai_files": ai, "capped_files": capped}
     results.append((key, verdict, ",".join(targets[:2])[:70], len(patched), len(ai)))
     print(f"  {verdict:<12} {key:<46} cibles={len(targets)} patches={len(patched)} ia={len(ai)}")
 
-json.dump({"branch": fix_branch, "results": results},
+json.dump({"branch": fix_branch, "results": results, "scopes": scopes,
+           "requested_keys": only, "exercised_keys": ordered, "ai_budget": ai_budget.summary()},
           open(os.path.join(SD, "gauntlet_run.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("\n--- bilan ---")
 for v in ("ok", "DEJA CORRIGE", "IGNOREE (payante)", "AUCUN PATCH", "AUCUNE CIBLE",

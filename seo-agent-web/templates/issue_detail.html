@@ -16,6 +16,7 @@
 {% endblock %}
 
 {% block content %}
+  {% set correction_controls = correction_controls|default({'deep_fix': false, 'url_fix': false}, true) %}
   {% if not project %}
     <section class="card"><p>Anomalie introuvable: <span class="mono">{{ issue_key }}</span></p></section>
   {% else %}
@@ -57,7 +58,7 @@
         <div class="metric-tile-label">Catégorie</div>
         <div class="metric-tile-value" style="font-size:16px;">{{ cat_labels.get(project.issue.category, project.issue.category) }}</div>
       </div>
-      <div class="metric-tile" style="flex:2; min-width:200px;">
+      <div class="metric-tile" style="min-width:0;">
         <div class="metric-tile-label">Exporter</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
           <a class="btn" href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.csv?crawl={{ project.timestamp }}">CSV</a>
@@ -68,9 +69,9 @@
     </div>
 
     <section class="card">
-      <div class="card-title-row">
+      <div class="card-title-row" style="flex-wrap:wrap;">
         <h2>Correction recommandée</h2>
-        <div class="card-title-actions">
+        <div class="card-title-actions" style="flex-wrap:wrap;">
           {% if fix_suggestion and fix_suggestion.priority %}
             {% set p = fix_suggestion.priority %}
             {% set badge = 'error' if p == 'high' else ('warning' if p == 'medium' else 'notice') %}
@@ -164,16 +165,22 @@
                 {% elif _v and _v.result == 'still_present' %}
                   <span class="badge error" style="font-size:10px;padding:2px 7px;" title="Toujours détecté après correction">⚠ Toujours présent</span>
                 {% endif %}
+                {% if correction_controls.url_fix %}
                 <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
                   data-url="{{ u }}"
                   data-issue="{{ project.issue.key }}"
                   data-crawl="{{ project.timestamp }}"
                   data-slug="{{ project.slug }}">Correction IA</button>
+                {% endif %}
+                {% if correction_controls.deep_fix %}
                 <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+                  data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
+                  title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
                   data-url="{{ u }}"
                   data-issue="{{ project.issue.key }}"
                   data-crawl="{{ project.timestamp }}"
                   data-slug="{{ project.slug }}">&#8982; GitHub</button>
+                {% endif %}
               </div>
               <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
               <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
@@ -385,10 +392,16 @@
 	                        <a href="{{ src }}" target="_blank" rel="noreferrer">{{ src }}</a>
 	                        → {% if tgt.startswith('http://') or tgt.startswith('https://') %}<a href="{{ tgt }}" target="_blank" rel="noreferrer">{{ tgt }}</a>{% else %}<span class="muted">{{ tgt }}</span>{% endif %}
 	                      </span>
+	                      {% if correction_controls.url_fix %}
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                      {% endif %}
+	                      {% if correction_controls.deep_fix %}
 	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
+	                        title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
 	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
+	                      {% endif %}
 	                    </div>
 	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
 	                    <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
@@ -399,10 +412,16 @@
 	                  <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
 	                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 	                      <span class="mono" style="font-size:12px;flex:1;word-break:break-all;"><a href="{{ u }}" target="_blank" rel="noreferrer">{{ u }}</a> <span class="muted">{{ tail }}</span></span>
+	                      {% if correction_controls.url_fix %}
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                      {% endif %}
+	                      {% if correction_controls.deep_fix %}
 	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
+	                        title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
 	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
+	                      {% endif %}
 	                    </div>
 	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
 	                    <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
@@ -411,10 +430,16 @@
 	                  <div class="url-ai-row" style="padding:7px 0;border-top:1px solid var(--border);">
 	                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 	                      <a href="{{ ex }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;word-break:break-all;">{{ ex }}</a>
+	                      {% if correction_controls.url_fix %}
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                      {% endif %}
+	                      {% if correction_controls.deep_fix %}
 	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
+	                        data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
+	                        title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
 	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
+	                      {% endif %}
 	                    </div>
 	                    <div class="url-ai-result" style="display:none;margin-top:7px;padding:8px 10px;background:var(--bg-card,#18181b);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;font-size:12px;line-height:1.5;"></div>
 	                    <div class="gh-fix-result" style="display:none;margin-top:7px;"></div>
@@ -591,10 +616,13 @@
     ghResult.style.display = 'block';
     ghResult.innerHTML = '<p style="font-size:12px;color:var(--muted);">Analyse du repo en cours…</p>';
 
-    fetch('/api/projects/' + encodeURIComponent(slug) + '/issues/' + encodeURIComponent(issue) + '/github-fix', {
+    var fixRoute = btn.dataset.fixRoute === 'deep-fix' ? 'deep-fix' : 'github-fix';
+    var fixBody = {url: url, crawl_ts: crawl || ''};
+    if (fixRoute === 'github-fix') fixBody.confirm = false;
+    fetch('/api/projects/' + encodeURIComponent(slug) + '/issues/' + encodeURIComponent(issue) + '/' + fixRoute, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({url: url, crawl_ts: crawl || '', confirm: false})
+      body: JSON.stringify(fixBody)
     }).then(function(r){return r.json();}).then(function(d){
       btn.disabled = false;
       btn.innerHTML = '&#8982; GitHub';

@@ -40,7 +40,7 @@ def _v(graine: str) -> str:
     relance du plancher et comptaient des appels sans rapport avec ce qu'ils verifient : une
     fixture irrealiste qui fait echouer un test etranger au sien.
     """
-    return graine + " " + "complement de texte pour atteindre le plancher. " * 3
+    return (graine + " " + "complement de texte pour atteindre le plancher. " * 3).strip()
 
 
 class _Faux:

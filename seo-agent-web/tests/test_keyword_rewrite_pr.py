@@ -216,6 +216,35 @@ def test_the_correction_is_billed_once_per_file(customer, github, model) -> None
     assert used == 1, f"expected 1 correction billed, got {used}"
 
 
+def test_a_pr_is_recovered_after_a_quota_write_failure_without_rewriting_or_double_billing(customer, github, model, monkeypatch):
+    client, slug, pid, uid = customer
+    add = billing.usage_add
+    def unavailable(*args, **kwargs):
+        raise OSError("quota store unavailable after accepted PR")
+    monkeypatch.setattr(billing, "usage_add", unavailable)
+    first = _post(client, slug, query=QUERY, url=PAGE)
+    assert first.status_code == 503
+    with app_module.DB.session() as db:
+        assert billing.usage_sum(db, user_id=uid, metric="ai_corrections_month") == 0
+        db.query(IssueTask).filter(IssueTask.project_id == pid).delete()
+        db.commit()
+    before = len(github["post"]), len(github["put"]), len(model)
+    branch = next(body["head"] for path, body in github["post"] if path.endswith("/pulls"))
+    pr = {"number": 42, "html_url": "https://github.com/client/site.fr/pull/42", "state": "open",
+          "head": {"ref": branch, "repo": {"full_name": "client/site.fr"}},
+          "base": {"ref": "main", "repo": {"full_name": "client/site.fr"}}}
+    monkeypatch.setattr(app_module, "_github_api_get", lambda *args, **kwargs: [pr])
+    monkeypatch.setattr(billing, "usage_add", add)
+    result = _post(client, slug, query=QUERY, url=PAGE)
+    assert result.status_code == 200 and result.json()["recovered"] is True
+    assert (len(github["post"]), len(github["put"]), len(model)) == before
+    with app_module.DB.session() as db:
+        assert billing.usage_sum(db, user_id=uid, metric="ai_corrections_month") == 1
+        task = db.scalar(select(IssueTask).where(IssueTask.project_id == pid))
+        assert task.url == PAGE and json.loads(task.note)["query"] == QUERY
+    assert _post(client, slug, query=QUERY, url=PAGE).status_code == 409
+
+
 def test_the_plans_model_is_the_one_used(customer, github, model) -> None:
     client, slug, _pid, _uid = customer
     _post(client, slug, query=QUERY, url=PAGE)

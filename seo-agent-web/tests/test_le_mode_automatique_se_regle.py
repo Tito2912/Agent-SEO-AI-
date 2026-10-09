@@ -302,7 +302,11 @@ def test_VALIDER_pendant_la_CI_attend_son_verdict_puis_fusionne(client_connecte,
     assert "dès que les vérifications" in unquote_plus(r.headers["location"])
     assert _statut(task_id) != "done" and not any(g.endswith("/merge") for g in depot["gestes"])
     depot["decision"] = ("promouvoir", "Vérifications vertes")
-    m._balayer_verifications_pr()
+    # This workflow test shares a database with other modules; the default batch
+    # cap does not promise that this newly created task is in the first batch.
+    with m.DB.session() as db:
+        backlog = int(db.scalar(m.select(m.func.count()).select_from(m.IssueTask)) or 0)
+    m._balayer_verifications_pr(limit=backlog + 1)
     assert _statut(task_id) == "done", "le balayage suivant fusionne la page validee"
 
 

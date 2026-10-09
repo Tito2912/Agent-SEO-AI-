@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-03",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "Real GitHub effects on one owned HTML fixture, forced API process exits, a killed worker and a real loopback socket drop after PR acceptance.",
+  "previous_evidence": "validation-reconciliation-2026-10-03.json",
+  "changes_deployed_to_agent": false,
+  "client_sites_changed": 0,
+  "production_database_used": false,
+  "additional_claude_calls": 0,
+  "additional_live_fixture_prs": 1,
+  "publication": {
+    "branch": "codex/corrector-recovery-20261003",
+    "main_changed": false,
+    "scope": "Owned-fixture recovery bench, disposable API worker, safety tests, runbook and this evidence. No production corrector code changed in this phase."
+  },
+  "live_fixture": {
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "file": "gauntlet/missing-title.html",
+    "positive_control": "Main still has no title; exactly one closing head tag permits the deterministic test patch.",
+    "main_sha_before": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "main_sha_after": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "main_unchanged": true,
+    "remote_branch_creations": 2,
+    "remote_file_commits": 1,
+    "remote_pr_creations": 1,
+    "pr_number": 44,
+    "pr_url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-static-html/pull/44",
+    "pr_head_sha": "02016808eb3bdea6f12addb28aa9f924fa1cc3a7",
+    "pr_closed_without_merge": true,
+    "pr_remained_draft": true,
+    "verification_auto_merge": false,
+    "branches_retained": [
+      "seo-fix/missing_title-20261003-163044-0315d7cf",
+      "seo-fix/missing_title-20261003-163054-0e03b2ac"
+    ]
+  },
+  "live_scenarios": [
+    {
+      "name": "paid_preview_survives_process_exit",
+      "fault": "Worker calls os._exit(23) after preview and atomic quota transaction, before recording/returning a completed response.",
+      "result": "A new API process returns the saved preview with recovered/cached flags; one model stub invocation and one synthetic usage event overall."
+    },
+    {
+      "name": "killed_branch_worker_reconciled_without_rebilling",
+      "fault": "Relay observes GitHub HTTP 201 for branch creation and holds acknowledgement; the parent kills the API subprocess.",
+      "result": "A new process acquires the released payer lock but refuses replay with 503. Operator inspection verifies the unchanged branch against GitHub and explicitly releases the unpaid confirmation receipt."
+    },
+    {
+      "name": "socket_drop_after_github_pr_acceptance_recovered_once",
+      "fault": "Relay observes GitHub HTTP 201 for the draft PR, then shuts down the client TCP socket without delivering its response.",
+      "result": "The API returns 400 and has PR intent without a PR receipt. A new process finds/reuses PR 44, restores the task and exact commit verification trace, without another write or debit. Subsequent duplicate request returns 409."
+    }
+  ],
+  "workflow_observations": {
+    "distinct_api_processes": 7,
+    "synthetic_usage_events_total": 1,
+    "simulated_model_calls_total": 1,
+    "api_status_sequence_after_successful_process_returns": [200, 503, 400, 200, 409],
+    "recovery_transport_calls": "GET only; PR identity verified using the existing frozen intent.",
+    "remote_file_matches_paid_preview": true,
+    "independent_pr_and_main_recheck": "Closed, unmerged, still draft, expected head SHA and unchanged fixture main confirmed in another process.",
+    "final_cleanup_identity_hardening_recheck": "Final cleanup code re-read PR 44, verified its head/base/repository identity and observed it already closed; no additional PR or closure write.",
+    "external_secrets_in_reports": false
+  },
+  "bench_contract": {
+    "entrypoint": "python ops/gauntlet/recovery_cycle.py --workdir EMPTY_TEMP_DIRECTORY",
+    "repository_allowlist": "Only pployeraffiliation-a11y/noyaru-stack-static-html; no customer repository arguments.",
+    "write_budget": "At most two fixture correction branches from the captured main, one exact file patch, one draft PR. No merge, main update, other-file write or branch deletion is accepted by the relay.",
+    "database": "Fresh SQLite bench.db in the requested empty workdir; inherited production database URL is replaced before backend import.",
+    "identity": "Synthetic, verified-email account, real session and CSRF middleware; fixture-only plan/connection helpers.",
+    "provider": "Deterministic stub; not a test of Claude output or SEO repair quality.",
+    "startup": "API subprocesses exercise routes without production lifespan or scheduler startup.",
+    "cleanup": "Recheck PR identity before closing only the bench PR; unknown acceptance, absent/ambiguous lookup, identity mismatch and failed closure are not reported as successful cleanup.",
+    "validation": "Runtime checks remain active under optimized Python; bounded HTTP waits, child termination and relay shutdown precede cleanup."
+  },
+  "verification": {
+    "full_final_local_suite": {
+      "database": "isolated_temporary_sqlite",
+      "passed": 2800,
+      "skipped": 42,
+      "warnings": 260,
+      "seconds": 216.58,
+      "source_edits_during_run": false,
+      "skip_note": "PostgreSQL-only cases were exercised in the preceding 166-pass run; the SQLite instance of PostgreSQL lease termination is inapplicable."
+    },
+    "targeted_final_bench_and_reconciliation": {
+      "passed": 100,
+      "skipped": 31,
+      "seconds": 22.07,
+      "new_bench_cases": 20,
+      "includes": "Socket faults and real child processes against a fake GitHub upstream, hard write budgets, cleanup identity/ambiguity, existing live-cycle controls and operator reconciliation."
+    },
+    "prior_full_suite_before_final_cleanup_hardening": {
+      "passed": 2796,
+      "skipped": 42,
+      "warnings": 260,
+      "seconds": 324.88
+    },
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "bandit_medium_or_high": "none",
+    "bandit_low_reviewed": "Two subprocess warnings: fixed Python executable and worker file, argument list without shell; user workdir is checked for isolation."
+  },
+  "harness_isolation_corrections": {
+    "initial_local_failures": "Production startup settings rejected the fixture session secret; then the unverified synthetic email was correctly refused by authentication middleware.",
+    "fix": "Do not execute production lifespan/schedulers in the disposable API harness; mark only its synthetic account verified using the existing helper. No auth bypass or production behavior change.",
+    "successful_recheck_before_live_run": {"passed": 16, "seconds": 11.38}
+  },
+  "limitations": [
+    "Faults are intentionally induced by a loopback relay; this is not an actual GitHub service outage.",
+    "Live GitHub effects used SQLite; real PostgreSQL leases/concurrent billing were tested separately, not in this live cycle.",
+    "Only single-file confirmation was exercised live; multi-file/billable batches and interruption after an accepted content write need further real-effect controls.",
+    "The benchmark does not exercise real service startup, scheduler recovery, production capacity or client deployment.",
+    "No additional Claude-written anomaly family, build or SEO recrawl was certified in this phase."
+  ],
+  "remaining_release_checks": [
+    "Complete remaining Claude-written anomaly families and indexability-sensitive positive controls.",
+    "Exercise billable batch recovery and partial content writes with real GitHub effects and isolated PostgreSQL together.",
+    "Validate production startup/schedulers, pooling capacity and receipt retention.",
+    "Validate real onboarding and billing lifecycle, then review/deploy and supervise pilots."
+  ],
+  "artifacts_windows": {
+    "live_github_cycle": "C:/Users/Caron/AppData/Local/Temp/seo-github-worker-recovery-20261003-mikrz1d6",
+    "final_full_suite": "C:/Users/Caron/AppData/Local/Temp/seo-github-recovery-final-full-20261003-b45hmj_7",
+    "final_targeted": "C:/Users/Caron/AppData/Local/Temp/seo-github-recovery-final-checks-20261003-j3z4c1yg",
+    "independent_final_cleanup": "C:/Users/Caron/AppData/Local/Temp/seo-github-recovery-final-cleanup-20261003-zyjd85gy"
+  }
+}

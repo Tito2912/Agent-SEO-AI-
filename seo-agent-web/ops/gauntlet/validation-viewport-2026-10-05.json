@@ -1,0 +1,193 @@
+{
+  "date": "2026-10-05",
+  "status": "guarded_minimal_viewport_addition_measured_on_pinned_owned_fixture",
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "708ec37f2b4172c98f30b1b95f58d320f9711734",
+  "scope": {
+    "family": "viewport_not_set",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "seed_branch": "gauntlet-static-html-sitemap-add-correction-20261005-102033",
+    "seed_sha": "e42e0f58eb69128317c2ec912f3ce92d33c7e82a",
+    "seed_pr_closed_draft_unmerged": 76,
+    "setup_file_puts": 0,
+    "corrective_paths": [
+      "gauntlet/viewport-not-set.html"
+    ],
+    "maximum_file_put_attempts": 1,
+    "write_requires_exact_qa_branch_blob_sha_expected_bytes_and_no_retry": true,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/viewport_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "product_guards": [
+    "Require an explicit typed integer meta_viewport_tag_count equal to zero and an absent/empty viewport value on every coherent independently requested direct same-host HTTPS HTML 200 observation. Reuse the proved indexability/canonical guard: no errors, blocked hosts, redirects, foreign hosts, credentials, fragments, explicit ports, non-self canonical or noindex/none instructions. Unknown counts, malformed values and conflicting duplicates refuse. Name refused URLs when a verified subset exists.",
+    "Bind each proved page to one current nonshared literal HTML route. Refuse missing/ambiguous/query-colliding bindings, nonliteral framework sources and heuristic layout targeting. Require budget for the whole source set and verify all current sources before any write, including current canonical, indexability, head structure, unique attributes and absent viewport. Existing viewport markup is not replaced or duplicated.",
+    "Inspect with the existing literal HTML reader and structured HTMLParser. Refuse scripts/templates/refresh/base, ambiguous heads, absent document language and sources or output above 80000 UTF-8 bytes. Ignore comments, preserve exact existing bytes and line endings, and insert one meta name=viewport content='width=device-width, initial-scale=1' at the literal head end. Repeated additions are idempotent.",
+    "Re-read simple flat routing rules; refuse competing, wildcard or changed redirects, ambiguous _redirects and configured Netlify redirect tables. Immediately before writing, recheck all pending pages with the existing bounded public-target/direct HTTPS indexability and canonical probe. One failed source/probe blocks the whole preflight. SHA-guard each HTML PUT; stop on a write failure and report every unpatched file. Multi-file Git writes are not atomic.",
+    "Individual and grouped deep endpoints share the exact guard, with zero provider calls or AI charge. Empty refusal plans prevent model/heuristic fallback. Free-form, cached and confirmed preview paths cannot bypass it. The old seven-family bulk fixture now supplies real-shaped direct HTML observations and an explicit zero viewport count; its original seven-family assertion is retained."
+  ],
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-viewport-baseline-20261005-110644",
+    "correction_branch": "gauntlet-static-html-viewport-correction-20261005-110644",
+    "baseline_sha": "e42e0f58eb69128317c2ec912f3ce92d33c7e82a",
+    "final_sha": "21bf75fcbca71d940d8b20291da385b8705bc348",
+    "baseline_pr": 77,
+    "correction_pr": 78,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "setup_file_puts": 0,
+    "corrective_file_puts": 1,
+    "corrective_path": "gauntlet/viewport-not-set.html",
+    "minimal_new_tags": 1,
+    "viewport_tag_counts": [
+      0,
+      1
+    ],
+    "viewport_value_after": "width=device-width, initial-scale=1",
+    "observed_healthy_html_routes": [
+      52,
+      52
+    ],
+    "report_rows": [
+      62,
+      62
+    ],
+    "controlled_whole_family_counts": [
+      1,
+      0
+    ],
+    "raw_whole_family_counts": [
+      0,
+      0
+    ],
+    "raw_sitemap_seed_urls": [
+      0,
+      0
+    ],
+    "sitemap_entries_unchanged": [
+      49,
+      49
+    ],
+    "positive_routes": [
+      "gauntlet/viewport-not-set"
+    ],
+    "preput_https_rechecks": 1,
+    "preput_http_namespace": "Only the exact owned production-namespace page is mapped to the actual baseline preview. Project response URL and remove only the verified exact native Netlify noindex header; real status, body, canonical, meta robots and stream are preserved. Native previews themselves do not pass the product guard.",
+    "only_the_expected_tag_changes_source_and_served_html": true,
+    "healthy_viewports_canonicals_social_tags_navigation_and_routing_preserved": true,
+    "requested_observation_multiset_preserved": true,
+    "previous_repairs_and_negative_controls_preserved": true,
+    "increased_counts": {},
+    "all_selected_occurrences_resolved": true,
+    "all_family_occurrences_on_this_controlled_fixture_resolved": true,
+    "example_comparison": "Reuse the previous strictly bounded normalizer only for protocol/www root probe examples of the two exact owned PR previews. Requested production-namespace observations and raw reports are not normalized.",
+    "cycle_sha256": "145da0c146f76d94989c6180c27b50f3cb8763c63ed8cab48d159cdecab349e0"
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "fresh_isolated_process_against_final_code": true,
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "checks": "Re-read exact branch heads, two closed draft unmerged PRs, successful builds, a one-commit/one-file Git comparison, source bindings, sitemap/routing and fresh served XML/HTML. Specify the expected single tag independently of the product rewriter. Compare complete healthy bodies, allowing only the actual owned Netlify deploy-id to vary and the one expected added line. Re-prepare with final code and verify idempotence without targeting/models/writes/quota calls.",
+    "fresh_default_probe_calls_on_native_preview_urls": 2,
+    "all_native_preview_probes_rejected": true,
+    "native_preview_noindex_preserved": true,
+    "production_indexation_not_proven": true,
+    "countercheck_sha256": "4dd4f37ce2a2dd16368910337d558865b39d8f5c2613b80dce5fea2a542c7cf7",
+    "countercheck_script_sha256": "4575e019b7bea263610b51f85e76f4bf728960340367c06e9d2f4f131430d447"
+  },
+  "acceptance_inventory": {
+    "historical_tracked_snapshot_preserved": "acceptance-inventory-2026-10-04.json",
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_exact_named_record_before": 9,
+    "families_without_exact_named_record_after": 8,
+    "new_named_mentions": [
+      "viewport_not_set"
+    ],
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "before_snapshot_sha256": "c9c25f8aa334ce91bab4df20c0c1451b75755d57e8ddd588d8e0de27b98778c8",
+    "legacy_hidden_diagnostic_not_promoted": "The remaining legacy diagnostic for an absent canonical is intentionally non-offered. Do not enable that task or count it as a tested repair merely to reduce the inventory gap."
+  },
+  "provider_usage": {
+    "all_live_and_countercheck_requests": 0,
+    "claude_budget": 0,
+    "openai_fallback_allowed": false
+  },
+  "verification": {
+    "full_final_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 4418,
+      "skipped": 42,
+      "warnings": 343,
+      "seconds": 243.6,
+      "real_provider_keys": "empty",
+      "provider_selection": "auto_for_existing_mocked_provider_tests",
+      "source_or_test_edits_during_run": false,
+      "junit_sha256": "ee3f0f4bb6a6b0988d41f1b3d88db4b1a6aadd181ccd56159120f261e4678067"
+    },
+    "new_tests_this_phase": 137,
+    "targeted_final_suite": {
+      "passed": 1232,
+      "skipped": 0,
+      "warnings": 105,
+      "seconds": 60.46,
+      "junit_sha256": "081329debb1d36ec1681aac971d151bcfaa34f5ee1116d897b7dc44f800b3e7a"
+    },
+    "initial_red": {
+      "failed": 69,
+      "passed": 2,
+      "seconds": 33.39,
+      "junit_sha256": "a518a5d44410dacc7e2e5b2a0952cb2e3637bceb5b79c08b62c402eac8756013",
+      "explanation": "Repeated cases expose absent guard plans/rewriter and generic head targeting, not 69 independent production defects. The new unit fixture was then made genuinely multiline with the intended second route for its line-ending and multi-page assertions."
+    },
+    "first_implementation_run": {
+      "failed": 1,
+      "passed": 314,
+      "seconds": 5.96,
+      "junit_sha256": "b9e17a299b59eb71ebdec0ab804fa0fd4b7e93f4281761450e694afdf26d9256",
+      "explanation": "The old bulk-seven-families positive fixture supplied only URL/status, no HTML/indexability or explicit viewport absence observations. Add a direct HTML 200 self-canonical row with typed zero count, retaining every existing seven-family processing assertion."
+    },
+    "first_size_preflight": {
+      "failed": 0,
+      "passed": 342,
+      "errors": 4,
+      "seconds": 5.54,
+      "junit_sha256": "7b91fbca7297eb7542762cb31d10646258de790eab8cef5f09e36542253f1261",
+      "explanation": "Pytest generated enormous identifiers from two large string parameters, exceeding the Windows 32767-character environment-variable limit during setup and teardown. Give those same byte-limit witnesses short explicit IDs; do not change their assertions or the product."
+    },
+    "final_preflight": {
+      "passed": 381,
+      "skipped": 0,
+      "warnings": 105,
+      "seconds": 5.31,
+      "junit_sha256": "fce12245ac8a7dd321645995a681afbf7cc3b3bc501db2ed8bb110c52e177aed"
+    },
+    "ruff_F_E9": "passed_on_all_six_phase_source_and_test_files",
+    "compileall": "passed",
+    "new_module_and_bench_bandit_medium_or_high": "none",
+    "source_manifest_sha256": "1684d7e74af78e61d4c3eb79c56d7c2785e3ea86557892161e81d67953a2b7be",
+    "normalized_LF_tested_source_sha256": {
+      "backend/app.py": "67b6b3ad2aa3949fe3efafc25302d8fc12ace5347ac0500f25bc8200a54b8b6f",
+      "backend/viewport.py": "e2e8d2a17d8a04757794550cbba5da9c160b60beb1d0aa20a67ca414c64c538c",
+      "tests/test_verified_viewport.py": "c260d1048c76e15893c9af24ee9c30d29af92972984b122b20e347f490a49f93",
+      "tests/test_corrector_operational.py": "89db19cc7f6de90eeb7d3de9bf69ffbeb2fb6d6e39b54dc0a150c6e8cb0637f1",
+      "ops/gauntlet/viewport_cycle.py": "202d2eea2b0cffeeaec9c3d1e09484c2d660dda46e0f6873d3ff3512d974e8c3",
+      "tests/test_gauntlet_viewport_cycle.py": "86a000349d6076a2ecb1a520626fca2371a8e4b9d5046e192dfa99fbcbe77541"
+    },
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "Only one owned static HTML fixture is rebuilt. The product path intentionally refuses nonliteral/shared sources, nonliteral heads, scripts/templates, ambiguous routing, non-HTTPS targets, unknown metrics and protected/redirecting/nonindexable pages. It does not provide a universal generator/stack detector: a bound literal HTML file is inspected as such. Project site_name must establish the actual host. These refusals are tested synthetically; no successful repair is claimed on every stack or every occurrence.",
+    "Viewport absence is proved by explicit crawl metrics and the current literal source. Fresh network rechecks reuse the indexability/canonical probe; they do not independently attest viewport absence on every production page. The live countercheck separately parses the real served viewport before/after. No mobile browser layout, JavaScript DOM execution or production indexation is verified.",
+    "Native previews keep noindex and production canonical-host context, with zero raw sitemap seeds. Raw counts 0 to 0 prove no repair. Controlled exact host/header projection and the actual served XML yield 1 to 0, supported by source and fresh HTTP checks. No real response status, body or meta directive is invented.",
+    "Source reads, SHA-guarded writes, network probes and future deployments are not atomic. Multi-file write failures can leave a reported partial branch; no rollback or atomic batch guarantee is claimed. The existing public-target validator is reused, not a full SSRF/DNS-rebinding audit.",
+    "No agent deployment, client onboarding, fresh real Claude integration, production recovery replay, scheduler/payment acceptance, capacity test or fresh PostgreSQL run is included. SQLite keeps 42 skipped tests. Eight claimed families still have no exact named record, including one deliberately hidden legacy diagnostic. Record references are not successful repairs and do not certify client readiness."
+  ]
+}

@@ -194,6 +194,65 @@ def suggest_issue_fix(
     # repli generique — mesure du 15/09/2026 : 28 familles dans ce cas, dont trois `error`.
     lk = key.lower().removesuffix("_not_indexable").removesuffix("_indexable")
 
+    if lk in {"structured_data_schema_org_validation_error", "structured_data_google_rich_results_validation_error"}:
+        faq = lk == "structured_data_google_rich_results_validation_error"
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort, "sample_urls": sample_urls,
+            "why": ("Le controle local detecte une FAQ incomplete, pas une validation Google. "
+                    "Les resultats enrichis FAQ ont ete arretes le 7 mai 2026." if faq else
+                    "Le controle local detecte du JSON invalide ou un @type manquant ; aucun validateur Schema.org externe n'est appele."),
+            "fix": (["Verifier les questions et reponses reellement publiees avant de completer ou retirer un balisage FAQ obsolete."] if faq else
+                    ["Verifier la syntaxe JSON et le type voulu avec le proprietaire du contenu avant toute modification."])
+                   + ["Ne pas inventer de type, de faits ou de contenu pour faire baisser le compteur."],
+            "verify": ["Recrawler la meme page et verifier les codes d'erreur locaux ; conserver les erreurs non resolues.",
+                       "Ce controle n'atteste ni validation externe ni affichage dans les resultats de recherche."],
+            "auto_fixable": False,
+            "auto_fix_note": "Aucune correction automatique prouvee. price accepte un texte ou un nombre : ne pas convertir un prix valide.",
+            "mode": "suggest-only",
+        }
+
+    if lk == "missing_canonical":
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort, "sample_urls": sample_urls,
+            "why": "L'absence seule de canonical ne prouve pas un defaut SEO ni quelle URL devrait etre preferee.",
+            "fix": [
+                "Examiner les vrais doublons et les signaux existants avant de choisir une URL preferee.",
+                "Traiter les groupes prouves dans leur famille duplicate_pages_without_canonical, sans ajout systematique.",
+            ],
+            "verify": [
+                "Verifier les URL finales, les redirections, les canonicals et les entrees de sitemap du groupe concerne.",
+                "Recrawler la famille de doublons concernee ; ne pas utiliser ce compteur historique comme objectif de correction.",
+            ],
+            "auto_fixable": False,
+            "auto_fix_note": "Ce diagnostic historique n'autorise aucune correction HTML automatique.",
+            "mode": "suggest-only",
+        }
+
+    if lk == "canonical_from_http_to_https":
+        return {
+            "key": key, "label": label, "category": category, "severity": severity,
+            "count": count, "priority": priority, "effort": effort, "sample_urls": sample_urls,
+            "why": ("La page reste servie en HTTP et declare un canonical HTTPS. Cette famille "
+                    "signale l'acces HTTP, pas une balise canonical a remplacer."),
+            "fix": [
+                "Conserver le canonical HTTPS ; ne pas le remplacer par une URL HTTP pour faire taire l'anomalie.",
+                "Verifier d'abord que la destination HTTPS repond en HTML 200 avec un certificat valide et sans boucle.",
+                "Faire configurer la redirection HTTP vers HTTPS sur l'hebergement, le serveur ou le proxy concerne.",
+                "Traiter separement les liens internes et entrees de sitemap HTTP signales par leurs propres familles.",
+            ],
+            "verify": [
+                "Tester directement l'URL HTTP : elle doit renvoyer une 301 ou 308 vers la destination HTTPS voulue.",
+                "Suivre la redirection : verifier HTML 200, le certificat et le canonical conserve, sans boucle.",
+                "Recrawler aussi l'ancienne URL HTTP et verifier canonical_from_http_to_https, sans retirer cette URL du test.",
+            ],
+            "auto_fixable": False,
+            "auto_fix_note": ("Intervention d'hebergement : le rapport ne prouve pas quel fichier "
+                              "controle l'acces HTTP. Aucune correction HTML automatique."),
+            "mode": "suggest-only",
+        }
+
     if lk.startswith("page_has_only_one_dofollow_incoming_internal_link"):
         rows = _under_linked_context(report, key)
         why = ("Ces pages ne reçoivent qu'UN seul lien interne en dofollow. Un lien unique rend "
@@ -289,16 +348,6 @@ def suggest_issue_fix(
         ]
 
     # Duplication / canonicals / variants
-    elif lk == "missing_canonical":
-        why = "Sans canonical, tu augmentes le risque de duplication (paramètres, variantes, etc.)."
-        fix = [
-            "Ajouter une balise canonical auto-référente sur les pages indexables.",
-            "Définir une politique d’URL (HTTPS, www ou non-www, trailing slash) et s’y tenir.",
-        ]
-        verify = [
-            "Relancer un crawl et vérifier « missing_canonical » et les issues liées aux canonicals.",
-            "Vérifier la cohérence canonicals ↔︎ URLs finales (pas de redirect/4xx/5xx).",
-        ]
     elif lk == "duplicate_titles":
         why = "Des titres dupliqués peuvent indiquer des pages trop proches (ou des variantes http/https/www) et nuisent au ciblage."
         if _looks_like_host_variant(sample_urls):

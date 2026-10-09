@@ -24,10 +24,11 @@ from backend import app as m  # noqa: E402
 from backend import audit_dashboard as dash  # noqa: E402
 
 # Inatteignables VOULUES, avec la raison. Toute autre est un trou.
-INATTEIGNABLES_ASSUMEES: dict[str, str] = {
+INATTEIGNABLES_ASSUMEES: dict[str, str] = {}
+DIAGNOSTICS_RETIRES: dict[str, str] = {
     "missing_canonical":
-        "parite Ahrefs : Ahrefs n'a aucune anomalie « canonical manquant ». Le cas nuisible est "
-        "`duplicate_pages_without_canonical`, leve separement. Le gestionnaire reste en place.",
+        "L'absence seule est un diagnostic historique, pas un defaut SEO prouve. La revendication "
+        "automatique est retiree ; duplicate_pages_without_canonical reste traitee separement.",
 }
 
 
@@ -65,5 +66,11 @@ def test_les_six_familles_de_redirection_de_ressources_sont_montrables():
 def test_une_inatteignable_assumee_porte_sa_raison():
     for key, raison in INATTEIGNABLES_ASSUMEES.items():
         assert key in m._handled_issue_keys(), key
+        assert not _montrable(key), key
+        assert len(raison) > 40, key
+    assert DIAGNOSTICS_RETIRES
+    for key, raison in DIAGNOSTICS_RETIRES.items():
+        assert key not in m._handled_issue_keys(), key
+        assert not m._github_issue_auto_fixable(key), key
         assert not _montrable(key), key
         assert len(raison) > 40, key

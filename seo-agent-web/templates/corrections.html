@@ -170,6 +170,15 @@
   margin: 5px 0 0; padding: 8px 10px; background: var(--bg-2, #0d0d0f); border: 1px solid var(--border);
   border-radius: 4px; font-size: 11px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; font-family: monospace;
 }
+@media (max-width: 640px) {
+  .topbar { flex-wrap: wrap; gap: 10px; }
+  .crumbs, .topbar-actions { flex-wrap: wrap; max-width: 100%; }
+  .card-title-row { flex-wrap: wrap; }
+  .card-title-actions { flex-wrap: wrap; max-width: 100%; }
+  .corr-item-head { flex-wrap: wrap; }
+  .corr-item-info { flex: 1 1 150px; }
+  .corr-item-meta { flex-wrap: wrap; max-width: 100%; }
+}
 </style>
 <script>
 (function () {
@@ -329,8 +338,12 @@
           stopPoll();
           var label = d.merged ? 'Corrections mergées' : 'PR créée';
           var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-          showFlowStatus(label + ' (' + esc(d.fixed_count || 0) + '/' + esc(d.total_count || 0) + ')' + link, 'ok');
-          setTimeout(function() { window.location.reload(); }, 2200);
+          var detail = d.partial ? ' - Correction partielle.' : '';
+          if (d.not_attempted_issues_count) detail += ' ' + d.not_attempted_issues_count + ' anomalie(s) non traitée(s).';
+          if (d.not_attempted_count) detail += ' ' + d.not_attempted_count + ' fichier(s) non traité(s).';
+          showFlowStatus(label + ' (' + esc(d.fixed_count || 0) + '/' + esc(d.total_count || 0) + ')' + esc(detail) + link, d.partial ? '' : 'ok');
+          if (d.partial) { btn.disabled = false; btn.textContent = original; }
+          else setTimeout(function() { window.location.reload(); }, 2200);
         })
         .catch(function() {
           // Slow request dropped client-side — server may still finish; poller will reload.
@@ -756,6 +769,7 @@
       <option value="all">Vérification</option>
       <option value="resolved">✓ Résolues</option>
       <option value="still_present">⚠ Encore présentes</option>
+      <option value="unverified">Non vérifiables</option>
       <option value="none">Non vérifiées</option>
     </select>
     <select id="corr-sort" title="Trier">
@@ -818,6 +832,8 @@
             <span class="corr-verify-text ok" title="Confirmé résolu">✓</span>
           {% elif task.verify and task.verify.result == 'still_present' %}
             <span class="corr-verify-text err" title="Toujours présent">⚠</span>
+          {% elif task.verify and task.verify.result == 'unverified' %}
+            <span class="corr-verify-text warn" aria-label="Non vérifiable" title="Non vérifiable : {{ task.verify.reason or 'Le crawl ne permet pas de conclure.' }}">?</span>
           {% endif %}
           {# Collateral damage: a fix that resolves its own issue while creating others is only
              half a success, and that used to be invisible. #}

@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-03",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "Durable correction receipts, idempotent quota transactions and recovery after an accepted PR; isolated SQLite and PostgreSQL tests, with GitHub/provider fault injection.",
+  "previous_evidence": "validation-postgres-et-ia-2026-10-02.json",
+  "changes_deployed_to_agent": false,
+  "client_sites_changed": 0,
+  "additional_claude_calls": 0,
+  "additional_live_fixture_prs": 0,
+  "publication": {
+    "branch": "codex/corrector-recovery-20261003",
+    "main_changed": false,
+    "scope": "Corrector implementation, migration, tests, verification UI/docs and prior validation evidence; unrelated worktree changes and line-ending-only changes are not included."
+  },
+  "durable_contract": {
+    "model": "CorrectionOperation",
+    "migration": "20261003_0013",
+    "request_identity": "Payer, project, action, normalized input and GitHub configuration; SHA-256 key, no credentials stored.",
+    "quota": "UsageEvent and the operation's charged flag commit in one transaction. Both pre-commit rollback and lost post-commit acknowledgement are tested.",
+    "paid_previews": "Saved before charging; replay or recovery returns the saved result without a new provider call or debit.",
+    "stale_previews": "Source hashes reject a replay/application after the file changed. Confirmation reads the file at the exact base commit before creating its correction branch.",
+    "github_intent": "Unique operation branch suffix, external-write intent and repair/task/billing intent are persisted before their effects.",
+    "pr_recovery": "Read-only lookup by exact head/base, both repository identities, numeric PR number and expected GitHub URL. One confirmed matching PR is reused; no PR creation or file rewrite is repeated.",
+    "task_recovery": "IssueTask records can be reconstructed from the persisted intent. PR SHA/node metadata is preserved and one verification trace is prepared outside the task loop.",
+    "unknown_outcomes": "Missing, ambiguous, malformed or inaccessible PRs and partial branches are refused with 503. A changed request cannot bypass a pending payer operation.",
+    "automation": "Recovery never merges or promotes a PR; restored verification does not grant automatic merge rights."
+  },
+  "verified_scenarios": [
+    "Repeated paid preview with the last credit",
+    "URL-fix result after lost response",
+    "Saved preview after lost response following a committed charge",
+    "Preview reuse after a rolled-back quota transaction",
+    "Single quota debit despite lost post-commit acknowledgement",
+    "PR accepted before transport failure, then reused without another write",
+    "Keyword PR accepted before quota persistence failure: task rebuilt and one debit on recovery",
+    "Deleted or corrupted IssueTask metadata cannot permit a duplicate PR/preview",
+    "Unknown/empty/multiple PR matches, wrong branch/repository and malformed metadata fail closed",
+    "Interrupted partial branch cannot be retried by changing crawl timestamp",
+    "Source revision change cannot be overwritten by a saved paid preview",
+    "GitHub line-wrapped base64 content remains readable on preview replay",
+    "Copied thread context does not inherit journal write authority",
+    "Six simultaneous API processes share one last credit on real PostgreSQL",
+    "Existing SQLite database migration and create_all compatibility",
+    "Existing PostgreSQL schema upgraded from 0012 to 0013 and upgrade replay"
+  ],
+  "verification": {
+    "full_local_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 2741,
+      "skipped": 11,
+      "warnings": 256,
+      "seconds": 198.55,
+      "skip_note": "Nine opt-in PostgreSQL guard cases and two PostgreSQL customer cases; all eleven passed in the separate PostgreSQL run.",
+      "source_edits_during_run": false
+    },
+    "targeted_real_postgres_run": {
+      "status": "passed",
+      "passed": 97,
+      "warnings": 32,
+      "seconds": 28.50,
+      "real_postgres_customer_and_keyword_ledger_cases": 62,
+      "real_postgres_guard_cases": 9,
+      "unit_or_sqlite_guard_and_journal_cases_included": 26
+    },
+    "postgres_schema_upgrade": {
+      "database": "seo_corrector_test_recovery_migration",
+      "previous_revision": "20260919_0012",
+      "new_revision": "20261003_0013",
+      "table_absent_before": true,
+      "table_present_after": true,
+      "upgrade_replay": "passed"
+    },
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "bandit": "passed_on_correction_guard_journal_and_db",
+    "staged_semantic_check": "Staged Python ASTs match the tested worktree; staged JSON parses successfully.",
+    "staged_whitespace_check": "passed"
+  },
+  "test_isolation_correction": {
+    "initial_full_suite": {"failed": 19, "passed": 2721, "skipped": 11, "seconds": 196.44},
+    "causes": [
+      "Migration tests ran Alembic logging setup in the pytest process and disabled existing application loggers.",
+      "Source guard tests needed to explicitly account for the recovery verification trace, and the recovery helper had prepared it inside the task loop."
+    ],
+    "fix": "Run migration CLI in isolated child processes; prepare one recovery trace outside the loop and preserve the five primary PR-route assertions.",
+    "targeted_recheck": {"passed": 128, "skipped": 2, "seconds": 21.85}
+  },
+  "postgres_isolation": {
+    "version": "16.15",
+    "bind": "127.0.0.1:55473",
+    "production_database_used": false,
+    "server_stopped_after_tests": true,
+    "remaining_advisory_locks": 0,
+    "remaining_idle_in_transaction_sessions": 0
+  },
+  "remaining_release_checks": [
+    "Partial branches, provider crashes before a saved result, or unconfirmable PR outcomes require operator reconciliation; no automatic destructive cleanup or retry is enabled.",
+    "Exercise recovery against actual GitHub transport failures and real worker restarts, not only injected responses and database-level integration tests.",
+    "Validate production worker/pool capacity and session-compatible PostgreSQL pooling.",
+    "Define receipt retention and operator tooling for pending operations before broad commercial rollout.",
+    "Complete the remaining Claude-written families, description batches and indexability-sensitive positive controls.",
+    "Validate real customer onboarding and billing lifecycle, then review/deploy and supervise pilots."
+  ],
+  "artifacts_windows": {
+    "full_suite": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-final-recovery-clean-20261003-660kbpj9",
+    "postgres_targeted": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-pg-recovery-clean-20261003-ssomx4qt",
+    "test_isolation_recheck": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-recovery-isolation-20261003-0l4khgxh"
+  }
+}

@@ -3218,10 +3218,9 @@ def _iter_sitemap_urls(
 
 def _schema_org_validation_errors(ld_json_texts: list[str], *, page_url: str | None = None) -> list[str]:
     """
-    Best-effort schema.org validation (Ahrefs-like).
+    Local JSON parsing and selected markup-completeness checks, not external validation.
 
-    This is intentionally lightweight: we only flag a small set of common type errors
-    that schema.org validators also report (e.g. required fields missing on common types).
+    These compatibility error codes do not certify Schema.org or Google eligibility.
     """
 
     def ctx_text_from(value: Any) -> str:
@@ -3296,8 +3295,7 @@ def _schema_org_validation_errors(ld_json_texts: list[str], *, page_url: str | N
                 errors.add("missing_type")
             else:
                 errors.add("missing_type")
-            # Rich results required-field checks (best-effort). This is NOT a full Rich Results validator;
-            # it only aims to catch common "missing required field" problems that tools like Ahrefs flag.
+            # Selected local completeness checks, not current Google feature requirements.
             if types & {"Article", "NewsArticle", "BlogPosting"}:
                 headline = obj.get("headline")
                 if not (isinstance(headline, str) and headline.strip()):
@@ -7067,9 +7065,8 @@ def _score_issues(
         more_than_one_page_for_same_language_in_hreflang = sorted(filter(None, _mto_flagged_keys))
 
     # --- Structured data (schema.org) ---
-    # Ahrefs-like: be conservative to avoid false positives.
-    # - schema.org validation errors: only hard parse/type errors
-    # - Google rich results errors: only a small subset of rich-results-like required-field issues
+    # Compatibility keys represent local checks, never an external validator's verdict.
+    # Google discontinued FAQ rich results on 2026-05-07; retain incomplete FAQ diagnostics.
     SCHEMA_ORG_HARD_ERRORS = {"invalid_json", "missing_type"}
     RICH_RESULTS_ERRORS = {
         "faq_mainEntity_missing",
@@ -8255,8 +8252,15 @@ def _score_issues(
     issues["structured_data_schema_org_validation_error"] = _issue_block(
         "structured_data_schema_org_validation_error", structured_data_schema_org_errors
     )
+    issues["structured_data_schema_org_validation_error"].update(
+        validation_source="local_jsonld_parse_and_type_check", external_schema_org_validation=False
+    )
     issues["structured_data_google_rich_results_validation_error"] = _issue_block(
         "structured_data_google_rich_results_validation_error", structured_data_google_rich_results_errors
+    )
+    issues["structured_data_google_rich_results_validation_error"].update(
+        validation_source="local_faq_markup_check", external_google_validation=False,
+        faq_google_rich_results_supported=False
     )
     issues["page_referenced_for_more_than_one_language_in_hreflang"] = _issue_block(
         "page_referenced_for_more_than_one_language_in_hreflang", hreflang_referenced_multi_lang

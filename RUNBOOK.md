@@ -11,12 +11,18 @@
 
 En production, `SEO_AGENT_STRICT_CONFIG=true` bloque le démarrage si les secrets critiques sont absents ou faibles.
 
-Variables obligatoires en mode strict :
+Variables obligatoires pour le service web en mode strict :
 - `DATABASE_URL`
 - `PUBLIC_BASE_URL` en `https://...`
 - `SEO_AGENT_SECRET_KEY` long et aléatoire
 - `SEO_AGENT_ENCRYPTION_KEY` ou `SEO_AGENT_ENCRYPTION_KEYS`, long, aléatoire et distinct de `SEO_AGENT_SECRET_KEY`
 - `CRON_SECRET` long et aléatoire
+
+Le worker séparé valide aussi sa configuration avant de consommer la file.
+Il exige `DATABASE_URL` et une clé de chiffrement explicite et robuste. Vérifier
+sa compatibilité avec celle du web. Il n'exige pas les secrets de session/cron ni l'URL publique
+du web ; si un secret de session lui est fourni, il doit rester distinct de la
+clé de chiffrement. Cette validation ne teste pas la connectivité PostgreSQL.
 
 Sur Render, `SEO_AGENT_TRUST_PROXY_HEADERS=true` permet d'utiliser `X-Forwarded-For` / `X-Forwarded-Proto` pour l'IP client et les cookies `Secure`. Ne l'active pas hors proxy de confiance.
 
@@ -28,6 +34,10 @@ Le body lu par le middleware CSRF est limité par `SEO_AGENT_CSRF_BODY_MAX_BYTES
 
 Le schéma est géré via Alembic (dossier `seo-agent-web/alembic/`). En production, le container exécute automatiquement `alembic upgrade head` au démarrage (voir `Dockerfile`).
 En développement local SQLite (sans `DATABASE_URL`), l'app applique aussi `alembic upgrade head` au démarrage pour éviter les bases en retard.
+Cette initialisation locale est commune au web et au worker séparé. Sur une
+base explicitement configurée, sans option d'auto-migration/création, les deux
+processus supposent que l'entrypoint a déjà appliqué les migrations. La concurrence
+entre migrations de plusieurs services doit être vérifiée en préproduction.
 
 ### Appliquer les migrations (manuel)
 
@@ -68,6 +78,9 @@ Idée simple :
 
 - **Sentry** : configure `SENTRY_DSN` + vérifie la réception d’une erreur test.
 - **Santé** : endpoint `GET /healthz` utilisé par Render.
+  C'est un contrôle de présence HTTP, pas une preuve que PostgreSQL, les workers
+  ou les intégrations sont opérationnels. Vérifier aussi les logs, la révision
+  Alembic et la consommation d'une tâche possédée en préproduction.
 - **Exploitation prod** : connecte-toi avec le compte propriétaire système puis ouvre `/settings/operations`.
   Cette page vérifie sans afficher les secrets : configuration stricte, secrets critiques, Stripe, emails, IA, S3/backups, stockage disque, jobs bloqués et audit logs récents.
 
@@ -149,8 +162,39 @@ Le repo supporte 2 modes via `SEO_AGENT_SERVICE_MODE` (voir `seo-agent-web/entry
 
 - Crée un service **Worker** basé sur le même repo/image.
 - Ajoute `SEO_AGENT_SERVICE_MODE=worker`.
+- Garde `SEO_AGENT_STRICT_CONFIG=true` (explicite dans le blueprint du worker).
 - Copie les env vars nécessaires (au minimum : `DATABASE_URL`, `SEO_AGENT_ENCRYPTION_KEY`, creds S3, clés IA).
 - Mets `SEO_AGENT_DISABLE_WORKER=true` sur le service web pour éviter de lancer le worker deux fois.
+
+Le worker initialise configuration, politique de migrations, Sentry et overrides
+de plans disponibles avant ses threads. Les schedulers de vérification PR et de
+contenu restent côté web. `PLAN_CONFIG_JSON` est relu depuis l'environnement ou
+les fichiers locaux disponibles : un override sur le disque du web n'est pas
+automatiquement distribué au worker hébergé ailleurs. Vérifier les mêmes plans
+sur les deux services et leur persistance après redémarrage.
+
+Depuis `seo-agent-web/`, le banc Linux `ops/gauntlet/startup_policy_cycle.py` teste des processus
+possédés, SQLite migré et une file synthétique. Il ne remplace ni une recette
+Docker/Render, ni une mesure du pool PostgreSQL, ni l'arrêt d'un vrai crawl en vol.
+
+### Preproduction isolee
+
+Cette infrastructure est optionnelle tant que l'instance existante est reservee
+aux comptes et sites de test possedes. La recette peut s'y faire apres controles
+de sauvegarde, version deployee, configuration et migration. Avant d'accueillir
+des donnees clients, isoler les essais risques de l'instance qui les heberge.
+
+Suivre [le guide de creation](seo-agent-web/ops/gauntlet/PREPRODUCTION.md) avec
+`render.preproduction.yaml` dans un **nouveau** Blueprint. Cette configuration
+prepare des ressources payantes, sans les creer ni deployer. Ne pas synchroniser
+le Blueprint de production ; desactiver aussi Auto Sync dans Render apres creation.
+
+`SEO_AGENT_DISABLE_SCHEDULERS=true` empeche au demarrage les boucles PR/contenu
+du web, sans couper les jobs, le worker ou les routes cron manuelles.
+`SEO_AGENT_NOINDEX=true` ajoute un en-tete aux reponses traitees, pas une
+protection d'acces. Les deux options sont inactives par defaut et demandent une
+configuration explicite. Les credentials externes sont initialement vides :
+configurer uniquement les integrations de recette avant de les tester.
 
 ## Rotation clé de chiffrement (secrets)
 

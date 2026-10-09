@@ -55,8 +55,8 @@ ARBRES = [
 ]
 
 PAGES = [
-    {"url": "https://site.fr/", "status_code": 200},
-    {"url": "https://site.fr/blog", "status_code": 200, "canonical": "https://site.fr/blog"},
+    {"url": "https://site.fr/", "status_code": 200, "content_type": "text/html"},
+    {"url": "https://site.fr/blog", "status_code": 200, "content_type": "text/html", "canonical": "https://site.fr/blog"},
 ]
 
 
@@ -196,7 +196,7 @@ def test_un_crawl_SANS_page_indexable_ne_produit_pas_un_sitemap_vide(github) -> 
 def test_au_dela_du_plafond_on_REFUSE_plutot_que_d_ecrire_a_moitie(github) -> None:
     """Au-delà, un sitemap doit être découpé en index. Un fichier qu'on ne sait pas découper
     vaut mieux refusé qu'écrit tronqué."""
-    trop = [{"url": "https://site.fr/p%d" % i, "status_code": 200}
+    trop = [{"url": "https://site.fr/p%d" % i, "status_code": 200, "content_type": "text/html"}
             for i in range(m._SITEMAP_URLS_MAX + 1)]
     changes, notes = _creer(["index.html", "robots.txt"], trop, github)
     assert changes == [] and github == []
@@ -268,7 +268,9 @@ def test_un_config_toml_IMBRIQUE_n_est_pas_du_Hugo() -> None:
 @pytest.fixture()
 def github_lecture(monkeypatch, github):
     """La réparation LIT le fichier avant de l'écrire : il lui faut son sha."""
-    monkeypatch.setattr(m, "_github_api_get", lambda *a, **kw: {"sha": "ancien", "content": ""})
+    import base64
+    monkeypatch.setattr(m, "_github_api_get", lambda *a, **kw: {
+        "sha": "ancien", "encoding": "base64", "content": base64.b64encode(b"<urlset><broken").decode()})
     return github
 
 

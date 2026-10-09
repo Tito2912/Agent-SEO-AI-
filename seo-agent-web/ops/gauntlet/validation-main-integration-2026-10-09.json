@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-09",
+  "status": "integrated_main_sources_locally_validated_before_authorized_push",
+  "client_readiness_certified": false,
+  "universal_corrector_certification": false,
+  "hosted_deployment_verified": false,
+  "paid_model_calls": 0,
+  "customer_sites_modified": false,
+  "integration": {
+    "original_main": "0375e2dec77efce648dda379802ecc3f3c53480c",
+    "original_corrector_branch_tip": "08a14a953c0d8913c204ded5074afac6500c700f",
+    "corrector_commits_absent_from_original_main": 36,
+    "main_mobile_commit_absent_from_original_corrector_branch": 1,
+    "merge_scope": "Preserve both histories with a two-parent merge into main, no history rewrite.",
+    "automatic_merge_conflicts": 0,
+    "corrector_backend_files_exactly_preserved": 31,
+    "mobile_commit_files_exactly_preserved": 10,
+    "old_documentation_and_pricing_branches_already_in_original_main": true,
+    "branches_to_remove_only_after_ancestor_and_remote_tip_checks": [
+      "codex/corrector-recovery-20261003", "docs/product-documentation-and-seo-guides", "fix/change-metrics-and-corrector-pricing"
+    ],
+    "final_branch_policy": "main only",
+    "owner_authorized_main_push_with_possible_render_auto_deployment_after_tests": true,
+    "authorized_push_is_not_a_hosted_acceptance_test": true,
+    "new_successfully_repaired_families_claimed": 0
+  },
+  "manual_integration_adjustments": {
+    "optional_blueprint_now_tracks_main_instead_of_deleted_work_branch": true,
+    "optional_blueprint_postgres_major": "18",
+    "postgres_version_source": "Owner's Render screenshot, not a database connection or runtime measurement.",
+    "postgres18_or_capacity_tested": false,
+    "schema_url": "https://render.com/schema/render.yaml.json",
+    "schema_sha256": "a0d4e8a3eb119a1b63657741757e3c25c091b3ce463c4be8c90e8026678d8163",
+    "blueprint_sha256": "31d23090bb3db1dfcc3dc38e5add2ace2086ea8cbd39d14b89a2e548e314de4a",
+    "local_structural_schema_valid": true,
+    "render_cli_api_or_resource_resolution_validated": false,
+    "new_preproduction_created": false,
+    "existing_test_only_render_instance_can_be_used_for_hosted_acceptance": true,
+    "owner_reported_accounts": "One administrator and one test account with nine owned sites on different stacks.",
+    "runbook_and_release_checklist_updated_without_weakening_historical_evidence": true
+  },
+  "final_tests": {
+    "windows_full": {
+      "artifact": "final2-windows-full/junit.xml", "passed": 7411, "skipped": 42,
+      "failed": 0, "errors": 0, "warnings": 456, "junit_seconds": 199.143,
+      "python": "3.13.7", "junit_sha256": "74b5cd49953dbd66983f3b94be4c9f29bffb43ef29db3361a077ba21c5d87927",
+      "source_manifest_artifact": "final2-windows-full/run.json",
+      "source_manifest_sha256": "b92adc24b27b80e78b9ff3c760a0b106143fe310aaecaea23dba7f5088d3a715"
+    },
+    "linux_targeted": {
+      "artifact": "final-linux-targeted/junit.xml", "passed": 5006, "skipped": 2,
+      "failed": 0, "errors": 0, "warnings": 276, "junit_seconds": 373.456, "modules": 92,
+      "python": "3.12.3", "junit_sha256": "e76a20e3f5fb2588043da20c8a6e35725ed3d99256d519bf8476cbe9eb28345c",
+      "source_manifest_artifact": "final-linux-targeted/run.json",
+      "source_manifest_sha256": "a2e5a63203e8f747d9f8d592dd141b5c7d0b176e2f88f797f2f6a2f0a69017e4"
+    },
+    "linux_full_suite_run_in_this_phase": false,
+    "old_windows_full_case_occurrences_retained": 7448,
+    "additional_main_mobile_case_occurrences": 5,
+    "same_42_skipped_cases_and_normalized_reasons": true,
+    "historical_records_unchanged": 40,
+    "frozen_runtime_source_files": 941,
+    "frozen_sources_equal_across_platforms_and_final_staged_code": true,
+    "provider_keys_blank_and_background_worker_disabled_in_unit_test_environments": true
+  },
+  "owned_linux_process_measurement": {
+    "artifact": "process-cycle/result.json",
+    "result_sha256": "65fb2d035e85c181a67793cb6f44b10242c230f9677081a20fd53256579fbe06",
+    "migration_log_sha256": "a838253959ffe9192b07483a98572bf48d9952ed750302612f89e6e5ed4165ce",
+    "migration_revision": "20261003_0013",
+    "real_alembic_uvicorn_and_separate_worker_main": true,
+    "web_and_valid_worker_cycles": 2,
+    "invalid_encryption_worker_refused_before_threads": true,
+    "synthetic_unsupported_jobs_processed_once": 6,
+    "all_owned_children_stopped": true,
+    "external_network_attempts": 0,
+    "scope": "Owned loopback SQLite migrated and restarted, not Docker/Render, PostgreSQL 18, live correction or interrupted real crawl recovery.",
+    "customer_capacity_certified": false
+  },
+  "read_only_inventory": {
+    "artifact": "inventory-before-receipt.json",
+    "sha256": "7ced8fea853ce09a6c09dfa9ffca7e5435d15d9886373166d99efd9e133ce768",
+    "catalog_keys": 203, "manual_catalog_keys": 131,
+    "claimed_and_visible_offered_families": 62,
+    "preview_capable_families": 47, "deep_only_families": 15,
+    "classifications_and_prior_record_hashes_unchanged": true,
+    "inventory_is_not_repair_or_release_certification": true
+  },
+  "evidence_provenance": {
+    "baseline_artifact": "baseline.json",
+    "baseline_sha256": "913190fe9304afcef8db757e198a7e44f6369ffff2377fe727fa234eb0586fe9",
+    "preservation_artifact": "preserved.json",
+    "preservation_sha256": "65755b6f9831dffea4e7174a956f404140454f411e69c88027916a66bc421304",
+    "verification_artifact": "verified.json",
+    "verification_sha256": "d2acc9a4f37505b3b24f56ba90e101c80277df8a245e641d642ecc6484dcc58b",
+    "existing_workspace_changes": "130 tracked files with CRLF-only differences, backed up before integration; 26 untracked logo files retained outside the integration worktree.",
+    "working_scope": "Detached temporary integration worktree; original workspace left untouched during merge and tests.",
+    "temporary_linux_runtime": "Reused disposable Python overlay and extracted browser libraries from the prior startup-policy evidence; no product dependency or Dockerfile change."
+  },
+  "earlier_attempts_retained": [
+    {"artifact": "final-windows-full/setup-failure.json", "pytest_started": false,
+      "reason": "Windows Git did not recognize the WSL absolute gitdir link. Only the temporary worktree link was made relative; final Windows suite then ran unchanged assertions."}
+  ],
+  "evidence_root": "C:/Users/Caron/AppData/Local/Temp/seo-main-integration-20261009-RY1CaW",
+  "remaining_release_checks": [
+    "After the authorized push, verify the actual Live Git SHA and startup/migration logs for BOTH Render web and worker; HTTP health alone cannot identify the deployed version.",
+    "Verify backup restore, PostgreSQL 18 schema and pool, concurrent hosted migrations, worker restart, shared S3 artefacts and effective encryption/plan configuration.",
+    "Use the non-admin test account and owned repositories for bounded before/after correction, PR review, build and recrawl across the nine stacks, preserving refusals and residues.",
+    "Actual Claude calls need a separate explicit bounded budget; use service test modes for payment/onboarding and keep real customer sites and payments outside this authorization."
+  ]
+}

@@ -1,0 +1,751 @@
+{
+  "date": "2026-10-02",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "changes_deployed_to_agent": false,
+  "scope": "Six additional fixture stacks with deterministic repairs, real GitHub/Netlify builds and recrawls; authenticated paid-client correction API regression tests against an isolated SQLite ledger.",
+  "previous_evidence": [
+    "validation-2026-10-01.json",
+    "validation-multistack-2026-10-01.json"
+  ],
+  "live_totals": {
+    "stacks_measured": 6,
+    "draft_preview_builds": 12,
+    "pull_requests_closed_without_merge": 12,
+    "file_repair_operations": 96,
+    "file_repair_operations_note": "Sum of per-family file writes; not a count of unique files.",
+    "claude_calls": 0,
+    "additional_estimated_model_cost_usd": 0,
+    "client_sites_changed": 0,
+    "observed_count_increases": 0,
+    "new_observed_issue_routes": 0
+  },
+  "fixed_customer_defects": [
+    {
+      "defect": "The last preview credit prevented its confirmation, including auto mode.",
+      "before_fix": "Authenticated preview succeeds and bills one credit; confirmation returns 402.",
+      "fix": "Confirmation still checks plan access but does not require another model credit or bill twice."
+    },
+    {
+      "defect": "Simultaneous correction requests could spend the same last credit.",
+      "before_fix": "A blocked first model call leaves the last credit available to a second request.",
+      "fix": "Serialize correction operations by project payer across all five correction routes and account members; a concurrent operation returns 409 with Retry-After."
+    },
+    {
+      "defect": "Quota read/write errors were swallowed.",
+      "before_fix": "A quota read failure was treated as unlimited; an unrecorded debit could be returned as success.",
+      "fix": "Refuse with 503 when the correction/quota store is unavailable. This does not make external GitHub writes and ledger writes atomic."
+    },
+    {
+      "defect": "Individual preview/confirmation allowed duplicate PRs and repeated paid previews.",
+      "before_fix": "A second confirmation creates another PR; preview regenerates and bills while a PR for the same issue/page is open.",
+      "fix": "Reuse the existing open-PR guard before provider/branch work; return 409 and the existing PR URL. Closed PRs do not block a fresh correction."
+    }
+  ],
+  "reproduction": {
+    "initial_customer_tests_before_fix": {
+      "failed": 3,
+      "passed": 1
+    },
+    "repeat_click_tests_before_fix": {
+      "failed": 2,
+      "passed": 1
+    },
+    "test_files": [
+      "tests/test_corrector_customer_workflow.py",
+      "tests/test_correction_guard.py"
+    ],
+    "authenticated_client_api": "real FastAPI routes, auth, CSRF, payer attribution and SQLite billing ledger; fake GitHub/model for deterministic fault/concurrency tests",
+    "sqlite_mutex": "OS-level exclusion between separate processes, independent payers, nested auto confirmation, body exceptions, abrupt worker exit and copied-thread context",
+    "postgres_mutex": "Protocol tests only: advisory session lock, commit without a long transaction, busy refusal, cleanup and connection invalidation. No real PostgreSQL server was exercised."
+  },
+  "evidence_notes": [
+    "No fixture main branch was changed. Every created preview PR was closed without merging.",
+    "This stage made no additional Claude calls. Model-written families were skipped, not certified.",
+    "Netlify adds noindex to previews. A family missing from the unchanged baseline remains unverified, even when its after-counter is zero.",
+    "Canonical 4xx and internal HTTP links passed separate positive-control HTML field checks on all six stacks; these are not crawler-count proofs.",
+    "Missing reciprocal hreflang remains unverified where preview indexability suppresses it. No patch is not a successful repair.",
+    "Open Graph URL/canonical remains partial (4 to 1) on Hugo, Gatsby and Nuxt: the surviving route is /gauntlet/canonical-http/. Its insecure canonical was deliberately outside the mechanical-only batch; the OG guard refuses to copy it.",
+    "Resolution and absence of regressions are limited to the observed preview scope. Passing builds and aggregate count reductions do not certify every client anomaly.",
+    "The full local suite was rerun after all source edits, because a run started before the last app edit invalidated line-based source-inspection tests.",
+    "Unrelated pre-existing whitespace in app.py was left intact."
+  ],
+  "remaining_release_checks": [
+    "Validate the PostgreSQL mutex with a real isolated database, multiple workers, connection loss and enough concurrent accounts to measure connection-pool capacity; advisory session locks require session-compatible pooling.",
+    "Validate recovery/idempotency when GitHub has accepted an external write but the quota/task ledger write fails. A 503 is honest but is not transactional rollback.",
+    "Exercise the remaining Claude-written families and finish partial batches on the additional stacks with explicit call budgets.",
+    "Validate reciprocal/invalid hreflang and other indexability-sensitive families where the unchanged defect is observable.",
+    "Exercise real paid-account onboarding, GitHub permissions, quota renewal, upgrade/downgrade and Stripe/provider failures.",
+    "Review and deploy the local changes, then run supervised pilots with draft PRs and human review before enabling wider automation."
+  ],
+  "artifacts_windows": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-six-stacks-20261002-kyxmvb3z",
+  "cycles": [
+    {
+      "stack": "hugo",
+      "status": "measured",
+      "main_sha": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 36,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-hugo/pull/36",
+          "build": {
+            "head_sha": "22e24e4304cb5f318251f0238e85c5e7edeb8d1a",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 37,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-hugo/pull/37",
+          "build": {
+            "head_sha": "1b50db64e93ca57009ec683d7df3b77d6004541e",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 36,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 37,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "crawl_max_pages": 90,
+      "production_reference_pages": 54,
+      "successful_html_pages": {
+        "before": 44,
+        "after": 44
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [
+        {
+          "family": "open_graph_url_not_matching_canonical",
+          "production_before": 4,
+          "preview_before": 4,
+          "preview_after": 1,
+          "verdict": "partial",
+          "reasons": []
+        }
+      ],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http",
+        "missing_reciprocal_hreflang"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404/",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http/",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "mechanical_result_counts": {
+        "AUCUN PATCH": 1,
+        "DEJA CORRIGE": 7,
+        "IGNOREE (payante)": 34,
+        "ok": 11,
+        "refus": 1
+      },
+      "file_repair_operations": 16,
+      "claude_calls": 0,
+      "model_written_file_repairs": 0
+    },
+    {
+      "stack": "jekyll",
+      "status": "measured",
+      "main_sha": "ff649b9a1a003ea9f92458cf88dc4dcbdcde6689",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 32,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-jekyll/pull/32",
+          "build": {
+            "head_sha": "3421fa139af3717cd94aa7fabee396f45e0c4d36",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 33,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-jekyll/pull/33",
+          "build": {
+            "head_sha": "c840ed550fc1557536cbc8978f404c798a78e1e6",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 32,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 33,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "crawl_max_pages": 90,
+      "production_reference_pages": 53,
+      "successful_html_pages": {
+        "before": 44,
+        "after": 44
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "open_graph_url_not_matching_canonical",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http",
+        "missing_reciprocal_hreflang"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "mechanical_result_counts": {
+        "AUCUN PATCH": 1,
+        "DEJA CORRIGE": 7,
+        "IGNOREE (payante)": 33,
+        "ok": 11,
+        "refus": 1
+      },
+      "file_repair_operations": 16,
+      "claude_calls": 0,
+      "model_written_file_repairs": 0
+    },
+    {
+      "stack": "gatsby",
+      "status": "measured",
+      "main_sha": "ea353d62d4c0f517c72f733aeeb04c556e73a7f7",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 34,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-gatsby/pull/34",
+          "build": {
+            "head_sha": "8e46c68aa082df5fabdcf8a390e2240b679fd424",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 35,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-gatsby/pull/35",
+          "build": {
+            "head_sha": "ed1f34030aac24c2e75b77bfae542029979d1810",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 34,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 35,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "crawl_max_pages": 90,
+      "production_reference_pages": 50,
+      "successful_html_pages": {
+        "before": 40,
+        "after": 40
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [
+        {
+          "family": "open_graph_url_not_matching_canonical",
+          "production_before": 4,
+          "preview_before": 4,
+          "preview_after": 1,
+          "verdict": "partial",
+          "reasons": []
+        }
+      ],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404/",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http/",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "mechanical_result_counts": {
+        "DEJA CORRIGE": 7,
+        "IGNOREE (payante)": 30,
+        "ok": 11,
+        "refus": 1
+      },
+      "file_repair_operations": 16,
+      "claude_calls": 0,
+      "model_written_file_repairs": 0
+    },
+    {
+      "stack": "nuxt",
+      "status": "measured",
+      "main_sha": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 36,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-nuxt/pull/36",
+          "build": {
+            "head_sha": "bb2daa4605cfb74d093a8e648eda05d1eaad48c3",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 37,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-nuxt/pull/37",
+          "build": {
+            "head_sha": "24513d77a8270fcdab5d2d35f544dd219369db58",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 36,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 37,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "crawl_max_pages": 90,
+      "production_reference_pages": 50,
+      "successful_html_pages": {
+        "before": 40,
+        "after": 40
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [
+        {
+          "family": "open_graph_url_not_matching_canonical",
+          "production_before": 4,
+          "preview_before": 4,
+          "preview_after": 1,
+          "verdict": "partial",
+          "reasons": []
+        }
+      ],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http",
+        "missing_reciprocal_hreflang"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404/",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http/",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "mechanical_result_counts": {
+        "AUCUN PATCH": 1,
+        "DEJA CORRIGE": 7,
+        "IGNOREE (payante)": 31,
+        "ok": 10,
+        "refus": 1
+      },
+      "file_repair_operations": 15,
+      "claude_calls": 0,
+      "model_written_file_repairs": 0
+    },
+    {
+      "stack": "sveltekit",
+      "status": "measured",
+      "main_sha": "892d341e305ce9d39bd861d94e26411b6f07a330",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 30,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-sveltekit/pull/30",
+          "build": {
+            "head_sha": "d0ffd5d0967e21eeef31ac893516056d60c302cb",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 31,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-sveltekit/pull/31",
+          "build": {
+            "head_sha": "047bdf7ce82b1b47fa7ee9cf874f35a89aab8da9",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 30,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 31,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "crawl_max_pages": 90,
+      "production_reference_pages": 48,
+      "successful_html_pages": {
+        "before": 39,
+        "after": 39
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "open_graph_url_not_matching_canonical",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "mechanical_result_counts": {
+        "DEJA CORRIGE": 7,
+        "IGNOREE (payante)": 28,
+        "ok": 11,
+        "refus": 1
+      },
+      "file_repair_operations": 16,
+      "claude_calls": 0,
+      "model_written_file_repairs": 0
+    },
+    {
+      "stack": "next-pages",
+      "status": "measured",
+      "main_sha": "729fc491abb4818841709ed7b27a78f04735d64b",
+      "pull_requests": [
+        {
+          "kind": "baseline",
+          "number": 30,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-next-pages/pull/30",
+          "build": {
+            "head_sha": "bcefe9261486300d858e340dbab8e5229c9bf93e",
+            "deploy_preview_status": "success"
+          }
+        },
+        {
+          "kind": "correction",
+          "number": 31,
+          "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-next-pages/pull/31",
+          "build": {
+            "head_sha": "9031017aa40f026e2f6adf3081a7ec7593be65f4",
+            "deploy_preview_status": "success"
+          }
+        }
+      ],
+      "cleanup": [
+        {
+          "number": 30,
+          "state": "closed",
+          "merged": false
+        },
+        {
+          "number": 31,
+          "state": "closed",
+          "merged": false
+        }
+      ],
+      "crawl_max_pages": 90,
+      "production_reference_pages": 47,
+      "successful_html_pages": {
+        "before": 38,
+        "after": 38
+      },
+      "comparable": true,
+      "missing_html_routes": [],
+      "resolved_families_in_preview_scope": [
+        "css_redirects",
+        "double_slash_in_url",
+        "https_http_mixed_content",
+        "https_page_links_to_http_css",
+        "https_page_links_to_http_image",
+        "https_page_links_to_http_javascript",
+        "image_redirects",
+        "inconsistent_ai_training_bot_policy",
+        "javascript_redirects",
+        "more_than_one_page_for_same_language_in_hreflang",
+        "open_graph_url_not_matching_canonical",
+        "page_has_links_to_redirect",
+        "page_has_redirected_css",
+        "page_has_redirected_image",
+        "page_has_redirected_javascript",
+        "page_in_multiple_sitemaps"
+      ],
+      "partial_families": [],
+      "still_present": [],
+      "unverified_by_crawler": [
+        "canonical_points_to_4xx",
+        "https_page_has_internal_links_to_http"
+      ],
+      "html_field_checks": [
+        {
+          "family": "canonical_points_to_4xx",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/canonical-404",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        },
+        {
+          "family": "https_page_has_internal_links_to_http",
+          "verdict": "resolved_on_observed_html",
+          "observations": [
+            {
+              "route": "/gauntlet/link-http",
+              "baseline_defect_observed": true,
+              "after_correct": true
+            }
+          ]
+        }
+      ],
+      "count_increases": [],
+      "new_issue_routes": [],
+      "mechanical_result_counts": {
+        "DEJA CORRIGE": 7,
+        "IGNOREE (payante)": 27,
+        "ok": 11,
+        "refus": 1
+      },
+      "file_repair_operations": 17,
+      "claude_calls": 0,
+      "model_written_file_repairs": 0
+    }
+  ],
+  "local_verification": {
+    "passed": 2689,
+    "failed": 0,
+    "warnings": 238,
+    "duration_seconds": 257.14,
+    "new_cases_this_stage": 33,
+    "new_customer_workflow_cases": 19,
+    "new_mutex_cases": 14,
+    "ruff": "passed_F_E9",
+    "compile": "passed",
+    "bandit_medium_high": "passed",
+    "database": "isolated_temporary_sqlite",
+    "test_artifacts_windows": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-final-release-20261002-rnbkhglz",
+    "limitations": "PostgreSQL lock protocol was mocked. GitHub/model were mocked in authenticated customer workflow tests; real fixture GitHub/Netlify measurements are reported separately."
+  }
+}

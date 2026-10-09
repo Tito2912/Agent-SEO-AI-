@@ -117,6 +117,6 @@ def test_the_family_never_goes_through_the_content_patcher() -> None:
     """Its targets would be the root layout — the file that cannot know the route, and the one
     whose patch broke a customer's build."""
     assert "served_html_lang_mismatch" in app_module._SERVED_LANG_FIX_KEYS
-    source = __import__("inspect").getsource(app_module.api_issue_deep_fix)
+    source = __import__("inspect").getsource(app_module._apply_prepared_issue_fix)
     assert "_SERVED_LANG_FIX_KEYS" in source
     assert source.index("_SERVED_LANG_FIX_KEYS") < source.index("_deep_patch_issue_files")

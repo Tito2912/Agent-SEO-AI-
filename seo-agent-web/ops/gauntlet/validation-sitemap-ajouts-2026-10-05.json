@@ -1,0 +1,220 @@
+{
+  "date": "2026-10-05",
+  "status": "guarded_minimal_sitemap_additions_measured_on_pinned_owned_fixture",
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "c7a7b3c974da0922d0599b13d9842de366a5de70",
+  "scope": {
+    "family": "indexable_page_not_in_sitemap",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "seed_branch": "gauntlet-static-html-sitemap-https-correction-20261005-072029",
+    "seed_sha": "b347b9b98437fd679d0f3c55ea0c1ee2b7ad9e2d",
+    "seed_pr_closed_draft_unmerged": 72,
+    "setup_paths": [
+      "sitemap.xml"
+    ],
+    "corrective_paths": [
+      "sitemap.xml"
+    ],
+    "maximum_file_put_attempts": 2,
+    "write_requires_exact_qa_branch_blob_sha_expected_bytes_and_no_retry": true,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/sitemap_add_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "product_guards": [
+    "Require coherent, independently requested, direct same-host HTTPS HTML 200 observations. Reject fetch errors, blocked hosts, redirects, foreign hosts, credentials, fragments, explicit ports, non-self canonical and noindex/none meta or X-Robots directives. Duplicate observations must agree, including consistently absent canonical. Name refused URLs when a verified subset is available.",
+    "Require one literal sitemap in a known static directory without a generator. Before writing, re-read unique current literal HTML bindings, canonical/indexability and flat routing rules. Refuse ambiguous or changed sources, scripts/templates/refresh, wildcard or competing configurations, malformed package metadata and unverified routing.",
+    "Immediately before a single SHA-guarded XML PUT, use the existing public-target guard and bounded direct streamed HTTPS probe for every planned page: exact response URL, typed 200, no history/Retry-After, HTML MIME, no excluded headers, UTF-8 body at most 80000 bytes and the same literal canonical/indexable head. A single changed witness blocks the whole file. Served body scripts are tolerated for host footers; source files remain script-free.",
+    "Reuse validated XML nodes and byte offsets. Append only missing minimal url/loc nodes with structured namespace-aware XML escaping. Preserve every previous byte, metadata, comment, extension and unrelated duplicate. Do not invent lastmod/priority/hreflang or copy them from another URL. Retain case, slash, query and distinct existing fragments. Reject DTD, sitemap indexes, malformed/ambiguous XML, mixed root/url text, self-closing empty roots and oversized output. Repeat corrections are idempotent.",
+    "Individual and grouped deep endpoints share these guards with zero provider calls or AI billing. Refusal carries an empty guard plan, preventing heuristic fallback. Free-form, cached or confirmed AI previews cannot bypass this evidence requirement. Other sitemap families use the shared parser/proof with their prior behavioral contracts tested."
+  ],
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-sitemap-add-baseline-20261005-102033",
+    "correction_branch": "gauntlet-static-html-sitemap-add-correction-20261005-102033",
+    "baseline_sha": "8eb7e0a003660a06a0152ca1a1bf8108327b18fb",
+    "final_sha": "e42e0f58eb69128317c2ec912f3ce92d33c7e82a",
+    "baseline_pr": 75,
+    "correction_pr": 76,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "setup_file_puts": 1,
+    "corrective_file_puts": 1,
+    "sitemap_entries": [
+      46,
+      49
+    ],
+    "existing_entries_preserved": 46,
+    "minimal_new_entries": 3,
+    "observed_healthy_html_routes": [
+      52,
+      52
+    ],
+    "report_rows": [
+      62,
+      62
+    ],
+    "controlled_whole_family_counts": [
+      3,
+      0
+    ],
+    "raw_whole_family_counts": [
+      0,
+      0
+    ],
+    "raw_sitemap_seed_urls": [
+      0,
+      0
+    ],
+    "positive_routes": [
+      "gauntlet/",
+      "gauntlet/qa-control",
+      "gauntlet/qa-master"
+    ],
+    "previous_negative_http_routes_preserved": [
+      "gauntlet/noindex-long",
+      "gauntlet/qa-sitemap-missing-a"
+    ],
+    "previous_http_sitemap_family_counts": [
+      2,
+      2
+    ],
+    "preput_https_rechecks": 3,
+    "preput_http_namespace": "Only exact owned production-namespace targets are mapped to the actual baseline preview. The transport projects response URL and removes only the verified exact native Netlify noindex header. Real status, body, canonical, meta robots and stream remain intact. This is a counterfactual fixture check, not native previews passing the product guard.",
+    "setup_metadata": "Remove three complete known seed entries, including two existing metadata blocks, to construct genuinely missing entries. The correction adds only loc nodes; it cannot restore historical metadata absent from the current sitemap. All 46 retained entries and their metadata are preserved.",
+    "healthy_sources_navigation_rules_and_observed_fields_preserved": true,
+    "requested_observation_multiset_preserved": true,
+    "previous_repairs_and_negative_controls_preserved": true,
+    "increased_counts": {},
+    "all_selected_occurrences_resolved": true,
+    "all_family_occurrences_on_this_controlled_fixture_resolved": true,
+    "owned_preview_root_examples_normalized": true,
+    "example_normalization_scope": "Explicit exact owned preview origins tied to their PR numbers, only root protocol/www probe examples. Preserve scheme and www identity; refuse path/query/fragment/credentials/port/foreign-host/context/count changes. Requested production-namespace observations are not normalized; raw reports are untouched.",
+    "cycle_sha256": "6f25c55ad7e6d2efb6513a3a9c62ed8ba3ef6683b31c0793d4079d14973d7bf0"
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "fresh_isolated_process_against_final_code": true,
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "checks": "Re-read exact branch heads, two closed draft unmerged PRs and successful builds, one-commit/one-file Git comparisons, served XML, all 46 retained nodes and three new minimal nodes, literal HTML bindings and routing. Independently specify expected XML bytes. Compare fresh healthy HTTP bodies, allowing only the owned Netlify deploy-id to vary. Re-prepare and rewrite the built baseline with final code, without targeting/models/writes/quota calls; confirm idempotence.",
+    "fresh_default_probe_calls_on_native_preview_urls": 6,
+    "all_native_preview_probes_rejected": true,
+    "native_preview_noindex_preserved": true,
+    "production_indexation_not_proven": true,
+    "countercheck_sha256": "c97c7e29a13c29178f607016b03b75ff31056ea27e670cdc8972d5da93f1a8ad",
+    "countercheck_script_sha256": "89f3e7cdf3c4a549a2ef614fa7cf455ea99a645b881ad152c4e0e8fd809b27f8"
+  },
+  "first_live_attempt": {
+    "status": "failed",
+    "failure_code": "other_issue_counts_or_examples_changed",
+    "baseline_pr": 73,
+    "correction_pr": 74,
+    "baseline_sha": "23a0f206e0a68d646a0550d01223e34c49ed3e37",
+    "built_final_sha": "7a3b57ab4fef400a3695ef290675cd03f362492b",
+    "closed_draft_unmerged": true,
+    "main_unchanged": true,
+    "provider_requests": 0,
+    "original_failed_receipt_not_rewritten": true,
+    "cycle_sha256": "d121bffb8c91c06aa92016116695b3a2e16427665e057a18ed052236d4ee7c7a",
+    "explanation": "The actual minimal additions and counts 3 to 0 were correct, but five unchanged families contained native HTTP/www root probe examples with PR 73 versus PR 74 preview hostnames. The benchmark originally required literal equality of these ephemeral hosts. Add narrowly bounded context normalization with 27 positive/refusal tests, then run a fresh complete live cycle and full/targeted suites. No auditor, product guard, raw report or old failed receipt is weakened or rewritten."
+  },
+  "acceptance_inventory": {
+    "historical_tracked_snapshot_preserved": "acceptance-inventory-2026-10-04.json",
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_exact_named_record_before": 10,
+    "families_without_exact_named_record_after": 9,
+    "new_named_mentions": [
+      "indexable_page_not_in_sitemap"
+    ],
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "before_snapshot_sha256": "19a83b30081f9dbe869d9de8edc4d73ee78013ed369dc454891de14574ff4a47"
+  },
+  "provider_usage": {
+    "all_live_and_countercheck_requests": 0,
+    "claude_budget": 0,
+    "openai_fallback_allowed": false
+  },
+  "verification": {
+    "full_final_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 4281,
+      "skipped": 42,
+      "warnings": 329,
+      "seconds": 294.79,
+      "real_provider_keys": "empty",
+      "provider_selection": "auto_for_existing_mocked_provider_tests",
+      "source_or_test_edits_during_run": false,
+      "junit_sha256": "814048ddd443f0280b8a32268a9bdfdf6350af49aaace486c19b2dcf233db876"
+    },
+    "new_tests_this_phase": 142,
+    "targeted_final_suite": {
+      "passed": 1062,
+      "skipped": 0,
+      "warnings": 91,
+      "seconds": 88.61,
+      "junit_sha256": "43dda9610bf2e7fa472d510074e1dc1ebb248b5ab5947f51911e2bd8d95fef99"
+    },
+    "initial_red": {
+      "failed": 58,
+      "passed": 1,
+      "seconds": 33.51,
+      "junit_sha256": "50c87b78e401d1987cd2eed1cb54a9c56c07efa9e3af3efc78cd72958f6c4d38",
+      "explanation": "Repeated cases exposing absent guarded additions and minimal XML behavior, not 58 independent production defects."
+    },
+    "first_benchmark_preflight": {
+      "failed": 7,
+      "passed": 298,
+      "seconds": 4.95,
+      "junit_sha256": "6b9d11a9e798d8edb44468c8de4d8861146ec3323cf5cbe32f56463d86b525c9",
+      "explanation": "The first checker could hide an earlier contradictory duplicate HTML observation behind the last row and did not reject an increased new family. Strengthen the runner to inspect every target observation, compare the requested observation multiset and reject every increased count; retain all assertions."
+    },
+    "first_full_suite_before_preview_normalization": {
+      "passed": 4254,
+      "skipped": 42,
+      "warnings": 329,
+      "seconds": 244.19,
+      "junit_sha256": "f804cbdf8f079146be3bc6ac4f893f1a0dd9cfd913062d8962d9d2ffe946d9fe"
+    },
+    "first_targeted_suite_before_preview_normalization": {
+      "passed": 1035,
+      "skipped": 0,
+      "warnings": 91,
+      "seconds": 61.91,
+      "junit_sha256": "0bdcd97647027c0aa8f8977b25e87fa37b5972e63c0589ff7251c5e7d5a4f4f2"
+    },
+    "preview_normalization_preflight": {
+      "passed": 332,
+      "skipped": 0,
+      "warnings": 91,
+      "seconds": 7.14,
+      "junit_sha256": "df642e0b9bef97e9d2417777c2f59244645c5aedd42811528d3fdea2cc4501b4"
+    },
+    "ruff_F_E9": "passed_on_all_seven_phase_source_and_test_files",
+    "compileall": "passed",
+    "new_module_and_bench_bandit_medium_or_high": "none",
+    "source_manifest_sha256": "fced8601a759be3631de696d46577c20e91e3940537bd964091503686859baa0",
+    "normalized_LF_tested_source_sha256": {
+      "backend/app.py": "963b48c217520aceb864d8bd4d22ac9af40d06a22ff43a2ba729d1cde4b5bd82",
+      "backend/sitemap_https.py": "29effeb2ad6f094b59fe99a5cf81c235e12515059194f97f22069eb298c9263b",
+      "backend/sitemap_rewrite.py": "1e1cff464cd3820b83b5b87c69209dee7a68a780fd8812cce8f53d6e01cae38f",
+      "tests/test_verified_sitemap_additions.py": "34c659cdcd515dba7ce27a44de35faeaaf583f7b96f11f46a017f1071fb1bc8a",
+      "tests/test_corrector_operational.py": "05d1969c725517b3a004309a3e056e30fa04bb2730f551faaec17be5f36e05f5",
+      "ops/gauntlet/sitemap_add_cycle.py": "316ecdd4d5f17ad41c4c9364267dab18538a51c1ef146a3d3917942cfc9ce416",
+      "tests/test_gauntlet_sitemap_add_cycle.py": "ac649a644eb6c90e45ed3ea050f878472f37a26c584b145c8b8b0bfcf5c1c90d"
+    },
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "Only owned static HTML with a unique literal XML sitemap, unique script-free HTML bindings and simple routing is rebuilt. HTTPS-only additions are intentional. Generated/dynamic/multiple sitemaps, scripts/templates/nonliteral heads, self-closing empty roots, oversized/non-UTF8 served documents and explicit ports are conservatively refused. Existing project site_name must identify the real host; a friendly label does not establish ownership. This is not coverage of all correctable occurrences or stacks.",
+    "Native previews retain noindex and production canonical-host context, with zero raw sitemap seeds. Their raw counts 0 to 0 prove no repair. Controlled exact host/header projection and the actual served XML measure 3 to 0; independent source and HTTP checks support this fixture result only. Production indexation and runtime JavaScript DOM execution are not proven.",
+    "The public-target validator is reused; this phase is not a full SSRF/DNS-rebinding audit. Source reads, SHA-guarded XML writes, fresh probes and future deployments are not one atomic transaction. Concurrent or later source/server changes remain possible.",
+    "No agent deployment, client onboarding, fresh real Claude integration, production recovery replay, scheduler/payment acceptance, capacity test or fresh PostgreSQL run is included. SQLite keeps 42 skipped tests. Nine claimed families still have no exact named record; references themselves are not successful repairs. No all-green catalog or client-readiness certification is claimed."
+  ]
+}

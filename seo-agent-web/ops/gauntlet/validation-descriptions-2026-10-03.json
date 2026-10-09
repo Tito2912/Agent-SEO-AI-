@@ -1,0 +1,136 @@
+{
+  "date": "2026-10-03",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "Finish the description-length families on existing Hugo/Nuxt fixture correction branches, with real Claude, exact-head Netlify builds and unchanged-preview positive controls.",
+  "previous_evidence": "validation-github-recovery-2026-10-03.json",
+  "description_reference_evidence": "validation-postgres-et-ia-2026-10-02.json",
+  "changes_deployed_to_agent": false,
+  "production_corrector_code_changed_in_this_phase": false,
+  "client_sites_changed": 0,
+  "production_database_used": false,
+  "additional_claude_calls": 7,
+  "additional_live_fixture_prs": 4,
+  "estimated_logged_cost_usd": 0.04166,
+  "cost_is_provider_invoice": false,
+  "provider_observed": "anthropic",
+  "model_observed": "claude-sonnet-4-6",
+  "new_ai_file_repairs": 6,
+  "new_distinct_files_edited": 5,
+  "observed_description_pages_after_cumulative_repairs": 7,
+  "publication": {
+    "branch": "codex/corrector-recovery-20261003",
+    "main_changed": false,
+    "scope": "Fixture-only Claude request budgets, rendered-description positive controls, detailed repair scopes, regression tests and this evidence."
+  },
+  "previous_partial_result_explanation": {
+    "finding": "The October 2 Claude selection included missing_meta_description but omitted the length families. Its one-file patch was not a failed attempt to repair the other descriptions.",
+    "keys_requested_this_phase": ["meta_description_too_long", "multiple_meta_description_tags"],
+    "length_scope": "The same production preparation/apply helpers group all too-short/too-long indexability variants. The fresh production crawl identifies three remaining Hugo files and two Nuxt files.",
+    "cumulative_scope": "Previously corrected files remain on the reused fixture branches. The final seven-page check therefore includes the two noindex/no-description pages repaired in the previous phase.",
+    "no_missing_key_claim": "Nuxt does not expose multiple_meta_description_tags in the fresh production reference; that requested key was not exercised or certified on Nuxt."
+  },
+  "bench_changes": {
+    "request_budget": "Default hard limit of 12 Claude requests per stack/process, including failed requests and retries; thread-safe across parallel file preparation. Mechanical passes get zero. OpenAI fallback is refused.",
+    "exhaustion": "A denied request marks the cycle unverified, not a complete repair.",
+    "baseline_diagnostic": "Original-content probing is limited to mechanical rewriters; a bounded AI rewriter must not call Claude merely to guess whether another pass already fixed a file.",
+    "repair_scope": "Current-pass requested/exercised keys, related family keys, impacted URLs, targets, patches, skipped files, AI-written files and capped files are persisted.",
+    "html_evidence": "Unchanged baseline must contain the literal defect. Every affected production route must be observed successfully, with exactly one rendered description of 100 to 160 Unicode characters after correction. Unknown tag counts, added noindex and missing occurrences cannot certify repair.",
+    "countercheck": "The final HTML-check implementation was applied to the already-recorded UTF-8 reports in a separate process, without another provider request, write, build or crawl. GitHub PR cleanup and main identities were independently re-read."
+  },
+  "live_fixtures": [
+    {
+      "stack": "hugo",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-hugo",
+      "branch": "gauntlet-hugo-20261002-111009",
+      "main_sha_before": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "main_sha_after": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "branch_head_before_this_phase": "9349801dbdace001c7a18968aa4cc6c4fe3b7dc6",
+      "exercised_keys": ["meta_description_too_long", "multiple_meta_description_tags"],
+      "claude_requests": {"limit": 12, "attempted": 5, "denied": 0},
+      "estimated_logged_cost_usd": 0.02794,
+      "new_ai_file_repairs": 4,
+      "new_distinct_files_edited": 3,
+      "capped_files": [],
+      "description_counts": {"production_before": 4, "preview_before": 4, "preview_after": 0},
+      "multiple_description_tag_counts": {"production_before": 1, "preview_before": 1, "preview_after": 0},
+      "html_verdict": "resolved_on_observed_html",
+      "html_observations": [
+        {"route": "/gauntlet/missing-meta-description/", "before_length": 0, "after_length": 148, "before_tags": 0, "after_tags": 1},
+        {"route": "/gauntlet/multiple-meta-description-tags/", "before_length": 24, "after_length": 148, "before_tags": 2, "after_tags": 1},
+        {"route": "/gauntlet/noindex-long/", "before_length": 219, "after_length": 150, "before_tags": 1, "after_tags": 1},
+        {"route": "/gauntlet/noindex-no-description/", "before_length": 0, "after_length": 137, "before_tags": 0, "after_tags": 1}
+      ],
+      "crawl": {"max_pages": 90, "baseline_successful_html": 44, "corrected_successful_html": 44, "missing_html_routes": [], "increases": [], "new_issue_routes": []},
+      "pull_requests": [
+        {"kind": "baseline", "number": 42, "head_sha": "c8be42d34d41f0855f174d445894b813d1728bff", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 43, "head_sha": "8e6700c2899b42a7baaf66ae180d855f92c7541f", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ],
+      "report_sha256": {
+        "before": "5917297b5891f2d36726c8b75dda8405979927cfe65f854f60e206fbde7f4955",
+        "baseline": "e78d36a353631c2d7e249bf604063fb82609a8263858dea867e8b095ee594014",
+        "correction": "7c96e1b88ea7de106c3dcf520f0ec0131981fe32f52ef8ea720a9955e31551b4"
+      }
+    },
+    {
+      "stack": "nuxt",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-nuxt",
+      "branch": "gauntlet-nuxt-20261002-111431",
+      "main_sha_before": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "main_sha_after": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "branch_head_before_this_phase": "7dc0cf3300be9b9c4515367dedf07605f4fee856",
+      "exercised_keys": ["meta_description_too_long"],
+      "claude_requests": {"limit": 12, "attempted": 2, "denied": 0},
+      "estimated_logged_cost_usd": 0.01372,
+      "new_ai_file_repairs": 2,
+      "new_distinct_files_edited": 2,
+      "capped_files": [],
+      "description_counts": {"production_before": 3, "preview_before": 3, "preview_after": 0},
+      "multiple_description_tags": "not_exercised_no_positive_production_control",
+      "html_verdict": "resolved_on_observed_html",
+      "html_observations": [
+        {"route": "/gauntlet/missing-meta-description/", "before_length": 0, "after_length": 154, "before_tags": 0, "after_tags": 1},
+        {"route": "/gauntlet/noindex-long/", "before_length": 219, "after_length": 146, "before_tags": 1, "after_tags": 1},
+        {"route": "/gauntlet/noindex-no-description/", "before_length": 0, "after_length": 133, "before_tags": 0, "after_tags": 1}
+      ],
+      "crawl": {"max_pages": 90, "baseline_successful_html": 40, "corrected_successful_html": 40, "missing_html_routes": [], "increases": [], "new_issue_routes": []},
+      "pull_requests": [
+        {"kind": "baseline", "number": 42, "head_sha": "ce9a67c6d5d51d13f4e7d6146b576a357e919531", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true},
+        {"kind": "correction", "number": 43, "head_sha": "f11930be69231409e359cf3f82dd3872f9e57ac5", "deploy_preview_status": "success", "state": "closed", "merged": false, "draft": true}
+      ],
+      "report_sha256": {
+        "before": "a998fbe04317dbdf628afd91e93b2a169ddb87295310426cf39a588152dc2f03",
+        "baseline": "6dbab7ad6b9c77979e4b785e379284a4251873ded6f8847981f7652f8bf52127",
+        "correction": "2d2b1ea18d37384ee3d5a6d8d96db5f2fd21afed551db6f35251188f202d823d"
+      }
+    }
+  ],
+  "verification": {
+    "full_final_local_suite": {"database": "isolated_temporary_sqlite", "passed": 2838, "skipped": 42, "warnings": 260, "seconds": 232.25, "source_edits_during_run": false},
+    "description_and_budget_bench_cases_in_full_suite": 81,
+    "new_tests_in_this_phase": 38,
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "bandit_medium_or_high": "none",
+    "bandit_low_reviewed": "Six low findings in existing bench code: subprocess import/two bounded argument-list calls without shell, fixture-only session secret, console-encoding best-effort fallback and per-file baseline-probe fallback. No findings in the new budget module.",
+    "postgresql": "No new PostgreSQL run in this fixture/content-only phase; prior real PostgreSQL recovery and concurrency evidence remains separate."
+  },
+  "limitations": [
+    "The seven description-page results are cumulative on reused correction branches, not seven new model-written files in this phase.",
+    "Fixtures provide structural correctness evidence, not universal editorial quality or repair capability for arbitrary customer templates.",
+    "Duplicate descriptions across the whole site, titles and other AI-written families were not completed or certified by this bounded selection.",
+    "Hreflang families requiring indexability still need independent positive controls without preview noindex masking.",
+    "The reused branches retain a legacy single Open Graph URL mismatch. Its separate October 2 fix/build evidence remains in validation-postgres-et-ia-2026-10-02.json; that family was not rerun here.",
+    "The agent has not been deployed and no customer site or production database was changed."
+  ],
+  "remaining_release_checks": [
+    "Finish hreflang positive controls and the remaining explicitly selected AI-written families.",
+    "Exercise real billable batch and partial-content-write recovery with GitHub and isolated PostgreSQL together.",
+    "Validate deployment startup/schedulers, pooling capacity, receipt retention and onboarding/billing lifecycle.",
+    "Review/deploy the verified changes, then supervise pilot clients."
+  ],
+  "artifacts_windows": {
+    "live_and_countercheck": "C:/Users/Caron/AppData/Local/Temp/seo-descriptions-live-20261003-izuuzqpi",
+    "full_final_suite": "C:/Users/Caron/AppData/Local/Temp/seo-descriptions-final-full-20261003-536tfk81",
+    "targeted_before_last_three_tests": "C:/Users/Caron/AppData/Local/Temp/seo-description-evidence-targeted-20261003-2n_au4vt"
+  }
+}

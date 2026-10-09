@@ -415,14 +415,16 @@ def _period_key(dt: datetime | None = None) -> str:
     return f"{now.year:04d}-{now.month:02d}"
 
 
-def usage_add(db: Session, *, user_id: str, metric: str, amount: int, meta: dict[str, Any] | None = None) -> None:
+def usage_add(db: Session, *, user_id: str, metric: str, amount: int,
+              meta: dict[str, Any] | None = None, commit: bool = True) -> None:
     uid = (user_id or "").strip()
     m = (metric or "").strip()
     if not uid or not m or not isinstance(amount, int) or amount == 0:
         return
     ev = UsageEvent(user_id=uid, period=_period_key(), metric=m, amount=int(amount), meta=meta or {})
     db.add(ev)
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def usage_sum(db: Session, *, user_id: str, metric: str, period: str | None = None) -> int:

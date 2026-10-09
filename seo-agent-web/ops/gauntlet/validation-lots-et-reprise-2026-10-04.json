@@ -1,0 +1,154 @@
+{
+  "date": "2026-10-04",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "scope": "Partial duplicate batches, frozen bulk recovery summaries, then accepted content/PR effects and atomic quota recovery with real owned GitHub and isolated PostgreSQL together",
+  "previous_evidence": ["validation-titres-et-doublons-2026-10-04.json", "validation-github-recovery-2026-10-03.json"],
+  "production_corrector_code_changed_in_this_phase": true,
+  "production_schema_changed": false,
+  "changes_deployed_to_agent": false,
+  "client_sites_changed": 0,
+  "production_database_used": false,
+  "additional_claude_calls": 0,
+  "additional_live_fixture_prs": 1,
+  "publication_branch": "codex/corrector-recovery-20261003",
+  "agent_main_sha_unchanged": "28c7113e65609b4b7ef7acfb87dd844994bb0ed9",
+  "fixed_defects": [
+    {
+      "defect": "Selected source values were not reserved because those files were expected to change. A rejected source or failed GitHub PUT could leave its original value while another selected page adopted that value.",
+      "before_fix": "Four cases against the previously committed deep helper reproduce the collision: titles/descriptions, rejected source guard/failed PUT.",
+      "fix": "Reserve all eligible observed values and all readable cached values, including selected files. Keep normalization, post-ceiling comparison and final pre-PUT checking. Do not assume every selected write will succeed.",
+      "limits": "The existing eligible inventory remains HTTP 200 HTML, unblocked, error-free, non-noindex and self-canonical. Unknown or computed render values are not universally certified. Conservative reservation can refuse reuse of an old value even if its page later changes successfully."
+    },
+    {
+      "defect": "Recovering an accepted bulk PR returned its identity but lost results, counts, caps, excluded files and partial status. The UI could show a complete-looking result for incomplete work.",
+      "before_fix": "Three response tests fail; verified PR identity already remained protected.",
+      "fix": "Freeze the bulk result in the durable PR intent before publication and return whitelisted scope fields during recovery. Both normal and recovered responses share that captured summary. Old, absent or untyped summaries return partial=true and scope_unknown=true; verified PR identity cannot be overridden.",
+      "limits": "A frozen summary describes the submitted correction scope and pre-operation cap, not a new SEO crawl or current remaining quota. Older receipts without usable summaries remain scope-unknown."
+    }
+  ],
+  "simulated_large_groups": {
+    "fields": ["title", "description"],
+    "pages_each": 14,
+    "batch_file_caps": [6, 6, 2],
+    "model_stub_calls_each": 15,
+    "previous_batch_collision": "The first proposal for page seven repeats page one's accepted value. A retry supplies a distinct value; all fourteen final values are unique.",
+    "state": "Shared production file-state cache, explicit capped-file lists and unchanged baseline inventory are exercised.",
+    "github_effects": "In-memory stubs only",
+    "proves_all_large_claude_fixture_groups": false
+  },
+  "live_fixture": {
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "provider": "deterministic_stub",
+    "database": "isolated_postgresql",
+    "report": "Source-derived synthetic report, limited to missing_title and duplicate_titles on the three authorized source files. Not a fresh production crawl.",
+    "main_sha_before_and_after": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "main_unchanged": true,
+    "authorized_files": ["gauntlet/duplicate-a.html", "gauntlet/duplicate-b.html", "gauntlet/missing-title.html"],
+    "remote_branch_creations": 2,
+    "remote_file_commits": 4,
+    "remote_pr_creations": 1,
+    "simulated_model_calls_total": 5,
+    "published_batch_model_calls": 3,
+    "interrupted_batch_model_calls": 2,
+    "api_processes": 6,
+    "pull_request": {
+      "number": 45,
+      "url": "https://github.com/pployeraffiliation-a11y/noyaru-stack-static-html/pull/45",
+      "branch": "seo-fix/bulk-20261004-084349-4048d617",
+      "head_sha": "2c0c63ec4a48a9f5bde2a6ef49f791d2987ca47a",
+      "draft": true,
+      "state": "closed",
+      "merged": false
+    },
+    "retained_partial_branch": {
+      "branch": "seo-fix/bulk-20261004-084335-7a91a2fc",
+      "head_sha": "92432e5f7590c9f50818d9f94a358366c085ec18",
+      "changed_files": ["gauntlet/duplicate-a.html"],
+      "pull_request_exists": false,
+      "charged": false,
+      "request_released_by_explicit_operator_retention": true
+    },
+    "ledger": {"metric": "ai_corrections_month", "amount": 3, "events": 1, "operation_id": "4048d617-a4b2-4cc4-9c19-827a1587c7ff"},
+    "tasks_restored": 2,
+    "verification_traces": 1,
+    "verification_auto_merge": false,
+    "recovered_summary": {"fixed_count": 2, "total_count": 2, "partial": false},
+    "build_or_seo_recrawl_exercised": false,
+    "stripe_payment_exercised": false,
+    "source_sha256": {
+      "base:gauntlet/duplicate-a.html": "921661fa58e1f8b841d48fc4f6de6e74fa77cc862a317b07020fe479004a0fc5",
+      "final:gauntlet/duplicate-a.html": "914b04cee088b66d3a69a54cf0861baf16554bb4f9ce37eb8b07c12fac723708",
+      "base:gauntlet/duplicate-b.html": "fb415cc2ca7a6053044a8cab445ef262f1c7fad59def3d3a3c22590eeae8c52e",
+      "final:gauntlet/duplicate-b.html": "34b07b7b8585642d0feeb8ed148dfa4784ce1195e36e33cac70bae98bbf9b0c2",
+      "base:gauntlet/missing-title.html": "052293d6d36c6ee74e8ef6f4388beddea0e569347d5a452b1867b3d88ea3fac3",
+      "final:gauntlet/missing-title.html": "e5a60cc3397d1e4d05247eee7a2b29fc06758062e3a52dfc02e1963b649ecc93"
+    }
+  },
+  "live_scenarios": [
+    {
+      "name": "accepted_partial_content_retained_with_explicit_operator_release",
+      "fault": "Relay observes an accepted GitHub HTTP 200 content write and holds its acknowledgement. Parent kills the API process before any PR intent/publication.",
+      "result": "One content commit persists; no quota is charged. A new API process returns 503 without replay. Reconciliation recognizes unpublished changes and refuses ordinary abandonment. Explicit audited retain_branch releases the unpaid request without deleting or changing the branch."
+    },
+    {
+      "name": "lost_batch_pr_response_and_committed_charge_recovered_once",
+      "fault": "The next batch writes three files. Relay drops the socket after GitHub accepts its draft PR; API returns 400 with durable billable intent. A new process finds the PR, commits the quota transaction and exits before returning success.",
+      "result": "Another process reuses PR 45, restores both tasks and one exact-head trace, returns the frozen 2/2 summary, and does not debit again. Further identical request returns 409. Recovery transport is GET-only and makes no model call."
+    }
+  ],
+  "bench_contract": {
+    "entrypoint": "python ops/gauntlet/bulk_recovery_cycle.py --workdir EMPTY_TEMP_DIRECTORY [--postgres-url DEDICATED_LOOPBACK_FIXTURE_URL]",
+    "database": "Default SQLite is fixed to workdir/bench.db. Optional PostgreSQL must use driver postgresql+psycopg, host 127.0.0.1, explicit port, passwordless fixture role, no URL options and a seo_corrector_test_bulk_ database. Existing tables refuse the cycle before remote effects.",
+    "write_budget": "Two fixture-only branches from captured main, four exact authorized file commits, one completed-batch draft PR. No main update, merge, branch deletion, unrelated file or customer repository write is accepted by the relay.",
+    "provider_budget": "Zero real Claude requests, OpenAI fallback disabled. Worker stubs permit at most three known file patches; heuristic targeting and unexpected provider generation are forbidden.",
+    "identity": "Synthetic verified-email non-admin, actual API session and CSRF middleware, fixture-only plan/connection configuration.",
+    "startup": "No production lifespan or scheduler startup. Child termination, relay shutdown and PR identity verification precede final cleanup.",
+    "retention": "Partial content is not resumed automatically. Operator review preserves the original branch; the next bounded batch starts a separate branch from unchanged main."
+  },
+  "postgres_validation": {
+    "version": "PostgreSQL 16.15",
+    "bind": "127.0.0.1:55476",
+    "live_database": "seo_corrector_test_bulk_20261004",
+    "checks_database": "seo_corrector_test_bulk_checks_20261004",
+    "isolation": "Fresh local temporary cluster, no system service or production database used. Integration checks and live effects have separate databases.",
+    "remaining_advisory_locks": 0,
+    "remaining_idle_in_transaction_sessions": 0,
+    "server_stopped_after_checks": true,
+    "stop_verified": "pg_ctl status reports no server running after clean fast shutdown."
+  },
+  "verification": {
+    "full_final_suite": {"database": "isolated_temporary_sqlite", "passed": 3014, "skipped": 42, "warnings": 260, "seconds": 227.43, "source_edits_during_run": false},
+    "postgres_checks": {"passed": 159, "skipped": 1, "warnings": 26, "seconds": 48.71, "skip_note": "The SQLite parametrization of lease termination is inapplicable; applicable PostgreSQL guard/customer/reconciliation cases ran."},
+    "prior_targeted_sqlite": {"passed": 214, "skipped": 33, "warnings": 48, "seconds": 41.59, "note": "Before adding the three final untyped-summary cases; final full suite and PostgreSQL checks include them."},
+    "new_tests_this_phase": 34,
+    "red_reproductions": {"partial_duplicates_against_committed_helper": {"failed": 4}, "lost_bulk_summary": {"failed": 3, "passed": 1}},
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "new_bench_bandit_medium_or_high": "none",
+    "independent_countercheck": "New process re-read closed/draft/unmerged PR identity, unchanged main, exact three-file compare and all original/final source values, retained one-file branch and absence of its PR. Read-only PostgreSQL session confirmed two operation receipts, explicit retention audit, one three-unit ledger event tied to the completed operation, both restored tasks, exact-head trace and frozen response summary. No extra GitHub write or provider call.",
+    "artifact_sha256": {"bulk-recovery.json": "a1b39775606812cbc8d9bc1dd0d5829e12db2fc88108b4dd5da8cca51955b50d", "countercheck.json": "67d015e94c75e44e439693346a82c8ef0e39eea102c5d01391f2ed1a46b3924c"},
+    "external_secrets_or_prompts_recorded": false
+  },
+  "limitations": [
+    "The three-file real batch uses deterministic provider stubs and a source-derived synthetic report. No new Claude quality, build, served HTML or SEO recrawl certification is made.",
+    "The fourteen-page capped batches are simulated. Larger real Claude duplicate groups left in the preceding evidence are not completed by this phase.",
+    "Accepted content without a PR remains blocked until explicit operator review/retention. This is safe refusal and audited release, not automatic continuation of partially written content.",
+    "Atomic internal monthly quota recovery is exercised, not Stripe payments, invoices, plan transitions or all external service outages.",
+    "Current literal uniqueness guards depend on eligible observed/cached data; arbitrary customer/shared/computed templates and other frameworks remain outside universal certification.",
+    "Production startup, scheduler recovery, capacity, receipt retention and deployment are not exercised here. Agent main and customer sites are unchanged."
+  ],
+  "remaining_release_checks": [
+    "Finish explicit remaining repairable-family/customer-template coverage, including larger real Claude duplicate groups with budgets and final recrawl.",
+    "Validate deployment startup/schedulers, capacity and receipt retention.",
+    "Validate onboarding and billing lifecycle in isolated acceptance environments, review/deploy the branch, then supervise pilots."
+  ],
+  "artifacts": {
+    "live_and_countercheck_windows": "C:/Users/Caron/AppData/Local/Temp/seo-bulk-github-postgres-live-20261004-69x9v3hq",
+    "postgres_checks_windows": "C:/Users/Caron/AppData/Local/Temp/seo-bulk-postgres-checks-20261004-c97t8egw",
+    "full_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-bulk-final-full-20261004-o9ofrl5q",
+    "prior_targeted_windows": "C:/Users/Caron/AppData/Local/Temp/seo-bulk-final-targeted-20261004-kgpbmzij",
+    "duplicate_red_windows": "C:/Users/Caron/AppData/Local/Temp/seo-bulk-partial-committed-red-20261004-7j69sfdx",
+    "response_red_windows": "C:/Users/Caron/AppData/Local/Temp/seo-bulk-response-red-20261004-w0a76a2r",
+    "postgres_cluster_wsl": "/tmp/seo-bulk-postgres-20261004-fisfEZ"
+  }
+}

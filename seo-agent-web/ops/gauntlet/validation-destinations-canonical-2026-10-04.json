@@ -1,0 +1,140 @@
+{
+  "date": "2026-10-04",
+  "status": "two_selected_verified_canonical_destinations_measured_with_one_unselected_residual",
+  "universal_corrector_certification": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "measurement_mode": "counterfactual_fixture_preview_without_injected_header",
+  "scope": {
+    "families": ["canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"],
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "qa_pages": ["qa-hop-source", "qa-chain-source", "qa-relay", "qa-master", "qa-control"],
+    "setup_writable_paths": [
+      "gauntlet/qa-hop-source.html", "gauntlet/qa-chain-source.html", "gauntlet/qa-relay.html",
+      "gauntlet/qa-master.html", "gauntlet/qa-control.html", "index.html", "sitemap.xml", "_redirects"
+    ],
+    "correction_writable_paths": ["gauntlet/qa-hop-source.html", "gauntlet/qa-chain-source.html"],
+    "maximum_successful_file_puts": 10,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/canonical_target_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "production_changes": [
+    "Both families require observed source canonical, the old target's redirect or declared canonical relationship, and a corroborated destination. Every observation of that exact destination must be HTML status 200 without an error, host block or explicit noindex, and without a canonical pointing elsewhere. URL scheme, host, path/query case and trailing slash are significant; host case and fragments use the existing verification identity.",
+    "An absent or invalid relationship no longer falls back to prompt-only canonical generation. Verified pairs reuse the existing page-local canonical pipeline; unknown, shared or ambiguous source files cannot invoke a model for targeting or content repair. The zero-targeting rule also applies to the already-scoped disappeared-canonical pipeline.",
+    "Only each file's own pairs are rewritten. A canonical-shaped literal belonging to another page, alternate/hreflang declarations and navigation links are retained. Relative variants require the old URL's origin to match the known source page, and a destination on another origin remains absolute. Query and fragment components remain intact.",
+    "A mixed family retains its verified pairs and explicit refusal notes. The unsafe page's file is skipped, without PUT or AI, while another verified page can still be corrected. Individual and bulk product endpoint tests both exercise the guarded mechanical path with zero AI quota debit.",
+    "Existing rewriter wiring tests now provide the measured source, previous target and destination required by the stronger evidence contract; the expected rewriter is unchanged."
+  ],
+  "successful_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-targets-baseline-20261004-164955",
+    "correction_branch": "gauntlet-static-html-targets-correction-20261004-164955",
+    "baseline_sha": "2494c4406a4260943d6d9595a2823904315f2300",
+    "final_sha": "cd2f28d30005072aef0a16b32b67c7bfdfa41947",
+    "baseline_pr": 55,
+    "correction_pr": 56,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "setup_file_puts": 8,
+    "corrective_file_puts": 2,
+    "observed_html_routes": [49, 49],
+    "other_observed_html_fields_and_routes_preserved": true,
+    "selected_occurrences": {
+      "canonical_points_to_redirect": [1, 0],
+      "non_canonical_page_specified_as_canonical_one": [1, 0]
+    },
+    "whole_crawl_counts": {
+      "canonical_points_to_redirect": [1, 0],
+      "non_canonical_page_specified_as_canonical_one": [2, 1]
+    },
+    "legitimate_redirect_direct_http_status": [301, 301],
+    "redirect_config_unchanged": true,
+    "only_two_canonical_source_values_changed": true,
+    "alternate_annotations_preserved": true,
+    "increased_counts": {},
+    "cycle_sha256": "5719504b926e660b13a324fb3d2e0fb84e0d6303fedb655bc2e3a2d2b68d9606"
+  },
+  "explicit_remaining_occurrence": {
+    "family": "non_canonical_page_specified_as_canonical_one",
+    "count_after": 1,
+    "source": "https://noyaru-stack-static-html.netlify.app/gauntlet/canonical-other",
+    "old_target": "https://noyaru-stack-static-html.netlify.app/gauntlet/canonical-relay",
+    "measured_proposed_destination": "https://noyaru-stack-static-html.netlify.app/gauntlet/missing-h1",
+    "already_present_in_baseline": true,
+    "excluded_by_the_explicit_qa_page_scope": true,
+    "claimed_uncorrectable": false,
+    "repaired_or_certified_this_phase": false,
+    "all_family_occurrences_passed": false
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "description": "A fresh isolated process re-read the closed draft unmerged PRs, exact successful build heads, unchanged fixture main and the two corrective commits on exactly the allowed pages. An independent HTML parser checked canonical/alternate values on all five GitHub sources and all ten saved/fresh HTTP bodies. Stripping exactly the owned Netlify toolbar fragment yields the corresponding source; the native noindex remains. The 301 and redirect config are unchanged. Current helper PUT proposals are captured locally against pinned baseline blobs and byte-match the measured final commit.",
+    "native_preview_noindex_retained": true,
+    "only_exact_owned_netlify_toolbar_excluded_from_source_comparison": true,
+    "synthetic_noindex_destination_refused": true,
+    "first_negative_assertion_failed": true,
+    "first_negative_assertion_diagnosis": "The assertion wrongly required a whole-family refusal after invalidating the selected QA destination, although a different preexisting pair remained valid. The corrector correctly retained that other pair. The corrected check confirms the selected page is absent from accepted pairs and present in refusal notes; with only the selected witness in the block, preparation refuses entirely. Two final unit cases additionally exercise safe partial writes and explicit skipped files.",
+    "countercheck_sha256": "12274efc4b2cc9bb29b293dbc0d5ff817b8b6a741686b1b8e4e9b2e0cde3574b",
+    "countercheck_script_sha256": "f0eaa2d4fe9d7055653f810b6b91f14521c5f26c49f58479631f6507c411db7d",
+    "snapshots_sha256": {
+      "baseline/raw/report.json": "0fb95db070d1ea8a1aef880051d9df37d611a10469c386a6796d892dd90ceb89",
+      "baseline/controlled/report.json": "4c9c7dc5ffa22f39554d64eef0fafe6073100efad25b290c1810ae2de5f088c9",
+      "baseline/http.json": "ecb0570245bd1478babdc271b4d8707c33f681cb213b425391396c54dde26863",
+      "final/raw/report.json": "e3d99a385f00fdbcd2c3b9de13583840c85587c3bed35bf7dfc573a8e1989a6c",
+      "final/controlled/report.json": "f2916f6320be8d33742fe4908b45449dc9c80e77f6867cd633e7df568200f5e7",
+      "final/http.json": "f7778daf53fea81f004872c17f4354ac95db8e6f9de66decdef3c3135421cc07"
+    }
+  },
+  "acceptance_inventory": {
+    "entrypoint": "python ops/gauntlet/acceptance_inventory.py --output NEW_PATH",
+    "historical_tracked_snapshot_preserved": "acceptance-inventory-2026-10-04.json",
+    "catalog_keys": 203,
+    "claimed_families": 66,
+    "visible_offered_families": 65,
+    "families_without_exact_named_record_before_this_record": 19,
+    "families_without_exact_named_record_after_this_record": 17,
+    "record_references_are_not_passed_repairs": true,
+    "client_readiness_certified": false,
+    "before_snapshot_sha256": "776cb8bfe3c174b74ac90f7c50bde0ac1ec1338ec8e600ee3e3991536878f71b",
+    "after_snapshot": "acceptance-after-targets.json in the live temporary directory"
+  },
+  "provider_usage": {"all_live_and_countercheck_requests": 0, "claude_budget": 0, "openai_fallback_allowed": false},
+  "verification": {
+    "red_witnesses_before_fix": {"failed": 33, "passed": 1},
+    "red_counts_are_test_cases_not_distinct_bugs": true,
+    "full_final_suite": {"database": "isolated_temporary_sqlite", "passed": 3290, "skipped": 42,
+      "warnings": 266, "seconds": 225.80, "source_or_test_edits_during_run": false},
+    "targeted_final_suite": {"passed": 173, "skipped": 0, "warnings": 28, "seconds": 6.06},
+    "new_tests_this_phase": 50,
+    "verified_canonical_pair_tests": 37,
+    "individual_and_bulk_endpoint_tests": 4,
+    "fixture_positive_control_tests": 9,
+    "ruff_F_E9": "passed",
+    "compileall": "passed",
+    "new_bench_bandit_medium_or_high": "none",
+    "full_junit_sha256": "0001abc0230da9c14d85505c483e3b4d87c8fb650ccc0ced8b0a35181f997a9b",
+    "targeted_junit_sha256": "4b37110a7c3da8168f4163a33102134338ef6cdab2f1afe62d59fe605083bea0",
+    "red_junit_sha256": "4f2340aa3cf624a305bee18fe10aaff23ce1f00a1ed31e02f50cef9b2efc939a",
+    "secrets_or_provider_payloads_recorded": false
+  },
+  "limitations": [
+    "Live evidence covers two selected source pages on the static HTML fixture, not every occurrence or every supported stack. The preexisting canonical-other occurrence remains deliberately outside the two-file corrective scope, not inherently uncorrectable.",
+    "Missing relationship evidence, unobserved or conflicting targets and destinations consolidating to yet another URL are refused. Longer canonical chains, computed/shared metadata and arbitrary customer templates are not certified by this cycle.",
+    "The cross-origin relative URL rules and noindex refusal are tested with source/unit inputs, not separate live cross-origin or noindex endpoint witnesses. A destination without an explicit canonical is allowed if its observed HTML otherwise passes the guard; this is not proof of search-engine indexing.",
+    "Raw previews remain noindex. Controlled scoring projects only the exact preview host/header into the fixture production namespace, using saved preview XML. Repairing these previews through that counterfactual input does not prove production indexing or raw alias/discovery equivalence.",
+    "No other SEO counter increased in this controlled comparison, but many existing anomalies remain. No all-green or universal client-readiness verdict is claimed.",
+    "An inventory reference can be positive, partial, negative or failed. Seventeen unnamed families is not a measure of remaining successful repairs or a first-client readiness score.",
+    "No agent deployment, startup/scheduler, customer onboarding, payment acceptance, production capacity or new PostgreSQL run is included. The 42 full-suite skips remain outside this SQLite validation."
+  ],
+  "next_acceptance_check": "Exercise the remaining measured canonical occurrence and other canonical scheme/source patterns, then the still-unverified visible families and the production/customer onboarding workflow.",
+  "artifacts": {
+    "live_and_countercheck_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-target-live-20261004-3ux12rzh",
+    "full_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-target-mixed-final-full-20261004-o_ig27yi",
+    "targeted_final_suite_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-target-mixed-final-targeted-20261004-f_die2qs",
+    "red_regression_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-destination-red-20261004-zndqd_v2",
+    "prior_full_suite_before_two_extra_mixed_cases_windows": "C:/Users/Caron/AppData/Local/Temp/seo-canonical-target-final-full-20261004-o0vjf5qx"
+  }
+}

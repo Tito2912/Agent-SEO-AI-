@@ -294,5 +294,5 @@ def test_la_pull_request_porte_la_note() -> None:
     """La note doit etre DANS le corps de la PR, pas seulement calculee."""
     src = inspect.getsource(m.api_issue_deep_fix)
     assert "_note_de_troncature(_ecartes" in src, "la note n'est pas ajoutée au corps de la PR"
-    assert src.index("_ecartes: list[str] = []") < src.index("_deep_patch_issue_files("), (
+    assert src.index("_ecartes: list[str] = []") < src.index("_apply_prepared_issue_fix("), (
         "le carnet doit être ouvert avant la boucle qui le remplit")

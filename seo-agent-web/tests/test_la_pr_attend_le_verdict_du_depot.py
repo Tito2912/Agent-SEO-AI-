@@ -360,9 +360,14 @@ def test_les_CINQ_routes_ouvrent_en_brouillon_et_laissent_une_trace() -> None:
 
     traces = [n for n in _ast.walk(arbre)
               if isinstance(n, _ast.Call) and _ast.unparse(n.func) == "_bloc_verification"]
-    assert len(traces) == 5, (
+    restore = next(n for n in arbre.body if isinstance(n, _ast.FunctionDef)
+                   and n.name == "_restore_correction_tasks")
+    recovery = [n for n in traces if restore.lineno <= n.lineno <= restore.end_lineno]
+    assert len(recovery) == 1, "La reprise doit restaurer une seule trace par PR."
+    primary = [n for n in traces if n not in recovery]
+    assert len(primary) == 5, (
         "%d traces de vérification pour 5 pull requests : une route ouvrira un brouillon que "
-        "personne ne viendra jamais sortir" % len(traces))
+        "personne ne viendra jamais sortir" % len(primary))
 
 
 def test_plus_AUCUNE_fusion_synchrone_dans_les_routes() -> None:

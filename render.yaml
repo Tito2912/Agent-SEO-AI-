@@ -204,6 +204,8 @@ services:
           property: connectionString
       - key: SEO_AGENT_SERVICE_MODE
         value: worker
+      - key: SEO_AGENT_STRICT_CONFIG
+        value: "true"
       # Two jobs in parallel so one large crawl can no longer freeze every other customer:
       # the queue is FIFO and served by a single claimer, so a 6-hour crawl used to block the
       # whole platform. This buys FAIRNESS, not throughput — the box is CPU-bound, so the same

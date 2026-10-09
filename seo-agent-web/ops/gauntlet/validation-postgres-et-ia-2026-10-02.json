@@ -1,0 +1,242 @@
+{
+  "date": "2026-10-02",
+  "readiness": "not_certified_for_all_clients_or_all_repairable_anomalies",
+  "changes_deployed_to_agent": false,
+  "scope": "Real isolated PostgreSQL failure/concurrency tests, paid-client API tests, bounded Claude calls on Hugo and Nuxt, then deterministic Open Graph regression cycles on Hugo, Gatsby and Nuxt.",
+  "previous_evidence": [
+    "validation-2026-10-01.json",
+    "validation-multistack-2026-10-01.json",
+    "validation-preclients-2026-10-02.json"
+  ],
+  "fixed_defects": [
+    {
+      "defect": "A long PostgreSQL correction lease consumed an application-pool connection.",
+      "before_fix": "A one-connection application pool cannot run a normal SELECT while the lease is held.",
+      "fix": "A separate, bounded PostgreSQL correction pool holds session leases. Four concurrent payers can still read quotas through a one-connection application pool; a fifth lease is refused without waiting.",
+      "limits": "Four leases per worker, not a production capacity certification; worker count, database connection limits and session-compatible pooling still need deployment-specific sizing."
+    },
+    {
+      "defect": "Terminating a PostgreSQL lease connection could still return apparent correction success.",
+      "before_fix": "The killed session loses its advisory lock but the unlock error is swallowed.",
+      "fix": "Verify session PID and advisory-lock ownership before GitHub writes, before quota charges and at successful operation exit. Lost, closed or invalidated leases fail with 503 and are never silently reacquired.",
+      "limits": "These checks do not make an already in-flight external GitHub request atomic with the database."
+    },
+    {
+      "defect": "An unknown existing-PR state was treated as permission to generate another paid preview.",
+      "before_fix": "Network failure, empty/non-object responses and unknown states permit a new preview after an existing PR.",
+      "fix": "All four PR-producing correction gates use strict PR-state checks. Unknown state or tracking-store read failure returns 503 before another provider call, charge or GitHub write.",
+      "limits": "Missing or damaged PR metadata and task-write failures still require durable operation recovery."
+    },
+    {
+      "defect": "Open Graph alignment remained blocked by the old crawl after a canonical HTTP-to-HTTPS repair.",
+      "before_fix": "The file already has a safe HTTPS canonical, but an og:url trailing-slash difference survives; real counters remain 4 to 1.",
+      "fix": "Prepare a deferred pair that activates only when the current file contains exactly the repaired HTTPS canonical. No insecure downgrade, speculative canonical or model fallback is allowed.",
+      "after_fix": "Real baseline/correction previews show 4 to 0 on Hugo, Gatsby and Nuxt, with no observed count increases or newly affected routes."
+    }
+  ],
+  "before_fix_reproductions": {
+    "real_postgres_pool_and_terminated_session": {"failed": 2},
+    "unknown_existing_pr_state": {"failed": 4},
+    "deferred_og_html_nuxt_next": {"failed": 3}
+  },
+  "postgres_validation": {
+    "version": "PostgreSQL 16.15",
+    "database": "seo_corrector_test",
+    "bind": "127.0.0.1:55473",
+    "isolation": "Temporary local cluster, synthetic users/projects, no production database or system service used.",
+    "server_stopped_after_tests": true,
+    "remaining_advisory_locks_after_tests": 0,
+    "remaining_idle_in_transaction_sessions_after_tests": 0,
+    "guard_integration_cases": 9,
+    "integration_coverage": [
+      "Application-pool starvation",
+      "Terminated lease session",
+      "Separate-process exclusion for the same payer and independent payers",
+      "Nested auto confirmation",
+      "Exception cleanup",
+      "Abrupt worker exit",
+      "No long-running transaction",
+      "Four simultaneous payers and bounded fifth-operation refusal",
+      "Repeated connection-pool checkout without leaked locks"
+    ],
+    "customer_api_cases_using_real_postgres_ledger": 30,
+    "customer_api_note": "Actual FastAPI/auth/CSRF/payer/quota behavior; GitHub and provider are deterministic stubs for financial and failure tests.",
+    "six_process_last_credit_test": {
+      "independent_api_processes": 6,
+      "shared_payer": true,
+      "simultaneous_start_barrier": true,
+      "successful_paid_previews": 1,
+      "provider_stub_calls": 1,
+      "quota_debits": 1
+    },
+    "lost_lease_after_provider_result": {
+      "http_status": 503,
+      "quota_debits": 0,
+      "github_writes": 0
+    }
+  },
+  "verification": {
+    "targeted_run_with_postgres": {
+      "passed": 57,
+      "warnings": 11,
+      "seconds": 26.64,
+      "unit_or_os_guard_cases_included": 18,
+      "test_files": [
+        "tests/test_corrector_customer_workflow.py",
+        "tests/test_correction_guard_postgres.py",
+        "tests/test_correction_guard.py"
+      ]
+    },
+    "full_local_suite": {
+      "status": "passed",
+      "database": "isolated_temporary_sqlite",
+      "passed": 2714,
+      "skipped": 11,
+      "warnings": 244,
+      "seconds": 363.99,
+      "skip_note": "Nine opt-in PostgreSQL guard cases and two PostgreSQL customer cases; all eleven passed in the separate real PostgreSQL run.",
+      "source_edits_during_run": false
+    },
+    "ruff_F_E9": "passed_on_changed_code_and_tests",
+    "compileall": "passed_on_changed_code_and_tests",
+    "bandit": "passed_on_backend_db_and_correction_guard",
+    "whitespace_note": "Existing app.py trailing blanks were left untouched; no new whitespace issue was reported in db.py."
+  },
+  "live_totals": {
+    "cycles_measured": 5,
+    "unique_stacks": 3,
+    "successful_draft_preview_builds": 10,
+    "pull_requests_closed_without_merge": 10,
+    "claude_calls": 14,
+    "model_written_file_repairs": 10,
+    "estimated_logged_model_cost_usd": 0.18132,
+    "cost_note": "Sum of rounded per-call estimates in claude.log, not an invoice. Calls include target mapping and do not equal model-written file counts.",
+    "client_sites_changed": 0,
+    "observed_count_increases": 0,
+    "new_observed_issue_routes": 0
+  },
+  "claude_cycles": [
+    {
+      "stack": "hugo",
+      "main_sha": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "baseline_pr": {"number": 38, "head_sha": "a6ccefd1761014208a9b50e31f44657f6c48bd23"},
+      "correction_pr": {"number": 39, "head_sha": "9349801dbdace001c7a18968aa4cc6c4fe3b7dc6"},
+      "repository": "pployeraffiliation-a11y/noyaru-stack-hugo",
+      "status": "measured",
+      "both_builds": "success",
+      "both_prs_closed_without_merge": true,
+      "comparable_html_pages": {"before": 44, "after": 44},
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "calls": 7,
+      "estimated_logged_model_cost_usd": 0.09605,
+      "model_written_files": 5,
+      "selected_results": [
+        {"family": "canonical_from_https_to_http", "before": 1, "after": 0, "model_written_files": 0, "note": "Already repaired by the mechanical mixed-content pass, not by Claude."},
+        {"family": "description", "before": 4, "after": 3, "verdict": "partial", "model_written_files": 1},
+        {"family": "open_graph_tags_incomplete", "before": 4, "after": 0, "verdict": "resolved_in_preview_scope", "model_written_files": 4},
+        {"family": "open_graph_url_not_matching_canonical", "before": 4, "after": 1, "verdict": "partial_before_deferred_pair_fix"}
+      ]
+    },
+    {
+      "stack": "nuxt",
+      "main_sha": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "baseline_pr": {"number": 38, "head_sha": "df6d5e858f018cd01c7bfc30a9b182f64f788fff"},
+      "correction_pr": {"number": 39, "head_sha": "7dc0cf3300be9b9c4515367dedf07605f4fee856"},
+      "repository": "pployeraffiliation-a11y/noyaru-stack-nuxt",
+      "status": "measured",
+      "both_builds": "success",
+      "both_prs_closed_without_merge": true,
+      "comparable_html_pages": {"before": 40, "after": 40},
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "calls": 7,
+      "estimated_logged_model_cost_usd": 0.08527,
+      "model_written_files": 5,
+      "selected_results": [
+        {"family": "canonical_from_https_to_http", "before": 1, "after": 0, "model_written_files": 0, "note": "Already repaired by the mechanical mixed-content pass, not by Claude."},
+        {"family": "description", "before": 3, "after": 2, "verdict": "partial", "model_written_files": 1},
+        {"family": "open_graph_tags_incomplete", "before": 4, "after": 0, "verdict": "resolved_in_preview_scope", "model_written_files": 4},
+        {"family": "open_graph_url_not_matching_canonical", "before": 4, "after": 1, "verdict": "partial_before_deferred_pair_fix"}
+      ]
+    }
+  ],
+  "og_regression_cycles": [
+    {
+      "stack": "hugo",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-hugo",
+      "main_sha": "a00c31e2892df9b6792e432b3e214cd01aa52aaf",
+      "baseline_pr": {"number": 40, "head_sha": "e8f00a2e0edc8b1f043155a7d31be6bf31bf4adf"},
+      "correction_pr": {"number": 41, "head_sha": "674bd45a8d463ed98e46b107c3f100433ab8bacc"},
+      "comparable_html_pages": {"before": 44, "after": 44},
+      "og_url_mismatch": {"before": 4, "after": 0, "verdict": "resolved_in_preview_scope"}
+    },
+    {
+      "stack": "gatsby",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-gatsby",
+      "main_sha": "ea353d62d4c0f517c72f733aeeb04c556e73a7f7",
+      "baseline_pr": {"number": 36, "head_sha": "e22fe2fff2aeb38d4c03cff7aaffc427ad08108a"},
+      "correction_pr": {"number": 37, "head_sha": "4e9d398c6a617208cb879685e92ecb957bc247d6"},
+      "comparable_html_pages": {"before": 40, "after": 40},
+      "og_url_mismatch": {"before": 4, "after": 0, "verdict": "resolved_in_preview_scope"}
+    },
+    {
+      "stack": "nuxt",
+      "repository": "pployeraffiliation-a11y/noyaru-stack-nuxt",
+      "main_sha": "88ea1117b0441ef084cbe3c8c74d11259668e47b",
+      "baseline_pr": {"number": 40, "head_sha": "42891f3077a7352c3ddc4dc7c73fcca6041fe093"},
+      "correction_pr": {"number": 41, "head_sha": "c50ec0f07b5b5ab5d9c6f6661d95a1a62271b795"},
+      "comparable_html_pages": {"before": 40, "after": 40},
+      "og_url_mismatch": {"before": 4, "after": 0, "verdict": "resolved_in_preview_scope"}
+    }
+  ],
+  "og_regression_shared_checks": {
+    "max_pages": 90,
+    "all_statuses": "measured",
+    "all_baselines_comparable": true,
+    "all_preview_builds": "success",
+    "all_preview_prs_closed_without_merge": true,
+    "fixture_main_branches_unchanged": true,
+    "missing_html_routes": [],
+    "observed_count_increases": [],
+    "new_issue_routes": [],
+    "additional_claude_calls": 0,
+    "raw_fields_on_canonical_http_route": {
+      "route": "/gauntlet/canonical-http/",
+      "observed_on_stacks": ["hugo", "gatsby", "nuxt"],
+      "baseline": {"canonical": "http://noyaru-stack-{stack}.netlify.app/gauntlet/canonical-http", "og_url": "https://noyaru-stack-{stack}.netlify.app/gauntlet/canonical-http/"},
+      "correction": {"canonical": "https://noyaru-stack-{stack}.netlify.app/gauntlet/canonical-http", "og_url": "https://noyaru-stack-{stack}.netlify.app/gauntlet/canonical-http"}
+    }
+  },
+  "historical_attribution_correction": {
+    "report": "validation-preclients-2026-10-02.json",
+    "old_interpretation": "The surviving Open Graph mismatch was attributed to an insecure canonical outside the mechanical-only batch.",
+    "new_evidence": "The mixed-content pass had already upgraded the canonical to HTTPS; the remaining mismatch was its trailing slash versus og:url. The old crawl prevented the OG rewriter from resuming after that upgrade.",
+    "old_report_preserved": true
+  },
+  "evidence_limits": [
+    "Real builds and before/after crawls prove only the observed fixture-preview scope, not every client or every occurrence.",
+    "Netlify previews inject noindex. A family absent from the unchanged baseline remains unverified, even with an after-counter of zero.",
+    "Canonical 4xx and internal HTTP links have separate positive-control HTML checks, not crawler-count certification.",
+    "Missing reciprocal hreflang remains unverified where indexability suppresses it; no patch is not a success.",
+    "Claude follow-up selected three family keys with at most four files per family. Two families actually needed model-written files; the HTTP canonical was already mechanically repaired.",
+    "Description variants and other AI-written families remain partial or unexercised."
+  ],
+  "remaining_release_checks": [
+    "P0: Durable correction-operation journal and idempotent billing/recovery when GitHub accepts a write but quota/task persistence or the HTTP response fails; retry must not create duplicate paid work or conflicting PRs.",
+    "P1: Deployment-specific PostgreSQL worker/pool sizing, session-compatible pooling, process recycling and longer load tests.",
+    "P1: Remaining Claude-written families, complete description batches and indexability-sensitive hreflang positive controls.",
+    "P1: Real paid-account onboarding, GitHub permissions, quota renewal, upgrade/downgrade and Stripe/provider failures.",
+    "Review and deploy local changes, then supervised pilots using draft PRs and human review before broader automation."
+  ],
+  "artifacts_windows": {
+    "claude": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-ai-followup-20261002-zqr_56xg",
+    "og_regression": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-og-regression-20261002-tajkvya4",
+    "postgres_targeted_tests": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-postgres-release-20261002-93hna3zo",
+    "full_local_suite": "C:\\Users\\Caron\\AppData\\Local\\Temp\\seo-final-release-20261002-31jl31e_"
+  },
+  "primary_semantics_references": [
+    "https://www.postgresql.org/docs/16/explicit-locking.html#ADVISORY-LOCKS",
+    "https://docs.sqlalchemy.org/en/20/core/pooling.html"
+  ]
+}

@@ -1,0 +1,930 @@
+{
+  "catalog_key_count": 203,
+  "claimed_family_count": 66,
+  "visible_offered_family_count": 65,
+  "record_mentions_are_not_success_verdicts": true,
+  "client_readiness_certified": false,
+  "families_without_named_record": [
+    "canonical_from_http_to_https",
+    "canonical_points_to_5xx",
+    "canonical_points_to_redirect",
+    "duplicate_pages_without_canonical",
+    "hreflang_defined_but_html_lang_missing",
+    "hreflang_to_non_canonical",
+    "hreflang_to_redirect_or_broken_page",
+    "indexable_page_not_in_sitemap",
+    "links_with_no_anchor_text",
+    "meta_description_too_short",
+    "missing_canonical",
+    "non_canonical_page_specified_as_canonical_one",
+    "page_referenced_for_more_than_one_language_in_hreflang",
+    "redirect_3xx",
+    "sitemap_3xx_redirect",
+    "sitemap_4xx_page",
+    "sitemap_http_urls_for_https",
+    "sitemap_noindex_page",
+    "sitemap_non_canonical_page",
+    "structured_data_google_rich_results_validation_error",
+    "twitter_card_missing",
+    "viewport_not_set"
+  ],
+  "families": [
+    {
+      "family": "canonical_from_http_to_https",
+      "catalog_keys": [
+        "canonical_from_http_to_https"
+      ],
+      "visible_offered_keys": [
+        "canonical_from_http_to_https"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "canonical_from_https_to_http",
+      "catalog_keys": [
+        "canonical_from_https_to_http"
+      ],
+      "visible_offered_keys": [
+        "canonical_from_https_to_http"
+      ],
+      "named_validation_records": [
+        "validation-postgres-et-ia-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "canonical_points_to_4xx",
+      "catalog_keys": [
+        "canonical_points_to_4xx"
+      ],
+      "visible_offered_keys": [
+        "canonical_points_to_4xx"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "canonical_points_to_5xx",
+      "catalog_keys": [
+        "canonical_points_to_5xx"
+      ],
+      "visible_offered_keys": [
+        "canonical_points_to_5xx"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "canonical_points_to_redirect",
+      "catalog_keys": [
+        "canonical_points_to_redirect"
+      ],
+      "visible_offered_keys": [
+        "canonical_points_to_redirect"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "css_redirects",
+      "catalog_keys": [
+        "css_redirects"
+      ],
+      "visible_offered_keys": [
+        "css_redirects"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "double_slash_in_url",
+      "catalog_keys": [
+        "double_slash_in_url"
+      ],
+      "visible_offered_keys": [
+        "double_slash_in_url"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "duplicate_meta_descriptions",
+      "catalog_keys": [
+        "duplicate_meta_descriptions"
+      ],
+      "visible_offered_keys": [
+        "duplicate_meta_descriptions"
+      ],
+      "named_validation_records": [
+        "validation-doublons-par-lots-2026-10-04.json",
+        "validation-titres-et-doublons-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "duplicate_pages_without_canonical",
+      "catalog_keys": [
+        "duplicate_pages_without_canonical"
+      ],
+      "visible_offered_keys": [
+        "duplicate_pages_without_canonical"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "duplicate_titles",
+      "catalog_keys": [
+        "duplicate_titles"
+      ],
+      "visible_offered_keys": [
+        "duplicate_titles"
+      ],
+      "named_validation_records": [
+        "validation-doublons-par-lots-2026-10-04.json",
+        "validation-titres-et-doublons-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "hreflang_annotation_invalid",
+      "catalog_keys": [
+        "hreflang_annotation_invalid"
+      ],
+      "visible_offered_keys": [
+        "hreflang_annotation_invalid"
+      ],
+      "named_validation_records": [
+        "validation-hreflang-ia-2026-10-04.json",
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "hreflang_defined_but_html_lang_missing",
+      "catalog_keys": [
+        "hreflang_defined_but_html_lang_missing"
+      ],
+      "visible_offered_keys": [
+        "hreflang_defined_but_html_lang_missing"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "hreflang_to_non_canonical",
+      "catalog_keys": [
+        "hreflang_to_non_canonical"
+      ],
+      "visible_offered_keys": [
+        "hreflang_to_non_canonical"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "hreflang_to_redirect_or_broken_page",
+      "catalog_keys": [
+        "hreflang_to_redirect_or_broken_page"
+      ],
+      "visible_offered_keys": [
+        "hreflang_to_redirect_or_broken_page"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "html_lang_attribute_invalid",
+      "catalog_keys": [
+        "html_lang_attribute_invalid"
+      ],
+      "visible_offered_keys": [
+        "html_lang_attribute_invalid"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "html_lang_attribute_missing",
+      "catalog_keys": [
+        "html_lang_attribute_missing"
+      ],
+      "visible_offered_keys": [
+        "html_lang_attribute_missing"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "https_http_mixed_content",
+      "catalog_keys": [
+        "https_http_mixed_content"
+      ],
+      "visible_offered_keys": [
+        "https_http_mixed_content"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "https_page_has_internal_links_to_http",
+      "catalog_keys": [
+        "https_page_has_internal_links_to_http"
+      ],
+      "visible_offered_keys": [
+        "https_page_has_internal_links_to_http"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "https_page_links_to_http_css",
+      "catalog_keys": [
+        "https_page_links_to_http_css"
+      ],
+      "visible_offered_keys": [
+        "https_page_links_to_http_css"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "https_page_links_to_http_image",
+      "catalog_keys": [
+        "https_page_links_to_http_image"
+      ],
+      "visible_offered_keys": [
+        "https_page_links_to_http_image"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "https_page_links_to_http_javascript",
+      "catalog_keys": [
+        "https_page_links_to_http_javascript"
+      ],
+      "visible_offered_keys": [
+        "https_page_links_to_http_javascript"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "image_redirects",
+      "catalog_keys": [
+        "image_redirects"
+      ],
+      "visible_offered_keys": [
+        "image_redirects"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "inconsistent_ai_training_bot_policy",
+      "catalog_keys": [
+        "inconsistent_ai_training_bot_policy"
+      ],
+      "visible_offered_keys": [
+        "inconsistent_ai_training_bot_policy"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "indexable_page_not_in_sitemap",
+      "catalog_keys": [
+        "indexable_page_not_in_sitemap"
+      ],
+      "visible_offered_keys": [
+        "indexable_page_not_in_sitemap"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "javascript_redirects",
+      "catalog_keys": [
+        "javascript_redirects"
+      ],
+      "visible_offered_keys": [
+        "javascript_redirects"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "links_with_no_anchor_text",
+      "catalog_keys": [
+        "links_with_no_anchor_text"
+      ],
+      "visible_offered_keys": [
+        "links_with_no_anchor_text"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "meta_description_too_long",
+      "catalog_keys": [
+        "meta_description_too_long",
+        "meta_description_too_long_indexable",
+        "meta_description_too_long_not_indexable"
+      ],
+      "visible_offered_keys": [
+        "meta_description_too_long",
+        "meta_description_too_long_indexable",
+        "meta_description_too_long_not_indexable"
+      ],
+      "named_validation_records": [
+        "validation-descriptions-2026-10-03.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "meta_description_too_short",
+      "catalog_keys": [
+        "meta_description_too_short",
+        "meta_description_too_short_indexable",
+        "meta_description_too_short_not_indexable"
+      ],
+      "visible_offered_keys": [
+        "meta_description_too_short",
+        "meta_description_too_short_indexable",
+        "meta_description_too_short_not_indexable"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "missing_alt_text",
+      "catalog_keys": [
+        "missing_alt_text"
+      ],
+      "visible_offered_keys": [
+        "missing_alt_text"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "missing_canonical",
+      "catalog_keys": [
+        "missing_canonical"
+      ],
+      "visible_offered_keys": [],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "missing_h1",
+      "catalog_keys": [
+        "missing_h1",
+        "missing_h1_indexable",
+        "missing_h1_not_indexable"
+      ],
+      "visible_offered_keys": [
+        "missing_h1",
+        "missing_h1_indexable",
+        "missing_h1_not_indexable"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "missing_meta_description",
+      "catalog_keys": [
+        "missing_meta_description"
+      ],
+      "visible_offered_keys": [
+        "missing_meta_description"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "missing_reciprocal_hreflang",
+      "catalog_keys": [
+        "missing_reciprocal_hreflang"
+      ],
+      "visible_offered_keys": [
+        "missing_reciprocal_hreflang"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json",
+        "validation-sitemaps-et-inventaire-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "missing_title",
+      "catalog_keys": [
+        "missing_title"
+      ],
+      "visible_offered_keys": [
+        "missing_title"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-titres-et-doublons-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "more_than_one_page_for_same_language_in_hreflang",
+      "catalog_keys": [
+        "more_than_one_page_for_same_language_in_hreflang"
+      ],
+      "visible_offered_keys": [
+        "more_than_one_page_for_same_language_in_hreflang"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "multiple_h1",
+      "catalog_keys": [
+        "multiple_h1"
+      ],
+      "visible_offered_keys": [
+        "multiple_h1"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "multiple_meta_description_tags",
+      "catalog_keys": [
+        "multiple_meta_description_tags"
+      ],
+      "visible_offered_keys": [
+        "multiple_meta_description_tags"
+      ],
+      "named_validation_records": [
+        "validation-descriptions-2026-10-03.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "multiple_title_tags",
+      "catalog_keys": [
+        "multiple_title_tags"
+      ],
+      "visible_offered_keys": [
+        "multiple_title_tags"
+      ],
+      "named_validation_records": [
+        "validation-titres-et-doublons-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "non_canonical_page_specified_as_canonical_one",
+      "catalog_keys": [
+        "non_canonical_page_specified_as_canonical_one"
+      ],
+      "visible_offered_keys": [
+        "non_canonical_page_specified_as_canonical_one"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "open_graph_tags_incomplete",
+      "catalog_keys": [
+        "open_graph_tags_incomplete"
+      ],
+      "visible_offered_keys": [
+        "open_graph_tags_incomplete"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json",
+        "validation-postgres-et-ia-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "open_graph_tags_missing",
+      "catalog_keys": [
+        "open_graph_tags_missing"
+      ],
+      "visible_offered_keys": [
+        "open_graph_tags_missing"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "open_graph_url_not_matching_canonical",
+      "catalog_keys": [
+        "open_graph_url_not_matching_canonical"
+      ],
+      "visible_offered_keys": [
+        "open_graph_url_not_matching_canonical"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-postgres-et-ia-2026-10-02.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "page_has_links_to_redirect",
+      "catalog_keys": [
+        "page_has_links_to_redirect",
+        "page_has_links_to_redirect_indexable",
+        "page_has_links_to_redirect_not_indexable"
+      ],
+      "visible_offered_keys": [
+        "page_has_links_to_redirect",
+        "page_has_links_to_redirect_indexable",
+        "page_has_links_to_redirect_not_indexable"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "page_has_redirected_css",
+      "catalog_keys": [
+        "page_has_redirected_css"
+      ],
+      "visible_offered_keys": [
+        "page_has_redirected_css"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "page_has_redirected_image",
+      "catalog_keys": [
+        "page_has_redirected_image"
+      ],
+      "visible_offered_keys": [
+        "page_has_redirected_image"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "page_has_redirected_javascript",
+      "catalog_keys": [
+        "page_has_redirected_javascript"
+      ],
+      "visible_offered_keys": [
+        "page_has_redirected_javascript"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "page_in_multiple_sitemaps",
+      "catalog_keys": [
+        "page_in_multiple_sitemaps"
+      ],
+      "visible_offered_keys": [
+        "page_in_multiple_sitemaps"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json",
+        "validation-preclients-2026-10-02.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "page_referenced_for_more_than_one_language_in_hreflang",
+      "catalog_keys": [
+        "page_referenced_for_more_than_one_language_in_hreflang"
+      ],
+      "visible_offered_keys": [
+        "page_referenced_for_more_than_one_language_in_hreflang"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "redirect_3xx",
+      "catalog_keys": [
+        "redirect_3xx"
+      ],
+      "visible_offered_keys": [
+        "redirect_3xx"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "served_html_lang_mismatch",
+      "catalog_keys": [
+        "served_html_lang_mismatch"
+      ],
+      "visible_offered_keys": [
+        "served_html_lang_mismatch"
+      ],
+      "named_validation_records": [
+        "validation-2026-10-01.json",
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_3xx_redirect",
+      "catalog_keys": [
+        "sitemap_3xx_redirect"
+      ],
+      "visible_offered_keys": [
+        "sitemap_3xx_redirect"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_4xx_page",
+      "catalog_keys": [
+        "sitemap_4xx_page"
+      ],
+      "visible_offered_keys": [
+        "sitemap_4xx_page"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_http_urls_for_https",
+      "catalog_keys": [
+        "sitemap_http_urls_for_https"
+      ],
+      "visible_offered_keys": [
+        "sitemap_http_urls_for_https"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_invalid_format",
+      "catalog_keys": [
+        "sitemap_invalid_format"
+      ],
+      "visible_offered_keys": [
+        "sitemap_invalid_format"
+      ],
+      "named_validation_records": [
+        "validation-sitemaps-et-inventaire-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_noindex_page",
+      "catalog_keys": [
+        "sitemap_noindex_page"
+      ],
+      "visible_offered_keys": [
+        "sitemap_noindex_page"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_non_canonical_page",
+      "catalog_keys": [
+        "sitemap_non_canonical_page"
+      ],
+      "visible_offered_keys": [
+        "sitemap_non_canonical_page"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_not_in_robots",
+      "catalog_keys": [
+        "sitemap_not_in_robots"
+      ],
+      "visible_offered_keys": [
+        "sitemap_not_in_robots"
+      ],
+      "named_validation_records": [
+        "validation-sitemaps-et-inventaire-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "sitemap_xml_not_found",
+      "catalog_keys": [
+        "sitemap_xml_not_found"
+      ],
+      "visible_offered_keys": [
+        "sitemap_xml_not_found"
+      ],
+      "named_validation_records": [
+        "validation-sitemaps-et-inventaire-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "structured_data_google_rich_results_validation_error",
+      "catalog_keys": [
+        "structured_data_google_rich_results_validation_error"
+      ],
+      "visible_offered_keys": [
+        "structured_data_google_rich_results_validation_error"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "structured_data_schema_org_validation_error",
+      "catalog_keys": [
+        "structured_data_schema_org_validation_error"
+      ],
+      "visible_offered_keys": [
+        "structured_data_schema_org_validation_error"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "title_too_long",
+      "catalog_keys": [
+        "title_too_long",
+        "title_too_long_indexable",
+        "title_too_long_not_indexable"
+      ],
+      "visible_offered_keys": [
+        "title_too_long",
+        "title_too_long_indexable",
+        "title_too_long_not_indexable"
+      ],
+      "named_validation_records": [
+        "validation-titres-et-doublons-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "title_too_short",
+      "catalog_keys": [
+        "title_too_short"
+      ],
+      "visible_offered_keys": [
+        "title_too_short"
+      ],
+      "named_validation_records": [
+        "validation-titres-et-doublons-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "twitter_card_incomplete",
+      "catalog_keys": [
+        "twitter_card_incomplete"
+      ],
+      "visible_offered_keys": [
+        "twitter_card_incomplete"
+      ],
+      "named_validation_records": [
+        "validation-multistack-2026-10-01.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "twitter_card_missing",
+      "catalog_keys": [
+        "twitter_card_missing"
+      ],
+      "visible_offered_keys": [
+        "twitter_card_missing"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "viewport_not_set",
+      "catalog_keys": [
+        "viewport_not_set"
+      ],
+      "visible_offered_keys": [
+        "viewport_not_set"
+      ],
+      "named_validation_records": [],
+      "all_occurrences_or_stacks_certified": false
+    },
+    {
+      "family": "x_default_hreflang_missing",
+      "catalog_keys": [
+        "x_default_hreflang_missing"
+      ],
+      "visible_offered_keys": [
+        "x_default_hreflang_missing"
+      ],
+      "named_validation_records": [
+        "validation-hreflang-ia-2026-10-04.json"
+      ],
+      "all_occurrences_or_stacks_certified": false
+    }
+  ],
+  "record_sha256": {
+    "validation-2026-10-01.json": "8401c961dc86c871945d2b4a922b43de88669f68c73e3abf65f530313e4265e8",
+    "validation-descriptions-2026-10-03.json": "b4558eaee39e41b463e57e9edcd2eb092e108df7dfb2ef4d7c1cfea76511a85a",
+    "validation-doublons-par-lots-2026-10-04.json": "4d1bbb3a7c8470a6aa6b04be69d9d4b6652b1b5f39e5f2488eab4080401dfa7d",
+    "validation-github-recovery-2026-10-03.json": "0c3c9c5b4744cb0f8ae2e5b9106d15f8f7eb290bb2476e42ef50536a88cca09d",
+    "validation-hreflang-ia-2026-10-04.json": "820051bc3d414fe5588147ae4f41946d232ec5736f5d5f64f783b26ea6fec978",
+    "validation-hreflang-retours-2026-10-03.json": "34f69345ac7704a905b0043cab0ebb9de097883ac1c56fb776f0d2b9188767e5",
+    "validation-lots-et-reprise-2026-10-04.json": "c4eb047a84915947e43fda3df3fb6ac2b290a9c83c627ae4a30d0598a32dd42e",
+    "validation-multistack-2026-10-01.json": "057a1834348de756e2f573f7bea4c119757c25f297b4e9ee717ecc62104b3b76",
+    "validation-nuxt-syntaxe-2026-10-04.json": "cfa0b49cd6ef9a34bcd6da46a5e646d6570f4f28dbf17a2aba07910c5548ea4d",
+    "validation-postgres-et-ia-2026-10-02.json": "54a44e9cac9664ebcf003a40027debe327636faac3525fc6fc60c5d98a0df1db",
+    "validation-preclients-2026-10-02.json": "69061bb77dd4c33120806049632d89393fed51083ad6bdb20cc597333078c283",
+    "validation-reconciliation-2026-10-03.json": "55346529dc4da41157e6a2b1adb0b953f0fb1f54e373f055a551511d2d626bd3",
+    "validation-reprise-2026-10-03.json": "787a957e8785f64e5cc467bc5ef02074316fa0396d0bc5e4429581ef404aa0b3",
+    "validation-sitemaps-et-inventaire-2026-10-04.json": "f00b2d5784b4b743bfd444b9e362e16fb3ebed35df74d2f0efa718d56efc9251",
+    "validation-titres-et-doublons-2026-10-04.json": "e2d6c328374d78409f1964cd5b8fd7b3690a2bde6009a654d3de312c09aad5da"
+  }
+}

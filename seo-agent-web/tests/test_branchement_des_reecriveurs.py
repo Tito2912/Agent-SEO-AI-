@@ -146,6 +146,8 @@ FORMES: "dict[str, tuple[set[str], dict, str]]" = {
     "_SITEMAP_ADD_KEYS": (m._SITEMAP_ADD_KEYS, _bloc(), ""),
     # Refuse par decision : voir le motif rendu par la branche elle-meme.
     "_REDIRECT_CONFIG_KEYS": (m._REDIRECT_CONFIG_KEYS, _bloc(), ""),
+    "_HTTP_CANONICAL_ADVICE_KEYS": (m._HTTP_CANONICAL_ADVICE_KEYS, _bloc(), ""),
+    "_LEGACY_CANONICAL_ADVICE_KEYS": (m._LEGACY_CANONICAL_ADVICE_KEYS, _bloc(), ""),
     "_X_DEFAULT_KEYS": (m._X_DEFAULT_KEYS, _bloc("page_values", _VALEURS), ""),
     "_SERVED_LANG_FIX_KEYS": (m._SERVED_LANG_FIX_KEYS, _bloc(
         "page_values", [{"page": P, "field": "lang", "value": "fr"}]), ""),
@@ -170,14 +172,39 @@ def _nom_du_reecriveur(rw) -> str:
 SANS_REECRIVEUR_GARANTI = {"_CANONICAL_BROKEN_KEYS", "_AI_POLICY_KEYS", "_SERVED_LANG_FIX_KEYS",
                            "_X_DEFAULT_KEYS", "_ROBOTS_KEYS", "_SITEMAP_REMOVE_KEYS",
                            "_HEAD_HINTS", "_HREFLANG_HINTS", "_PAGE_VALUE_KEYS",
-                           "_SITEMAP_ADD_KEYS", "_REDIRECT_CONFIG_KEYS"}
+                           "_SITEMAP_ADD_KEYS", "_REDIRECT_CONFIG_KEYS", "_HTTP_CANONICAL_ADVICE_KEYS",
+                           "_LEGACY_CANONICAL_ADVICE_KEYS"}
 
 
 def _prepare(cle: str, bloc: dict) -> dict:
+    pages = list(PAGES)
+    chemins = list(CHEMINS)
+    if cle in m._SITEMAP_HTTPS_KEYS:
+        pages = [{"url": S + suffix, "final_url": S + suffix, "status_code": 200,
+                  "content_type": "text/html", "canonical": S + suffix} for suffix in ("/a", "/b")]
+    if cle == "canonical_from_https_to_http":
+        bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": "http://exemple.fr/", "to": P}]})
+        pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": "http://exemple.fr/"}]
+    if cle in {"canonical_points_to_redirect", "non_canonical_page_specified_as_canonical_one"}:
+        pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": S + "/a"},
+                 {"url": S + "/a", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"},
+                 {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
+        if cle == "canonical_points_to_redirect":
+            pages[1].update(final_url=S + "/b", redirect_statuses=[301])
+    if cle == "sitemap_non_canonical_page":
+        bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": P, "to": S + "/b"}]})
+        pages = [{"url": P, "status_code": 200, "content_type": "text/html", "canonical": S + "/b"},
+                 {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
+    if cle == "sitemap_3xx_redirect":
+        bloc = dict(bloc, evidence={"kind": "url_pairs", "items": [{"page": P, "from": P, "to": S + "/b"}]})
+        pages = [{"url": P, "final_url": S + "/b", "status_code": 200, "content_type": "text/html",
+                  "canonical": S + "/b", "redirect_chain": [P], "redirect_statuses": [301]},
+                 {"url": S + "/b", "status_code": 200, "content_type": "text/html", "canonical": S + "/b"}]
+        chemins.append("public/_redirects")
     return m._prepare_issue_fix(
-        issue_key=cle, issues={cle: dict(bloc)}, impacted=[P], all_paths=list(CHEMINS),
+        issue_key=cle, issues={cle: dict(bloc)}, impacted=[P], all_paths=chemins,
         site_name=SITE, owner="o", repo_name="r", branch="main", token="",
-        pages=list(PAGES))
+        pages=pages)
 
 
 def _emises() -> "set[str]":
@@ -218,6 +245,36 @@ def test_le_branchement_fournit_LE_BON_reecriveur(groupe: str, cle: str, bloc: d
                                                   attendu: str) -> None:
     """Debrancher la famille, ou la router ailleurs, doit se voir ici et nulle part ailleurs."""
     out = _prepare(cle, bloc)
+    if cle in m._STRUCTURED_DATA_KEYS:
+        # Preserve these historical parameter IDs while proving the old coercion is unreachable.
+        assert out['refusal'] and 'local' in out['refusal'] and 'price' in out['refusal']
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback'] and not out['rewriter_is_ai']
+        assert not m._github_issue_auto_fixable(cle)
+        return
+    if cle == 'links_with_no_anchor_text':
+        from tests.test_verified_anchor_text import prepare, ITEM
+        assert out['refusal'] and out['anchor_text_items'] == []
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+        verified = prepare()
+        assert not verified['refusal'] and verified['anchor_text_items'] == [ITEM]
+        assert verified['link_rewriter'] is None and not verified['rewriter_ai_fallback']
+        return
+    if cle == 'page_referenced_for_more_than_one_language_in_hreflang':
+        from tests.test_verified_hreflang_drop import prepare, ITEM
+        assert out['refusal'] and out['hreflang_drop_items'] == []
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+        verified = prepare()
+        assert not verified['refusal'] and verified['hreflang_drop_items'] == [ITEM]
+        assert verified['link_rewriter'] is None and not verified['rewriter_ai_fallback']
+        return
+    if cle == 'hreflang_to_non_canonical':
+        from tests.test_verified_hreflang_canonical import prepare, PAIR
+        assert out['refusal'] and out['hreflang_canonical_pairs'] == []
+        assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+        verified = prepare()
+        assert not verified['refusal'] and verified['hreflang_canonical_pairs'] == [PAIR]
+        assert verified['link_rewriter'] is None and not verified['rewriter_ai_fallback']
+        return
     assert not str(out.get("refusal") or "").strip(), (cle, out.get("refusal"))
     rw = out.get("link_rewriter")
     assert callable(rw), (

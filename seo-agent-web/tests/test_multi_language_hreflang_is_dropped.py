@@ -135,15 +135,16 @@ def test_le_BRANCHEMENT_fournit_vraiment_le_reecriveur() -> None:
     le reste de ce fichier.
     """
     out = _prepare(ITEMS)
-    assert out.get("refusal") in (None, ""), out.get("refusal")
-    assert out.get("evidence") == [S + "/fr"], out.get("evidence")
-    # Aucun repli modele : les deux valeurs sont connues.
-    assert out.get("rewriter_ai_fallback") is False
-    rw = out.get("link_rewriter")
-    assert callable(rw), out
-    sortie, n = rw(COUPABLE)
+    assert out['refusal'] and out['hreflang_drop_items'] == []
+    assert out['link_rewriter'] is None and not out['rewriter_ai_fallback']
+    from backend import hreflang_drop
+    from tests.test_verified_hreflang_drop import prepare, raw, expected, pages, ITEM
+    verified = prepare()
+    assert not verified['refusal'] and verified['hreflang_drop_items'] == [ITEM]
+    assert verified['link_rewriter'] is None and not verified['rewriter_ai_fallback']
+    sortie, n = hreflang_drop.rewrite(raw(), ITEM, pages()[0], app_module._duplicate_html_document, app_module._verification_url)
     assert n == 1, sortie
-    assert _annotations(sortie) == [("en", S + "/en"), ("de", S + "/de")], _annotations(sortie)
+    assert sortie == expected()
 
 
 def test_le_BRANCHEMENT_refuse_quand_la_preuve_manque() -> None:

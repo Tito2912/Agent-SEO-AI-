@@ -1,0 +1,343 @@
+{
+  "date": "2026-10-08",
+  "status": "guarded_short_description_excerpt_subset_measured_on_pinned_owned_fixture",
+  "client_readiness_certified": false,
+  "universal_corrector_certification": false,
+  "all_primary_family_occurrences_on_this_fixture_resolved": false,
+  "agent_deployed": false,
+  "customer_sites_modified": false,
+  "tested_agent_parent_commit": "03a0b05beceef049dbd6c90914cf92e882069924",
+  "scope": {
+    "family": "meta_description_too_short",
+    "repository": "pployeraffiliation-a11y/noyaru-stack-static-html",
+    "main_sha_unchanged": "ba041ef05c0f51c1c228e3442928c896fbc00102",
+    "seed_branch": "gauntlet-static-html-anchor-correction-20261007-180323",
+    "seed_sha": "05ff4c231528a024f7f639a625edd1a5058dbd1e",
+    "seed_pr_closed_draft_unmerged": 90,
+    "setup_paths": [
+      "gauntlet/index.html",
+      "gauntlet/qa-short-description-present.html",
+      "gauntlet/qa-short-description-absent.html",
+      "gauntlet/qa-short-description-unproved.html"
+    ],
+    "corrective_paths": [
+      "gauntlet/qa-short-description-present.html",
+      "gauntlet/qa-short-description-absent.html"
+    ],
+    "setup_file_puts": 4,
+    "corrective_file_puts": 2,
+    "maximum_file_put_attempts_per_cycle": 6,
+    "maximum_real_claude_requests_per_cycle": 2,
+    "customer_or_main_writes_allowed": false,
+    "entrypoint": "python ops/gauntlet/short_description_cycle.py --workdir EMPTY_TEMP_DIRECTORY"
+  },
+  "product_guards": [
+    "Typed coherent exact requested/final/self-canonical source identity, root language, title/H1 and tag counts, actual short/absent description and complete length sample. Require observed direct same-host indexable healthy HTTPS HTML. Name unproved pages and refuse unsupported sources.",
+    "Use the common strict quoted-attribute lexer and literal HTML parser. Select punctuation-ended consecutive sentence excerpts of 100-160 decoded Unicode characters from eligible published paragraph text; preserve all other source bytes and the 80000-byte UTF-8 limit. Use actual parser head offsets, including unusual line separators.",
+    "Require unique nonshared literal HTML routes and bounded current routing. Re-read SHA/content, ignoring stale cache. Finish the complete lot source/routing preflight and fresh bounded streamed public-target HTTPS paragraph/context probes before any model request.",
+    "Claude selects only a typed in-range integer candidate index in an exact one-key JSON object. Reject invented strings, boolean/float/string indices, extra keys and current-context drift. Exclude known exact duplicate descriptions and selections already made within the lot.",
+    "All selections precede any PUT. Each PUT uses the current source blob SHA. Stop and explicitly report remaining files on partial failure without claiming atomicity. Only committed AI-selected files are billed and flagged for human review, not auto-merged.",
+    "Individual and bulk endpoints share the protected plan. Free/cached/confirmed model previews cannot bypass it. Short siblings are excluded from the legacy long-description callback. Refuse absent/malformed long samples, disable the long file fallback and honor a refused metadata length plan in internal application before I/O or AI."
+  ],
+  "successful_final_code_live_cycle": {
+    "baseline_branch": "gauntlet-static-html-short-description-baseline-20261008-034500",
+    "correction_branch": "gauntlet-static-html-short-description-correction-20261008-034500",
+    "baseline_sha": "832a93f19b69b250ff0d46d89b3f7bfc3849e573",
+    "final_sha": "3a4a8c19c1d47c6d8a9453b5288545ec54349c8c",
+    "baseline_pr": 95,
+    "correction_pr": 96,
+    "pull_requests_closed_draft_unmerged": true,
+    "exact_successful_builds": 2,
+    "real_crawls": 2,
+    "observed_healthy_html_routes": [
+      64,
+      64
+    ],
+    "report_rows": [
+      74,
+      74
+    ],
+    "sitemap_entries_unchanged": [
+      49,
+      49
+    ],
+    "controlled_whole_family_counts": [
+      5,
+      3
+    ],
+    "raw_whole_family_counts": [
+      3,
+      2
+    ],
+    "raw_missing_description_counts": [
+      3,
+      2
+    ],
+    "selected_counts": [
+      2,
+      0
+    ],
+    "unproved_controls": [
+      1,
+      1
+    ],
+    "preexisting_unselected_occurrences": [
+      2,
+      2
+    ],
+    "preput_https_rechecks": 2,
+    "real_claude_requests": 2,
+    "model_observed": "claude-sonnet-4-6",
+    "one_existing_attribute_replaced_and_one_missing_head_tag_added": true,
+    "increased_controlled_counts": {},
+    "requested_observation_multiset_preserved": true,
+    "unknown_language_left_unknown_and_unmodified": true,
+    "http_namespace": "Test-only exact owned production URL to baseline-preview projection. Remove only the verified native Netlify noindex header; real status, body, canonical and meta robots remain. No product preview/indexability exemption.",
+    "all_selected_occurrences_resolved": true,
+    "all_primary_family_occurrences_resolved": false
+  },
+  "independent_countercheck": {
+    "status": "passed",
+    "fresh_isolated_process_against_final_code": true,
+    "remote_writes": 0,
+    "provider_requests": 0,
+    "fresh_served_html_reads": 6,
+    "fresh_served_xml_reads": 2,
+    "fresh_default_native_preview_probes_rejected": 6,
+    "checks": "Exact current heads, closed unmerged draft PRs, successful builds and 4 setup/2 corrective commits/files. An independent HTMLParser derives both changes from actual body paragraphs and meta tags, excluding comment decoys. Full current repository and fresh served bodies agree after only owned Netlify deploy-id normalization. Routes, index, XML, routing, negative root language and all other bytes preserved; re-preparation, refusal and idempotence pass.",
+    "twelve_original_html_xml_report_snapshots_retained": true,
+    "snapshot_sha256": {
+      "baseline/sitemap.xml": "8039910718192092b0e9b434d2e12094d430d003ff9864ddc8a1f7fa48d4ec97",
+      "baseline/raw/report.json": "2e2a8ab6a97ee5f9876c3c606410ff3c1d52b8aa57b0099d69a6ee456a0d2445",
+      "baseline/controlled/report.json": "e6083e9ee5852eb785cb706ff7c62c183ef620f5b4f0ae9492a02c14f30e7d3a",
+      "baseline/0.http": "6a281ff77e4c176e6470d057ce98f285bbbc338736b820cec6ef8a798b29544c",
+      "baseline/1.http": "86fbce248652b28cace17c21a41f5778fbb4beb7e76480857cb0a1457e52cdb0",
+      "baseline/2.http": "652a92299aca742d8d0a6f2b33179f0a0d8eda4835a114addc2d6bf3ac2f9d2d",
+      "final/sitemap.xml": "8039910718192092b0e9b434d2e12094d430d003ff9864ddc8a1f7fa48d4ec97",
+      "final/raw/report.json": "80e3cd64ddc1d0d9358736ee3e9ef807cf591c5f9246b7959fd923cd66062b54",
+      "final/controlled/report.json": "c0f77112878d36468eaf11bb3e5afb32f16f5090c058a067d8c32f769e8c1ade",
+      "final/0.http": "575f73f5beff67e6461d6de2113fbb81029cc81221d035d330ab4a9550eb4dea",
+      "final/1.http": "a67d884e9bed63aa4df6ca61cb473904afe9a05d2a08bd249e023eb29220ef3b",
+      "final/2.http": "5915a38321dfddbebb57a7fc649de9655aa77d2e94d83d0395c0b81a58dcd029"
+    }
+  },
+  "browser_check": {
+    "status": "passed_on_saved_owned_served_bodies",
+    "viewports": [
+      [
+        1280,
+        800
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "saved_real_owned_bodies_rendered": 12,
+    "before_after_png_pairs_identical": 6,
+    "actual_head_descriptions_checked": true,
+    "body_text_preserved": true,
+    "network_requests": 0,
+    "limitation": "Saved literal fixture with blocked platform scripts; not a live JavaScript, customer CSS or editorial quality certification."
+  },
+  "test_results": {
+    "full_final_suite": {
+      "passed": 5894,
+      "skipped": 42,
+      "cases": 5936,
+      "seconds": 256.247,
+      "warnings": 453
+    },
+    "targeted_final_suite": {
+      "passed": 3311,
+      "skipped": 2,
+      "cases": 3313,
+      "seconds": 63.888,
+      "warnings": 242,
+      "modules": 71
+    },
+    "new_cases": 223,
+    "new_case_modules": {
+      "tests.test_corrector_operational": 33,
+      "tests.test_gauntlet_short_description_cycle": 58,
+      "tests.test_verified_short_description": 132
+    },
+    "all_5713_prior_case_ids_retained": true,
+    "same_42_prior_skips": true,
+    "seven_frozen_source_test_hashes_match_full_target_live_and_fresh_counter": true,
+    "ruff_F_E9": "passed",
+    "bandit_medium_high_new_modules": "passed",
+    "python_compilation": "passed"
+  },
+  "test_isolation_fix": "The operational endpoint harness now yields and deletes only its own unique fixture user at teardown, with existing FK cascades. No product sweep limit, shared database reset, old case IDs or old skipped tests changed. 501 workflow/endpoint/PR tests pass together before final full re-run.",
+  "retained_earlier_measurements": [
+    {
+      "explanation": "Earlier protected short-plan version, before long-family escape closure and isolated harness cleanup.",
+      "record": {
+        "path": "seo-short-description-live-20261008-65ia3byk/cycle/cycle.json",
+        "sha256": "1f14e601f39833a187799db8bc2948ff021100b88fac71168cf4876e24cd7183"
+      },
+      "manifest": {
+        "path": "seo-short-description-live-20261008-65ia3byk/manifest.json",
+        "sha256": "0e078a114164179d886d2f23aca6f17257513a4c2cc3ac621b0e49d8f1c7f645"
+      },
+      "prs": [
+        91,
+        92
+      ],
+      "provider_requests": 2,
+      "not_relabelled_as_final_code": true
+    },
+    {
+      "explanation": "Earlier long-plan refusal version, before the internal application guard; not final-code acceptance.",
+      "record": {
+        "path": "seo-short-description-live2-20261008-4p4agyoi/cycle/cycle.json",
+        "sha256": "f55282da1474a6bd216dac86ea2b043debfd43097047ed5bcf718f72e07a4c9c"
+      },
+      "manifest": {
+        "path": "seo-short-description-live2-20261008-4p4agyoi/manifest.json",
+        "sha256": "7ffa02f88191df709dc7b46635261f0ccc2c95e6a1d1e893d0834b49c26feaa1"
+      },
+      "prs": [
+        93,
+        94
+      ],
+      "provider_requests": 2,
+      "not_relabelled_as_final_code": true
+    }
+  ],
+  "retained_failed_measurements": [
+    {
+      "explanation": "109 failures and one pass before implementation; most failures witness the missing module/plan, not independent bugs.",
+      "junit": {
+        "path": "seo-short-description-red-20261008-i9a8rioh/junit.xml",
+        "sha256": "7e846e2cf58eac35fc7abc02cce0166c66e1a458cdcf5a8e1e3d32b443626bc5"
+      }
+    },
+    {
+      "explanation": "812 passes and two fixture failures: a 161-character excerpt was correctly refused; fix fixture, never relax the ceiling.",
+      "junit": {
+        "path": "seo-short-description-green-20261008-5ngbmtkh/junit.xml",
+        "sha256": "5488e606811f68ba7ecb7e2375d02db8f26dbde1bfdf50fe4db9cca9a0031871"
+      }
+    },
+    {
+      "explanation": "5885 passes, two PR-sweep test failures and 42 skips. Endpoint fixtures leaked their own pending rows past the existing 100-row sweep limit.",
+      "junit": {
+        "path": "seo-short-description-final-full-20261008-jkzu90pd/junit.xml",
+        "sha256": "0de33e8d4b58646559a34c9a2061550dbe6a5fb58eb32c8a6221d19ab0b81d9f"
+      }
+    },
+    {
+      "explanation": "620 passes and seven failures: a refused long-description plan was still usable through internal application.",
+      "junit": {
+        "path": "seo-short-description-escape-green-20261008-vtcsjcqa/junit.xml",
+        "sha256": "5e72dfff471a0303984e0d6ab566f094de2b9025dbb1861270aef40804bef502"
+      }
+    },
+    {
+      "explanation": "3304 passes, seven internal refusal failures and two skips; preserved, not promoted.",
+      "junit": {
+        "path": "seo-short-description-final3-targeted-20261008-lh79fm0u/junit.xml",
+        "sha256": "729eb4bf53da0a98cdb4df841846a16cf03ef42e90bd9f5d3a49ef3ec733ae4e"
+      }
+    }
+  ],
+  "interrupted_nonfinal_full_run": {
+    "manifest": {
+      "path": "seo-short-description-final3-full-20261008-s__p0c9y/manifest.json",
+      "sha256": "7ffa02f88191df709dc7b46635261f0ccc2c95e6a1d1e893d0834b49c26feaa1"
+    },
+    "reason": "Stopped own isolated test process after seven targeted refusal failures made that pre-guard full run obsolete. Not counted as a completed suite."
+  },
+  "all_real_provider_requests_this_step": 6,
+  "provider_requests_in_counterchecks_and_unit_tests": 0,
+  "named_record_inventory": {
+    "catalog_keys": 203,
+    "claimed_families": 65,
+    "visible_offered_families": 64,
+    "families_without_exact_named_record_before": 3,
+    "expected_after_this_primary_record": 2,
+    "mentions_are_not_success_or_client_readiness_certificates": true
+  },
+  "historical_validation_and_rewriter_receipts_unchanged": 34,
+  "final_source_raw_sha256": {
+    "backend/app.py": "0d5d474af1360fe01c879707039e48b2d0c853a4176f4c1039375af24c76ab29",
+    "backend/anchor_text.py": "e02a221792afa1eb43d597bb5d238ff9df89f9b7d684681d6e61c539ebaf26aa",
+    "backend/short_description.py": "45d792ccd33917b03b441029dcf012e04bcbaed1200edb618f0b54294da6007d",
+    "ops/gauntlet/short_description_cycle.py": "c52a358f8a2974463a67c7b8acc9202631184687f5de43cf9b7cbf5305e38ab9",
+    "tests/test_verified_short_description.py": "608fe147dd913c8c77cff734c60c20bf32954f600cba31db3b509c5477b25e7d",
+    "tests/test_gauntlet_short_description_cycle.py": "7ccdf6ae3f2a2a51b90cbfb36fd8cf4e5db5646b69eec954913bbcd9d0e3cc23",
+    "tests/test_corrector_operational.py": "30b91952bd806e9f0654cb909df8a7a8031e6bdd38672e50f43c4231f98aa03a"
+  },
+  "final_source_lf_normalized_sha256": {
+    "backend/app.py": "3eb98c6cba462d85088d118e1c211300da5dd073c257ab2597bcf499bbe767d2",
+    "backend/anchor_text.py": "e02a221792afa1eb43d597bb5d238ff9df89f9b7d684681d6e61c539ebaf26aa",
+    "backend/short_description.py": "45d792ccd33917b03b441029dcf012e04bcbaed1200edb618f0b54294da6007d",
+    "ops/gauntlet/short_description_cycle.py": "c52a358f8a2974463a67c7b8acc9202631184687f5de43cf9b7cbf5305e38ab9",
+    "tests/test_verified_short_description.py": "608fe147dd913c8c77cff734c60c20bf32954f600cba31db3b509c5477b25e7d",
+    "tests/test_gauntlet_short_description_cycle.py": "7ccdf6ae3f2a2a51b90cbfb36fd8cf4e5db5646b69eec954913bbcd9d0e3cc23",
+    "tests/test_corrector_operational.py": "30b91952bd806e9f0654cb909df8a7a8031e6bdd38672e50f43c4231f98aa03a"
+  },
+  "artifacts": {
+    "full_junit": {
+      "path": "seo-short-description-final4-full-20261008-fj985nm8/junit.xml",
+      "sha256": "e96bcd3a683e2bddbf843eb5a4e13854d1329fb608a760138f7c50d53aaa1bff"
+    },
+    "full_manifest": {
+      "path": "seo-short-description-final4-full-20261008-fj985nm8/manifest.json",
+      "sha256": "1981852ca9d4f94888e8191247932e72d51894e9114895dbd07c943ebe2821b0"
+    },
+    "target_junit": {
+      "path": "seo-short-description-final4-targeted-20261008-0ljld4c9/junit.xml",
+      "sha256": "d1e73edb8ac9cec67f7c296a9cf7daac035937df08fbe323db948bb11bd2cede"
+    },
+    "target_manifest": {
+      "path": "seo-short-description-final4-targeted-20261008-0ljld4c9/manifest.json",
+      "sha256": "1981852ca9d4f94888e8191247932e72d51894e9114895dbd07c943ebe2821b0"
+    },
+    "target_selection": {
+      "path": "seo-short-description-final4-targeted-20261008-0ljld4c9/selection.json",
+      "sha256": "45b9614d32aedaaa994a70ec1acbfda05ab327e3a45d29b930567befc08c3d01"
+    },
+    "live_cycle": {
+      "path": "seo-short-description-live3-20261008-l5nv9gwc/cycle/cycle.json",
+      "sha256": "d0a3065a687acf08e5425614c9f204d04b77ea3518785e68aea9dba552e13df4"
+    },
+    "live_manifest": {
+      "path": "seo-short-description-live3-20261008-l5nv9gwc/manifest.json",
+      "sha256": "1981852ca9d4f94888e8191247932e72d51894e9114895dbd07c943ebe2821b0"
+    },
+    "countercheck": {
+      "path": "seo-short-description-live3-20261008-l5nv9gwc/countercheck.json",
+      "sha256": "1684b3f24e2a2a417727a360a7272c9eb89b35cdd64bbf2cbba8f95a51fb62dc"
+    },
+    "countercheck_script": {
+      "path": "seo-short-description-live3-20261008-l5nv9gwc/countercheck.py",
+      "sha256": "e5c23498232da94f2b5c890c87065af78ff677fff0d12fb8a171178d6996fe29"
+    },
+    "browsercheck": {
+      "path": "seo-short-description-live3-20261008-l5nv9gwc/browsercheck.json",
+      "sha256": "288cfe77c45c106f3c783ff340dba8c6212609213a505b1b5b2ead0b7bcc1ca6"
+    },
+    "browsercheck_script": {
+      "path": "seo-short-description-live3-20261008-l5nv9gwc/browsercheck.py",
+      "sha256": "eb8af27994b4dbf159aa41302bed9445a65e72699ff5cc7f719271d1adc21971"
+    },
+    "historical_manifest": {
+      "path": "seo-short-description-final-full-20261008-jkzu90pd/historical.json",
+      "sha256": "c93fa8bdd5a05daa38209e12afc24012e13409d7cc48b14ed7e66c136d09365d"
+    },
+    "before_inventory": {
+      "path": "seo-short-description-inventory-20261008-rdryl6rq/before.json",
+      "sha256": "26364f4de857e9fbffb67edaee3391ac85dca6a4798a67502e200e9fe62b2f67"
+    }
+  },
+  "limitations": [
+    "Only two proved literal HTML sources on an owned fixture, not all family occurrences or all frameworks.",
+    "Each real Claude control has one existing candidate; editorial ranking among multiple plausible excerpts, linguistic sentence completeness and SEO relevance are not certified.",
+    "Published literal paragraph text does not attest universal CSS visibility. Served body scripts are tolerated but their execution/hydration is not attested; repository scripts/templates are refused.",
+    "Known exact description uniqueness is bounded to observed report metadata and this lot, not a fresh all-site semantic uniqueness audit.",
+    "Native preview noindex is genuine and still rejected by normal probes. Production indexability, PostgreSQL concurrency and global client readiness remain unverified."
+  ]
+}
