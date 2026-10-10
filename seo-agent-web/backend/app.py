@@ -19080,6 +19080,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         return JSONResponse({"ok": False, "error": "Rapport de crawl introuvable."}, status_code=400)
 
     site_name = str(proj.site_name or slug)
+    # Correction helpers need the project URL, not its editable display label.
+    site_url = str(getattr(proj, "base_url", "") or site_name)
 
     report_issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
     report_pages = report.get("pages") if isinstance(report.get("pages"), list) else None
@@ -19156,7 +19158,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             continue
         _prep = _prepare_issue_fix(
             issue_key=issue_key, issues=report_issues, impacted=impacted, all_paths=all_paths,
-            site_name=site_name, owner=owner, repo_name=repo_name, branch=branch, token=token,
+            site_name=site_url, owner=owner, repo_name=repo_name, branch=branch, token=token,
             model_override=gate_model, pages=report_pages)
         if _prep["refusal"]:
             results.append({**result, "error": _prep["refusal"]})
@@ -19165,7 +19167,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         applied = _apply_prepared_issue_fix(
             owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
             all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted=impacted,
-            site_name=site_name, file_state=file_state, max_files=budget, prep=_prep,
+            site_name=site_url, file_state=file_state, max_files=budget, prep=_prep,
             pages=report_pages, index=idx, model_override=gate_model, ecartes=ecartes)
         if applied.get("fatal"):
             return JSONResponse({"ok": False, "error": applied["error"], "results": results},
@@ -29110,6 +29112,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     meta = dash.issue_meta(issue_key)
     issue_label = meta.label if meta else issue_key
     site_name = str(proj.site_name or slug)
+    site_url = str(getattr(proj, "base_url", "") or site_name)
 
     # ── Impacted URLs from the crawl report ──
     runs_dir = _runs_dir_pour_slug(request, slug)
@@ -29165,7 +29168,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _prep = _prepare_issue_fix(
         pages=_report_pages if isinstance(_report_pages, list) else None,
         issue_key=issue_key, issues=issues, impacted=impacted, all_paths=all_paths,
-        site_name=str(proj.site_name or ""), owner=owner, repo_name=repo_name,
+        site_name=site_url, owner=owner, repo_name=repo_name,
         branch=branch, token=token, model_override=gate_model,
     )
     if _prep["refusal"]:
@@ -29191,7 +29194,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _applied = _apply_prepared_issue_fix(
         owner=owner, repo_name=repo_name, branch=branch, token=token, fix_branch=fix_branch,
         all_paths=all_paths, issue_key=issue_key, issue_label=issue_label, impacted=impacted,
-        site_name=site_name, file_state=file_state, max_files=gate_max_files, prep=_prep,
+        site_name=site_url, file_state=file_state, max_files=gate_max_files, prep=_prep,
         pages=_report_pages if isinstance(_report_pages, list) else None,
         index=idx, model_override=gate_model, ecartes=_ecartes)
     patched_files, skipped, targets, _ai_files = (
