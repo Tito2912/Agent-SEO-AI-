@@ -20097,7 +20097,12 @@ def _verified_canonical_pairs(issue_key: str, pairs: list[dict[str, str]],
         sources, destinations, previous = observed.get(source, []), observed.get(new, []), requested.get(old, [])
         source_known = at(sources, source) and all(_verification_url(r.get("canonical")) == old for r in sources)
         # A self upgrade repairs this very document's HTTP canonical, not a different master.
-        self_upgrade = issue_key == "canonical_from_https_to_http" and new == source
+        # Same for a canonical that REDIRECTS back to its own page — `/blog/` declared on `/blog`,
+        # which 301s to `/blog`: the destination is this page, and its canonical is still the
+        # old value being repaired. The most common form of the family, and the one every bench
+        # fixture carries; refused on all ten stacks until 12/10/2026 for lack of this case.
+        self_upgrade = (issue_key in {"canonical_from_https_to_http", "canonical_points_to_redirect"}
+                        and new == source)
         destination_known = at(destinations, new) and all(
             (not r.get("canonical") or _verification_url(r["canonical"]) == (old if self_upgrade else new))
             and not any("noindex" in re.split(r"[,;\s:]+", str(r.get(k) or "").lower())
