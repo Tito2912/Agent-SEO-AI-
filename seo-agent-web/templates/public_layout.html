@@ -67,6 +67,16 @@
         .pub-nav-links a { white-space: nowrap; padding: 9px 10px; }
       }
     </style>
+    {# Image de partage (12/10/2026) : le site n'en declarait aucune — 33 pages en « Open Graph
+       incomplet » et 7 sans carte X chez Ahrefs comme chez Noyaru. Posee ICI une seule fois :
+       aucune page ne declare d'image, donc aucun doublon possible. La carte X passe en grand
+       format pour toutes les pages ; les pages ne declarent plus la leur. #}
+    <meta property="og:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png') }}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="{{ app_name }} — l'audit SEO qui livre le correctif" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png') }}" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>

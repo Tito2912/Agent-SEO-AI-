@@ -3,8 +3,12 @@
 {% block title %}Conditions générales d'utilisation - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="Les conditions d'utilisation de {{ app_name }} : le service, les prix et les quotas, la résiliation, le droit de rétractation, les pull requests sur votre dépôt, vos responsabilités et les nôtres." />
+<meta name="description" content="Conditions d'utilisation de {{ app_name }} : le service, les prix et quotas, la résiliation, la rétractation et les pull requests sur votre dépôt." />
 <link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Conditions générales d'utilisation - {{ app_name }}" />
+<meta property="og:description" content="Le service, les prix et quotas, la résiliation, la rétractation et les pull requests sur votre dépôt." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
 {# REECRITES LE 29/09/2026. L'ancienne version etait un « modele de base a completer » publie tel
    quel, avec la date du jour en guise de date de mise a jour. Chaque regle de fonctionnement
    ci-dessous est celle du code : quotas remis a zero le 1er du mois (UTC, `_period_key`), une

@@ -43,7 +43,8 @@ Pour transformer ces chiffres en actions, la page voisine est plus directe :
 
 ## Les Core Web Vitals
 
-Trois mesures, et une seule question chacune.
+Trois mesures, et une seule question chacune. Pour savoir lesquelles comptent vraiment pour le
+référencement, lisez le guide [Core Web Vitals : lire les signaux sans se perdre dans les scores](/ressources-seo/core-web-vitals-lire-signaux-seo).
 
 ![Bloc Core Web Vitals : part des pages au bon niveau, puis LCP, TBT et CLS page par page](/static/captures/core-web-vitals.webp "Les Core Web Vitals d'un échantillon de pages, métrique par métrique.")
 

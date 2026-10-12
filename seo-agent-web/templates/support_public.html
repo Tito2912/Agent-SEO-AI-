@@ -2,6 +2,16 @@
 
 {% block title %}Support - {{ app_name }}{% endblock %}
 
+{# 12/10/2026 : meme manque que /status — ni description, ni canonical, ni Open Graph. #}
+{% block head_extra %}
+<meta name="description" content="Un problème de connexion, d'intégration GitHub ou de facturation ? Écrivez au support de {{ app_name }} avec les informations utiles." />
+<link rel="canonical" href="{{ public_url(request, '/support') }}" />
+<meta property="og:title" content="Support - {{ app_name }}" />
+<meta property="og:description" content="Connexion, intégration GitHub ou facturation : comment joindre le support de {{ app_name }}." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ public_url(request, '/support') }}" />
+{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <h1>Support</h1>

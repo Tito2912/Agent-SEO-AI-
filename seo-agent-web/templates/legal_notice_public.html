@@ -3,8 +3,12 @@
 {% block title %}Mentions légales - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="Éditeur, directeur de la publication et hébergeur de {{ app_name }}." />
+<meta name="description" content="Mentions légales de {{ app_name }} : la société éditrice, le directeur de la publication, l'hébergeur du site et les moyens de nous contacter." />
 <link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Mentions légales - {{ app_name }}" />
+<meta property="og:description" content="La société éditrice, le directeur de la publication, l'hébergeur et le contact de {{ app_name }}." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
 {# CREEE LE 30/09/2026 : le site n'en avait pas, alors que la LCEN (art. 6 III) l'impose a un site
    professionnel. L'editeur vient des variables LEGAL_* (une ligne par valeur declaree). L'hebergeur
    est celui que Render nomme dans ses propres conditions (render.com/terms, lu le 30/09/2026). #}

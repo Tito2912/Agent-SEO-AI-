@@ -1,6 +1,6 @@
 ---
 title: "Vérifier qu'une correction a vraiment fonctionné"
-meta_title: "Vérification post-crawl des corrections — documentation {{app_name}}"
+meta_title: "Vérifier une correction — documentation {{app_name}}"
 description: "Comment {{app_name}} confirme au crawl suivant qu'une anomalie corrigée a disparu, détecte les régressions collatérales, et ce que chaque statut signifie."
 kind: "Documentation"
 section: "Corriger"

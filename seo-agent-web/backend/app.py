@@ -10392,6 +10392,12 @@ def _public_url(request: Request, path: str) -> str:
     return f"{_public_base_url(request)}{clean_path}"
 
 
+# Les balises sociales exigent une URL ABSOLUE (og:image, og:url), construite comme les canonical.
+# Toutes les routes publiques ne passent pas par `_public_template_context` : une fonction globale
+# sert donc toutes les pages, y compris /status et /support.
+templates.env.globals["public_url"] = _public_url
+
+
 def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
     ctx: dict[str, Any] = {
         "request": request,

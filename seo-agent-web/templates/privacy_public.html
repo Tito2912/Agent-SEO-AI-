@@ -5,6 +5,10 @@
 {% block head_extra %}
 <meta name="description" content="Quelles données {{ app_name }} traite, pourquoi, avec quels prestataires et où, combien de temps, et comment exercer vos droits." />
 <link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Confidentialité - {{ app_name }}" />
+<meta property="og:description" content="Les données que {{ app_name }} traite, pourquoi, avec quels prestataires, combien de temps, et comment exercer vos droits." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
 {# REECRITE LE 29/09/2026. L'ancienne version etait un « modele de base a completer », publie tel
    quel : sous-traitants incomplets (ni fournisseurs d'IA, ni Google, ni GitHub, ni SerpAPI),
    prestataire d'e-mail faux (SendGrid au lieu de Brevo), aucun mot des transferts hors UE — alors

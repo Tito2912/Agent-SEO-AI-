@@ -1,7 +1,7 @@
 ---
 title: "Corriger sans dépôt Git : le fix-pack"
 meta_title: "Fix-pack : corriger un site sans dépôt — documentation {{app_name}}"
-description: "L'archive de correctifs prête à appliquer pour les sites WordPress, Shopify, Webflow ou tout site dont le code n'est pas accessible : contenu, format, mode d'emploi."
+description: "L'archive de correctifs à appliquer sur WordPress, Shopify, Webflow ou tout site sans dépôt accessible : son contenu, son format, son mode d'emploi."
 kind: "Documentation"
 section: "Corriger"
 order: 24
