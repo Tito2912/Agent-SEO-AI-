@@ -52,7 +52,9 @@ SITES: dict[str, str] = {
 # Une stack ENTREE au banc mais pas encore prouvee sur son site deploye. La home n'annonce que
 # les stacks prouvees (tests/test_la_home_dit_ce_que_le_produit_fait.py) : on retire la stack
 # d'ici le jour ou le banc l'a validee, et la home doit alors suivre.
-EN_PREUVE = {"flask"}
+# flask en est sortie le 12/10/2026 : 27 familles resolues, aucune toujours presente, aucune
+# anomalie creee, verifie sur le HTML de l'apercu corrige (PR #7 et #8 fermees sans fusion).
+EN_PREUVE: set[str] = set()
 
 _VIEWPORT_SHELL = (
     "MESURE sur le site deploye : la page servie porte UNE balise viewport alors qu'elle n'en "
