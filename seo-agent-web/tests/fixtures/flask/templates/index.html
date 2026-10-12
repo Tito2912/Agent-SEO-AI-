@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Accueil du site de test flask{% endblock %}
+{% block head %}
+    <meta name="description" content="Site fixture Flask : des gabarits Jinja choisis par des routes Python, et qui heritent les uns des autres. L'idiome des sites serveur." />
+    <link rel="canonical" href="http://127.0.0.1:8748/" />
+    {# DEFAUT INJECTE (famille served_html_lang_mismatch) : le hreflang auto-referent annonce
+       l'anglais alors que le document servi porte lang="fr" — comme sur le site HTML pur. #}
+    <link rel="alternate" hreflang="en" href="http://127.0.0.1:8748/" />
+    <link rel="alternate" hreflang="fr" href="http://127.0.0.1:8748/a-propos" />
+    <link rel="alternate" hreflang="x-default" href="http://127.0.0.1:8748/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Accueil du site de test flask" />
+    <meta property="og:description" content="Site fixture Flask : des gabarits Jinja choisis par des routes Python." />
+    <meta property="og:url" content="http://127.0.0.1:8748/" />
+    <meta property="og:image" content="http://127.0.0.1:8748/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Accueil du site de test flask" />
+    <meta name="twitter:description" content="Site fixture Flask : des gabarits Jinja choisis par des routes Python." />
+    <meta name="twitter:image" content="http://127.0.0.1:8748/og.png" />
+{% endblock %}
+{% block body %}
+    <h1>Accueil</h1>
+    <p>Site fixture pour prouver que le correcteur sait lire un site a gabarits serveur.</p>
+    <p><a href="/gauntlet/">Parcours d obstacles</a></p>
+{% endblock %}

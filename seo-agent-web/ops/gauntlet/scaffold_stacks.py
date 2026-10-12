@@ -43,6 +43,9 @@ STATIC_DIR: dict[str, str] = {
     "hugo": "static",
     "gatsby": "static",
     "sveltekit": "static",
+    # Flask sert `static/` sous /static/ ; `freeze.py` copie `public/` TEL QUEL a la racine du
+    # site gele, la ou les autres stacks posent leurs assets, `_redirects` et leur sitemap.
+    "flask": "public",
 }
 
 # Un PNG 1x1 valide : les pages qui referencent une image doivent en trouver une.
@@ -298,7 +301,7 @@ def link_from_home(stack: str, root: Path | None = None) -> bool:
         "astro": "src/pages/index.astro", "hugo": "content/_index.md",
         "gatsby": "src/pages/index.js", "nuxt": "pages/index.vue",
         "sveltekit": "src/routes/+page.svelte", "next-pages": "pages/index.js",
-        "next-app": "app/page.tsx",
+        "next-app": "app/page.tsx", "flask": "templates/index.html",
     }
     path = base / candidates[stack]
     if not path.exists():

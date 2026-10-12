@@ -25,7 +25,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                     "..", "..", "..", "..", ".."))
 AUDIT = None
 STACKS = ["static-html", "astro", "hugo", "jekyll", "gatsby", "nuxt",
-          "sveltekit", "next-pages", "next-app"]
+          "sveltekit", "next-pages", "next-app", "flask"]
 
 
 # Familles que le CRAWLER replie l'une dans l'autre selon l'indexabilite. Les comparer separement

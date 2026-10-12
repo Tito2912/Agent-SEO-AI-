@@ -52,6 +52,10 @@ def _stacks_du_banc() -> list[str]:
     test ne doit pas dépendre de ce que son import déclenche.
     """
     arbre = ast.parse(EMIT.read_text(encoding="utf-8"))
+    sites: list[str] | None = None
+    # Une stack entree au banc mais pas encore validee (`EN_PREUVE`, 12/10/2026 : flask) n'est
+    # pas une technologie PROUVEE : la home ne l'annonce qu'une fois sortie de cette liste.
+    en_preuve: set[str] = set()
     for noeud in ast.walk(arbre):
         cible = None
         if isinstance(noeud, ast.AnnAssign) and isinstance(noeud.target, ast.Name):
@@ -59,8 +63,12 @@ def _stacks_du_banc() -> list[str]:
         elif isinstance(noeud, ast.Assign) and len(noeud.targets) == 1 and isinstance(noeud.targets[0], ast.Name):
             cible, valeur = noeud.targets[0].id, noeud.value
         if cible == "SITES" and isinstance(valeur, ast.Dict):
-            return [k.value for k in valeur.keys if isinstance(k, ast.Constant)]
-    raise AssertionError("SITES est introuvable : ce test ne mesure plus rien")
+            sites = [k.value for k in valeur.keys if isinstance(k, ast.Constant)]
+        if cible == "EN_PREUVE" and isinstance(valeur, ast.Set):
+            en_preuve = {e.value for e in valeur.elts if isinstance(e, ast.Constant)}
+    if sites is None:
+        raise AssertionError("SITES est introuvable : ce test ne mesure plus rien")
+    return [s for s in sites if s not in en_preuve]
 
 
 # ── le nom du produit ────────────────────────────────────────────────────────────────────────

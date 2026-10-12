@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Blog du site de test flask{% endblock %}
+{% block head %}
+    <meta name="description" content="Index du blog du site fixture Flask, qui sert a verifier que la correction du canonical ne touche ni l'accueil ni la page temoin." />
+    {# LE DEFAUT INJECTE : le slash final. L'hote sert /blog et redirige /blog/ vers lui. #}
+    <link rel="canonical" href="http://127.0.0.1:8748/blog/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Blog du site de test flask" />
+    <meta property="og:description" content="Index du blog du site fixture Flask." />
+    <meta property="og:url" content="http://127.0.0.1:8748/blog" />
+    <meta property="og:image" content="http://127.0.0.1:8748/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Blog du site de test flask" />
+    <meta name="twitter:description" content="Index du blog du site fixture Flask." />
+    <meta name="twitter:image" content="http://127.0.0.1:8748/og.png" />
+{% endblock %}
+{% block body %}
+    <h1>Blog</h1>
+    <p>Articles.</p>
+{% endblock %}

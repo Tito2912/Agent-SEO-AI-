@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# FAMILLE VISEE : indexable_page_blocked_from_some_ai_search_bots
+User-agent: PerplexityBot
+Disallow: /
+
+# FAMILLE VISEE : inconsistent_ai_training_bot_policy
+User-agent: GPTBot
+Disallow: /

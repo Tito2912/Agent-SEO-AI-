@@ -47,7 +47,12 @@ SITES: dict[str, str] = {
     "sveltekit": "https://noyaru-stack-sveltekit.netlify.app",
     "next-pages": "https://noyaru-stack-next-pages.netlify.app",
     "next-app": "https://noyaru-stack-next-app.netlify.app",
+    "flask": "https://noyaru-stack-flask.netlify.app",
 }
+# Une stack ENTREE au banc mais pas encore prouvee sur son site deploye. La home n'annonce que
+# les stacks prouvees (tests/test_la_home_dit_ce_que_le_produit_fait.py) : on retire la stack
+# d'ici le jour ou le banc l'a validee, et la home doit alors suivre.
+EN_PREUVE = {"flask"}
 
 _VIEWPORT_SHELL = (
     "MESURE sur le site deploye : la page servie porte UNE balise viewport alors qu'elle n'en "
@@ -619,7 +624,31 @@ def emit_next_app(spec: Spec, site: str) -> tuple[str, str]:
     return f"app/gauntlet/{spec.slug}/page.tsx", doc
 
 
+def emit_flask(spec: Spec, site: str) -> tuple[str, str]:
+    """Flask : un gabarit Jinja par page, qui ETEND la mise en page du parcours.
+
+    Dixieme stack, ajoutee le 12/10/2026 apres la PR #1 de noyaru.com : le premier site a
+    gabarits SERVEUR que le correcteur ait touche (Jinja, FastAPI) — et il y a ecrit
+    `url_for(..., filename=)`, pose des balises dans la mise en page EN PLUS des pages, et vise
+    une fixture de tests. Aucune des neuf autres stacks n'a d'heritage `{% extends %}` /
+    `{% block %}`, ni de route Python qui choisit le gabarit.
+
+    La mise en page `gauntlet/_layout.html` n'imprime que ce que la page lui donne (comme le
+    gabarit `gauntlet` de Jekyll) : la page reste la seule source de ses valeurs, et peut donc
+    porter une page sans titre, sans viewport ou sans attribut lang.
+    """
+    head = render_html_tags([("comment", {"text": spec.family + " — " + spec.note})]
+                            + head_tags(spec, site))
+    body = "\n".join("    " + b for b in body_bits(spec, site))
+    doc = ('{% extends "gauntlet/_layout.html" %}\n'
+           "{% block html_attrs %}" + _html_attrs(spec) + "{% endblock %}\n"
+           "{% block head %}\n" + head + "\n{% endblock %}\n"
+           "{% block body %}\n" + body + "\n{% endblock %}\n")
+    return f"templates/gauntlet/{spec.slug}.html", doc
+
+
 EMITTERS = {
+    "flask": emit_flask,
     "static-html": emit_static_html,
     "jekyll": emit_jekyll,
     "hugo": emit_hugo,
