@@ -9,6 +9,7 @@
 <meta property="og:description" content="{{ meta_description }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
+<meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) if url_for is defined else '/static/og-image.png' }}" />
 <meta name="twitter:card" content="summary" />
 <style>
 .resources-hero { padding: 52px 0 36px; }
