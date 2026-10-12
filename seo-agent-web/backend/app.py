@@ -26032,6 +26032,33 @@ def _rewrite_served_lang(content: str) -> tuple[str, int]:
     return content.replace(tag.group(0), fixed, 1), 1
 
 
+def _rewrite_served_lang_gabarit(content: str, path: str, lire: "Callable[[str], str | None]") -> tuple[str, int]:
+    """`_rewrite_served_lang` pour une page a gabarits Python : meme preuve, autre endroit.
+
+    La langue que la page dit d'elle-meme se lit comme sur une page HTML — canonical et hreflang
+    auto-reference, dans la page rendue si elle se compose, sinon dans la page seule. Mais
+    `<html lang>` est ecrit par la mise en page COMMUNE : la changer la changerait pour tout le
+    site. La page surcharge donc le bloc de langue que la mise en page expose (voir
+    `jinja_heritage.served_lang`) ; sans bloc, rien a faire sans modele, et rien n'est ecrit.
+    """
+    try:
+        from . import jinja_heritage
+    except ImportError:
+        import jinja_heritage
+    lecteur = lambda p: content if p == path else lire(p)  # noqa: E731
+    lang = _self_declared_lang(jinja_heritage.literal_view(path, lecteur) or content)
+    servie = jinja_heritage.rendered_lang(path, lecteur)
+    if not lang or (servie and servie.split("-")[0] == lang.split("-")[0]):
+        return content, 0
+    nouveau = jinja_heritage.served_lang(content, path, lire, lang)
+    return (nouveau, 1) if nouveau else (content, 0)
+
+
+# La reecriture recoit aussi le chemin et un lecteur du depot : une page a gabarits ne se
+# comprend qu'avec sa mise en page. Voir l'appel dans `_deep_patch_issue_files`.
+_rewrite_served_lang_gabarit.lit_les_gabarits = True  # type: ignore[attr-defined]
+
+
 # What to tell the model, per stack, about the ONE place that writes `<html lang>` and how it can
 # know the page there. Measured on the nine fixtures: every stack writes it in a single file, and
 # eight of them can make it route-aware. The ninth is why the post-build fallback exists.
@@ -26053,6 +26080,8 @@ _SERVED_LANG_STACK_IDIOM: dict[str, str] = {
                  "handle de src/hooks.server.(js|ts) via transformPageChunk, a partir de "
                  "event.url.pathname.",
     "static-html": "HTML statique : l'attribut est ecrit dans la page elle-meme, corrige-le la.",
+    "python-templates": "Gabarits Python (Jinja) : la mise en page doit exposer la langue dans un "
+                        "bloc (lang=\"{% block lang %}fr{% endblock %}\") que chaque page surcharge.",
     "next-app": "Next.js App Router : seul un segment de langue ([lang]/[locale]) permet au layout "
                 "de connaitre la route. Si le projet n'en a pas, ne touche pas au layout racine.",
 }
@@ -26227,7 +26256,9 @@ def _served_lang_strategy(all_paths: list[str]) -> str:
     does not need one.
     """
     stack = repo_index.detect_stack(all_paths) or ""
-    if stack == "static-html":
+    # Les gabarits Python aussi : la page surcharge le bloc de langue de sa mise en page, sans
+    # modele (voir `_rewrite_served_lang_gabarit`). Mesure du 12/10/2026 sur le banc Flask.
+    if stack in ("static-html", repo_index.STACK_PY_TEMPLATES):
         return "deterministic"
     if stack == "next-app" and not any(
         re.search(r"app/.*\[(lang|locale|lng)\]/", path) for path in all_paths
@@ -26819,8 +26850,9 @@ def _resolve_issue_targets(
         and not (issue_key in _SHARED_RENDER_FIX_KEYS
                  # …except where the attribute lives in the page itself: on a hand-written site
                  # the flagged pages ARE the files to fix, and excluding them would leave the
-                 # family with nothing to target at all.
-                 and str((index or {}).get("stack") or "") != "static-html")
+                 # family with nothing to target at all. Same on a Python-template site, where
+                 # the page overrides its layout's language block.
+                 and str((index or {}).get("stack") or "") not in ("static-html", repo_index.STACK_PY_TEMPLATES))
     index_resolved_all = False
     if want_page_targeting and impacted_urls:
         priority: list[str] = []
@@ -27339,7 +27371,8 @@ def _prepare_issue_fix(
                              + (" " + idiom if idiom else ""))
         if _served_lang_strategy(all_paths) == "deterministic":
             # A hand-written page says its own language; no model is needed to read it back.
-            out["link_rewriter"] = (lambda raw: _rewrite_served_lang(raw))  # noqa: E731
+            out["link_rewriter"] = (_rewrite_served_lang_gabarit if stack == repo_index.STACK_PY_TEMPLATES
+                                    else (lambda raw: _rewrite_served_lang(raw)))  # noqa: E731
             out["rewriter_ai_fallback"] = False
         return out
 
@@ -28319,8 +28352,9 @@ def _deep_patch_issue_files(
         return [], ['Ancres refusees : plan source et destination verifie requis.'], [], []
     if viewport_urls is not None or twitter_missing_urls is not None or hreflang_lang_urls is not None or hreflang_canonical_pairs is not None or hreflang_drop_items is not None or anchor_text_items is not None or short_description_urls is not None:
         try:
-            from . import viewport, twitter_card, hreflang_lang, hreflang_canonical, hreflang_drop, anchor_proof, short_description, sitemap_redirects
+            from . import viewport, twitter_card, hreflang_lang, hreflang_canonical, hreflang_drop, anchor_proof, short_description, sitemap_redirects, jinja_heritage
         except ImportError:
+            import jinja_heritage
             import viewport
             import twitter_card
             import hreflang_lang
@@ -28432,6 +28466,36 @@ def _deep_patch_issue_files(
                         raise ValueError('description ou contenu actuel non verifiable')
                     source_documents[path] = short_description.document(raw, canonical, _duplicate_html_document, _verification_url, **bounds)
                     plans[path] = (raw, sha)
+                    continue
+                if (head_rewriter in (twitter_card, viewport) and current_index.get('stack') == repo_index.STACK_PY_TEMPLATES
+                        and jinja_heritage.template_root(path)):
+                    # Une page a gabarits n'est pas un document : le plan lit celui qu'elle REND,
+                    # composee avec ses mises en page, et l'ecriture ne touche que la page.
+                    def lire(chemin, _page=path, _raw=raw):
+                        if chemin == _page:
+                            return _raw
+                        return read_literal_source(chemin)[0] if chemin in all_paths else None
+                    view = jinja_heritage.literal_view(path, lire)
+                    if (not isinstance(sha, str) or not sha.strip() or not view
+                            or not head_rewriter.literal(view, canonical, _duplicate_html_document, _verification_url)
+                            or _gabarit_d_une_autre_page(view, str(observed[url].get('title') or ''))):
+                        raise ValueError('page rendue non litterale')
+                    if (twitter_missing_urls is not None
+                            and not twitter_card.matches(view, canonical, observed[url], _duplicate_html_document, _verification_url)):
+                        raise ValueError('metadonnees actuelles contradictoires')
+                    new_view, count = head_rewriter.add(view, canonical, _duplicate_html_document, _verification_url)
+                    if count:
+                        new = jinja_heritage.add_to_head(raw, path, lire, view, new_view)
+                        # Relu par le plan lui-meme : la page rendue doit rester litterale, et il
+                        # ne doit plus rien vouloir y ajouter. Une balise tombee hors de l'en-tete
+                        # proprement dit (dans un `<noscript>` que la mise en page referme) rend
+                        # le document ambigu, et c'est ici qu'on le voit.
+                        rendered = new and jinja_heritage.literal_view(path, lambda chemin: new if chemin == path else lire(chemin))
+                        if (not rendered or not head_rewriter.literal(rendered, canonical, _duplicate_html_document, _verification_url)
+                                or head_rewriter.add(rendered, canonical, _duplicate_html_document, _verification_url)[1]
+                                or _github_patched_content_error(new, path) or _refus_de_format(path, new)):
+                            raise ValueError('gabarit non reecrivable')
+                        plans[path] = (new, sha)
                     continue
                 literal = head_rewriter.document if hreflang_canonical_pairs is not None or hreflang_drop_items is not None or anchor_text_items is not None else head_rewriter.literal
                 if not isinstance(sha, str) or not sha.strip() or not literal(raw, canonical, _duplicate_html_document, _verification_url):
@@ -28842,6 +28906,26 @@ def _deep_patch_issue_files(
                 return _og_layouts[candidat]
         return {}
 
+    # Les mises en page qu'une page a gabarits etend, lues sur la branche de correction : une
+    # correction deja empilee dans ce lot doit se voir. None = absent ou illisible, et la
+    # reecriture qui en depend refuse.
+    _gabarits_lus: dict[str, str | None] = {}
+
+    def _lire_du_depot(chemin: str) -> str | None:
+        if chemin in file_state:
+            return file_state[chemin]["content"]
+        if chemin not in set(all_paths or []):
+            return None
+        if chemin not in _gabarits_lus:
+            try:
+                fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin),
+                                     token=token, params={"ref": fix_branch})
+                _gabarits_lus[chemin] = _b64.b64decode(fd.get("content", "").replace("\n", "")).decode("utf-8")
+            except Exception as e:
+                logger.info("[correction] gabarit illisible (%s): %s", chemin, e)
+                _gabarits_lus[chemin] = None
+        return _gabarits_lus[chemin]
+
     patched: list[str] = []
     skipped: list[str] = []
     ai_files: list[str] = []   # the subset the MODEL wrote — the only ones that cost tokens
@@ -28880,7 +28964,8 @@ def _deep_patch_issue_files(
         # Mechanical link families: deterministic rewrite, no AI (avoids the prefix-link and
         # relative→absolute mistakes an LLM makes; e.g. /en/ vs /en/guide, code literals).
         if link_rewriter is not None:
-            new_content, n = link_rewriter(raw)
+            new_content, n = (link_rewriter(raw, path, _lire_du_depot)
+                              if getattr(link_rewriter, "lit_les_gabarits", False) else link_rewriter(raw))
             if n > 0:
                 # Marked so the caller can tell a rewrite that spent no tokens from one that did:
                 # only the former is free to the customer, badgeable as mechanical, and safe to

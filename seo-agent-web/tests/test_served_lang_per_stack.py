@@ -44,6 +44,8 @@ def _paths(stack: str) -> list[str]:
     [
         # The attribute is in the page itself: no model, no tokens, no build step.
         ("static-html", "deterministic"),
+        # Python templates: the page overrides its layout's language block, still no model.
+        ("flask", "deterministic"),
         # Seven frameworks whose single lang-writing file CAN know the page.
         ("jekyll", "source"), ("hugo", "source"), ("astro", "source"),
         ("gatsby", "source"), ("nuxt", "source"), ("next-pages", "source"),
