@@ -6,8 +6,10 @@ import pytest
 
 from backend import app as m
 from ops.gauntlet import structured_data_policy_cycle as bench
+from tests.chromium_requis import requires_chromium
 
 
+@requires_chromium
 def test_owned_http_crawler_controls_stay_present_without_a_patch(monkeypatch, tmp_path):
     def forbidden(*args, **kwargs):
         pytest.fail("This witness must not touch GitHub, a provider or billing")

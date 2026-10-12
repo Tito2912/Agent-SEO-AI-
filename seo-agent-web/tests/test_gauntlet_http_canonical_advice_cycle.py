@@ -8,8 +8,10 @@ import pytest
 
 from backend import app as m
 from ops.gauntlet import http_canonical_advice_cycle as b
+from tests.chromium_requis import requires_chromium
 
 
+@requires_chromium
 def test_real_http_witness_is_refused_then_only_manual_redirect_resolves_it(monkeypatch, tmp_path):
     def forbidden(*args, **kwargs):
         pytest.fail("No GitHub or provider request permitted")
