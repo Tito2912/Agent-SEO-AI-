@@ -182,7 +182,7 @@ def test_pipeline_revalidates_sources_and_https_before_one_xml_put(monkeypatch, 
 
 @pytest.mark.parametrize("case", ["verified", "unsafe", "credentials", "http", "redirect", "history", "wrong_url", "noindex_header",
     "none_header", "noindex_meta", "none_meta", "changed_canonical", "missing_canonical", "json", "oversize", "timeout", "bad_utf8",
-    "body_script", "head_script"])
+    "body_script", "head_script", "trailing_script", "netlify_public_hud_footer"])
 def test_current_https_probe_requires_public_direct_indexable_html_and_closes_response(monkeypatch, case):
     if not hasattr(m, "_sitemap_https_page"):
         pytest.fail("A fresh HTTPS destination check is required")
@@ -201,6 +201,12 @@ def test_current_https_probe_requires_public_direct_indexable_html_and_closes_re
         body = body.replace('</body>', '<script async src="/analytics.js"></script></body>')
     elif case == "head_script":
         body = body.replace('</head>', '<script src="/seo.js"></script></head>')
+    elif case == "trailing_script":
+        body += '<script async src="/analytics.js"></script>'
+    elif case == "netlify_public_hud_footer":
+        body += ('\n<script async src="/.netlify/scripts/hud?variant=public" data-nf-variant="public" '
+                 'data-netlify-site-id="77d51c3d-1c9b-4f70-ba7d-6f5af9b8844b" '
+                 'data-app-host="app.netlify.com"></script>\n')
     content = b'\xff' if case == 'bad_utf8' else body.encode()
     response = SimpleNamespace(status_code=302 if case == "redirect" else 200, url=B if case == "wrong_url" else url,
         history=[object()] if case == "history" else [], headers={"content-type": "application/json" if case == "json" else "text/html"},
@@ -215,6 +221,6 @@ def test_current_https_probe_requires_public_direct_indexable_html_and_closes_re
             raise TimeoutError()
         return response
     monkeypatch.setattr(m.requests, "get", get)
-    assert m._sitemap_https_page(url, A) is (case in {"verified", "body_script"})
+    assert m._sitemap_https_page(url, A) is (case in {"verified", "body_script", "netlify_public_hud_footer"})
     assert fetched == ([] if case in {"unsafe", "credentials", "http"} else [url])
     assert closed == ([] if case in {"unsafe", "credentials", "http", "timeout"} else [True])

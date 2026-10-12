@@ -20826,6 +20826,26 @@ def _sitemap_error_status(url: str) -> int | None:
     return None
 
 
+_NETLIFY_PUBLIC_HUD_FOOTER_RE = re.compile(
+    r'''\s*<script\b
+    (?=[^>]*\bsrc\s*=\s*["']/\.netlify/scripts/hud\?variant=public["'])
+    (?=[^>]*\bdata-nf-variant\s*=\s*["']public["'])
+    (?=[^>]*\bdata-netlify-site-id\s*=\s*["'][0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}["'])
+    (?=[^>]*\bdata-app-host\s*=\s*["']app\.netlify\.com["'])
+    [^>]*>\s*</script>\s*\Z''',
+    re.IGNORECASE | re.DOTALL | re.VERBOSE,
+)
+
+
+def _without_trailing_netlify_public_hud(raw: str) -> str:
+    """Ignore only Netlify's known public HUD footer during a served-page recheck."""
+    match = _NETLIFY_PUBLIC_HUD_FOOTER_RE.search(raw)
+    if not match:
+        return raw
+    document = raw[:match.start()]
+    return document if document.rstrip().lower().endswith("</html>") else raw
+
+
 def _sitemap_https_page(url: str, canonical: str, *, verify=None, allow_missing_lang: bool = False) -> bool:
     """Recheck bounded public HTTPS HTML, without redirects or preview exemptions."""
     try:
@@ -20849,7 +20869,7 @@ def _sitemap_https_page(url: str, canonical: str, *, verify=None, allow_missing_
                 if size > 80_000:
                     return False
                 chunks.append(chunk)
-            raw = b"".join(chunks).decode("utf-8")
+            raw = _without_trailing_netlify_public_hud(b"".join(chunks).decode("utf-8"))
             return sitemap_https.literal_destination(raw, canonical,
                 lambda raw, **kw: _duplicate_html_document(raw, allow_body_scripts=True, allow_missing_lang=allow_missing_lang, **kw),
                 _verification_url) and (verify(raw) if verify else True)
