@@ -28074,6 +28074,32 @@ def _retirer_ajouts_non_prouves(new_content: str, old_content: str, path: str, *
     return sortie, [retirer[i] for i in sorted(retirer)]
 
 
+_TITRE_BALISE_RE = re.compile(r"<title>(.*?)</title>", re.I | re.S)
+_TITRE_BLOC_RE = re.compile(r"\{%-?\s*block\s+title\s*-?%\}(.*?)\{%-?\s*endblock", re.S)
+
+
+def _gabarit_d_une_autre_page(raw: str, titre_servi: str) -> str:
+    """'' si rien ne contredit ; sinon le titre LITTERAL du gabarit, qui n'est pas celui servi.
+
+    Sur un depot a gabarits Python, la carte relie une URL a un gabarit par CONVENTION de nom
+    (`/` -> `templates/index.html`). Dans le depot du produit, `index.html` est la page interne
+    de l'application (« Noyaru (local) »), pas l'accueil public : c'est le fichier que la PR #1
+    avait vise. Un titre ecrit en dur et different du titre servi prouve que ce n'est pas la
+    page. Un titre calcule (`{{ ... }}`) ou absent ne prouve rien : on ne refuse pas sur un doute.
+    """
+    servi = " ".join(html.unescape(str(titre_servi or "")).split()).lower()
+    if not servi:
+        return ""
+    trouve = _TITRE_BLOC_RE.search(raw or "") or _TITRE_BALISE_RE.search(raw or "")
+    if not trouve:
+        return ""
+    texte = trouve.group(1)
+    if "{{" in texte or "{%" in texte:
+        return ""
+    ecrit = " ".join(html.unescape(texte).split())
+    return ecrit if ecrit and ecrit.lower() != servi else ""
+
+
 # D : un test, une fixture ou un mock ne sert aucune page du site. Le meme passage visait
 # `tests/fixtures/next-app/app/layout.tsx` — la fixture d'un AUTRE site, rangee dans ce depot.
 _SEGMENTS_HORS_SITE = {"test", "tests", "__tests__", "spec", "specs", "fixture", "fixtures",
@@ -28834,6 +28860,15 @@ def _deep_patch_issue_files(
                 return (path, None, "", None)
         if len(raw) > 80_000:
             return (path, None, "", None)
+        if str((index or {}).get("stack") or "") == repo_index.STACK_PY_TEMPLATES:
+            _url_du_fichier = _url_par_fichier.get(path, "")
+            _titre_servi = next((str(p.get("title") or "") for p in pages or [] if isinstance(p, dict)
+                                 and _url_du_fichier and _verification_url(p.get("url")) == _verification_url(_url_du_fichier)), "")
+            _autre = _gabarit_d_une_autre_page(raw, _titre_servi)
+            if _autre:
+                logger.info("[correction] %s: %s ecarte — gabarit « %s », page servie « %s »",
+                            issue_key, path, _autre[:60], _titre_servi[:60])
+                return (path, raw, cur_sha, {"error": "Gabarit d'une autre page : son titre ne correspond pas a la page servie."})
         if canonical_pairs is not None:
             # A shared dead URL can require a different destination for every source page.
             propres = _canonical_pairs_par_fichier.get(path, [])

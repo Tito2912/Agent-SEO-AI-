@@ -28,6 +28,9 @@ from typing import Any
 _NOISE_DIRS = frozenset({
     "node_modules", "dist", "build", ".next", ".nuxt", "vendor", ".git",
     "coverage", ".cache", "out", "_site", ".vercel", ".netlify", "target",
+    # Les fixtures ne servent aucune page du site. Mesure du 12/10/2026 : dans le depot du
+    # produit, `/` pointait aussi vers `tests/fixtures/flask/templates/index.html`.
+    "fixtures", "__fixtures__", "__tests__", "__mocks__",
 })
 
 # Extensions that can define a page/route in the supported stacks.
@@ -42,6 +45,12 @@ STACK_HUGO = "hugo"
 STACK_JEKYLL = "jekyll"
 STACK_STATIC = "static-html"
 STACK_UNKNOWN = "unknown"
+# Gabarits SERVEUR Python : Flask, FastAPI, Django — une route Python choisit un gabarit, et les
+# gabarits heritent les uns des autres. Ajoute le 12/10/2026 : le banc Flask a montre ces depots
+# lus comme du « HTML statique » — `templates/gauntlet/x.html` range sous l'URL absurde
+# `/templates/gauntlet/x`, la vraie URL sans fichier, et le correcteur qui DEVINAIT : la mise en
+# page commune `base.html` ou l'index statique du parcours au lieu du gabarit de la page.
+STACK_PY_TEMPLATES = "python-templates"
 
 # Stacks added 2026-08-29 after measuring what the detector did with generators it had never
 # been shown. Gatsby was the dangerous one: `src/pages/*` is its routing convention too, so it
@@ -108,6 +117,12 @@ _STACK_IDIOMS: dict[str, str] = {
     ),
     STACK_STATIC: (
         "Stack: HTML statique. Édite directement le <head> du fichier .html de la page."
+    ),
+    STACK_PY_TEMPLATES: (
+        "Stack: gabarits serveur Python (Jinja, Django). Chaque page est un gabarit qui hérite "
+        "d'une mise en page ({% extends %}) : écris les balises <head> dans le BLOC de la page "
+        "(par ex. {% block head %}), jamais dans la mise en page commune, qui sert tout le site. "
+        "N'emploie que les fonctions, filtres et variables déjà présents dans le fichier."
     ),
     # UNSUPPORTED_STACKS deliberately get NO entry. An empty idiom makes the prompts fall back
     # to "or the framework's equivalent", i.e. the model guesses — and with no route map there
@@ -212,6 +227,13 @@ def detect_stack(all_paths: list[str]) -> str:
         return STACK_HUGO
     if has("_config.yml") and any(p.startswith(("_layouts/", "_posts/")) for p in paths):
         return STACK_JEKYLL
+    # AVANT le HTML statique : un depot Flask/FastAPI/Django porte des .html, mais ce sont des
+    # GABARITS sous `templates/`, rendus par du code Python. Trois signes ensemble : du Python, un
+    # fichier de dependances Python, et des gabarits dans un dossier `templates/`.
+    if (any(p.endswith(".py") for p in paths)
+            and any(p.rsplit("/", 1)[-1] in _PY_DEPS for p in paths)
+            and any(_py_template_rel(p) is not None for p in paths)):
+        return STACK_PY_TEMPLATES
     if any(_ext(p) in {"html", "htm"} for p in paths):
         return STACK_STATIC
     return STACK_UNKNOWN
@@ -319,7 +341,48 @@ def _hugo_route(path: str) -> str | None:
 _TEMPLATE_DIRS: dict[str, tuple[str, ...]] = {
     STACK_HUGO: ("layouts/", "themes/", "archetypes/"),
     STACK_JEKYLL: ("_layouts/", "_includes/", "_data/", "_drafts/", "_sass/"),
+    # Les gabarits ont leur propre carte (`_py_template_routes`) : la carte du HTML statique les
+    # rangerait sous `/templates/...`, une URL que le site ne sert pas.
+    STACK_PY_TEMPLATES: ("templates/",),
 }
+
+_PY_DEPS = frozenset({"requirements.txt", "pyproject.toml", "Pipfile", "setup.py"})
+_PY_TEMPLATE_EXTS = frozenset({"html", "htm", "jinja", "jinja2", "j2"})
+# Dossiers de FRAGMENTS : inclus par d'autres gabarits, jamais servis comme une page.
+_PY_PARTIAL_DIRS = frozenset({"partials", "includes", "macros", "components", "layouts",
+                              "emails", "email", "mail"})
+
+
+def _py_template_rel(path: str) -> str | None:
+    """Le chemin sous le DERNIER dossier `templates/`, ou None si le fichier n'en est pas un."""
+    if _ext(path) not in _PY_TEMPLATE_EXTS:
+        return None
+    i = path.rfind("templates/")
+    if i == -1 or (i > 0 and path[i - 1] != "/"):
+        return None
+    return path[i + len("templates/"):]
+
+
+def _py_template_routes(path: str) -> list[str]:
+    """`templates/gauntlet/x.html` → `/gauntlet/x` ; `templates/a_propos.html` → `/a_propos` ET
+    `/a-propos` ; `templates/index.html` → `/`. La convention de `render_template` : le gabarit
+    porte le nom de sa page. Les deux graphies parce qu'un identifiant Python n'a pas de tiret
+    et qu'une URL en a souvent un. Une page servie sous un autre nom reste sans fichier, et le
+    correcteur refuse au lieu de deviner — comme pour toute route que la carte ignore."""
+    rel = _py_template_rel(path)
+    if rel is None:
+        return []
+    segments = rel.split("/")
+    stem = segments[-1].rsplit(".", 1)[0]
+    parents = segments[:-1]
+    if any(s.lower() in _PY_PARTIAL_DIRS for s in parents):
+        return []
+    segs = parents + ([] if stem == "index" else [stem])
+    routes = [_route_from_segments(segs)]
+    tirets = [s.replace("_", "-") for s in segs]
+    if tirets != segs:
+        routes.append(_route_from_segments(tirets))
+    return routes
 
 # Single files that are the document shell for the WHOLE site. The static-HTML mapping runs
 # additively on every stack, so without this `src/app.html` becomes a route and SvelteKit gets
@@ -464,6 +527,9 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
             add(_hugo_route(p), p)
         if stack == STACK_JEKYLL:
             for r in _jekyll_routes(p):
+                add(r, p)
+        if stack == STACK_PY_TEMPLATES:
+            for r in _py_template_routes(p):
                 add(r, p)
         # Static HTML is additive on every stack: a Next.js export or a Hugo site can ship
         # hand-written pages under public/, and those ARE the file to patch. Template
