@@ -97,11 +97,10 @@ class Spec:
 CATALOGUE: list[Spec] = [
     # ── A. balises <head> manquantes ou dupliquees ────────────────────────────────────────
     Spec("missing-title", "missing_title", "aucun titre declare.", title=None),
-    # La famille N'EST PAS `missing_meta_description` : le crawler ne la reserve qu'aux pages
-    # NON indexables, et replie le cas indexable dans `meta_description_too_short_indexable`
-    # — parite Ahrefs, ecrite noir sur blanc dans seo_audit.py. Mesure : la page est bien servie
-    # sans aucune balise description, et c'est bien la variante « trop courte » qui se declenche.
-    Spec("missing-meta-description", "meta_description_too_short_indexable",
+    # 12/10/2026 : `missing_meta_description` sur une page INDEXABLE aussi. Ahrefs, mesure sur
+    # noyaru.com : « Meta description tag missing or empty » 2 et « too short » 1, sous INDEXABLE.
+    # L'ancien repli dans `meta_description_too_short_indexable` ne correspondait plus a Ahrefs.
+    Spec("missing-meta-description", "missing_meta_description",
          "aucune meta description sur une page indexable.", desc=None),
     Spec("missing-h1", "missing_h1", "aucun <h1> dans le corps.", h1=0),
     Spec("multiple-h1", "multiple_h1", "deux <h1> sur la meme page.", h1=2),
@@ -170,16 +169,19 @@ CATALOGUE: list[Spec] = [
 
     # ── D. Open Graph / Twitter ───────────────────────────────────────────────────────────
     Spec("og-missing", "open_graph_tags_missing", "aucune balise Open Graph.", og="none"),
-    Spec("og-incomplete", "open_graph_tags_incomplete",
+    # 12/10/2026 : cette page porte aussi une carte `summary_large_image` sans aucune image (ni
+    # twitter:image ni og:image) — incomplete pour X comme pour Ahrefs. C'est desormais elle qui
+    # exerce `twitter_card_incomplete` : la page `twitter-incomplete` (carte `summary`, Open Graph
+    # complet) ne l'est plus, exactement comme les 31 pages de noyaru.com qu'Ahrefs laisse a 0.
+    Spec("og-incomplete", "open_graph_tags_incomplete + twitter_card_incomplete",
          "og:title seul, sans description ni image ni url.", og="partial"),
     # `tw="none"` ne suffit PAS : le controle est
-    # `if not twitter_card: if has_any_twitter or not og_any_present`, et cette page garde son
+    # `if not twitter_card: if has_any_twitter or not og_complete`, et cette page garde son
     # Open Graph complet. C'est la PREMIERE branche qu'il faut viser — une balise twitter
     # presente sans la carte. La note qui declarait la famille inexercable ne lisait que la
     # seconde. Mesure du 12/09/2026.
     Spec("twitter-missing", "twitter_card_missing",
          "balises twitter presentes mais twitter:card absente.", tw="no-card"),
-    Spec("twitter-incomplete", "twitter_card_incomplete", "twitter:card seul.", tw="partial"),
 
     # ── E. http / https et doubles barres ─────────────────────────────────────────────────
     Spec("mixed-image", "https_page_links_to_http_image + https_http_mixed_content",
@@ -227,10 +229,9 @@ CATALOGUE: list[Spec] = [
          "attribut lang syntaxiquement invalide.", lang="francais"),
 
     # ── I. longueurs, sur une page non indexable ──────────────────────────────────────────
-    # `missing_meta_description` ne tire QUE sur une page non indexable — parite Ahrefs, ecrite
-    # dans seo_audit.py : `not _non_empty(p.meta_description) and not _is_indexable(p)`. Le cas
-    # indexable se replie dans `meta_description_too_short_indexable`, que porte deja la page
-    # `missing-meta-description`. Il faut donc une SECONDE page : sans description ET noindex.
+    # `missing_meta_description` tire sur toute page sans description depuis le 12/10/2026 (parite
+    # Ahrefs mesuree sur noyaru.com). Cette page noindex reste : elle exerce le cas non indexable,
+    # que la page `missing-meta-description`, indexable, ne couvre pas.
     Spec("noindex-no-description", "missing_meta_description",
          "page noindex ne declarant aucune meta description.",
          desc=None, robots="noindex, follow"),

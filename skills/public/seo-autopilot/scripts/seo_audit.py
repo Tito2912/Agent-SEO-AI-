@@ -5325,9 +5325,10 @@ def _score_issues(
 
     # --- On-page basics (existing keys) ---
     missing_title = [p.url for p in ok_html_pages if not _non_empty(p.title)]
-    # Non-indexable pages only — indexable missing descriptions are folded into
-    # meta_description_too_short_indexable below (mirrors Ahrefs behavior).
-    missing_description = [p.url for p in ok_html_pages if not _non_empty(p.meta_description) and not _is_indexable(p)]
+    # Every page without a description, indexable or not. Ahrefs, noyaru.com, 12/10/2026: under
+    # INDEXABLE, "Meta description tag missing or empty" 2 (/status, /support) and "too short" 1
+    # (/mentions-legales). The old fold into too_short_indexable reported 3 "trop courte".
+    missing_description = [p.url for p in ok_html_pages if not _non_empty(p.meta_description)]
     def _is_missing_h1(p: PageData) -> bool:
         return (p.h1_tag_count or 0) == 0 or ((p.h1_tag_count or 0) > 0 and not p.h1)
 
@@ -6199,11 +6200,11 @@ def _score_issues(
     meta_description_too_long_not_indexable = [
         p.url for p in not_indexable_html_pages if _non_empty(p.meta_description) and len(p.meta_description.strip()) > DESC_TOO_LONG
     ]
-    # Ahrefs combines "missing" and "too short" into a single "Meta description too short" issue
-    # for indexable pages. We mirror this: flag both absent and under-threshold descriptions.
+    # A PRESENT description under the threshold. An absent one is `missing_meta_description`
+    # (Ahrefs keeps the two apart on indexable pages — measured on noyaru.com, 12/10/2026).
     meta_description_too_short_indexable = [
         p.url for p in indexable_html_pages
-        if not _non_empty(p.meta_description) or len(p.meta_description.strip()) < DESC_TOO_SHORT
+        if _non_empty(p.meta_description) and len(p.meta_description.strip()) < DESC_TOO_SHORT
     ]
     meta_description_too_short_not_indexable = [
         p.url
@@ -6616,23 +6617,30 @@ def _score_issues(
             if _norm_self(p.og_url) != _norm_self(p.canonical):
                 open_graph_url_mismatch.append(eff)
 
-        # Ahrefs-like: be conservative about Twitter Card. If Open Graph is present, don't require Twitter tags.
+        # Ahrefs, noyaru.com, 12/10/2026: "X (Twitter) card missing" = 7, exactly the 7 pages
+        # without twitter:card — 5 with no Open Graph at all AND / and /pricing, whose Open Graph
+        # is INCOMPLETE (no og:image). A COMPLETE Open Graph still exempts a page: X falls back on
+        # it, which is what the earlier "if Open Graph is present" rule had observed.
         has_any_twitter = bool(_non_empty(p.twitter_title) or _non_empty(p.twitter_description) or _non_empty(p.twitter_image))
+        og_complete = og_any_present and eff not in open_graph_incomplete
         if not _non_empty(p.twitter_card):
-            if has_any_twitter or not og_any_present:
+            if has_any_twitter or not og_complete:
                 twitter_missing.append(eff)
         else:
-            # Ahrefs-like heuristic: allow Open Graph + standard meta fallbacks.
+            # Ahrefs-like heuristic: allow Open Graph + standard meta fallbacks. The IMAGE is only
+            # required by a summary_large_image card: on noyaru.com 31 pages carry a `summary` card
+            # with no image anywhere, and Ahrefs reports 0 "X (Twitter) card incomplete".
             tw_title = p.twitter_title or p.og_title or p.title
             tw_desc = p.twitter_description or p.og_description or p.meta_description
             tw_img = p.twitter_image or p.og_image
+            needs_img = (p.twitter_card or "").strip().lower() == "summary_large_image"
             if not (_balise_utilisable(tw_title) and _balise_utilisable(tw_desc)
-                    and _balise_utilisable(tw_img)):
+                    and (_balise_utilisable(tw_img) or not needs_img)):
                 twitter_incomplete.append(eff)
                 _absent = [
                     tag for tag, val in (
                         ("twitter:title", tw_title), ("twitter:description", tw_desc),
-                        ("twitter:image", tw_img),
+                        ("twitter:image", tw_img if needs_img else "ok"),
                     ) if not _balise_utilisable(val)
                 ]
                 twitter_missing_values.append(

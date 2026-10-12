@@ -1166,6 +1166,13 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
     system_fetches = report.get("system_fetches") if isinstance(report.get("system_fetches"), list) else []
 
     pages_crawled = meta.get("pages_crawled") if isinstance(meta.get("pages_crawled"), int) else len(pages)
+    # Ahrefs, noyaru.com 12/10/2026: 41 internal + 14 resources = 55. Eleven documentation
+    # screenshots are both EMBEDDED (<img>) and LINKED (click-to-zoom <a href>): the crawl listed
+    # them as pages AND as resources, 52 + 14 = 66. A non-HTML URL that is a resource counts once.
+    _resource_urls = {str(r.get("url")) for r in resources if isinstance(r, dict) and r.get("url")}
+    _counted_twice = sum(1 for p in pages if isinstance(p, dict) and str(p.get("url")) in _resource_urls
+                         and not str(p.get("content_type") or "").strip().lower().startswith("text/html"))
+    pages_crawled = max(0, int(pages_crawled) - _counted_twice)
     resources_crawled = len([r for r in resources if isinstance(r, dict) and str(r.get("type") or "").strip().lower() in {"image", "javascript", "css"}])
     system_urls_crawled = len([r for r in system_fetches if isinstance(r, dict)])
     # Ahrefs health-score base = internal pages + internal resources (CSS/JS/images),
