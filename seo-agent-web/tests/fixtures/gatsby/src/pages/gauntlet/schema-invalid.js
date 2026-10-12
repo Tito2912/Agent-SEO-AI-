@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 // FAMILLE VISEE : structured_data_google_rich_results_validation_error
-// Offer dont le prix est une chaine.
+// FAQ dont la question n'a pas de reponse.
 
 export default function Page() {
   return (
@@ -30,7 +30,7 @@ export function Head() {
       <meta name="twitter:title" content="Page de test du parcours d'obstacles Noyaru" />
       <meta name="twitter:description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
       <meta name="twitter:image" content="https://noyaru-stack-gatsby.netlify.app/og.png" />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de test","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}` }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: `{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Une question sans reponse ?"}]}` }} />
     </>
   );
 }

@@ -29,7 +29,6 @@ Chaque page ci-dessous porte une anomalie et une seule.
 - [og-missing](/gauntlet/og-missing/)
 - [og-incomplete](/gauntlet/og-incomplete/)
 - [twitter-missing](/gauntlet/twitter-missing/)
-- [twitter-incomplete](/gauntlet/twitter-incomplete/)
 - [mixed-image](/gauntlet/mixed-image/)
 - [mixed-css](/gauntlet/mixed-css/)
 - [mixed-js](/gauntlet/mixed-js/)

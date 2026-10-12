@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-// FAMILLE VISEE : open_graph_tags_incomplete
+// FAMILLE VISEE : open_graph_tags_incomplete + twitter_card_incomplete
 // og:title seul, sans description ni image ni url.
 
 export default function Page() {

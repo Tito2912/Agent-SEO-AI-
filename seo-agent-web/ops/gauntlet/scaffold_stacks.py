@@ -264,7 +264,9 @@ def scaffold(stack: str, root: Path | None = None) -> list[str]:
         # Pas de barre obligatoire apres `/gauntlet` : sur SvelteKit l'index est `/gauntlet`
         # tout court, et un motif qui l'exigeait ne le retirait pas — l'entree se serait
         # dupliquee a chaque regeneration. Ce nettoyage est ce qui rend l'echafaudage rejouable.
-        text = re.sub(r"\n?  <url><loc>[^<]*/gauntlet[^<]*</loc></url>", "", text)
+        # `/page-absente` aussi, ajoutee plus bas : regeneree le 12/10/2026, elle se serait
+        # dupliquee au passage suivant.
+        text = re.sub(r"\n?  <url><loc>[^<]*/(?:gauntlet[^<]*|page-absente)</loc></url>", "", text)
         extra = [f"  <url><loc>{site}{index_path(stack)}</loc></url>"]
         extra += [f"  <url><loc>{site}/gauntlet/{s}{suffix}</loc></url>"
                   for s in slugs_for(stack)]

@@ -6,7 +6,6 @@ permalink: /sitemap.xml
 <url><loc>http://127.0.0.1:8747/</loc></url>
 <url><loc>http://127.0.0.1:8747/blog</loc></url>
 <url><loc>http://127.0.0.1:8747/a-propos</loc></url>
-  <url><loc>https://noyaru-stack-jekyll.netlify.app/page-absente</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/missing-title</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/missing-meta-description</loc></url>
@@ -31,7 +30,6 @@ permalink: /sitemap.xml
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/og-missing</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/og-incomplete</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/twitter-missing</loc></url>
-  <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/twitter-incomplete</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/mixed-image</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/mixed-css</loc></url>
   <url><loc>https://noyaru-stack-jekyll.netlify.app/gauntlet/mixed-js</loc></url>

@@ -1,6 +1,6 @@
 <script setup>
 // FAMILLE VISEE : structured_data_google_rich_results_validation_error
-// Offer dont le prix est une chaine.
+// FAQ dont la question n'a pas de reponse.
 useHead({
     title: 'Page de test du parcours d\'obstacles Noyaru',
     htmlAttrs: { lang: 'fr' },
@@ -21,7 +21,7 @@ useHead({
       { rel: 'canonical', href: 'https://noyaru-stack-nuxt.netlify.app/gauntlet/schema-invalid' }
     ],
     script: [
-      { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Application de test","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}' }
+      { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Une question sans reponse ?"}]}' }
     ],
 });
 </script>

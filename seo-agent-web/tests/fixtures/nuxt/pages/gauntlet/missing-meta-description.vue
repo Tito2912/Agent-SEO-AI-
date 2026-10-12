@@ -1,5 +1,5 @@
 <script setup>
-// FAMILLE VISEE : meta_description_too_short_indexable
+// FAMILLE VISEE : missing_meta_description
 // aucune meta description sur une page indexable.
 useHead({
     title: 'Page de test du parcours d\'obstacles Noyaru',
