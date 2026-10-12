@@ -20974,6 +20974,37 @@ def _page_servie_confirme(url: str, *, canonical: str | None = None, noindex: st
             and not (indexable and any(sitemap_https.excluded(v) for v in [*servie["robots"], servie["x_robots"]])))
 
 
+def _redirection_permanente_vers(source: str, cible: str) -> bool:
+    """L'hote redirige-t-il TOUJOURS `source` vers `cible`, et seulement par des 301 / 308 ?
+
+    Relu au moment de corriger : une redirection observee au crawl et disparue depuis — une
+    regle retiree du depot, un hote reconfigure — ne passe pas pour une redirection de l'hote."""
+    try:
+        if _validate_public_crawl_target(source) or _validate_public_crawl_target(cible):
+            return False
+        response = requests.get(source, allow_redirects=True, stream=True, timeout=(5, 10))
+        try:
+            return bool(response.history and all(r.status_code in (301, 308) for r in response.history)
+                        and len(response.history) <= 5 and response.status_code == 200
+                        and _verification_url(response.url) == _verification_url(cible))
+        finally:
+            response.close()
+    except Exception:
+        return False
+
+
+def _destination_saine(url: str) -> bool:
+    """La destination d'une redirection, relue maintenant : 200 direct, indexable, et son
+    canonical la designe elle-meme — ou il n'y en a pas."""
+    try:
+        from . import sitemap_https
+    except ImportError:
+        import sitemap_https
+    servie = _page_servie(url)
+    return bool(servie and servie["canonicals"] in ([], [_verification_url(url)])
+                and not any(sitemap_https.excluded(v) for v in [*servie["robots"], servie["x_robots"]]))
+
+
 def _twitter_missing_page(url: str, canonical: str, observed: dict[str, Any]) -> bool:
     try:
         from . import twitter_card
@@ -27810,7 +27841,11 @@ def _prepare_issue_fix(
             out["refusal"] = "Aucune destination canonical HTML 200 indexable verifiee pour ces entrees du sitemap."
         elif len(candidates) != 1 or candidates[0] not in literal_roots or _sitemap_deja_engendre(all_paths):
             out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : aucune reecriture devinee."
-        elif is_redirect and not sitemap_redirects.config_path(all_paths, candidates[0]):
+        elif (is_redirect and not sitemap_redirects.config_path(all_paths, candidates[0])
+              # Sans AUCUN `_redirects`, les redirections viennent de l'hote : l'ecriture les
+              # admet si elles sont permanentes et relues en ligne (decision du 12/10/2026).
+              # Un `_redirects` mal place, lui, reste ambigu.
+              and any(p.rsplit("/", 1)[-1] == "_redirects" for p in all_paths)):
             out["refusal"] = "La source litterale unique des redirections n'est pas verifiable."
         else:
             out["sitemap_redirect_pairs" if is_redirect else "sitemap_canonical_pairs"] = list(url_pairs)
@@ -28873,18 +28908,32 @@ def _deep_patch_issue_files(
                     if refused or verified != sitemap_pairs:
                         raise ValueError("observations de redirection contradictoires")
                 config = sitemap_redirects.config_path(all_paths, path)
-                if (not config and (redirect_pairs or any(p.rsplit("/", 1)[-1] == "_redirects" for p in all_paths))
-                        or any(p in all_paths for p in (".htaccess", "vercel.json"))):
+                if (any(p in all_paths for p in (".htaccess", "vercel.json"))
+                        or not config and any(p.rsplit("/", 1)[-1] == "_redirects" for p in all_paths)):
                     raise ValueError("configuration de redirection ambigue")
                 sources = {p["from"] for p in redirect_pairs}
                 hops = {_verification_url(url) for row in pages or [] if isinstance(row, dict)
                         and _verification_url(row.get("url")) in sources for url in row.get("redirect_chain") or []}
                 shadowed = {url for url in hops if repo_index.route_files(current_index, url)}
+                rules = ""
                 if config:
                     fd = _github_api_get(_github_content_api_path(owner, repo_name, config), token=token, params={"ref": fix_branch})
                     rules = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
-                    if not fd.get("sha") or not sitemap_redirects.rules_match(rules, redirect_pairs, pages or [], _verification_url, shadowed, direct=direct_routes):
-                        raise ValueError("regles de redirection actuelles contradictoires")
+                    if not fd.get("sha"):
+                        raise ValueError("regles de redirection illisibles")
+                if config or redirect_pairs:
+                    stricte = bool(config) and sitemap_redirects.rules_match(
+                        rules, redirect_pairs, pages or [], _verification_url, shadowed, direct=direct_routes)
+                    # Les redirections de l'HOTE (http -> https, barre finale) : permanentes,
+                    # observees, hors de toute regle du depot, et leur destination relue saine.
+                    # Voir `sitemap_redirects.host_redirects` (decision du 12/10/2026).
+                    hote = (bool(redirect_pairs)
+                            and sitemap_redirects.host_redirects(rules, redirect_pairs, pages or [], _verification_url)
+                            and all(_redirection_permanente_vers(p["from"], p["to"]) and _destination_saine(p["to"])
+                                    for p in redirect_pairs))
+                    if not (stricte or hote):
+                        raise ValueError("regles de redirection actuelles contradictoires" if config
+                                         else "configuration de redirection ambigue")
                 if "netlify.toml" in all_paths:
                     import tomllib
                     fd = _github_api_get(_github_content_api_path(owner, repo_name, "netlify.toml"), token=token, params={"ref": fix_branch})

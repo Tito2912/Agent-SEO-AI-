@@ -66,29 +66,71 @@ def verified_pairs(pairs: list[dict], pages: list[dict] | None, identify) -> tup
     return accepted, sorted(set(refused))
 
 
+def _flat_rules(content: str, origin: str, identify) -> dict | None:
+    """{source: (cible, code, force)} d'un `_redirects` a regles plates, ou None s'il en a une autre."""
+    rules = {}
+    for line in content.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if "'" in line or '"' in line:
+            return None
+        tokens = shlex.split(line, comments=True)
+        if len(tokens) != 3 or not re.fullmatch(r"\d{3}!?", tokens[2]):
+            return None
+        if any(not token.startswith(("/", "https://", "http://")) or token.startswith("//") for token in tokens[:2]):
+            return None
+        source, target = (identify(urljoin(origin, token)) for token in tokens[:2])
+        if any(not value or re.search(r"[:*]", urlsplit(value).path) or urlsplit(value).query
+               or urlsplit(value).fragment for value in (source, target)) or source in rules:
+            return None
+        rules[source] = (target, int(tokens[2].removesuffix("!")), tokens[2].endswith("!"))
+    return rules
+
+
+# Seules ces redirections disent « l'adresse a change pour de bon ». Une 302 ou une 307 de
+# l'hote peut etre un etat de passage : on ne reecrit pas un sitemap sur un etat de passage.
+PERMANENT = {301, 308}
+
+
+def host_redirects(content: str, pairs: list[dict], pages: list[dict], identify) -> bool:
+    """Toutes ces redirections viennent-elles de l'HOTE, et pour de bon ?
+
+    Decision du proprietaire (12/10/2026). Le chemin strict n'admet que les redirections
+    DECLAREES dans le `_redirects` du depot ; il refusait donc partout celles de l'hote — http
+    vers https, ajout de la barre finale — que le banc mesure sur toutes les stacks. Admises ici
+    si chaque saut observe est permanent et qu'AUCUNE regle du depot n'en couvre un : une regle
+    qui en couvre un releve du chemin strict, et un `_redirects` illisible ne prouve rien."""
+    if not pairs or len(content) > 80_000:
+        return False
+    try:
+        rules = _flat_rules(content, pairs[0]["from"], identify) if content.strip() else {}
+        if rules is None:
+            return False
+        for pair in pairs:
+            rows = [row for row in pages if isinstance(row, dict) and identify(row.get("url")) == pair["from"]]
+            if not rows:
+                return False
+            for row in rows:
+                chain, statuses = row.get("redirect_chain") or [], row.get("redirect_statuses") or []
+                if (not chain or len(chain) != len(statuses)
+                        or any(type(code) is not int or code not in PERMANENT for code in statuses)
+                        or any(identify(url) in rules for url in chain)):
+                    return False
+    except (KeyError, TypeError, ValueError):
+        return False
+    return True
+
+
 def rules_match(content: str, pairs: list[dict], pages: list[dict], identify, shadowed: set[str] | None = None,
                 *, direct: set[str] | None = None) -> bool:
     """Require exact flat rules, never infer wildcard precedence or condition semantics."""
     if (not pairs and not direct) or len(content) > 80_000:
         return False
     origin = pairs[0]["from"] if pairs else min(direct)
-    rules = {}
     try:
-        for line in content.splitlines():
-            if not line.strip() or line.lstrip().startswith("#"):
-                continue
-            if "'" in line or '"' in line:
-                return False
-            tokens = shlex.split(line, comments=True)
-            if len(tokens) != 3 or not re.fullmatch(r"\d{3}!?", tokens[2]):
-                return False
-            if any(not token.startswith(("/", "https://", "http://")) or token.startswith("//") for token in tokens[:2]):
-                return False
-            source, target = (identify(urljoin(origin, token)) for token in tokens[:2])
-            if any(not value or re.search(r"[:*]", urlsplit(value).path) or urlsplit(value).query
-                   or urlsplit(value).fragment for value in (source, target)) or source in rules:
-                return False
-            rules[source] = (target, int(tokens[2].removesuffix("!")), tokens[2].endswith("!"))
+        rules = _flat_rules(content, origin, identify)
+        if rules is None:
+            return False
         if set(direct or []) & rules.keys():
             return False
         requested = {identify(row.get("url")): row for row in pages if isinstance(row, dict)}

@@ -87,9 +87,17 @@ def test_partial_refusals_are_named_and_not_counted_as_repaired():
 
 
 @pytest.mark.parametrize("paths", [["app/sitemap.ts"], ["sitemap.xml", "backup-sitemap.xml"],
-    ["sitemap.xml", "app/sitemap.ts"], ["dist/sitemap.xml", "_redirects"], ["sitemap.xml"]])
+    ["sitemap.xml", "app/sitemap.ts"], ["dist/sitemap.xml", "_redirects"], ["sitemap.xml", "public/_redirects"]])
 def test_generated_ambiguous_or_unverifiable_redirect_source_refuses(paths):
     assert prepare([redirected(), row(B)], paths=paths)["refusal"]
+
+
+def test_without_any_redirect_file_the_redirect_is_the_hosts_and_proof_moves_to_the_write():
+    # Decision du 12/10/2026 : `["sitemap.xml"]` seul etait refuse ici. Ses redirections viennent
+    # de l'hote ; l'ecriture exige qu'elles soient permanentes et relues en ligne
+    # (tests/test_sitemap_redirection_hote.py).
+    prep = prepare([redirected(), row(B)], paths=["sitemap.xml"])
+    assert not prep["refusal"] and prep["sitemap_redirect_pairs"] == [PAIR]
 
 
 @pytest.mark.parametrize("case", ["verified", "multihop", "missing_master_entry", "stale_rule", "missing_rule", "wrong_code",
