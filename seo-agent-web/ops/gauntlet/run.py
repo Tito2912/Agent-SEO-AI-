@@ -70,6 +70,11 @@ seen_group: set[str] = set()
 ordered: list[str] = []
 for k in sorted(families):
     grp = m._length_family_name(k) or k.removesuffix("_indexable").removesuffix("_not_indexable")
+    # Depuis le 08/10/2026 les descriptions COURTES (et absentes, que le crawler y range sur une
+    # page indexable) ont leur propre plan : un representant « trop longue » les ecarte. Le banc
+    # du 12/10 ne les a donc jamais exercees. Les deux moities du groupe se mesurent a part.
+    if grp == "meta" and "_too_short" in k:
+        grp = "meta-short"
     if grp in seen_group:
         continue
     seen_group.add(grp)

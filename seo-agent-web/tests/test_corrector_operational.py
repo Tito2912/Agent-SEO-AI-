@@ -990,9 +990,12 @@ def test_short_description_endpoints_use_verified_excerpts_and_charge_only_writt
     def probe(url, *args):
         probes.append(url)
         return case != 'source_probe'
+    from tests.test_description_redigee_en_repli import WRITTEN
     def ai(**kw):
         assert probes == [URL]
         selections.append(kw)
+        if case == 'no_excerpt':
+            return {'description': WRITTEN}
         return {'candidate': True} if case == 'invalid_model' else {'value': 'invented'} if case == 'invented_model' else {'candidate': 0}
     monkeypatch.setattr(m, '_short_description_page', probe)
     monkeypatch.setattr(m, '_correction_ai_json', ai)
@@ -1006,6 +1009,14 @@ def test_short_description_endpoints_use_verified_excerpts_and_charge_only_writt
         assert len(selections) == 1 and state['charges'] == [1] and state['pr_bodies']
         if case == 'partial':
             assert any(URL + 'unknown' in body for body in state['pr_bodies'])
+    elif case == 'no_excerpt':
+        # Owner's decision, 12/10/2026: a page with no excerpt gets a WRITTEN description — through
+        # both real routes, billed once, and flagged in the pull request.
+        thin = state['sources']['index.html']
+        assert result['status'] == 200
+        assert result['written'] == {'index.html': thin.replace('content="' + SHORT + '"', 'content="' + WRITTEN + '"', 1)}
+        assert len(selections) == 1 and state['charges'] == [1]
+        assert any("rédigée par l'IA" in body for body in state['pr_bodies'])
     else:
         assert not result['written'] and not state['pr_bodies'] and not any(state['charges'])
         assert len(selections) == (1 if case in {'invalid_model', 'invented_model'} else 0)

@@ -1,4 +1,8 @@
-"""Select a complete published excerpt for one proved literal short description."""
+"""Select a complete published excerpt for one proved literal short description.
+
+Owner's decision, 12/10/2026: the excerpt stays first. Only a page that offers NO excerpt of the
+right length may receive a description the model WROTE (`written=True`), and it is flagged as such.
+"""
 import html
 import re
 
@@ -136,20 +140,30 @@ def document(raw, canonical, inspect, identify, *, floor=100, ceiling=160):
         return None
 
 
-def matches(raw, observed, inspect, identify, expected=None, *, floor=100, ceiling=160):
+def written_ok(value, floor=100, ceiling=160):
+    """A description the model WROTE: one plain line inside the length band, nothing to escape out of."""
+    return (isinstance(value, str) and floor <= len(value) <= ceiling and ' '.join(value.split()) == value
+            and not any(ord(char) < 32 or ord(char) == 127 or char in '<>' for char in value))
+
+
+def matches(raw, observed, inspect, identify, expected=None, *, floor=100, ceiling=160, allow_written=False):
     known = snapshot(observed)
     canonical = observed.get('url') if isinstance(observed, dict) else None
     parsed = document(raw, canonical, inspect, identify, floor=floor, ceiling=ceiling)
     return bool(parsed and known and {key: parsed[key] for key in FIELDS} == known
-        and len(known['meta_description'] or '') < floor and parsed['candidates']
+        and len(known['meta_description'] or '') < floor and (parsed['candidates'] or allow_written)
         and (expected is None or all(parsed[key] == expected.get(key) for key in (*FIELDS, 'paragraphs', 'candidates'))))
 
 
-def rewrite(raw, observed, value, inspect, identify, *, floor=100, ceiling=160):
-    if not isinstance(value, str) or not matches(raw, observed, inspect, identify, floor=floor, ceiling=ceiling):
+def rewrite(raw, observed, value, inspect, identify, *, floor=100, ceiling=160, written=False):
+    """`written` (owner's decision, 12/10/2026): a model-WRITTEN value is accepted only on a page that
+    offers NO published excerpt. The excerpt keeps priority in code, not just in the prompt."""
+    if not isinstance(value, str) or not matches(raw, observed, inspect, identify, floor=floor, ceiling=ceiling,
+                                                 allow_written=written):
         return raw, 0
     parsed = document(raw, observed['url'], inspect, identify, floor=floor, ceiling=ceiling)
-    if value not in parsed['candidates']:
+    if value not in parsed['candidates'] and not (written and not parsed['candidates']
+                                                  and written_ok(value, floor, ceiling)):
         return raw, 0
     escaped = html.escape(value, quote=True)
     if parsed['span']:
