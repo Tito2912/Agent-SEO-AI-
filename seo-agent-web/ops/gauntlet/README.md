@@ -50,8 +50,11 @@ python ops/gauntlet/live_cycle.py --workdir <dossier-temporaire> --stacks astro 
 ```
 
 Par defaut, seules les corrections mecaniques sont appliquees. `--ai-families` permet de nommer
-explicitement un petit lot a exercer avec Claude ; `--ai-max-files` vaut 2 fichiers par famille.
-Ce plafond est un budget de banc, pas une certification de toutes les occurrences du site.
+explicitement un petit lot a exercer avec Claude ; `--ai-max-files` vaut 5 fichiers par famille.
+Ce plafond est un budget de banc, pas une certification de toutes les occurrences du site. Il
+valait 2 jusqu'au 12/10/2026 — le plafond du plan GRATUIT : chaque famille de 4 pages ressortait
+« partielle » pour une raison qui ne tenait qu'au banc. Les plans payants ecrivent 12 a 40
+fichiers par pull request, et aucune famille du parcours n'en touche plus de 5.
 Les appels IA sont traces dans `claude.log`, jamais avec leurs cles.
 `--ai-max-calls` ajoute un plafond strict de 12 requetes Claude par stack par defaut,
 relances comprises. Les echecs du fournisseur comptent aussi, les preparations paralleles

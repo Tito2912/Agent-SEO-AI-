@@ -311,7 +311,7 @@ def close_prs(repo: str, token: str, prs: list[dict]) -> list[dict]:
 
 
 def cycle(m, token: str, stack: str, root: Path, *, max_pages: int = 90,
-          reuse: bool = False, ai_families: str = "", ai_max_files: int = 2,
+          reuse: bool = False, ai_families: str = "", ai_max_files: int = 5,
           ai_max_calls: int = 12) -> dict:
     if stack not in STACKS:
         raise ValueError("Only the allowlisted fixture stacks can be tested.")
@@ -407,7 +407,10 @@ def main() -> int:
     parser.add_argument("--max-pages", type=int, default=90)
     parser.add_argument("--reuse", action="store_true", help="Reuse this workdir's reference/fix branch.")
     parser.add_argument("--ai-families", default="", help="Explicit comma-separated families; Claude only.")
-    parser.add_argument("--ai-max-files", type=int, default=2)
+    # 5, pas 2 : a 2 fichiers, le banc mesurait le plan GRATUIT (2 fichiers par pull request),
+    # et chaque famille de 4 pages ressortait « partielle » sans que le correcteur y soit pour
+    # rien. Les plans payants en ont 12 a 40 ; aucune famille du parcours n'en touche plus de 5.
+    parser.add_argument("--ai-max-files", type=int, default=5)
     parser.add_argument("--ai-max-calls", type=int, default=12,
                         help="Hard limit on Claude requests per stack, including retries.")
     args = parser.parse_args()

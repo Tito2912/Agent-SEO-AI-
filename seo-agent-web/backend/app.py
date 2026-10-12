@@ -29051,6 +29051,21 @@ def _deep_patch_issue_files(
                 _gabarits_lus[chemin] = None
         return _gabarits_lus[chemin]
 
+    # Les champs de front matter que les gabarits d'une page Jekyll impriment vraiment, ou None
+    # si la chaine n'est pas entierement dans le depot. Voir backend/jekyll_champs.py.
+    _rendus_jekyll: dict[str, Any] = {}
+
+    def _champs_jekyll(chemin: str, contenu: str) -> "set[str] | None":
+        if str((index or {}).get("stack") or "") != repo_index.STACK_JEKYLL:
+            return None
+        if chemin not in _rendus_jekyll:
+            try:
+                from . import jekyll_champs
+            except ImportError:
+                import jekyll_champs
+            _rendus_jekyll[chemin] = jekyll_champs.champs_rendus(contenu, all_paths or [], _lire_du_depot)
+        return _rendus_jekyll[chemin]
+
     patched: list[str] = []
     skipped: list[str] = []
     ai_files: list[str] = []   # the subset the MODEL wrote — the only ones that cost tokens
@@ -29118,6 +29133,13 @@ def _deep_patch_issue_files(
                       + " | ".join('"%s"' % v for v in interdits[:10]) + ".")
         if rappel:
             _hint += " " + rappel
+        _rendus = _champs_jekyll(path, raw)
+        if _rendus is not None:
+            try:
+                from . import jekyll_champs
+            except ImportError:
+                import jekyll_champs
+            _hint += " " + jekyll_champs.consigne(_rendus)
         try:
             patch = _openai_generate_file_patch(
                 file_path=path, file_content=raw, issue_key=issue_key, issue_label=issue_label,
@@ -29374,6 +29396,20 @@ def _deep_patch_issue_files(
             _etrangere = _valeur_twitter_non_imposee(new_content, raw, twitter_values.get(path) or {})
             if _etrangere:
                 logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _etrangere)
+                skipped.append(path)
+                continue
+        # Un champ de front matter que les gabarits n'impriment pas ne change RIEN a la page
+        # servie : une pull request sans effet, que rien ne signalait (jekyll, 12/10/2026).
+        _rendus = _champs_jekyll(path, raw)
+        if _rendus is not None:
+            try:
+                from . import jekyll_champs
+            except ImportError:
+                import jekyll_champs
+            _muets = jekyll_champs.champs_sans_effet(new_content, raw, _rendus)
+            if _muets:
+                logger.warning("[correction] %s: %s refuse — champ(s) %s ignore(s) par les gabarits",
+                               issue_key, path, ", ".join(_muets))
                 skipped.append(path)
                 continue
         # LA SEULE QUESTION EST « LE CONTENU A-T-IL CHANGE ? », et le drapeau `no_change` ne
