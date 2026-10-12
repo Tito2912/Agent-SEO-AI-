@@ -20,6 +20,8 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -120,3 +122,34 @@ def test_the_family_never_goes_through_the_content_patcher() -> None:
     source = __import__("inspect").getsource(app_module._apply_prepared_issue_fix)
     assert "_SERVED_LANG_FIX_KEYS" in source
     assert source.index("_SERVED_LANG_FIX_KEYS") < source.index("_deep_patch_issue_files")
+
+
+def _built_page(lang: str, self_code: str) -> str:
+    return (f'<!doctype html><html lang="{lang}"><head>'
+            '<link rel="canonical" href="https://site.fr/page" />'
+            f'<link rel="alternate" hreflang="{self_code}" href="https://site.fr/page" />'
+            '<link rel="alternate" hreflang="en" href="https://site.fr/en/page" />'
+            '</head><body>x</body></html>')
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="requires node")
+def test_the_shipped_script_never_copies_an_invalid_self_code(tmp_path) -> None:
+    """Gauntlet, 12/10/2026, next-app — the stack this script exists for: a page declaring itself
+    `fr_fr` with a correct `lang="fr"` came out of the build as `lang="fr_fr"`, a NEW anomaly.
+    Run the exact bytes we ship, with node, on a built output."""
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts" / "fix-html-lang.mjs").write_text(app_module._HTML_LANG_FIXER_SCRIPT, encoding="utf-8")
+    out = tmp_path / "out"
+    out.mkdir()
+    pages = {"invalid.html": _built_page("fr", "fr_fr"), "invalid-other.html": _built_page("en", "fr_fr"),
+             "mismatch.html": _built_page("en", "fr")}
+    for name, html in pages.items():
+        (out / name).write_text(html, encoding="utf-8")
+    run = subprocess.run(["node", "scripts/fix-html-lang.mjs"], cwd=tmp_path, capture_output=True, text=True,
+                         timeout=60)
+    assert run.returncode == 0, run.stderr
+    assert (out / "invalid.html").read_text(encoding="utf-8") == pages["invalid.html"]
+    assert (out / "invalid-other.html").read_text(encoding="utf-8") == pages["invalid-other.html"]
+    # The witness: a valid self code still repairs the served language.
+    assert '<html lang="fr">' in (out / "mismatch.html").read_text(encoding="utf-8")
+    assert "1 page(s) corrigee(s) sur 3" in run.stdout

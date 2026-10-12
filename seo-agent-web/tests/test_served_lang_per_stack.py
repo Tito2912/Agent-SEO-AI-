@@ -120,6 +120,18 @@ def test_a_page_that_declares_nothing_is_left_exactly_as_it_is() -> None:
         assert app_module._rewrite_served_lang(silent) == (silent, 0)
 
 
+def test_an_invalid_self_code_is_never_copied_into_html_lang() -> None:
+    """Gauntlet, 12/10/2026, next-app: the page declared itself `fr_fr` and served a correct
+    `lang="fr"`; the rewrite copied `fr_fr` and CREATED html_lang_attribute_invalid. An invalid
+    code says nothing about the page's language, whatever `<html lang>` currently holds."""
+    for served in ('lang="fr"', 'lang="en"'):
+        page = PAGE.replace('hreflang="fr"', 'hreflang="fr_fr"').replace('lang="en"', served, 1)
+        assert app_module._rewrite_served_lang(page) == (page, 0), served
+    # A valid region tag still names the language.
+    regional = PAGE.replace('hreflang="fr"', 'hreflang="fr-FR"')
+    assert '<html lang="fr-fr">' in app_module._rewrite_served_lang(regional)[0]
+
+
 def test_x_default_is_never_taken_for_a_language() -> None:
     page = PAGE.replace('hreflang="fr" href="https://site.fr/index-fr"',
                         'hreflang="x-default" href="https://site.fr/index-fr"')

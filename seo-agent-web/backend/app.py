@@ -25904,6 +25904,11 @@ _HTML_LANG_ATTR_RE = re.compile(r'\blang=["\']([^"\']*)["\']', re.I)
 _CANONICAL_HREF_RE = re.compile(
     r'<link[^>]*rel=["\']canonical["\'][^>]*href=["\']([^"\']+)["\']', re.I)
 _ALTERNATE_TAG_RE = re.compile(r'<link\b[^>]*rel=["\']alternate["\'][^>]*>', re.I)
+# The crawler's own grammar for `<html lang>` (LANG_RE in seo_audit.py). Banc du 12/10/2026,
+# next-app : la page `hreflang-invalid` se declare `fr_fr` (code invalide, defaut voulu du banc)
+# et servait `lang="fr"`, correct. La reecriture a recopie `fr_fr` dans `<html lang>` et a CREE
+# `html_lang_attribute_invalid`. Un code que le crawler refuse ne dit pas la langue de la page.
+_SELF_LANG_CODE_RE = re.compile(r"[a-z]{2}(?:-[a-z0-9]{2,8})*", re.I)
 
 
 def _self_declared_lang(content: str) -> str:
@@ -25927,7 +25932,7 @@ def _self_declared_lang(content: str) -> str:
         if value == "x-default":
             continue
         if _norm_url_for_match(href.group(1)) == self_url:
-            return value
+            return value if _SELF_LANG_CODE_RE.fullmatch(value) else ""
     return ""
 
 
@@ -26074,13 +26079,15 @@ _HTML_LANG_FIXER_SCRIPT = """#!/usr/bin/env node
 // sa langue. Aucune convention d'URL n'est supposee.
 //
 // Une page sans canonical, sans alternates, ou dont aucun alternate ne pointe sur elle-meme,
-// est laissee STRICTEMENT intacte.
+// est laissee STRICTEMENT intacte. De meme si cet alternate porte un code de langue invalide
+// (fr_fr au lieu de fr-FR) : le recopier rendrait <html lang> invalide a son tour.
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const CANDIDATE_DIRS = ['out', 'dist', 'build', '.output/public', 'public', '_site'];
+const LANG_CODE = /^[a-z]{2}(-[a-z0-9]{2,8})*$/i;
 const norm = (u) => String(u || '').trim().replace(/#.*$/, '').replace(/\\/+$/, '').toLowerCase();
 
 async function* htmlFiles(dir) {
@@ -26104,7 +26111,7 @@ function selfLang(html) {
     if (!code || !target) continue;
     const value = code[1].trim().toLowerCase();
     if (value === 'x-default') continue;
-    if (norm(target[1]) === self) return value;
+    if (norm(target[1]) === self) return LANG_CODE.test(value) ? value : null;
   }
   return null;
 }
