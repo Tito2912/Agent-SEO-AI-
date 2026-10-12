@@ -27974,6 +27974,113 @@ def _retirer_propriete_objet(content: str, debut_cle: int, fin_bloc: int) -> str
     return content[:debut] + reste
 
 
+# ── Trois refus sur les lignes qu'un patch AJOUTE (12/10/2026) ───────────────────────────────
+# Premier passage du correcteur sur noyaru.com lui-meme, un site a gabarits Jinja servi par
+# FastAPI — un idiome qu'aucun des neuf sites du banc ne porte. La PR « Open Graph incomplet »
+# aurait : fait planter /pricing et /ressources-seo (`url_for('static', filename=...)`, syntaxe
+# Flask : Starlette attend `path=`), pointe six pages vers /static/og-image.png qui n'existe pas,
+# et pose og:image et og:type dans `public_layout.html` EN PLUS des pages qui l'etendent — deux
+# balises, contradictoires, par page. Les trois refus ci-dessous ne devinent rien : ils retirent
+# la ligne ajoutee et le disent.
+_GABARIT_EXTS = (".html", ".htm", ".jinja", ".jinja2", ".j2", ".njk", ".twig", ".liquid",
+                 ".hbs", ".tmpl", ".gohtml")
+_META_SOCIALE_RE = re.compile(
+    r"""<meta\b[^>]*\b(?:property|name)\s*=\s*['"]((?:og|twitter):[a-z:_]+)['"][^>]*>""", re.I)
+# Nom DISTINCT de `_META_CONTENU_RE` (forme objet `content: '...'`, plus haut) : le reprendre
+# l'ecrasait pour tout le module et cassait la coupe des descriptions Vue/Nuxt.
+_META_ATTR_CONTENT_RE = re.compile(r"""\bcontent\s*=\s*(['"])(.*?)\1""", re.I | re.S)
+_IMAGE_SOCIALE = {"og:image", "og:image:url", "og:image:secure_url", "twitter:image", "twitter:image:src"}
+_APPEL_GABARIT_RE = re.compile(r"([A-Za-z_][\w.]*)\s*\(")
+_ARG_NOMME_RE = re.compile(r"[(,]\s*([A-Za-z_]\w*)\s*=(?!=)")
+_LITTERAL_RE = re.compile(r"""(['"])([^'"]+)\1""")
+
+
+def _lignes_ajoutees(new_content: str, old_content: str) -> list[int]:
+    """Indices des lignes de `new_content` absentes de `old_content` (au compte pres)."""
+    restantes = Counter(old_content.splitlines())
+    ajoutees = []
+    for i, ligne in enumerate(new_content.splitlines()):
+        if restantes[ligne] > 0:
+            restantes[ligne] -= 1
+        else:
+            ajoutees.append(i)
+    return ajoutees
+
+
+def _image_prouvee(valeur: str, all_paths: list[str], images_du_site: set[str]) -> bool:
+    """Une image ecrite par le patch est-elle un FAIT du site ou du depot ?"""
+    valeur = (valeur or "").strip()
+    if not valeur:
+        return False
+    if valeur in images_du_site:
+        return True
+    candidats = ([v for _q, v in _LITTERAL_RE.findall(valeur)]
+                 if ("{{" in valeur or "{%" in valeur) else [valeur])
+    for candidat in candidats:
+        chemin = urlsplit(candidat).path.lstrip("/")
+        if (chemin and re.search(r"\.(png|jpe?g|webp|gif|avif|svg)$", chemin, re.I)
+                and any(p == chemin or p.endswith("/" + chemin) for p in all_paths or [])):
+            return True
+    return False
+
+
+def _retirer_ajouts_non_prouves(new_content: str, old_content: str, path: str, *,
+                                all_paths: list[str],
+                                pages: list[dict[str, Any]] | None) -> tuple[str, list[str]]:
+    """Retire les lignes AJOUTEES que rien ne prouve. Voir l'en-tete du bloc."""
+    lignes = new_content.splitlines()
+    gabarit = path.lower().endswith(_GABARIT_EXTS)
+    tete = old_content.split("</head>", 1)[0] if "</head>" in old_content else ""
+    # C : la tete ouvre un bloc aux pages enfants ; elles y posent leurs propres balises.
+    bloc_enfant = gabarit and "{% block" in tete
+    images_du_site = {str((p or {}).get(k) or "").strip() for p in pages or [] if isinstance(p, dict)
+                      for k in ("og_image", "twitter_image")} - {""}
+    appels_connus = set(_APPEL_GABARIT_RE.findall(old_content))
+    args_connus = set(_ARG_NOMME_RE.findall(old_content))
+    retirer: dict[int, str] = {}
+    for i in _lignes_ajoutees(new_content, old_content):
+        ligne = lignes[i]
+        meta = _META_SOCIALE_RE.search(ligne)
+        if meta and bloc_enfant:
+            retirer[i] = "%s retiree : gabarit commun dont la tete ouvre un bloc aux pages" % meta.group(1)
+            continue
+        if gabarit and ("{{" in ligne or "{%" in ligne):
+            expr = " ".join(re.findall(r"\{[{%](.*?)[}%]\}", ligne))
+            inconnus = ([a + "(" for a in _APPEL_GABARIT_RE.findall(expr) if a not in appels_connus]
+                        + [a + "=" for a in _ARG_NOMME_RE.findall(expr) if a not in args_connus])
+            if inconnus:
+                retirer[i] = "expression de gabarit absente du fichier : " + ", ".join(sorted(set(inconnus)))
+                continue
+        if meta and meta.group(1).lower() in _IMAGE_SOCIALE:
+            contenu = _META_ATTR_CONTENT_RE.search(ligne)
+            # Sans guillemets, c'est une expression JSX/Astro (`content={image}`) : les formes
+            # objet ont leurs propres garde-fous, celui-ci ne juge que ce qu'il sait lire.
+            if not contenu:
+                continue
+            valeur = contenu.group(2)
+            if not _image_prouvee(valeur, all_paths, images_du_site):
+                retirer[i] = ("%s retiree : %s n'est ni une image du site ni un fichier du depot"
+                              % (meta.group(1), valeur[:80]))
+    if not retirer:
+        return new_content, []
+    garde = [ligne for i, ligne in enumerate(lignes) if i not in retirer]
+    sortie = "\n".join(garde) + ("\n" if new_content.endswith("\n") else "")
+    return sortie, [retirer[i] for i in sorted(retirer)]
+
+
+# D : un test, une fixture ou un mock ne sert aucune page du site. Le meme passage visait
+# `tests/fixtures/next-app/app/layout.tsx` — la fixture d'un AUTRE site, rangee dans ce depot.
+_SEGMENTS_HORS_SITE = {"test", "tests", "__tests__", "spec", "specs", "fixture", "fixtures",
+                       "__fixtures__", "e2e", "cypress", "__mocks__", "mocks", "node_modules", ".github"}
+
+
+def _chemin_hors_site(path: str) -> bool:
+    morceaux = [m.lower() for m in str(path or "").replace("\\", "/").split("/")]
+    nom = morceaux[-1] if morceaux else ""
+    return (any(m in _SEGMENTS_HORS_SITE for m in morceaux[:-1])
+            or nom.startswith("test_") or ".test." in nom or ".spec." in nom)
+
+
 def _completer_open_graph_objet(new_content: str, old_content: str,
                                 reporte_fn: "Callable[[], dict[str, str]]",
                                 ) -> tuple[str, list[str]]:
@@ -28638,6 +28745,7 @@ def _deep_patch_issue_files(
             wants_page_targeting=link_rewriter is not None, page_side=page_side,
             allow_ai=allow_ai_targeting and canonical_pairs is None, ecartes=ecartes,
         )
+    targets = [t for t in targets if not _chemin_hors_site(t)]
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
     _idiom = repo_index.stack_idiom_hint(index) if index else ""
     if _idiom:
@@ -29001,6 +29109,11 @@ def _deep_patch_issue_files(
         new_content, _ogj_notes = _completer_open_graph_objet(
             new_content, raw, lambda: _og_reporte_pour(path))
         _og_notes = _og_notes + _ogj_notes
+        # EN DERNIER parmi ceux qui ecrivent : il juge chaque ligne AJOUTEE, y compris celles
+        # que les completions ci-dessus viennent de poser (elles ne posent qu'une image mesuree).
+        new_content, _preuve_notes = _retirer_ajouts_non_prouves(
+            new_content, raw, path, all_paths=all_paths, pages=pages)
+        _og_notes = _og_notes + _preuve_notes
         for _n in (_len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes
                    + _master_notes + _og_notes):
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
