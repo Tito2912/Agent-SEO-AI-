@@ -20890,6 +20890,90 @@ def _sitemap_https_page(url: str, canonical: str, *, verify=None, allow_missing_
         return False
 
 
+_ENTETE_SITEMAP_RE = re.compile(r"\A---[ \t]*\r?\n.*?\r?\n---[ \t]*\r?\n", re.S)
+
+
+def _entete_de_sitemap(raw: str) -> tuple[str, str]:
+    """(front matter, XML) d'un sitemap ; l'en-tete vaut '' quand il n'y en a pas."""
+    match = _ENTETE_SITEMAP_RE.match(raw or "")
+    return (match.group(0), raw[match.end():]) if match else ("", raw)
+
+
+def _page_servie(url: str) -> dict[str, Any] | None:
+    """Ce que l'hote SERT pour cette URL — canonicals et directives robots de l'en-tete — lu
+    sans exiger un document litteral : une page Next, Gatsby ou Nuxt charge ses scripts dans le
+    <head>, et `_duplicate_html_document` la refuse a juste titre comme SOURCE. Comme TEMOIN de
+    ce que voit un moteur, elle se lit tres bien. Meme hygiene que `_sitemap_https_page` : HTTPS
+    public, 200 direct, sans redirection ni Retry-After, HTML, taille bornee."""
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme != "https" or parsed.username or parsed.password or _validate_public_crawl_target(url):
+            return None
+        response = requests.get(url, allow_redirects=False, stream=True, timeout=(5, 10))
+        try:
+            if (type(response.status_code) is not int or response.status_code != 200 or response.history
+                    or _verification_url(response.url) != _verification_url(url)
+                    or response.headers.get("retry-after")
+                    or response.headers.get("content-type", "").split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}):
+                return None
+            chunks, size = [], 0
+            for chunk in response.iter_content(chunk_size=65536):
+                size += len(chunk)
+                if size > 3_000_000:
+                    return None
+                chunks.append(chunk)
+            raw = b"".join(chunks).decode("utf-8", errors="replace")
+            header = str(response.headers.get("x-robots-tag") or "")
+        finally:
+            response.close()
+    except Exception:
+        return None
+
+    class Tete(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.canonicals, self.robots, self.corps = [], [], False
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "body":
+                self.corps = True
+            if self.corps:
+                return
+            valeurs = dict(attrs)
+            if tag == "link" and "canonical" in str(valeurs.get("rel") or "").lower().split():
+                self.canonicals.append(str(valeurs.get("href") or ""))
+            if tag == "meta" and str(valeurs.get("name") or "").strip().lower() in {"robots", "googlebot"}:
+                self.robots.append(str(valeurs.get("content") or ""))
+
+    tete = Tete()
+    try:
+        tete.feed(raw)
+        tete.close()
+    except Exception:
+        return None
+    return {"canonicals": [_verification_url(c) for c in tete.canonicals], "robots": tete.robots, "x_robots": header}
+
+
+def _page_servie_confirme(url: str, *, canonical: str | None = None, noindex: str | None = None,
+                          indexable: bool = False) -> bool:
+    """La page SERVIE confirme-t-elle l'observation du crawl ? `canonical` : un seul canonical,
+    celui-la (et, avec `indexable`, aucune directive noindex). `noindex` : la directive robots
+    observee, a l'identique."""
+    try:
+        from . import sitemap_https, sitemap_noindex
+    except ImportError:
+        import sitemap_https
+        import sitemap_noindex
+    servie = _page_servie(url)
+    if not servie:
+        return False
+    if noindex is not None:
+        return (len(servie["robots"]) == 1 and "noindex" in sitemap_noindex.robots_tokens(servie["robots"][0])
+                and sitemap_noindex.robots_tokens(servie["robots"][0]) == sitemap_noindex.robots_tokens(noindex))
+    return (servie["canonicals"] == ([_verification_url(canonical)] if canonical else [])
+            and not (indexable and any(sitemap_https.excluded(v) for v in [*servie["robots"], servie["x_robots"]])))
+
+
 def _twitter_missing_page(url: str, canonical: str, observed: dict[str, Any]) -> bool:
     try:
         from . import twitter_card
@@ -28814,7 +28898,7 @@ def _deep_patch_issue_files(
                 while current and current not in visited:
                     visited.add(current)
                     files = repo_index.route_files(current_index, current) or []
-                    if (len(files) != 1 or not files[0].lower().endswith(".html")
+                    if (len(files) != 1
                             or bindings.get(files[0], current) != current or current not in observed):
                         raise ValueError("source de page absente ou ambigue")
                     bindings[files[0]] = current
@@ -28823,13 +28907,30 @@ def _deep_patch_issue_files(
                         break
                     current = declared
             for source_path, url in bindings.items():
-                if source_path in file_state:
-                    source = file_state[source_path]["content"]
-                else:
-                    fd = _github_api_get(_github_content_api_path(owner, repo_name, source_path),
-                                         token=token, params={"ref": fix_branch})
-                    source = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
-                document = _duplicate_html_document(source, allow_noindex=sitemap_noindex_urls is not None) if len(source) <= 80_000 else None
+                source, document = "", None
+                if source_path.lower().endswith((".html", ".htm")):
+                    if source_path in file_state:
+                        source = file_state[source_path]["content"]
+                    else:
+                        fd = _github_api_get(_github_content_api_path(owner, repo_name, source_path),
+                                             token=token, params={"ref": fix_branch})
+                        source = _b64.b64decode(fd.get("content", "").replace("\n", ""), validate=True).decode("utf-8")
+                    document = _duplicate_html_document(source, allow_noindex=sitemap_noindex_urls is not None) if len(source) <= 80_000 else None
+                if document is None:
+                    # Un .astro, un .vue, un gabarit Jinja n'ont pas de tete LITTERALE a relire, et
+                    # exiger du HTML brut faisait echouer ces familles sur sept stacks — en silence
+                    # (banc complet du 12/10/2026). Le temoin est alors la page SERVIE, relue
+                    # maintenant : elle doit dire encore ce que le crawl a observe. Sur un site en
+                    # HTML pur, la source EST le document : illisible, elle reste un refus.
+                    if str(current_index.get("stack") or "unknown") in ("static-html", "unknown"):
+                        raise ValueError("source HTML actuelle non litterale : %s" % source_path)
+                    temoin = (_page_servie_confirme(url, noindex=str(observed[url].get("meta_robots") or ""))
+                              if sitemap_noindex_urls is not None else
+                              _page_servie_confirme(url, canonical=_verification_url(observed[url].get("canonical")),
+                                                    indexable=sitemap_https_pairs is not None or sitemap_add_urls is not None))
+                    if not temoin:
+                        raise ValueError("page servie contradictoire : %s" % url)
+                    continue
                 if sitemap_noindex_urls is not None:
                     robots = document.get("robots", []) if document else []
                     if (len(robots) != 1 or robots[0][0] != "robots"
@@ -28855,25 +28956,40 @@ def _deep_patch_issue_files(
             if not isinstance(sha, str) or not sha.strip() or len(raw) > 80_000:
                 raise ValueError("source non verifiable")
             removal_urls = list(sitemap_error_statuses) if sitemap_error_statuses is not None else sitemap_noindex_urls
-            new, count = (sitemap_rewrite.add_urls(raw, sitemap_add_urls, _verification_url) if sitemap_add_urls is not None
-                          else sitemap_rewrite.upgrade_schemes(raw, sitemap_https_pairs, _verification_url) if sitemap_https_pairs is not None
-                          else _remove_sitemap_locs(raw, removal_urls, verified=True) if removal_urls is not None
-                          else _rewrite_sitemap_locs(raw, sitemap_pairs, canonical=True))
+            # Un sitemap Jekyll est une PAGE : un front matter (`permalink: /sitemap.xml`), puis le
+            # XML. L'analyseur XML, strict, n'y lisait rien et le correcteur concluait « rien a
+            # changer » sur des entrees bien presentes (banc du 12/10/2026). L'en-tete est mis de
+            # cote et recolle a l'identique ; un XML qui contient du Liquid, lui, s'engendre.
+            entete, xml = _entete_de_sitemap(raw)
+            if entete and re.search(r"\{\{|\{%", xml):
+                raise ValueError("sitemap engendre par le gabarit (Liquid)")
+            new, count = (sitemap_rewrite.add_urls(xml, sitemap_add_urls, _verification_url) if sitemap_add_urls is not None
+                          else sitemap_rewrite.upgrade_schemes(xml, sitemap_https_pairs, _verification_url) if sitemap_https_pairs is not None
+                          else _remove_sitemap_locs(xml, removal_urls, verified=True) if removal_urls is not None
+                          else _rewrite_sitemap_locs(xml, sitemap_pairs, canonical=True))
+            new = entete + new
             if not count:
                 return [], [path], [path], []
             if sitemap_error_statuses is not None and any(_sitemap_error_status(url) != code for url, code in sitemap_error_statuses.items()):
                 raise ValueError("statut HTTP actuel modifie ou non verifiable")
-            if sitemap_https_pairs is not None and any(not _sitemap_https_page(p["to"], _verification_url(observed[p["to"]].get("canonical"))) for p in sitemap_https_pairs):
+            # La page litterale passe le controle strict ; une page de framework, le temoin servi.
+            def _indexable_maintenant(url):
+                canonical = _verification_url(observed[url].get("canonical"))
+                return _sitemap_https_page(url, canonical) or _page_servie_confirme(url, canonical=canonical, indexable=True)
+            if sitemap_https_pairs is not None and any(not _indexable_maintenant(p["to"]) for p in sitemap_https_pairs):
                 raise ValueError("destination HTTPS actuelle modifiee ou non verifiable")
-            if sitemap_add_urls is not None and any(not _sitemap_https_page(url, _verification_url(observed[url].get('canonical'))) for url in sitemap_add_urls):
+            if sitemap_add_urls is not None and any(not _indexable_maintenant(url) for url in sitemap_add_urls):
                 raise ValueError('page a ajouter modifiee ou non verifiable')
             response = _github_api_put(_github_content_api_path(owner, repo_name, path), token=token,
                 json_body={"branch": fix_branch, "sha": sha, "message": "fix(seo): canonical sitemap cleanup\n\nGenerated by Noyaru",
                            "content": _b64.b64encode(new.encode("utf-8")).decode("ascii")})
             file_state[path] = {"content": new, "sha": str((response.get("content") or {}).get("sha") or "")}
             return [path], [], [path], []
-        except Exception:
-            return [], [path], [path], []
+        except Exception as exc:
+            # Un refus DIT sa raison. Muet, il passait pour « deja corrige » : sept stacks du banc
+            # du 12/10/2026 annoncaient un sitemap propre que le sitemap servi dementait.
+            logger.info("[correction] %s: sitemap refuse — %s", issue_key, exc)
+            return [], [path, "Sitemap refuse : %s" % exc], [path], []
     if canonical_masters is not None:
         # Preflight the complete group, including an existing master, before any PUT.
         # GitHub's per-file writes are not an atomic multi-file transaction.

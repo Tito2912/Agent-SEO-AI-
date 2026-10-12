@@ -208,13 +208,17 @@ for key in ordered:
     except Exception as exc:
         results.append((key, "ERREUR patch", str(exc)[:80], 0, 0))
         continue
-    verdict = "ok" if patched else ("AUCUN PATCH" if targets else "AUCUNE CIBLE")
+    # Un refus du correcteur se lit dans `skipped` : une phrase, pas un chemin. Sans cette
+    # lecture, un sitemap refuse en silence s'affichait « DEJA CORRIGE » (12/10/2026).
+    raisons = [s for s in skipped if isinstance(s, str) and " " in s]
+    verdict = "ok" if patched else ("refus" if raisons else "AUCUN PATCH" if targets else "AUCUNE CIBLE")
     if verdict == "AUCUN PATCH" and mecanique and _mordait_a_l_origine(prep["link_rewriter"], targets):
         verdict = "DEJA CORRIGE"
     scopes[key] = {"family_keys": sorted(fam), "impacted_urls": impacted_l,
                    "targets": targets, "patched": patched, "skipped": skipped,
                    "ai_files": ai, "capped_files": capped}
-    results.append((key, verdict, ",".join(targets[:2])[:70], len(patched), len(ai)))
+    results.append((key, verdict, (raisons[0] if verdict == "refus" else ",".join(targets[:2]))[:70],
+                    len(patched), len(ai)))
     print(f"  {verdict:<12} {key:<46} cibles={len(targets)} patches={len(patched)} ia={len(ai)}")
 
 json.dump({"branch": fix_branch, "results": results, "scopes": scopes,
