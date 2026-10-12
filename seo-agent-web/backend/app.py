@@ -27328,6 +27328,28 @@ def _prepare_issue_fix(
             out['extra_hint'] = _HEAD_HINTS['twitter_card_missing']
             if refused:
                 out['side_effects'] = '\nPages laissees sans correction Twitter faute de preuve : ' + ', '.join(refused)
+            if _strategie_carte_twitter(all_paths) == 'framework':
+                # Un framework n'a pas de page HTML litterale a lire : le plan protege refusait
+                # tout (« AUCUNE CIBLE » sur sept stacks du banc, 12/10/2026, contre 8/9 resolues
+                # le 17/09). Decision du proprietaire : le modele ECRIT la carte dans l'idiome du
+                # fichier, mais les VALEURS restent celles que le code a prouvees sur la page.
+                plan, laissees = _carte_twitter_par_fichier(urls, pages, all_paths)
+                if not plan:
+                    # Le plan protege reste en place : l'etape d'ecriture ne relit pas ce refus,
+                    # et sans lui elle passerait au modele libre.
+                    out['refusal'] = ('Aucune page sans carte Twitter n\'a de fichier propre dans le depot : '
+                                      'la carte se poserait dans une mise en page commune, a toutes les pages.')
+                    return out
+                out['twitter_missing_urls'] = None
+                out['twitter_values'] = plan
+                out['targets_override'] = list(plan)
+                # Les fichiers sont connus : chercher dans le depot ceux qui citent l'URL
+                # telechargerait l'archive pour un resultat que `targets_override` ecarte.
+                out['evidence'] = []
+                out['extra_hint'] = _HEAD_HINTS['twitter_card_missing'] + _consigne_twitter_imposee(plan)
+                if laissees:
+                    out['side_effects'] += ('\nPages laissees sans correction Twitter faute de fichier propre : '
+                                            + ', '.join(laissees))
         return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'viewport_not_set':
         try:
@@ -28107,6 +28129,106 @@ def _retirer_ajouts_non_prouves(new_content: str, old_content: str, path: str, *
     return sortie, [retirer[i] for i in sorted(retirer)]
 
 
+# ── La carte Twitter sur un framework : le modele ecrit, le code impose (12/10/2026) ──────────
+# Le plan protege (`twitter_card.py`) ne lit que du HTML litteral, ou une page Jinja composee.
+# Ailleurs — .astro, .vue, .svelte, .tsx, front matter — il refusait tout. Les valeurs, elles,
+# ne dependent pas de l'idiome : `twitter_card.addition` les tire de la page servie. Le modele
+# ne fait donc que les ECRIRE, et `_valeur_twitter_non_imposee` refuse le fichier s'il en a
+# ecrit une autre.
+_TWITTER_LITERAL_STACKS = frozenset({"static-html", "unknown", repo_index.STACK_PY_TEMPLATES})
+# Ce qu'une ligne ajoutee peut citer sans etre une valeur : les noms de balises, et les cles d'un
+# objet ecrites entre guillemets (JSON, front matter).
+_CLES_TWITTER = frozenset({
+    "twitter:card", "twitter:title", "twitter:description", "twitter:image", "twitter:image:src",
+    "twitter", "card", "title", "description", "image", "images", "name", "property", "content",
+})
+
+
+def _strategie_carte_twitter(all_paths: list[str]) -> str:
+    """« litteral » (le plan protege lit la page) ou « framework » (le modele ecrit, le code
+    impose les valeurs). Meme forme que `_served_lang_strategy` : la stack decide."""
+    return "litteral" if (repo_index.detect_stack(all_paths) or "unknown") in _TWITTER_LITERAL_STACKS else "framework"
+
+
+def _carte_twitter_par_fichier(urls: list[str], pages: list[dict[str, Any]] | None,
+                               all_paths: list[str]) -> tuple[dict[str, dict[str, str]], list[str]]:
+    """{fichier PROPRE a la page : {balise : valeur imposee}}, et les URL laissees faute de fichier.
+
+    Une carte absente d'une page se pose dans CETTE page : une URL sans fichier a elle seule —
+    route inconnue, fichier partage, deux pages pour un fichier — est laissee, pas devinee."""
+    try:
+        from . import twitter_card
+    except ImportError:
+        import twitter_card
+    index = repo_index.build_repo_index(all_paths)
+    plan: dict[str, dict[str, str]] = {}
+    laissees: list[str] = []
+    for url in urls:
+        rows = [twitter_card.snapshot(row) for row in pages or []
+                if isinstance(row, dict) and _verification_url(row.get("url")) == url]
+        valeurs = twitter_card.addition(rows[0]) if rows else None
+        fichiers = [f for f in repo_index.route_files(index, url) if f in all_paths]
+        if (not valeurs or len(fichiers) != 1 or repo_index.is_shared_path(index, fichiers[0])
+                or fichiers[0] in plan):
+            laissees.append(url)
+            continue
+        plan[fichiers[0]] = valeurs
+    return plan, laissees
+
+
+def _consigne_twitter_imposee(plan: dict[str, dict[str, str]]) -> str:
+    lignes = ["- %s : %s" % (fichier, " ; ".join('%s = "%s"' % (cle, valeur) for cle, valeur in valeurs.items()))
+              for fichier, valeurs in plan.items()]
+    return ("\nValeurs IMPOSEES, tirees de la page elle-meme et verifiees au crawl — a ecrire telles "
+            "quelles, dans l'idiome du fichier (balise <meta>, objet de metadonnees, front matter…) :\n"
+            + "\n".join(lignes)
+            + "\nN'ajoute QUE ces balises twitter:*, avec EXACTEMENT ces valeurs. N'invente, ne "
+              "reformule et ne modifie aucune autre valeur.")
+
+
+def _litteraux(texte: str) -> list[str]:
+    """Les chaines entre guillemets (" ' `) d'un texte, echappements resolus."""
+    sortie: list[str] = []
+    i, n = 0, len(texte)
+    while i < n:
+        quote = texte[i]
+        if quote not in "\"'`":
+            i += 1
+            continue
+        j, morceaux = i + 1, []
+        while j < n and texte[j] != quote:
+            if texte[j] == "\\" and j + 1 < n:
+                morceaux.append(texte[j + 1])
+                j += 2
+                continue
+            morceaux.append(texte[j])
+            j += 1
+        if j >= n:
+            break
+        sortie.append("".join(morceaux))
+        i = j + 1
+    return sortie
+
+
+def _valeur_twitter_non_imposee(new_content: str, old_content: str, imposees: dict[str, str]) -> str:
+    """'' si les lignes AJOUTEES ne citent que des valeurs imposees, des noms de balises, ou ce
+    que le fichier contenait deja ; sinon la premiere valeur etrangere.
+
+    Chaque chaine litterale compte, pas seulement celles d'une ligne qui dit « twitter » : dans un
+    objet de metadonnees, `description: '...'` est sur sa propre ligne."""
+    import html as _html
+    permises = {_html.unescape(v) for v in imposees.values()} | set(imposees) | _CLES_TWITTER
+    ancien = _html.unescape(old_content)
+    lignes = new_content.splitlines()
+    for i in _lignes_ajoutees(new_content, old_content):
+        for litteral in _litteraux(lignes[i]):
+            valeur = _html.unescape(litteral)
+            if valeur in permises or valeur in ancien:
+                continue
+            return "valeur non imposee : " + valeur[:80]
+    return ""
+
+
 _TITRE_BALISE_RE = re.compile(r"<title>(.*?)</title>", re.I | re.S)
 _TITRE_BLOC_RE = re.compile(r"\{%-?\s*block\s+title\s*-?%\}(.*?)\{%-?\s*endblock", re.S)
 
@@ -28296,6 +28418,9 @@ def _deep_patch_issue_files(
     sitemap_add_urls: list[str] | None = None,
     viewport_urls: list[str] | None = None,
     twitter_missing_urls: list[str] | None = None,
+    # Fichier -> {balise : valeur} : la carte Twitter qu'un framework doit recevoir, valeurs
+    # imposees par le code. Voir `_carte_twitter_par_fichier`.
+    twitter_values: dict[str, dict[str, str]] | None = None,
     hreflang_lang_urls: list[str] | None = None,
     hreflang_canonical_pairs: list[dict[str, str]] | None = None,
     hreflang_drop_items: list[dict[str, str]] | None = None,
@@ -29243,6 +29368,14 @@ def _deep_patch_issue_files(
         for _n in (_len_notes + _scheme_notes + _quote_notes + _dup_notes + _lang_notes
                    + _master_notes + _og_notes):
             logger.info("[correction] %s: %s — %s", issue_key, path, _n)
+        # La carte Twitter d'un framework : le modele l'a ecrite, mais pas avec ses valeurs.
+        # Retirer la ligne casserait un objet de metadonnees ; on refuse le fichier, et ca se voit.
+        if twitter_values is not None:
+            _etrangere = _valeur_twitter_non_imposee(new_content, raw, twitter_values.get(path) or {})
+            if _etrangere:
+                logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _etrangere)
+                skipped.append(path)
+                continue
         # LA SEULE QUESTION EST « LE CONTENU A-T-IL CHANGE ? », et le drapeau `no_change` ne
         # savait pas y repondre. Il dit ce que le REECRIVEUR a fait, pas ce que le fichier est
         # devenu depuis — or les garde-fous qui suivent ecrivent, eux aussi. Le tester ici
@@ -29431,6 +29564,7 @@ def _apply_prepared_issue_fix(
                 sitemap_add_urls=prep.get('sitemap_add_urls'),
                 viewport_urls=prep.get('viewport_urls'),
                 twitter_missing_urls=prep.get('twitter_missing_urls'),
+                twitter_values=prep.get('twitter_values'),
                 hreflang_lang_urls=prep.get('hreflang_lang_urls'),
                 hreflang_canonical_pairs=prep.get('hreflang_canonical_pairs'),
                 hreflang_drop_items=prep.get('hreflang_drop_items'),
