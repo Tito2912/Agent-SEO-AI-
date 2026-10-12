@@ -8,8 +8,14 @@ from starlette.requests import Request
 from urllib.parse import quote
 
 from backend import app as m
-from tests.test_corrector_operational import harness, HTML, URL  # noqa: F401
-from tests.test_corrector_customer_workflow import customer  # noqa: F401
+from tests import test_corrector_customer_workflow as _workflow
+from tests import test_corrector_operational as _operational
+from tests.test_corrector_operational import HTML, URL
+
+# Shared fixtures are bound by assignment, not imported by name: Ruff reports an imported name
+# that a test parameter then shadows as F811, which failed CI on main three times.
+harness = _operational.harness
+customer = _workflow.customer
 
 MANUAL_KEYS = sorted(key for key in m.dash.ISSUE_CATALOG if not m._github_issue_auto_fixable(key))
 EXTRA_KEYS = ["some_future_issue_key", "keyword_rewrite", m._KEYWORD_REWRITE_KEY, "", "SLOW_PAGE", " slow_page ",

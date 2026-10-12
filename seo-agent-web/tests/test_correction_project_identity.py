@@ -3,7 +3,11 @@
 import pytest
 
 from backend import app as m
-from tests.test_corrector_operational import harness, HTML, URL  # noqa: F401
+from tests import test_corrector_operational as _operational
+from tests.test_corrector_operational import HTML, URL
+
+# Bound by assignment, not imported by name: see test_correction_capability_policy.py (F811).
+harness = _operational.harness
 
 
 def setup_viewport(state, monkeypatch):
