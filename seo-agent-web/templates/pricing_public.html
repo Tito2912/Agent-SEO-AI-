@@ -9,6 +9,7 @@
 <meta property="og:description" content="Les quotas réels de chaque plan, fonction par fonction." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
+<meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) if url_for is defined else '/static/og-image.png' }}" />
 {# Meme grille que la home (`_tarifs.html`), plus la FAQ. Refonte du 29/09/2026 : plan Free
    affiche, quotas reels par fonction, plus de badge « Populaire ». #}
 <style>
