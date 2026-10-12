@@ -1,21 +1,21 @@
 +++
 url = "/gauntlet/mixed-css"
-title = 'Page de test du parcours d obstacles Noyaru'
+title = 'Parcours Noyaru : mixed css'
 html_attrs = ' lang="fr"'
 raw_head = '''
   <!-- FAMILLE VISEE : https_page_links_to_http_css — feuille de style chargee en http. -->
   <meta name="viewport" content="width=device-width" />
-  <title>Page de test du parcours d'obstacles Noyaru</title>
-  <meta name="description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
+  <title>Parcours Noyaru : mixed css</title>
+  <meta name="description" content="Page « mixed css » du parcours d'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche." />
   <link rel="canonical" href="https://noyaru-stack-hugo.netlify.app/gauntlet/mixed-css" />
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Page de test du parcours d'obstacles Noyaru" />
-  <meta property="og:description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
+  <meta property="og:title" content="Parcours Noyaru : mixed css" />
+  <meta property="og:description" content="Page « mixed css » du parcours d'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche." />
   <meta property="og:url" content="https://noyaru-stack-hugo.netlify.app/gauntlet/mixed-css" />
   <meta property="og:image" content="https://noyaru-stack-hugo.netlify.app/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Page de test du parcours d'obstacles Noyaru" />
-  <meta name="twitter:description" content="Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl." />
+  <meta name="twitter:title" content="Parcours Noyaru : mixed css" />
+  <meta name="twitter:description" content="Page « mixed css » du parcours d'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche." />
   <meta name="twitter:image" content="https://noyaru-stack-hugo.netlify.app/og.png" />
   <link rel="stylesheet" href="http://noyaru-stack-hugo.netlify.app/style.css" />
 '''

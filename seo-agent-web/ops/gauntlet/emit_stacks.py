@@ -287,7 +287,8 @@ def body_bits(spec: Spec, site: str) -> list[str]:
     # le banc mesurait une difficulte qu'il avait lui-meme fabriquee.
     #
     # Le TITRE et la DESCRIPTION restent partages : ce sont eux, l'anomalie visee.
-    sujet = spec.slug.replace("-", " ")
+    # Sauf pour de VRAIES jumelles (`spec.jumelle`), dont le doublon EST l'anomalie : meme corps.
+    sujet = spec.jumelle or spec.slug.replace("-", " ")
     if spec.h1 >= 1:
         out.append(f"<h1>Parcours d'obstacles : {sujet}</h1>")
     if spec.h1 >= 2:

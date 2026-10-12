@@ -11,6 +11,7 @@ import base64
 import datetime as dt
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -65,6 +66,74 @@ def _impacted_routes(report: dict, family: str) -> set[str]:
     return {_route(url) for url in urls}
 
 
+# Familles que l'apercu ne reproduit pas — son noindex injecte les sort du score — mais que le
+# HTML observe juge page par page. 12/10/2026 : elles restaient « unverified » sur les dix stacks.
+_PAGE_FIELD_FAMILIES = frozenset({"viewport_not_set", "x_default_hreflang_missing",
+                                  "hreflang_annotation_invalid", "duplicate_titles",
+                                  "duplicate_meta_descriptions"})
+# La grammaire du crawler (`HREFLANG_RE` dans seo_audit.py), recopiee : c'est elle qui leve la
+# famille, c'est donc elle qui dit si l'annotation corrigee est valide.
+_HREFLANG_CODE = re.compile(r"^(x-default|[a-z]{2}(-[a-z0-9]{2,8})*)$", re.IGNORECASE)
+# Familles du sitemap. Sur l'apercu, robots.txt designe le sitemap de PRODUCTION (URL absolue,
+# c'est correct) : le crawl de l'apercu ne voit donc jamais le sitemap corrige. On le LIT.
+_SITEMAP_FAMILIES = frozenset({"sitemap_http_urls_for_https", "sitemap_3xx_redirect",
+                               "sitemap_4xx_page", "sitemap_noindex_page",
+                               "sitemap_non_canonical_page", "indexable_page_not_in_sitemap"})
+_LOC = re.compile(r"<loc>\s*([^<]+?)\s*</loc>", re.I)
+
+
+def sitemap_checks(production: dict, baseline: dict, corrected: dict, families: set[str], fetch) -> list[dict]:
+    """Le sitemap SERVI par chaque apercu, juge entree par entree contre les URL que la
+    production avait levees. `fetch(url) -> str | None` ; sans lui, rien n'est juge."""
+    if fetch is None:
+        return []
+    locs = {}
+    for name, report in (("baseline", baseline), ("corrected", corrected)):
+        base_url = str(report.get("meta", {}).get("base_url") or "").rstrip("/")
+        text = fetch(base_url + "/sitemap.xml") if base_url.startswith("https://") else None
+        locs[name] = set(_LOC.findall(text)) if isinstance(text, str) else None
+    after_pages = _html_pages(corrected)
+    checks = []
+    for family in sorted(families & _SITEMAP_FAMILIES):
+        urls = set()
+        for key, block in production.get("issues", {}).items():
+            if base(key) == family:
+                from backend.audit_dashboard import extract_impacted_pages
+                urls.update(extract_impacted_pages(key, block))
+        observations = []
+        for url in sorted(urls):
+            row = {"url": url, "baseline_defect_observed": False, "after_correct": None}
+            if locs["baseline"] is not None and locs["corrected"] is not None:
+                before, after = locs["baseline"], locs["corrected"]
+                if family == "indexable_page_not_in_sitemap":
+                    row["baseline_defect_observed"] = url not in before
+                    row["after_correct"] = url in after
+                else:
+                    row["baseline_defect_observed"] = url in before
+                    page = after_pages.get(_route(url))
+                    # Une page devenue canonique d'elle-meme n'a plus a quitter le sitemap.
+                    healed = bool(family == "sitemap_non_canonical_page" and page
+                                  and _route(str(page.get("canonical") or "")) == _route(url))
+                    row["after_correct"] = url not in after or healed
+                    if family == "sitemap_http_urls_for_https":
+                        row["after_correct"] = url not in after and "https://" + url.removeprefix("http://") in after
+            observations.append(row)
+        complete = bool(observations) and all(o["baseline_defect_observed"] and o["after_correct"] is not None
+                                              for o in observations)
+        verdict = ("unverified" if not complete else "resolved_on_served_sitemap"
+                   if all(o["after_correct"] for o in observations) else "still_present")
+        checks.append({"family": family, "verdict": verdict, "observations": observations})
+    return checks
+
+
+def _fetch_text(url: str) -> str | None:
+    try:
+        response = requests.get(url, timeout=30)
+        return response.text if response.status_code == 200 else None
+    except requests.RequestException:
+        return None
+
+
 def html_checks(production: dict, baseline: dict, corrected: dict, families: set[str]) -> list[dict]:
     """Observe literal defects that the preview's injected noindex disables in the scorer."""
     pp, bp, ap = map(_html_pages, (production, baseline, corrected))
@@ -73,7 +142,7 @@ def html_checks(production: dict, baseline: dict, corrected: dict, families: set
     checks = []
     for family in sorted(families & {"served_html_lang_mismatch", "canonical_points_to_4xx",
                                      "https_page_has_internal_links_to_http", "description",
-                                     "multiple_meta_description_tags"}):
+                                     "multiple_meta_description_tags", *_PAGE_FIELD_FAMILIES}):
         routes = _impacted_routes(production, family)
         counts = {}
         for key, block in production.get("issues", {}).items():
@@ -112,6 +181,26 @@ def html_checks(production: dict, baseline: dict, corrected: dict, families: set
                                                 and parsed.scheme == "https"
                                                 and parsed.netloc in {production_host, preview_host}
                                                 and _route(canonical) in ap)
+                elif family == "viewport_not_set":
+                    count = lambda p: p.get("meta_viewport_tag_count")  # noqa: E731
+                    row["baseline_defect_observed"] = bool(count(prod) == 0 and count(old) == 0)
+                    row["after_correct"] = bool(count(new) == 1
+                                                and "width=device-width" in str(new.get("meta_viewport") or ""))
+                elif family == "x_default_hreflang_missing":
+                    has = lambda p: "x-default" in {str(c).lower() for c in (p.get("hreflang") or {})}  # noqa: E731
+                    row["baseline_defect_observed"] = bool(prod.get("hreflang") and not has(prod) and not has(old))
+                    row["after_correct"] = has(new)
+                elif family == "hreflang_annotation_invalid":
+                    invalid = lambda p: {c for c in (p.get("hreflang") or {}) if not _HREFLANG_CODE.match(str(c))}  # noqa: E731
+                    row["baseline_defect_observed"] = bool(invalid(prod) and invalid(old) == invalid(prod))
+                    row["after_correct"] = bool(new.get("hreflang") and not invalid(new))
+                elif family in ("duplicate_titles", "duplicate_meta_descriptions"):
+                    field = "title" if family == "duplicate_titles" else "meta_description"
+                    value = lambda p: str(p.get(field) or "").strip()  # noqa: E731
+                    elsewhere = lambda pages, here: {value(p) for r, p in pages.items() if r != here}  # noqa: E731
+                    row["baseline_defect_observed"] = bool(value(old) and value(old) == value(prod)
+                                                           and value(old) in elsewhere(bp, route))
+                    row["after_correct"] = bool(value(new) and value(new) not in elsewhere(ap, route))
                 elif family == "https_page_has_internal_links_to_http":
                     links = lambda p: set(p.get("internal_links", []) + p.get("external_links", []))  # noqa: E731
                     broken = {url for url in links(prod) if urlsplit(url).scheme == "http"
@@ -149,7 +238,7 @@ def html_checks(production: dict, baseline: dict, corrected: dict, families: set
     return checks
 
 
-def compare(production: Path, baseline: Path, corrected: Path, run: dict) -> dict:
+def compare(production: Path, baseline: Path, corrected: Path, run: dict, fetch=None) -> dict:
     from backend import audit_dashboard as dash
 
     prod, before, after = load(production), load(baseline), load(corrected)
@@ -199,7 +288,7 @@ def compare(production: Path, baseline: Path, corrected: Path, run: dict) -> dic
         added = _impacted_routes(after, family) - _impacted_routes(before, family)
         if added:
             introduced.append({"family": family, "routes": sorted(added)})
-    direct = html_checks(prod, before, after, set(targeted))
+    direct = html_checks(prod, before, after, set(targeted)) + sitemap_checks(prod, before, after, set(targeted), fetch)
     if reasons:
         for check in direct:
             check["verdict"] = "unverified"
@@ -378,7 +467,7 @@ def cycle(m, token: str, stack: str, root: Path, *, max_pages: int = 90,
         if main_after["object"]["sha"] != result["main_sha"]:
             raise RuntimeError("Fixture main changed during validation; comparison invalid.")
         result["comparison"] = compare(before, workdir / "baseline/report.json",
-                                       workdir / "correction/report.json", run)
+                                       workdir / "correction/report.json", run, fetch=_fetch_text)
         comparison = result["comparison"]
         result["status"] = ("unverified" if not comparison["comparable"] else "regression_detected"
                             if comparison["increases"] or comparison["new_issue_routes"] else "measured")

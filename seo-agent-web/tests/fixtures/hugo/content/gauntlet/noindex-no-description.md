@@ -1,19 +1,19 @@
 +++
 url = "/gauntlet/noindex-no-description"
-title = 'Page de test du parcours d obstacles Noyaru'
+title = 'Parcours Noyaru : noindex no description'
 html_attrs = ' lang="fr"'
 raw_head = '''
   <!-- FAMILLE VISEE : missing_meta_description — page noindex ne declarant aucune meta description. -->
   <meta name="viewport" content="width=device-width" />
-  <title>Page de test du parcours d'obstacles Noyaru</title>
+  <title>Parcours Noyaru : noindex no description</title>
   <meta name="robots" content="noindex, follow" />
   <link rel="canonical" href="https://noyaru-stack-hugo.netlify.app/gauntlet/noindex-no-description" />
   <meta property="og:type" content="article" />
-  <meta property="og:title" content="Page de test du parcours d'obstacles Noyaru" />
+  <meta property="og:title" content="Parcours Noyaru : noindex no description" />
   <meta property="og:url" content="https://noyaru-stack-hugo.netlify.app/gauntlet/noindex-no-description" />
   <meta property="og:image" content="https://noyaru-stack-hugo.netlify.app/og.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Page de test du parcours d'obstacles Noyaru" />
+  <meta name="twitter:title" content="Parcours Noyaru : noindex no description" />
   <meta name="twitter:image" content="https://noyaru-stack-hugo.netlify.app/og.png" />
 '''
 raw_body = '''

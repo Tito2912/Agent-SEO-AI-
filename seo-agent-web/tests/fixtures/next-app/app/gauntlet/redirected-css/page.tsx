@@ -1,22 +1,22 @@
 // FAMILLE VISEE : css_redirects + page_has_redirected_css
 // feuille de style chargee depuis une URL qui redirige.
 export const metadata = {
-  title: 'Page de test du parcours d\'obstacles Noyaru',
-  description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
+  title: 'Parcours Noyaru : redirected css',
+  description: 'Page « redirected css » du parcours d\'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche.',
   alternates: {
     canonical: 'https://noyaru-stack-next-app.netlify.app/gauntlet/redirected-css',
   },
   openGraph: {
     type: 'article',
-    title: 'Page de test du parcours d\'obstacles Noyaru',
-    description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
+    title: 'Parcours Noyaru : redirected css',
+    description: 'Page « redirected css » du parcours d\'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche.',
     url: 'https://noyaru-stack-next-app.netlify.app/gauntlet/redirected-css',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Page de test du parcours d\'obstacles Noyaru',
-    description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
+    title: 'Parcours Noyaru : redirected css',
+    description: 'Page « redirected css » du parcours d\'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche.',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
 };

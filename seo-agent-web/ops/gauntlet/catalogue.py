@@ -22,11 +22,19 @@ from dataclasses import dataclass, field
 TITLE = "Page de test du parcours d'obstacles Noyaru"
 DESC = ("Page du parcours d'obstacles : elle est correcte partout sauf sur un point precis, "
         "afin que la famille visee soit la seule a se declencher au crawl.")
+# PAR DEFAUT, chaque page a SON titre et SA description, tires de son nom (voir
+# `Spec.__post_init__`). Jusqu'au 12/10/2026 toutes partageaient TITLE et DESC : les familles
+# `duplicate_titles` et `duplicate_meta_descriptions` touchaient alors une trentaine de pages par
+# stack au lieu des deux paires prevues, et ne pouvaient jamais se resoudre a un plafond de banc.
+PROPRE = "\x00propre"
 
 # duplicate_titles / duplicate_meta_descriptions ont besoin de DEUX pages identiques.
 DUP_T = "Deux pages qui portent exactement le meme titre pour le test"
 DUP_D = ("Deux pages qui portent exactement la meme meta description, afin de declencher la "
          "famille des doublons.")
+# Les jumelles ont la LEUR : partager DUP_D reliait les deux groupes par leurs metadonnees.
+DUP_J = ("Deux pages jumelles au contenu identique et sans canonical declare : le doublon que "
+         "la famille des pages dupliquees doit trouver.")
 
 LONG_T = ("Un titre volontairement beaucoup trop long pour la fenetre visee par le correcteur, "
           "ecrit pour depasser nettement le plafond")
@@ -48,8 +56,8 @@ class Spec:
     family: str
     note: str
 
-    title: str | None = TITLE
-    desc: str | None = DESC
+    title: str | None = PROPRE
+    desc: str | None = PROPRE
     # None = pas d'attribut lang du tout ; sinon la valeur telle quelle (y compris invalide).
     lang: str | None = "fr"
     # None = canonical vers soi-meme ; "" = aucun canonical ; sinon un slug du parcours, ou une
@@ -64,6 +72,9 @@ class Spec:
 
     second_title: bool = False
     second_desc: bool = False
+    # Groupe de VRAIES jumelles : meme h1, meme corps, seule l'URL change. Vide = un corps propre
+    # a la page, la regle depuis le 14/09/2026 (voir `emit_stacks.body_bits`).
+    jumelle: str = ""
 
     # (code de langue, cible) — cible = slug du parcours ou URL absolue.
     hreflang: tuple[tuple[str, str], ...] = ()
@@ -92,6 +103,17 @@ class Spec:
     # Renseigne par l'emetteur quand la stack ne peut pas exprimer la spec (voir le module
     # emetteur) — jamais ecrit a la main ici.
     tags: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        # Titre 15-70 et description 100-160 caracteres, pour tout nom du parcours : ces pages
+        # doivent rester correctes sur ces deux points (tests/test_jumelles_du_banc.py le verifie).
+        sujet = self.slug.replace("-", " ")
+        if self.title == PROPRE:
+            object.__setattr__(self, "title", "Parcours Noyaru : " + sujet)
+        if self.desc == PROPRE:
+            object.__setattr__(self, "desc", (
+                "Page « %s » du parcours d'obstacles : correcte partout sauf sur un point "
+                "precis, pour que seule la famille visee se declenche." % sujet))
 
 
 CATALOGUE: list[Spec] = [
@@ -140,11 +162,18 @@ CATALOGUE: list[Spec] = [
     Spec("canonical-404", "canonical_points_to_4xx",
          "canonical vers une page absente, listee au sitemap pour que le crawl constate le 404.",
          canonical="/page-absente"),
+    # De VRAIES jumelles, corps compris. Jusqu'au 12/10/2026 elles ne partageaient que titre et
+    # description — leur h1 et leur texte citaient leur propre nom — et le correcteur, qui exige
+    # depuis le 04/10 la preuve d'un CONTENU identique avant de poser un canonical, les refusait
+    # sur les dix stacks. A raison : un titre partage ne prouve pas un doublon. C'etait le banc
+    # qui ne portait pas l'anomalie qu'il annoncait.
     Spec("no-canonical-a", "duplicate_pages_without_canonical",
          "jumelle de no-canonical-b, aucune des deux ne declare de canonical.",
-         canonical="", title="Deux pages jumelles sans canonical declare", desc=DUP_D),
+         canonical="", title="Deux pages jumelles sans canonical declare", desc=DUP_J,
+         jumelle="pages jumelles"),
     Spec("no-canonical-b", "duplicate_pages_without_canonical", "jumelle de no-canonical-a.",
-         canonical="", title="Deux pages jumelles sans canonical declare", desc=DUP_D),
+         canonical="", title="Deux pages jumelles sans canonical declare", desc=DUP_J,
+         jumelle="pages jumelles"),
 
     # ── C. hreflang ───────────────────────────────────────────────────────────────────────
     # `zz-ZZ` etait un mauvais choix, mesure : le controle du crawler est SYNTAXIQUE
@@ -180,8 +209,9 @@ CATALOGUE: list[Spec] = [
     # Open Graph complet. C'est la PREMIERE branche qu'il faut viser — une balise twitter
     # presente sans la carte. La note qui declarait la famille inexercable ne lisait que la
     # seconde. Mesure du 12/09/2026.
+    # TITLE et DESC explicites : `twitter_card_cycle.py` (05/10/2026) relit ces valeurs-la.
     Spec("twitter-missing", "twitter_card_missing",
-         "balises twitter presentes mais twitter:card absente.", tw="no-card"),
+         "balises twitter presentes mais twitter:card absente.", tw="no-card", title=TITLE, desc=DESC),
 
     # ── E. http / https et doubles barres ─────────────────────────────────────────────────
     Spec("mixed-image", "https_page_links_to_http_image + https_http_mixed_content",

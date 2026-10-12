@@ -9,19 +9,19 @@ export default function Page() {
       <Head>
         <meta name="viewport" content="width=device-width" />
         <title>Deux pages jumelles sans canonical declare</title>
-        <meta name="description" content="Deux pages qui portent exactement la meme meta description, afin de declencher la famille des doublons." />
+        <meta name="description" content="Deux pages jumelles au contenu identique et sans canonical declare : le doublon que la famille des pages dupliquees doit trouver." />
         <meta property="og:type" content="article" />
         <meta property="og:title" content="Deux pages jumelles sans canonical declare" />
-        <meta property="og:description" content="Deux pages qui portent exactement la meme meta description, afin de declencher la famille des doublons." />
+        <meta property="og:description" content="Deux pages jumelles au contenu identique et sans canonical declare : le doublon que la famille des pages dupliquees doit trouver." />
         <meta property="og:url" content="https://noyaru-stack-next-pages.netlify.app/gauntlet/no-canonical-b" />
         <meta property="og:image" content="https://noyaru-stack-next-pages.netlify.app/og.png" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Deux pages jumelles sans canonical declare" />
-        <meta name="twitter:description" content="Deux pages qui portent exactement la meme meta description, afin de declencher la famille des doublons." />
+        <meta name="twitter:description" content="Deux pages jumelles au contenu identique et sans canonical declare : le doublon que la famille des pages dupliquees doit trouver." />
         <meta name="twitter:image" content="https://noyaru-stack-next-pages.netlify.app/og.png" />
       </Head>
-      <h1>Parcours d'obstacles : no canonical b</h1>
-      <p>Cette page du parcours traite le cas « no canonical b ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
+      <h1>Parcours d'obstacles : pages jumelles</h1>
+      <p>Cette page du parcours traite le cas « pages jumelles ». Cette page appartient au parcours d'obstacles de la fixture. Elle sert a provoquer UNE anomalie et une seule.</p>
       <p><a href="/">Retour a l accueil</a></p>
     </main>
   );

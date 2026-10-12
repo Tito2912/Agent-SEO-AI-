@@ -1,20 +1,20 @@
 // FAMILLE VISEE : missing_meta_description
 // page noindex ne declarant aucune meta description.
 export const metadata = {
-  title: 'Page de test du parcours d\'obstacles Noyaru',
+  title: 'Parcours Noyaru : noindex no description',
   robots: 'noindex, follow',
   alternates: {
     canonical: 'https://noyaru-stack-next-app.netlify.app/gauntlet/noindex-no-description',
   },
   openGraph: {
     type: 'article',
-    title: 'Page de test du parcours d\'obstacles Noyaru',
+    title: 'Parcours Noyaru : noindex no description',
     url: 'https://noyaru-stack-next-app.netlify.app/gauntlet/noindex-no-description',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Page de test du parcours d\'obstacles Noyaru',
+    title: 'Parcours Noyaru : noindex no description',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
 };

@@ -2,21 +2,21 @@
 // titre de moins de 15 caracteres.
 export const metadata = {
   title: 'Test',
-  description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
+  description: 'Page « title too short » du parcours d\'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche.',
   alternates: {
     canonical: 'https://noyaru-stack-next-app.netlify.app/gauntlet/title-too-short',
   },
   openGraph: {
     type: 'article',
     title: 'Test',
-    description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
+    description: 'Page « title too short » du parcours d\'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche.',
     url: 'https://noyaru-stack-next-app.netlify.app/gauntlet/title-too-short',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Test',
-    description: 'Page du parcours d\'obstacles : elle est correcte partout sauf sur un point precis, afin que la famille visee soit la seule a se declencher au crawl.',
+    description: 'Page « title too short » du parcours d\'obstacles : correcte partout sauf sur un point precis, pour que seule la famille visee se declenche.',
     images: ['https://noyaru-stack-next-app.netlify.app/og.png'],
   },
 };
