@@ -26152,7 +26152,21 @@ def _rewrite_served_lang(content: str) -> tuple[str, int]:
     return content.replace(tag.group(0), fixed, 1), 1
 
 
-def _rewrite_served_lang_gabarit(content: str, path: str, lire: "Callable[[str], str | None]") -> tuple[str, int]:
+def _reecriveur_lang_gabarit(lang_du_site: str) -> "Callable[..., tuple[str, int]]":
+    """Le reecriveur d'une page a gabarits Python SANS langue (`html_lang_attribute_missing`,
+    `hreflang_defined_but_html_lang_missing`) : la langue que la page dit d'elle-meme, sinon
+    celle que le crawl mesure sur le site. Deterministe : le 12/10/2026, sur le banc Flask, le
+    modele avait ecrit `{% block html_attrs %}lang="fr"{% endblock %}` SANS l'espace qui le
+    separe de `<html` — la page servie disait `<htmllang="fr">`, et n'avait toujours pas de
+    langue. `jinja_heritage.served_lang` pose l'espace, et relit la langue rendue."""
+    def reecrire(content: str, path: str, lire: "Callable[[str], str | None]") -> tuple[str, int]:
+        return _rewrite_served_lang_gabarit(content, path, lire, lang_par_defaut=lang_du_site)
+    reecrire.lit_les_gabarits = True  # type: ignore[attr-defined]
+    return reecrire
+
+
+def _rewrite_served_lang_gabarit(content: str, path: str, lire: "Callable[[str], str | None]",
+                                 lang_par_defaut: str = "") -> tuple[str, int]:
     """`_rewrite_served_lang` pour une page a gabarits Python : meme preuve, autre endroit.
 
     La langue que la page dit d'elle-meme se lit comme sur une page HTML — canonical et hreflang
@@ -26166,7 +26180,7 @@ def _rewrite_served_lang_gabarit(content: str, path: str, lire: "Callable[[str],
     except ImportError:
         import jinja_heritage
     lecteur = lambda p: content if p == path else lire(p)  # noqa: E731
-    lang = _self_declared_lang(jinja_heritage.literal_view(path, lecteur) or content)
+    lang = _self_declared_lang(jinja_heritage.literal_view(path, lecteur) or content) or lang_par_defaut
     servie = jinja_heritage.rendered_lang(path, lecteur)
     if not lang or (servie and servie.split("-")[0] == lang.split("-")[0]):
         return content, 0
@@ -27409,6 +27423,14 @@ def _prepare_issue_fix(
             if refused:
                 out['side_effects'] = '\nPages laissees sans remplacement hreflang faute de groupe verifie : ' + ', '.join(refused)
         return out
+    if (str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable')
+            in ('html_lang_attribute_missing', 'hreflang_defined_but_html_lang_missing')
+            and repo_index.detect_stack(all_paths) == repo_index.STACK_PY_TEMPLATES):
+        # Une page a gabarits Python sans langue : la page surcharge le bloc de langue de sa
+        # mise en page, sans modele. Voir `_reecriveur_lang_gabarit`.
+        out['link_rewriter'] = _reecriveur_lang_gabarit(_dominant_site_lang(pages))
+        out['rewriter_ai_fallback'] = False
+        return out
     if str(issue_key or '').strip().lower().removesuffix('_not_indexable').removesuffix('_indexable') == 'hreflang_defined_but_html_lang_missing':
         try:
             from . import hreflang_lang
@@ -27922,6 +27944,22 @@ def _prepare_issue_fix(
             out["duplicate_refusals"] = _refuses
             if _refuses:
                 out["side_effects"] = "\nPages laissees sans correction canonical faute de groupe verifie : " + ", ".join(_refuses)
+            if (repo_index.detect_stack(all_paths) or "unknown") not in ("static-html", "unknown"):
+                # Le plan protege ecrit dans du HTML litteral ; un framework ou un gabarit Jinja
+                # le faisait refuser sur huit stacks (banc complet du 12/10/2026). Le maitre, lui,
+                # est deja tranche par le code : le modele ne fait qu'ECRIRE ce canonical dans
+                # l'idiome du fichier, et `_valeur_non_imposee` refuse toute autre URL. Comme
+                # pour le plan protege, le groupe entier ou rien.
+                _plan, _laissees = _plan_par_fichier(sorted(_maitres), all_paths, lambda u: {"canonical": _maitres[u]})
+                if _plan and not _laissees:
+                    out["canonical_masters"] = None
+                    out["valeurs_imposees"] = _plan
+                    out["targets_override"] = list(_plan)
+                    out["evidence"] = []
+                    out["extra_hint"] += _consigne_valeurs_imposees(_plan, "canonical")
+                else:
+                    out["refusal"] = ("Groupe de jumelles incomplet dans le depot : chaque page doit avoir "
+                                      "son propre fichier pour recevoir le canonical vers la maitresse.")
         else:
             out["refusal"] = ("Aucun groupe complet de pages jumelles suffisamment observees. "
                               "Un titre ou une description partages ne prouvent pas un contenu duplique ; "
@@ -29608,6 +29646,20 @@ def _deep_patch_issue_files(
             if _muets:
                 logger.warning("[correction] %s: %s refuse — champ(s) %s ignore(s) par les gabarits",
                                issue_key, path, ", ".join(_muets))
+                skipped.append(path)
+                continue
+        # Une page Jinja recomposee ne doit pas coller un attribut a `<html` : le 12/10/2026, le
+        # modele a ecrit `{% block html_attrs %}lang="fr"{% endblock %}` sous une mise en page
+        # `<html{% block html_attrs %}…>`, et la page servie disait `<htmllang="fr">`.
+        if str((index or {}).get("stack") or "") == repo_index.STACK_PY_TEMPLATES and new_content != raw:
+            try:
+                from . import jinja_heritage
+            except ImportError:
+                import jinja_heritage
+            _rendu = jinja_heritage.compose(path, lambda p: new_content if p == path else _lire_du_depot(p))
+            if _rendu and re.search(r"<html(?=[^\s>/])", _rendu[0], re.I):
+                logger.warning("[correction] %s: %s refuse — attribut colle a <html> dans la page rendue",
+                               issue_key, path)
                 skipped.append(path)
                 continue
         # LA SEULE QUESTION EST « LE CONTENU A-T-IL CHANGE ? », et le drapeau `no_change` ne
