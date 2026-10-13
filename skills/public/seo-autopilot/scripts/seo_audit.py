@@ -1083,6 +1083,37 @@ def _allow_private_hosts() -> bool:
     return str(os.environ.get("SEO_AUDIT_ALLOW_PRIVATE_HOSTS") or "").strip().lower() in {"1", "true", "yes"}
 
 
+# Les familles d'echec d'une page qui n'a JAMAIS repondu, de la plus precise a la plus vague.
+# Le texte vient de Playwright (`net::ERR_…`) ou de requests (`NameResolutionError`, …).
+_ECHECS_SANS_REPONSE = (
+    ("dns", ("err_name_not_resolved", "nameresolutionerror", "getaddrinfo failed",
+             "name or service not known", "nodename nor servname", "failed to resolve")),
+    ("tls", ("err_cert_", "err_ssl_", "sslerror", "certificate verify failed", "ssl:")),
+    ("connexion", ("err_connection_refused", "err_connection_reset", "err_connection_closed",
+                   "err_address_unreachable", "connection refused", "newconnectionerror")),
+    ("delai", ("err_timed_out", "err_connection_timed_out", "timeout", "timed out")),
+)
+
+
+def _site_injoignable(pages) -> dict[str, str] | None:
+    """{raison, detail} quand AUCUNE page n'a recu de reponse HTTP ; None sinon.
+
+    13/10/2026 : le domaine d'un client mis en attente par son bureau d'enregistrement ne
+    resolvait plus. Le crawl rendait « 4 pages, 0 anomalie, sante 0 » — un score sur un site
+    absent, et rien pour dire pourquoi. Un site que personne ne peut joindre n'a pas de defauts
+    SEO : il a un probleme d'hebergement ou de domaine, et c'est cela qu'il faut dire. Une seule
+    reponse, meme une erreur 5xx, suffit a ne PAS conclure : le site existe, et le crawl le juge.
+    """
+    lignes = [p for p in pages or []]
+    if not lignes or any(isinstance(getattr(p, "status_code", None), int) for p in lignes):
+        return None
+    erreurs = [str(getattr(p, "error", "") or "") for p in lignes]
+    texte = " ".join(erreurs).lower()
+    raison = next((nom for nom, motifs in _ECHECS_SANS_REPONSE if any(m in texte for m in motifs)), "inconnue")
+    detail = next((e for e in erreurs if e), "").splitlines()[0][:200] if any(erreurs) else ""
+    return {"raison": raison, "detail": detail}
+
+
 def _host_is_public(host: str) -> tuple[bool, str]:
     """
     Best-effort SSRF protection.
@@ -9825,6 +9856,9 @@ def main(argv: list[str]) -> int:
             "count": len(blocked_pages),
             "urls": [p.url for p in blocked_pages][:200],
         },
+        # Aucune page n'a recu de reponse : le site est INJOIGNABLE, il n'a pas de defauts a
+        # mesurer. None sinon. Voir `_site_injoignable`.
+        "site_injoignable": _site_injoignable(page_list),
         # Ahrefs-like: links found vs crawled (uncrawled links)
         "urls_discovered": int(len(seen)),
         "urls_uncrawled": int(max(0, len(seen) - len(page_list))),

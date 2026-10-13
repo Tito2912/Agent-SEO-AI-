@@ -295,7 +295,9 @@
 	                  </div>
 	                </td>
 	                <td>
-	                  {% if p.timestamp %}
+	                  {% if p.timestamp and p.site_injoignable %}
+	                    <span class="badge error" title="Aucune page n'a répondu au dernier crawl">Site injoignable</span>
+	                  {% elif p.timestamp %}
 	                    {% set hcls = 'ok' if p.health_score >= 90 else ('warning' if p.health_score >= 70 else 'error') %}
 	                    <div class="health-inline">
 	                      <div class="mini-bar {{ hcls }}" style="--p: {{ p.health_score }};"></div>

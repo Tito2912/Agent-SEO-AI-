@@ -33,7 +33,8 @@
   {% if project.current %}
     {% set cur = project.current %}
     {% set sum = cur.summary %}
-    {% set sc = sum.health_score|int if sum and sum.health_score is not none else none %}
+    {# Un site que personne n'a pu joindre n'a pas de score : « 0 » laissait croire a 100 % d'erreurs. #}
+    {% set sc = sum.health_score|int if sum and sum.health_score is not none and not sum.site_injoignable else none %}
     {% set sc_color = 'var(--ok)' if sc is not none and sc >= 80 else ('var(--warn)' if sc is not none and sc >= 50 else 'var(--err)') %}
   {% else %}
     {% set sc = none %}
@@ -65,6 +66,31 @@
          it, every project that has never been crawled 500s, which is every project a new
          customer has just created. #}
       {% set blocked = (sum.blocked_by_host.count if (project.current and sum is defined and sum.blocked_by_host) else 0) or 0 %}
+      {% set injoignable = sum.site_injoignable if (project.current and sum is defined) else none %}
+      {% if injoignable %}
+        {# 13/10/2026 : un domaine suspendu par son bureau d'enregistrement donnait « sante 0,
+           0 anomalie », sans un mot. Ce n'est pas un defaut SEO : c'est le site qui manque. #}
+        <div class="ov-blocked" role="alert">
+          <strong>Site injoignable — aucune page n'a répondu.</strong>
+          {% if injoignable.raison == 'dns' %}
+            Le domaine ne résout pas : il n'existe plus dans le DNS. Vérifiez chez votre bureau
+            d'enregistrement que le domaine est renouvelé et actif, et que ses serveurs DNS pointent
+            vers votre hébergeur.
+          {% elif injoignable.raison == 'tls' %}
+            La connexion sécurisée échoue : le certificat HTTPS est absent, expiré ou invalide.
+            Vérifiez-le chez votre hébergeur.
+          {% elif injoignable.raison == 'connexion' %}
+            Le serveur refuse la connexion. Vérifiez que l'hébergement est actif et que le site
+            est bien déployé.
+          {% elif injoignable.raison == 'delai' %}
+            Le serveur ne répond pas dans les délais. Vérifiez l'état de votre hébergement.
+          {% else %}
+            Vérifiez que le site est en ligne, puis relancez un crawl.
+          {% endif %}
+          Aucun score n'est calculé tant que le site ne répond pas.
+          {% if injoignable.detail %}<div class="muted small mono" style="margin-top:6px;">{{ injoignable.detail }}</div>{% endif %}
+        </div>
+      {% endif %}
       {% if blocked %}
         {# The score below was computed WITHOUT these pages. Saying so is the whole point. #}
         <div class="ov-blocked" role="status">
@@ -316,8 +342,8 @@
         <div class="history">
           {% for h in project.history %}
             <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}" title="{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}/{{ h.timestamp[:4] }} {{ h.timestamp[9:11] }}:{{ h.timestamp[11:13] }}{% if h.duration_label %} · {{ h.duration_label }}{% endif %}">
-              <div class="history-bar-fill" style="--p: {{ h.health_score }};"></div>
-              <div class="history-bar-label mono">{{ h.health_score }}</div>
+              <div class="history-bar-fill" style="--p: {{ 0 if h.site_injoignable else h.health_score }};"></div>
+              <div class="history-bar-label mono" {% if h.site_injoignable %}title="Site injoignable"{% endif %}>{{ '—' if h.site_injoignable else h.health_score }}</div>
               <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
               <div class="history-bar-ts muted small" data-ts-time="{{ h.timestamp }}">{{ h.timestamp[9:11] }}:{{ h.timestamp[11:13] }}</div>
               {% if h.duration_label %}<div class="history-bar-ts muted small">{{ h.duration_label }}</div>{% endif %}

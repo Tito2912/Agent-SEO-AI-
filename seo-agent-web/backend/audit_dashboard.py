@@ -1577,6 +1577,9 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         "urls_discovered": int(urls_discovered),
         "urls_uncrawled": int(urls_uncrawled),
         "health_score": int(max(0, min(100, health_score))),
+        # Aucune page n'a repondu : l'ecran le DIT au lieu d'afficher un score. Voir
+        # `_site_injoignable` dans seo_audit.py (13/10/2026, domaine suspendu d'un client).
+        "site_injoignable": meta.get("site_injoignable") if isinstance(meta.get("site_injoignable"), dict) else None,
         "urls_with_errors": int(urls_with_errors),
         "urls_without_errors": int(urls_without_errors),
         "issues_total": int(issues_total),
@@ -1611,6 +1614,7 @@ def project_latest_summary(runs_dir: Path, slug: str) -> dict[str, Any] | None:
             "pages_crawled": summary["pages_crawled"],
             "urls_crawled": summary.get("urls_crawled", summary["pages_crawled"]),
             "health_score": summary["health_score"],
+            "site_injoignable": summary.get("site_injoignable"),
             "urls_with_errors": summary["urls_with_errors"],
             "issues_distribution": summary["issues_distribution"],
         }
@@ -1673,6 +1677,7 @@ def project_overview(runs_dir: Path, slug: str, timestamp: str | None, compare_t
                 "timestamp": ts,
                 "label": format_timestamp(ts),
                 "health_score": s["health_score"],
+                "site_injoignable": s.get("site_injoignable"),
                 "pages_crawled": s["pages_crawled"],
                 "urls_crawled": s.get("urls_crawled", s["pages_crawled"]),
                 "urls_with_errors": s["urls_with_errors"],

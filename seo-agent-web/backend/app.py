@@ -5605,7 +5605,7 @@ def _reportlab_project_report_pdf(runs_dir: Path, data: dict[str, Any]) -> bytes
     story.append(Paragraph("Résumé", styles["H2"]))
     health = int(summary.get("health_score") or 0)
     summary_rows = [
-        ["Santé (Health score)", f"{health}%"],
+        ["Santé (Health score)", "— site injoignable (aucune page n'a répondu)" if summary.get("site_injoignable") else f"{health}%"],
         ["Pages crawled", str(int(summary.get("pages_crawled") or 0))],
         ["URLs discovered", str(int(summary.get("urls_discovered") or 0))],
         ["URLs uncrawled", str(int(summary.get("urls_uncrawled") or 0))],
