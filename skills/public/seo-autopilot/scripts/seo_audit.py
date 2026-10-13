@@ -430,6 +430,9 @@ class PageData:
     redirect_chain: list[str] = dataclasses.field(default_factory=list)
     redirect_statuses: list[int] = dataclasses.field(default_factory=list)
     x_robots_tag: str | None = None
+    # X-Robots-Tag de la reponse de l'URL DEMANDEE quand elle redirige. `x_robots_tag` est celui de
+    # la page d'arrivee — que le correcteur lit pour juger l'indexabilite, d'ou un champ a part.
+    redirect_x_robots_tag: str | None = None
     content_encoding: str | None = None
     response_bytes: int | None = None
     elapsed_ms: int | None = None
@@ -2856,6 +2859,18 @@ def _root_probe_urls(base_url: str) -> list[str]:
     return list(dict.fromkeys([p for p in probes if p]))
 
 
+def _urls_de_depart(base_url: str, sitemap_seed_urls: list[str]) -> list[str]:
+    """Ce que le crawl visite sans qu'une page le lui montre : l'accueil, ses variantes http/www
+    (Ahrefs les essaie aussi), puis le sitemap.
+
+    Plus de sonde des racines de langue sans barre (/fr pour /fr/), reflexe repris de Semrush.
+    prosperfactory.com, 13/10/2026 : 112 adresses internes contre 109 chez Ahrefs, l'ecart etant
+    exactement /de, /es, /fr — que rien ne lie. Un site qui lie ses racines sans barre
+    (easyshopbuilder, make-avis : liens ET sitemap) les fait toujours decouvrir.
+    """
+    return list(dict.fromkeys([base_url, *_root_probe_urls(base_url), *sitemap_seed_urls]))
+
+
 # Every URL the crawler keeps is produced here, and a site links the same targets from every
 # page: 84 pages x 80 links on a real site draw from ~110 distinct URLs, so ~6 700 separate
 # string objects were held for ~110 values. Sharing them cuts the measured cost of
@@ -3924,6 +3939,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
     elapsed_holder: list[int] = []
     ttfb_holder: list[int] = []
     html_holder: list[str] = []
+    redirect_robots_holder: list[str] = []
 
     async def _fetch_async(browser) -> None:
         import time as _time
@@ -3987,12 +4003,18 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
                 redirect_statuses.clear()
                 tmp: list[tuple[str, int]] = []
                 r = response.request
+                premiere = None
                 while r.redirected_from is not None:
                     prev_r = r.redirected_from
                     prev_resp = await prev_r.response()
                     if prev_resp is not None:
                         tmp.insert(0, (prev_resp.url, prev_resp.status))
+                    premiere = prev_resp
                     r = prev_r
+                if premiere is not None:
+                    _xr = {k.lower(): v for k, v in (await premiere.all_headers()).items()}.get("x-robots-tag")
+                    if _xr:
+                        redirect_robots_holder.append(_xr)
                 for _u, _s in tmp:
                     redirect_chain.append(_u)
                     redirect_statuses.append(_s)
@@ -4019,7 +4041,8 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
 
     _total_timeout = float(config.timeout_s or 30) + 60
     _host = (urlsplit(url).netloc or "").lower()
-    _holders = (redirect_chain, redirect_statuses, status_holder, final_url_holder, elapsed_holder, html_holder)
+    _holders = (redirect_chain, redirect_statuses, status_holder, final_url_holder, elapsed_holder, html_holder,
+                redirect_robots_holder)
     _blocked_tries = 0
     while True:
         # A retry must not inherit the blocked attempt's headers or empty body.
@@ -4079,6 +4102,7 @@ def _extract_page(url: str, config: CrawlConfig, rp: RobotsRules | None, base_pa
             page.redirect_chain = [url]
             page.redirect_statuses = [301]
     page.x_robots_tag = response_headers.get("x-robots-tag", "").strip() or None
+    page.redirect_x_robots_tag = (redirect_robots_holder[0].strip() if redirect_robots_holder else "") or None
     page.content_encoding = response_headers.get("content-encoding", "").strip() or None
     ct_raw = response_headers.get("content-type", "").split(";")[0].strip().lower()
     page.content_type = ct_raw or None
@@ -4601,14 +4625,16 @@ def _score_external_resource_issues(
         for url, rows in sorted(broken_js_css_by_page.items())
         if rows
     ]
-    disallowed_external_resources = [
-        {"url": url, "resources": rows[:200], "count": len(rows)} for url, rows in sorted(disallowed_by_page.items())
-    ]
+    # SUPPRIMEE pour la parite Ahrefs (prosperfactory.com, 13/10/2026 : 4 contre 0). « Ressource
+    # externe refusee par le robots.txt de son hote » est une famille SEMRUSH, absente du catalogue
+    # Ahrefs, et hors de portee du client : c'est le robots.txt d'un AUTRE site. La detection reste,
+    # elle evite de compter une ressource refusee comme cassee (is_broken_image, is_broken_js_css).
+    _ = disallowed_by_page
 
     return {
         "broken_external_images": issue("broken_external_images", broken_external_images),
         "broken_external_js_css": issue("broken_external_js_css", broken_external_js_css),
-        "disallowed_external_resources": issue("disallowed_external_resources", disallowed_external_resources),
+        "disallowed_external_resources": issue("disallowed_external_resources", []),
     }
 
 
@@ -5696,6 +5722,20 @@ def _score_issues(
         if (_looks_noindex(p.meta_robots) or _looks_noindex(p.x_robots_tag))
         and not (_looks_nofollow(p.meta_robots) or _looks_nofollow(p.x_robots_tag))
     ]
+    # Une REDIRECTION porte ses propres directives. prosperfactory.com, 13/10/2026 : ses quatre
+    # adresses de paiement repondent 302 vers Stripe avec « X-Robots-Tag: noindex, follow » ;
+    # Ahrefs compte « Noindex page » 4 ET « Noindex follow page » 4, le crawler 0 — il ne lisait
+    # que les en-tetes de la page d'ARRIVEE, un site tiers. `redirect_x_robots_tag` n'existe que si
+    # la navigation a redirige. Une URL deja jugee sur son document n'est pas rejugee : elle
+    # finirait dans « follow » et « nofollow » a la fois.
+    _juges = set(noindex_pages_all) | set(nofollow_page)
+    for p in pages:
+        _xr = p.redirect_x_robots_tag if p.url not in _juges else None
+        _ni, _nf = _looks_noindex(_xr), _looks_nofollow(_xr)
+        for _liste, _vrai in ((noindex_pages_all, _ni), (nofollow_page, _nf),
+                              (noindex_and_nofollow_page, _ni and _nf), (noindex_follow_page, _ni and not _nf)):
+            if _vrai:
+                _liste.append(p.url)
 
     # Canonical target checks
     canonical_points_to_4xx: list[str] = []
@@ -9418,21 +9458,6 @@ def main(argv: list[str]) -> int:
             sitemap_seed_urls.append(u)
     print(f"[SITEMAP] sitemaps={len(sitemap_urls)} seed_urls={len(sitemap_seed_urls)}", flush=True)
 
-    # Probe a small set of "language root" variants without trailing slash (e.g. /fr → /fr/)
-    # to surface canonicalization redirects similarly to Semrush.
-    lang_root_probes: list[str] = []
-    for locs in sitemap_urlsets.values():
-        if not isinstance(locs, list):
-            continue
-        for u in locs:
-            if not isinstance(u, str) or not u.startswith(("http://", "https://")):
-                continue
-            parts = urlsplit(u)
-            if re.fullmatch(r"/[a-z]{2}/", parts.path or ""):
-                no_slash_path = (parts.path or "").rstrip("/")
-                if no_slash_path:
-                    lang_root_probes.append(urlunsplit((parts.scheme, parts.netloc, no_slash_path, "", "")))
-
     # Pace ourselves the way the site asked. Doing this before the first fetch matters:
     # discovering the limit by getting blocked is how phantom 4XX end up in a customer report.
     _base_host = (urlsplit(config.base_url).netloc or "").lower()
@@ -9447,12 +9472,7 @@ def main(argv: list[str]) -> int:
 
     phases.add("discovery", time.monotonic() - _discovery_t0)
 
-    probe_urls = _root_probe_urls(config.base_url)
-    # Ahrefs-like: include sitemap file URLs as crawl targets (they appear as timed out / 3XX in Ahrefs exports).
-    extra_sitemap_targets: list[str] = []  # Do not crawl sitemap XML files as pages (keeps parity with Ahrefs issues)
-    start_urls = list(
-        dict.fromkeys([config.base_url, *probe_urls, *lang_root_probes, *extra_sitemap_targets, *sitemap_seed_urls])
-    )
+    start_urls = _urls_de_depart(config.base_url, sitemap_seed_urls)
     queue = deque(start_urls)
     # `seen` means "discovered/enqueued" (not "already crawled").
     # This makes the crawl frontier deterministic and avoids queue blow-ups due to duplicates.

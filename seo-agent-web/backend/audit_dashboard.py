@@ -723,7 +723,9 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     "redirect_chain_too_long": IssueMeta("redirect_chain_too_long", "Chaîne de redirection trop longue", "Redirects", "warning"),
     "redirect_loop": IssueMeta("redirect_loop", "Boucle de redirection", "Redirects", "error"),
     "redirect_3xx": IssueMeta("redirect_3xx", "Redirection 3XX", "Redirects", "warning"),
-    "redirect_302": IssueMeta("redirect_302", "Redirection 302", "Redirects", "notice"),
+    # Avertissement chez Ahrefs (icone jaune) ; prosperfactory.com, 13/10/2026 : ses 51
+    # avertissements ne tombent juste qu'avec les 4 « 302 redirect ».
+    "redirect_302": IssueMeta("redirect_302", "Redirection 302", "Redirects", "warning"),
     "https_to_http_redirect": IssueMeta("https_to_http_redirect", "Redirection HTTPS → HTTP", "Redirects", "warning"),
     "http_to_https_redirect": IssueMeta("http_to_https_redirect", "Redirection HTTP → HTTPS", "Redirects", "notice"),
     "meta_refresh_redirect": IssueMeta("meta_refresh_redirect", "Meta refresh redirect", "Redirects", "warning"),
