@@ -69,7 +69,7 @@ def test_the_bounded_rewriter_no_longer_stands_down(monkeypatch) -> None:
     free-form patch. It must now reach the measured rewriter."""
     seen: dict[str, object] = {}
 
-    def _fake(*, current, kind, url, site_name, model_override="", affix_len=0):
+    def _fake(*, current, kind, url, site_name, model_override="", affix_len=0, contexte=""):
         seen["current"], seen["affix"] = current, affix_len
         return "Make vs Zapier (2026) : le comparatif"
 

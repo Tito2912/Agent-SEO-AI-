@@ -56,7 +56,7 @@ def test_a_value_below_the_window_now_reaches_the_rewriter(monkeypatch) -> None:
     """The defect: a four-character title was skipped because it was under the ceiling."""
     seen: list[str] = []
 
-    def _fake(*, current, kind, url, site_name, model_override="", affix_len=0):
+    def _fake(*, current, kind, url, site_name, model_override="", affix_len=0, contexte=""):
         seen.append(current)
         return "Un titre reecrit a la bonne longueur pour la fenetre visee ici"
 

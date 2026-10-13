@@ -95,6 +95,14 @@ def test_a_description_already_used_elsewhere_is_not_written_again(monkeypatch) 
     assert m._written_description_value(thin(), page(), excluded_values={WRITTEN}) == ""
 
 
+def test_a_written_description_claiming_what_the_page_does_not_say_is_refused(monkeypatch) -> None:
+    # 13/10/2026, PR #16 d'oryvalo : « …transparent, independent… » sur une page qui n'en dit rien.
+    inventee = WRITTEN.replace("notre équipe", "notre équipe indépendante")
+    assert m._affirmations_non_fondees(inventee, "Accueil Un texte court.") == ["indépendante"]
+    monkeypatch.setattr(m, "_correction_ai_json", lambda **kw: {"description": inventee})
+    assert m._written_description_value(thin(), page()) == ""
+
+
 def test_the_whole_route_writes_flags_and_bills_the_written_description(monkeypatch) -> None:
     raw, writes, messages = thin(), {}, []
     monkeypatch.setattr(m, "_github_api_get", lambda api, **kw: {

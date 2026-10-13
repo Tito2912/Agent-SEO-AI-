@@ -21130,6 +21130,12 @@ def _written_description_value(raw: str, observed: dict[str, Any], *, model_over
     value = answer.get('description') if isinstance(answer, dict) and set(answer) == {'description'} else None
     if not short_description.written_ok(value, **bounds) or value in (excluded_values or set()):
         return ''
+    fond = ' '.join(str(x or '') for x in (parsed['title'], parsed['h1'], parsed['meta_description'],
+                                           *parsed['paragraphs']))
+    if _affirmations_non_fondees(value, fond):
+        logger.info('[correction-ai] description redigee refusee : affirmation absente de la page (%s)',
+                    ', '.join(_affirmations_non_fondees(value, fond)))
+        return ''
     return value
 
 
@@ -21609,9 +21615,36 @@ _DANGLING_WORDS = frozenset({
 })
 
 
+# Ce qu'une valeur ne peut pas affirmer si la page ne le dit pas : une qualite qu'on se donne, un
+# classement, une gratuite, une garantie. Racines, dans les langues du produit. 13/10/2026, PR #16
+# d'oryvalo : une description « trop courte » allongee en « …transparent, INDEPENDENT, and
+# genuinely helpful » — rien de cela sur la page, qui dit au contraire vivre d'affiliation.
+_AFFIRMATIONS_RE = re.compile(
+    r"\b(independ\w*|indépendan\w*|unabhängig\w*|independien\w*|indipenden\w*|"
+    r"impartia\w*|unbiased|objecti\w*|objekti\w*|"
+    r"best|meilleur\w*|beste\w*|mejor\w*|miglior\w*|"
+    r"free|gratuit\w*|kostenlos\w*|gratis|"
+    r"guarant\w*|garanti\w*|"
+    r"certifi\w*|zertifi\w*|official\w*|officiel\w*|offiziell\w*|oficial\w*|"
+    r"trusted|trustworthy|fiable\w*|vertrauensw\w*|confiable\w*|"
+    r"leader\w*|award\w*)", re.I)
+
+
+def _affirmations_non_fondees(valeur: str, fond: str) -> list[str]:
+    """Les affirmations de `valeur` dont la page (`fond`) ne dit rien."""
+    fond_bas = (fond or "").lower()
+    return sorted({m.group(0) for m in _AFFIRMATIONS_RE.finditer(valeur or "")
+                   if m.group(0).lower()[:6] not in fond_bas})
+
+
+def _texte_de_page(source: str) -> str:
+    """Le texte d'un fichier de page, balises retirees : ce que le modele a le droit de dire."""
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", source or "")).strip()
+
+
 def _length_value_for_page(
     *, current: str, kind: str, url: str, site_name: str, model_override: str = "",
-    affix_len: int = 0,
+    affix_len: int = 0, contexte: str = "",
 ) -> str:
     """Ask the model for the VALUE alone, then make the length true ourselves — at BOTH ends.
 
@@ -21652,8 +21685,9 @@ def _length_value_for_page(
         + ("trop court. " if too_short else "trop long. ")
         + f"Réécris-le pour qu'il tienne en {low} à {high} caractères. "
         + ("Garde la langue, la marque, l'année et les termes de recherche déjà présents ; "
-           "développe ce que la page traite réellement, sans jamais inventer une promesse "
-           "qu'elle ne tient pas. " if too_short else
+           "développe ce que la page traite réellement — son contenu est fourni — sans jamais "
+           "affirmer ce qu'il ne dit pas : ni qualité qu'on se donne (indépendant, fiable, "
+           "officiel), ni classement, ni gratuité, ni garantie, ni chiffre. " if too_short else
            "Garde la langue, la marque, l'année et les termes de recherche déjà présents ; "
            "retire la partie la moins informative plutôt que de réécrire depuis zéro. ")
         + (f"La page est en {_LANGUAGE_NAMES[lang_before]} : réponds dans cette langue, même si "
@@ -21662,10 +21696,16 @@ def _length_value_for_page(
     )
     attempt = ""
     attempts: list[str] = []
+    # Ce que la page dit d'elle-meme : sans lui, « developpe ce que la page traite » ne pouvait
+    # s'appuyer sur rien, et le modele comblait avec des qualites qu'elle ne revendique pas.
+    page = (contexte or "")[:1500]
+    fond = " ".join((current, page, site_name, url))
+    infondees: list[str] = []
     for round_no in range(2):
         if round_no == 0:
             user = json.dumps({"url": url, "site": site_name, "actuel": current,
                                "longueur_actuelle": _rendered_len(current),
+                               **({"contenu_de_la_page": page} if too_short and page else {}),
                                "cible": f"{low}-{high}"},
                               ensure_ascii=False)
         else:
@@ -21673,7 +21713,9 @@ def _length_value_for_page(
             # Stated as an operation to carry out — remove N, or take back a clause — because
             # "aim at 60-68" is precisely the instruction it cannot follow.
             n = _rendered_len(attempt)
-            problem = (f"trop long de {n - ceiling} caracteres" if n > ceiling else
+            problem = (f"tu affirmes ce que la page ne dit pas ({', '.join(infondees)}) : retire-le"
+                       if infondees else
+                       f"trop long de {n - ceiling} caracteres" if n > ceiling else
                        f"trop court : {n} caracteres, il en faut {low} a {high}. Reprends un "
                        "element informatif que tu as retire (ce que la page traite vraiment), "
                        "n'invente rien" if n < low else
@@ -21681,6 +21723,7 @@ def _length_value_for_page(
             user = json.dumps({"url": url, "site": site_name, "actuel": current,
                                "ta_proposition": attempt, "longueur_de_ta_proposition": n,
                                "probleme": problem,
+                               **({"contenu_de_la_page": page} if too_short and page else {}),
                                "cible": f"{low}-{high}"}, ensure_ascii=False)
         parsed = _correction_ai_json(system=system, user_msg=user, max_tokens=600,
                                      temperature=0.1, model_override=model_override)
@@ -21694,6 +21737,13 @@ def _length_value_for_page(
             logger.warning("[correction-ai] %s: reponse dans une autre langue que la page (%s), "
                            "valeur refusee", kind, lang_before)
             return ""
+        infondees = _affirmations_non_fondees(attempt, fond)
+        if infondees:
+            # Jamais gardee, meme « la plus proche » : une affirmation fausse ne se rattrape pas
+            # par sa longueur.
+            logger.info("[correction-ai] %s: affirmation absente de la page (%s), nouvel essai",
+                        kind, ", ".join(infondees))
+            continue
         attempts.append(attempt)
         if low <= _rendered_len(attempt) <= high:
             return attempt
@@ -22025,7 +22075,7 @@ def _rewrite_length_values(
             continue  # the text also names syntax; the bounded replacement would be ambiguous
         value = _length_value_for_page(current=target, kind=kind, url=str(url),
                                        site_name=site_name, model_override=model_override,
-                                       affix_len=affix)
+                                       affix_len=affix, contexte=_texte_de_page(content))
         # Both ends here too. Only the ceiling was checked, so a value that came back still under
         # the crawler's floor was written and counted as a fix: the anomaly survives the
         # correction and the customer is billed a unit for it. And the length that decides is the
