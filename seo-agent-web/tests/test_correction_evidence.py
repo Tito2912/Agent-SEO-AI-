@@ -295,6 +295,11 @@ def test_between_crawl_change_metrics_are_not_damage() -> None:
     assert app_module._collateral_introduced({}, after) == []
 
 
+def test_the_indexnow_list_grows_with_every_title_fix_and_is_not_damage() -> None:
+    # Since 13/10/2026 it lists every page whose title or description changed (oryvalo, Ahrefs 2).
+    assert app_module._collateral_introduced({}, {"pages_to_submit_to_indexnow": 2}) == []
+
+
 def test_a_clean_fix_reports_nothing() -> None:
     counts = {"title_too_short": 3, "missing_alt_text": 2}
 

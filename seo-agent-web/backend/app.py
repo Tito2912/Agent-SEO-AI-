@@ -5102,12 +5102,14 @@ def _report_issue_counts(report: dict[str, Any]) -> dict[str, int]:
 def _is_delta_metric_key(key: str) -> bool:
     """Between-crawl change metrics ('title tag changed', 'became non-indexable', 'pages added to
     sitemaps'…). They move by construction as soon as anything is fixed, so counting them as
-    damage would drown the signal they are meant to support."""
+    damage would drown the signal they are meant to support. Same for the IndexNow list: since
+    13/10/2026 it is every page whose title or description changed, so fixing a title grows it."""
     k = (key or "").lower()
     return (
         "_changed" in k
         or "became_" in k
         or k.startswith(("pages_added", "pages_removed", "no_of_urls"))
+        or k == "pages_to_submit_to_indexnow"
     )
 
 

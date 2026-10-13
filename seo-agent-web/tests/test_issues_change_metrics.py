@@ -11,9 +11,9 @@ in the same table, the same column and the same red as real regressions, it tell
 cannot read the code that the agent broke something the moment it repaired something.
 
 Ahrefs marks these `[Δ]` and shows "—" rather than an Actual-issues count, so counting them as
-anomalies was also a parity break. The sibling metrics (`title_tag_changed`,
-`meta_description_changed`, `h1_tag_changed`, `word_count_changed`) already had their emission
-zeroed in seo_audit.py for exactly this reason; these three still emit because the movement is
+anomalies was also a parity break. `title_tag_changed` and `meta_description_changed` emit too
+since 13/10/2026 (Ahrefs shows both, oryvalo after its PR #16) and are rendered the same way,
+apart; `h1_tag_changed` and `word_count_changed` stay zeroed in seo_audit.py. The movement is
 worth seeing — just not as a defect.
 
 These tests render the real page through the real handler for a non-admin account, in the state

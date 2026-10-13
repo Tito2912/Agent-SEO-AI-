@@ -8444,20 +8444,20 @@ def _score_issues(
             if prev_noindex and not cur_noindex and cur_indexable:
                 noindex_page_became_indexable.append(eff)
 
-            parts = urlsplit(eff)
-            is_root = (parts.path or "/") in {"", "/"}
-            is_locale_root = bool(re.fullmatch(r"/[a-z]{2}(-[a-z0-9]{2,8})?/?", parts.path or "", re.IGNORECASE))
-
+            # Titre et description : TOUTE page indexable, comme Ahrefs. oryvalo.com, 13/10/2026,
+            # apres la PR #16 (titre de /seo, description de /about) : « Title tag changed » 1,
+            # « Meta description changed » 1, « Changed pages not submitted to IndexNow » 2 —
+            # /seo n'est pas une racine, l'ancienne restriction aux racines l'aurait manquee.
             prev_title = (prev.title or "").strip()
             cur_title = (cur.title or "").strip()
-            if prev_title and cur_title and prev_title != cur_title:
-                # Ahrefs-like: change tracking is noisier on non-root pages; keep it conservative for parity.
-                if (not strict_link_counts) or is_root or is_locale_root:
-                    title_tag_changed.append(eff)
+            titre_change = bool(cur_indexable and prev_title and cur_title and prev_title != cur_title)
+            if titre_change:
+                title_tag_changed.append(eff)
 
             prev_desc = (prev.meta_description or "").strip()
             cur_desc = (cur.meta_description or "").strip()
-            if prev_desc and cur_desc and prev_desc != cur_desc:
+            description_changee = bool(cur_indexable and prev_desc and cur_desc and prev_desc != cur_desc)
+            if description_changee:
                 meta_description_changed.append(eff)
 
             prev_h1 = (prev.h1[0] if prev.h1 else "").strip()
@@ -8472,17 +8472,10 @@ def _score_issues(
             ):
                 word_count_changed.append(eff)
 
-            # IndexNow: only suggest high-level pages (home / locale roots) when significant content changed.
-            # This matches Ahrefs better than suggesting the entire indexable set.
-            if (is_root or is_locale_root) and cur_indexable:
-                if prev_title and cur_title and prev_title != cur_title:
-                    pages_to_submit_to_indexnow.append(eff)
-                elif prev_desc and cur_desc and prev_desc != cur_desc:
-                    pages_to_submit_to_indexnow.append(eff)
-                elif prev_h1 and cur_h1 and prev_h1 != cur_h1:
-                    pages_to_submit_to_indexnow.append(eff)
-                elif prev_can != cur_can and (prev_can or cur_can):
-                    pages_to_submit_to_indexnow.append(eff)
+            # IndexNow : les pages dont le titre ou la description a change — les deux changements
+            # qu'Ahrefs montre aussi. Pas le h1 ni le nombre de mots, que le rendu fait varier.
+            if titre_change or description_changee:
+                pages_to_submit_to_indexnow.append(eff)
 
         issues["canonical_url_changed"] = _issue_block("canonical_url_changed", sorted(set(canonical_url_changed)))
         issues["indexable_page_became_non_indexable"] = _issue_block(
@@ -8491,14 +8484,15 @@ def _score_issues(
         issues["noindex_page_became_indexable"] = _issue_block(
             "noindex_page_became_indexable", sorted(set(noindex_page_became_indexable))
         )
-        # Suppressed for Ahrefs parity: title_tag_changed / h1_tag_changed are Noyaru-only
-        # between-crawl [Δ] deltas Ahrefs does not track as distinct Site Audit issues. They
-        # fire spurious +N on every re-crawl whenever a fix (or render jitter) changes a title/H1
-        # (e.g. after a title-length correction PR). Detection kept above; emission zeroed —
-        # same treatment as meta_description_changed / word_count_changed.
-        issues["title_tag_changed"] = _issue_block("title_tag_changed", [])
-        # Suppressed: Ahrefs does not report meta description changes as a distinct Site Audit issue.
-        issues["meta_description_changed"] = _issue_block("meta_description_changed", [])
+        # REEMISES le 13/10/2026 : leur suppression (7b184f4) disait qu'Ahrefs ne les suivait pas,
+        # c'etait faux (oryvalo, ci-dessus). Le tableau de bord les range a part (DELTA_ISSUE_KEYS)
+        # et le correcteur ne les compte pas comme degats : une correction reussie ne s'y lit pas
+        # comme une regression.
+        issues["title_tag_changed"] = _issue_block("title_tag_changed", sorted(set(title_tag_changed)))
+        issues["meta_description_changed"] = _issue_block(
+            "meta_description_changed", sorted(set(meta_description_changed))
+        )
+        # Toujours supprimee : aucune observation Ahrefs, et le h1 rendu varie d'un crawl a l'autre.
         issues["h1_tag_changed"] = _issue_block("h1_tag_changed", [])
         # Suppressed for Ahrefs parity: word_count_changed is a Noyaru-only between-crawl
         # delta Ahrefs does not track, and networkidle word-count jitter makes it fire
