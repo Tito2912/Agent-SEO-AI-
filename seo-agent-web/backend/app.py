@@ -19712,7 +19712,8 @@ def _build_length_hint(issues: dict[str, Any], family_keys: set[str], kind: str)
         f"Ensuite seulement : NE RACCOURCIS PAS PLUS QUE NÉCESSAIRE, vise le HAUT de la fenêtre ({high} car.), pas le bas. "
         f"Un {label} nettement plus court que la fenêtre perd de la surface de mots-clés sans rien "
         f"corriger. Retire la partie la MOINS informative (une clause de fin, un qualificatif redondant) "
-        f"et conserve la marque, l'année et les termes de recherche déjà présents ; ne réécris pas "
+        f"et conserve la marque, l'année si elle y figure déjà et les termes de recherche déjà "
+        f"présents ; pas de nombre ni d'année qui n'y figurent déjà ; ne réécris pas "
         f"depuis zéro et ne traduis jamais : garde la langue de la page.\n"
         + "\n".join(lines)
     )
@@ -19961,8 +19962,14 @@ def _rewrite_redirect_links(content: str, pairs: list[dict[str, str]]) -> tuple[
         # redirecting `/en/` never rewrites the valid `/en/guide-etoro`. Fragments preserved.
         prefix = r'(href\s*[=:]\s*\{?\s*["\']|\]\()'
         pattern = re.compile(prefix + re.escape(frm) + r'(?=["\'#?)>\s])')
-        new, n = pattern.subn(lambda m: m.group(1) + to, new)
-        total += n
+        # Jamais dans un <link> : canonical et hreflang ont leurs propres familles, et le crawler
+        # ne compte ici que des liens. PR #12 de prosperfactory : la canonical d'une page
+        # reecrite vers Stripe. (re.split avec groupe : les balises <link> aux indices impairs.)
+        morceaux = re.split(r"(<link\b[^>]*>)", new, flags=re.I)
+        for i in range(0, len(morceaux), 2):
+            morceaux[i], n = pattern.subn(lambda m: m.group(1) + to, morceaux[i])
+            total += n
+        new = "".join(morceaux)
     return new, total
 
 
@@ -20336,8 +20343,20 @@ def _url_value_variants(pair: dict[str, str]) -> list[tuple[str, str]]:
     variants = [(frm, to)]
     frm_path, to_path = _link_path(frm), _link_path(to)
     if frm_path != frm:
-        variants.append((frm_path, to_path))
+        # Une destination sur un AUTRE site n'a pas d'ecriture relative : son chemin, accole au
+        # site, est une autre adresse. PR #12 de prosperfactory, 13/10/2026 : `/es/pago` (302 vers
+        # buy.stripe.com/5kQd…) reecrit en `/5kQd…`, un lien casse.
+        variants.append((frm_path, to_path if _meme_site(frm, to) else to))
     return [(a, b) for a, b in variants if a and b and a != b]
+
+
+def _meme_site(a: str, b: str) -> bool:
+    """Deux URL du meme site : meme hote au `www.` pres, ou l'une est relative."""
+    def hote(u: str) -> str:
+        h = (urlsplit(str(u or "")).hostname or "").lower()
+        return h[4:] if h.startswith("www.") else h
+    ha, hb = hote(a), hote(b)
+    return not ha or not hb or ha == hb
 
 
 # Files that DECLARE routing rather than reference it. A URL appearing here is a rule operand,
@@ -21134,9 +21153,11 @@ def _written_description_value(raw: str, observed: dict[str, Any], *, model_over
         return ''
     fond = ' '.join(str(x or '') for x in (parsed['title'], parsed['h1'], parsed['meta_description'],
                                            *parsed['paragraphs']))
-    if _affirmations_non_fondees(value, fond):
+    # Ici la description n'existe pas encore : un nombre se juge contre la PAGE.
+    infondees = _affirmations_non_fondees(value, fond) + _chiffres_inventes(value, fond)
+    if infondees:
         logger.info('[correction-ai] description redigee refusee : affirmation absente de la page (%s)',
-                    ', '.join(_affirmations_non_fondees(value, fond)))
+                    ', '.join(infondees))
         return ''
     return value
 
@@ -21639,6 +21660,15 @@ def _affirmations_non_fondees(valeur: str, fond: str) -> list[str]:
                    if m.group(0).lower()[:6] not in fond_bas})
 
 
+def _chiffres_inventes(valeur: str, fond: str) -> list[str]:
+    """Les nombres de `valeur` que `fond` ne contient pas. Un nombre ne se reformule pas : il
+    est dans la source ou il est invente. PR #12 de prosperfactory, 13/10/2026 : cinq titres
+    RACCOURCIS revenus avec « 2024 » ou « 2025 », sur des pages datees 2026 qui ne citent ni
+    l'un ni l'autre."""
+    presents = set(re.findall(r"\d+", fond or ""))
+    return sorted({n for n in re.findall(r"\d+", valeur or "") if n not in presents})
+
+
 def _texte_de_page(source: str) -> str:
     """Le texte d'un fichier de page, balises retirees : ce que le modele a le droit de dire."""
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", source or "")).strip()
@@ -21686,12 +21716,13 @@ def _length_value_for_page(
         f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, "
         + ("trop court. " if too_short else "trop long. ")
         + f"Réécris-le pour qu'il tienne en {low} à {high} caractères. "
-        + ("Garde la langue, la marque, l'année et les termes de recherche déjà présents ; "
-           "développe ce que la page traite réellement — son contenu est fourni — sans jamais "
-           "affirmer ce qu'il ne dit pas : ni qualité qu'on se donne (indépendant, fiable, "
-           "officiel), ni classement, ni gratuité, ni garantie, ni chiffre. " if too_short else
-           "Garde la langue, la marque, l'année et les termes de recherche déjà présents ; "
-           "retire la partie la moins informative plutôt que de réécrire depuis zéro. ")
+        + ("Garde la langue, la marque, l'année si elle y figure déjà et les termes de recherche "
+           "déjà présents ; développe ce que la page traite réellement — son contenu est fourni — "
+           "sans jamais affirmer ce qu'il ne dit pas : ni qualité qu'on se donne (indépendant, "
+           "fiable, officiel), ni classement, ni gratuité, ni garantie, ni chiffre. " if too_short else
+           "Garde la langue, la marque, l'année si elle y figure déjà et les termes de recherche "
+           "déjà présents ; retire la partie la moins informative plutôt que de réécrire depuis "
+           "zéro. N'ajoute aucun nombre, aucune année. ")
         + (f"La page est en {_LANGUAGE_NAMES[lang_before]} : réponds dans cette langue, même si "
            "ces instructions sont dans une autre. " if lang_before in _LANGUAGE_NAMES else "")
         + 'Réponds STRICTEMENT en JSON : {"value": "..."} et rien d\'autre.'
@@ -21739,7 +21770,10 @@ def _length_value_for_page(
             logger.warning("[correction-ai] %s: reponse dans une autre langue que la page (%s), "
                            "valeur refusee", kind, lang_before)
             return ""
-        infondees = _affirmations_non_fondees(attempt, fond)
+        # Un nombre se juge contre la valeur ACTUELLE, pas la page : raccourcir n'en ajoute
+        # aucun, et allonger non plus (« ni chiffre »).
+        infondees = (_affirmations_non_fondees(attempt, fond)
+                     + [f"le nombre {n}" for n in _chiffres_inventes(attempt, current)])
         if infondees:
             # Jamais gardee, meme « la plus proche » : une affirmation fausse ne se rattrape pas
             # par sa longueur.
@@ -27248,7 +27282,10 @@ def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None") -> str:
                    "pour traiter les suivants." % (plafond.plan if plafond else len(rows)))
     head = (f"\n\n> 📄 **Non traités : {len(rows)} fichier(s)** — le plafond a coupé avant "
             f"de les atteindre. {conseil} Ces pages resteront signalées au prochain crawl :\n")
-    return head + "\n".join(f"> - `{p}`" for p in rows[:12])
+    # La liste s'arrete a 12 ; sans le dire, « 28 » et douze lignes se lisent comme une erreur
+    # de compte (PR #12 de prosperfactory, 13/10/2026).
+    reste = (f"\n> - … et {len(rows) - 12} autre(s)" if len(rows) > 12 else "")
+    return head + "\n".join(f"> - `{p}`" for p in rows[:12]) + reste
 
 
 def _skipped_note(issue_key: str, skipped: list[str], targets: list[str]) -> str:
@@ -27671,6 +27708,19 @@ def _prepare_issue_fix(
         pairs = _issue_redirect_pairs(block)
         if pairs:
             content_pairs, out["loop_paths"] = _classify_redirect_pairs(pairs)
+            # Un lien vers une redirection qui QUITTE le site (paiement, partenaire) ne se
+            # reecrit pas : l'adresse tierce serait figee dans le site, et la redirection — que
+            # le proprietaire garde pour pouvoir la changer — contournee. PR #12 de
+            # prosperfactory, 13/10/2026 : quatre accueils lies a /payment (302 vers Stripe).
+            _hors_site = [p for p in content_pairs if not _meme_site(p["from"], p["to"])]
+            content_pairs = [p for p in content_pairs if _meme_site(p["from"], p["to"])]
+            if _hors_site and not content_pairs and not out["loop_paths"]:
+                _hotes = sorted({urlsplit(p["to"]).hostname or p["to"] for p in _hors_site})
+                out["refusal"] = ("Ces liens menent a des redirections vers un autre site ("
+                                  + ", ".join(_hotes) + ") : les reecrire figerait l'adresse tierce "
+                                  "dans le site et contournerait la redirection. Rien a corriger "
+                                  "dans le depot.")
+                return out
             out["evidence"] = [p["from"] for p in content_pairs]
             out["extra_hint"] = _build_redirect_hint(content_pairs) if content_pairs else ""
     if issue_key in _SITEMAP_ADD_KEYS and impacted:

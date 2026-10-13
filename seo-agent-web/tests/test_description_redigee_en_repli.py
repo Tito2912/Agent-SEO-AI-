@@ -103,6 +103,13 @@ def test_a_written_description_claiming_what_the_page_does_not_say_is_refused(mo
     assert m._written_description_value(thin(), page()) == ""
 
 
+def test_a_written_description_with_a_number_the_page_does_not_carry_is_refused(monkeypatch) -> None:
+    # 13/10/2026, PR #12 de prosperfactory : « 2024 » ajouté à des titres de pages datées 2026.
+    chiffree = WRITTEN.replace("rapidement", "en 24 heures")
+    monkeypatch.setattr(m, "_correction_ai_json", lambda **kw: {"description": chiffree})
+    assert m._written_description_value(thin(), page()) == ""
+
+
 def test_the_whole_route_writes_flags_and_bills_the_written_description(monkeypatch) -> None:
     raw, writes, messages = thin(), {}, []
     monkeypatch.setattr(m, "_github_api_get", lambda api, **kw: {

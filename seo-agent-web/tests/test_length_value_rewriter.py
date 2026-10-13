@@ -316,8 +316,11 @@ def test_a_value_inside_the_window_on_screen_is_accepted(monkeypatch) -> None:
     seen = []
     monkeypatch.setattr(app_module, "_correction_ai_json",
                         lambda **kw: (seen.append(1), {"value": value})[1])
+    # The current value carries the year the answer keeps: since 13/10/2026 a number absent from
+    # it is an invention (PR #12 of prosperfactory) and would be refused, whatever its length.
     out = app_module._length_value_for_page(
-        current="T" * 120, kind="title", url="https://site.fr/x", site_name="site.fr")
+        current="Kling AI Bild zu Video 2026 " + "T" * 100, kind="title", url="https://site.fr/x",
+        site_name="site.fr")
     assert out == value
 
 
