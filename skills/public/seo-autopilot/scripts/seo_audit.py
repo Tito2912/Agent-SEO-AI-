@@ -9309,8 +9309,25 @@ def _find_previous_report(output_dir: str) -> tuple[str | None, Path | None]:
     for prev_ts in reversed(siblings[:idx]):
         report_path = slug_dir / prev_ts / "audit" / "report.json"
         if report_path.exists() and report_path.is_file():
+            # Un crawl ou le site etait INJOIGNABLE n'a rien vu : comparer a lui ferait passer
+            # chaque anomalie pour nouvelle (13/10/2026). On remonte au dernier crawl qui a vu le site.
+            if _rapport_injoignable(report_path):
+                continue
             return prev_ts, report_path
     return None, None
+
+
+def _rapport_injoignable(report_path: Path) -> bool:
+    """Le rapport le dit (`meta.site_injoignable`), ou, plus ancien, aucune de ses pages n'a de statut."""
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    meta = report.get("meta") if isinstance(report, dict) else None
+    if isinstance(meta, dict) and isinstance(meta.get("site_injoignable"), dict):
+        return True
+    pages = report.get("pages") if isinstance(report, dict) else None
+    return bool(pages) and not any(isinstance(p, dict) and isinstance(p.get("status_code"), int) for p in pages)
 
 
 def _pages_from_report(report: dict[str, Any]) -> list[PageData]:

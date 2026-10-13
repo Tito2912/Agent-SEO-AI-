@@ -63,7 +63,55 @@ def test_the_dashboard_carries_it_and_ignores_garbage() -> None:
     dns = {"raison": "dns", "detail": "net::ERR_NAME_NOT_RESOLVED"}
     assert audit_dashboard.summarize_report(_report({"site_injoignable": dns}))["site_injoignable"] == dns
     assert audit_dashboard.summarize_report(_report({"site_injoignable": "nonsense"}))["site_injoignable"] is None
-    assert audit_dashboard.summarize_report(_report())["site_injoignable"] is None
+    joint = _report({"site_injoignable": None})
+    joint["pages"][0]["status_code"] = 200
+    assert audit_dashboard.summarize_report(joint)["site_injoignable"] is None
+
+
+def test_a_report_written_before_the_crawler_said_so_is_recognised() -> None:
+    # Les crawls rates de prosperfactory, le 13/10/2026, precedent la cle `site_injoignable`.
+    from backend import audit_dashboard
+    ancien = _report()                                   # aucune cle, aucune page avec statut
+    assert audit_dashboard.site_injoignable(ancien)["raison"] == "dns"
+    ancien["pages"].append({"url": "https://x.test/b", "status_code": 200})
+    assert audit_dashboard.site_injoignable(ancien) is None
+
+
+def _ecrire(runs, slug, ts, report):
+    import json
+    d = runs / slug / ts / "audit"
+    d.mkdir(parents=True)
+    (d / "report.json").write_text(json.dumps(report), encoding="utf-8")
+    (runs / slug / ts / "run.json").write_text(json.dumps({"site_name": "x.test", "base_url": "https://x.test/"}), encoding="utf-8")
+
+
+def _avec_anomalies(n):
+    return {"meta": {"base_url": "https://x.test/", "pages_crawled": 1},
+            "pages": [{"url": "https://x.test/", "status_code": 200, "content_type": "text/html"}],
+            "issues": {"title_too_long_indexable": {"count": n, "examples": ["https://x.test/"]}}}
+
+
+def test_the_default_comparison_skips_a_crawl_that_saw_nothing(tmp_path) -> None:
+    # « +17 » sur chaque ligne : le crawl precedent etait celui du domaine suspendu.
+    from backend import audit_dashboard
+    _ecrire(tmp_path, "s", "20261013-100000", _avec_anomalies(17))
+    _ecrire(tmp_path, "s", "20261013-170000", _report())
+    _ecrire(tmp_path, "s", "20261013-180000", _avec_anomalies(17))
+    vue = audit_dashboard.project_overview(tmp_path, "s", timestamp=None, compare_to=None)
+    assert vue["compare"]["timestamp"] == "20261013-100000"
+    ligne = next(r for r in vue["current"]["summary"]["issues"] if r["key"].startswith("title_too_long"))
+    assert ligne["change"] == 0
+    # Un choix EXPLICITE reste respecte.
+    choisi = audit_dashboard.project_overview(tmp_path, "s", timestamp=None, compare_to="20261013-170000")
+    assert choisi["compare"]["timestamp"] == "20261013-170000"
+
+
+def test_the_crawler_compares_with_the_last_crawl_that_saw_the_site(tmp_path) -> None:
+    for ts, report in (("20261013-100000", _avec_anomalies(1)), ("20261013-170000", _report())):
+        _ecrire(tmp_path, "s", ts, report)
+    (tmp_path / "s" / "20261013-180000" / "audit").mkdir(parents=True)
+    prev_ts, _ = seo_audit._find_previous_report(str(tmp_path / "s" / "20261013-180000" / "audit"))
+    assert prev_ts == "20261013-100000"
 
 
 def _fragment():

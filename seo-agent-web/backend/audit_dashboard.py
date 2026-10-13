@@ -1579,7 +1579,7 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         "health_score": int(max(0, min(100, health_score))),
         # Aucune page n'a repondu : l'ecran le DIT au lieu d'afficher un score. Voir
         # `_site_injoignable` dans seo_audit.py (13/10/2026, domaine suspendu d'un client).
-        "site_injoignable": meta.get("site_injoignable") if isinstance(meta.get("site_injoignable"), dict) else None,
+        "site_injoignable": site_injoignable(report),
         "urls_with_errors": int(urls_with_errors),
         "urls_without_errors": int(urls_without_errors),
         "issues_total": int(issues_total),
@@ -1592,6 +1592,37 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
         "gsc": gsc_summary,
         "bing": bing_summary,
     }
+
+
+# La meme classification que `_ECHECS_SANS_REPONSE` dans seo_audit.py, pour les rapports ecrits
+# AVANT que le crawler ne note lui-meme `site_injoignable` (13/10/2026).
+_ECHECS_SANS_REPONSE = (
+    ("dns", ("err_name_not_resolved", "nameresolutionerror", "getaddrinfo failed",
+             "name or service not known", "nodename nor servname", "failed to resolve")),
+    ("tls", ("err_cert_", "err_ssl_", "sslerror", "certificate verify failed", "ssl:")),
+    ("connexion", ("err_connection_refused", "err_connection_reset", "err_connection_closed",
+                   "err_address_unreachable", "connection refused", "newconnectionerror")),
+    ("delai", ("err_timed_out", "err_connection_timed_out", "timeout", "timed out")),
+)
+
+
+def site_injoignable(report: dict[str, Any] | None) -> dict[str, str] | None:
+    """{raison, detail} si le crawl n'a joint AUCUNE page ; None sinon.
+
+    Le crawler le note dans `meta.site_injoignable` ; un rapport plus ancien se reconnait a ce
+    qu'aucune de ses pages n'a de statut HTTP."""
+    if not isinstance(report, dict):
+        return None
+    meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
+    if "site_injoignable" in meta:
+        return meta["site_injoignable"] if isinstance(meta["site_injoignable"], dict) else None
+    pages = [p for p in report.get("pages") or [] if isinstance(p, dict)]
+    if not pages or any(isinstance(p.get("status_code"), int) for p in pages):
+        return None
+    erreurs = [str(p.get("error") or "") for p in pages]
+    texte = " ".join(erreurs).lower()
+    raison = next((nom for nom, motifs in _ECHECS_SANS_REPONSE if any(m in texte for m in motifs)), "inconnue")
+    return {"raison": raison, "detail": next((e for e in erreurs if e), "").splitlines()[0][:200] if any(erreurs) else ""}
 
 
 def project_latest_summary(runs_dir: Path, slug: str) -> dict[str, Any] | None:
@@ -1650,10 +1681,16 @@ def project_overview(runs_dir: Path, slug: str, timestamp: str | None, compare_t
     if compare_to and compare_to in crawls and compare_to != current_ts:
         compare_ts = compare_to
     elif len(crawls) >= 2:
-        # default compare with previous crawl
+        # Par defaut, le crawl precedent — mais pas un crawl ou le site etait INJOIGNABLE : il
+        # n'a rien vu, et chaque anomalie passait pour nouvelle (« +17 », 13/10/2026, domaine
+        # suspendu d'un client). On remonte au dernier crawl qui a vu le site. Un choix explicite
+        # de l'utilisateur (`compare_to`), lui, est respecte tel quel.
         idx = crawls.index(current_ts)
-        if idx > 0:
-            compare_ts = crawls[idx - 1]
+        for candidat in reversed(crawls[:idx]):
+            if site_injoignable(load_report_json(runs_dir, slug, candidat)):
+                continue
+            compare_ts = candidat
+            break
 
     current_report = load_report_json(runs_dir, slug, current_ts)
     if not current_report:
