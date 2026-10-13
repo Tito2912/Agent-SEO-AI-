@@ -51,7 +51,7 @@ def test_a_framework_page_gets_a_plan_with_the_values_the_page_already_proves() 
     plan = prepare(ASTRO, [row(A, **TWITTER)])
     assert not plan["refusal"] and plan["twitter_missing_urls"] is None
     assert plan["targets_override"] == ["src/pages/gauntlet/twitter-missing.astro"]
-    assert plan["twitter_values"] == {"src/pages/gauntlet/twitter-missing.astro": {
+    assert plan["valeurs_imposees"] == {"src/pages/gauntlet/twitter-missing.astro": {
         "twitter:card": "summary_large_image", "twitter:description": DESC}}
     assert 'twitter:description = "' + DESC + '"' in plan["extra_hint"]
     assert "EXACTEMENT ces valeurs" in plan["extra_hint"]
@@ -61,29 +61,29 @@ def test_literal_stacks_keep_the_protected_plan_and_never_reach_the_model() -> N
     for paths in (["index.html", "gauntlet/twitter-missing.html"],
                   ["app.py", "requirements.txt", "templates/gauntlet/twitter-missing.html"]):
         plan = prepare(paths, [row(A, **TWITTER)])
-        assert plan["twitter_missing_urls"] == [A] and "twitter_values" not in plan
+        assert plan["twitter_missing_urls"] == [A] and "valeurs_imposees" not in plan
 
 
 def test_a_page_without_its_own_file_is_left_not_guessed() -> None:
     # B n'a pas de fichier : sa carte se poserait dans une mise en page commune.
     paths = [p for p in ASTRO if p != "src/pages/gauntlet/autre.astro"]
     plan = prepare(paths, [row(A, **TWITTER), row(B, **TWITTER)], urls=(A, B))
-    assert list(plan["twitter_values"]) == ["src/pages/gauntlet/twitter-missing.astro"]
+    assert list(plan["valeurs_imposees"]) == ["src/pages/gauntlet/twitter-missing.astro"]
     assert B in plan["side_effects"] and plan["evidence"] == []
     seule = prepare(paths, [row(B, **TWITTER)], urls=(B,))
-    assert seule["refusal"] and "twitter_values" not in seule
+    assert seule["refusal"] and "valeurs_imposees" not in seule
     # Une route dynamique rend toute une famille d'URL : ecrire la carte d'UNE page dedans la
     # poserait sur toutes.
     article = "https://site.test/blog/un-article"
     dynamique = prepare(ASTRO + ["src/pages/blog/[slug].astro"], [row(article, **TWITTER)], urls=(article,))
-    assert dynamique["refusal"] and "twitter_values" not in dynamique
+    assert dynamique["refusal"] and "valeurs_imposees" not in dynamique
 
 
 def test_a_shared_file_is_never_a_page_target_even_if_the_route_map_named_one(monkeypatch) -> None:
     # La carte des routes exclut deja les mises en page ; ce refus ne depend pas d'elle.
     monkeypatch.setattr(m.repo_index, "route_files", lambda index, url: ["src/layouts/Layout.astro"])
     plan = prepare(ASTRO + ["src/layouts/Layout.astro"], [row(A, **TWITTER)])
-    assert plan["refusal"] and "twitter_values" not in plan
+    assert plan["refusal"] and "valeurs_imposees" not in plan
 
 
 def run(monkeypatch, ecrite):
@@ -142,5 +142,5 @@ def test_a_value_the_model_chose_refuses_the_whole_file(monkeypatch, ecrite) -> 
 ])
 def test_only_imposed_known_or_existing_literals_may_be_added(ligne, ancien, imposees, attendu) -> None:
     nouveau = ancien + "\n" + ligne + "\n"
-    assert m._valeur_twitter_non_imposee(nouveau, ancien, imposees) == (
+    assert m._valeur_non_imposee(nouveau, ancien, imposees) == (
         "valeur non imposee : " + attendu if attendu else "")
