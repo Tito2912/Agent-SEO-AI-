@@ -141,3 +141,43 @@ def test_la_liste_tronquee_dit_combien_il_en_reste() -> None:
 
 def test_une_liste_courte_ne_dit_rien_de_plus() -> None:
     assert "autre(s)" not in m._note_de_troncature(["a.mdx", "b.mdx"], None)
+
+
+# --- 4. PR #13 : la description courte absorbee par la longue -----------------------------
+# « Tout corriger » regroupait les variantes de longueur d'une meme balise ; depuis le 12/10 la
+# passe « trop longue » ecarte les descriptions courtes, qui ont leur route. Les six courtes de
+# prosperfactory n'etaient ni corrigees ni citees dans la PR.
+
+def _cles(*cles: str) -> list[str]:
+    return [i["key"] for i in m._regrouper_les_passes([{"key": c} for c in cles])]
+
+
+def test_la_description_courte_garde_sa_passe_a_cote_de_la_longue() -> None:
+    assert _cles("title_too_long_indexable", "title_too_short_indexable", "meta_description_too_long_indexable",
+                 "meta_description_too_short_indexable") == [
+        "title_too_long_indexable", "meta_description_too_long_indexable", "meta_description_too_short_indexable"]
+    assert _cles("meta_description_too_short_indexable", "meta_description_too_long_indexable") == [
+        "meta_description_too_short_indexable", "meta_description_too_long_indexable"]
+
+
+def test_chaque_passe_se_verifie_sur_ce_qu_elle_traite() -> None:
+    longue = {"meta_description_too_long", "meta_description_too_long_indexable",
+              "meta_description_too_long_not_indexable"}
+    assert m._verification_family_keys("meta_description_too_long_indexable") == longue
+    assert m._verification_family_keys("meta_description_too_short_indexable") == {
+        "meta_description_too_short", "meta_description_too_short_indexable",
+        "meta_description_too_short_not_indexable"}
+    # Le titre garde une seule passe ; une famille hors longueur garde ses variantes.
+    assert "title_too_short_indexable" in m._verification_family_keys("title_too_long_indexable")
+    assert m._verification_family_keys("missing_h1_indexable") == {
+        "missing_h1", "missing_h1_indexable", "missing_h1_not_indexable"}
+    # Apres fusion de la PR #13 : 0 longue, 6 courtes — la passe longue est resolue.
+    apres = {"meta_description_too_long_indexable": {"count": 0},
+             "meta_description_too_short_indexable": {"count": 6}}
+    assert m._verification_scope_count("meta_description_too_long_indexable", apres) == 0
+
+
+def test_les_variantes_d_une_meme_passe_restent_regroupees() -> None:
+    assert _cles("meta_description_too_short_indexable", "meta_description_too_short_not_indexable",
+                 "redirect_3xx") == ["meta_description_too_short_indexable", "redirect_3xx"]
+    assert _cles("title_too_short_indexable", "title_too_long_not_indexable") == ["title_too_short_indexable"]

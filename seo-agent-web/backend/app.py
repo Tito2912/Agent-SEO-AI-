@@ -5134,7 +5134,13 @@ def _collateral_introduced(
 
 def _verification_family_keys(issue_key: str) -> set[str]:
     base = re.sub(r"_(?:not_)?indexable$", "", issue_key)
-    return _with_indexability_variants(_length_family_keys(base))
+    keys = _with_indexability_variants(_length_family_keys(base))
+    if _length_family_name(base) is None:
+        return keys
+    # Une passe se verifie sur ce qu'elle traite : la description courte a sa route depuis le
+    # 12/10/2026, la longue resterait sinon « encore presente » a cause de pages qu'elle ne touche
+    # pas (et ses cibles en « Tout corriger » incluraient les fichiers des pages courtes).
+    return {k for k in keys if _passe_de_longueur(k) == _passe_de_longueur(base)}
 
 
 def _verification_scope_count(issue_key: str, issues: dict[str, Any]) -> int:
@@ -19096,15 +19102,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     fixable = _github_fixable_issue_candidates(report=report, proj=proj, limit=len(report_issues))
     _plafond = _plafond_de_correction(user, slug=slug)
     _ecartes: list[str] = []
-    # Length variants already share a rewriter; other variants may carry different evidence.
-    seen_keys: set[str] = set()
-    grouped = []
-    for issue in fixable:
-        if issue["key"] in seen_keys:
-            continue
-        seen_keys.update(_length_family_keys(issue["key"]))
-        grouped.append(issue)
-    fixable = grouped
+    fixable = _regrouper_les_passes(fixable)
 
     if not fixable:
         return JSONResponse({"ok": False, "error": "Aucune erreur corrigeable trouvée dans le dernier crawl."}, status_code=400)
@@ -19553,6 +19551,31 @@ def _length_family_keys(issue_key: str) -> set[str]:
     fix pass brings every value into the optimal window. Non-length issues return just themselves."""
     name = _length_family_name(issue_key)
     return set(_LENGTH_FAMILIES[name]) if name else {issue_key}
+
+
+def _passe_de_longueur(issue_key: str) -> str:
+    """La passe de correction qui traite une cle de longueur. Une seule par famille, SAUF la
+    description courte : depuis le 12/10/2026 elle a sa propre route (le passage « trop longue »
+    l'ecarte explicitement). Les regrouper la faisait disparaitre de « Tout corriger » sans un
+    mot — PR #13 de prosperfactory, 13/10/2026 : 6 descriptions courtes, ni corrigees ni citees."""
+    base = str(issue_key or "").removesuffix("_not_indexable").removesuffix("_indexable")
+    if base == "meta_description_too_short":
+        return "meta_description_courte"
+    return _length_family_name(issue_key) or issue_key
+
+
+def _regrouper_les_passes(fixable: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Une anomalie par passe : les variantes de longueur d'une meme passe partagent un
+    reecriveur ; les autres variantes peuvent porter des preuves differentes."""
+    seen_keys: set[str] = set()
+    grouped = []
+    for issue in fixable:
+        if issue["key"] in seen_keys:
+            continue
+        seen_keys.update(k for k in _length_family_keys(issue["key"])
+                         if _passe_de_longueur(k) == _passe_de_longueur(issue["key"]))
+        grouped.append(issue)
+    return grouped
 
 
 def _issue_evidence_srcs(issue_block: Any) -> list[str]:
