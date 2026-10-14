@@ -30746,6 +30746,21 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         v = ctx.get("verify")
         return str(v.get("result")) if isinstance(v, dict) else ""
 
+    # Les PR que GitHub CONFIRME ouvertes, chacune une fois. Compter les taches portant un lien
+    # affichait « 3 PR ouvertes » sur prosperfactory (13/10/2026) quand toutes etaient fusionnees.
+    # Une tache corrigee n'est pas interrogee : sa PR est derriere elle. La liste est aussi
+    # AFFICHEE : le message « PR créée » disparait au rechargement, le lien doit rester
+    # (make-avis, 14/10/2026 : « le lien est apparu et a disparu »).
+    prs_ouvertes: list[dict[str, Any]] = []
+    for _g in ("todo", "in_progress", "ignored"):
+        for _t in groups[_g]:
+            _pr = _t.get("pr") or {}
+            _n = int(_pr.get("pr_number") or 0)
+            if (_n > 0 and _n not in {p["number"] for p in prs_ouvertes}
+                    and _etat_pr(_n) == "open"):
+                prs_ouvertes.append({"number": _n, "url": str(_pr.get("pr_url") or "")})
+    prs_ouvertes.sort(key=lambda p: p["number"])
+
     stats = {
         "total": total,
         "todo": len(groups["todo"]),
@@ -30758,13 +30773,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         "still_present": sum(
             1 for g in groups.values() for t in g if _verify_result(t) == "still_present"
         ),
-        # Les PR que GitHub CONFIRME ouvertes, chacune une fois. Compter les taches portant un
-        # lien affichait « 3 PR ouvertes » sur prosperfactory (13/10/2026) quand toutes etaient
-        # fusionnees. Une tache corrigee n'est pas interrogee : sa PR est derriere elle.
-        "with_pr": len({
-            n for g in ("todo", "in_progress", "ignored") for t in groups[g]
-            for n in [int((t.get("pr") or {}).get("pr_number") or 0)] if n > 0 and _etat_pr(n) == "open"
-        }),
+        "with_pr": len(prs_ouvertes),
     }
 
     runs_dir = _runs_dir_pour_slug(request, slug)
@@ -30803,6 +30812,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "current_crawl_ts": current_crawl_ts,
             "fix_candidates": fix_candidates,
             "stats": stats,
+            "prs_ouvertes": prs_ouvertes,
         },
     )
     resp.headers["Cache-Control"] = "no-store"

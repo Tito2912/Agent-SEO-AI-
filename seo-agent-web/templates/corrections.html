@@ -676,6 +676,14 @@
     <p class="muted small" style="margin:8px 0 0;">
       Dépôt connecté : <span class="mono">{{ github_cfg.repo }}</span> · branche <span class="mono">{{ github_cfg.branch }}</span> · mode {{ 'auto-merge' if github_cfg.mode == 'auto' else 'PR à vérifier' }}.
     </p>
+    {# Le lien de la PR survit au rechargement : le message « PR créée » disparait avec lui. #}
+    {% if prs_ouvertes %}
+    <p class="small" style="margin:6px 0 0;" data-prs-ouvertes>
+      {{ 'PR ouvertes' if prs_ouvertes|length > 1 else 'PR ouverte' }} :
+      {% for p in prs_ouvertes %}<a href="{{ p.url }}" target="_blank" rel="noreferrer">#{{ p.number }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      — à relire puis fusionner sur GitHub.
+    </p>
+    {% endif %}
   {% endif %}
   <div id="correction-flow-status" class="corr-flow-status"></div>
 

@@ -143,6 +143,10 @@ def test_le_compteur_ne_compte_que_les_pr_que_github_confirme_ouvertes(monkeypat
 
     assert COMPTE % 1 in page
     assert len(_ouvrir.appels) == 1          # un appel par PR distincte, partage par la page
+    # Le lien reste affiche apres le rechargement (make-avis, 14/10/2026 : il « a disparu »).
+    bloc = page.split("data-prs-ouvertes", 1)[1].split("</p>", 1)[0]
+    assert 'href="https://github.com/o/r/pull/14"' in bloc and "#14" in bloc
+    assert bloc.count("#14") == 1
 
 
 @pytest.mark.parametrize("etat", [{"state": "closed", "merged": True, "merged_at": "2026-10-13T21:00:00Z"},
@@ -153,6 +157,7 @@ def test_une_pr_fusionnee_ou_inconnue_n_est_pas_comptee_ouverte(monkeypatch, eta
     page = _ouvrir(monkeypatch, user_id, slug, etat)
 
     assert "PR ouvertes" not in page
+    assert "data-prs-ouvertes" not in page
 
 
 def test_une_tache_terminee_n_est_pas_rouverte(monkeypatch) -> None:
