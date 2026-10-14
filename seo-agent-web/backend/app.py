@@ -2370,6 +2370,43 @@ def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool
     return data.get("merged") or bool(data.get("merged_at")) or data.get("state") == "closed"
 
 
+def _github_pr_fermee_sans_fusion(owner: str, repo: str, pr_number: int, token: str) -> bool:
+    """True SEULEMENT quand GitHub confirme une PR fermee et non fusionnee. Elle remet une tache
+    a traiter : une erreur ou un etat inconnu ne doit jamais le faire."""
+    if not token or not owner or not repo or pr_number <= 0:
+        return False
+    try:
+        data = _github_api_get(_github_api_path("repos", owner, repo, "pulls", str(int(pr_number))),
+                               token=token, timeout_s=8)
+    except Exception:
+        return False
+    return (isinstance(data, dict) and data.get("state") == "closed"
+            and not data.get("merged") and not data.get("merged_at"))
+
+
+def _liberer_si_pr_fermee(task_id: Any, pr: dict[str, Any], *, now_iso: str) -> bool:
+    """Une tache « en cours » dont la PR a ete fermee sans fusion redevient « a traiter ».
+
+    13/10/2026, prosperfactory : la PR #12 (liens de paiement reecrits a tort) fermee sans
+    fusion, sa tache « Page -> lien vers redirection » restait « En cours » indefiniment — le
+    balayage ne suit une PR que jusqu'au verdict de sa CI. La trace de la PR reste dans la note
+    (`pr_fermee`), hors de `pr_url` : elle ne compte plus parmi les PR ouvertes."""
+    try:
+        with DB.session() as db:
+            t = db.get(IssueTask, task_id)
+            if t is None or t.status != "in_progress":
+                return False
+            t.status = "todo"
+            t.note = json.dumps({"pr_fermee": {"pr_number": int(pr.get("pr_number") or 0),
+                                               "pr_url": str(pr.get("pr_url") or ""),
+                                               "constatee_le": now_iso}}, ensure_ascii=False)
+            db.commit()
+            return True
+    except Exception as exc:
+        logger.warning("[corrections] tache %s non liberee : %s", task_id, exc)
+        return False
+
+
 def _github_pr_is_open(owner: str, repo: str, pr_number: int, token: str, *, strict: bool = False) -> bool:
     """True only when GitHub CONFIRMS the pull request is still open.
 
@@ -30360,6 +30397,17 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
     groups: dict[str, list[Any]] = {"todo": [], "in_progress": [], "done": [], "ignored": []}
     task_lookup: dict[tuple[str, str], dict[str, Any]] = {}
     total = 0
+    user = getattr(request.state, "user", None)
+    gh_token = ""
+    repo_parts = None
+    try:
+        if user is not None and github_cfg.get("repo"):
+            gh_token, _src = _effective_user_connection_value(
+                user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), key="GITHUB_TOKEN"
+            )
+        repo_parts = _github_repo_parts(github_cfg.get("repo") or "")
+    except Exception as exc:
+        logger.warning("[corrections] connexion GitHub illisible pour %s : %s", slug, exc)
     try:
         with DB.session() as db:
             tasks = list(db.scalars(
@@ -30367,6 +30415,8 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 .where(IssueTask.project_id == proj_row.id)
                 .order_by(IssueTask.updated_at.desc())
             ))
+        fermees: dict[int, bool] = {}
+        now_iso = datetime.now(timezone.utc).isoformat()
         for t in tasks:
             s = t.status if t.status in groups else "todo"
             # Separate internal PR JSON from user-written note
@@ -30376,12 +30426,21 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 _note_parsed = {}
             _is_pr_note = bool(_note_parsed.get("pr_url"))
             pr_data = _note_parsed if _is_pr_note else {}
+            _pr_n = int(pr_data.get("pr_number") or 0) if _is_pr_note else 0
+            if t.status == "in_progress" and _pr_n > 0 and repo_parts and gh_token:
+                if _pr_n not in fermees:
+                    fermees[_pr_n] = _github_pr_fermee_sans_fusion(repo_parts[0], repo_parts[1], _pr_n, gh_token)
+                if fermees[_pr_n] and _liberer_si_pr_fermee(t.id, pr_data, now_iso=now_iso):
+                    s, _is_pr_note, pr_data = "todo", False, {}
+                    _note_parsed = {"pr_fermee": {"pr_number": _pr_n}}
             # User-written note: only when the note isn't our internal JSON payload.
-            user_note = "" if (_is_pr_note or isinstance(_note_parsed, dict) and _note_parsed.get("verify")) else (t.note or "")
+            _interne = isinstance(_note_parsed, dict) and any(
+                _note_parsed.get(k) for k in ("pr_url", "verify", "pr_fermee"))
+            user_note = "" if _interne else (t.note or "")
             _verify = _note_parsed.get("verify") if isinstance(_note_parsed.get("verify"), dict) else None
             task_ctx = {
                 "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,
-                "url": t.url, "status": t.status,
+                "url": t.url, "status": s,
                 "pr": pr_data, "user_note": user_note, "verify": _verify,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
@@ -30423,13 +30482,6 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         report = dash.load_report_json(runs_dir, slug, current_crawl_ts) if current_crawl_ts else None
         if isinstance(report, dict):
             fix_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
-            user = getattr(request.state, "user", None)
-            gh_token = ""
-            if user is not None and github_cfg.get("repo"):
-                gh_token, _src = _effective_user_connection_value(
-                    user_id=_compte_payeur(str(getattr(user, "id", "") or ""), slug), key="GITHUB_TOKEN"
-                )
-            repo_parts = _github_repo_parts(github_cfg.get("repo") or "")
             merged_cache: dict[int, bool] = {}
             for candidate in fix_candidates:
                 linked = task_lookup.get((str(candidate.get("key") or ""), str(candidate.get("url") or "")))
