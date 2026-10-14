@@ -608,9 +608,10 @@ def _run_tree_candidates(path: Path) -> list[Path]:
     candidates: list[Path] = []
     for idx, part in enumerate(parts):
         if _RUN_TS_RE.fullmatch(part):
+            # Le dossier DU crawl, jamais celui du projet : un fichier d'un crawl ne vit que dans
+            # le sien, et remonter d'un cran telechargeait TOUS les crawls du projet. 14/10/2026,
+            # avis-invest (60 crawls) : deux crawls morts apres 84/84 pages, le job jamais clos.
             candidates.append(root.joinpath(*parts[: idx + 1]))
-            if idx > 0:
-                candidates.append(root.joinpath(*parts[:idx]))
             break
     if not candidates:
         candidates.append(path.resolve())
@@ -5225,6 +5226,22 @@ def _verification_url(url: str) -> str:
         return ""
 
 
+def _extrait_de_reference(rapport: dict[str, Any]) -> dict[str, Any]:
+    """Ce que la verification lit d'un ancien rapport, et rien d'autre : ses anomalies, ses
+    metadonnees, et l'URL et les directives robots de chaque page.
+
+    Elle garde un rapport de reference par crawl d'origine des taches, tous en memoire a la fois.
+    14/10/2026, avis-invest : 13 corrections, 10 crawls de reference (juin-juillet), apres un crawl
+    de 84 pages et PageSpeed, sur un worker de 2 Go. Les pages completes (liens, hreflang,
+    PageSpeed, ressources) ne servent a rien ici."""
+    garder = ("url", "final_url", "meta_robots", "x_robots_tag")
+    return {
+        "issues": rapport.get("issues") if isinstance(rapport.get("issues"), dict) else {},
+        "meta": rapport.get("meta") if isinstance(rapport.get("meta"), dict) else {},
+        "pages": [{k: r.get(k) for k in garder} for r in rapport.get("pages") or [] if isinstance(r, dict)],
+    }
+
+
 def _verify_corrections_after_crawl(
     slug: str, report: dict[str, Any], runs_dir: Path | None = None, *,
     user_id: str | None = None, crawl_ts: str = "",
@@ -5302,7 +5319,7 @@ def _verify_corrections_after_crawl(
                             old = dash.load_report_json(runs_dir, slug, ts)
                         except Exception:
                             pass
-                    baseline_reports[ts] = old if isinstance(old, dict) else {}
+                    baseline_reports[ts] = _extrait_de_reference(old) if isinstance(old, dict) else {}
                 return baseline_reports[ts]
 
             def _baseline_counts(ts: str) -> dict[str, int]:
@@ -9971,6 +9988,8 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     job.stderr = job.stderr or ""
     _save_job(job)
 
+    report: dict[str, Any] | None = None
+    _rapport_envoye = False
     try:
         # Per-plan timeout, resolved at queue time and carried on the job (the worker has no
         # request context). Falls back to the global env default for admin/legacy jobs.
@@ -10009,9 +10028,6 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
                 if isinstance(pages_crawled, int) and pages_crawled >= 0:
                     actual_pages_crawled = int(pages_crawled)
                     job.progress = {"type": "crawl", "current": pages_crawled, "total": pages_crawled, "done": True}
-                # #5 — verify previously applied corrections against this fresh crawl.
-                _verify_corrections_after_crawl(slug, report, runs_dir=_runs_dir_for_user(str(user_id)),
-                                                user_id=str(user_id), crawl_ts=timestamp)
             job.result = {
                 "type": "crawl",
                 "slug": slug,
@@ -10025,6 +10041,23 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         if job.status != "canceled":
             job.status = "done" if returncode == 0 else "failed"
         _save_job(job)
+        # ORDRE, 14/10/2026 (avis-invest) : le crawl est CLOS et son rapport ENVOYE avant la
+        # verification des anciennes corrections. Elle tournait avant les deux : deux crawls de
+        # 84 pages reussis, rapport ecrit, puis job jamais clos et rapport jamais envoye — le
+        # controle des jobs perimes les a declares en echec quinze minutes plus tard.
+        if isinstance(report, dict) and job.status == "done":
+            try:
+                if site_dir.exists() and site_dir.is_dir():
+                    _sync_runs_path_to_object_store(site_dir)
+                    _rapport_envoye = True
+            except Exception as e:
+                logger.error("[S3] crawl sync error: %s: %s", type(e).__name__, e)
+            try:
+                # #5 — verify previously applied corrections against this fresh crawl.
+                _verify_corrections_after_crawl(slug, report, runs_dir=_runs_dir_for_user(str(user_id)),
+                                                user_id=str(user_id), crawl_ts=timestamp)
+            except Exception as e:
+                logger.error("[verify] apres le crawl %s: %s: %s", timestamp, type(e).__name__, e)
     except Exception as e:
         job.returncode = 1
         job.stderr = f"{type(e).__name__}: {e}"
@@ -10038,7 +10071,7 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
             except Exception:
                 pass
         try:
-            if site_dir.exists() and site_dir.is_dir():
+            if not _rapport_envoye and site_dir.exists() and site_dir.is_dir():
                 _sync_runs_path_to_object_store(site_dir)
         except Exception as e:
             logger.error("[S3] crawl sync error: %s: %s", type(e).__name__, e)
