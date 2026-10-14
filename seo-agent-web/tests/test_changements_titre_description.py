@@ -81,11 +81,29 @@ def test_une_page_non_indexable_ne_compte_pas() -> None:
     assert f"{BASE}/prive" not in _urls(issues, "pages_to_submit_to_indexnow")
 
 
-def test_le_h1_ne_compte_ni_comme_changement_ni_pour_indexnow() -> None:
+def test_un_h1_qui_change_compte_et_part_a_indexnow() -> None:
     issues = _apres_la_pr(**{"/prive": {"h1": ["Un autre h1"]}})
 
-    assert issues["h1_tag_changed"]["count"] == 0
-    assert f"{BASE}/prive" not in _urls(issues, "pages_to_submit_to_indexnow")
+    assert _urls(issues, "h1_tag_changed") == [f"{BASE}/prive"]
+    assert f"{BASE}/prive" in _urls(issues, "pages_to_submit_to_indexnow")
+
+
+def test_un_h1_qui_apparait_est_un_changement() -> None:
+    """make-avis, 14/10/2026 : 16 pages SANS H1 en recoivent un ; Ahrefs « H1 tag changed » 16."""
+    avant = _site(**{"/prive": {"h1": []}})
+    apres = _site()
+    issues = seo_audit._score_issues(apres, previous_pages=avant, base_url=BASE, strict_link_counts=True)
+
+    assert _urls(issues, "h1_tag_changed") == [f"{BASE}/prive"]
+    assert _urls(issues, "pages_to_submit_to_indexnow") == [f"{BASE}/prive"]
+
+
+def test_un_h1_absent_des_deux_cotes_ne_change_rien_et_le_noindex_reste_dehors() -> None:
+    sans = {"/prive": {"h1": []}}
+    assert seo_audit._score_issues(_site(**sans), previous_pages=_site(**sans), base_url=BASE)[
+        "h1_tag_changed"]["count"] == 0
+    noindex = _apres_la_pr(**{"/prive": {"h1": ["Autre"], "meta_robots": "noindex"}})
+    assert f"{BASE}/prive" not in _urls(noindex, "h1_tag_changed")
 
 
 def test_sans_crawl_precedent_rien_ne_change() -> None:

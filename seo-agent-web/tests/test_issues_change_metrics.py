@@ -12,9 +12,9 @@ cannot read the code that the agent broke something the moment it repaired somet
 
 Ahrefs marks these `[Δ]` and shows "—" rather than an Actual-issues count, so counting them as
 anomalies was also a parity break. `title_tag_changed` and `meta_description_changed` emit too
-since 13/10/2026 (Ahrefs shows both, oryvalo after its PR #16) and are rendered the same way,
-apart; `h1_tag_changed` and `word_count_changed` stay zeroed in seo_audit.py. The movement is
-worth seeing — just not as a defect.
+since 13/10/2026 (Ahrefs shows both, oryvalo after its PR #16), `h1_tag_changed` since 14/10/2026
+(make-avis, 16), and are rendered the same way, apart; `word_count_changed` stays zeroed in
+seo_audit.py. The movement is worth seeing — just not as a defect.
 
 These tests render the real page through the real handler for a non-admin account, in the state
 that produced the trap: two crawls, one canonical changed between them.

@@ -8460,9 +8460,14 @@ def _score_issues(
             if description_changee:
                 meta_description_changed.append(eff)
 
+            # Le H1 compte aussi quand il APPARAIT. make-avis.com, 14/10/2026 : 16 pages sans H1
+            # en recoivent un (PR #5) ; Ahrefs « H1 tag changed » 16, et son IndexNow 16 couvre
+            # H1 et descriptions. Gigue mesuree sur deux crawls reels de prosperfactory (Next) : 0
+            # H1 different sur 109 pages.
             prev_h1 = (prev.h1[0] if prev.h1 else "").strip()
             cur_h1 = (cur.h1[0] if cur.h1 else "").strip()
-            if prev_h1 and cur_h1 and prev_h1 != cur_h1:
+            h1_change = bool(cur_indexable and prev_h1 != cur_h1 and (prev_h1 or cur_h1))
+            if h1_change:
                 h1_tag_changed.append(eff)
 
             if (
@@ -8472,9 +8477,9 @@ def _score_issues(
             ):
                 word_count_changed.append(eff)
 
-            # IndexNow : les pages dont le titre ou la description a change — les deux changements
-            # qu'Ahrefs montre aussi. Pas le h1 ni le nombre de mots, que le rendu fait varier.
-            if titre_change or description_changee:
+            # IndexNow : les pages dont le titre, la description ou le H1 a change — les trois
+            # changements qu'Ahrefs montre aussi. Pas le nombre de mots, que le rendu fait varier.
+            if titre_change or description_changee or h1_change:
                 pages_to_submit_to_indexnow.append(eff)
 
         issues["canonical_url_changed"] = _issue_block("canonical_url_changed", sorted(set(canonical_url_changed)))
@@ -8492,8 +8497,8 @@ def _score_issues(
         issues["meta_description_changed"] = _issue_block(
             "meta_description_changed", sorted(set(meta_description_changed))
         )
-        # Toujours supprimee : aucune observation Ahrefs, et le h1 rendu varie d'un crawl a l'autre.
-        issues["h1_tag_changed"] = _issue_block("h1_tag_changed", [])
+        # Reemise le 14/10/2026 : Ahrefs la montre (make-avis, 16), et la gigue mesuree est nulle.
+        issues["h1_tag_changed"] = _issue_block("h1_tag_changed", sorted(set(h1_tag_changed)))
         # Suppressed for Ahrefs parity: word_count_changed is a Noyaru-only between-crawl
         # delta Ahrefs does not track, and networkidle word-count jitter makes it fire
         # spurious +N on every re-crawl. Detection kept above; emission zeroed.

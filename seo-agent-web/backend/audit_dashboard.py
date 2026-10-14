@@ -26,8 +26,8 @@ SEVERITY_ORDER: dict[Severity, int] = {"error": 0, "warning": 1, "notice": 2}
 # successful correction read as a regression the agent caused: fixing a canonical necessarily
 # raises `canonical_url_changed` on the very next crawl. They are counted apart and rendered
 # apart. `title_tag_changed` and `meta_description_changed` emit again since 13/10/2026 (Ahrefs
-# shows both after a correction PR, oryvalo) and land here, apart; `h1_tag_changed` and
-# `word_count_changed` stay zeroed in seo_audit.py (render jitter, no Ahrefs observation).
+# shows both after a correction PR, oryvalo), `h1_tag_changed` since 14/10/2026 (make-avis, 16),
+# and land here, apart; `word_count_changed` stays zeroed in seo_audit.py (render jitter).
 DELTA_ISSUE_KEYS: frozenset[str] = frozenset(
     {
         "canonical_url_changed",
@@ -538,7 +538,7 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
     # Content changes (diff vs previous crawl)
     "title_tag_changed": IssueMeta("title_tag_changed", "Balise title modifiée", "Content", "notice"),
     "meta_description_changed": IssueMeta("meta_description_changed", "Meta description modifiée", "Content", "notice"),
-    "h1_tag_changed": IssueMeta("h1_tag_changed", "H1 tag changed", "Content", "notice"),
+    "h1_tag_changed": IssueMeta("h1_tag_changed", "H1 modifié", "Content", "notice"),
     "word_count_changed": IssueMeta("word_count_changed", "Word count changed", "Content", "notice"),
     # Links (internal)
     "canonical_url_has_no_incoming_internal_links": IssueMeta(
