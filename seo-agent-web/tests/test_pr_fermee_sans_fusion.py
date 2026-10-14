@@ -94,6 +94,9 @@ def test_une_pr_fermee_sans_fusion_rend_la_tache_a_traiter(monkeypatch) -> None:
     assert note == {"pr_fermee": {"pr_number": 12, "pr_url": "https://github.com/o/r/pull/12",
                                   "constatee_le": note["pr_fermee"]["constatee_le"]}}
     assert "PR ouvertes" not in page          # la PR fermee ne compte plus comme ouverte
+    # Des CE chargement, pas au suivant : la page montre la tache a traiter.
+    assert '<span class="num">1</span><span class="lbl">À traiter</span>' in page
+    assert '<span class="num">0</span><span class="lbl">En cours</span>' in page
     # Au chargement suivant, la note est la trace interne : elle ne s'affiche pas comme une note.
     suivante = _ouvrir(monkeypatch, user_id, slug, {"state": "closed", "merged": False})
     assert "pr_fermee" not in suivante and _ouvrir.appels == []
@@ -112,6 +115,44 @@ def test_rien_ne_bouge_hors_d_une_fermeture_confirmee(monkeypatch, etat) -> None
 
     status, note = _tache(tid)
     assert status == "in_progress" and note["pr_number"] == 13
+
+
+def _projet_a_plusieurs_taches(prs: list[int]) -> tuple[str, str]:
+    """Un projet dont chaque tache « en cours » porte la PR donnee (plusieurs familles, une PR)."""
+    user_id, slug, _ = _projet_avec_tache(prs[0])
+    with m.DB.session() as db:
+        proj = db.scalars(m.select(m.Project).where(m.Project.slug == slug)).one()
+        for i, n in enumerate(prs[1:]):
+            db.add(m.IssueTask(project_id=str(proj.id), user_id=user_id, created_by=user_id,
+                               issue_key=f"title_too_long_indexable_{i}", issue_label="Titre",
+                               crawl_ts="20261013-173710", url=f"https://{slug}.example.com/{i}",
+                               status="in_progress", severity="warning",
+                               note=json.dumps({"pr_url": f"https://github.com/o/r/pull/{n}", "pr_number": n})))
+        db.commit()
+    return user_id, slug
+
+
+COMPTE = '<span class="num">%d</span><span class="lbl">PR ouvertes</span>'
+
+
+def test_le_compteur_ne_compte_que_les_pr_que_github_confirme_ouvertes(monkeypatch) -> None:
+    # Trois familles corrigees dans UNE PR ouverte : une PR ouverte, pas trois.
+    user_id, slug = _projet_a_plusieurs_taches([14, 14, 14])
+
+    page = _ouvrir(monkeypatch, user_id, slug, {"state": "open", "merged": False})
+
+    assert COMPTE % 1 in page
+    assert len(_ouvrir.appels) == 1          # un appel par PR distincte, partage par la page
+
+
+@pytest.mark.parametrize("etat", [{"state": "closed", "merged": True, "merged_at": "2026-10-13T21:00:00Z"},
+                                  RuntimeError("GitHub indisponible")])
+def test_une_pr_fusionnee_ou_inconnue_n_est_pas_comptee_ouverte(monkeypatch, etat) -> None:
+    user_id, slug = _projet_a_plusieurs_taches([13, 14])
+
+    page = _ouvrir(monkeypatch, user_id, slug, etat)
+
+    assert "PR ouvertes" not in page
 
 
 def test_une_tache_terminee_n_est_pas_rouverte(monkeypatch) -> None:

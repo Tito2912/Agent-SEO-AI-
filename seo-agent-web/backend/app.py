@@ -2350,38 +2350,22 @@ def _github_api_delete(path: str, *, token: str, json_body: dict[str, Any], time
         raise RuntimeError(f"GitHub JSON decode error: {e}") from e
 
 
-def _github_pr_merged(owner: str, repo: str, pr_number: int, token: str) -> bool:
-    """Return True if the given pull request is closed or merged (i.e. no longer open).
-    Best-effort: any error (network, missing token, rate limit) is treated as 'not done'
-    so the UI degrades gracefully."""
+def _github_pr_etat(owner: str, repo: str, pr_number: int, token: str) -> str:
+    """« open », « merged », « closed » (fermee SANS fusion) — ou « » quand GitHub ne le confirme
+    pas. « closed » remet une tache a traiter et « open » se compte comme PR ouverte : une erreur
+    ou un etat inconnu ne doit jamais valoir l'un ni l'autre."""
     if not token or not owner or not repo or pr_number <= 0:
-        return False
-    try:
-        data = _github_api_get(
-            _github_api_path("repos", owner, repo, "pulls", str(int(pr_number))),
-            token=token,
-            timeout_s=8,
-        )
-    except Exception:
-        return False
-    if not isinstance(data, dict):
-        return False
-    # Hide "PR existante" when the PR is no longer open (merged OR closed/rejected)
-    return data.get("merged") or bool(data.get("merged_at")) or data.get("state") == "closed"
-
-
-def _github_pr_fermee_sans_fusion(owner: str, repo: str, pr_number: int, token: str) -> bool:
-    """True SEULEMENT quand GitHub confirme une PR fermee et non fusionnee. Elle remet une tache
-    a traiter : une erreur ou un etat inconnu ne doit jamais le faire."""
-    if not token or not owner or not repo or pr_number <= 0:
-        return False
+        return ""
     try:
         data = _github_api_get(_github_api_path("repos", owner, repo, "pulls", str(int(pr_number))),
                                token=token, timeout_s=8)
     except Exception:
-        return False
-    return (isinstance(data, dict) and data.get("state") == "closed"
-            and not data.get("merged") and not data.get("merged_at"))
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    if data.get("merged") or data.get("merged_at"):
+        return "merged"
+    return str(data.get("state")) if data.get("state") in {"open", "closed"} else ""
 
 
 def _liberer_si_pr_fermee(task_id: Any, pr: dict[str, Any], *, now_iso: str) -> bool:
@@ -2410,7 +2394,7 @@ def _liberer_si_pr_fermee(task_id: Any, pr: dict[str, Any], *, now_iso: str) -> 
 def _github_pr_is_open(owner: str, repo: str, pr_number: int, token: str, *, strict: bool = False) -> bool:
     """True only when GitHub CONFIRMS the pull request is still open.
 
-    Deliberately the inverse of `_github_pr_merged`'s error handling: this one gates an action,
+    Deliberately the inverse of `_github_pr_etat`'s error handling: this one gates an action,
     so display-only callers retain the historical False on unknown. Correction gates use
     `strict`: an unknown result must not permit another paid preview or conflicting PR."""
     if not token or not owner or not repo or pr_number <= 0:
@@ -30408,6 +30392,15 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         repo_parts = _github_repo_parts(github_cfg.get("repo") or "")
     except Exception as exc:
         logger.warning("[corrections] connexion GitHub illisible pour %s : %s", slug, exc)
+    # Un appel GitHub par PR distincte, partage par tout ce que la page en deduit.
+    etats_pr: dict[int, str] = {}
+
+    def _etat_pr(numero: int) -> str:
+        if numero not in etats_pr:
+            etats_pr[numero] = (_github_pr_etat(repo_parts[0], repo_parts[1], numero, gh_token)
+                                if repo_parts and gh_token else "")
+        return etats_pr[numero]
+
     try:
         with DB.session() as db:
             tasks = list(db.scalars(
@@ -30415,7 +30408,6 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 .where(IssueTask.project_id == proj_row.id)
                 .order_by(IssueTask.updated_at.desc())
             ))
-        fermees: dict[int, bool] = {}
         now_iso = datetime.now(timezone.utc).isoformat()
         for t in tasks:
             s = t.status if t.status in groups else "todo"
@@ -30427,12 +30419,10 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             _is_pr_note = bool(_note_parsed.get("pr_url"))
             pr_data = _note_parsed if _is_pr_note else {}
             _pr_n = int(pr_data.get("pr_number") or 0) if _is_pr_note else 0
-            if t.status == "in_progress" and _pr_n > 0 and repo_parts and gh_token:
-                if _pr_n not in fermees:
-                    fermees[_pr_n] = _github_pr_fermee_sans_fusion(repo_parts[0], repo_parts[1], _pr_n, gh_token)
-                if fermees[_pr_n] and _liberer_si_pr_fermee(t.id, pr_data, now_iso=now_iso):
-                    s, _is_pr_note, pr_data = "todo", False, {}
-                    _note_parsed = {"pr_fermee": {"pr_number": _pr_n}}
+            if (t.status == "in_progress" and _pr_n > 0 and _etat_pr(_pr_n) == "closed"
+                    and _liberer_si_pr_fermee(t.id, pr_data, now_iso=now_iso)):
+                s, _is_pr_note, pr_data = "todo", False, {}
+                _note_parsed = {"pr_fermee": {"pr_number": _pr_n}}
             # User-written note: only when the note isn't our internal JSON payload.
             _interne = isinstance(_note_parsed, dict) and any(
                 _note_parsed.get(k) for k in ("pr_url", "verify", "pr_fermee"))
@@ -30468,9 +30458,13 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         "still_present": sum(
             1 for g in groups.values() for t in g if _verify_result(t) == "still_present"
         ),
-        "with_pr": sum(
-            1 for g in groups.values() for t in g if (t.get("pr") or {}).get("pr_url")
-        ),
+        # Les PR que GitHub CONFIRME ouvertes, chacune une fois. Compter les taches portant un
+        # lien affichait « 3 PR ouvertes » sur prosperfactory (13/10/2026) quand toutes etaient
+        # fusionnees. Une tache corrigee n'est pas interrogee : sa PR est derriere elle.
+        "with_pr": len({
+            n for g in ("todo", "in_progress", "ignored") for t in groups[g]
+            for n in [int((t.get("pr") or {}).get("pr_number") or 0)] if n > 0 and _etat_pr(n) == "open"
+        }),
     }
 
     runs_dir = _runs_dir_pour_slug(request, slug)
@@ -30482,7 +30476,6 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
         report = dash.load_report_json(runs_dir, slug, current_crawl_ts) if current_crawl_ts else None
         if isinstance(report, dict):
             fix_candidates = _github_fixable_issue_candidates(report=report, proj=proj_row, limit=8)
-            merged_cache: dict[int, bool] = {}
             for candidate in fix_candidates:
                 linked = task_lookup.get((str(candidate.get("key") or ""), str(candidate.get("url") or "")))
                 candidate["task_status"] = str(linked.get("status") or "") if linked else ""
@@ -30492,13 +30485,8 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 # Une fois la PR mergée, on ne montre plus le lien « PR existante » :
                 # l'anomalie reste candidate (le crawl la voit encore), mais le suivi
                 # passe désormais par le workflow, pas par une nouvelle PR.
-                if pr and pr.get("pr_url") and repo_parts and gh_token and pr_number > 0:
-                    if pr_number not in merged_cache:
-                        merged_cache[pr_number] = _github_pr_merged(
-                            repo_parts[0], repo_parts[1], pr_number, gh_token
-                        )
-                    if merged_cache[pr_number]:
-                        pr = {}
+                if pr and pr.get("pr_url") and pr_number > 0 and _etat_pr(pr_number) in {"merged", "closed"}:
+                    pr = {}
                 candidate["pr"] = pr
     except Exception as exc:
         logger.warning("[corrections] failed to build correction candidates for %s: %s", slug, exc)
