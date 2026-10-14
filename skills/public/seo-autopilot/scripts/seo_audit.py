@@ -4304,10 +4304,39 @@ def _parse_int(value: str | None) -> int | None:
         return None
 
 
-def _fetch_resource(url: str, *, timeout_s: float, user_agent: str, connection_close: bool = True) -> dict[str, Any]:
+def _fetch_resource(url: str, *, timeout_s: float, user_agent: str, connection_close: bool = True,
+                    certificats_nommes: frozenset[str] = frozenset()) -> dict[str, Any]:
+    """`certificats_nommes` : les hotes dont le certificat REFUSE est deja nomme dans le rapport
+    (`_audit_certificat_du_site`). Une ressource servie par l'un d'eux n'est pas cassee pour autant.
+
+    14/10/2026, elevenlabs-avis.com servait le certificat par defaut de Netlify (`*.netlify.app`) :
+    les pages, chargees par un navigateur qui ignore les erreurs de certificat, passaient ; chaque
+    script, feuille de style et image du site echouait ici sur la verification TLS et sortait
+    « casse » — huit familles d'erreurs (jusqu'a 31 occurrences) qu'Ahrefs ne voyait pas. Le vrai
+    defaut, le certificat, est signale une fois par l'audit TLS.
+
+    La tolerance ne couvre QUE l'hote nomme, et chacun de ses sauts : un sous-domaine, un alias
+    www, une redirection vers un autre hote ou un refus que l'audit ne sait pas nommer (auto-signe,
+    racine inconnue) restent casses, sans quoi le defaut ne serait signale nulle part."""
     session = _get_session(user_agent, connection_close=connection_close)
     try:
-        resp = session.get(url, timeout=timeout_s, allow_redirects=True, stream=True, headers={"Accept": "*/*"})
+        try:
+            resp = session.get(url, timeout=timeout_s, allow_redirects=True, stream=True, headers={"Accept": "*/*"})
+            tls_ignore = False
+        except requests.exceptions.SSLError as refus:
+            if (urlsplit(url).hostname or "") not in certificats_nommes:
+                raise
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            resp = session.get(url, timeout=timeout_s, allow_redirects=True, stream=True,  # nosec B501
+                               headers={"Accept": "*/*"}, verify=False)
+            sauts = [str(h.url) for h in (resp.history or [])] + [str(resp.url)]
+            if any((urlsplit(s).hostname or "") not in certificats_nommes for s in sauts):
+                # Un saut ailleurs a perdu sa verification lui aussi : rien ne dit que ce n'est pas
+                # LUI qui refusait. L'erreur d'origine reste.
+                resp.close()
+                raise refus
+            tls_ignore = True
         try:
             content_type = (resp.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower() or None
             content_encoding = (resp.headers.get("Content-Encoding") or "").strip() or None
@@ -4336,6 +4365,7 @@ def _fetch_resource(url: str, *, timeout_s: float, user_agent: str, connection_c
                 "content_encoding": content_encoding,
                 "content_length": content_length,
                 "error": None,
+                "tls_ignore": tls_ignore,
             }
         finally:
             resp.close()
@@ -4352,7 +4382,8 @@ def _fetch_resource(url: str, *, timeout_s: float, user_agent: str, connection_c
         }
 
 
-def _fetch_internal_resources(pages: list[PageData], config: CrawlConfig, base_parts) -> tuple[list[dict[str, Any]], dict[str, int]]:
+def _fetch_internal_resources(pages: list[PageData], config: CrawlConfig, base_parts, *,
+                              certificats_nommes: frozenset[str] = frozenset()) -> tuple[list[dict[str, Any]], dict[str, int]]:
     def is_html_200(p: PageData) -> bool:
         return (p.content_type or "").find("html") != -1 and isinstance(p.status_code, int) and p.status_code == 200 and not p.error
 
@@ -4398,6 +4429,8 @@ def _fetch_internal_resources(pages: list[PageData], config: CrawlConfig, base_p
                 timeout_s=float(config.timeout_s),
                 user_agent=str(config.user_agent),
                 connection_close=bool(config.connection_close),
+                # Le certificat refuse ET nomme dans le rapport : voir `_fetch_resource`.
+                certificats_nommes=certificats_nommes,
             ): (u, t)
             for u, t in tasks
         }
@@ -9321,6 +9354,97 @@ def _load_json_dict(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _audit_tls(host: str, *, timeout_s: float, port: int = 443) -> dict[str, Any]:
+    """La poignee de main TLS du site : version, chiffrement, dates et nom du certificat."""
+    out: dict[str, Any] = {"host": host, "port": port, "ok": False}
+    try:
+        ctx = ssl.create_default_context()
+        with socket.create_connection((host, port), timeout=float(timeout_s)) as sock:
+            with ctx.wrap_socket(sock, server_hostname=host) as ssock:
+                out["ok"] = True
+                out["tls_version"] = ssock.version()
+                out["cipher"] = (ssock.cipher() or (None, None, None))[0]
+                cert = ssock.getpeercert() or {}
+                out["cert"] = cert
+                # ssl.match_hostname was removed in Python 3.12; the TLS handshake
+                # above already verifies the hostname via ctx.check_hostname=True,
+                # so reaching this point means the hostname is valid.
+                try:
+                    if hasattr(ssl, "match_hostname"):
+                        ssl.match_hostname(cert, host)  # type: ignore[attr-defined]
+                    out["hostname_ok"] = True
+                except ssl.CertificateError as e:
+                    out["hostname_ok"] = False
+                    out["hostname_error"] = f"{type(e).__name__}: {e}"
+                not_after = cert.get("notAfter")
+                out["not_after"] = not_after
+                not_before = cert.get("notBefore")
+                out["not_before"] = not_before
+                if isinstance(not_after, str) and not_after.strip():
+                    try:
+                        dt_na = dt.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
+                        out["days_left"] = int((dt_na - dt.datetime.now(dt.timezone.utc)).total_seconds() // 86400)
+                        # La DUREE totale du certificat dit s'il est renouvele par une machine
+                        # ou par une personne, et c'est ce qui rend le seuil d'alerte
+                        # interpretable. Voir `_seuil_alerte_certificat`.
+                        if isinstance(not_before, str) and not_before.strip():
+                            dt_nb = dt.datetime.strptime(not_before, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
+                            out["validity_days"] = int((dt_na - dt_nb).total_seconds() // 86400)
+                    except Exception:
+                        pass
+    except ssl.SSLCertVerificationError as e:
+        # Un certificat REFUSE a la poignee de main n'arrive jamais jusqu'aux controles du
+        # dessus : `certificate_name_mismatch` ne pouvait donc pas se lever, et un certificat
+        # expire non plus. 14/10/2026, elevenlabs-avis.com servait `*.netlify.app` : vingt-huit
+        # ressources « cassees » et pas un mot sur le certificat. Codes OpenSSL : 62 = nom qui ne
+        # correspond pas, 10 = certificat expire.
+        out["error"] = f"{type(e).__name__}: {e}"
+        out["verify_code"] = getattr(e, "verify_code", None)
+        out["verify_message"] = str(getattr(e, "verify_message", "") or "")
+        if out["verify_code"] == 62:
+            out["hostname_ok"] = False
+            out["hostname_error"] = out["verify_message"] or out["error"]
+        elif out["verify_code"] == 10:
+            out["expire"] = True
+    except Exception as e:
+        out["error"] = f"{type(e).__name__}: {e}"
+    return out
+
+
+def _familles_certificat(tls: dict[str, Any], host: str) -> dict[str, dict[str, Any]]:
+    """Les familles de certificat que leve un audit TLS, avec leur ligne de preuve.
+
+    Un certificat REFUSE a la poignee de main (`ok` faux) se lit maintenant : nom qui ne
+    correspond pas -> `certificate_name_mismatch`, certificat expire -> `certificate_expiration`
+    (jours restants inconnus : on n'a pas pu le lire)."""
+    familles: dict[str, dict[str, Any]] = {}
+    seuil = _seuil_alerte_certificat(tls.get("validity_days"))
+    if tls.get("ok") and isinstance(tls.get("days_left"), int) and int(tls["days_left"]) <= seuil:
+        familles["certificate_expiration"] = {
+            "host": host, "not_after": tls.get("not_after"), "days_left": int(tls.get("days_left") or 0),
+            "validity_days": tls.get("validity_days"), "seuil": seuil}
+    elif tls.get("expire"):
+        familles["certificate_expiration"] = {"host": host, "days_left": None,
+                                              "error": tls.get("verify_message") or tls.get("error")}
+    if tls.get("hostname_ok") is False:
+        familles["certificate_name_mismatch"] = {"host": host, "error": tls.get("hostname_error")}
+    return familles
+
+
+def _audit_certificat_du_site(base_parts, *, timeout_s: float) -> tuple[dict[str, Any], dict[str, dict[str, Any]], frozenset[str]]:
+    """L'audit TLS de l'hote de base, ses familles, et les hotes dont le certificat REFUSE y est nomme.
+
+    Ces hotes-la seulement rendent leurs ressources tolerables (`_fetch_resource`). Un site servi
+    en http n'a pas de certificat a se voir reprocher : ce que repond son port 443 n'est pas le
+    sien. Un port explicite en https est celui qu'on audite."""
+    host = (base_parts.hostname or "").strip()
+    https = str(base_parts.scheme or "").lower() == "https"
+    tls = _audit_tls(host, timeout_s=timeout_s, port=(base_parts.port or 443) if https else 443)
+    familles = _familles_certificat(tls, host) if (https or tls.get("ok")) else {}
+    nommes = frozenset({host}) if (familles and not tls.get("ok")) else frozenset()
+    return tls, familles, nommes
+
+
 def _find_previous_report(output_dir: str) -> tuple[str | None, Path | None]:
     """
     Best-effort previous crawl detection (Ahrefs-like change tracking).
@@ -9704,64 +9828,21 @@ def main(argv: list[str]) -> int:
         issues["incorrect_pages_found_in_sitemap_xml"] = {"count": len(merged), "examples": merged[:200]}
 
     # --- Semrush-like security checks (site-level) ---
-    def _tls_audit(host: str, port: int = 443) -> dict[str, Any]:
-        out: dict[str, Any] = {"host": host, "port": port, "ok": False}
-        try:
-            ctx = ssl.create_default_context()
-            with socket.create_connection((host, port), timeout=float(config.timeout_s)) as sock:
-                with ctx.wrap_socket(sock, server_hostname=host) as ssock:
-                    out["ok"] = True
-                    out["tls_version"] = ssock.version()
-                    out["cipher"] = (ssock.cipher() or (None, None, None))[0]
-                    cert = ssock.getpeercert() or {}
-                    out["cert"] = cert
-                    # ssl.match_hostname was removed in Python 3.12; the TLS handshake
-                    # above already verifies the hostname via ctx.check_hostname=True,
-                    # so reaching this point means the hostname is valid.
-                    try:
-                        if hasattr(ssl, "match_hostname"):
-                            ssl.match_hostname(cert, host)  # type: ignore[attr-defined]
-                        out["hostname_ok"] = True
-                    except ssl.CertificateError as e:
-                        out["hostname_ok"] = False
-                        out["hostname_error"] = f"{type(e).__name__}: {e}"
-                    not_after = cert.get("notAfter")
-                    out["not_after"] = not_after
-                    not_before = cert.get("notBefore")
-                    out["not_before"] = not_before
-                    if isinstance(not_after, str) and not_after.strip():
-                        try:
-                            dt_na = dt.datetime.strptime(not_after, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
-                            out["days_left"] = int((dt_na - dt.datetime.now(dt.timezone.utc)).total_seconds() // 86400)
-                            # La DUREE totale du certificat dit s'il est renouvele par une machine
-                            # ou par une personne, et c'est ce qui rend le seuil d'alerte
-                            # interpretable. Voir `_seuil_alerte_certificat`.
-                            if isinstance(not_before, str) and not_before.strip():
-                                dt_nb = dt.datetime.strptime(not_before, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=dt.timezone.utc)
-                                out["validity_days"] = int((dt_na - dt_nb).total_seconds() // 86400)
-                        except Exception:
-                            pass
-        except Exception as e:
-            out["error"] = f"{type(e).__name__}: {e}"
-        return out
-
+    certificats_nommes: frozenset[str] = frozenset()
     host = (base_parts.hostname or "").strip()
     if host:
-        tls = _tls_audit(host)
+        tls, familles_certificat, certificats_nommes = _audit_certificat_du_site(
+            base_parts, timeout_s=float(config.timeout_s))
         system_fetches.append({"type": "tls", **tls})
         issues_dir = Path(str(config.output_dir)).resolve() / "issues"
-        _seuil = _seuil_alerte_certificat(tls.get("validity_days"))
-        if tls.get("ok") and isinstance(tls.get("days_left"), int) and int(tls["days_left"]) <= _seuil:
-            row = {"host": host, "not_after": tls.get("not_after"),
-                   "days_left": int(tls.get("days_left") or 0),
-                   "validity_days": tls.get("validity_days"), "seuil": _seuil}
-            _write_issue_rows(issues_dir, "certificate_expiration", [row])
+        # Cles en toutes lettres : `ops/couverture.py` lit dans ce code quelles familles peuvent se lever.
+        if "certificate_expiration" in familles_certificat:
+            _write_issue_rows(issues_dir, "certificate_expiration", [familles_certificat["certificate_expiration"]])
             issues["certificate_expiration"] = {"count": 1, "examples": [host]}
-        if tls.get("ok") and tls.get("hostname_ok") is False:
-            row = {"host": host, "error": tls.get("hostname_error")}
-            _write_issue_rows(issues_dir, "certificate_name_mismatch", [row])
+        if "certificate_name_mismatch" in familles_certificat:
+            _write_issue_rows(issues_dir, "certificate_name_mismatch", [familles_certificat["certificate_name_mismatch"]])
             issues["certificate_name_mismatch"] = {"count": 1, "examples": [host]}
-        ver = str(tls.get("tls_version") or "")
+        ver =str(tls.get("tls_version") or "")
         if tls.get("ok") and ver in {"TLSv1", "TLSv1.1"}:
             _write_issue_rows(issues_dir, "old_tls_version", [{"host": host, "tls_version": ver}])
             issues["old_tls_version"] = {"count": 1, "examples": [host]}
@@ -9832,7 +9913,8 @@ def main(argv: list[str]) -> int:
     if resources_checked:
         print(f"[RESOURCES] Checking internal resources | max_per_type={int(config.max_resources)}", flush=True)
         _resources_t0 = time.monotonic()
-        resources, resources_counts = _fetch_internal_resources(page_list, config, base_parts)
+        resources, resources_counts = _fetch_internal_resources(page_list, config, base_parts,
+                                                                certificats_nommes=certificats_nommes)
         issues.update(
             _score_resource_issues(
                 page_list, resources, output_dir=config.output_dir, strict_link_counts=bool(config.strict_link_counts)
