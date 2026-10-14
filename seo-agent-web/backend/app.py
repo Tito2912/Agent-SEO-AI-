@@ -2287,16 +2287,19 @@ def _decider_de_la_pr(verifs: dict[str, Any], *, age_s: float) -> tuple[str, str
     return "inconnu", "Aucune vérification disponible sur ce dépôt"
 
 
-def _bloc_verification(pr_data: Any, *, fusion_auto: bool) -> dict[str, Any]:
+def _bloc_verification(pr_data: Any, *, fusion_auto: bool,
+                       controle_sitemap: dict[str, Any] | None = None) -> dict[str, Any]:
     """Ce qu'on garde d'une pull request pour pouvoir la reprendre plus tard.
 
     Le SHA et l'identifiant de noeud viennent de la REPONSE de GitHub et non de variables
     locales : les quatre routes les nomment differemment, et trois d'entre elles ne gardent
     qu'un SHA tronque a sept caracteres. Lire la reponse donne la meme chose partout.
+    `controle_sitemap` : un filtre de sitemap engendre, que l'apercu doit confirmer avant
+    toute sortie de brouillon (voir `_controler_sitemap_apercu`).
     """
     tete = pr_data.get("head") if isinstance(pr_data, dict) else None
     sha = str((tete or {}).get("sha") or "") if isinstance(tete, dict) else ""
-    return {
+    bloc = {
         "etat": "en_attente",
         "sha": sha,
         "node_id": str((pr_data or {}).get("node_id") or ""),
@@ -2304,6 +2307,17 @@ def _bloc_verification(pr_data: Any, *, fusion_auto: bool) -> dict[str, Any]:
         "fusion_auto": bool(fusion_auto),
         "raison": "",
     }
+    if controle_sitemap:
+        bloc["controle_sitemap"] = controle_sitemap
+    return bloc
+
+
+def _controle_sitemap_de(prep: dict[str, Any] | None, patched: list[str] | None) -> dict[str, Any] | None:
+    """Le controle a faire sur l'apercu quand un filtre de sitemap engendre a ete COMMITE."""
+    filtre = (prep or {}).get("sitemap_filtre")
+    if not filtre or str(filtre.get("generateur") or "") not in set(patched or []):
+        return None
+    return {"urls": list(filtre.get("urls") or [])}
 
 
 def _github_api_put(path: str, *, token: str, json_body: dict[str, Any], timeout_s: float = 30.0) -> Any:
@@ -19168,6 +19182,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     ai_billable = 0                  # …but only the model-written ones are billed
     any_premise_key = ""             # …and so is one fix that rests on a debatable assumption
     budget = int(gate_budget)  # total files we may patch this run (plan cap ∩ remaining quota)
+    _controle_sitemap: dict[str, Any] | None = None  # un filtre de sitemap engendre a verifier
     for issue in fixable:
         issue_key, issue_label, url = issue["key"], issue["label"], issue["url"]
         result = {"issue_key": issue_key, "issue_label": issue_label, "url": url, "ok": False}
@@ -19209,6 +19224,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
         if patched and not any_premise_key and _fix_premise_note(issue_key):
             any_premise_key = issue_key
         budget -= len(patched)
+        _controle_sitemap = _controle_sitemap or _controle_sitemap_de(_prep, patched)
         results.append({
             **result, "ok": bool(patched), "files": patched,
             "verification_urls": impacted,
@@ -19286,7 +19302,9 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # chacune, elle ferait reprendre la meme PR autant de fois par le balayage — donc tenter de
     # la sortir du brouillon et de la fusionner plusieurs fois.
     _trace_verif: dict[str, Any] | None = {
-        "verification": _bloc_verification(pr_data, fusion_auto=_fusion_auto),
+        "verification": _bloc_verification(
+            pr_data, fusion_auto=_fusion_auto,
+            **({"controle_sitemap": _controle_sitemap} if _controle_sitemap else {})),
         "pr_title": pr_title,
     }
     for r in fixed_results:
@@ -26747,6 +26765,194 @@ def _fichiers_sitemap_du_depot(all_paths: list[str]) -> list[str]:
     return sorted(out)
 
 
+def _lire_texte_du_depot(owner: str, repo_name: str, branch: str, token: str, chemin: str) -> str | None:
+    try:
+        fd = _github_api_get(_github_content_api_path(owner, repo_name, chemin), token=token,
+                             params={"ref": branch})
+        return base64.b64decode(str((fd or {}).get("content") or "").replace("\n", "")).decode("utf-8")
+    except Exception:
+        return None
+
+
+# Un FICHIER de route qui rend le sitemap : c'est la qu'un filtre s'ecrit. Un paquet
+# (@astrojs/sitemap) ou le sitemap par defaut de Hugo n'ont pas de fichier ou le poser.
+_GENERATEUR_FILTRABLE_RE = re.compile(r"(?:^|/)sitemap\.(?:ts|tsx|js|mjs)$", re.I)
+
+
+def _plan_filtre_sitemap(*, generateur: str, urls: list[str], all_paths: list[str], owner: str,
+                         repo_name: str, branch: str, token: str) -> "dict[str, Any] | str":
+    """Le plan d'un filtre noindex dans un sitemap ENGENDRE, ou la raison de s'abstenir.
+
+    14/10/2026, easyshopbuilder : `app/sitemap.ts` liste les quatre accueils de blog que leur
+    front matter met en `robots: "noindex, follow"`. Le geste est une regle dans le generateur,
+    et il ne se fait que s'il se PROUVE avant d'appeler le modele : un seul fichier de route,
+    le noindex de chaque page declare dans un champ de SA source, et ce champ deja lu par le
+    generateur ou un module qu'il importe. Voir backend/sitemap_genere.py."""
+    try:
+        from . import sitemap_genere
+    except ImportError:
+        import sitemap_genere
+    chemins = set(all_paths or [])
+    if not urls:
+        return "Aucune page noindex prouvee : rien a exclure du sitemap."
+    if generateur not in chemins or not _GENERATEUR_FILTRABLE_RE.search(generateur):
+        return ("Le sitemap est engendre par %s, sans fichier de route ou poser un filtre : "
+                "exclusion a traiter dans sa vraie source." % generateur)
+    lus: dict[str, str | None] = {}
+
+    def lire(chemin: str) -> str | None:
+        if chemin not in lus:
+            lus[chemin] = _lire_texte_du_depot(owner, repo_name, branch, token, chemin)
+        return lus[chemin]
+
+    index = repo_index.build_repo_index(all_paths)
+    champs: set[str] = set()
+    for url in urls:
+        fichiers = [f for f in (repo_index.route_files(index, url) or [])
+                    if f in chemins and not repo_index.is_shared_path(index, f)]
+        porteurs = {f: sitemap_genere.champ_noindex(lire(f) or "") for f in fichiers}
+        porteurs = {f: c for f, c in porteurs.items() if c}
+        if len(porteurs) != 1:
+            return ("La source de %s ne declare pas son noindex dans un champ que le generateur "
+                    "du sitemap pourrait lire : aucun filtre devine." % url)
+        champs.update(porteurs.values())
+    if len(champs) > 1:
+        return ("Les pages signalees declarent leur noindex dans des champs differents (%s) : "
+                "aucun filtre devine." % ", ".join(sorted(champs)))
+    champ = champs.pop()
+    source = lire(generateur)
+    if source is None:
+        return "Generateur du sitemap illisible (%s)." % generateur
+    modules = {m: lire(m) or "" for m in sitemap_genere.modules_importes(source, generateur, chemins)}
+    if not sitemap_genere.lit_le_champ(source, modules, champ):
+        return ("Le generateur %s ne lit pas le champ `%s` des pages : un filtre devrait deviner "
+                "d'ou vient leur noindex." % (generateur, champ))
+    lecteurs = [m for m, t in modules.items() if re.search(r"\b%s\b" % re.escape(champ), t)]
+    hint = (
+        "Le sitemap est ENGENDRE par `%s`. Ces pages y figurent alors que leur source les met en "
+        "noindex, dans le champ `%s`%s. Ajoute dans `%s` un filtre qui ecarte toute entree dont "
+        "le champ `%s` contient « noindex », a l'endroit ou les entrees sont construites. Filtre "
+        "sur ce champ et JAMAIS sur une URL ou un prefixe d'URL ; n'ecris aucune URL en dur ; ne "
+        "touche a rien d'autre dans le fichier ; ne retire pas le noindex des pages.\n%s"
+        % (generateur, champ, (", que `%s` transmet deja" % lecteurs[0]) if lecteurs else "",
+           generateur, champ, "\n".join("- " + u for u in urls[:20])))
+    return {
+        "targets_override": [generateur], "evidence": list(urls), "extra_hint": hint,
+        "sitemap_noindex_urls": None,
+        "sitemap_filtre": {"champ": champ, "urls": list(urls), "generateur": generateur},
+        "side_effects": ("\n\n> 🧭 **Sitemap engendré.** Un filtre sur le champ `%s` a été ajouté à "
+                         "`%s`. Noyaru vérifie sur l'aperçu de déploiement que le sitemap servi "
+                         "n'a perdu que ces %d page(s) ; sinon la PR reste en brouillon."
+                         % (champ, generateur, len(urls))),
+    }
+
+
+def _lire_sitemap_public(url: str) -> str | None:
+    """Un sitemap servi, lu avec l'hygiene de `_page_servie` : HTTPS public, 200 direct, aucune
+    redirection suivie, taille bornee. L'URL d'apercu vient d'un statut GitHub que le client
+    ecrit : elle ne se lit jamais sans `_validate_public_crawl_target`."""
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme != "https" or parsed.username or parsed.password or _validate_public_crawl_target(url):
+            return None
+        response = requests.get(url, allow_redirects=False, stream=True, timeout=(5, 15))
+        try:
+            if response.status_code != 200 or response.history:
+                return None
+            chunks, size = [], 0
+            for chunk in response.iter_content(chunk_size=65536):
+                size += len(chunk)
+                if size > 10_000_000:
+                    return None
+                chunks.append(chunk)
+            return b"".join(chunks).decode("utf-8", errors="replace")
+        finally:
+            response.close()
+    except Exception:
+        return None
+
+
+def _chemins_du_sitemap_servi(origine: str) -> set[str] | None:
+    """Les chemins listes par le sitemap d'une origine (index suivi, 20 enfants au plus)."""
+    try:
+        from . import sitemap_genere
+    except ImportError:
+        import sitemap_genere
+    texte = _lire_sitemap_public(origine.rstrip("/") + "/sitemap.xml")
+    if texte is None:
+        return None
+    try:
+        chemins, enfants = sitemap_genere.chemins_sitemap(texte)
+        for enfant in enfants[:20]:
+            # Un enfant se lit sur l'origine controlee, quel que soit l'hote qu'il ecrit.
+            sous = _lire_sitemap_public(origine.rstrip("/") + urlsplit(enfant).path)
+            if sous is None:
+                return None
+            chemins |= sitemap_genere.chemins_sitemap(sous)[0]
+        return chemins
+    except Exception:
+        return None
+
+
+# Les hebergeurs dont l'URL d'apercu est publique et previsible. Un statut GitHub peut porter
+# n'importe quelle URL : on ne lit que celles-ci.
+_HOTES_APERCU = (".netlify.app", ".vercel.app", ".pages.dev", ".onrender.com")
+
+
+def _apercus_du_commit(*, owner: str, repo: str, sha: str, token: str) -> list[str]:
+    """Les URL d'apercu deployees pour ce commit : statuts (Netlify) et deploiements GitHub
+    (Vercel, Cloudflare Pages), limitees aux hebergeurs connus."""
+    vues: list[str] = []
+    try:
+        combine = _github_api_get(_github_api_path("repos", owner, repo, "commits", sha, "status"), token=token) or {}
+        for s in combine.get("statuses") or []:
+            if isinstance(s, dict) and str(s.get("state") or "") == "success":
+                vues.append(str(s.get("target_url") or ""))
+    except Exception:
+        pass
+    try:
+        deploiements = _github_api_get(_github_api_path("repos", owner, repo, "deployments"), token=token,
+                                       params={"sha": sha, "per_page": "10"}) or []
+        for d in deploiements if isinstance(deploiements, list) else []:
+            statuts = _github_api_get(_github_api_path("repos", owner, repo, "deployments", str(d.get("id")), "statuses"),
+                                      token=token, params={"per_page": "5"}) or []
+            for s in statuts if isinstance(statuts, list) else []:
+                if isinstance(s, dict) and str(s.get("state") or "") == "success":
+                    vues.append(str(s.get("environment_url") or ""))
+    except Exception:
+        pass
+    sortie: list[str] = []
+    for url in vues:
+        hote = (urlsplit(url).hostname or "").lower()
+        if url.startswith("https://") and hote.endswith(_HOTES_APERCU):
+            origine = "https://" + hote
+            if origine not in sortie:
+                sortie.append(origine)
+    return sortie
+
+
+def _controler_sitemap_apercu(controle: dict[str, Any], *, owner: str, repo: str, sha: str,
+                              token: str, base_url: str) -> tuple[str, str]:
+    """(etat, raison) : « ok », « echec », « attendre » (pas encore d'apercu) ou « illisible »."""
+    try:
+        from . import sitemap_genere
+    except ImportError:
+        import sitemap_genere
+    apercus = _apercus_du_commit(owner=owner, repo=repo, sha=sha, token=token)
+    if not apercus:
+        return "attendre", "En attente de l'aperçu de déploiement pour vérifier le sitemap"
+    parts = urlsplit(base_url or "")
+    vivants = _chemins_du_sitemap_servi("%s://%s" % (parts.scheme or "https", parts.netloc)) if parts.netloc else None
+    apercu = _chemins_du_sitemap_servi(apercus[0])
+    if vivants is None or apercu is None:
+        return "illisible", "sitemap de l'aperçu ou du site illisible : à relire avant de fusionner"
+    ecart = sitemap_genere.ecart_apercu(vivants, apercu, list(controle.get("urls") or []))
+    if ecart:
+        return "echec", ecart
+    return "ok", "sitemap de l'aperçu vérifié : %d entrée(s) retirée(s), %d conservée(s)" % (
+        len(vivants - apercu), len(apercu))
+
+
 def _deep_reparer_le_sitemap(
     *, owner: str, repo_name: str, token: str, fix_branch: str, all_paths: list[str],
     pages: list[dict[str, Any]] | None, package_json: str = "",
@@ -28020,9 +28226,19 @@ def _prepare_issue_fix(
         candidates = _fichiers_sitemap_du_depot(all_paths)
         roots = {"sitemap.xml", *(folder + "/sitemap.xml" for folder in _DOSSIERS_STATIQUES)}
         out["extra_hint"] = "Retire EXACTEMENT les entrees noindex prouvees ; conserve les pages et leur noindex. Aucun motif d'URL ni repli IA."
+        _generateur = _sitemap_deja_engendre(all_paths)
         if not urls:
             out["refusal"] = "Aucune instruction meta noindex HTML 200 coherente observee. Les en-tetes seuls ne prouvent pas une source litterale."
-        elif len(candidates) != 1 or candidates[0] not in roots or _sitemap_deja_engendre(all_paths):
+        elif _generateur and not candidates:
+            # Aucun XML ecrit a la main : le seul geste possible est un filtre dans le generateur,
+            # et il ne se tente que s'il se prouve (voir `_plan_filtre_sitemap`).
+            _plan = _plan_filtre_sitemap(generateur=_generateur, urls=urls, all_paths=all_paths,
+                                         owner=owner, repo_name=repo_name, branch=branch, token=token)
+            if isinstance(_plan, str):
+                out["refusal"] = _plan
+            else:
+                out.update(_plan)
+        elif len(candidates) != 1 or candidates[0] not in roots or _generateur:
             out["refusal"] = "Le sitemap source est engendre, absent ou ambigu : exclusion a traiter dans sa vraie source."
         else:
             out["sitemap_noindex_urls"] = urls
@@ -28783,6 +28999,9 @@ def _deep_patch_issue_files(
     # Fichier -> {balise : valeur} : la carte Twitter qu'un framework doit recevoir, valeurs
     # imposees par le code. Voir `_carte_twitter_par_fichier`.
     valeurs_imposees: dict[str, dict[str, str]] | None = None,
+    # Un sitemap ENGENDRE : le modele y pose un filtre noindex, `sitemap_genere.garde_filtre`
+    # le juge. Voir `_plan_filtre_sitemap`.
+    sitemap_filtre: dict[str, Any] | None = None,
     hreflang_lang_urls: list[str] | None = None,
     hreflang_canonical_pairs: list[dict[str, str]] | None = None,
     hreflang_drop_items: list[dict[str, str]] | None = None,
@@ -29819,6 +30038,18 @@ def _deep_patch_issue_files(
                 logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _etrangere)
                 skipped.append(path)
                 continue
+        # Le filtre d'un sitemap engendre : sur le champ, sans URL ni motif, et court.
+        if sitemap_filtre is not None:
+            try:
+                from . import sitemap_genere
+            except ImportError:
+                import sitemap_genere
+            _motif = sitemap_genere.garde_filtre(raw, new_content, list(sitemap_filtre.get("urls") or []),
+                                                 str(sitemap_filtre.get("champ") or ""))
+            if _motif:
+                logger.warning("[correction] %s: %s refuse — %s", issue_key, path, _motif)
+                skipped.append(path)
+                continue
         # Un champ de front matter que les gabarits n'impriment pas ne change RIEN a la page
         # servie : une pull request sans effet, que rien ne signalait (jekyll, 12/10/2026).
         _rendus = _champs_jekyll(path, raw)
@@ -30036,6 +30267,7 @@ def _apply_prepared_issue_fix(
                 viewport_urls=prep.get('viewport_urls'),
                 twitter_missing_urls=prep.get('twitter_missing_urls'),
                 valeurs_imposees=prep.get('valeurs_imposees'),
+                sitemap_filtre=prep.get('sitemap_filtre'),
                 hreflang_lang_urls=prep.get('hreflang_lang_urls'),
                 hreflang_canonical_pairs=prep.get('hreflang_canonical_pairs'),
                 hreflang_drop_items=prep.get('hreflang_drop_items'),
@@ -30252,7 +30484,10 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
                         and not _fix_premise_note(issue_key))
 
     try:
-        _note = json.dumps({"verification": _bloc_verification(pr_data, fusion_auto=_fusion_auto),
+        _controle = _controle_sitemap_de(_prep, all_changed)
+        _note = json.dumps({"verification": _bloc_verification(
+                                pr_data, fusion_auto=_fusion_auto,
+                                **({"controle_sitemap": _controle} if _controle else {})),
                             "pr_title": pr_title,
                             "pr_url": pr_url, "pr_number": int(pr_number) if pr_number else 0, "branch": fix_branch, "files": all_changed, "deep": True, "pages": len(impacted), "verification_urls": impacted, "verification_expected_count": _verification_scope_count(issue_key, issues), "config": bool(config_changes)}, ensure_ascii=False)
         with DB.session() as _db:
@@ -36820,6 +37055,7 @@ def _reprendre_une_verification(tache: Any) -> str:
     with DB.session() as db:
         projet = db.get(Project, str(tache.project_id))
         reglages = projet.settings if (projet and isinstance(projet.settings, dict)) else {}
+        base_url = str(getattr(projet, "base_url", "") or "") if projet else ""
     depot = str(reglages.get("github_repo") or "").strip()
     parties = _github_repo_parts(depot)
     if parties is None:
@@ -36846,6 +37082,21 @@ def _reprendre_une_verification(tache: Any) -> str:
     verifs = _verifications_du_commit(owner=proprio, repo=nom, sha=sha, token=jeton)
     age = max(0.0, time.time() - float(verif.get("ouvert_le") or 0))
     decision, raison = _decider_de_la_pr(verifs, age_s=age)
+
+    # Un filtre de sitemap ENGENDRE ne sort du brouillon que si l'apercu le confirme : le build
+    # peut passer avec un filtre qui retire trop, ou rien. Illisible = non verifie, jamais verifie.
+    controle = verif.get("controle_sitemap")
+    if controle and decision in ("promouvoir", "inconnu"):
+        etat_c, motif_c = _controler_sitemap_apercu(controle, owner=proprio, repo=nom, sha=sha,
+                                                    token=jeton, base_url=base_url)
+        if etat_c == "echec":
+            decision, raison = "refuser", "Sitemap : " + motif_c
+        elif etat_c == "attendre" and age < _pr_verif_fenetre_s():
+            decision, raison = "attendre", motif_c
+        elif etat_c == "ok":
+            raison = raison + " — " + motif_c
+        else:
+            decision, raison = "inconnu", raison + " — " + motif_c
 
     if decision == "attendre":
         verif["raison"] = raison
