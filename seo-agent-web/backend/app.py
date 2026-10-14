@@ -662,6 +662,30 @@ def _ensure_runs_file_local(path: Path) -> bool:
     return bool(object_store.restore_runs_file(root, target))
 
 
+def _ramener_les_crawls_precedents(runs_dir: Path, slug: str, avant: str, *, combien: int = 3) -> list[str]:
+    """Ramene sur le disque du worker les derniers rapports anterieurs a `avant`.
+
+    Le crawler ne cherche son crawl precedent que dans les dossiers VOISINS du sien
+    (`_find_previous_report`) : tout le suivi des changements en depend — titre et description
+    modifies, IndexNow, canonical modifie, page devenue non indexable. Or le worker n'a pas de
+    disque durable : apres un redemarrage (chaque deploiement), les rapports ne vivent plus que
+    dans le stockage objet. 14/10/2026, easyshopbuilder : crawl de 10:01, deux deploiements, crawl
+    de 14:40 apres la fusion de 11 descriptions — Ahrefs « Meta description changed » 11 et
+    IndexNow 11, Noyaru 0, sans un mot. Plusieurs rapports et non un : le crawler saute ceux ou
+    le site etait injoignable."""
+    ramenes: list[str] = []
+    try:
+        anterieurs = [t for t in dash.list_project_crawls(runs_dir, slug) if t < avant]
+    except Exception:
+        return ramenes
+    for t in reversed(anterieurs):
+        if len(ramenes) >= combien:
+            break
+        if _ensure_runs_file_local(runs_dir / slug / t / "audit" / "report.json"):
+            ramenes.append(t)
+    return ramenes
+
+
 def _sync_runs_path_to_object_store(path: Path) -> None:
     try:
         object_store.upload_runs_path(DEFAULT_RUNS_DIR, path.resolve())
@@ -9728,6 +9752,8 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
     site_dir = runs_dir / slug / timestamp
     audit_dir = site_dir / "audit"
     audit_dir.mkdir(parents=True, exist_ok=True)
+    # Le crawler compare au crawl precedent qu'il trouve A COTE du sien, sur ce disque.
+    _ramener_les_crawls_precedents(runs_dir, slug, timestamp)
 
     run_meta = {
         "site_name": site_name,
