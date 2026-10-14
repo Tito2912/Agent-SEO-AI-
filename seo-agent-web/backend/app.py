@@ -27302,6 +27302,32 @@ _SKIPPED_REASONS: dict[str, str] = {
 }
 
 
+def _ecartes_qui_changeraient(chemins: list[str], lire: "Callable[[str], str | None]",
+                              reecrire: "Callable[[str, str], tuple[str, int]]", *,
+                              limite: int = 30) -> list[str]:
+    """Les fichiers ecartes par le plafond qu'une reecriture deterministe aurait modifies.
+
+    Lire coute un appel GitHub, aucun appel au modele. Au-dela de `limite`, ou pour un fichier
+    illisible, on ne sait pas : il reste annonce. Un fichier que le reecriveur refuse ne serait
+    pas corrige par une relance non plus : il ne l'est pas."""
+    gardes: list[str] = []
+    for i, chemin in enumerate(chemins):
+        if i >= limite:
+            gardes.extend(chemins[i:])
+            break
+        contenu = lire(chemin)
+        if contenu is None:
+            gardes.append(chemin)
+            continue
+        try:
+            _, n = reecrire(contenu, chemin)
+        except Exception:
+            continue
+        if n:
+            gardes.append(chemin)
+    return gardes
+
+
 def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None") -> str:
     """Les fichiers qu'une correction n'a meme pas ESSAYES, faute de place sous le plafond.
 
@@ -28794,6 +28820,7 @@ def _deep_patch_issue_files(
     rewrite that spends no tokens must cost the customer nothing."""
     import base64 as _b64
     issue_key = str(issue_key or "").strip().lower()
+    _debut_ecartes = len(ecartes) if ecartes is not None else 0
     if str(issue_key or "").strip().lower() in _LEGACY_CANONICAL_ADVICE_KEYS:
         return [], [_LEGACY_CANONICAL_ADVICE], [], []
     if str(issue_key or "").strip().lower() in _STRUCTURED_DATA_KEYS:
@@ -29432,6 +29459,18 @@ def _deep_patch_issue_files(
                 logger.info("[correction] gabarit illisible (%s): %s", chemin, e)
                 _gabarits_lus[chemin] = None
         return _gabarits_lus[chemin]
+
+    # Une famille SANS modele : un fichier ecarte par le plafond n'est « non traite » que si le
+    # reecriveur l'aurait vraiment change. PR #2 d'easyshopbuilder, 14/10/2026 : les 3 pages
+    # signalees corrigees, puis « Non traites : 4 » — des fichiers trouves parce qu'ils
+    # MENTIONNENT /en/, sans aucun lien a reecrire. Relancer n'aurait rien change.
+    # Seulement les familles de liens, ou le reecriveur EST le correctif : ailleurs (og:url, les
+    # plans litteraux) une branche propre ecrit le fichier, et le reecriveur ne dit rien de lui.
+    if (ecartes is not None and link_rewriter is not None
+            and not rewriter_ai_fallback and not rewriter_is_ai
+            and issue_key in (_REDIRECT_LINK_KEYS | _MIXED_CONTENT_KEYS | _DOUBLE_SLASH_KEYS)):
+        ecartes[_debut_ecartes:] = _ecartes_qui_changeraient(
+            ecartes[_debut_ecartes:], _lire_du_depot, lambda raw, _chemin: link_rewriter(raw))
 
     # Les champs de front matter que les gabarits d'une page Jekyll impriment vraiment, ou None
     # si la chaine n'est pas entierement dans le depot. Voir backend/jekyll_champs.py.
