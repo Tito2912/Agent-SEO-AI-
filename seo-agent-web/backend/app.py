@@ -27505,6 +27505,10 @@ def _resolve_issue_targets(
         # to it would edit a rule instead of the data it produced.
         named = [p for p in targets if _is_sitemap_path(p)]
         targets = named or [p for p in targets if p in _SITEMAP_GENERATOR_CONFIGS]
+    # Un fichier que rien ne publie ne corrige rien : un .html laisse hors du dossier que le
+    # framework recopie (`repo_index._DOSSIERS_PUBLIES`). La preuve le trouve quand meme, parce
+    # qu'il garde les vieux liens : cityscootlab, PR #1 du 15/10/2026, sept fichiers morts sur 32.
+    targets = [p for p in targets if not repo_index.is_dead_path(index or {}, p)]
     # Ce que le plafond jette n'est pas perdu : sans cette liste, une correction qui
     # traite 8 candidats sur 9 est indiscernable d'une correction complete.
     if ecartes is not None:

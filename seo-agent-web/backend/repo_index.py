@@ -389,7 +389,51 @@ def _py_template_routes(path: str) -> list[str]:
 # offered its own shell as the file to patch for one page's title.
 _SHELL_FILES: dict[str, tuple[str, ...]] = {
     STACK_SVELTEKIT: ("src/app.html",),
+    # Le gabarit HTML global de Nuxt 2 : hors de `public/`, et pourtant bien vivant.
+    STACK_NUXT: ("app.html",),
 }
+
+
+# Le dossier qu'un framework recopie TEL QUEL dans le site publie. Ailleurs dans son depot, un
+# .html n'est servi par rien : il ne doit pas devenir une route. cityscootlab, PR #1 du 15/10/2026 :
+# Next en export statique (Netlify publie `out/`) garde a la racine les .html de son ancienne
+# version, et le correcteur en a modifie sept a cote des vraies sources .mdx. Les generateurs qui
+# publient leurs .html ou qu'ils soient (HTML statique, Jekyll, Eleventy) n'ont pas d'entree.
+_DOSSIERS_PUBLIES: dict[str, tuple[str, ...]] = {
+    STACK_NEXT_APP: ("public/",),
+    STACK_NEXT_PAGES: ("public/",),
+    STACK_ASTRO: ("public/",),
+    STACK_REMIX: ("public/",),
+    STACK_NUXT: ("public/", "static/"),  # `static/` : Nuxt 2
+    STACK_GATSBY: ("static/",),
+    STACK_SVELTEKIT: ("static/",),
+    STACK_HUGO: ("static/",),
+    STACK_DOCUSAURUS: ("static/",),
+}
+
+
+_MARQUEUR_NEXT = re.compile(r"next\.config\.[cm]?[jt]s|(src/)?(app/layout|pages/_app|pages/_document)\.[jt]sx?")
+
+
+def _dossiers_publies(stack: str, paths: list[str]) -> tuple[str, ...] | None:
+    """Le dossier publie, seulement quand le framework est CERTAIN. Next se reconnait aussi a
+    `pages/` + `package.json` : c'est la forme d'un site HTML qui outille son CSS, ou d'un Vite
+    multi-pages, dont la racine EST publiee. Sans fichier propre a Next, l'ancien comportement."""
+    dossiers = _DOSSIERS_PUBLIES.get(stack)
+    if dossiers and stack in (STACK_NEXT_APP, STACK_NEXT_PAGES) and not any(
+            _MARQUEUR_NEXT.fullmatch(p) for p in paths):
+        return None
+    return dossiers
+
+
+def _html_publie(dossiers: tuple[str, ...] | None, path: str) -> bool:
+    """Ce .html arrive-t-il dans le site publie tel quel ?"""
+    return dossiers is None or path.startswith(dossiers)
+
+
+def is_dead_path(index: dict[str, Any], path: str) -> bool:
+    """True for a .html the framework never publishes: patching it changes nothing served."""
+    return isinstance(index, dict) and path in (index.get("morts") or ())
 
 
 def _is_template_path(stack: str, path: str) -> bool:
@@ -482,13 +526,16 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
 
     Returns {stack, routes, dynamic, shared}: `routes` maps a normalised URL path to the
     per-page source files behind it (most specific first); `dynamic` maps each dynamic
-    route template to its static prefix; `shared` lists layout/template files. A URL that
-    cannot be resolved is simply absent — callers must treat a miss as "no opinion"."""
+    route template to its static prefix; `shared` lists layout/template files; `morts` lists
+    the .html files a framework never publishes (see `_DOSSIERS_PUBLIES`). A URL that cannot
+    be resolved is simply absent — callers must treat a miss as "no opinion"."""
     paths = _clean_paths(all_paths)
     stack = detect_stack(paths)
+    publies = _dossiers_publies(stack, paths)
     routes: dict[str, list[str]] = {}
     dynamic: dict[str, str] = {}
     shared: list[str] = []
+    morts: list[str] = []
 
     def add(route: str | None, path: str) -> None:
         if not route:
@@ -533,10 +580,14 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
                 add(r, p)
         # Static HTML is additive on every stack: a Next.js export or a Hugo site can ship
         # hand-written pages under public/, and those ARE the file to patch. Template
-        # directories are the exception — there the .html IS the site-wide template.
+        # directories are the exception — there the .html IS the site-wide template. So is a
+        # .html outside the folder the framework copies verbatim: nothing serves it.
         if not _is_template_path(stack, p):
-            for r in _static_routes(p):
-                add(r, p)
+            if _html_publie(publies, p):
+                for r in _static_routes(p):
+                    add(r, p)
+            elif _static_routes(p):
+                morts.append(p)
 
     # Content collections (`content/**/*.mdx` feeding a dynamic route): the MDX file is the
     # real per-page source — patching the `[slug]` template instead would hardcode one value
@@ -584,7 +635,8 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
                     add(_sans_langue_non_routee(candidate), p)
                     break
 
-    return {"stack": stack, "routes": routes, "dynamic": dynamic, "shared": sorted(set(shared))}
+    return {"stack": stack, "routes": routes, "dynamic": dynamic, "shared": sorted(set(shared)),
+            "morts": sorted(set(morts))}
 
 
 
