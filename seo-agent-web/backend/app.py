@@ -19291,9 +19291,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             "skipped": applied["skipped"],
             "not_attempted_files": ecartes, "config_fixed": applied["config_notes"],
             "partial": bool(applied["skipped"] or ecartes),
-            "notes": (_skipped_note(issue_key, applied["skipped"], applied["targets"])
-                      + _note_de_troncature(ecartes, _plafond)
-                      + str(_prep.get("side_effects") or "")),
+            "notes": _notes_de_famille(issue_key, applied["skipped"], applied["targets"], ecartes,
+                                       _plafond, _prep.get("side_effects")),
             "error": "" if patched else (applied["error"] or "Aucun patch appliqué")})
 
     fixed_results = [r for r in results if r.get("ok")]
@@ -19303,22 +19302,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # Build PR
     _files_total = len({path for r in fixed_results for path in r.get("files", [])})
     pr_title = f"fix(seo): {len(fixed_results)} anomalie(s) corrigée(s) — {site_name}"
-    pr_lines = [
-        "## Corrections SEO automatiques — audit complet\n",
-        f"**Site :** {site_name}  \n**Crawl :** `{ts}`  \n"
-        f"**Anomalies corrigées :** {len(fixed_results)} · **Fichiers modifiés :** {_files_total}\n",
-    ]
-    for r in results:
-        icon = "✅" if r.get("ok") else "❌"
-        files = r.get("files") or []
-        detail = ", ".join(f"`{f}`" for f in files) if files else (r.get("error") or "")
-        pr_lines.append(f"{icon} **{r['issue_label']}** — {detail}")
-        pr_lines.extend(f"- {note}" for note in r.get("config_fixed", []))
-        if r.get("notes"):
-            pr_lines.append(r["notes"])
-    pr_lines.append(_fix_nature_note(any_ai_written, any_premise_key).strip())
-    pr_lines.append("\nCorrection générée par [Noyaru](https://noyaru.com).")
-    pr_body = "\n".join(pr_lines)
+    pr_body = _corps_pr_groupee(site_name=site_name, ts=ts, results=results, files_total=_files_total,
+                                ai_written=any_ai_written, premise_key=any_premise_key)
 
     bulk_result = {
         "fixed_count": len(fixed_results), "total_count": len(results), "results": results,
@@ -27611,6 +27596,45 @@ def _ecartes_qui_changeraient(chemins: list[str], lire: "Callable[[str], str | N
     return gardes
 
 
+def _blocs_markdown(*blocs: str) -> str:
+    """Des blocs Markdown TOUJOURS separes par une ligne vide.
+
+    Une ligne collee sous une citation (`> …`) ou une liste y entre : c'est la continuation
+    « paresseuse » du Markdown. PR #1 de cityscootlab, 15/10/2026 : la note « Non corriges »
+    finissait sans ligne vide, et la famille suivante comme l'avertissement « A relire » sont
+    tombes DANS la citation. Les notes ont trois formes (citation, paragraphe, ligne nue) : on ne
+    fie plus le resultat a la ponctuation de chacune."""
+    return "\n\n".join(b.strip("\n") for b in blocs if b and b.strip())
+
+
+def _notes_de_famille(issue_key: str, skipped: list[str], targets: list[str], ecartes: list[str],
+                      plafond: "_Plafond | None", effets: Any) -> str:
+    """Les notes d'une famille dans la PR groupee : non corriges, non traites, effets de bord."""
+    return _blocs_markdown(_skipped_note(issue_key, skipped, targets),
+                           _note_de_troncature(ecartes, plafond), str(effets or ""))
+
+
+def _corps_pr_groupee(*, site_name: str, ts: str, results: list[dict[str, Any]], files_total: int,
+                      ai_written: bool, premise_key: str) -> str:
+    """Le corps de la PR « Tout corriger » : une famille par bloc, ses notes dans le sien."""
+    fixed = sum(1 for r in results if r.get("ok"))
+    blocs = [
+        "## Corrections SEO automatiques — audit complet",
+        f"**Site :** {site_name}  \n**Crawl :** `{ts}`  \n"
+        f"**Anomalies corrigées :** {fixed} · **Fichiers modifiés :** {files_total}",
+    ]
+    for r in results:
+        icon = "✅" if r.get("ok") else "❌"
+        files = r.get("files") or []
+        detail = ", ".join(f"`{f}`" for f in files) if files else (r.get("error") or "")
+        ligne = "\n".join([f"{icon} **{r['issue_label']}** — {detail}"]
+                          + [f"- {note}" for note in r.get("config_fixed", [])])
+        blocs.append(_blocs_markdown(ligne, r.get("notes") or ""))
+    blocs.append(_fix_nature_note(ai_written, premise_key))
+    blocs.append("Correction générée par [Noyaru](https://noyaru.com).")
+    return _blocs_markdown(*blocs)
+
+
 def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None") -> str:
     """Les fichiers qu'une correction n'a meme pas ESSAYES, faute de place sous le plafond.
 
@@ -30543,18 +30567,18 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     _config_note_block = ("\n\n**Correction structurelle :**\n"
                           + "\n".join(f"- {_n}" for _n in config_notes)) if config_notes else ""
     pr_title = f"fix(seo): {issue_label} — {len(all_changed)} fichier(s)"
-    pr_body = (
-        f"## Correction SEO automatique (couverture étendue)\n\n"
+    pr_body = _blocs_markdown(
+        "## Correction SEO automatique (couverture étendue)",
         f"**Anomalie :** {issue_label} (`{issue_key}`)\n"
         f"**Pages impactées :** {len(impacted) or '—'}\n"
-        f"**Fichiers modifiés :** {len(all_changed)}\n\n"
-        + "\n".join(f"- `{p}`" for p in all_changed)
-        + _config_note_block
-        + _fix_nature_note(bool(_ai_files), issue_key, _prep.get("url_pairs"))
-        + _skipped_note(issue_key, skipped, targets)
-        + _note_de_troncature(_ecartes, _plafond)
-        + str(_prep.get("side_effects") or "")
-        + f"\n\nGénéré par [Noyaru](https://noyaru.com) pour **{site_name}**."
+        f"**Fichiers modifiés :** {len(all_changed)}",
+        "\n".join(f"- `{p}`" for p in all_changed),
+        _config_note_block,
+        _fix_nature_note(bool(_ai_files), issue_key, _prep.get("url_pairs")),
+        _skipped_note(issue_key, skipped, targets),
+        _note_de_troncature(_ecartes, _plafond),
+        str(_prep.get("side_effects") or ""),
+        f"Généré par [Noyaru](https://noyaru.com) pour **{site_name}**.",
     )
     correction_journal.pr_intent(owner=owner, repo=repo_name, base=branch, billable=len(_ai_files), motif=issue_key,
         tasks=[{"issue_key": issue_key, "issue_label": issue_label, "url": primary_url, "crawl_ts": ts,

@@ -1364,3 +1364,33 @@ def test_a_new_fix_replaces_the_old_verdict_and_baseline(harness, monkeypatch, m
         note = json.loads(tasks[0].note)
         assert "verify" not in note and tasks[0].status == "in_progress"
         assert note["verification_urls"] == urls and note["verification_expected_count"] == 2
+
+
+def _rendu(md):
+    """(text, inside a blockquote?) for every rendered text block — CommonMark, as GitHub."""
+    markdown_it = pytest.importorskip("markdown_it")
+    out, depth = [], 0
+    for tok in markdown_it.MarkdownIt("commonmark").parse(md):
+        depth += {"blockquote_open": 1, "blockquote_close": -1}.get(tok.type, 0)
+        if tok.type == "inline":
+            out.append((tok.content, depth > 0))
+    return out
+
+
+def test_both_pr_bodies_keep_every_block_in_its_place(harness):
+    """cityscootlab PR #1 (15/10/2026): a line glued under a note fell INTO its quote. Both
+    entry points assemble their body from the same blocks; each must render apart."""
+    state, run = harness
+    state["key"] = "https_page_has_internal_links_to_http"
+    state["sources"] = {"index.html": HTML.replace("</body>", '<a href="http://site.test/contact">Contact</a></body>')}
+    state["report"] = {"issues": {state["key"]: {"count": 1, "examples": [URL]}},
+                       "pages": [{"url": URL, "final_url": URL, "status_code": 200,
+                                  "content_type": "text/html", "canonical": URL, "lang": "fr"}]}
+    assert run("individual")["status"] == 200 and run("bulk")["status"] == 200
+    individual, bulk = (dict(_rendu(body)) for body in state["pr_bodies"][-2:])
+
+    assert individual["Correction SEO automatique (couverture étendue)"] is False
+    assert individual["`index.html`"] is False
+    assert any(t.startswith("✅ **Correctif mécanique.**") and q for t, q in individual.items())
+    assert any(t.startswith("Généré par") and not q for t, q in individual.items())
+    assert any(t.startswith("Correction générée par") and not q for t, q in bulk.items())

@@ -55,4 +55,6 @@ def test_the_note_reaches_the_pull_request_body() -> None:
     import inspect
     src = inspect.getsource(app_module.api_issue_deep_fix)
     assert "_skipped_note(issue_key, skipped, targets)" in src
-    assert src.index("_skipped_note") < src.index("pr_body = (") + len(src)
+    # Inside the call that builds the body, not merely somewhere in the function.
+    corps = src.index("pr_body = _blocs_markdown(")
+    assert corps < src.index("_skipped_note(issue_key, skipped, targets)") < src.index("correction_journal.pr_intent", corps)
