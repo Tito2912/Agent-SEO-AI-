@@ -70,4 +70,9 @@ def test_a_page_family_is_not_pulled_toward_the_component() -> None:
         impacted_urls=["https://x.fr/"], evidence=[], located=list(LOCATED),
         index=repo_index.build_repo_index(TREE), max_files=4)
     assert out[0] == "app/(sales)/page.tsx", out
-    assert "components/SiteHeader.tsx" not in out
+    # The de/es/fr routes are the sources of pages the crawl did NOT flag: they are no longer
+    # targeted at all (cityscootlab, 15/10/2026 — see test_cible_liens_hors_crawl.py). This test
+    # used to assert the component was absent, which only held because those three routes filled
+    # the cap of 4 ahead of it. What matters is that it never comes BEFORE the flagged page.
+    assert not any(p.startswith(("app/(sales)/de/", "app/(sales)/es/", "app/(sales)/fr/")) for p in out), out
+    assert out.index("app/(sales)/page.tsx") < out.index("components/SiteHeader.tsx"), out

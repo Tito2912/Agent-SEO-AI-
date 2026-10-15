@@ -27333,6 +27333,7 @@ def _resolve_issue_targets(
     ai_map: "Callable[[], list[str]] | None" = None,
     ai_pick: "Callable[[], list[str]] | None" = None,
     ecartes: list[str] | None = None,
+    impacted_complete: bool = True,
 ) -> list[str]:
     """Decide WHICH repo files to patch for one issue. Pure and deterministic apart from the
     two optional AI fallbacks, so the whole ordering can be tested without network.
@@ -27434,7 +27435,20 @@ def _resolve_issue_targets(
                 targets = ([t for t in targets if t not in _reserve][:max(0, max_files - len(_reserve))]
                            + _reserve)
             else:
-                targets = priority + [t for t in targets if t not in priority]
+                # Les fichiers trouves par la preuve restent — un lien de menu vit dans un composant
+                # PARTAGE, une fois pour toutes les pages — sauf la source PROPRE d'une autre page :
+                # elle ne rend que sa page, que le crawl n'a pas signalee. cityscootlab, PR #1 du
+                # 15/10/2026 : la preuve `/de/` trouvait tous les .mdx allemands (`/de/about`…) ; la
+                # PR en a modifie quatre de pages saines, puis annonce seize « non traites », tous
+                # hors du crawl. Seulement si la carte a resolu CHAQUE page signalee et que leur
+                # liste est COMPLETE : sinon « une autre page » peut etre une page signalee que la
+                # carte n'a pas su lire, ou que le rapport n'a pas gardee. Un fichier partage n'est
+                # jamais une source de page : la carte range gabarits et routes dynamiques a part.
+                _sources_de_page: set[str] = set()
+                if index_resolved_all and impacted_complete:
+                    _sources_de_page = {f for files in ((index or {}).get("routes") or {}).values()
+                                        for f in (files or [])}
+                targets = priority + [t for t in targets if t not in priority and t not in _sources_de_page]
     # Hardcoded candidate filenames for this issue type (this is what puts app/sitemap.ts in
     # range for a sitemap issue, where the impacted pages are the DATA, not the file to edit).
     #
@@ -27704,6 +27718,21 @@ def _shared_alternates_file(
     return ""
 
 
+def _pages_signalees_completes(issues: dict[str, Any] | None, issue_key: str) -> bool:
+    """Le rapport a-t-il garde TOUTES les pages signalees de la famille ? Il n'en conserve que
+    200 exemples par cle : au-dela, la liste des pages a corriger est tronquee."""
+    for cle in _verification_family_keys(issue_key):
+        bloc = (issues or {}).get(cle)
+        if not isinstance(bloc, dict) or not isinstance(bloc.get("examples"), list):
+            continue
+        try:
+            if int(bloc.get("count") or 0) > len(bloc["examples"]):
+                return False
+        except (TypeError, ValueError):
+            return False
+    return True
+
+
 def _prepare_issue_fix(
     *, issue_key: str, issues: dict[str, Any] | None, impacted: list[str], all_paths: list[str],
     site_name: str, owner: str, repo_name: str, branch: str, token: str,
@@ -27734,6 +27763,7 @@ def _prepare_issue_fix(
         "rewriter_is_ai": False,
         "loop_paths": [],
         "refusal": None,
+        "impacted_complete": _pages_signalees_completes(issues, issue_key),
     }
 
     if str(issue_key or "").strip().lower() in _HTTP_CANONICAL_ADVICE_KEYS:
@@ -29042,6 +29072,8 @@ def _deep_patch_issue_files(
     # de la valeur, et laissait passer un appel de ciblage par famille — mesure du 16/09/2026,
     # sept appels sur une passe `GAUNTLET_FREE=1` annoncee a cout nul.
     allow_ai_targeting: bool = True,
+    # False quand le rapport n'a pas garde toutes les pages signalees. Voir `_resolve_issue_targets`.
+    impacted_complete: bool = True,
     # url de page -> url de la maitresse de son groupe de jumelles. Le code ayant tranche, la
     # valeur ecrite est VERIFIEE et non pas seulement suggeree au modele : voir
     # `_duplicate_canonical_masters` et la boucle canonique du 16/09/2026.
@@ -29652,6 +29684,7 @@ def _deep_patch_issue_files(
             impacted_urls=impacted_urls, located=targets, max_files=max_files, evidence=evidence,
             wants_page_targeting=link_rewriter is not None, page_side=page_side,
             allow_ai=allow_ai_targeting and canonical_pairs is None, ecartes=ecartes,
+            impacted_complete=impacted_complete,
         )
     targets = [t for t in targets if not _chemin_hors_site(t)]
     occ_hint = f"{len(impacted_urls)} page(s) du site sont touchées par cette anomalie." if impacted_urls else ""
@@ -30311,6 +30344,7 @@ def _apply_prepared_issue_fix(
                 impacted_urls=impacted, site_name=site_name, file_state=file_state,
                 max_files=remaining, ecartes=ecartes, evidence=prep["evidence"],
                 allow_ai_targeting=allow_ai_targeting,
+                impacted_complete=prep.get("impacted_complete") is not False,
                 extra_hint=prep["extra_hint"], model_override=model_override, index=index,
                 link_rewriter=prep["link_rewriter"],
                 rewriter_ai_fallback=prep["rewriter_ai_fallback"],
