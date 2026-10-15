@@ -28,6 +28,7 @@ SEVERITY_ORDER: dict[Severity, int] = {"error": 0, "warning": 1, "notice": 2}
 # apart. `title_tag_changed` and `meta_description_changed` emit again since 13/10/2026 (Ahrefs
 # shows both after a correction PR, oryvalo), `h1_tag_changed` since 14/10/2026 (make-avis, 16),
 # and land here, apart; `word_count_changed` stays zeroed in seo_audit.py (render jitter).
+# `pages_added_to_sitemaps` since 15/10/2026 (cityscootlab: /de /es /fr, matching Ahrefs).
 DELTA_ISSUE_KEYS: frozenset[str] = frozenset(
     {
         "canonical_url_changed",
@@ -37,6 +38,7 @@ DELTA_ISSUE_KEYS: frozenset[str] = frozenset(
         "meta_description_changed",
         "h1_tag_changed",
         "word_count_changed",
+        "pages_added_to_sitemaps",
         "serp_title_changed",
         "redirect_target_changed",
         "robots_txt_changed",
@@ -487,6 +489,13 @@ ISSUE_CATALOG: dict[str, IssueMeta] = {
         "Sitemaps",
         "notice",
         description="Pages sitemap sans liens internes entrants (Semrush).",
+    ),
+    "pages_added_to_sitemaps": IssueMeta(
+        "pages_added_to_sitemaps",
+        "Pages ajoutées aux sitemaps",
+        "Sitemaps",
+        "notice",
+        description="Pages absentes du sitemap au crawl précédent et présentes à celui-ci.",
     ),
     "bing_urlinfo_non_200": IssueMeta(
         "bing_urlinfo_non_200",

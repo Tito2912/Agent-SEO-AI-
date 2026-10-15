@@ -440,6 +440,10 @@ class PageData:
     # True when the final status was the HOST refusing us (403/429/503 that survived retries),
     # not a defect of the page. Scoring must never report these as the customer's broken pages.
     blocked_by_host: bool = False
+    # L'URL finale figure-t-elle dans le sitemap lu par CE crawl ? None quand aucun sitemap n'a ete
+    # lu : « inconnu » ne doit jamais se lire « absent ». Le crawl SUIVANT s'en sert pour « Pages
+    # ajoutees aux sitemaps » — `meta.sitemaps` ne nomme que les fichiers, pas leurs URL.
+    in_sitemap: bool | None = None
 
     title: str | None = None
     title_tag_count: int = 0
@@ -7283,6 +7287,11 @@ def _score_issues(
 
     indexable_not_in_sitemap: list[str] = []
     sitemap_set_norm = {_norm_self(u) or u for u in sitemap_urls}
+    # Meme regle que la famille ci-dessous, deja alignee sur Ahrefs : l'URL FINALE dans les <loc>.
+    # cityscootlab, 15/10/2026 : le sitemap passe de /de/ (une redirection) a /de, et Ahrefs
+    # compte /de dans « Pages added to sitemaps » — c'est bien l'URL de la page qui compte.
+    for p in pages:
+        p.in_sitemap = (_final_url(p) in sitemap_set_norm) if sitemap_set_norm else None
     for p in effective_pages.values():
         if not _is_indexable(p):
             continue
@@ -7443,7 +7452,11 @@ def _score_issues(
     issues["low_text_to_html_ratio"] = _issue_block("low_text_to_html_ratio", [])
     # Suppressed: Ahrefs does not surface sitemap inclusion anomalies / sitemapindex recursion issues.
     issues["incorrect_pages_found_in_sitemap_xml"] = _issue_block("incorrect_pages_found_in_sitemap_xml", [])
-    issues["orphaned_sitemap_pages"] = _issue_block("orphaned_sitemap_pages", sorted(set(orphaned_sitemap_pages)))
+    # Muette pour la parite : famille SEMRUSH, absente du catalogue Ahrefs. cityscootlab, 15/10/2026 :
+    # Noyaru 2 (/de et /es/isinwheel-m2-review-2026, reellement sans lien entrant), Ahrefs 0 — il
+    # tient ces pages pour reliees par leurs hreflang, d'ou la meme exclusion sur
+    # `orphan_page_indexable`, qui est la famille Ahrefs. Detection gardee ci-dessus.
+    issues["orphaned_sitemap_pages"] = _issue_block("orphaned_sitemap_pages", [])
 
     # Ahrefs: "Pages to submit to IndexNow" appears to focus on recently changed, high-level pages.
     # We'll compute it during change tracking when a previous crawl is available; default to empty otherwise.
@@ -8445,9 +8458,16 @@ def _score_issues(
         meta_description_changed: list[str] = []
         h1_tag_changed: list[str] = []
         word_count_changed: list[str] = []
+        pages_added_to_sitemaps: list[str] = []
 
         def _is_ok_html(p: PageData) -> bool:
             return _is_html(p) and isinstance(p.status_code, int) and p.status_code == 200 and not p.error
+
+        def _liens_sortants(p: PageData) -> int:
+            """« No. of internal outlinks » d'Ahrefs : les cibles internes DISTINCTES, la page
+            elle-meme exclue. Mesure sur cityscootlab le 15/10/2026 : 16, 15, 15, 15 sur les quatre
+            pages qu'Ahrefs chiffre — /fr/blog n'en fait 16 que sans son lien de menu vers soi."""
+            return len(set(p.internal_links) - {_final_url(p)})
 
         for eff, cur in effective_pages.items():
             prev = prev_effective_pages.get(eff)
@@ -8510,9 +8530,20 @@ def _score_issues(
             ):
                 word_count_changed.append(eff)
 
-            # IndexNow : les pages dont le titre, la description ou le H1 a change — les trois
-            # changements qu'Ahrefs montre aussi. Pas le nombre de mots, que le rendu fait varier.
-            if titre_change or description_changee or h1_change:
+            # Ajoutee au sitemap : absente au crawl precedent, presente a celui-ci. Les deux crawls
+            # doivent avoir LU un sitemap — un rapport anterieur au 15/10/2026 n'en garde rien (None),
+            # et le prendre pour « absente » ferait passer tout le sitemap pour ajoute.
+            if prev.in_sitemap is False and cur.in_sitemap is True:
+                pages_added_to_sitemaps.append(eff)
+
+            # IndexNow : titre, description ou H1 change, page DEVENUE indexable, ou nombre de liens
+            # internes sortants change. cityscootlab, 15/10/2026 : Ahrefs 23 = 13 titres + 4
+            # descriptions + /de /es /fr (canonical repare, donc indexables) + 3 pages dont un seul
+            # lien a change. Gigue des liens mesuree nulle sur deux paires de crawls reels
+            # (prosperfactory 0/106, cityscootlab 0/68). Pas le nombre de mots, que le rendu fait varier.
+            devenue_indexable = bool(cur_indexable and not _is_indexable(prev))
+            liens_changes = bool(cur_indexable and _liens_sortants(prev) != _liens_sortants(cur))
+            if titre_change or description_changee or h1_change or devenue_indexable or liens_changes:
                 pages_to_submit_to_indexnow.append(eff)
 
         issues["canonical_url_changed"] = _issue_block("canonical_url_changed", sorted(set(canonical_url_changed)))
@@ -8538,6 +8569,9 @@ def _score_issues(
         issues["word_count_changed"] = _issue_block("word_count_changed", [])
         issues["pages_to_submit_to_indexnow"] = _issue_block(
             "pages_to_submit_to_indexnow", sorted(set(pages_to_submit_to_indexnow))
+        )
+        issues["pages_added_to_sitemaps"] = _issue_block(
+            "pages_added_to_sitemaps", sorted(set(pages_added_to_sitemaps))
         )
 
     return issues
