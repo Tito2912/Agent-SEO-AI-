@@ -18,7 +18,7 @@
       <p class="muted">
         Ces recommandations viennent des données de recherche de ton propre site : rien n'est
         deviné, rien n'est acheté à un tiers. Connecte Search Console dans
-        <a href="/projects/{{ slug }}/settings/crawl">Paramètres de crawl</a> pour les obtenir.
+        <a href="/projects/{{ slug }}/settings/crawl">Réglages de l’analyse</a> pour les obtenir.
       </p>
       {% if gsc_reason %}<p class="muted small mono">{{ gsc_reason }}</p>{% endif %}
     </section>
@@ -92,7 +92,7 @@
                       {% if o.page and github_cfg and github_cfg.repo %}
                         <button type="button" class="btn primary" data-keyword-pr
                                 data-query="{{ o.query }}" data-url="{{ o.page }}"
-                                title="Ouvre une pull request qui réécrit le titre et la meta description de cette page pour cette requête">Réécrire (PR)</button>
+                                title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de cette page pour cette requête">Réécrire (PR)</button>
                       {% endif %}
                     </div>
                   </td>
@@ -165,7 +165,7 @@
                     {% if t.target_url and github_cfg and github_cfg.repo %}
                       <button type="button" class="btn primary" data-keyword-pr
                               data-query="{{ t.query }}" data-url="{{ t.target_url }}"
-                              title="Ouvre une pull request qui réécrit le titre et la meta description de la page cible">Réécrire (PR)</button>
+                              title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de la page cible">Réécrire (PR)</button>
                     {% endif %}
                     <form method="post" action="/projects/{{ slug }}/keywords/untrack" class="inline">
                       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />

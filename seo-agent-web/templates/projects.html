@@ -25,7 +25,7 @@
 {% block content %}
   <div class="page-header">
     <h1>Projets</h1>
-    <p class="muted">Suivez vos sites, lancez des crawls et surveillez l'état de santé SEO en temps réel.</p>
+    <p class="muted">Suivez vos sites, lancez des analyses et surveillez l'état de santé SEO en temps réel.</p>
   </div>
 
   {% if err %}
@@ -56,15 +56,15 @@
       <div class="stat-strip-sep"></div>
       <div class="stat-strip-item">
         <div class="stat-strip-num">{{ ns.crawled_count }}</div>
-        <div class="stat-strip-lbl">Crawlés</div>
-        <div class="stat-strip-sub">au moins un crawl effectué</div>
+        <div class="stat-strip-lbl">Analysés</div>
+        <div class="stat-strip-sub">au moins une analyse effectuée</div>
       </div>
       {% if ns.live_count %}
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--warn);">{{ ns.live_count }}</div>
           <div class="stat-strip-lbl">En cours</div>
-          <div class="stat-strip-sub">crawl actif</div>
+          <div class="stat-strip-sub">analyse active</div>
         </div>
       {% endif %}
     </div>
@@ -83,9 +83,40 @@
         <div class="progress-fill" style="--p: {{ onboarding.progress_pct }};"></div>
       </div>
       <div class="onboarding-steps">
-        {% for step in onboarding.steps %}
-          <div class="onboarding-step {{ 'done' if step.done else '' }}">
+        {% set next_step = namespace(pending=true) %}
+        {% for step in onboarding.steps | rejectattr('optional') %}
+          <div class="onboarding-step {{ 'done' if step.done else ('next' if next_step.pending else '') }}">
             <div class="onboarding-step-mark">{{ '✓' if step.done else loop.index }}</div>
+            <div class="onboarding-step-body">
+              <div class="onboarding-step-title">
+                {% if not step.done and next_step.pending %}<span class="next-step-label">À faire maintenant</span>{% endif %}
+                {{ step.label }}
+                {% if step.optional %}<span class="muted small">optionnel</span>{% endif %}
+              </div>
+              <div class="muted small">
+                {{ step.detail }}
+                {% if step.doc_href %}
+                  &middot; <a href="{{ step.doc_href }}" class="muted">Comment faire</a>
+                {% endif %}
+              </div>
+            </div>
+            {% if not step.done %}
+              {% if step.action_dialog %}
+                <button type="button" class="btn" data-open-add-project>{{ step.action_label }}</button>
+              {% elif step.action_href and not step.disabled %}
+                <a class="btn" href="{{ step.action_href }}">{{ step.action_label }}</a>
+              {% else %}
+                <button type="button" class="btn" disabled>{{ step.action_label }}</button>
+              {% endif %}
+            {% endif %}
+          </div>
+          {% if not step.done %}{% set next_step.pending = false %}{% endif %}
+        {% endfor %}
+      </div>
+      <details class="screen-options optional-connections"><summary>Connexions facultatives pour aller plus loin</summary><div class="onboarding-steps">
+        {% for step in onboarding.steps | selectattr('optional') %}
+          <div class="onboarding-step {{ 'done' if step.done else '' }}">
+            <div class="onboarding-step-mark">{{ '✓' if step.done else '+' }}</div>
             <div class="onboarding-step-body">
               <div class="onboarding-step-title">
                 {{ step.label }}
@@ -109,7 +140,7 @@
             {% endif %}
           </div>
         {% endfor %}
-      </div>
+      </div></details>
     </section>
   {% endif %}
 
@@ -125,7 +156,7 @@
       </div>
       <h2 style="margin:0 0 8px;letter-spacing:-.02em;">Bienvenue sur votre tableau de bord SEO</h2>
       <p class="muted" style="max-width:480px;margin:0 auto 28px;">
-        Commencez par ajouter votre premier site. L'outil crawlera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
+        Commencez par ajouter votre premier site. Noyaru analysera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
       </p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <button type="button" class="btn primary" id="add-project-open" data-open-add-project style="padding:10px 24px;">
@@ -138,8 +169,8 @@
           <div class="muted small">Entrez l'URL de votre domaine pour créer un projet.</div>
         </div>
         <div style="max-width:160px;">
-          <div style="font-weight:600;margin-bottom:4px;">2. Lancer un crawl</div>
-          <div class="muted small">Le crawler analyse toutes vos pages en quelques minutes.</div>
+          <div style="font-weight:600;margin-bottom:4px;">2. Lancer une analyse</div>
+          <div class="muted small">Noyaru analyse les pages de votre site en quelques minutes.</div>
         </div>
         <div style="max-width:160px;">
           <div style="font-weight:600;margin-bottom:4px;">3. Corriger les anomalies</div>
@@ -150,16 +181,18 @@
   {% else %}
   <section class="card">
       <div class="card-title-row">
-	        <h2>Sélection</h2>
+	        <h2>Vos sites</h2>
 	        <div class="topbar-actions">
-	          <span class="muted small" id="batch-crawl-count">0 sélectionné</span>
+	          <div id="batch-project-actions" class="batch-project-actions" hidden>
+              <span class="muted small" id="batch-crawl-count">0 sélectionné</span>
 	          <button type="submit" form="batch-crawl-form" class="btn primary" id="batch-crawl-btn" disabled>
 	            Auditer la sélection
 	          </button>
 	          <button type="submit" form="delete-projects-form" class="btn danger" id="delete-projects-btn" disabled>
 	            Supprimer
 	          </button>
-	          <button type="button" class="btn primary" id="add-project-open" data-open-add-project>Nouveau projet</button>
+	          </div>
+              <button type="button" class="btn primary" id="add-project-open" data-open-add-project>Ajouter un site</button>
 	        </div>
 	      </div>
 	      <div class="table-wrap">
@@ -172,9 +205,9 @@
                 </label>
               </th>
               <th>Projet</th>
-              <th>Dernier crawl</th>
+              <th>Dernière analyse</th>
               <th>Santé</th>
-              <th class="num">URLs crawlées</th>
+              <th class="num">URL analysées</th>
               <th class="num">URLs avec erreurs</th>
               <th>Anomalies</th>
               <th></th>
@@ -335,14 +368,14 @@
 		                    <a
 		                      class="icon-btn"
 		                      href="/projects/{{ p.slug }}/settings/crawl"
-		                      title="Paramètres de crawl"
-		                      aria-label="Paramètres de crawl"
+		                      title="Réglages de l’analyse"
+		                      aria-label="Réglages de l’analyse"
 		                    >⚙</a>
 		                    <form method="post" action="/projects/{{ p.slug }}/crawl" class="crawl-start-form" data-slug="{{ p.slug }}">
 		                      <input type="hidden" name="config_path" value="{{ config_path }}" />
 		                      {% set live_running = live and live.status in ['queued','running'] %}
 		                      <button type="submit" class="btn primary" data-role="start-btn" {% if live_running %}disabled{% endif %}>
-		                        {% if live_running %}En cours{% else %}Démarrer{% endif %}
+		                        {% if live_running %}En cours{% else %}Lancer l’analyse{% endif %}
 		                      </button>
 		                    </form>
 		                  </div>
@@ -442,6 +475,7 @@
 
 		        function render() {
 		          const checked = selectedValues().length;
+                  document.getElementById("batch-project-actions").hidden = checked === 0;
 		          if (countEl) countEl.textContent = checked === 1 ? "1 sélectionné" : `${checked} sélectionnés`;
 		          if (btn) btn.disabled = checked === 0;
 	          if (delBtn) delBtn.disabled = checked === 0;
@@ -569,7 +603,7 @@
 	        </span>
 	        <div class="modal-title-copy">
 	          <h2>Ajouter un projet</h2>
-	          <div class="modal-subtitle">Ajoute un domaine, une URL précise ou importe tes propriétés Search Console.</div>
+	          <div class="modal-subtitle">Ajoutez un domaine, une URL précise ou importez vos propriétés Search Console.</div>
 	        </div>
 	      </div>
 	      <form method="dialog">
@@ -636,7 +670,7 @@
 	            <div class="gsc-list is-empty" id="gsc-list">
 	              <div class="gsc-empty-state">
 	                <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-	                <span>Charge les propriétés accessibles avec ton compte Google.</span>
+	                <span>Chargez les propriétés accessibles avec votre compte Google.</span>
 	              </div>
 	            </div>
 	            <div class="modal-actions">

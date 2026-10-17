@@ -5,7 +5,7 @@
   <div class="page-header">
     <h1>Concurrents</h1>
     <p class="muted">
-      {{ project.site_name }} · ce que tes concurrents traitent, et ce que tes pages répondent déjà
+      {{ project.site_name }} · ce que vos concurrents traitent, et les réponses déjà présentes sur votre site
       <a href="/docs/analyser-les-concurrents" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </p>
   </div>
@@ -16,10 +16,8 @@
   {% if not has_access %}
     <section class="card">
       <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
-      <p class="muted">
-        Analyser un concurrent, c'est crawler son site : du temps de calcul dépensé sur un site
-        qui n'est pas le tien. Cette page est incluse à partir du plan Pro.
-      </p>
+      <p class="muted">Repérez les sujets abordés par vos concurrents et absents de votre site, puis préparez une nouvelle page ou améliorez une page existante. Disponible à partir du plan Pro.</p>
+      <div class="feature-example"><p class="muted small">Exemple de résultat · démonstration</p><p><strong>Comment entretenir un vélo électrique ?</strong></p><p class="muted">Sujet traité par un concurrent, absent des pages analysées de votre site. Action possible : préparer un article sur ce sujet.</p></div>
       <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
     </section>
   {% else %}
@@ -34,7 +32,7 @@
         Chaque analyse lit jusqu'à {{ max_pages }} pages du concurrent — titres, H1 et URL,
         rien d'autre : ses performances ne nous regardent pas. Elle dure quelques minutes, et
         {{ budget_minutes }} au plus : un site lent est lu en partie plutôt que pas du tout. Elle se relance toute seule tous
-        les {{ refresh_days }} jours, et à la demande quand tu cliques.
+        les {{ refresh_days }} jours, et à la demande quand vous le demandez.
       </p>
 
       <form method="post" action="/projects/{{ slug }}/competitors/add" class="setting-form">
@@ -47,7 +45,7 @@
             <input id="k-url" name="url" placeholder="exemple-concurrent.com" required style="padding-right:150px;" />
             <button type="button" id="k-trouver" class="btn small"
                     style="position:absolute;right:5px;top:50%;transform:translateY(-50%);"
-                    title="Cherche les sites qui se classent sur les mêmes recherches que toi">Trouver avec l'IA</button>
+                    title="Cherche les sites qui se classent sur les mêmes recherches que vous">Trouver avec l'IA</button>
           </span>
         </label>
         <div class="modal-actions between">
@@ -79,8 +77,8 @@
         function garder(d) { try { sessionStorage.setItem(cle, JSON.stringify(d)); } catch (e) {} }
         function relire() { try { return JSON.parse(sessionStorage.getItem(cle) || 'null'); } catch (e) { return null; } }
         function afficher(d) {
-          dire('Recherches : « ' + d.requetes.join(' », « ') + ' ». Ajoute ceux que tu reconnais.');
-          /* Chaque candidat avec sa PREUVE : sur combien de tes recherches il se classe, et
+          dire('Recherches : « ' + d.requetes.join(' », « ') + ' ». Ajoutez ceux que vous reconnaissez.');
+          /* Chaque candidat avec sa PREUVE : sur combien de vos recherches il se classe, et
              sa meilleure position. « Ajouter » passe par le formulaire ci-dessus et ses
              controles (cible publique, doublon, plafond de cinq). */
           liste.innerHTML = d.candidats.map(function (c) {
@@ -90,7 +88,7 @@
                 (plein ? ' disabled title="Plafond de sites suivis atteint"' : '') + '>Ajouter</button>';
             return '<div class="checkbox" style="justify-content:space-between;border-top:1px solid var(--border);padding:6px 0;">' +
               '<span><strong>' + esc(c.domaine) + '</strong> <span class="muted small">— classé sur ' +
-              c.requetes.length + ' de tes ' + d.requetes.length + ' recherches, meilleure position ' +
+              c.requetes.length + ' de vos ' + d.requetes.length + ' recherches, meilleure position ' +
               esc(c.position) + '</span></span>' + action + '</div>';
           }).join('');
           liste.hidden = false;
@@ -107,7 +105,7 @@
           bouton.disabled = true;
           bouton.textContent = 'Recherche…';
           liste.hidden = true;
-          dire("L'IA formule tes recherches, puis Google dit qui s'y classe. Une quinzaine de secondes.");
+          dire("L'IA formule vos recherches, puis Google dit qui s'y classe. Une quinzaine de secondes.");
           fetch('/api/projects/' + encodeURIComponent(slug) + '/competitors/suggest', { method: 'POST' })
             .then(function (resp) { return resp.json(); })
             .then(function (d) {
@@ -218,7 +216,7 @@
         {% endif %}
       {% else %}
         <p class="muted" style="margin-top:12px;">
-          Aucun concurrent suivi. Ajoute le domaine d'un site qui te dispute les mêmes
+          Aucun concurrent suivi. Ajoutez le domaine d'un site qui vous dispute les mêmes
           recherches : la comparaison se fait sur les sujets qu'il publie, sans acheter de
           base de mots-clés à personne.
         </p>
@@ -227,17 +225,17 @@
 
     {% if own_pages_count == 0 %}
       <section class="card">
-        <h2 style="margin-top:0;">Il manque ton propre crawl</h2>
+        <h2 style="margin-top:0;">Il manque l’analyse de votre site</h2>
         <p class="muted">
-          La comparaison a besoin des deux côtés. Lance un crawl de ton site : sans lui, on peut
-          lister ce que publie un concurrent, mais pas dire si tu y réponds déjà.
+          La comparaison a besoin des deux côtés. Lancez une analyse de votre site : sans lui, on peut
+          lister ce que publie un concurrent, mais pas dire si vous y répondez déjà.
         </p>
         <a class="btn primary" href="/projects/{{ slug }}" style="margin-top:12px;display:inline-block;">Aller au projet</a>
       </section>
     {% elif findings %}
       <section class="card">
         <div class="card-title-row">
-          <h2 style="margin:0;">Sujets traités par tes concurrents</h2>
+          <h2 style="margin:0;">Sujets traités par vos concurrents</h2>
           <span class="muted small">
             {{ summary.total }} sujet{{ 's' if summary.total > 1 }} ·
             {{ summary.covered }} déjà couvert{{ 's' if summary.covered > 1 }} ·
@@ -246,8 +244,8 @@
         </div>
 
         <p class="muted small">
-          Comparé à tes {{ own_pages_count }} pages du crawl {{ own_crawl_ts }}. Un sujet
-          « couvert » veut dire qu'une de tes pages parle déjà de ça : on peut donc réécrire son
+          Comparé à vos {{ own_pages_count }} pages du crawl {{ own_crawl_ts }}. Un sujet
+          « couvert » veut dire qu'une de vos pages parle déjà de ça : on peut donc réécrire son
           titre et sa description pour le dire clairement. Un sujet « non couvert » est signalé,
           jamais corrigé automatiquement — glisser un mot-clé dans une page qui ne traite pas le
           sujet, c'est du bourrage, et ça dégrade le site.
@@ -259,7 +257,7 @@
               <tr>
                 <th>Sujet du concurrent</th>
                 <th>Concurrent</th>
-                <th>Ta page</th>
+                <th>Votre page</th>
                 <th class="num">Recouvrement</th>
                 <th></th>
               </tr>
@@ -286,7 +284,7 @@
                     {% elif f.covered %}
                       <button type="button" class="btn primary" data-keyword-pr
                               data-query="{{ f.competitor_title }}" data-url="{{ f.own_url }}"
-                              title="Ouvre une pull request qui réécrit le titre et la meta description de ta page pour ce sujet">Recibler (PR)</button>
+                              title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de votre page pour ce sujet">Recibler (PR)</button>
                     {% else %}
                       {# « Retarget first, create later » : le later est arrivé le 20/09/2026. Un
                          sujet NON couvert ne se recible pas — glisser un mot-clé dans une page
@@ -296,7 +294,7 @@
                          l'adresse avant de dépenser un article. #}
                       <a class="btn" data-content-draft
                          href="/projects/{{ slug }}/content?sujet={{ f.competitor_title | urlencode }}"
-                         title="Ouvre l'écran Contenu avec ce sujet pré-rempli">Rédiger une page</a>
+                         title="Ouvrez l’écran Contenu avec ce sujet pré-rempli">Rédiger une page</a>
                     {% endif %}
                   </td>
                 </tr>
@@ -313,7 +311,7 @@
             une panne : leurs pages ne partagent pas assez de termes avec les tiennes pour qu'on
             parle du même sujet.
           {% else %}
-            Lance une analyse sur un des sites ci-dessus pour voir ce qu'il publie.
+            Lancez une analyse sur un des sites ci-dessus pour voir ce qu'il publie.
           {% endif %}
         </p>
       </section>

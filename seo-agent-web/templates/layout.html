@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}Noyaru{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=24" />
+    <link rel="stylesheet" href="/static/styles.css?v=25" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
@@ -18,7 +18,8 @@
       <label for="nav-mobile" class="nav-mobile-voile" aria-hidden="true"></label>
 
       <!-- SIDEBAR -->
-      <aside class="sidebar" id="barre-laterale">
+      <aside class="sidebar" id="barre-laterale" aria-label="Navigation">
+        <label for="nav-mobile" id="nav-mobile-close" class="nav-mobile-close" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">Fermer le menu <span aria-hidden="true">×</span></label>
 
         <!-- Brand -->
         {# Logo du pack Noyaru (28/09/2026) : symbole ET lettrage, prevus pour un fond sombre. Il
@@ -40,6 +41,74 @@
             <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
             Projets
           </a>
+
+          {% if project and project.slug %}
+            <div class="nav-section">{{ project.site_name }}</div>
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+              Vue d'ensemble
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}" href="/projects/{{ project.slug }}/issues">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+              Anomalies
+            </a>
+
+            <a class="nav-item {% if '/corrections' in request.url.path %}active{% endif %}" href="/projects/{{ project.slug }}/corrections">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              Corrections
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %}active{% endif %}" href="/projects/{{ project.slug }}/content">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+              Contenu <span class="nav-plan">Pro+</span>
+            </a>
+            <details class="nav-group" {% if '/performance' in request.url.path or '/keywords' in request.url.path or '/competitors' in request.url.path or '/backlinks' in request.url.path or '/netlinking' in request.url.path %}open{% endif %}>
+              <summary>Visibilité et acquisition</summary>
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Performance
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %}active{% endif %}" href="/projects/{{ project.slug }}/keywords/opportunities">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              Mots-clés
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}" href="/projects/{{ project.slug }}/competitors">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+              Concurrents <span class="nav-plan">Pro+</span>
+            </a>
+
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              Liens entrants
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks/opportunities">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Opportunités <span class="nav-plan">Solo+</span>
+            </a>
+            </details>
+            <details class="nav-group" {% if '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path %}open{% endif %}>
+              <summary>Réglages et historique</summary>
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}" href="/projects/{{ project.slug }}/settings/crawl">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
+              Réglages de l’analyse
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %}active{% endif %}" href="/projects/{{ project.slug }}/automation">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Automatisation
+            </a>
+
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}" href="/projects/{{ project.slug }}/crawls">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+              Historique des analyses
+            </a>
+            </details>
+          {% endif %}
+            <div class="nav-section">Votre espace</div>
 
           <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
@@ -86,74 +155,7 @@
             </a>
           {% endif %}
 
-          {% if project and project.slug %}
-            <div class="nav-section">
-              <span class="nav-section-site">
-                <svg style="width:11px;height:11px;flex:0 0 11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-                Site
-              </span>
-            </div>
 
-            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-              Vue d'ensemble
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}" href="/projects/{{ project.slug }}/settings/crawl">
-              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
-              Paramètres de crawl
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-              Performance
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %}active{% endif %}" href="/projects/{{ project.slug }}/keywords/opportunities">
-              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              Mots-clés
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}" href="/projects/{{ project.slug }}/competitors">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
-              Concurrents <span class="nav-plan">Pro+</span>
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %}active{% endif %}" href="/projects/{{ project.slug }}/content">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-              Contenu <span class="nav-plan">Pro+</span>
-            </a>
-
-            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-              Backlinks
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks/opportunities">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              Opportunités <span class="nav-plan">Solo+</span>
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}" href="/projects/{{ project.slug }}/issues">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-              Anomalies
-            </a>
-
-            <a class="nav-item {% if '/corrections' in request.url.path %}active{% endif %}" href="/projects/{{ project.slug }}/corrections">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-              Corrections
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %}active{% endif %}" href="/projects/{{ project.slug }}/automation">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Automatisation
-            </a>
-
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}" href="/projects/{{ project.slug }}/crawls">
-              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-              Historique des crawls
-            </a>
-          {% endif %}
         </nav>
 
 
@@ -186,7 +188,7 @@
           </span>
           <span class="assistant-launcher-text">
             <span class="assistant-launcher-title">Assistant IA</span>
-            <span class="assistant-launcher-sub">Pose une question</span>
+            <span class="assistant-launcher-sub">Posez une question</span>
           </span>
           <span class="assistant-fab-dot" id="assistant-dot" aria-hidden="true"></span>
         </button>
@@ -215,7 +217,7 @@
           </div>
           <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
           <form class="assistant-form" id="assistant-form">
-            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Pose une question..." maxlength="2000" />
+            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Posez une question..." maxlength="2000" />
             <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
             </button>
@@ -227,7 +229,7 @@
       <!-- MAIN -->
       <main class="main">
         <header class="topbar">
-          <label for="nav-mobile" class="nav-mobile-bouton" role="button" tabindex="0" aria-controls="barre-laterale"
+          <label for="nav-mobile" class="nav-mobile-bouton" role="button" tabindex="0" aria-controls="barre-laterale" aria-expanded="false"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
             <span>Menu</span>
@@ -248,6 +250,8 @@
       </main>
 
     </div><!-- /.app -->
+
+    <script src="/static/navigation.js?v=1" defer></script>
 
     <!-- SCRIPTS -->
     <script>

@@ -220,16 +220,16 @@ def test_the_overview_warns_only_when_pages_were_blocked() -> None:
     crawled = {"current": {"timestamp": "20260827-120000"}}
 
     clean = tpl.render(project=crawled, sum={"blocked_by_host": {"count": 0, "urls": []}})
-    assert "Crawl incomplet" not in clean
+    assert "Analyse incomplète" not in clean
 
     partial = tpl.render(
         project=crawled, sum={"blocked_by_host": {"count": 11, "urls": ["https://x.test/de/about"]}}
     )
-    assert "Crawl incomplet" in partial and "11 pages inaccessibles" in partial
+    assert "Analyse incomplète" in partial and "11 pages inaccessibles" in partial
     assert "https://x.test/de/about" in partial
 
     # A summary from before the feature must render the same as a clean one, not crash.
-    assert "Crawl incomplet" not in tpl.render(project=crawled, sum={})
+    assert "Analyse incomplète" not in tpl.render(project=crawled, sum={})
 
 
 # --- phase timings ---------------------------------------------------------------------------

@@ -75,7 +75,7 @@
 
     {% if item.source == "system" %}
       <p class="muted small setting-note">
-        Une clé plateforme est disponible. Tu peux brancher ton propre compte pour l'utiliser à la place.
+        Une clé plateforme est disponible. Vous pouvez brancher votre propre compte pour l'utiliser à la place.
       </p>
     {% endif %}
 
@@ -123,7 +123,12 @@
   <div class="account-connections-page">
   <div class="page-header">
     <h1>Comptes &amp; connexions</h1>
-    <p class="muted">Connecte tes comptes pour activer les modules GSC, Bing, GitHub et Netlify.</p>
+    <p class="muted">Reliez Google pour suivre vos visiteurs et GitHub pour proposer des corrections dans le code.</p>
+    <nav class="account-shortcuts" aria-label="Sections du compte">
+      <a class="btn" href="#gsc-oauth-card">Google</a><a class="btn" href="#github-connect-card">GitHub</a>
+      <a class="btn" href="#bing-connect-card">Bing</a><a class="btn" href="#netlify-connect-card">Netlify</a>
+      <a class="btn" href="#mon-compte">Mon compte</a>
+    </nav>
   </div>
 
   {% if err %}
@@ -150,6 +155,533 @@
     </section>
   {% endif %}
 
+  <div class="settings-section">
+    <div class="settings-section-head">
+      <div>
+        <div class="settings-section-title">
+          <svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:6px;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Connexions de vos sites
+        </div>
+        <div class="muted small">Suivez les recherches, les clics et les positions de vos sites.</div>
+      </div>
+    </div>
+
+    <div class="grid two">
+      <section class="card setting-card span-2" id="gsc-oauth-card">
+        {% set gsc_ns = namespace(connected=0, broken=0, first_props_url='') %}
+        {% for p in gsc_oauth.projects %}
+          {% if p.oauth_connected and p.oauth_status.ready %}
+            {% set gsc_ns.connected = gsc_ns.connected + 1 %}
+            {% if not gsc_ns.first_props_url %}{% set gsc_ns.first_props_url = p.properties_url %}{% endif %}
+          {% endif %}
+          {% if p.oauth_connected and not p.oauth_status.ready %}{% set gsc_ns.broken = gsc_ns.broken + 1 %}{% endif %}
+        {% endfor %}
+
+        <div class="setting-head">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span class="modal-title-icon" aria-hidden="true" style="flex-shrink:0;margin-top:1px;">
+              <img src="/static/google.svg" style="width:18px;height:18px;" alt="" />
+            </span>
+            <div>
+              <h2 class="setting-title">Google Search Console</h2>
+              <div class="muted small">Retrouvez les recherches qui affichent votre site et les clics obtenus sur Google.</div>
+            </div>
+          </div>
+          <div class="setting-actions">
+            {% if gsc_oauth.configured %}
+              {% if gsc_ns.broken %}<span class="badge error">{{ gsc_ns.broken }} erreur{{ 's' if gsc_ns.broken > 1 }}</span>{% endif %}
+              {% if gsc_ns.connected %}
+                <span class="badge ok">{{ gsc_ns.connected }} connecté{{ 's' if gsc_ns.connected > 1 }}</span>
+                <button type="button" class="btn" id="gsc-sync-btn"
+                  data-url="{{ gsc_ns.first_props_url }}"
+                  title="Comparer vos propriétés GSC avec les projets de l'app">
+                  Synchroniser GSC
+                </button>
+                <form method="post" action="/settings/accounts/gsc/disconnect-all" style="display:inline-flex;">
+                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                  <button class="btn-link btn-link-danger" type="submit"
+                    onclick="return confirm('Déconnecter Google de tous les projets ?');">Déconnecter tout</button>
+                </form>
+              {% else %}
+                <span class="badge notice">non connecté</span>
+              {% endif %}
+            {% else %}
+              <span class="badge notice">indisponible</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if gsc_oauth.configured %}
+          {% if gsc_oauth.projects %}
+            <div class="gsc-proj-list">
+
+              {# ── Connectés ──────────────────────────────── #}
+              {% for p in gsc_oauth.projects %}
+                {% if p.oauth_connected and p.oauth_status.ready %}
+                  <div class="gsc-proj-row gsc-row-ok">
+                    <span class="gsc-dot ok"></span>
+                    <div class="gsc-proj-meta">
+                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="muted small">{{ p.base_url or p.slug }}</div>
+                    </div>
+                    <div class="gsc-proj-act">
+                      <form method="post" action="{{ p.disconnect_url }}" style="display:contents;">
+                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                        <input type="hidden" name="next" value="/settings/accounts#gsc-oauth-card" />
+                        <button class="btn-link btn-link-danger" type="submit"
+                          onclick="return confirm('Déconnecter Google pour ce projet ?');">Déconnecter</button>
+                      </form>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+
+              {# ── Connexion brisée ───────────────────────── #}
+              {% for p in gsc_oauth.projects %}
+                {% if p.oauth_connected and not p.oauth_status.ready %}
+                  <div class="gsc-proj-row gsc-row-err">
+                    <span class="gsc-dot err"></span>
+                    <div class="gsc-proj-meta">
+                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="muted small">{{ p.base_url or p.slug }}</div>
+                      {% if p.oauth_status_hint %}
+                        <div class="small" style="color:var(--err);margin-top:2px;">{{ p.oauth_status_hint }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="gsc-proj-act">
+                      <a class="btn" href="{{ p.connect_url }}">Réparer la connexion</a>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+
+              {# ── Non connectés ──────────────────────────── #}
+              {% for p in gsc_oauth.projects %}
+                {% if not p.oauth_connected %}
+                  <div class="gsc-proj-row">
+                    <span class="gsc-dot off"></span>
+                    <div class="gsc-proj-meta">
+                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="muted small">{{ p.base_url or p.slug }}</div>
+                    </div>
+                    <div class="gsc-proj-act">
+                      <a class="btn google-btn" href="{{ p.connect_url }}">
+                        <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+                        Connecter
+                      </a>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+
+            </div>
+
+
+          {% else %}
+            <p class="muted small setting-note">Aucun projet configuré dans l'app.</p>
+          {% endif %}
+        {% else %}
+          <p class="muted small setting-note">
+            La connexion Google n'est pas encore disponible sur cette plateforme.
+            {% if can_access_system_settings %}
+              <a href="{{ gsc_oauth.system_url }}">Configurer OAuth côté système</a>.
+            {% endif %}
+          </p>
+        {% endif %}
+      </section>
+      <section class="card setting-card span-2" id="github-connect-card">
+        <div class="setting-head">
+          <div>
+            <h2 class="setting-title">GitHub</h2>
+            <div class="muted small">Compte utilisé pour sélectionner les dépôts et préparer les flux de fix/deploy.</div>
+            {% if github_oauth.compte_hote %}
+              {# Sans cette phrase, un membre lit « compte connecté » et en déduit que ses
+                 corrections partiront de CE compte. Sur les projets de son hôte, elles
+                 partent du jeton de l'hôte — décision assumée, mais invisible à l'écran. #}
+              <div class="muted small" style="margin-top:6px;">
+                Sur les projets de <strong>{{ github_oauth.compte_hote }}</strong>, les corrections
+                utilisent le compte GitHub de l'hôte. Cette connexion sert à vos propres projets.
+              </div>
+            {% endif %}
+          </div>
+          <div class="setting-actions">
+            {% if github_oauth.is_oauth %}
+              <span class="badge ok">compte connecté</span>
+            {% elif github_oauth.is_manual %}
+              <span class="badge notice">token manuel</span>
+            {% elif github_oauth.source == "system" %}
+              <span class="badge notice">fallback plateforme</span>
+            {% elif github_oauth.ready %}
+              <span class="badge ok">oauth disponible</span>
+            {% else %}
+              <span class="badge notice">oauth indisponible</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="kv setting-kv">
+          <div class="kv-item">
+            <span class="muted">Source</span>
+            <div class="mono">{{ github_oauth.source_label }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Actif</span>
+            <div class="mono">{{ github_oauth.masked or "-" }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Compte</span>
+            <div class="mono">{{ github_oauth.account_label or "-" }}</div>
+          </div>
+        </div>
+
+        <div class="oauth-project-actions" style="margin-top:12px;">
+          {% if github_oauth.ready %}
+            <a class="btn {% if not github_oauth.is_oauth %}primary{% endif %}" href="{{ github_oauth.connect_url }}">
+              {% if github_oauth.is_oauth %}Reconnecter GitHub{% else %}Connecter GitHub{% endif %}
+            </a>
+          {% elif can_access_system_settings %}
+            <a class="btn" href="{{ github_oauth.system_url }}">Configurer OAuth plateforme</a>
+          {% else %}
+            <span class="muted small">Connexion GitHub indisponible pour le moment.</span>
+          {% endif %}
+          {% if github_oauth.source == "user" %}
+            <form method="post" action="{{ github_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+              <input type="hidden" name="next" value="/settings/accounts#github-connect-card" />
+              <button
+                class="btn danger"
+                type="submit"
+                onclick="return confirm('Déconnecter GitHub pour ce compte ?');"
+              >
+                Déconnecter
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        <details class="setting-details">
+          <summary>Mode avancé : token manuel</summary>
+          <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <input type="hidden" name="key" value="GITHUB_TOKEN" />
+            <label>
+              Token GitHub
+              <input type="password" name="value" placeholder="Coller le token GitHub…" autocomplete="new-password" />
+            </label>
+            <div class="modal-actions between">
+              {% if github_oauth.has_user_value %}
+                <button
+                  class="btn danger"
+                  type="submit"
+                  name="op"
+                  value="clear"
+                  onclick="return confirm('Supprimer ce token GitHub ?');"
+                >
+                  Supprimer mon token
+                </button>
+              {% else %}
+                <span></span>
+              {% endif %}
+              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+            </div>
+          </form>
+        </details>
+
+        <div class="setting-note">
+          <div class="card-title-row" style="margin-top:16px;">
+            <h3 style="margin:0; font-size:15px;">Dépôts GitHub accessibles</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn" type="button" id="github-load-repos">Charger les dépôts</button>
+              <span class="muted small" id="github-repos-status">Chargez les dépôts accessibles depuis votre compte GitHub.</span>
+            </div>
+          </div>
+          <div class="oauth-project-list" id="github-repos-list"></div>
+        </div>
+        {{ help_dialog(github_oauth) }}
+      </section>
+
+      <section class="card setting-card span-2" id="bing-connect-card">
+        <div class="setting-head">
+          <div>
+            <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
+            <div class="muted small">Connexion compte prioritaire via OAuth. La clé API reste disponible uniquement en fallback avancé.</div>
+          </div>
+          <div class="setting-actions">
+            {% if bing_oauth.is_oauth %}
+              <span class="badge ok">compte connecté</span>
+            {% elif bing_oauth.is_manual %}
+              <span class="badge notice">clé manuelle</span>
+            {% elif bing_oauth.source == "system" %}
+              <span class="badge notice">fallback plateforme</span>
+            {% elif bing_oauth.ready %}
+              <span class="badge ok">oauth disponible</span>
+            {% else %}
+              <span class="badge notice">oauth indisponible</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="kv setting-kv">
+          <div class="kv-item">
+            <span class="muted">Source</span>
+            <div class="mono">{{ bing_oauth.source_label }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Actif</span>
+            <div class="mono">{{ bing_oauth.masked or "-" }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Mode</span>
+            <div class="mono">
+              {% if bing_oauth.is_oauth %}
+                oauth compte
+              {% elif bing_oauth.is_manual %}
+                clé api manuelle
+              {% elif bing_oauth.source == "system" %}
+                fallback plateforme
+              {% else %}
+                -
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if bing_oauth.account_label %}
+          <p class="muted small setting-note">Compte Bing : <span class="mono">{{ bing_oauth.account_label }}</span></p>
+        {% endif %}
+
+        <div class="oauth-project-actions" style="margin-top:12px;">
+          {% if bing_oauth.ready %}
+            <a class="btn {% if not bing_oauth.is_oauth %}primary{% endif %}" href="{{ bing_oauth.connect_url }}">
+              {% if bing_oauth.is_oauth %}Reconnecter Bing{% else %}Connecter Bing{% endif %}
+            </a>
+          {% elif can_access_system_settings %}
+            <a class="btn" href="{{ bing_oauth.system_url }}">Configurer OAuth plateforme</a>
+          {% else %}
+            <span class="muted small">Connexion Bing indisponible pour le moment.</span>
+          {% endif %}
+          {% if bing_oauth.is_oauth %}
+            <form method="post" action="{{ bing_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+              <input type="hidden" name="next" value="/settings/accounts#bing-connect-card" />
+              <button
+                class="btn danger"
+                type="submit"
+                onclick="return confirm('Déconnecter Bing pour ce compte ?');"
+              >
+                Déconnecter
+              </button>
+            </form>
+          {% endif %}
+          <button class="btn" type="button" id="bing-test-btn">Tester</button>
+          <span class="muted small" id="bing-test-result"></span>
+        </div>
+
+        {% if bing_projects %}
+          <div class="muted small setting-note">Projets configurés dans l'app</div>
+          <div class="oauth-project-list">
+            {% for project_item in bing_projects %}
+              <div class="oauth-project-item">
+                <div>
+                  <div class="oauth-project-title">{{ project_item.site_name }}</div>
+                  <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
+                </div>
+                <div class="oauth-project-actions">
+                  {% if project_item.bing_enabled and bing_oauth.source == "user" %}
+                    <span class="badge ok">module prêt</span>
+                  {% elif project_item.bing_enabled and bing_oauth.source == "system" %}
+                    <span class="badge notice">fallback plateforme</span>
+                  {% elif project_item.bing_enabled %}
+                    <span class="badge error">compte manquant</span>
+                  {% else %}
+                    <span class="badge notice">module désactivé</span>
+                  {% endif %}
+                  <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <details class="setting-details" {% if bing_oauth.source == "none" and not bing_oauth.ready %}open{% endif %}>
+          <summary>Mode avancé : clé API manuelle</summary>
+          <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
+            <label>
+              Clé API Bing
+              <input type="password" name="value" placeholder="Coller la clé Bing Webmaster…" autocomplete="new-password" />
+            </label>
+            <div class="modal-actions between">
+              {% if bing_oauth.manual_item.has_user_value %}
+                <button
+                  class="btn danger"
+                  type="submit"
+                  name="op"
+                  value="clear"
+                  onclick="return confirm('Supprimer votre clé Bing ?');"
+                >
+                  Supprimer ma clé
+                </button>
+              {% else %}
+                <span></span>
+              {% endif %}
+              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+            </div>
+          </form>
+        </details>
+
+        <div class="setting-note">
+          <div class="card-title-row" style="margin-top:16px;">
+            <h3 style="margin:0; font-size:15px;">Sites Bing importables</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn" type="button" id="bing-load-sites">Charger les sites Bing</button>
+              <span class="muted small" id="bing-sites-status">Chargez les sites accessibles depuis votre compte Bing.</span>
+            </div>
+          </div>
+          <div class="oauth-project-list" id="bing-sites-list"></div>
+        </div>
+        {{ help_dialog(bing_oauth.manual_item) }}
+      </section>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-head">
+      <div>
+        <div class="settings-section-title">
+          <svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:6px;" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          Déploiement
+        </div>
+        <div class="muted small">GitHub permet de relire et valider les corrections dans le code. Netlify sert à suivre vos déploiements.</div>
+      </div>
+    </div>
+
+    <div class="grid two">
+
+
+      <section class="card setting-card" id="netlify-connect-card">
+        <div class="setting-head">
+          <div>
+            <h2 class="setting-title">Netlify</h2>
+            <div class="muted small">Compte utilisé pour lister les sites et préparer les workflows de déploiement.</div>
+          </div>
+          <div class="setting-actions">
+            {% if netlify_oauth.is_hardened %}
+              <span class="badge ok">compte connecté</span>
+            {% elif netlify_oauth.is_oauth_fallback %}
+              <span class="badge notice">connecté · fallback oauth</span>
+            {% elif netlify_oauth.is_oauth %}
+              <span class="badge ok">compte connecté</span>
+            {% elif netlify_oauth.is_manual %}
+              <span class="badge notice">token manuel</span>
+            {% elif netlify_oauth.source == "system" %}
+              <span class="badge notice">fallback plateforme</span>
+            {% elif netlify_oauth.ready %}
+              <span class="badge ok">oauth disponible</span>
+            {% else %}
+              <span class="badge notice">oauth indisponible</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="kv setting-kv">
+          <div class="kv-item">
+            <span class="muted">Source</span>
+            <div class="mono">{{ netlify_oauth.source_label }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Actif</span>
+            <div class="mono">{{ netlify_oauth.masked or "-" }}</div>
+          </div>
+          <div class="kv-item">
+            <span class="muted">Compte</span>
+            <div class="mono">{{ netlify_oauth.account_label or "-" }}</div>
+          </div>
+        </div>
+        {% if netlify_oauth.is_hardened %}
+          <div class="muted small" style="margin-top:10px;">
+            Le token OAuth Netlify n'est pas conservé. L'app génère puis stocke un PAT serveur
+            {% if netlify_oauth.pat_expires_at %} valable jusqu'au {{ netlify_oauth.pat_expires_at[:10] }}{% endif %}.
+          </div>
+        {% elif netlify_oauth.is_oauth_fallback %}
+          <div class="muted small" style="margin-top:10px;">
+            Netlify est connecté via le token OAuth direct.
+            {% if netlify_oauth.pat_upgrade_error %}
+              La génération automatique du PAT a été refusée par Netlify.
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <div class="oauth-project-actions" style="margin-top:12px;">
+          {% if netlify_oauth.ready %}
+            <a class="btn {% if not netlify_oauth.is_oauth %}primary{% endif %}" href="{{ netlify_oauth.connect_url }}">
+              {% if netlify_oauth.is_oauth %}Reconnecter Netlify{% else %}Connecter Netlify{% endif %}
+            </a>
+          {% elif can_access_system_settings %}
+            <a class="btn" href="{{ netlify_oauth.system_url }}">Configurer OAuth plateforme</a>
+          {% else %}
+            <span class="muted small">Connexion Netlify indisponible pour le moment.</span>
+          {% endif %}
+          {% if netlify_oauth.source == "user" %}
+            <form method="post" action="{{ netlify_oauth.disconnect_url }}" style="display:inline-flex;">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+              <input type="hidden" name="next" value="/settings/accounts#netlify-connect-card" />
+              <button
+                class="btn danger"
+                type="submit"
+                onclick="return confirm('Déconnecter Netlify pour ce compte ?');"
+              >
+                Déconnecter
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        <details class="setting-details">
+          <summary>Mode avancé : token manuel</summary>
+          <form method="post" action="/settings/accounts" class="setting-form">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <input type="hidden" name="key" value="NETLIFY_TOKEN" />
+            <label>
+              Token Netlify
+              <input type="password" name="value" placeholder="Coller le token Netlify…" autocomplete="new-password" />
+            </label>
+            <div class="modal-actions between">
+              {% if netlify_oauth.has_user_value %}
+                <button
+                  class="btn danger"
+                  type="submit"
+                  name="op"
+                  value="clear"
+                  onclick="return confirm('Supprimer ce token Netlify ?');"
+                >
+                  Supprimer mon token
+                </button>
+              {% else %}
+                <span></span>
+              {% endif %}
+              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
+            </div>
+          </form>
+        </details>
+
+        <div class="setting-note">
+          <div class="card-title-row" style="margin-top:16px;">
+            <h3 style="margin:0; font-size:15px;">Sites Netlify accessibles</h3>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button class="btn" type="button" id="netlify-load-sites">Charger les sites</button>
+              <span class="muted small" id="netlify-sites-status">Chargez les sites accessibles depuis votre compte Netlify.</span>
+            </div>
+          </div>
+          <div class="oauth-project-list" id="netlify-sites-list"></div>
+        </div>
+        {{ help_dialog(netlify_oauth) }}
+      </section>
+    </div>
+  </div>
+  <section id="mon-compte" aria-labelledby="mon-compte-title">
+    <h2 id="mon-compte-title">Mon compte</h2>
   <section class="card">
     <div class="card-title-row">
       <h2>Sécurité &amp; stockage</h2>
@@ -390,530 +922,7 @@
     </details>
   </section>
 
-  <div class="settings-section">
-    <div class="settings-section-head">
-      <div>
-        <div class="settings-section-title">
-          <svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:6px;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          Search &amp; Analytics
-        </div>
-        <div class="muted small">Google = connexion OAuth projet par projet. Bing = connexion compte au niveau utilisateur, puis activation par projet.</div>
-      </div>
-    </div>
-
-    <div class="grid two">
-      <section class="card setting-card span-2" id="gsc-oauth-card">
-        {% set gsc_ns = namespace(connected=0, broken=0, first_props_url='') %}
-        {% for p in gsc_oauth.projects %}
-          {% if p.oauth_connected and p.oauth_status.ready %}
-            {% set gsc_ns.connected = gsc_ns.connected + 1 %}
-            {% if not gsc_ns.first_props_url %}{% set gsc_ns.first_props_url = p.properties_url %}{% endif %}
-          {% endif %}
-          {% if p.oauth_connected and not p.oauth_status.ready %}{% set gsc_ns.broken = gsc_ns.broken + 1 %}{% endif %}
-        {% endfor %}
-
-        <div class="setting-head">
-          <div style="display:flex;align-items:flex-start;gap:12px;">
-            <span class="modal-title-icon" aria-hidden="true" style="flex-shrink:0;margin-top:1px;">
-              <img src="/static/google.svg" style="width:18px;height:18px;" alt="" />
-            </span>
-            <div>
-              <h2 class="setting-title">Google Search Console</h2>
-              <div class="muted small">OAuth par projet — connexion nécessaire pour les données live et les imports GSC.</div>
-            </div>
-          </div>
-          <div class="setting-actions">
-            {% if gsc_oauth.configured %}
-              {% if gsc_ns.broken %}<span class="badge error">{{ gsc_ns.broken }} erreur{{ 's' if gsc_ns.broken > 1 }}</span>{% endif %}
-              {% if gsc_ns.connected %}
-                <span class="badge ok">{{ gsc_ns.connected }} connecté{{ 's' if gsc_ns.connected > 1 }}</span>
-                <button type="button" class="btn" id="gsc-sync-btn"
-                  data-url="{{ gsc_ns.first_props_url }}"
-                  title="Comparer vos propriétés GSC avec les projets de l'app">
-                  Synchroniser GSC
-                </button>
-                <form method="post" action="/settings/accounts/gsc/disconnect-all" style="display:inline-flex;">
-                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                  <button class="btn-link btn-link-danger" type="submit"
-                    onclick="return confirm('Déconnecter Google de tous les projets ?');">Déconnecter tout</button>
-                </form>
-              {% else %}
-                <span class="badge notice">non connecté</span>
-              {% endif %}
-            {% else %}
-              <span class="badge notice">indisponible</span>
-            {% endif %}
-          </div>
-        </div>
-
-        {% if gsc_oauth.configured %}
-          {% if gsc_oauth.projects %}
-            <div class="gsc-proj-list">
-
-              {# ── Connectés ──────────────────────────────── #}
-              {% for p in gsc_oauth.projects %}
-                {% if p.oauth_connected and p.oauth_status.ready %}
-                  <div class="gsc-proj-row gsc-row-ok">
-                    <span class="gsc-dot ok"></span>
-                    <div class="gsc-proj-meta">
-                      <div class="gsc-proj-name">{{ p.site_name }}</div>
-                      <div class="muted small">{{ p.base_url or p.slug }}</div>
-                    </div>
-                    <div class="gsc-proj-act">
-                      <form method="post" action="{{ p.disconnect_url }}" style="display:contents;">
-                        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                        <input type="hidden" name="next" value="/settings/accounts#gsc-oauth-card" />
-                        <button class="btn-link btn-link-danger" type="submit"
-                          onclick="return confirm('Déconnecter Google pour ce projet ?');">Déconnecter</button>
-                      </form>
-                    </div>
-                  </div>
-                {% endif %}
-              {% endfor %}
-
-              {# ── Connexion brisée ───────────────────────── #}
-              {% for p in gsc_oauth.projects %}
-                {% if p.oauth_connected and not p.oauth_status.ready %}
-                  <div class="gsc-proj-row gsc-row-err">
-                    <span class="gsc-dot err"></span>
-                    <div class="gsc-proj-meta">
-                      <div class="gsc-proj-name">{{ p.site_name }}</div>
-                      <div class="muted small">{{ p.base_url or p.slug }}</div>
-                      {% if p.oauth_status_hint %}
-                        <div class="small" style="color:var(--err);margin-top:2px;">{{ p.oauth_status_hint }}</div>
-                      {% endif %}
-                    </div>
-                    <div class="gsc-proj-act">
-                      <a class="btn" href="{{ p.connect_url }}">Réparer la connexion</a>
-                    </div>
-                  </div>
-                {% endif %}
-              {% endfor %}
-
-              {# ── Non connectés ──────────────────────────── #}
-              {% for p in gsc_oauth.projects %}
-                {% if not p.oauth_connected %}
-                  <div class="gsc-proj-row">
-                    <span class="gsc-dot off"></span>
-                    <div class="gsc-proj-meta">
-                      <div class="gsc-proj-name">{{ p.site_name }}</div>
-                      <div class="muted small">{{ p.base_url or p.slug }}</div>
-                    </div>
-                    <div class="gsc-proj-act">
-                      <a class="btn google-btn" href="{{ p.connect_url }}">
-                        <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-                        Connecter
-                      </a>
-                    </div>
-                  </div>
-                {% endif %}
-              {% endfor %}
-
-            </div>
-
-
-          {% else %}
-            <p class="muted small setting-note">Aucun projet configuré dans l'app.</p>
-          {% endif %}
-        {% else %}
-          <p class="muted small setting-note">
-            La connexion Google n'est pas encore disponible sur cette plateforme.
-            {% if can_access_system_settings %}
-              <a href="{{ gsc_oauth.system_url }}">Configurer OAuth côté système</a>.
-            {% endif %}
-          </p>
-        {% endif %}
-      </section>
-
-      <section class="card setting-card span-2" id="bing-connect-card">
-        <div class="setting-head">
-          <div>
-            <h2 class="setting-title">Connexion Bing Webmaster Tools</h2>
-            <div class="muted small">Connexion compte prioritaire via OAuth. La clé API reste disponible uniquement en fallback avancé.</div>
-          </div>
-          <div class="setting-actions">
-            {% if bing_oauth.is_oauth %}
-              <span class="badge ok">compte connecté</span>
-            {% elif bing_oauth.is_manual %}
-              <span class="badge notice">clé manuelle</span>
-            {% elif bing_oauth.source == "system" %}
-              <span class="badge notice">fallback plateforme</span>
-            {% elif bing_oauth.ready %}
-              <span class="badge ok">oauth disponible</span>
-            {% else %}
-              <span class="badge notice">oauth indisponible</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="kv setting-kv">
-          <div class="kv-item">
-            <span class="muted">Source</span>
-            <div class="mono">{{ bing_oauth.source_label }}</div>
-          </div>
-          <div class="kv-item">
-            <span class="muted">Actif</span>
-            <div class="mono">{{ bing_oauth.masked or "-" }}</div>
-          </div>
-          <div class="kv-item">
-            <span class="muted">Mode</span>
-            <div class="mono">
-              {% if bing_oauth.is_oauth %}
-                oauth compte
-              {% elif bing_oauth.is_manual %}
-                clé api manuelle
-              {% elif bing_oauth.source == "system" %}
-                fallback plateforme
-              {% else %}
-                -
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        {% if bing_oauth.account_label %}
-          <p class="muted small setting-note">Compte Bing : <span class="mono">{{ bing_oauth.account_label }}</span></p>
-        {% endif %}
-
-        <div class="oauth-project-actions" style="margin-top:12px;">
-          {% if bing_oauth.ready %}
-            <a class="btn {% if not bing_oauth.is_oauth %}primary{% endif %}" href="{{ bing_oauth.connect_url }}">
-              {% if bing_oauth.is_oauth %}Reconnecter Bing{% else %}Connecter Bing{% endif %}
-            </a>
-          {% elif can_access_system_settings %}
-            <a class="btn" href="{{ bing_oauth.system_url }}">Configurer OAuth plateforme</a>
-          {% else %}
-            <span class="muted small">Connexion Bing indisponible pour le moment.</span>
-          {% endif %}
-          {% if bing_oauth.is_oauth %}
-            <form method="post" action="{{ bing_oauth.disconnect_url }}" style="display:inline-flex;">
-              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-              <input type="hidden" name="next" value="/settings/accounts#bing-connect-card" />
-              <button
-                class="btn danger"
-                type="submit"
-                onclick="return confirm('Déconnecter Bing pour ce compte ?');"
-              >
-                Déconnecter
-              </button>
-            </form>
-          {% endif %}
-          <button class="btn" type="button" id="bing-test-btn">Tester</button>
-          <span class="muted small" id="bing-test-result"></span>
-        </div>
-
-        {% if bing_projects %}
-          <div class="muted small setting-note">Projets configurés dans l'app</div>
-          <div class="oauth-project-list">
-            {% for project_item in bing_projects %}
-              <div class="oauth-project-item">
-                <div>
-                  <div class="oauth-project-title">{{ project_item.site_name }}</div>
-                  <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
-                </div>
-                <div class="oauth-project-actions">
-                  {% if project_item.bing_enabled and bing_oauth.source == "user" %}
-                    <span class="badge ok">module prêt</span>
-                  {% elif project_item.bing_enabled and bing_oauth.source == "system" %}
-                    <span class="badge notice">fallback plateforme</span>
-                  {% elif project_item.bing_enabled %}
-                    <span class="badge error">compte manquant</span>
-                  {% else %}
-                    <span class="badge notice">module désactivé</span>
-                  {% endif %}
-                  <a class="btn" href="{{ project_item.crawl_settings_url }}">Paramètres crawl</a>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        <details class="setting-details" {% if bing_oauth.source == "none" and not bing_oauth.ready %}open{% endif %}>
-          <summary>Mode avancé : clé API manuelle</summary>
-          <form method="post" action="/settings/accounts" class="setting-form">
-            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <input type="hidden" name="key" value="BING_WEBMASTER_API_KEY" />
-            <label>
-              Clé API Bing
-              <input type="password" name="value" placeholder="Coller la clé Bing Webmaster…" autocomplete="new-password" />
-            </label>
-            <div class="modal-actions between">
-              {% if bing_oauth.manual_item.has_user_value %}
-                <button
-                  class="btn danger"
-                  type="submit"
-                  name="op"
-                  value="clear"
-                  onclick="return confirm('Supprimer ta clé Bing ?');"
-                >
-                  Supprimer ma clé
-                </button>
-              {% else %}
-                <span></span>
-              {% endif %}
-              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-            </div>
-          </form>
-        </details>
-
-        <div class="setting-note">
-          <div class="card-title-row" style="margin-top:16px;">
-            <h3 style="margin:0; font-size:15px;">Sites Bing importables</h3>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button class="btn" type="button" id="bing-load-sites">Charger les sites Bing</button>
-              <span class="muted small" id="bing-sites-status">Charge les sites accessibles depuis ton compte Bing.</span>
-            </div>
-          </div>
-          <div class="oauth-project-list" id="bing-sites-list"></div>
-        </div>
-        {{ help_dialog(bing_oauth.manual_item) }}
-      </section>
-    </div>
-  </div>
-
-  <div class="settings-section">
-    <div class="settings-section-head">
-      <div>
-        <div class="settings-section-title">
-          <svg style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px;margin-right:6px;" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          Déploiement
-        </div>
-        <div class="muted small">Connecte tes comptes GitHub et Netlify. Les tokens manuels restent disponibles en fallback avancé.</div>
-      </div>
-    </div>
-
-    <div class="grid two">
-      <section class="card setting-card" id="github-connect-card">
-        <div class="setting-head">
-          <div>
-            <h2 class="setting-title">GitHub</h2>
-            <div class="muted small">Compte utilisé pour sélectionner les dépôts et préparer les flux de fix/deploy.</div>
-            {% if github_oauth.compte_hote %}
-              {# Sans cette phrase, un membre lit « compte connecté » et en déduit que ses
-                 corrections partiront de CE compte. Sur les projets de son hôte, elles
-                 partent du jeton de l'hôte — décision assumée, mais invisible à l'écran. #}
-              <div class="muted small" style="margin-top:6px;">
-                Sur les projets de <strong>{{ github_oauth.compte_hote }}</strong>, les corrections
-                utilisent le compte GitHub de l'hôte. Cette connexion sert à tes propres projets.
-              </div>
-            {% endif %}
-          </div>
-          <div class="setting-actions">
-            {% if github_oauth.is_oauth %}
-              <span class="badge ok">compte connecté</span>
-            {% elif github_oauth.is_manual %}
-              <span class="badge notice">token manuel</span>
-            {% elif github_oauth.source == "system" %}
-              <span class="badge notice">fallback plateforme</span>
-            {% elif github_oauth.ready %}
-              <span class="badge ok">oauth disponible</span>
-            {% else %}
-              <span class="badge notice">oauth indisponible</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="kv setting-kv">
-          <div class="kv-item">
-            <span class="muted">Source</span>
-            <div class="mono">{{ github_oauth.source_label }}</div>
-          </div>
-          <div class="kv-item">
-            <span class="muted">Actif</span>
-            <div class="mono">{{ github_oauth.masked or "-" }}</div>
-          </div>
-          <div class="kv-item">
-            <span class="muted">Compte</span>
-            <div class="mono">{{ github_oauth.account_label or "-" }}</div>
-          </div>
-        </div>
-
-        <div class="oauth-project-actions" style="margin-top:12px;">
-          {% if github_oauth.ready %}
-            <a class="btn {% if not github_oauth.is_oauth %}primary{% endif %}" href="{{ github_oauth.connect_url }}">
-              {% if github_oauth.is_oauth %}Reconnecter GitHub{% else %}Connecter GitHub{% endif %}
-            </a>
-          {% elif can_access_system_settings %}
-            <a class="btn" href="{{ github_oauth.system_url }}">Configurer OAuth plateforme</a>
-          {% else %}
-            <span class="muted small">Connexion GitHub indisponible pour le moment.</span>
-          {% endif %}
-          {% if github_oauth.source == "user" %}
-            <form method="post" action="{{ github_oauth.disconnect_url }}" style="display:inline-flex;">
-              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-              <input type="hidden" name="next" value="/settings/accounts#github-connect-card" />
-              <button
-                class="btn danger"
-                type="submit"
-                onclick="return confirm('Déconnecter GitHub pour ce compte ?');"
-              >
-                Déconnecter
-              </button>
-            </form>
-          {% endif %}
-        </div>
-
-        <details class="setting-details">
-          <summary>Mode avancé : token manuel</summary>
-          <form method="post" action="/settings/accounts" class="setting-form">
-            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <input type="hidden" name="key" value="GITHUB_TOKEN" />
-            <label>
-              Token GitHub
-              <input type="password" name="value" placeholder="Coller le token GitHub…" autocomplete="new-password" />
-            </label>
-            <div class="modal-actions between">
-              {% if github_oauth.has_user_value %}
-                <button
-                  class="btn danger"
-                  type="submit"
-                  name="op"
-                  value="clear"
-                  onclick="return confirm('Supprimer ce token GitHub ?');"
-                >
-                  Supprimer mon token
-                </button>
-              {% else %}
-                <span></span>
-              {% endif %}
-              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-            </div>
-          </form>
-        </details>
-
-        <div class="setting-note">
-          <div class="card-title-row" style="margin-top:16px;">
-            <h3 style="margin:0; font-size:15px;">Dépôts GitHub accessibles</h3>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button class="btn" type="button" id="github-load-repos">Charger les dépôts</button>
-              <span class="muted small" id="github-repos-status">Charge les dépôts accessibles depuis ton compte GitHub.</span>
-            </div>
-          </div>
-          <div class="oauth-project-list" id="github-repos-list"></div>
-        </div>
-        {{ help_dialog(github_oauth) }}
-      </section>
-
-      <section class="card setting-card" id="netlify-connect-card">
-        <div class="setting-head">
-          <div>
-            <h2 class="setting-title">Netlify</h2>
-            <div class="muted small">Compte utilisé pour lister les sites et préparer les workflows de déploiement.</div>
-          </div>
-          <div class="setting-actions">
-            {% if netlify_oauth.is_hardened %}
-              <span class="badge ok">compte connecté</span>
-            {% elif netlify_oauth.is_oauth_fallback %}
-              <span class="badge notice">connecté · fallback oauth</span>
-            {% elif netlify_oauth.is_oauth %}
-              <span class="badge ok">compte connecté</span>
-            {% elif netlify_oauth.is_manual %}
-              <span class="badge notice">token manuel</span>
-            {% elif netlify_oauth.source == "system" %}
-              <span class="badge notice">fallback plateforme</span>
-            {% elif netlify_oauth.ready %}
-              <span class="badge ok">oauth disponible</span>
-            {% else %}
-              <span class="badge notice">oauth indisponible</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="kv setting-kv">
-          <div class="kv-item">
-            <span class="muted">Source</span>
-            <div class="mono">{{ netlify_oauth.source_label }}</div>
-          </div>
-          <div class="kv-item">
-            <span class="muted">Actif</span>
-            <div class="mono">{{ netlify_oauth.masked or "-" }}</div>
-          </div>
-          <div class="kv-item">
-            <span class="muted">Compte</span>
-            <div class="mono">{{ netlify_oauth.account_label or "-" }}</div>
-          </div>
-        </div>
-        {% if netlify_oauth.is_hardened %}
-          <div class="muted small" style="margin-top:10px;">
-            Le token OAuth Netlify n'est pas conservé. L'app génère puis stocke un PAT serveur
-            {% if netlify_oauth.pat_expires_at %} valable jusqu'au {{ netlify_oauth.pat_expires_at[:10] }}{% endif %}.
-          </div>
-        {% elif netlify_oauth.is_oauth_fallback %}
-          <div class="muted small" style="margin-top:10px;">
-            Netlify est connecté via le token OAuth direct.
-            {% if netlify_oauth.pat_upgrade_error %}
-              La génération automatique du PAT a été refusée par Netlify.
-            {% endif %}
-          </div>
-        {% endif %}
-
-        <div class="oauth-project-actions" style="margin-top:12px;">
-          {% if netlify_oauth.ready %}
-            <a class="btn {% if not netlify_oauth.is_oauth %}primary{% endif %}" href="{{ netlify_oauth.connect_url }}">
-              {% if netlify_oauth.is_oauth %}Reconnecter Netlify{% else %}Connecter Netlify{% endif %}
-            </a>
-          {% elif can_access_system_settings %}
-            <a class="btn" href="{{ netlify_oauth.system_url }}">Configurer OAuth plateforme</a>
-          {% else %}
-            <span class="muted small">Connexion Netlify indisponible pour le moment.</span>
-          {% endif %}
-          {% if netlify_oauth.source == "user" %}
-            <form method="post" action="{{ netlify_oauth.disconnect_url }}" style="display:inline-flex;">
-              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-              <input type="hidden" name="next" value="/settings/accounts#netlify-connect-card" />
-              <button
-                class="btn danger"
-                type="submit"
-                onclick="return confirm('Déconnecter Netlify pour ce compte ?');"
-              >
-                Déconnecter
-              </button>
-            </form>
-          {% endif %}
-        </div>
-
-        <details class="setting-details">
-          <summary>Mode avancé : token manuel</summary>
-          <form method="post" action="/settings/accounts" class="setting-form">
-            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <input type="hidden" name="key" value="NETLIFY_TOKEN" />
-            <label>
-              Token Netlify
-              <input type="password" name="value" placeholder="Coller le token Netlify…" autocomplete="new-password" />
-            </label>
-            <div class="modal-actions between">
-              {% if netlify_oauth.has_user_value %}
-                <button
-                  class="btn danger"
-                  type="submit"
-                  name="op"
-                  value="clear"
-                  onclick="return confirm('Supprimer ce token Netlify ?');"
-                >
-                  Supprimer mon token
-                </button>
-              {% else %}
-                <span></span>
-              {% endif %}
-              <button class="btn primary" type="submit" name="op" value="save">Enregistrer</button>
-            </div>
-          </form>
-        </details>
-
-        <div class="setting-note">
-          <div class="card-title-row" style="margin-top:16px;">
-            <h3 style="margin:0; font-size:15px;">Sites Netlify accessibles</h3>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button class="btn" type="button" id="netlify-load-sites">Charger les sites</button>
-              <span class="muted small" id="netlify-sites-status">Charge les sites accessibles depuis ton compte Netlify.</span>
-            </div>
-          </div>
-          <div class="oauth-project-list" id="netlify-sites-list"></div>
-        </div>
-        {{ help_dialog(netlify_oauth) }}
-      </section>
-    </div>
-  </div>
+  </section>
   </div>
 
   <script>

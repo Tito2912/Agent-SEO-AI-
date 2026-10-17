@@ -258,7 +258,7 @@
   // à cet instant : la fusion attend désormais le verdict.
   function statutCorrection(d) {
     if (d.merged) return 'Correction mergée.';
-    if (d.verification) return 'Correction ouverte en brouillon — en attente des vérifications de ton dépôt.';
+    if (d.verification) return 'Correction ouverte en brouillon — en attente des vérifications de votre dépôt.';
     return 'Pull Request créée.';
   }
 
@@ -321,7 +321,7 @@
     if (!btn) return;
     var original = btn.textContent;
     btn.disabled = true; btn.textContent = 'Création de la PR...';
-    showFlowStatus('Analyse du dernier crawl et génération des corrections...', '');
+    showFlowStatus('Lecture du dernier rapport et préparation des corrections...', '');
     prCount().then(function (baseline) {
       var stopPoll = startPrPoll({ baseline: baseline });
       fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/bulk-fix', {
@@ -416,7 +416,7 @@
           reste = ' <strong>' + esc(d.not_attempted_count) + ' fichier(s) non traité(s)</strong> : '
                 + (typeof cap.left === 'number' && cap.left <= cap.files
                    ? 'il te restait ' + esc(cap.left) + ' correction(s) IA ce mois-ci.'
-                   : 'ton forfait en traite ' + esc(cap.files) + ' par correction — relance pour les suivants.');
+                   : 'votre forfait en traite ' + esc(cap.files) + ' par correction — relance pour les suivants.');
         }
         showFlowStatus(statutCorrection(d) + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link + reste, 'ok');
         setTimeout(function () { window.location.reload(); }, 2400);
@@ -553,7 +553,7 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (!d.ok) {
-          body.innerHTML = '<p style="margin:0 0 10px;">Ton compte GitHub n\'est pas encore connecté.</p>'
+          body.innerHTML = '<p style="margin:0 0 10px;">Votre compte GitHub n\'est pas encore connecté.</p>'
             + '<a class="btn primary" href="/oauth/github/connect?next=' + encodeURIComponent(_ghNext) + '">Connecter mon compte GitHub</a>';
           return;
         }
@@ -616,14 +616,14 @@
 {% block actions %}
   <a class="btn" href="/projects/{{ slug }}/issues">Voir les anomalies</a>
   <form method="post" action="/projects/{{ slug }}/crawl" class="inline">
-    <button type="submit" class="btn primary">Nouveau crawl</button>
+    <button type="submit" class="btn primary">Nouvelle analyse</button>
   </form>
 {% endblock %}
 
 {% block content %}
 {% set sev_color = {'error': '#ef4444', 'warning': '#f59e0b', 'notice': '#818cf8'} %}
 <div class="page-header">
-  <h1>Workflow corrections</h1>
+  <h1>Corrections à valider</h1>
   <p class="muted">{{ stats.total }} correction{{ 's' if stats.total > 1 else '' }} suivie{{ 's' if stats.total > 1 else '' }} · {{ project.site_name }}</p>
   <a href="/docs/corrections-automatiques" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
 </div>
@@ -633,7 +633,7 @@
   <div class="corr-stat"><span class="num">{{ stats.total }}</span><span class="lbl">Suivies</span></div>
   <div class="corr-stat accent"><span class="num">{{ stats.todo }}</span><span class="lbl">À traiter</span></div>
   <div class="corr-stat"><span class="num">{{ stats.in_progress }}</span><span class="lbl">En cours</span></div>
-  <div class="corr-stat"><span class="num">{{ stats.done }}</span><span class="lbl">Corrigées</span></div>
+  <div class="corr-stat"><span class="num">{{ stats.done }}</span><span class="lbl">Déclarées corrigées</span></div>
   {% if stats.with_pr %}<div class="corr-stat"><span class="num">{{ stats.with_pr }}</span><span class="lbl">PR ouvertes</span></div>{% endif %}
   <div class="corr-stat ok"><span class="num">{{ stats.verified_resolved }}</span><span class="lbl">✓ Vérifiées résolues</span></div>
   {% if stats.still_present %}<div class="corr-stat err"><span class="num">{{ stats.still_present }}</span><span class="lbl">⚠ Encore présentes</span></div>{% endif %}
@@ -643,29 +643,35 @@
 <section class="card">
   <div class="card-title-row">
     <div>
-      <h2>Accélérateur de correction</h2>
+      <h2>Choisir une correction</h2>
       <p class="muted small" style="margin:4px 0 0;">
         {% if current_crawl_ts %}
-          Crawl courant <span class="mono">{{ current_crawl_ts }}</span> · {{ fix_candidates|length }} anomalie{{ 's' if fix_candidates|length > 1 else '' }} candidate{{ 's' if fix_candidates|length > 1 else '' }}.
+          Analyse du <span data-ts-datetime="{{ current_crawl_ts }}">{{ current_crawl_ts[6:8] }}/{{ current_crawl_ts[4:6] }}/{{ current_crawl_ts[:4] }}</span> · {{ fix_candidates|length }} anomalie{{ 's' if fix_candidates|length > 1 else '' }} candidate{{ 's' if fix_candidates|length > 1 else '' }}.
         {% else %}
-          Aucun crawl exploitable pour générer des corrections.
+          Aucune analyse exploitable pour générer des corrections.
         {% endif %}
       </p>
     </div>
     <div class="card-title-actions">
       <a class="btn" href="/projects/{{ slug }}/issues{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Anomalies</a>
       {% if current_crawl_ts %}
-        <a class="btn" href="/projects/{{ slug }}/export/fix-pack.zip?crawl={{ current_crawl_ts }}">Fix Pack ZIP</a>
+        {% if fix_pack_unlocked %}
+          <a class="btn" href="/projects/{{ slug }}/export/fix-pack.zip?crawl={{ current_crawl_ts }}">Archive de corrections ZIP</a>
+        {% else %}
+          <a class="btn" href="/billing">Archive de corrections · Solo+</a>
+        {% endif %}
+        <a class="btn" href="/projects/{{ slug }}/export/report.pdf?crawl={{ current_crawl_ts }}">Rapport à transmettre (PDF)</a>
       {% endif %}
       {% if github_cfg and github_cfg.repo and fix_candidates %}
         <button type="button" class="btn primary" data-correction-bulk-fix>Tout corriger en 1 PR</button>
       {% elif not (github_cfg and github_cfg.repo) %}
-        <button type="button" class="btn primary" id="gh-connect-toggle">Connecter GitHub</button>
+        <button type="button" class="btn" id="gh-connect-toggle">Connecter GitHub (facultatif)</button>
       {% endif %}
     </div>
   </div>
 
   {% if not (github_cfg and github_cfg.repo) %}
+  <p class="muted">Votre site est géré dans un CMS ou par un prestataire ? Ouvrez les instructions de chaque problème pour modifier la page, ou transmettez le rapport PDF. Après modification, lancez une nouvelle analyse pour vérifier le résultat.</p>
   <div id="gh-connect-panel" style="display:none;margin-top:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
     <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Connecter un dépôt GitHub à ce projet</div>
     <div id="gh-connect-body" style="font-size:12px;color:var(--muted);">Chargement…</div>
@@ -719,7 +725,7 @@
               </div>
             </div>
             <div class="corr-flow-actions">
-              <a class="btn" style="font-size:11px;padding:3px 10px;" href="/projects/{{ slug }}/issues/{{ candidate.key }}{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Voir</a>
+              <a class="btn" style="font-size:11px;padding:3px 10px;" href="/projects/{{ slug }}/issues/{{ candidate.key }}{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Voir les instructions</a>
               {% if candidate.url %}
                 <button type="button" class="btn" style="font-size:11px;padding:3px 10px;"
                   data-correction-preview data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}">Aperçu IA</button>
@@ -727,9 +733,8 @@
               {% if github_cfg and github_cfg.repo and candidate.url %}
                 <button type="button" class="btn primary" style="font-size:11px;padding:3px 10px;"
                   data-correction-deep-fix data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}"
-                  title="Corrige toutes les occurrences de cette anomalie dans le dépôt, en une seule PR">Créer PR</button>
-              {% elif not (github_cfg and github_cfg.repo) %}
-                <span class="muted small">GitHub requis</span>
+                  title="Corrige toutes les occurrences de cette anomalie dans le dépôt, en une seule PR">Créer une proposition GitHub</button>
+
               {% endif %}
               {% if candidate.pr and candidate.pr.pr_url %}
                 <a href="{{ candidate.pr.pr_url }}" target="_blank" rel="noreferrer" class="muted small">PR existante</a>
@@ -741,14 +746,14 @@
       {% endfor %}
     </div>
   {% else %}
-    <p class="muted small" style="margin-top:12px;">Aucune anomalie corrigeable automatiquement trouvée sur le dernier crawl.</p>
+    <p class="muted small" style="margin-top:12px;">Aucune anomalie corrigeable automatiquement trouvée sur la dernière analyse.</p>
   {% endif %}
 </section>
 
 {% if stats.total == 0 %}
   <section class="card">
     <p class="muted">Aucune correction suivie pour l'instant.</p>
-    <p class="muted small" style="margin-top:6px;">Utilise « Aperçu IA » puis « Créer PR » dans l'accélérateur ci-dessus, ou les boutons de statut sur la page d'une anomalie.</p>
+    <p class="muted small" style="margin-top:6px;">Ouvrez les instructions d’une anomalie et indiquez son avancement avec les boutons de statut. Si un dépôt est connecté, vous pouvez aussi examiner une proposition de modification avant de la créer sur GitHub.</p>
     <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">Voir les anomalies</a>
   </section>
 {% else %}

@@ -5,17 +5,15 @@
   <div class="page-header">
     <h1>Contenu</h1>
     <p class="muted">
-      {{ project.site_name }} · faire écrire une page neuve, en pull request ou prête à publier
+      {{ project.site_name }} · rédigez un article à relire, puis à publier dans votre site
     </p>
   </div>
 
   {% if not has_access %}
     <section class="card">
       <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
-      <p class="muted">
-        Cette page s'alimente de l'écran Concurrents, qui fournit les sujets, et elle est
-        incluse au même niveau : à partir du plan Pro.
-      </p>
+      <p class="muted">Transformez un sujet en article avec un titre, une meta description et un texte en HTML et Markdown. Vous pouvez le publier vous-même ou préparer une proposition sur GitHub. Disponible à partir du plan Pro.</p>
+      <div class="feature-example"><p class="muted small">Exemple de livrable · démonstration</p><p><strong>Entretenir son vélo électrique au quotidien</strong></p><p class="muted">Un article structuré, une adresse suggérée et des liens vers les pages de votre site, à relire avant publication.</p></div>
       <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
     </section>
   {% else %}
@@ -41,27 +39,28 @@
            posait le bouton AU-DESSUS de son texte (capture du 28/09/2026). #}
         <label class="radio" style="align-items:flex-start;">
           <input type="radio" name="c-mode" value="github" {% if a_depot %}checked{% else %}disabled{% endif %} style="margin-top:3px;" />
-          <span><strong>Pull request sur ton dépôt GitHub</strong>
-            <span class="muted small">— la page est écrite dans ton site, liée depuis sa section, en brouillon à relire.
-            {% if not a_depot %}<a href="/projects/{{ slug }}/settings/crawl">Connecte un dépôt GitHub</a> pour l'activer.{% endif %}</span></span>
+          <span><strong>Pull request sur votre dépôt GitHub</strong>
+            <span class="muted small">— la page est écrite dans votre site, liée depuis sa section, en brouillon à relire.
+            {% if not a_depot %}<a href="/projects/{{ slug }}/settings/crawl">Connectez un dépôt GitHub</a> pour l'activer.{% endif %}</span></span>
         </label>
         <label class="radio" style="align-items:flex-start;">
           <input type="radio" name="c-mode" value="contenu" {% if not a_depot %}checked{% endif %} style="margin-top:3px;" />
           <span><strong>Contenu seul</strong>
-            <span class="muted small">— tu repars avec l'article en Markdown et en HTML, et tu le publies toi-même.</span></span>
+            <span class="muted small">— vous obtenez l'article en Markdown et en HTML, et vous le publiez vous-même.</span></span>
         </label>
       </fieldset>
 
+      <p class="muted">Choisissez un sujet et le public auquel il s’adresse, puis la destination de l’article. Vous recevrez un texte à relire avant publication.</p>
       <div class="setting-form">
         <label>
-          Sujet de la page
+          Sujet et public visé
           {# « Sujet IA » DANS le champ, a droite (demande du 28/09/2026) : un sujet pour la
              section choisie, tire de ce que les concurrents traitent et pas le site. #}
           <span style="position:relative;display:block;">
-            <input id="c-sujet" placeholder="Comment choisir un outil de veille SEO" style="padding-right:120px;" />
+            <input id="c-sujet" placeholder="Ex. : choisir un vélo électrique pour ses trajets quotidiens" style="padding-right:120px;" />
             <button type="button" id="c-sujet-ia" class="btn small"
                     style="position:absolute;right:5px;top:50%;transform:translateY(-50%);"
-                    title="Propose un sujet que tes concurrents traitent et pas toi, pour la section choisie">Sujet IA</button>
+                    title="Propose un sujet que vos concurrents traitent et pas vous, pour la section choisie">Sujet IA</button>
           </span>
         </label>
         {# LA PROPOSITION DE L'IA, dans un encadre a elle (capture du 28/09/2026 : une phrase
@@ -73,27 +72,27 @@
 
         {# TAILLE ET TON, communs aux deux modes (demande du 28/09/2026). Par defaut rien
            n'est impose : l'article imite une page de sa section, comme avant. #}
+        <details class="screen-options content-style"><summary>Personnaliser la longueur et le ton</summary>
         <div class="c-style-ligne">
           <label>
             Taille
             <select id="c-taille">
-              <option value="">Comme la section</option>
+              <option value="">Style du site</option>
               {% for cle, libelle in tailles_article %}<option value="{{ cle }}">{{ libelle }}</option>{% endfor %}
             </select>
           </label>
           <label>
             Ton
             <select id="c-ton">
-              <option value="">Comme la section</option>
+              <option value="">Style du site</option>
               {% for cle, libelle in tons_article %}<option value="{{ cle }}">{{ libelle }}</option>{% endfor %}
             </select>
           </label>
         </div>
         <span class="muted small" style="display:block;margin:-2px 0 10px;">
-          « Comme la section » imite une page qu'elle contient déjà. Un choix explicite prime sur
-          elle ; les traductions suivent la version principale. Chaque version compte pour un
-          article, quelle que soit sa taille.
+          « Style du site » reprend la longueur et le ton d’une page existante dans la rubrique choisie. Vous pouvez les personnaliser. Chaque version linguistique compte pour un article.
         </span>
+        </details>
 
         <div id="c-bloc-contenu" {% if a_depot %}hidden{% endif %}>
           {% if sections_crawl %}
@@ -107,7 +106,7 @@
               <span class="muted small">
                 Le nombre de pages dit combien la section en contient déjà : l'article imite
                 l'une d'elles — longueur du titre, ton, type de plan — et ne lie que des pages
-                que le dernier crawl a vues.
+                que la dernière analyse a vues.
               </span>
             </label>
             {% if langues_crawl|length > 1 %}
@@ -122,15 +121,15 @@
                 <span class="muted small">
                   L'article s'écrit d'abord dans la langue de la section, puis se traduit dans
                   chaque langue cochée — même plan, mêmes chiffres. Pour écrire d'abord dans une
-                  autre langue, choisis sa section dans la liste ci-dessus.
+                  autre langue, choisissez sa rubrique dans la liste ci-dessus.
                 </span>
               </fieldset>
             {% endif %}
           {% else %}
             <p class="muted small" id="c-sans-crawl">
-              Aucun crawl de ton site pour l'instant. C'est lui qui dit quelles sections existent
-              et à quoi ressemblent leurs pages : <a href="/projects/{{ slug }}">lance un crawl</a>,
-              puis reviens ici.
+              Aucune analyse de votre site pour l'instant. L’analyse identifie les rubriques existantes
+              et à quoi ressemblent leurs pages : <a href="/projects/{{ slug }}">lancez une analyse</a>,
+              puis revenez ici.
             </p>
           {% endif %}
         </div>
@@ -146,7 +145,7 @@
           Adresse de la page
           <input id="c-route" class="mono" placeholder="se remplit avec le sujet" />
           <span class="muted small">
-            Composée de la section et du sujet ; tu peux la modifier. Le nombre de pages d'une
+            Composée de la section et du sujet ; vous pouvez la modifier. Le nombre de pages d'une
             section dit combien elle en contient déjà : l'agent imite l'une d'elles.
           </span>
         </label>
@@ -158,15 +157,19 @@
           <span class="muted small">
             La page s'écrit d'abord dans la langue de son adresse, puis se traduit dans chaque
             langue cochée — toutes dans la même pull request, liées entre elles (hreflang). Pour
-            écrire d'abord dans une autre langue, choisis sa section.
+            écrire d'abord dans une autre langue, choisissez sa rubrique.
           </span>
-          <div id="c-cout" class="muted small" role="status" aria-live="polite" style="margin-top:4px;"></div>
+
         </fieldset>
+        </div>
+        <div class="content-receipt">
+          <p id="c-destination" class="muted small">Article en Markdown et HTML à publier vous-même.</p>
+          <p id="c-cout" class="muted small" role="status" aria-live="polite">1 version : 1 article décompté du quota.</p>
         </div>
         <div class="modal-actions between">
           <span class="muted small">
             Besoin d'idées ? <a href="/projects/{{ slug }}/competitors">Concurrents</a> liste
-            les sujets que tes rivaux traitent et que tu ne couvres pas.
+            les sujets que vos concurrents traitent et que vous ne couvrez pas.
           </span>
           <button class="btn primary" type="button" id="c-go">{% if a_depot %}Rédiger (PR){% else %}Rédiger l'article{% endif %}</button>
         </div>
@@ -210,9 +213,9 @@
 
       <p class="muted small">
         Des pages prises dans les sujets que
-        <a href="/projects/{{ slug }}/competitors">tes concurrents traitent et que tu ne couvres
-        pas</a> — jamais un sujet que tu traites déjà, ce serait te cannibaliser. Chaque version
-        compte dans ton quota mensuel, et une page que l'agent ne sait pas
+        <a href="/projects/{{ slug }}/competitors">vos concurrents traitent et que vous ne couvrez
+        pas</a> — jamais un sujet que vous traitez déjà, ce serait concurrencer vos propres pages. Chaque version
+        compte dans votre quota mensuel, et une page que l'agent ne sait pas
         <strong>lier</strong> à sa section n'est pas écrite du tout.
       </p>
 
@@ -271,14 +274,14 @@
           <label>
             Taille
             <select id="c-auto-taille">
-              <option value="">Comme la section</option>
+              <option value="">Style du site</option>
               {% for cle, libelle in tailles_article %}<option value="{{ cle }}" {% if auto.taille == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
             </select>
           </label>
           <label>
             Ton
             <select id="c-auto-ton">
-              <option value="">Comme la section</option>
+              <option value="">Style du site</option>
               {% for cle, libelle in tons_article %}<option value="{{ cle }}" {% if auto.ton == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
             </select>
           </label>
@@ -296,12 +299,12 @@
           <label class="radio" style="align-items:flex-start;">
             <input type="radio" name="c-auto-publication" value="verification" {% if auto.publication != 'auto' %}checked{% endif %} style="margin-top:3px;" />
             <span><strong>Avec vérification</strong>
-              <span class="muted small">— la pull request attend ta validation ; un e-mail te prévient, avec un bouton pour la valider.</span></span>
+              <span class="muted small">— la pull request attend votre validation ; un e-mail vous prévient, avec un bouton pour la valider.</span></span>
           </label>
           <label class="radio" style="align-items:flex-start;">
             <input type="radio" name="c-auto-publication" value="auto" {% if auto.publication == 'auto' %}checked{% endif %} style="margin-top:3px;" />
             <span><strong>Automatique</strong>
-              <span class="muted small">— la pull request est fusionnée seule dès que les vérifications de ton dépôt passent. Sans vérification, ou si elles échouent, elle t'attend et un e-mail te prévient.</span></span>
+              <span class="muted small">— la pull request est fusionnée seule dès que les vérifications de votre dépôt passent. Sans vérification, ou si elles échouent, elle attend votre validation et un e-mail vous prévient.</span></span>
           </label>
         </fieldset>
 
@@ -481,7 +484,7 @@
               '<button type="button" class="btn small" id="c-sujet-autre">Autre sujet</button></div>' +
               (d.pourquoi ? '<p>' + esc(d.pourquoi) + '</p>' : '') +
               '<p class="muted small">Source : « ' + esc(sansMarque(d.inspire_de)) +
-              ' », un sujet que traite un de tes concurrents et pas toi.</p>';
+              ' », un sujet que traite un de vos concurrents et pas vous.</p>';
             document.getElementById('c-sujet-autre').addEventListener('click', function () { boutonIA.click(); });
           })
           .catch(function () {
@@ -580,8 +583,13 @@
         return Array.prototype.map.call(
           langBox.querySelectorAll('input:checked'), function (c) { return c.value; });
       }
+      function afficherCout(n) {
+        var txt = n + (n > 1 ? ' versions : ' : ' version : ') + n + (n > 1 ? ' articles décomptés du quota.' : ' article décompté du quota.');
+        cout.className = restant !== null && n > restant ? 'error small' : 'muted small';
+        cout.textContent = txt + (restant !== null && n > restant ? ' Votre solde est de ' + restant + ' ce mois-ci.' : '');
+      }
       function majLangues() {
-        if (!codes.length) return;
+        if (!codes.length) { if (mode() === 'github') afficherCout(1); return; }
         /* Sans adresse encore (sujet vide), la langue de la page se lit dans la SECTION choisie :
            la capture du 28/09/2026 verrouillait la racine alors que `/fr/guides` etait
            selectionnee. */
@@ -597,15 +605,7 @@
           c.title = est ? "langue de l'adresse : toujours écrite" : '';
           nommerVerrou(c, est, "langue de l'adresse");
         });
-        var n = Math.max(1, cochees().length);
-        var txt = n > 1 ? n + ' versions : ' + n + ' articles.' : '1 version : 1 article.';
-        if (restant !== null && n > restant) {
-          cout.className = 'error small';
-          cout.textContent = txt + ' Il ne t\'en reste que ' + restant + ' ce mois-ci.';
-        } else {
-          cout.className = 'muted small';
-          cout.textContent = txt;
-        }
+        if (mode() === 'github') afficherCout(Math.max(1, cochees().length));
       }
       route.addEventListener('input', majLangues);
 
@@ -623,7 +623,11 @@
         blocGithub.hidden = m !== 'github';
         blocContenu.hidden = m !== 'contenu';
         btn.textContent = m === 'github' ? 'Rédiger (PR)' : "Rédiger l'article";
-        majCoutContenu();
+        document.getElementById('c-destination').textContent = m === 'github'
+          ? 'Proposition GitHub en brouillon : relisez le texte et les vérifications avant de le fusionner.'
+          : 'Article en Markdown et HTML à télécharger ou copier, puis à publier vous-même.';
+        if (m === 'github') majLangues();
+        else majCoutContenu();
       }
       Array.prototype.forEach.call(document.querySelectorAll('input[name="c-mode"]'), function (r) {
         r.addEventListener('change', majMode);
@@ -639,7 +643,8 @@
           languesContenu.querySelectorAll('input:checked'), function (c) { return c.value; });
       }
       function majCoutContenu() {
-        if (mode() !== 'contenu' || !languesContenu || !sectionSel) return;
+        if (mode() !== 'contenu') return;
+        if (!languesContenu || !sectionSel) { afficherCout(1); return; }
         var seg = (sectionSel.value.split('/').filter(Boolean)[0] || '').toLowerCase();
         var codesContenu = Array.prototype.map.call(
           languesContenu.querySelectorAll('input'), function (c) { return c.value; });
@@ -652,8 +657,10 @@
           c.title = est ? 'langue de la section : toujours écrite' : '';
           nommerVerrou(c, est, 'langue de la section');
         });
+        afficherCout(Math.max(1, languesArticle().length));
       }
       if (sectionSel) sectionSel.addEventListener('change', majCoutContenu);
+      if (languesContenu) languesContenu.addEventListener('change', majCoutContenu);
 
       /* L'ARTICLE. Chaque version s'affiche a la demande ; l'apercu passe par `srcdoc` dans un
          iframe `sandbox` sans permission — aucun script ne peut s'y executer. */
@@ -732,7 +739,7 @@
 
       function redigerArticle() {
         var s = (sujet.value || '').trim();
-        if (!sectionSel) { say("Lance d'abord un crawl : c'est lui qui dit quelles sections existent.", 'error'); return; }
+        if (!sectionSel) { say("Lancez d’abord une analyse : l’analyse identifie les rubriques existantes.", 'error'); return; }
         if (!s) { say('Il faut un sujet.', 'error'); return; }
         var langues = languesArticle();
         btn.disabled = true;
@@ -764,8 +771,8 @@
             btn.disabled = false;
             btn.textContent = "Rédiger l'article";
             say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être de ' +
-                'notre côté. Recharge cette page dans quelques minutes : l\'article apparaîtra dans ' +
-                '« Articles rédigés ». Ne relance pas avant, tu risquerais de payer deux fois.', 'error');
+                'notre côté. Rechargez cette page dans quelques minutes : l\'article apparaîtra dans ' +
+                '« Articles rédigés ». Ne relancez pas avant, vous risqueriez de payer deux fois.', 'error');
           });
       }
 
@@ -874,9 +881,9 @@
             btn.disabled = false;
             btn.textContent = 'Rédiger (PR)';
             say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être ' +
-                'de notre côté. Recharge cette page dans quelques minutes : si la pull request ' +
-                'a été ouverte, elle apparaîtra dans « Pages proposées ». Ne relance pas ' +
-                'avant, tu risquerais de payer deux fois.', 'error');
+                'de notre côté. Rechargez cette page dans quelques minutes : si la pull request ' +
+                'a été ouverte, elle apparaîtra dans « Pages proposées ». Ne relancez pas ' +
+                'avant, vous risqueriez de payer deux fois.', 'error');
           });
       });
 

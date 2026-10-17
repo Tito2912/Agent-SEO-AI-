@@ -21,14 +21,14 @@
   </div>
 
       {% if not job %}
-        <section class="card"><p>Job introuvable.</p></section>
+        <section class="card"><p>Exécution introuvable.</p></section>
       {% else %}
         <section class="card">
           <div class="card-title-row">
             <div>
-              <h2 style="margin:0; font-size:15px;">{{ job.id }}</h2>
+              <h2 style="margin:0; font-size:15px;">{{ 'Analyse du site' if job.kind == 'crawl' else 'Traitement' }}{% if job.slug %} · {{ job.slug }}{% endif %}</h2>
               {% if job.kind == 'crawl' and job.slug %}
-                <div class="muted small mono" style="margin-top:2px;">crawl · {{ job.slug }}</div>
+                <div class="muted small mono" style="margin-top:2px;">analyse du site</div>
               {% elif job.kind == 'autopilot' %}
                 <div class="muted small mono" style="margin-top:2px;">audit multi-sites</div>
               {% endif %}
@@ -68,7 +68,7 @@
             <div class="progress-row">
               <span class="muted small" id="progress-kind">
                 {% if progress and progress.type == 'crawl' %}
-                  Crawl:
+                  Pages:
                 {% elif progress and progress.type == 'autopilot' %}
                   Sites:
                 {% else %}
@@ -93,12 +93,6 @@
               <div class="progress-fill" id="progress-fill" style="--p: {{ pct|round(0) }};"></div>
             </div>
           </div>
-          {% if job.command %}
-            <p class="muted">Commande: <span id="job-command" class="mono">{{ job.command }}</span></p>
-          {% endif %}
-          <p id="job-returncode" {% if job.returncode is none %}style="display:none;"{% endif %}>
-            Code de retour: <span class="mono" id="job-returncode-val">{{ job.returncode }}</span>
-          </p>
         </section>
 
         {% if latest %}
@@ -118,9 +112,45 @@
         </section>
         {% endif %}
 
-        <section class="card">
+        {% set result = job.result if job.result else none %}
+        <section class="card" id="job-result" {% if not result %}style="display:none;"{% endif %}>
+          <div class="card-title-row"><h2>Résultat</h2></div>
+          <p>
+            <a
+              id="job-result-link"
+              class="btn primary"
+              href="{% if result and result.type == 'crawl' %}{{ result.project_url }}{% elif result and result.type == 'autopilot' %}/{% else %}#{% endif %}"
+            >
+              {% if result and result.type == 'crawl' %}
+                Voir les résultats de l’analyse
+              {% elif result and result.type == 'autopilot' %}
+                Ouvrir les projets
+              {% else %}
+                Ouvrir
+              {% endif %}
+            </a>
+            <span id="job-result-ts" class="muted small mono">{{ result.timestamp if result and result.timestamp else '' }}</span>
+          </p>
+          <p id="job-result-files" class="muted small" style="display:none;">
+            <span id="job-result-files-label">Rapport:</span>
+            <a id="job-result-md" href="#">report.md</a>
+            <span id="job-result-files-sep"> · </span>
+            <a id="job-result-json" href="#">report.json</a>
+          </p>
+        </section>
+
+        <details class="card screen-options">
+          <summary>Détails techniques et journaux</summary>
+          <p class="muted small">Identifiant : <code>{{ job.id }}</code></p>
+          {% if job.command %}
+            <p class="muted">Commande: <span id="job-command" class="mono">{{ job.command }}</span></p>
+          {% endif %}
+          <p id="job-returncode" {% if job.returncode is none %}style="display:none;"{% endif %}>
+            Code de retour: <span class="mono" id="job-returncode-val">{{ job.returncode }}</span>
+          </p>
+
           <div class="card-title-row">
-            <h2>Logs</h2>
+            <h2>Journaux</h2>
             <div class="tab-buttons" id="log-tabs" style="margin:0;">
               <button type="button" class="tab-btn active" data-log-tab="stdout">Sortie standard</button>
               <button type="button" class="tab-btn" data-log-tab="stderr">Erreurs</button>
@@ -148,34 +178,7 @@
               });
             })();
           </script>
-        </section>
-
-        {% set result = job.result if job.result else none %}
-        <section class="card" id="job-result" {% if not result %}style="display:none;"{% endif %}>
-          <div class="card-title-row"><h2>Résultat</h2></div>
-          <p>
-            <a
-              id="job-result-link"
-              class="btn primary"
-              href="{% if result and result.type == 'crawl' %}{{ result.project_url }}{% elif result and result.type == 'autopilot' %}/{% else %}#{% endif %}"
-            >
-              {% if result and result.type == 'crawl' %}
-                Ouvrir le dashboard du crawl
-              {% elif result and result.type == 'autopilot' %}
-                Ouvrir les projets
-              {% else %}
-                Ouvrir
-              {% endif %}
-            </a>
-            <span id="job-result-ts" class="muted small mono">{{ result.timestamp if result and result.timestamp else '' }}</span>
-          </p>
-          <p id="job-result-files" class="muted small" style="display:none;">
-            <span id="job-result-files-label">Rapport:</span>
-            <a id="job-result-md" href="#">report.md</a>
-            <span id="job-result-files-sep"> · </span>
-            <a id="job-result-json" href="#">report.json</a>
-          </p>
-        </section>
+        </details>
 
         {% if corrections_plan %}
         <section class="card">
@@ -338,7 +341,7 @@
               if (result && resultLink) {
                 if (result.type === "crawl" && result.project_url) {
                   resultLink.href = String(result.project_url);
-                  resultLink.textContent = "Ouvrir le dashboard du crawl";
+                  resultLink.textContent = "Voir les résultats de l’analyse";
                 } else if (result.type === "autopilot") {
                   resultLink.href = "/";
                   resultLink.textContent = "Ouvrir les projets";
