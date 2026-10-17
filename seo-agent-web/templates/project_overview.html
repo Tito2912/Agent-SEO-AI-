@@ -245,6 +245,21 @@
 
   {% else %}
 
+  {# Old crawl notice #}
+  {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
+  {% if cur.used_fallback %}
+    <div class="alert notice" style="margin-bottom:20px;">
+      Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport.
+      Affichage du dernier terminé : <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
+      <a href="/jobs">Voir les jobs</a>.
+    </div>
+  {% elif cur.timestamp != latest_ts %}
+    <div class="alert notice" style="margin-bottom:20px;">
+      Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :
+      <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
+    </div>
+  {% endif %}
+
   {# ══════════════════════════════════════
      ACTIONS PRIORITAIRES
   ══════════════════════════════════════ #}
@@ -375,21 +390,6 @@
         <p class="muted small" style="margin-top:12px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
       </details>
     {% endif %}
-
-  {# Old crawl notice #}
-  {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
-  {% if cur.used_fallback %}
-    <div class="alert notice" style="margin-bottom:20px;">
-      Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport.
-      Affichage du dernier terminé : <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
-      <a href="/jobs">Voir les jobs</a>.
-    </div>
-  {% elif cur.timestamp != latest_ts %}
-    <div class="alert notice" style="margin-bottom:20px;">
-      Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :
-      <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
-    </div>
-  {% endif %}
 
   {# ══════════════════════════════════════
      MAIN GRID
