@@ -155,8 +155,10 @@ def _cartes(page: str, balise: str) -> dict[str, str]:
     return cartes
 
 
-@pytest.mark.parametrize("chemin, balise", [("/pricing", "h3"), ("/", "h3"), ("/billing", "h2")])
+@pytest.mark.parametrize("chemin, balise", [("/pricing", "h3"), ("/billing", "h2")])
 def test_chaque_carte_liste_TOUTES_les_lignes_de_la_grille(chemin, balise) -> None:
+    # La home resume les cartes depuis le 16/10/2026, avec l'accord du proprietaire.
+    # La grille complete reste disponible dans son comparatif depliable.
     page = _abonnement() if chemin == "/billing" else TestClient(m.app).get(chemin).text
     grille = m._comparatif_des_plans()
     attendu = len(_lignes()) + len(grille["sections"])

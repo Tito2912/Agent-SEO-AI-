@@ -13725,11 +13725,16 @@ def _comparatif_des_plans() -> dict[str, Any]:
                 else:
                     texte = "%s : %s" % (l["libelle"], v)
                 liste.append({"texte": texte, "inclus": bool(v),
-                              "phare": l["libelle"] == "Corrections écrites par l'IA, par mois"})
+                              "phare": l["libelle"] == "Corrections écrites par l'IA, par mois",
+                              "resume": l["libelle"] in {
+                                  "Sites suivis", "Pages analysées par mois",
+                                  "Corrections écrites par l'IA, par mois", "Exports CSV et PDF",
+                                  "Articles rédigés par l'IA, par mois",
+                              } or (cles[i] == "solo" and l["libelle"] == "Fix pack sans dépôt Git")})
         return liste
 
-    accroches = {"free": "Pour voir le correcteur sur votre propre dépôt.",
-                 "solo": "Un site en production, corrigé chaque mois.",
+    accroches = {"free": "Pour un premier audit et un essai des corrections sur un dépôt compatible.",
+                 "solo": "Pour suivre vos sites et préparer les corrections chaque mois.",
                  "pro": "Plusieurs sites, la concurrence et la rédaction.",
                  "business": "Les portefeuilles de sites et les agences."}
     cartes = []

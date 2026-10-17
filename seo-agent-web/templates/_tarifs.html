@@ -1,12 +1,12 @@
 {# LES QUATRE PLANS ET LEURS VRAIS QUOTAS — partage par la home et /pricing (29/09/2026).
    Tout vient de `_comparatif_des_plans()` : aucun nombre n'est ecrit ici. Pas de badge, pas
    d'icone : le plan mis en avant l'est par son cadre, pas par une etiquette.
-   30/09/2026 : chaque carte liste TOUTES les fonctions ; le bouton passe sous le prix, pour ne
-   pas etre au bout d'une longue liste. #}
+   Sur la home, `cartes_resumees` garde les quotas essentiels dans les cartes et place la
+   grille complete dans un volet. /pricing conserve les cartes detaillees. #}
 {% from "_tarif_fonctions.html" import liste_fonctions %}
 {% include "_tarifs_styles.html" %}
 
-<div class="tarifs">
+<div class="tarifs{% if cartes_resumees|default(false) %} tarifs--resumees{% endif %}">
   {% for c in comparatif.cartes %}
     <article class="tarif{% if c.en_avant %} tarif--avant{% endif %}">
       <header>
@@ -17,13 +17,29 @@
       {% if request.state.user %}
         <a class="btn{% if c.en_avant %} primary{% endif %}" href="/billing">Gérer mon plan</a>
       {% elif c.cle == "free" %}
-        <a class="btn" href="/auth/signup">Créer un compte</a>
+        <a class="btn" href="/auth/signup">{% if cartes_resumees|default(false) %}Lancer mon audit gratuit{% else %}Créer un compte{% endif %}</a>
       {% else %}
         <a class="btn{% if c.en_avant %} primary{% endif %}" href="/auth/signup">Commencer avec {{ c.nom }}</a>
       {% endif %}
-      {{ liste_fonctions(c) }}
+      {% if cartes_resumees|default(false) %}
+        <ul class="tarif-cles">
+          {% for f in c.fonctions if f.resume and f.inclus %}
+            <li{% if f.phare %} class="phare"{% endif %}>{{ f.texte }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {{ liste_fonctions(c) }}
+      {% endif %}
     </article>
   {% endfor %}
 </div>
 
-{% include "_comparatif.html" %}
+{% if cartes_resumees|default(false) %}
+  <p class="tarifs-note">Les corrections dans le code nécessitent un dépôt GitHub compatible. Une correction IA correspond à un fichier écrit par le modèle. Chaque analyse reste limitée au quota mensuel de pages disponible.</p>
+  <details class="tarifs-detail">
+    <summary>Comparer toutes les fonctions et les quotas</summary>
+    {% include "_comparatif.html" %}
+  </details>
+{% else %}
+  {% include "_comparatif.html" %}
+{% endif %}
