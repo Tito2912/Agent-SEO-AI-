@@ -1,0 +1,49 @@
+<section class="card overview-history" aria-labelledby="overview-history-title">
+  <div class="card-title-row">
+    <div>
+      <h2 id="overview-history-title">Évolution du score</h2>
+      <p class="overview-section-subtitle">La santé du site, analyse après analyse</p>
+    </div>
+    <a class="overview-section-link" href="/projects/{{ project.slug }}/crawls">Historique →</a>
+  </div>
+  {% set history = project.history or [] %}
+  {% if not history %}
+    <p class="overview-empty">L’évolution apparaîtra après votre première analyse terminée.</p>
+  {% else %}
+    <svg class="overview-history-chart" viewBox="0 0 640 200" role="img" aria-labelledby="overview-history-title overview-history-description">
+      <desc id="overview-history-description">Score de santé sur 100. {% for h in history %}{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }} : {{ 'site injoignable, score indisponible' if h.site_injoignable else h.health_score }}. {% endfor %}</desc>
+      {% for score, y in [(100,24), (50,94), (0,164)] %}
+        <line class="overview-chart-grid" x1="42" x2="618" y1="{{ y }}" y2="{{ y }}" />
+        <text class="overview-chart-label" x="28" y="{{ y + 4 }}" text-anchor="end">{{ score }}</text>
+      {% endfor %}
+      {% for h in history %}
+        {% set x = 42 + loop.index0 * 576 / (history|length - 1) if history|length > 1 else 330 %}
+        {% if not h.site_injoignable and h.health_score is not none %}
+          {% set y = 164 - h.health_score * 1.4 %}
+          {% if not loop.first %}
+            {% set previous = history[loop.index0 - 1] %}
+            {% if not previous.site_injoignable and previous.health_score is not none %}
+              <line class="overview-chart-line" x1="{{ 42 + (loop.index0 - 1) * 576 / (history|length - 1) }}" y1="{{ 164 - previous.health_score * 1.4 }}" x2="{{ x }}" y2="{{ y }}" />
+            {% endif %}
+          {% endif %}
+          <a href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}" aria-label="Analyse du {{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}/{{ h.timestamp[:4] }}, score {{ h.health_score }} sur 100">
+            <circle class="overview-chart-hit" cx="{{ x }}" cy="{{ y }}" r="12" />
+            <circle class="overview-chart-point {{ 'selected' if h.timestamp == cur.timestamp else '' }}" cx="{{ x }}" cy="{{ y }}" r="{{ 5 if h.timestamp == cur.timestamp else 4 }}">
+              <title>{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}/{{ h.timestamp[:4] }} · {{ h.health_score }}/100</title>
+            </circle>
+          </a>
+        {% endif %}
+      {% endfor %}
+      <text class="overview-chart-label" x="42" y="192">{{ history[0].timestamp[6:8] }}/{{ history[0].timestamp[4:6] }}</text>
+      {% if history|length > 1 %}<text class="overview-chart-label" x="618" y="192" text-anchor="end">{{ history[-1].timestamp[6:8] }}/{{ history[-1].timestamp[4:6] }}</text>{% endif %}
+    </svg>
+    <div class="overview-history-caption">
+      <span><span class="overview-chart-key" aria-hidden="true"></span>Score de santé / 100</span>
+      <span>{{ history|length }} analyse{{ 's' if history|length > 1 else '' }}</span>
+    </div>
+    <details class="overview-history-records">
+      <summary>Consulter les valeurs</summary>
+      <ul>{% for h in history %}<li><a href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}"><span data-ts-datetime="{{ h.timestamp }}">{{ h.label }}</span> <span>{{ 'Site injoignable · sans score' if h.site_injoignable else h.health_score ~ '/100' }}</span></a></li>{% endfor %}</ul>
+    </details>
+  {% endif %}
+</section>

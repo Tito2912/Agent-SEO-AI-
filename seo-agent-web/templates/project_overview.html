@@ -2,6 +2,7 @@
 {% block title %}{{ project.site_name if project else slug }} - Vue d'ensemble{% endblock %}
 
 {% block head_extra %}
+  <link rel="stylesheet" href="/static/project_overview.css?v=1" />
   <script src="/static/project_overview.js" defer></script>
 {% endblock %}
 
@@ -25,6 +26,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="overview-page">
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
@@ -42,29 +44,8 @@
   {% endif %}
 
   {# ══════════════════════════════════════
-     HERO — arc gauge + site info + KPIs
+     PROJECT HEADER AND AUDIT SUMMARY
   ══════════════════════════════════════ #}
-  <div class="ov-hero">
-
-    <div class="ov-ring-wrap">
-      <svg class="ov-ring-svg" viewBox="0 0 120 120" fill="none" aria-hidden="true">
-        <circle cx="60" cy="60" r="46" class="ov-ring-track"/>
-        {% if sc is not none %}
-          <circle cx="60" cy="60" r="46" class="ov-ring-fill"
-            style="stroke:{{ sc_color }}; stroke-dasharray:{{ (sc / 100 * 289.0)|round(1) }} 289;"
-            transform="rotate(-90 60 60)"/>
-        {% endif %}
-      </svg>
-      <div class="ov-ring-inner">
-        <div class="ov-ring-n" style="color:{{ sc_color }};">{% if sc is not none %}{{ sc }}{% else %}—{% endif %}</div>
-        <div class="ov-ring-label">Santé</div>
-      </div>
-    </div>
-
-    <div class="ov-info">
-      {# `sum` only exists once a crawl has completed — same guard as the KPIs below. Without
-         it, every project that has never been crawled 500s, which is every project a new
-         customer has just created. #}
       {% set blocked = (sum.blocked_by_host.count if (project.current and sum is defined and sum.blocked_by_host) else 0) or 0 %}
       {% set injoignable = sum.site_injoignable if (project.current and sum is defined) else none %}
       {% if injoignable %}
@@ -104,45 +85,51 @@
           <span class="ov-blocked-hint">Si cela se répète : baissez la vitesse d’analyse dans Réglages de l’analyse, ou autorisez le robot chez votre hébergeur/CDN.</span>
         </div>
       {% endif %}
+
+  <header class="overview-header">
+    <div>
+      <p class="overview-eyebrow">Vue d’ensemble</p>
       <h1>{{ project.site_name }}</h1>
-      <div class="ov-info-sub">
-        <a href="{{ project.base_url }}" target="_blank" rel="noopener">{{ project.base_url }}</a>
-        {% if project.crawls %}
-          <span>{{ project.crawls | length }} analyse{{ 's' if project.crawls | length > 1 else '' }} · dernière {{ project.crawls[0][6:8] }}/{{ project.crawls[0][4:6] }}/{{ project.crawls[0][:4] }}</span>
-        {% endif %}
-      </div>
-
-      {% if project.current %}
-        {% set defects = sum.issues | rejectattr('is_delta') | list %}
-        <p class="muted score-explanation">{{ defects|length }} types de problèmes · {{ sum.issues_total }} occurrences.
-          {% if sc is not none %}Score : part des pages internes sans erreur grave. Les avertissements restent à traiter.{% endif %}
-        </p>
-        <div class="ov-kpis" aria-label="Occurrences par gravité et pages analysées">
-          <a class="ov-kpi err" href="/projects/{{ project.slug }}/issues?severity=error&crawl={{ cur.timestamp }}">
-            <div class="ov-kpi-n">{{ sum.issues_distribution.error or 0 }}</div>
-            <div class="ov-kpi-l">Erreurs</div>
-          </a>
-          <a class="ov-kpi warn" href="/projects/{{ project.slug }}/issues?severity=warning&crawl={{ cur.timestamp }}">
-            <div class="ov-kpi-n">{{ sum.issues_distribution.warning or 0 }}</div>
-            <div class="ov-kpi-l">Avertissements</div>
-          </a>
-          <a class="ov-kpi ntc" href="/projects/{{ project.slug }}/issues?severity=notice&crawl={{ cur.timestamp }}">
-            <div class="ov-kpi-n">{{ sum.issues_distribution.notice or 0 }}</div>
-            <div class="ov-kpi-l">Infos</div>
-          </a>
-          <a class="ov-kpi" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
-            <div class="ov-kpi-n">{{ sum.pages_crawled }}</div>
-            <div class="ov-kpi-l">Pages analysées</div>
-          </a>
-          <a class="ov-kpi" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
-            <div class="ov-kpi-n">{{ sum.urls_crawled_distribution }}</div>
-            <div class="ov-kpi-l">URLs totales</div>
-          </a>
-        </div>
-      {% endif %}
+      <a class="overview-domain" href="{{ project.base_url }}" target="_blank" rel="noopener">{{ project.base_url }}</a>
     </div>
+    {% if project.current %}
+      <div class="overview-date">
+        <span>Analyse affichée</span>
+        <span data-ts-datetime="{{ cur.timestamp }}">{{ cur.timestamp[6:8] }}/{{ cur.timestamp[4:6] }}/{{ cur.timestamp[:4] }} · {{ cur.timestamp[9:11] }}:{{ cur.timestamp[11:13] }}</span>
+      </div>
+    {% endif %}
+  </header>
 
-  </div>
+  {% if project.current %}
+    {% set defects = sum.issues | rejectattr('is_delta') | list %}
+    <div class="overview-metrics">
+      <section class="overview-metric overview-health">
+        <div class="overview-metric-label">Score de santé</div>
+        <div class="overview-metric-value">{% if sc is not none %}{{ sc }}<span>/ 100</span>{% else %}—{% endif %}</div>
+        {% if sc is not none %}<div class="overview-health-track" aria-hidden="true"><span style="width:{{ sc }}%;background:{{ sc_color }};"></span></div>{% endif %}
+        <details class="overview-score-help"><summary>À propos du score</summary><p>Part des pages internes analysées sans erreur grave. Les avertissements restent à traiter, même à 100. Les pages bloquées par l’hébergeur sont exclues du calcul.</p></details>
+      </section>
+      <a class="overview-metric" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
+        <div class="overview-metric-label">Pages analysées</div>
+        <div class="overview-metric-value">{{ sum.pages_crawled }}</div>
+        <div class="overview-metric-note">{{ sum.urls_crawled_distribution }} URL au total, ressources comprises</div>
+      </a>
+      <a class="overview-metric" href="/projects/{{ project.slug }}/issues?severity=error&crawl={{ cur.timestamp }}">
+        <div class="overview-metric-label"><span class="overview-dot error" aria-hidden="true"></span>Erreurs</div>
+        <div class="overview-metric-value">{{ sum.issues_distribution.error or 0 }}</div>
+        <div class="overview-metric-note">Occurrences à traiter en priorité</div>
+      </a>
+      <a class="overview-metric" href="/projects/{{ project.slug }}/issues?severity=warning&crawl={{ cur.timestamp }}">
+        <div class="overview-metric-label"><span class="overview-dot warning" aria-hidden="true"></span>Avertissements</div>
+        <div class="overview-metric-value">{{ sum.issues_distribution.warning or 0 }}</div>
+        <div class="overview-metric-note">Améliorations recommandées</div>
+      </a>
+    </div>
+    <div class="overview-summary-line">
+      <span>{{ defects|length }} types de problèmes · {{ sum.issues_total }} occurrences</span>
+      <a href="/projects/{{ project.slug }}/issues?severity=notice&crawl={{ cur.timestamp }}">{{ sum.issues_distribution.notice or 0 }} informations complémentaires</a>
+    </div>
+  {% endif %}
 
   {# ══════════════════════════════════════
      LIVE JOB CARD
@@ -153,11 +140,11 @@
         {% if live_job.status == 'failed' %}
           La dernière analyse a <strong>échoué</strong>.
         {% else %}
-          La dernière analyse a été <strong>annulé</strong>.
+          La dernière analyse a été <strong>annulée</strong>.
         {% endif %}
       </span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">Voir les logs →</a>
+        <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">Voir le détail →</a>
         <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
           <button type="submit" class="btn primary" style="font-size:12px;">Relancer une analyse</button>
         </form>
@@ -175,7 +162,7 @@
       data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
     >
       <div class="card-title-row">
-        <h2>Crawl</h2>
+        <h2>Analyse en cours</h2>
         <div class="live-job-header-right">
           <span id="live-job-elapsed" class="muted small mono" style="display:none;"></span>
           <span id="live-job-ts" class="muted small mono"></span>
@@ -261,66 +248,10 @@
   {% endif %}
 
   {# ══════════════════════════════════════
-     ACTIONS PRIORITAIRES
-  ══════════════════════════════════════ #}
-  <section class="card" style="margin-top:8px;">
-    <div class="card-title-row">
-      <h2>Vos prochaines actions</h2>
-      {% if fix_pack_unlocked %}
-        <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
-      {% else %}
-        <a class="muted small" href="/billing">Archive de corrections · Solo+</a>
-      {% endif %}
-    </div>
-
-    {% if not top_actions %}
-      <p class="muted">Aucune action prioritaire détectée pour cette analyse.</p>
-    {% else %}
-      <div class="action-list">
-        {% for a in top_actions %}
-          {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
-          {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
-          {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
-          <div class="action-item">
-            <div class="action-num">{{ loop.index }}</div>
-            <div class="action-body">
-              <div class="action-title">
-                <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
-                <span class="sev {{ a.severity }}" style="margin-left:10px;">{{ sev_label }}</span>
-              </div>
-              <div class="action-meta">
-                <span class="mono">{{ a.count }}</span> occurrences
-                &nbsp;·&nbsp; Priorité <strong>{{ priority_label }}</strong>
-                &nbsp;·&nbsp; Effort {{ effort_label }}
-              </div>
-              <div style="margin-top:10px;">
-                <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir les instructions →</a>
-              </div>
-              {% if a.why %}
-                <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
-                  {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}
-                </p>
-              {% endif %}
-              {% if fix_pack_unlocked and a.fix %}
-                <ul class="examples" style="margin-top:8px;">
-                  {% for step in a.fix[:3] %}
-                    <li>{{ step }}</li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  </section>
-
-  {# ══════════════════════════════════════
      TOOLBAR — crawl selector + exports
   ══════════════════════════════════════ #}
-  <details class="screen-options">
-    <summary>Comparer les analyses et exporter le rapport</summary>
+  <details class="screen-options overview-report-controls">
+    <summary>Choisir une analyse, comparer ou exporter</summary>
   <div class="data-toolbar">
     <form method="get" class="filters" style="width:100%;">
       {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
@@ -361,66 +292,92 @@
 
   </details>
 
-    {# Anomalies breakdown — right column of hero #}
-    {% if project.current %}
-      {% set e = sum.issues_distribution.error or 0 %}
-      {% set w = sum.issues_distribution.warning or 0 %}
-      {% set n = sum.issues_distribution.notice or 0 %}
-      {% set mx = [e, w, n]|max %}
-      <details class="ov-hero-breakdown">
-        <summary>Répartition des occurrences</summary>
-        <div class="ov-section-hd" style="margin-bottom:14px;"><span>Occurrences par gravité</span></div>
-        <div class="bars">
-          <div class="bar-row">
-            <span class="bar-label">Erreurs</span>
-            <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / mx) * 100)|round(0) if mx else 0 }};"></div></div>
-            <span class="mono">{{ e }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Avertissements</span>
-            <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / mx) * 100)|round(0) if mx else 0 }};"></div></div>
-            <span class="mono">{{ w }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Infos</span>
-            <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / mx) * 100)|round(0) if mx else 0 }};"></div></div>
-            <span class="mono">{{ n }}</span>
-          </div>
-        </div>
-        <p class="muted small" style="margin-top:12px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
-      </details>
-    {% endif %}
-
-  {# ══════════════════════════════════════
-     MAIN GRID
-  ══════════════════════════════════════ #}
-  <div class="grid">
-
-    {# Score history — span-2 so dates are readable #}
-    <section class="card span-2">
+  <div class="overview-focus-grid">
+    {% include "_overview_history.html" %}
+    <section class="card overview-priorities" aria-labelledby="overview-priorities-title">
       <div class="card-title-row">
-        <h2>Évolution du score</h2>
-        <span class="muted small">dernières analyses</span>
+        <h2 id="overview-priorities-title">Vos prochaines actions</h2>
+        <a class="overview-section-link" href="/projects/{{ project.slug }}/corrections">Tout voir →</a>
       </div>
-      {% if not project.history %}
-        <p class="muted small">Aucune donnée.</p>
+      {% if not top_actions %}
+        {% if sum.site_injoignable %}
+          <p class="overview-empty">Rétablissez l’accès au site, puis relancez une analyse pour identifier les problèmes.</p>
+        {% else %}
+          <p class="overview-empty">Aucune action prioritaire détectée sur cette analyse.</p>
+        {% endif %}
       {% else %}
-        <div class="history">
-          {% for h in project.history %}
-            <a class="history-bar" href="/projects/{{ project.slug }}?crawl={{ h.timestamp }}" title="{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}/{{ h.timestamp[:4] }} {{ h.timestamp[9:11] }}:{{ h.timestamp[11:13] }}{% if h.duration_label %} · {{ h.duration_label }}{% endif %}">
-              <div class="history-bar-fill" style="--p: {{ 0 if h.site_injoignable else h.health_score }};"></div>
-              <div class="history-bar-label mono" {% if h.site_injoignable %}title="Site injoignable"{% endif %}>{{ '—' if h.site_injoignable else h.health_score }}</div>
-              <div class="history-bar-ts muted small">{{ h.timestamp[6:8] }}/{{ h.timestamp[4:6] }}</div>
-              <div class="history-bar-ts muted small" data-ts-time="{{ h.timestamp }}">{{ h.timestamp[9:11] }}:{{ h.timestamp[11:13] }}</div>
-              {% if h.duration_label %}<div class="history-bar-ts muted small">{{ h.duration_label }}</div>{% endif %}
-            </a>
+        <ol class="overview-action-list">
+          {% for a in top_actions %}
+            {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
+            <li>
+              <div class="overview-action-row">
+                <span class="overview-action-index" aria-hidden="true">{{ loop.index }}</span>
+                <div class="overview-action-content">
+                  <a class="overview-action-title" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
+                  <div class="overview-action-meta">{{ a.count }} occurrences · priorité {{ priority_label }}</div>
+                </div>
+                <a class="overview-action-open" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" aria-label="Voir les instructions : {{ a.label }}">Ouvrir <span aria-hidden="true">↗</span></a>
+              </div>
+              {% if a.why or (fix_pack_unlocked and a.fix) %}
+                <details class="overview-action-details">
+                  <summary>Pourquoi agir ?</summary>
+                  {% if a.why %}<p>{% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}</p>{% endif %}
+                  {% if fix_pack_unlocked and a.fix %}<ul>{% for step in a.fix[:3] %}<li>{{ step }}</li>{% endfor %}</ul>{% endif %}
+                </details>
+              {% endif %}
+            </li>
           {% endfor %}
-        </div>
+        </ol>
       {% endif %}
     </section>
+  </div>
+  <div class="overview-details-grid">
+  {# ══════════════════════════════════════
+     PRINCIPALES ANOMALIES
+  ══════════════════════════════════════ #}
+  <section class="card overview-anomalies">
+    <div class="card-title-row">
+      <h2>Principales anomalies</h2>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="muted small">{{ sum.issues_total }} occurrences</span>
+        <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Toutes les anomalies →</a>
+      </div>
+    </div>
+    {% if not sum.top_issues %}
+      <p class="muted">Aucune anomalie détectée.</p>
+    {% else %}
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Principales anomalies">
+      <table class="ov-issue-table">
+        <thead><tr><th>Problème</th><th>Gravité</th><th class="num">Occurrences</th><th class="num">Évolution</th></tr></thead>
+        <tbody>
+          {% for it in sum.top_issues %}
+            <tr>
+              <td class="overview-anomaly-label">
+                <span class="ov-sev-dot {{ it.severity }}"></span>
+                <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
+              </td>
+              <td style="white-space:nowrap;padding-left:16px;">
+                {% set sl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
+                <span class="sev {{ it.severity }}">{{ sl }}</span>
+              </td>
+              <td class="mono" style="white-space:nowrap;padding-left:16px;">{{ it.count }}</td>
+              <td style="white-space:nowrap;padding-left:12px;width:60px;">
+                {% if it.change is not none %}
+                  {% if it.change > 0 %}<span class="delta up">+{{ it.change }}</span>
+                  {% elif it.change < 0 %}<span class="delta down">{{ it.change }}</span>
+                  {% else %}<span class="muted">–</span>{% endif %}
+                {% else %}<span class="muted">–</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% endif %}
+  </section>
 
     {# URL breakdown — 1 col #}
-    <section class="card">
+    <section class="card overview-url-summary">
       <div class="card-title-row">
         <h2>Répartition des URLs</h2>
         <span class="muted small mono">{{ sum.urls_crawled_distribution }}</span>
@@ -454,10 +411,11 @@
       </div>
     </section>
 
+  </div>
     {# Core Web Vitals — full width #}
     {% set ps = sum.pagespeed %}
     {% set cwv = sum.cwv %}
-    <section class="card span-all">
+    <section class="card overview-cwv">
       <div class="card-title-row">
         <h2>Core Web Vitals</h2>
         {% if ps and ps.enabled %}
@@ -500,6 +458,7 @@
 
         <p class="muted small">Pages testées: <span class="mono">{{ cwv.tested_pages }}</span> · Stratégie: <span class="mono">{{ cwv.strategy }}</span></p>
 
+        <details class="overview-cwv-details"><summary>Voir le détail des mesures LCP, TBT et CLS</summary>
         <div class="table-wrap">
           <table class="table compact">
             <thead>
@@ -530,11 +489,12 @@
             </tbody>
           </table>
         </div>
+        </details>
       {% else %}
         {% if ps and ps.enabled %}
           <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur cette analyse.</p>
         {% else %}
-          <p class="muted">Activez PageSpeed pour ajouter LCP/TBT/CLS. La clé API est gérée côté plateforme.</p>
+          <p class="muted">Mesurez la vitesse et la stabilité de vos pages avec PageSpeed. <a href="/projects/{{ project.slug }}/settings/crawl">Configurer PageSpeed →</a></p>
         {% endif %}
       {% endif %}
     </section>
@@ -544,9 +504,9 @@
     {% set bing = sum.bing %}
     {% set live_gsc = live_series.gsc if live_series and live_series.gsc else {} %}
     {% set live_bing = live_series.bing if live_series and live_series.bing else {} %}
-    <div class="span-all">
-      <div class="grid two">
-        <section class="card">
+    <div class="overview-search-sources">
+      <div class="overview-source-grid">
+        <section class="card overview-source {% if not live_gsc.enabled and not (gsc and gsc.ok) %}overview-source-empty{% endif %}">
           {% set gsc_days = live_gsc.days if live_gsc and live_gsc.days else (gsc.days if gsc and gsc.days else 28) %}
           <div class="card-title-row">
             <h2>Google Search Console</h2>
@@ -635,7 +595,7 @@
           {% endif %}
         </section>
 
-        <section class="card">
+        <section class="card overview-source {% if not live_bing.enabled and not (bing and bing.ok) %}overview-source-empty{% endif %}">
           {% set bing_days = live_bing.days if live_bing and live_bing.days else (bing.days if bing and bing.days else 28) %}
           <div class="card-title-row">
             <h2>Bing Webmaster Tools</h2>
@@ -719,48 +679,6 @@
       </div>
     </div>
 
-  </div>{# /grid #}
-
-  {# ══════════════════════════════════════
-     PRINCIPALES ANOMALIES
-  ══════════════════════════════════════ #}
-  <section class="card" style="margin-top:8px;">
-    <div class="card-title-row">
-      <h2>Principales anomalies</h2>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="muted small">{{ cur.label }}</span>
-        <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Toutes les anomalies →</a>
-      </div>
-    </div>
-    {% if not sum.top_issues %}
-      <p class="muted">Aucune anomalie détectée.</p>
-    {% else %}
-      <table class="ov-issue-table">
-        <tbody>
-          {% for it in sum.top_issues %}
-            <tr>
-              <td style="width:100%;">
-                <span class="ov-sev-dot {{ it.severity }}"></span>
-                <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
-              </td>
-              <td style="white-space:nowrap;padding-left:16px;">
-                {% set sl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(it.severity, it.severity) %}
-                <span class="sev {{ it.severity }}">{{ sl }}</span>
-              </td>
-              <td class="mono" style="white-space:nowrap;padding-left:16px;">{{ it.count }}</td>
-              <td style="white-space:nowrap;padding-left:12px;width:60px;">
-                {% if it.change is not none %}
-                  {% if it.change > 0 %}<span class="delta up">+{{ it.change }}</span>
-                  {% elif it.change < 0 %}<span class="delta down">{{ it.change }}</span>
-                  {% else %}<span class="muted">–</span>{% endif %}
-                {% else %}<span class="muted">–</span>{% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% endif %}
-  </section>
 
   {% endif %}{# /has current #}
 
@@ -905,4 +823,5 @@
   {% endif %}
 
   {% endif %}{# /project exists #}
+</div>
 {% endblock %}
