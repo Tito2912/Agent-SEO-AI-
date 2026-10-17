@@ -23,13 +23,15 @@
       {% if not job %}
         <section class="card"><p>Exécution introuvable.</p></section>
       {% else %}
+        {% set job_kind = (job.result or {}).get('type', '') %}
+        {% set job_slug = (job.result or {}).get('slug', '') %}
         <section class="card">
           <div class="card-title-row">
             <div>
-              <h2 style="margin:0; font-size:15px;">{{ 'Analyse du site' if job.kind == 'crawl' else 'Traitement' }}{% if job.slug %} · {{ job.slug }}{% endif %}</h2>
-              {% if job.kind == 'crawl' and job.slug %}
+              <h2 style="margin:0; font-size:15px;">{{ 'Analyse du site' if job_kind == 'crawl' else 'Traitement' }}{% if job_slug %} · {{ job_slug }}{% endif %}</h2>
+              {% if job_kind == 'crawl' and job_slug %}
                 <div class="muted small mono" style="margin-top:2px;">analyse du site</div>
-              {% elif job.kind == 'autopilot' %}
+              {% elif job_kind == 'autopilot' %}
                 <div class="muted small mono" style="margin-top:2px;">audit multi-sites</div>
               {% endif %}
             </div>
@@ -129,7 +131,7 @@
                 Ouvrir
               {% endif %}
             </a>
-            <span id="job-result-ts" class="muted small mono">{{ result.timestamp if result and result.timestamp else '' }}</span>
+            <span id="job-result-ts" class="muted small mono">{% if result and result.timestamp %}{{ result.timestamp[6:8] }}/{{ result.timestamp[4:6] }}/{{ result.timestamp[:4] }}{% endif %}</span>
           </p>
           <p id="job-result-files" class="muted small" style="display:none;">
             <span id="job-result-files-label">Rapport:</span>
@@ -348,7 +350,8 @@
                 }
               }
               if (resultTs) {
-                resultTs.textContent = (result && result.timestamp) ? String(result.timestamp) : "";
+                const ts = (result && result.timestamp) ? String(result.timestamp) : "";
+                resultTs.textContent = /^\d{8}-\d{6}$/.test(ts) ? `${ts.slice(6,8)}/${ts.slice(4,6)}/${ts.slice(0,4)}` : "";
               }
 
               if (resultFiles && resultFilesLabel && resultMd && resultJson) {
