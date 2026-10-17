@@ -325,7 +325,7 @@ def test_pendant_une_resiliation_on_ne_CHANGE_PAS_de_plan(monkeypatch) -> None:
     tag = uuid.uuid4().hex[:8]
     client, _uid, _sid = _client(abonnement="active", donnees=_abonnement_dahlia(f"sub_{tag}", "u", cancel_at=int(FIN.timestamp())))
     page = html.unescape(client.get("/billing").text)
-    assert "Pour changer de plan, réactive d'abord ton" in page
+    assert "Pour changer de plan, réactivez d’abord votre" in page
     for carte in ("Solo", "Business"):
         bouton = page.split("<h2>%s</h2>" % carte, 1)[1].split("</button>", 1)[0]
         assert "disabled" in bouton, carte
@@ -334,7 +334,7 @@ def test_pendant_une_resiliation_on_ne_CHANGE_PAS_de_plan(monkeypatch) -> None:
         assert rep.status_code == 303 and "err=" in rep.headers["location"]
     assert not appels
     actif = html.unescape(_client(abonnement="active")[0].get("/billing").text)
-    assert "réactive d'abord" not in actif and "disabled" not in actif.split("<h2>Business</h2>", 1)[1].split("</button>", 1)[0]
+    assert "réactivez d’abord" not in actif and "disabled" not in actif.split("<h2>Business</h2>", 1)[1].split("</button>", 1)[0]
 
 
 def test_le_RENOUVELLEMENT_se_lit_dans_les_articles() -> None:

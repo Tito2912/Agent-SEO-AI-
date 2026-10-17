@@ -165,7 +165,7 @@ def test_dashboard_onboarding_renders_for_authenticated_user() -> None:
 
     assert response.status_code == 200
     assert "Prochaines étapes" in response.text
-    assert "Lancer un premier crawl" in response.text
+    assert "Lancer une première analyse" in response.text
 
 
 def test_corrections_page_renders_accelerator_for_authenticated_user() -> None:
@@ -193,7 +193,7 @@ def test_corrections_page_renders_accelerator_for_authenticated_user() -> None:
         response = client.get(f"/projects/{slug}/corrections")
 
     assert response.status_code == 200
-    assert "Accélérateur de correction" in response.text
+    assert "Choisir une correction" in response.text
     assert "Connecter GitHub" in response.text
 
 
