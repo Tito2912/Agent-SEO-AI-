@@ -672,7 +672,7 @@
             {% elif bing and bing.enabled %}
               {# Daté pour la même raison que la carte GSC juste au-dessus : cette valeur vient
                  du rapport de la dernière analyse, le graphique en dessous est live. #}
-              <p class="muted">Au dernier crawl, Bing était indisponible : <span class="mono">{{ bing.reason }}</span></p>
+              <p class="muted">Les données Bing n’étaient pas disponibles lors de la dernière analyse.</p>
               <p class="muted small">{% if bing.reason in ["missing_api_key", "missing_credentials"] %}<a href="/settings/accounts#bing-connect-card">Connecter Bing</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
             {% else %}
               <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>

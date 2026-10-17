@@ -160,9 +160,10 @@ def test_le_bandeau_d_indisponibilite_est_DATE() -> None:
     l'écran, y compris de ce qui marche.
     """
     page = (WEB_ROOT / "templates" / "project_overview.html").read_text(encoding="utf-8")
-    for source in ("GSC", "Bing"):
-        assert "Au dernier crawl, %s était indisponible" % source in page, (
+    for source in ("Google", "Bing"):
+        assert "Les données %s n’étaient pas disponibles lors de la dernière analyse." % source in page, (
             "le bandeau %s ne dit pas de QUAND date son verdict" % source)
+    for source in ("GSC", "Bing"):
         assert "%s activé mais indisponible" % source not in page, (
             "l'ancienne formulation non datée subsiste pour %s" % source)
 
