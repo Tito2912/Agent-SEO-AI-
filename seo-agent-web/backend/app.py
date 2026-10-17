@@ -16217,7 +16217,9 @@ async def assistant_chat(request: Request) -> JSONResponse:
 
 
 @app.get("/projects/{slug}/gsc/oauth/connect")
-def project_gsc_oauth_connect(request: Request, slug: str, next: str | None = None) -> RedirectResponse:
+def project_gsc_oauth_connect(
+    request: Request, slug: str, next: str | None = None, activate: bool = False
+) -> RedirectResponse:
     _ = _db_project_or_404(request, slug)
     client_id, client_secret = _google_oauth_client()
     return_to = _safe_next_path(next)
@@ -16229,7 +16231,8 @@ def project_gsc_oauth_connect(request: Request, slug: str, next: str | None = No
 
     try:
         state = _oauth_state_encode(
-            {"slug": slug, "ts": int(time.time()), "nonce": uuid.uuid4().hex, "next": return_to}
+            {"slug": slug, "user_id": str(request.state.user.id), "ts": int(time.time()),
+             "nonce": uuid.uuid4().hex, "next": return_to, "activate": activate}
         )
     except Exception as e:
         return RedirectResponse(
@@ -16274,7 +16277,7 @@ def google_oauth_callback(
         )
         return RedirectResponse(url=f"/settings/accounts?err={quote('OAuth state invalide.')}", status_code=303)
     user = getattr(request.state, "user", None)
-    if not user or not _db_project(str(user.id), slug):
+    if not user or not _db_project(str(user.id), slug) or payload.get("user_id") not in (None, str(user.id)):
         _audit_log(
             request,
             action="oauth.google.callback",
@@ -16385,7 +16388,9 @@ def google_oauth_callback(
 
     scope = str(token_data.get("scope") or _GOOGLE_OAUTH_SCOPE).strip() or _GOOGLE_OAUTH_SCOPE
     try:
-        _gsc_oauth_save(str(user.id), slug, refresh_token=refresh_token, scope=scope)
+        _gsc_oauth_save(_compte_payeur(str(user.id), slug), slug, refresh_token=refresh_token, scope=scope)
+        if payload.get("activate") is True:
+            _set_project_search_enabled(_db_project_or_404(request, slug), "gsc", True)
     except Exception as e:
         msg = f"SaveError: {type(e).__name__}: {e}"
         if len(msg) > 200:
@@ -16833,7 +16838,7 @@ def _bing_oauth_cible(user: Any, slug: str) -> tuple[str, str]:
 
 @app.get("/oauth/bing/connect")
 def bing_oauth_connect(request: Request, next: str | None = None,
-                       slug: str | None = None) -> RedirectResponse:
+                       slug: str | None = None, activate: bool = False) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     if not user:
         raise HTTPException(status_code=401, detail="auth_required")
@@ -16855,6 +16860,7 @@ def bing_oauth_connect(request: Request, next: str | None = None,
                 "nonce": uuid.uuid4().hex,
                 "next": return_to,
                 "slug": _slug,
+                "activate": activate,
             }
         )
     except Exception as e:
@@ -16886,6 +16892,8 @@ def bing_oauth_callback(
         raise HTTPException(status_code=401, detail="auth_required")
     if not isinstance(payload, dict) or payload.get("provider") != "bing" or str(payload.get("user_id") or "") != str(user.id):
         return RedirectResponse(url=_path_with_flash(return_to, err="OAuth state invalide."), status_code=303)
+    if _slug:
+        _db_project_or_404(request, _slug)
     if error:
         return RedirectResponse(
             url=_path_with_flash(return_to, err=(error_description or error or "Bing OAuth refusé")[:240]),
@@ -16919,6 +16927,8 @@ def bing_oauth_callback(
         }
         _cible, _cle = _bing_oauth_cible(user, _slug)
         _upsert_user_connection(user_id=_cible, key=_cle, value=refresh_token, meta=meta)
+        if _slug and payload.get("activate") is True:
+            _set_project_search_enabled(_db_project_or_404(request, _slug), "bing", True)
         if not _slug:
             # La cle API manuelle est au niveau du COMPTE : la supprimer depuis un projet
             # retirerait le repli de tous les autres.
@@ -18269,9 +18279,58 @@ def crawl_projects_batch(
     return RedirectResponse(url=f"/jobs?job={job_ids[0]}", status_code=303)
 
 
+def _set_project_search_enabled(project: Project, source: str, enabled: bool) -> None:
+    """Change only this project's connector switch; preserve the other analysis settings."""
+    key = "gsc_api" if source == "gsc" else "bing"
+    with DB.session() as db:
+        row = db.get(Project, project.id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="project_not_found")
+        settings = row.settings if isinstance(row.settings, dict) else {}
+        connector = settings.get(key) if isinstance(settings.get(key), dict) else {}
+        row.settings = {**settings, key: {**connector, "enabled": enabled}}
+        db.add(row)
+        db.commit()
+
+
+@app.post("/projects/{slug}/search-connections/{source}")
+def project_search_connection_update(
+    request: Request, slug: str, source: str,
+    action: str = Form(...), next: str = Form(default=""),
+) -> RedirectResponse:
+    project = _db_project_or_404(request, slug)
+    if source not in {"gsc", "bing"}:
+        raise HTTPException(status_code=404, detail="unknown_search_source")
+    if action not in {"connect", "disconnect"}:
+        raise HTTPException(status_code=400, detail="unknown_connection_action")
+    owner_id = str(project.owner_user_id)
+    return_to = _safe_next_path(next or f"/projects/{slug}#{source}-connection")
+    label = "Google" if source == "gsc" else "Bing"
+    if action == "connect":
+        ready = (_gsc_live_credentials_status(user_id=owner_id, slug=slug).get("ready")
+                 if source == "gsc" else _effective_bing_connection(user_id=owner_id, slug=slug).get("token"))
+        if not ready:
+            return RedirectResponse(
+                url=_path_with_flash(return_to, err=f"Reconnecte {label} pour activer le suivi."), status_code=303)
+    else:
+        # Shared account/API credentials must keep serving the account's other projects.
+        # Remove only this project's OAuth token. Google revocation would revoke the grant
+        # for other sites connected with the same Google account, so disconnect locally.
+        if source == "gsc":
+            _gsc_oauth_clear(owner_id, slug)
+        else:
+            _delete_user_connection(user_id=owner_id, key=_bing_oauth_connection_key(slug))
+    _set_project_search_enabled(project, source, action == "connect")
+    _audit_log(request, action=f"search_connection.{source}.{action}", status="ok",
+               target_type="project", target_id=slug)
+    message = f"{label} connecté pour ce projet." if action == "connect" else f"{label} déconnecté pour ce projet."
+    return RedirectResponse(url=_path_with_flash(return_to, msg=message), status_code=303)
+
+
 @app.get("/projects/{slug}", response_class=HTMLResponse)
 def project_overview(
-    request: Request, slug: str, crawl: str | None = None, compare: str | None = None, job: str | None = None
+    request: Request, slug: str, crawl: str | None = None, compare: str | None = None, job: str | None = None,
+    msg: str | None = None, err: str | None = None, connection: str | None = None,
 ) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_pour_slug(request, slug)
@@ -18345,7 +18404,9 @@ def project_overview(
         config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
         project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
     )
-    gsc_status = _gsc_live_credentials_status(user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug)
+    owner_id = str(proj_row.owner_user_id)
+    gsc_status = _gsc_live_credentials_status(user_id=owner_id, slug=slug)
+    bing_auth = _effective_bing_connection(user_id=owner_id, slug=slug)
     live_series = {
         "gsc": {
             "enabled": bool(effective_gsc.get("enabled")) if "enabled" in effective_gsc else True,
@@ -18357,10 +18418,30 @@ def project_overview(
         "bing": {
             "enabled": bool(effective_bing.get("enabled")) if "enabled" in effective_bing else False,
             "days": int(effective_bing.get("days") or 28),
-            "credentials_ready": bool(_effective_bing_connection(
-                user_id=_compte_payeur(str(getattr(user, "id", "")), slug), slug=slug).get("token")),
+            "credentials_ready": bool(bing_auth.get("token")),
         },
     }
+    overview_query = urlencode({key: value for key, value in {"crawl": crawl, "compare": compare}.items() if value})
+    overview_path = f"/projects/{slug}" + (f"?{overview_query}" if overview_query else "")
+    search_connections = {}
+    for source, label, client in (("gsc", "Google", _google_oauth_client()), ("bing", "Bing", _bing_oauth_client())):
+        return_to = f"{overview_path}{'&' if overview_query else '?'}connection={source}#{source}-connection"
+        params = {"next": return_to, "activate": "true"}
+        if source == "bing":
+            params["slug"] = slug
+        connect_path = f"/projects/{slug}/gsc/oauth/connect" if source == "gsc" else "/oauth/bing/connect"
+        credentials_ready = live_series[source]["credentials_ready"]
+        enabled = live_series[source]["enabled"]
+        has_project_connection = (_gsc_oauth_connected(owner_id, slug) if source == "gsc"
+                                  else bool(_user_connection_row(user_id=owner_id, key=_bing_oauth_connection_key(slug))))
+        search_connections[source] = {
+            "source": source, "label": label, "return_to": return_to,
+            "connected": bool(enabled and credentials_ready),
+            "can_resume": bool(not enabled and credentials_ready),
+            "can_disconnect": bool((enabled and credentials_ready) or has_project_connection),
+            "oauth_ready": bool(client[0] and client[1] and _safe_env("SEO_AGENT_SECRET_KEY")),
+            "connect_url": f"{connect_path}?{urlencode(params)}",
+        }
     plan_key = "free"
     if user and not is_admin:
         with DB.session() as db:
@@ -18425,6 +18506,10 @@ def project_overview(
             "fix_pack_unlocked": bool(fix_pack_unlocked),
             "plan_key": plan_key,
             "live_series": live_series,
+            "search_connections": search_connections,
+            "connection": connection if connection in {"gsc", "bing"} else "",
+            "msg": (msg or "").strip(),
+            "err": (err or "").strip(),
             "crawl_items": crawl_items,
             "crawl_timing": crawl_timing,
         },

@@ -104,6 +104,24 @@
 .overview-source-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .overview-source-empty .pill-select { display: none; }
 .overview-source-empty .card-title-row { margin-bottom: 10px; }
+.overview-source { scroll-margin-top: 90px; }
+.overview-source .card-title-actions { flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+.search-connection { position: relative; scroll-margin-top: 90px; }
+.search-connection > summary { cursor: pointer; list-style: none; gap: 6px; min-height: 32px; padding: 4px 9px; white-space: nowrap; }
+.search-connection > summary::-webkit-details-marker { display: none; }
+.search-connection > summary:hover { background: #27332b; }
+.search-connection > summary:focus-visible, .search-connection-action:focus-visible { outline: 2px solid var(--overview-accent); outline-offset: 3px; }
+.search-connection-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.search-connection-chevron { font-size: 14px; line-height: 1; }
+.search-connection[open] { z-index: 5; }
+.search-connection-menu { position: absolute; right: 0; top: calc(100% + 8px); width: 260px; max-width: calc(100vw - 64px); padding: 14px; border: 1px solid #405246; border-radius: 10px; background: #1d2420; box-shadow: 0 12px 30px #0005; color: var(--overview-text); font-size: 13px; }
+.search-connection-menu > strong { font-weight: 600; }
+.search-connection-menu p { margin: 8px 0; color: var(--overview-muted); line-height: 1.6; }
+.search-connection-menu form { margin: 0; }
+.search-connection-action { display: block; width: 100%; padding: 10px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--overview-accent); text-align: left; font: inherit; text-decoration: none; cursor: pointer; }
+.search-connection-action:hover { background: #2c3930; color: var(--overview-text); text-decoration: none; }
+.search-connection-action.search-connection-disconnect { color: var(--err); }
+.search-connection-menu .search-connection-note { margin-bottom: 0; padding-top: 8px; border-top: 1px solid var(--overview-border); font-size: 11px; }
 .overview-page .search-source-summary { font-size: 13px; }
 .overview-page .search-source-summary p { font-size: 13px; line-height: 1.6; }
 .overview-page .ov-blocked { margin: 0 0 20px; }

@@ -672,7 +672,32 @@
     }
   }
 
+  function initConnectionBadges() {
+    const badges = Array.from(document.querySelectorAll(".search-connection"));
+    for (const badge of badges) {
+      badge.addEventListener("toggle", () => {
+        if (badge.open) {
+          for (const other of badges) if (other !== badge) other.open = false;
+          badge.querySelector(".search-connection-menu").scrollIntoView({ block: "nearest" });
+        }
+      });
+    }
+    document.addEventListener("click", (event) => {
+      for (const badge of badges) if (!badge.contains(event.target)) badge.open = false;
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      for (const badge of badges) {
+        if (badge.open) {
+          badge.open = false;
+          badge.querySelector("summary").focus();
+        }
+      }
+    });
+  }
+
   function init() {
+    initConnectionBadges();
     initPeriodSelects();
     initTimeseriesWidgets();
     initTimeseriesPeriodSelects();
