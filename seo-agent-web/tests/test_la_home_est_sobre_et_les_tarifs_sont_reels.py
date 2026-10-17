@@ -29,6 +29,7 @@ os.environ.setdefault("SEO_AGENT_SECRET_KEY", "test-session-secret")
 os.environ.setdefault("SEO_AGENT_DISABLE_WORKER", "true")
 
 from fastapi.testclient import TestClient  # noqa: E402
+from bs4 import BeautifulSoup  # noqa: E402
 
 from backend import app as m  # noqa: E402
 from backend import billing  # noqa: E402
@@ -54,8 +55,9 @@ def test_les_valeurs_suivent_le_CATALOGUE(monkeypatch) -> None:
     c = m._comparatif_des_plans()
     assert _ligne(c, "Corrections écrites")[2] == "345"
     assert _ligne(c, "Sites suivis")[2] == "12"
-    pro = TestClient(m.app).get("/pricing").text
-    assert "345 corrections/mois" in pro and "12 sites suivis" in pro
+    for path in ("/", "/pricing"):
+        page = TestClient(m.app).get(path).text
+        assert "345 corrections/mois" in page and "12 sites suivis" in page
 
 
 def test_une_fonction_FERMEE_par_le_plan_s_affiche_absente() -> None:
@@ -103,6 +105,13 @@ def test_la_home_montre_la_grille_complete() -> None:
     for nom in ("Free", "Solo", "Pro", "Business"):
         assert ">%s</h3>" % nom in corps, nom
     assert "Comparer les plans, fonction par fonction" in corps
+    table = BeautifulSoup(corps, "html.parser").select_one(".comparatif")
+    assert table is not None
+    lignes = table.select('tbody th[scope="row"]')
+    attendues = [l for s in m._comparatif_des_plans()["sections"] for l in s["lignes"]]
+    assert len(lignes) == len(attendues)
+    for cellule, ligne in zip(lignes, attendues):
+        assert cellule.get_text().startswith(ligne["libelle"])
 
 
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿⭐✅]")

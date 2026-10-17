@@ -68,11 +68,14 @@ par heure.
 C'est la partie difficile, et celle qui distingue une correction utile d'un patch au hasard.
 
 Le produit indexe votre dépôt et reconnaît la structure des générateurs de sites courants —
-Next.js, Astro, Nuxt, Jekyll, Hugo, Eleventy, Svelte, Vue, WordPress en thème, les gabarits
-Jinja d'un site Flask, ainsi que les fichiers de configuration d'hébergement (`netlify.toml`, `vercel.json`, `_redirects`,
+Next.js (App Router et Pages Router), Astro, Nuxt, Gatsby, SvelteKit, Jekyll, Hugo, HTML statique
+et les gabarits Jinja d'un site Flask, ainsi que les fichiers de configuration d'hébergement (`netlify.toml`, `vercel.json`, `_redirects`,
 `_headers`, `.htaccess`).
 
 Puis il fait la distinction qui compte : **l'anomalie vient-elle de la page ou du gabarit ?**
+
+Pour un CMS sans correction automatique prise en charge, comme WordPress, utilisez l'audit,
+les rapports exportables et, dès le plan Solo, le [fix-pack à appliquer manuellement](/docs/fix-pack-sans-depot).
 
 - Une seule page en cause → le fichier de cette page.
 - Toutes les pages en cause → le layout, le composant `<head>`, ou le fichier de

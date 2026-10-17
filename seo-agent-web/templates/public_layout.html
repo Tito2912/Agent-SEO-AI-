@@ -106,7 +106,7 @@
           </form>
         {% else %}
           <a class="btn" href="/auth/login">Se connecter</a>
-          <a class="btn primary" href="/auth/signup">Commencer &rarr;</a>
+          <a class="btn primary" href="/auth/signup">{% block signup_label %}Commencer &rarr;{% endblock %}</a>
         {% endif %}
       </div>
     </header>

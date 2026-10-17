@@ -122,7 +122,12 @@ def test_chaque_technologie_NOMMEE_est_couverte_par_le_banc() -> None:
     """Nommer une stack qu'on ne teste pas est la pire des promesses : elle est vérifiable
     par le premier client qui l'utilise."""
     prouvees = set(_stacks_du_banc())
-    texte = _gabarit().lower()
+    # Le bloc distingue maintenant l'audit de sites CMS et les corrections dans le code.
+    # Citer WordPress comme parcours MANUEL ne promet pas une correction automatique.
+    # Seule la liste explicitement annoncee pour le correcteur doit etre prouvee au banc.
+    liste = re.search(r'<div class="stacks">.*?<ul>(.*?)</ul>', _gabarit(), re.S)
+    assert liste, "la liste des technologies du correcteur est introuvable"
+    texte = liste.group(1).lower()
 
     # LES NOMS VIENNENT DU CODE, PAS D'UNE LISTE ÉCRITE ICI. Une liste à la main ne peut pas
     # attraper un nom auquel on n'a pas pensé : la mutation qui annonçait « WordPress » — une

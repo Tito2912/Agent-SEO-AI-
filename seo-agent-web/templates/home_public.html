@@ -1,13 +1,14 @@
 {% extends "public_layout.html" %}
 {% from "_capture.html" import capture %}
 
-{% block title %}{{ app_name }} - L'audit SEO qui livre le correctif{% endblock %}
+{% block title %}{{ app_name }} - Audit SEO et corrections pour votre site{% endblock %}
+{% block signup_label %}Audit gratuit{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="{{ app_name }} analyse votre site, écrit la correction dans votre code et vous l'envoie en pull request — vérifiée par votre propre CI avant de vous être proposée." />
+<meta name="description" content="Repérez les problèmes SEO de votre site avec {{ app_name }}. Audit gratuit sans carte bancaire, et corrections dans le code sur les sites compatibles." />
 <link rel="canonical" href="{{ canonical_url }}" />
-<meta property="og:title" content="{{ app_name }} - L'audit SEO qui livre le correctif" />
-<meta property="og:description" content="La correction arrive en pull request sur votre dépôt, écrite dans la forme de votre code et vérifiée par votre build." />
+<meta property="og:title" content="{{ app_name }} - Comprenez votre SEO, passez aux corrections" />
+<meta property="og:description" content="Analysez votre site, identifiez les problèmes prioritaires et préparez les corrections sur les sites compatibles. Essayez gratuitement, sans carte bancaire." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
 {# REFONTE DU 29/09/2026, demande du proprietaire : « on dirait un site pour enfant ». Retires :
@@ -30,23 +31,24 @@ main.container { max-width: 1160px; padding-top: 0; }
 .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 34px; }
 .hero-actions .btn { padding: 12px 22px; font-size: 14.5px; }
 .hero-note { margin: 16px 0 0; font-size: 13px; color: var(--muted); }
-
-/* L'illustration : une pull request, telle qu'elle arrive sur le depot. */
-.pr { margin: 0; border: 1px solid var(--border-2); border-radius: 14px; background: #0c0c0e; box-shadow: var(--shadow-lg); overflow: hidden; }
-.pr-tete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 0; font-size: 12.5px; color: var(--muted); }
-.pr-etat { display: inline-flex; align-items: center; gap: 7px; color: var(--ok-2); font-weight: 600; }
-.pr-etat::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
-.pr-titre { margin: 10px 20px 0; font-size: 15px; font-weight: 600; color: var(--text); }
-.pr-meta { margin: 6px 20px 16px; font-size: 12.5px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.pr-fichier { padding: 9px 20px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(255,255,255,.025); font: 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: rgba(255,255,255,.7); }
-.pr-diff { margin: 0; padding: 10px 0; font: 12.5px/1.75 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-x: auto; }
-.pr-diff span { display: block; padding: 0 20px; white-space: pre; color: rgba(255,255,255,.55); }
-.pr-diff .del { background: rgba(239, 68, 68, .09); color: #f3a5a5; }
-.pr-diff .add { background: rgba(var(--ok-rgb), .11); color: #b6e3c8; }
-.pr-checks { list-style: none; margin: 0; padding: 12px 20px 14px; border-top: 1px solid var(--border); display: grid; gap: 6px; font-size: 12.5px; color: rgba(255,255,255,.7); }
-.pr-checks li { display: flex; justify-content: space-between; gap: 12px; }
-.pr-checks li span { color: var(--ok-2); }
-.pr figcaption { padding: 10px 20px; border-top: 1px solid var(--border); font-size: 11.5px; color: rgba(255,255,255,.34); }
+.hero-apercu { min-width: 0; }
+.hero-apercu .capture { padding: 18px; border: 1px solid var(--border-2); border-radius: 14px; background: var(--surface-card-2); }
+.hero-apercu .capture img { border: 0; }
+.hero-apercu .capture figcaption { color: rgba(255,255,255,.72); }
+.hero-apercu > a { display: inline-block; margin-top: 12px; font-size: 13px; }
+.hero-resultat { margin: 16px 0 0; font-size: 14px; line-height: 1.6; color: rgba(255,255,255,.72); }
+section[id] { scroll-margin-top: 112px; }
+.compatibilite { margin-top: 52px; padding: 32px; border: 1px solid var(--border-2); border-radius: 14px; background: var(--surface-card-2); }
+.compatibilite .h-titre { font-size: clamp(1.5rem, 2.5vw, 2rem); }
+.compat-cas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-top: 28px; }
+.compat-cas h3 { margin: 0 0 10px; font-size: 17px; font-weight: 600; }
+.compat-cas p { margin: 0; font-size: 14.5px; line-height: 1.65; color: rgba(255,255,255,.68); }
+.compat-cas a { display: inline-block; margin-top: 12px; font-size: 14px; }
+.faq { margin-top: 32px; border-top: 1px solid var(--border-2); }
+.faq details { padding: 20px 0; border-bottom: 1px solid var(--border); }
+.faq summary { cursor: pointer; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.faq p { max-width: 780px; margin: 14px 0 0; font-size: 14.5px; line-height: 1.7; color: rgba(255,255,255,.7); }
+.faq summary:focus-visible, .tarifs-detail summary:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 6px; }
 
 /* ── Bande des technologies ── */
 .stacks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 28px; padding: 26px 0; margin-top: 44px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -106,7 +108,7 @@ main.container { max-width: 1160px; padding-top: 0; }
 
 @media (max-width: 920px) {
   .hero { grid-template-columns: 1fr; gap: 44px; padding-top: 56px; }
-  .etapes, .groupes, .socle, .ecran, .ecran:nth-child(even) { grid-template-columns: 1fr; }
+  .etapes, .groupes, .socle, .compat-cas, .ecran, .ecran:nth-child(even) { grid-template-columns: 1fr; }
   .ecran { gap: 20px; }
   .ecran:nth-child(even) .ecran-texte { order: 0; }
   .etape, .etape + .etape { padding: 22px 0; border-left: 0; border-bottom: 1px solid var(--border); }
@@ -117,6 +119,8 @@ main.container { max-width: 1160px; padding-top: 0; }
 @media (max-width: 560px) {
   .guide { grid-template-columns: 1fr; }
   .hero-sub { font-size: 16px; }
+  .compatibilite { padding: 24px 20px; }
+  .hero-apercu .capture { padding: 12px; }
 }
 </style>
 {% endblock %}
@@ -126,40 +130,53 @@ main.container { max-width: 1160px; padding-top: 0; }
 
   <section class="hero">
     <div>
-      <h1>L'audit SEO qui livre <em>le correctif</em>, pas la liste de tâches.</h1>
+      <p class="h-kicker">Pour les indépendants et les petites entreprises</p>
+      <h1>Comprenez votre SEO.<br><em>Passez aux corrections.</em></h1>
       <p class="hero-sub">
-        {{ app_name }} analyse votre site, écrit la correction dans votre code et vous l'envoie en
-        pull request — vérifiée par votre propre CI avant de vous être proposée.
+        {{ app_name }} repère les problèmes de référencement de votre site et les classe par priorité.
+        Sur les sites compatibles, il prépare aussi les corrections dans le code, à valider
+        par vous ou votre prestataire.
       </p>
       <div class="hero-actions">
-        <a class="btn primary" href="/auth/signup">Commencer gratuitement</a>
-        <a class="btn" href="#tarifs">Voir les tarifs</a>
+        <a class="btn primary" href="/auth/signup">Lancer mon audit gratuit</a>
+        <a class="btn" href="#compatibilite">Vérifier la compatibilité</a>
       </div>
-      {% if gratuit and gratuit.corrections %}
-        <p class="hero-note">Sans carte bancaire · {{ gratuit.corrections }} corrections offertes chaque mois pour l'essayer sur votre dépôt</p>
-      {% endif %}
+      <p class="hero-note">Compte gratuit requis · Sans carte bancaire<br>Aucune connexion GitHub nécessaire pour l'audit.</p>
+      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ gratuit.corrections }} corrections IA par mois incluses, sur un dépôt compatible.</p>{% endif %}
     </div>
 
-    <figure class="pr" aria-label="Exemple de pull request ouverte par {{ app_name }}">
-      <div class="pr-tete"><span class="pr-etat">Prête à fusionner</span><span>#42</span></div>
-      <p class="pr-titre">seo : canonical de /guides/dca-crypto</p>
-      <p class="pr-meta">noyaru/fix-canonical → main · 1 fichier</p>
-      <div class="pr-fichier">app/guides/dca-crypto/page.tsx</div>
-      <pre class="pr-diff"><span>  export const metadata = {</span><span>    title: "DCA crypto : le guide",</span><span class="del">-   alternates: { canonical: "/guides/dca" },</span><span class="add">+   alternates: { canonical: "/guides/dca-crypto/" },</span><span>  }</span></pre>
-      <ul class="pr-checks">
-        <li>build <span>réussi</span></li>
-        <li>lint <span>réussi</span></li>
-      </ul>
-      <figcaption>Illustration : une correction telle qu'elle arrive sur votre dépôt.</figcaption>
-    </figure>
+    <div class="hero-apercu">
+      <p class="h-kicker">Ce que vous obtenez</p>
+      {{ capture("anomalies", "Extrait d'un audit réel : 17 titres trop longs, 9 descriptions trop longues et des redirections, classés par gravité",
+                 "Une liste des problèmes détectés, de leur gravité et du nombre de pages concernées.", chargement="eager") }}
+      <p class="hero-resultat">Dans cet exemple, 17 pages ont un titre trop long : vous savez quels titres examiner avant de préparer les corrections.</p>
+      <a href="/static/captures/anomalies.webp">Ouvrir la capture en grand</a>
+    </div>
   </section>
 
+  <section class="compatibilite" id="compatibilite" aria-labelledby="compatibilite-titre">
+    <p class="h-kicker">Votre site est-il compatible ?</p>
+    <h2 class="h-titre" id="compatibilite-titre">Un audit avec l'adresse du site. Des corrections selon votre accès.</h2>
+    <p class="h-intro">L'analyse porte sur les pages publiques accessibles au robot, dans les limites de votre plan. L'accès au code intervient ensuite, pour les corrections.</p>
+    <div class="compat-cas">
+      <div>
+        <h3>Site géré avec WordPress, Shopify ou Wix</h3>
+        <p>Commencez par l'audit et les rapports exportables. Vous ou votre prestataire appliquez les changements dans votre outil. Dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite ce travail manuel.</p>
+        <a href="/docs/fix-pack-sans-depot">Voir comment corriger sans dépôt GitHub</a>
+      </div>
+      <div>
+        <h3>Code disponible sur GitHub</h3>
+        <p>Pour les technologies ci-dessous, {{ app_name }} prépare les modifications dans une pull request : une proposition de changement que vous ou votre développeur relisez et validez avant publication.</p>
+        <a href="/docs/connecter-github">Voir comment connecter le dépôt</a>
+      </div>
+    </div>
   <div class="stacks">
-    <p>Écrit dans la forme de votre projet — <strong>10 technologies</strong> prises en charge</p>
+    <p>Corrections dans le code — <strong>10 technologies</strong> prises en charge</p>
     <ul>
-      <li>Next.js</li><li>Astro</li><li>Nuxt</li><li>Gatsby</li><li>SvelteKit</li><li>Hugo</li><li>Jekyll</li><li>Flask</li><li>HTML</li>
+      <li>Next.js App Router</li><li>Next.js Pages Router</li><li>Astro</li><li>Nuxt</li><li>Gatsby</li><li>SvelteKit</li><li>Hugo</li><li>Jekyll</li><li>Flask</li><li>HTML</li>
     </ul>
   </div>
+  </section>
 
   <section class="apercu" aria-label="Aperçu de l'application">
     {{ capture("apercu-projet", "Vue d'ensemble d'un projet dans " ~ app_name ~ " : score de santé, anomalies par gravité, historique des crawls et répartition des URL",
@@ -168,77 +185,77 @@ main.container { max-width: 1160px; padding-top: 0; }
 
   <section class="h-section" id="fonctionnement">
     <p class="h-kicker">Fonctionnement</p>
-    <h2 class="h-titre">De l'anomalie au correctif, sans quitter votre dépôt.</h2>
+    <h2 class="h-titre">Votre premier audit, puis les corrections adaptées à votre site.</h2>
     <div class="etapes">
       <div class="etape">
         <div class="etape-num">01</div>
         <h3>Ajoutez votre site</h3>
-        <p>L'adresse suffit pour lancer l'audit. Le dépôt GitHub se connecte quand vous voulez recevoir des corrections, pas avant.</p>
+        <p>Créez votre compte gratuit, indiquez l'adresse de votre site et lancez l'analyse.</p>
       </div>
       <div class="etape">
         <div class="etape-num">02</div>
-        <h3>L'analyse remonte au fichier</h3>
-        <p>Chaque anomalie est classée par gravité et rattachée au fichier de votre dépôt qui la produit.</p>
+        <h3>Identifiez les priorités</h3>
+        <p>Consultez les problèmes détectés et les pages concernées, avec leur gravité et l'effort de correction estimé.</p>
       </div>
       <div class="etape">
         <div class="etape-num">03</div>
-        <h3>La correction arrive en pull request</h3>
-        <p>Écrite dans la forme de votre code, vérifiée par votre build, elle attend votre relecture. Rien n'est publié sans votre accord.</p>
+        <h3>Passez aux corrections</h3>
+        <p>Relisez les modifications proposées sur votre dépôt compatible, ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.</p>
       </div>
     </div>
   </section>
 
   <section class="h-section" id="fonctions">
-    <p class="h-kicker">Fonctions</p>
-    <h2 class="h-titre">Les autres outils vous disent quoi faire. {{ app_name }} le fait.</h2>
-    <p class="h-intro">Et vous garde le dernier mot : chaque changement passe par une pull request que vous relisez.</p>
+    <p class="h-kicker">Comprendre, corriger, suivre</p>
+    <h2 class="h-titre">De l'erreur détectée au changement que vous validez.</h2>
+    <p class="h-intro">Un audit pour décider où agir, des corrections préparées sur les sites compatibles, et vos données de recherche pour suivre l'évolution.</p>
 
     <div class="groupes">
       <div class="groupe">
+        <h3>Comprendre</h3>
+        <div class="fonction">
+          <h4>Repérez les problèmes prioritaires</h4>
+          <p>Titres, liens cassés, redirections, indexation : retrouvez les pages concernées et les anomalies classées par gravité et par effort.</p>
+        </div>
+        <div class="fonction">
+          <h4>Transmettez un rapport exploitable</h4>
+          <p>Exportez l'audit en PDF ou en CSV pour travailler avec la personne qui s'occupe de votre site.</p>
+        </div>
+        <div class="fonction">
+          <h4>Posez vos questions sur vos données</h4>
+          <p>L'assistant IA vous aide à interpréter votre SEO et à préparer des descriptions pour vos pages.</p>
+        </div>
+      </div>
+
+      <div class="groupe">
         <h3>Corriger</h3>
         <div class="fonction">
-          <h4>Corrections en pull request</h4>
-          <p>L'anomalie est corrigée dans votre code, dans la forme de votre projet. Vous relisez un diff, pas un rapport.</p>
+          <h4>Des modifications prêtes à relire</h4>
+          <p>Sur un dépôt compatible, la correction arrive en pull request. Vous ou votre développeur examinez les changements avant de les appliquer.</p>
         </div>
         <div class="fonction">
-          <h4>Vérifiées par votre build</h4>
-          <p>La pull request reste en brouillon tant que votre propre chaîne d'intégration n'a pas confirmé que le site se construit.</p>
+          <h4>Vérifiées par vos propres tests</h4>
+          <p>Votre chaîne d'intégration vérifie que le site se construit. La proposition reste en brouillon jusqu'au résultat de ces contrôles.</p>
         </div>
         <div class="fonction">
-          <h4>Audit technique complet</h4>
-          <p>Balises, redirections, liens cassés, données structurées, hreflang, Core Web Vitals — classés par gravité et par effort.</p>
-        </div>
-      </div>
-
-      <div class="groupe">
-        <h3>Écrire</h3>
-        <div class="fonction">
-          <h4>Rédaction de pages</h4>
-          <p>Une page neuve dans la forme de votre site, liée à sa section, livrée en pull request ou en Markdown et HTML.</p>
-        </div>
-        <div class="fonction">
-          <h4>Sujets tirés de la concurrence</h4>
-          <p>Ce que vos concurrents traitent et que vous ne couvrez pas, mesuré sur leurs propres pages.</p>
-        </div>
-        <div class="fonction">
-          <h4>Mode automatique</h4>
-          <p>La fréquence, le jour et l'heure que vous choisissez ; publication automatique ou après votre validation.</p>
+          <h4>Un mode d'emploi sans dépôt</h4>
+          <p>Dès le plan Solo, téléchargez une archive de données et de modèles à appliquer vous-même ou à confier à votre prestataire.</p>
         </div>
       </div>
 
       <div class="groupe">
-        <h3>Mesurer</h3>
+        <h3>Suivre</h3>
         <div class="fonction">
-          <h4>Search Console et Bing</h4>
-          <p>Impressions, clics et positions, site par site et mois après mois.</p>
+          <h4>Retrouvez vos clics et positions</h4>
+          <p>Connectez Google Search Console ou Bing Webmaster pour suivre les recherches qui amènent des visiteurs sur votre site.</p>
         </div>
         <div class="fonction">
-          <h4>Opportunités de backlinks</h4>
-          <p>Des sources de liens pertinentes, et une réponse rédigée pour chacune.</p>
+          <h4>Contrôlez les corrections</h4>
+          <p>Après l'intégration d'une correction proposée dans le code, le prochain audit vérifie si l'anomalie a disparu.</p>
         </div>
         <div class="fonction">
-          <h4>Assistant IA</h4>
-          <p>Posez vos questions sur vos données SEO, obtenez des meta descriptions et des pistes précises.</p>
+          <h4>Planifiez les prochains audits</h4>
+          <p>Surveillez votre site dans le temps et retrouvez l'historique des analyses, dans les limites de votre plan.</p>
         </div>
       </div>
     </div>
@@ -246,22 +263,22 @@ main.container { max-width: 1160px; padding-top: 0; }
     <div class="ecrans">
       <div class="ecran">
         <div class="ecran-texte">
-          <h3>Chaque anomalie corrigeable a son bouton « Créer PR »</h3>
-          <p>Un aperçu de la correction avant de l'envoyer, puis une pull request par anomalie — ou toutes les anomalies d'un crawl en une seule.</p>
+          <h3>Voyez la correction avant de l'envoyer</h3>
+          <p>Sur un dépôt compatible, ouvrez l'aperçu du changement proposé, puis créez une pull request à relire. L'écran ci-contre montre les commandes disponibles dans l'application.</p>
         </div>
         {{ capture("accueil-corrections", "Accélérateur de correction : anomalies candidates avec leurs boutons Voir, Aperçu IA et Créer PR") }}
       </div>
       <div class="ecran">
         <div class="ecran-texte">
           <h3>Une page neuve, dans la forme de votre site</h3>
-          <p>Un sujet, une taille, un ton et une section : la page est écrite comme ses voisines, traduite si vous le demandez, et livrée en brouillon à relire.</p>
+          <p>Dès le plan Pro : choisissez un sujet, une taille, un ton et une section. La page est livrée en brouillon à relire, dans votre dépôt ou en Markdown et HTML.</p>
         </div>
         {{ capture("rediger-une-page", "Formulaire de rédaction : destination, sujet, taille, ton, section du site, adresse et langues") }}
       </div>
       <div class="ecran">
         <div class="ecran-texte">
           <h3>Vos données de recherche, à côté de l'audit</h3>
-          <p>Clics, impressions, CTR et position moyenne sur la période choisie, pour relier chaque correction à ce qu'elle change.</p>
+          <p>Consultez vos clics, impressions et positions sur la période choisie pour observer l'évolution de votre visibilité.</p>
         </div>
         {{ capture("search-console", "Graphique Google Search Console : clics, impressions, CTR et position moyenne sur 28 jours") }}
       </div>
@@ -291,7 +308,40 @@ main.container { max-width: 1160px; padding-top: 0; }
         <p class="h-intro">Mensuel, sans engagement. Un passage au plan supérieur est immédiat ; un retour au plan inférieur prend effet à la fin de la période payée.</p>
       </div>
     </div>
-    {% include "_tarifs.html" %}
+    {% with cartes_resumees = true %}
+      {% include "_tarifs.html" %}
+    {% endwith %}
+  </section>
+
+  <section class="h-section" id="questions" aria-labelledby="questions-titre">
+    <p class="h-kicker">Avant de commencer</p>
+    <h2 class="h-titre" id="questions-titre">Ce qu'il faut savoir pour votre premier audit.</h2>
+    <div class="faq">
+      <details>
+        <summary>Faut-il savoir coder ou connecter GitHub ?</summary>
+        <p>Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur.</p>
+      </details>
+      <details>
+        <summary>Mon site sera-t-il modifié pendant l'audit ?</summary>
+        <p>L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site.</p>
+      </details>
+      <details>
+        <summary>Que comprend le plan gratuit ?</summary>
+        <p>{% if gratuit %}{{ gratuit.sites }} site{% if gratuit.sites != 1 %}s{% endif %} suivi{% if gratuit.sites != 1 %}s{% endif %}, {{ gratuit.pages }} pages analysées par mois{% if gratuit.corrections %} et {{ gratuit.corrections }} corrections IA par mois sur un dépôt compatible{% endif %}. {% endif %}Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo. Consultez le <a href="/pricing#comparatif">comparatif complet</a> pour les autres limites.</p>
+      </details>
+      <details>
+        <summary>Comment sont comptées les pages et les corrections ?</summary>
+        <p>Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages. <a href="/docs/plans-et-quotas">Lire le détail des quotas</a>.</p>
+      </details>
+      <details>
+        <summary>Puis-je travailler avec mon prestataire ?</summary>
+        <p>Vous pouvez lui transmettre les rapports PDF et CSV. Pour une correction dans le code, il peut relire les modifications proposées sur GitHub. Des comptes collaborateurs sont aussi disponibles selon le plan.</p>
+      </details>
+      <details>
+        <summary>Quand verrai-je un effet sur mon référencement ?</summary>
+        <p>L'audit montre les problèmes détectés et un nouveau passage permet de contrôler les changements. L'évolution des positions dépend ensuite de la réexploration par les moteurs, du contenu et de la concurrence. Le service ne garantit ni délai ni position dans Google.</p>
+      </details>
+    </div>
   </section>
 
   {% if featured_resources %}
@@ -321,9 +371,9 @@ main.container { max-width: 1160px; padding-top: 0; }
     <div>
       <h2>Votre premier audit est gratuit.</h2>
       <p>
-        Ajoutez un site, lancez l'analyse{% if gratuit and gratuit.corrections %}, et voyez jusqu'à {{ gratuit.corrections }} corrections par mois arriver sur votre propre dépôt{% endif %}.
+        Créez votre compte gratuit, ajoutez l'adresse de votre site et découvrez les problèmes à traiter en priorité. Sans carte bancaire.
       </p>
     </div>
-    <a class="btn primary" href="/auth/signup">Créer un compte</a>
+    <a class="btn primary" href="/auth/signup">Lancer mon audit gratuit</a>
   </section>
 {% endblock %}

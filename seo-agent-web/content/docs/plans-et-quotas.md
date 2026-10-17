@@ -56,8 +56,9 @@ En pratique, un site de taille moyenne consomme quelques dizaines d'unités le p
 celui où l'on rattrape le retard — puis nettement moins ensuite, une fois les anomalies de
 gabarit réglées.
 
-Le plan Free n'inclut pas de correction IA. Il inclut l'audit complet, les suggestions, les
-exports et le fix-pack : de quoi corriger à la main.
+Le plan Free inclut {{corrections_free}} corrections IA par mois sur un dépôt GitHub compatible,
+ainsi que l'audit et les exports PDF et CSV. Le fix-pack sans dépôt est disponible dès le plan
+Solo. Les limites réellement disponibles figurent dans le tableau ci-dessus.
 
 ### Articles rédigés — un compteur à part
 
