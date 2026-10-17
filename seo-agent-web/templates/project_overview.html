@@ -1,8 +1,9 @@
 {% extends "layout.html" %}
+{% from "_search_connection_badge.html" import connection_badge with context %}
 {% block title %}{{ project.site_name if project else slug }} - Vue d'ensemble{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="/static/project_overview.css?v=1" />
+  <link rel="stylesheet" href="/static/project_overview.css?v=2" />
   <script src="/static/project_overview.js" defer></script>
 {% endblock %}
 
@@ -27,6 +28,10 @@
 
 {% block content %}
 <div class="overview-page">
+  {% if not connection %}
+    {% if err %}<div class="alert error" role="alert">{{ err }}</div>
+    {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+  {% endif %}
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
   {% else %}
@@ -519,11 +524,13 @@
                   {% endfor %}
                 </select>
               </div>
-              {% if gsc and gsc.ok %}<span class="badge ok">ok</span>
-              {% elif gsc and gsc.enabled %}<span class="badge warning">activé</span>
-              {% else %}<span class="badge notice">désactivé</span>{% endif %}
+              {{ connection_badge(search_connections.gsc) }}
             </div>
           </div>
+          {% if connection == "gsc" %}
+            {% if err %}<div class="alert error" role="alert">{{ err }}</div>
+            {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+          {% endif %}
           <div class="search-source-summary" data-summary-block {% if not (gsc and gsc.ok) %}data-summary-fallback="true"{% endif %}>
             {% if gsc and gsc.ok %}
               <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
@@ -550,7 +557,9 @@
                  juste au-dessus d'un graphique qui fonctionnait. Deux mesures de deux moments
                  présentées comme une seule, et le client doute alors de tout l'écran. #}
               <p class="muted">Les données Google n’étaient pas disponibles lors de la dernière analyse.</p>
-              <p class="muted small">{% if gsc.reason == "missing_credentials" %}<a href="/settings/accounts#gsc-oauth-card">Connecter Google</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
+            {% elif search_connections.gsc.connected %}
+              <p class="muted">Le suivi Google est connecté pour ce projet.</p>
             {% else %}
               <p class="muted">Reliez Google pour suivre les clics et les recherches qui affichent votre site.</p>
               <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer le suivi</a></p>
@@ -608,12 +617,14 @@
                   {% endfor %}
                 </select>
               </div>
-              {% if bing and bing.ok %}<span class="badge ok">ok</span>
-              {% elif bing and bing.enabled %}<span class="badge warning">activé</span>
-              {% else %}<span class="badge notice">désactivé</span>{% endif %}
+              {{ connection_badge(search_connections.bing) }}
             </div>
           </div>
-          <div class="search-source-summary" data-summary-block>
+          {% if connection == "bing" %}
+            {% if err %}<div class="alert error" role="alert">{{ err }}</div>
+            {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+          {% endif %}
+          <div class="search-source-summary" data-summary-block {% if not (bing and bing.ok) %}data-summary-fallback="true"{% endif %}>
             {% if bing and bing.ok %}
               {% if bing.site_url %}<p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>{% endif %}
               {% if bing.start_date and bing.end_date %}<p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>{% endif %}
@@ -633,7 +644,9 @@
               {# Daté pour la même raison que la carte GSC juste au-dessus : cette valeur vient
                  du rapport de la dernière analyse, le graphique en dessous est live. #}
               <p class="muted">Les données Bing n’étaient pas disponibles lors de la dernière analyse.</p>
-              <p class="muted small">{% if bing.reason in ["missing_api_key", "missing_credentials"] %}<a href="/settings/accounts#bing-connect-card">Connecter Bing</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
+            {% elif search_connections.bing.connected %}
+              <p class="muted">Le suivi Bing est connecté pour ce projet.</p>
             {% else %}
               <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
               <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer le suivi</a></p>
