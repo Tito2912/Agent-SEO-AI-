@@ -95,7 +95,7 @@
 
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
-            <span style="font-size:13px;font-weight:600;">Pages crawlées</span>
+            <span style="font-size:13px;font-weight:600;">Pages analysées</span>
             {% if is_admin %}
               <span style="font-size:20px;font-weight:650;letter-spacing:-.02em;">— <span class="muted" style="font-size:13px;font-weight:400;">/ {{ limits_labels.pages_crawled_month }}</span></span>
             {% else %}
@@ -172,7 +172,7 @@
           {%- else %}
             à la fin de la période déjà payée.
           {%- endif %}
-          D'ici là tu gardes {{ plan.label if plan else plan_key }} et tous ses quotas — rien
+          D'ici là vous gardez {{ plan.label if plan else plan_key }} et tous ses quotas — rien
           n'est prélevé pour ce changement.
         {% else %}
           <strong>Un changement de plan est déjà demandé</strong> et prendra effet à la fin de la
@@ -201,8 +201,8 @@
       {% set current_rank = rank.get(plan_key, 0) %}
       {% if subscription_active and abonnement_vu.resilie %}
         <div class="setting-note" style="margin-bottom:12px;">
-          <strong>Résiliation enregistrée.</strong> Pour changer de plan, réactive d'abord ton
-          abonnement avec « Gérer l'abonnement » ; tu peux le faire jusqu'au
+          <strong>Résiliation enregistrée.</strong> Pour changer de plan, réactivez d’abord votre
+          abonnement avec « Gérer l'abonnement » ; vous pouvez le faire jusqu'au
           {% if abonnement_vu.date %}{{ abonnement_vu.date.strftime('%d/%m/%Y') }}{% else %}terme de la période payée{% endif %}.
         </div>
       {% endif %}
@@ -248,7 +248,7 @@
                 class="btn{% if not is_current %} primary{% endif %}"
                 {% if is_current or is_scheduled or bloque %}disabled{% endif %}
                 {% if is_scheduled %}title="Ce changement est déjà demandé{% if pending_change.effective_at %}, il prend effet le {{ pending_change.effective_at.strftime('%d/%m/%Y') }}{% endif %}."{% endif %}
-                {% if bloque %}title="Réactive d'abord ton abonnement avec « Gérer l'abonnement »."{% endif %}
+                {% if bloque %}title="Réactivez d’abord votre abonnement avec « Gérer l'abonnement »."{% endif %}
               >
                 {% if is_current %}
                   Plan actuel

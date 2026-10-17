@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Paramètres de crawl - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}Réglages de l’analyse - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -131,7 +131,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
   {% if project %}
     <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Paramètres de crawl</span>
+    <span class="crumb-current">Réglages de l’analyse</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -146,7 +146,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
     <section class="card"><p>Projet introuvable : <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     <div class="page-header">
-      <h1>Paramètres de crawl</h1>
+      <h1>Réglages de l’analyse</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ project.base_url }}</span></p>
       <a href="/docs/lancer-un-crawl" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </div>
@@ -183,7 +183,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
               <div class="cs-field">
                 <span class="cs-label">Pages à analyser</span>
                 <input type="number" name="max_pages" min="1" max="{{ plan_crawl.max_pages_per_crawl }}" value="{{ crawl.max_pages }}" />
-                <span class="cs-hint">Max d'URLs à crawler. Votre plan autorise jusqu'à {{ plan_crawl.max_pages_per_crawl }} pages par crawl{% if plan_crawl.job_timeout_s %} (un crawl plus long que {{ (plan_crawl.job_timeout_s // 3600) }} h est interrompu){% endif %}. Au-delà, la demande est ramenée à ce plafond.</span>
+                <span class="cs-hint">Max d'URLs à crawler. Votre plan autorise jusqu'à {{ plan_crawl.max_pages_per_crawl }} pages par crawl{% if plan_crawl.job_timeout_s %} (une analyse plus longue que {{ (plan_crawl.job_timeout_s // 3600) }} h est interrompue){% endif %}. Au-delà, la demande est ramenée à ce plafond.</span>
               </div>
               <div class="cs-field">
                 <span class="cs-label">Connexions simultanées</span>
@@ -328,7 +328,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                     <div class="cs-field">
                       <span class="cs-label">Pages à tester (max)</span>
                       <input type="number" name="pagespeed_max_urls" min="0" max="{{ plan_crawl.max_pagespeed_urls }}" value="{{ crawl.pagespeed_max_urls }}" />
-                      <span class="cs-hint">Votre plan analyse jusqu'à {{ plan_crawl.max_pagespeed_urls }} page{{ 's' if plan_crawl.max_pagespeed_urls > 1 else '' }} par crawl. Les mesures sont réutilisées tant que la page n'a pas changé, donc un crawl régulier n'en reconsomme presque aucune.</span>
+                      <span class="cs-hint">Votre plan analyse jusqu'à {{ plan_crawl.max_pagespeed_urls }} page{{ 's' if plan_crawl.max_pagespeed_urls > 1 else '' }} par crawl. Les mesures sont réutilisées tant que la page n'a pas changé, donc une analyse régulière n'en reconsomme presque aucune.</span>
                     </div>
                     <div class="cs-field">
                       <span class="cs-label">Timeout par analyse (s)</span>
@@ -510,7 +510,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                            placeholder="https://www.exemple.com/"
                            {% if not bing.site_url and not bing_api_ready %}style="border-color:rgba(245,158,11,.45);"{% endif %} />
                     {% if bing_api_ready %}
-                      <span class="cs-hint">Clique sur « Choisir mon site » pour sélectionner automatiquement depuis ton compte Bing.</span>
+                      <span class="cs-hint">Cliquez sur « Choisir mon site » pour sélectionner automatiquement depuis votre compte Bing.</span>
                     {% else %}
                       <span class="cs-hint">Doit correspondre exactement à la propriété déclarée dans Bing Webmaster Tools (avec ou sans www, avec ou sans / final).</span>
                     {% endif %}
@@ -519,7 +519,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
                   {% if not bing.site_url and not bing_api_ready %}
                     <div class="cs-warn-box">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-                      <span>Ce champ est vide — c'est la cause de l'erreur <strong>no_accessible_site</strong>. Connecte ton compte Bing ou saisis l'URL exacte de ton site.</span>
+                      <span>Ce champ est vide — c'est la cause de l'erreur <strong>no_accessible_site</strong>. Connectez votre compte Bing ou saisissez l’URL exacte de votre site.</span>
                     </div>
                   {% endif %}
 
@@ -901,7 +901,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
       </div>
       <div class="cs-card-meta">
         <div class="cs-card-title">Dépôt GitHub <span id="gh-repo-badge" style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--muted);margin-left:6px;">Non connecté</span></div>
-        <div class="cs-card-desc">Permet à l'agent de corriger les anomalies directement dans ton code via des Pull Requests</div>
+        <div class="cs-card-desc">Permet à l'agent de corriger les anomalies directement dans votre code via des Pull Requests</div>
       </div>
     </div>
     <div class="cs-card-body">
@@ -928,7 +928,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
               <button type="button" id="gh-mode-review" class="gh-mode-btn" data-mode="review" style="flex:1;padding:7px 6px;font-size:11px;font-weight:600;background:var(--accent);color:#fff;border:none;cursor:pointer;">Vérification</button>
               <button type="button" id="gh-mode-auto" class="gh-mode-btn" data-mode="auto" style="flex:1;padding:7px 6px;font-size:11px;font-weight:600;background:var(--bg);color:var(--muted);border:none;cursor:pointer;border-left:1px solid var(--border);">Full access</button>
             </div>
-            <p class="muted small" id="gh-mode-hint" style="margin:4px 0 0;font-size:10px;">Vérification : tu valides chaque PR avant qu'elle soit créée.</p>
+            <p class="muted small" id="gh-mode-hint" style="margin:4px 0 0;font-size:10px;">Vérification : vous validez chaque PR avant qu'elle soit créée.</p>
           </div>
         </div>
 
@@ -999,7 +999,7 @@ details.cs-card[open] > summary { border-bottom: 1px solid var(--border); border
       autoWarning.style.display = mode === 'auto' ? '' : 'none';
       modeHint.textContent = mode === 'auto'
         ? 'Full access : les PRs sont créées directement, sans étape de confirmation.'
-        : 'Vérification : tu valides chaque PR avant qu\'elle soit créée.';
+        : 'Vérification : vous validez chaque PR avant qu\'elle soit créée.';
     }
 
     // Pick repo list

@@ -15522,22 +15522,22 @@ def _dashboard_onboarding_state(
             "label": "Ajouter un site",
             "doc_href": "/docs/ajouter-un-projet",
             "done": has_projects,
-            "detail": "Projet créé." if has_projects else "Crée le premier projet à auditer.",
+            "detail": "Projet créé." if has_projects else "Créez votre premier projet.",
             "action_label": "Ajouter",
             "action_href": "",
             "action_dialog": "add-project-dialog",
         },
         {
             "key": "crawl",
-            "label": "Lancer un premier crawl",
+            "label": "Lancer une première analyse",
             "doc_href": "/docs/lancer-un-crawl",
             "done": has_attempted_crawl,
             "detail": (
-                "Crawl terminé."
+                "Analyse terminée."
                 if has_completed_crawl
-                else ("Crawl en cours." if has_active_crawl else "Analyse les pages du site pour générer le rapport.")
+                else ("Analyse en cours." if has_active_crawl else "Analysez les pages du site pour obtenir le rapport.")
             ),
-            "action_label": "Démarrer",
+            "action_label": "Lancer l’analyse",
             "action_href": f"/projects/{first_slug}" if first_slug else "",
             "disabled": not first_slug,
         },
@@ -15546,7 +15546,7 @@ def _dashboard_onboarding_state(
             "label": "Traiter les anomalies",
             "doc_href": "/docs/anomalies-et-priorites",
             "done": can_review_issues,
-            "detail": "Rapport disponible." if can_review_issues else "Les anomalies apparaîtront après le premier crawl.",
+            "detail": "Rapport disponible." if can_review_issues else "Les anomalies apparaîtront après la première analyse.",
             "action_label": "Voir",
             "action_href": f"/projects/{first_crawled_slug}/issues" if first_crawled_slug else "",
             "disabled": not first_crawled_slug,
@@ -15556,7 +15556,7 @@ def _dashboard_onboarding_state(
             "label": "Connecter Search Console",
             "doc_href": "/docs/connecter-search-console",
             "done": gsc_connected,
-            "detail": "Données search connectées." if gsc_connected else "Ajoute les performances réelles de recherche.",
+            "detail": "Données search connectées." if gsc_connected else "Ajoutez les performances réelles de recherche.",
             "action_label": "Connecter",
             "action_href": "/settings/accounts#gsc-oauth-card",
             "optional": True,
@@ -30900,6 +30900,13 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
     except Exception as exc:
         logger.warning("[corrections] failed to build correction candidates for %s: %s", slug, exc)
 
+    is_admin = bool(getattr(user, "is_admin", False))
+    plan_key = "free"
+    if user and not is_admin:
+        with DB.session() as db:
+            plan_key = billing.effective_plan_key(db, user_id=_compte_payeur(str(user.id), slug))
+    fix_pack_unlocked = is_admin or _fix_pack_ouvert(plan_key)
+
     resp = templates.TemplateResponse(
         "corrections.html",
         {
@@ -30911,6 +30918,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "github_cfg": github_cfg,
             "current_crawl_ts": current_crawl_ts,
             "fix_candidates": fix_candidates,
+            "fix_pack_unlocked": fix_pack_unlocked,
             "stats": stats,
             "prs_ouvertes": prs_ouvertes,
         },

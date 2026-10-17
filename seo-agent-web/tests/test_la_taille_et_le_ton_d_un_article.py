@@ -157,6 +157,6 @@ def test_l_ecran_offre_les_choix_de_la_redaction(customer, plan) -> None:
     for cle in list(m._TAILLES_ARTICLE) + list(m._TONS_ARTICLE):
         assert 'value="%s"' % cle in page, cle
     # Deux pour la redaction manuelle, deux pour le mode automatique : memes tables.
-    assert page.count(">Comme la section</option>") == 4
+    assert page.count(">Style du site</option>") == 4
     assert page.count("taille: choixStyle('c-taille'), ton: choixStyle('c-ton')") == 2, \
         "les DEUX modes envoient le choix"

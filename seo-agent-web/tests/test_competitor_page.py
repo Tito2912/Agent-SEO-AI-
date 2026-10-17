@@ -169,7 +169,7 @@ def test_without_a_crawl_of_your_own_site_the_comparison_says_so(customer, monke
     monkeypatch.setattr(app_module.dash, "list_project_crawls", lambda *a, **kw: [])
     _add_ready_rival(pid, uid)
     body = client.get(f"/projects/{slug}/competitors").text
-    assert "Il manque ton propre crawl" in body
+    assert "Il manque l’analyse de votre site" in body
 
 
 # ── the comparison ────────────────────────────────────────────────────────────────────────────

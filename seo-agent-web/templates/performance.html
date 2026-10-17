@@ -20,7 +20,7 @@
 {% block actions %}
   {% if project %}
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouveau crawl</button>
+      <button type="submit" class="btn primary">Nouvelle analyse</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -34,7 +34,7 @@
       <p class="muted">
         {{ project.site_name }} ·
         {% if live and live.fallback %}
-          Données du dernier crawl
+          Données de la dernière analyse
         {% elif live and live.ok and live.start_date %}
           Live · {{ live.start_date }} → {{ live.end_date }} ({{ days }}j)
         {% else %}
@@ -43,6 +43,29 @@
       </p>
     </div>
 
+    {% if not perf_ok %}
+      <section class="card empty-connection">
+        {% set reason = live.reason if live else '' %}
+        {% if reason == 'disabled' %}
+          <h2>Activez le suivi des recherches</h2>
+          <p class="muted">Le suivi {{ 'Google' if source == 'gsc' else 'Bing' }} est désactivé pour ce projet.</p>
+          <a class="btn primary" href="/projects/{{ project.slug }}/settings/crawl">Activer le suivi</a>
+        {% elif reason in ['missing_credentials', 'not_connected', 'oauth_not_connected', ''] %}
+          <h2>Découvrez les recherches qui amènent des visiteurs</h2>
+          <p class="muted">Connectez {{ 'Google Search Console' if source == 'gsc' else 'Bing Webmaster' }} pour suivre les clics, les recherches et les positions de votre site.</p>
+          <a class="btn primary" href="/settings/accounts#{{ 'gsc-oauth-card' if source == 'gsc' else 'bing-connect-card' }}">Connecter {{ 'Google' if source == 'gsc' else 'Bing' }}</a>
+        {% else %}
+          <h2>Les données ne sont pas disponibles pour le moment</h2>
+          <p class="muted">Vérifiez la connexion et les autorisations du compte pour ce site, puis réessayez.</p>
+          <a class="btn primary" href="/settings/accounts#{{ 'gsc-oauth-card' if source == 'gsc' else 'bing-connect-card' }}">Vérifier la connexion</a>
+          <a class="btn" href="?source={{ source }}&days={{ days }}">Réessayer</a>
+        {% endif %}
+        <p class="muted small"><a href="?source={{ 'bing' if source == 'gsc' else 'gsc' }}">Voir le suivi {{ 'Bing' if source == 'gsc' else 'Google' }}</a></p>
+        {% if live and (live.reason or live.error) %}<details class="technical-details"><summary>Détails techniques</summary><code>{{ live.reason or live.error }}</code></details>{% endif %}
+      </section>
+    {% else %}
+      <details class="screen-options" {% if q %}open{% endif %}>
+        <summary>Source, période et filtres{% if q %} · filtres actifs{% endif %}</summary>
     <div class="data-toolbar">
       <form method="get" class="filters" style="width:100%;">
         <label>
@@ -91,32 +114,14 @@
       </form>
     </div>
 
-    {% if not perf_ok %}
-      <section class="card">
-        <p class="muted" style="margin: 0;">
-          Données {{ source|upper }} indisponibles
-          {% if live and (live.reason or live.error) %}
-            : <span class="mono">{{ live.reason or live.error }}</span>.
-          {% else %}
-            .
-          {% endif %}
-          {% if live and live.reason == "disabled" %}
-            Active le module dans <a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>.
-          {% elif source == 'gsc' %}
-            Connecte ton compte depuis <a href="/settings/accounts#gsc-oauth-card">Comptes &amp; connexions</a>.
-          {% else %}
-            Connecte ton compte depuis <a href="/settings/accounts#bing-connect-card">Comptes &amp; connexions</a>.
-          {% endif %}
-        </p>
-      </section>
-    {% else %}
+      </details>
       <div class="stat-strip">
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ totals.clicks }}</div>
           <div class="stat-strip-lbl">Clics</div>
           {% if live and live.ok %}
             <div class="stat-strip-sub">
-              {% if live.fallback %}Dernier crawl{% else %}{{ live.start_date }} → {{ live.end_date }}{% endif %}
+              {% if live.fallback %}Dernière analyse{% else %}{{ live.start_date }} → {{ live.end_date }}{% endif %}
             </div>
           {% endif %}
         </div>
@@ -147,7 +152,7 @@
           <h2>Évolution</h2>
           <span class="muted small">
             {{ source|upper }} ·
-            {% if live and live.fallback %}Dernier crawl{% else %}{{ days }}j · live{% endif %}
+            {% if live and live.fallback %}Dernière analyse{% else %}{{ days }}j · live{% endif %}
           </span>
         </div>
 

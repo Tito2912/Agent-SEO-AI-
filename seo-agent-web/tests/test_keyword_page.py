@@ -93,7 +93,7 @@ def test_a_project_without_search_console_is_told_so(customer, gsc) -> None:
     client, slug, _ = customer
     body = client.get(f"/projects/{slug}/keywords/opportunities").text
     assert "Search Console n'est pas connecté" in body
-    assert "Paramètres de crawl" in body, "the page must say where to go next"
+    assert "Réglages de l’analyse" in body, "the page must say where to go next"
 
 
 def test_a_connected_project_with_nothing_to_report_says_that_too(customer, gsc) -> None:

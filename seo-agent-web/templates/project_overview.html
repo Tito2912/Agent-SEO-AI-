@@ -19,7 +19,7 @@
   {% if project %}
     <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouveau crawl</button>
+      <button type="submit" class="btn primary">Nouvelle analyse</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -85,7 +85,7 @@
           {% elif injoignable.raison == 'delai' %}
             Le serveur ne répond pas dans les délais. Vérifiez l'état de votre hébergement.
           {% else %}
-            Vérifiez que le site est en ligne, puis relancez un crawl.
+            Vérifiez que le site est en ligne, puis relancez une analyse.
           {% endif %}
           Aucun score n'est calculé tant que le site ne répond pas.
           {% if injoignable.detail %}<div class="muted small mono" style="margin-top:6px;">{{ injoignable.detail }}</div>{% endif %}
@@ -94,26 +94,30 @@
       {% if blocked %}
         {# The score below was computed WITHOUT these pages. Saying so is the whole point. #}
         <div class="ov-blocked" role="status">
-          <strong>Crawl incomplet — {{ blocked }} page{{ 's' if blocked > 1 else '' }} inaccessible{{ 's' if blocked > 1 else '' }}.</strong>
+          <strong>Analyse incomplète — {{ blocked }} page{{ 's' if blocked > 1 else '' }} inaccessible{{ 's' if blocked > 1 else '' }}.</strong>
           Le site a refusé ces pages au robot (403/429/503) même après plusieurs tentatives.
           Elles ne sont pas comptées comme des erreurs de votre site, mais le score ci-dessous
           est calculé sans elles.
           {% if sum.blocked_by_host.urls %}
             <span class="ov-blocked-urls">{{ sum.blocked_by_host.urls[:3] | join(' · ') }}{% if blocked > 3 %} … {% endif %}</span>
           {% endif %}
-          <span class="ov-blocked-hint">Si cela se répète : baissez la vitesse de crawl dans Paramètres de crawl, ou autorisez le robot chez votre hébergeur/CDN.</span>
+          <span class="ov-blocked-hint">Si cela se répète : baissez la vitesse d’analyse dans Réglages de l’analyse, ou autorisez le robot chez votre hébergeur/CDN.</span>
         </div>
       {% endif %}
       <h1>{{ project.site_name }}</h1>
       <div class="ov-info-sub">
         <a href="{{ project.base_url }}" target="_blank" rel="noopener">{{ project.base_url }}</a>
         {% if project.crawls %}
-          <span>{{ project.crawls | length }} crawl{{ 's' if project.crawls | length > 1 else '' }} · dernier {{ project.crawls[0][6:8] }}/{{ project.crawls[0][4:6] }}/{{ project.crawls[0][:4] }}</span>
+          <span>{{ project.crawls | length }} analyse{{ 's' if project.crawls | length > 1 else '' }} · dernière {{ project.crawls[0][6:8] }}/{{ project.crawls[0][4:6] }}/{{ project.crawls[0][:4] }}</span>
         {% endif %}
       </div>
 
       {% if project.current %}
-        <div class="ov-kpis">
+        {% set defects = sum.issues | rejectattr('is_delta') | list %}
+        <p class="muted score-explanation">{{ defects|length }} types de problèmes · {{ sum.issues_total }} occurrences.
+          {% if sc is not none %}Score : part des pages internes sans erreur grave. Les avertissements restent à traiter.{% endif %}
+        </p>
+        <div class="ov-kpis" aria-label="Occurrences par gravité et pages analysées">
           <a class="ov-kpi err" href="/projects/{{ project.slug }}/issues?severity=error&crawl={{ cur.timestamp }}">
             <div class="ov-kpi-n">{{ sum.issues_distribution.error or 0 }}</div>
             <div class="ov-kpi-l">Erreurs</div>
@@ -128,7 +132,7 @@
           </a>
           <a class="ov-kpi" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
             <div class="ov-kpi-n">{{ sum.pages_crawled }}</div>
-            <div class="ov-kpi-l">Pages crawlées</div>
+            <div class="ov-kpi-l">Pages analysées</div>
           </a>
           <a class="ov-kpi" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">
             <div class="ov-kpi-n">{{ sum.urls_crawled_distribution }}</div>
@@ -138,34 +142,6 @@
       {% endif %}
     </div>
 
-    {# Anomalies breakdown — right column of hero #}
-    {% if project.current %}
-      {% set e = sum.issues_distribution.error or 0 %}
-      {% set w = sum.issues_distribution.warning or 0 %}
-      {% set n = sum.issues_distribution.notice or 0 %}
-      {% set mx = [e, w, n]|max %}
-      <div class="ov-hero-breakdown">
-        <div class="ov-section-hd" style="margin-bottom:14px;"><span>Répartition des anomalies</span></div>
-        <div class="bars">
-          <div class="bar-row">
-            <span class="bar-label">Erreurs</span>
-            <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / mx) * 100)|round(0) if mx else 0 }};"></div></div>
-            <span class="mono">{{ e }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Avertissements</span>
-            <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / mx) * 100)|round(0) if mx else 0 }};"></div></div>
-            <span class="mono">{{ w }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Infos</span>
-            <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / mx) * 100)|round(0) if mx else 0 }};"></div></div>
-            <span class="mono">{{ n }}</span>
-          </div>
-        </div>
-        <p class="muted small" style="margin-top:12px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
-      </div>
-    {% endif %}
   </div>
 
   {# ══════════════════════════════════════
@@ -175,15 +151,15 @@
     <div class="alert {{ 'error' if live_job.status == 'failed' else 'notice' }}" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
       <span>
         {% if live_job.status == 'failed' %}
-          Le dernier crawl a <strong>échoué</strong>.
+          La dernière analyse a <strong>échoué</strong>.
         {% else %}
-          Le dernier crawl a été <strong>annulé</strong>.
+          La dernière analyse a été <strong>annulé</strong>.
         {% endif %}
       </span>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">Voir les logs →</a>
         <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-          <button type="submit" class="btn primary" style="font-size:12px;">Relancer un crawl</button>
+          <button type="submit" class="btn primary" style="font-size:12px;">Relancer une analyse</button>
         </form>
       </div>
     </div>
@@ -250,18 +226,18 @@
   {% if not project.current %}
     <section class="card">
       <div class="card-title-row">
-        <h2>Premier crawl</h2>
-        <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a>
+        <h2>Première analyse</h2>
+        <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a>
       </div>
-      <p class="muted" style="margin:0 0 12px;">Aucun crawl terminé pour ce projet.</p>
+      <p class="muted" style="margin:0 0 12px;">Aucune analyse terminée pour ce projet.</p>
       {% if live_job and live_job.status == 'failed' %}
         <p class="muted small" style="margin:0 0 14px;">
-          Le dernier crawl a échoué. Ouvre les logs ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l'erreur complète.
+          La dernière analyse a échoué. Ouvrez les journaux ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l'erreur complète.
         </p>
       {% endif %}
       <div class="topbar-actions">
         <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-          <button type="submit" class="btn primary">Lancer le premier crawl</button>
+          <button type="submit" class="btn primary">Lancer la première analyse</button>
         </form>
         <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">Voir les exécutions</a>
       </div>
@@ -269,14 +245,87 @@
 
   {% else %}
 
+  {# Old crawl notice #}
+  {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
+  {% if cur.used_fallback %}
+    <div class="alert notice" style="margin-bottom:20px;">
+      Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport.
+      Affichage du dernier terminé : <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
+      <a href="/jobs">Voir les jobs</a>.
+    </div>
+  {% elif cur.timestamp != latest_ts %}
+    <div class="alert notice" style="margin-bottom:20px;">
+      Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :
+      <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
+    </div>
+  {% endif %}
+
+  {# ══════════════════════════════════════
+     ACTIONS PRIORITAIRES
+  ══════════════════════════════════════ #}
+  <section class="card" style="margin-top:8px;">
+    <div class="card-title-row">
+      <h2>Vos prochaines actions</h2>
+      {% if fix_pack_unlocked %}
+        <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
+      {% else %}
+        <a class="muted small" href="/billing">Archive de corrections · Solo+</a>
+      {% endif %}
+    </div>
+
+    {% if not top_actions %}
+      <p class="muted">Aucune action prioritaire détectée pour cette analyse.</p>
+    {% else %}
+      <div class="action-list">
+        {% for a in top_actions %}
+          {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
+          {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
+          {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
+          <div class="action-item">
+            <div class="action-num">{{ loop.index }}</div>
+            <div class="action-body">
+              <div class="action-title">
+                <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
+                <span class="sev {{ a.severity }}" style="margin-left:10px;">{{ sev_label }}</span>
+              </div>
+              <div class="action-meta">
+                <span class="mono">{{ a.count }}</span> occurrences
+                &nbsp;·&nbsp; Priorité <strong>{{ priority_label }}</strong>
+                &nbsp;·&nbsp; Effort {{ effort_label }}
+              </div>
+              <div style="margin-top:10px;">
+                <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir les instructions →</a>
+              </div>
+              {% if a.why %}
+                <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
+                  {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}
+                </p>
+              {% endif %}
+              {% if fix_pack_unlocked and a.fix %}
+                <ul class="examples" style="margin-top:8px;">
+                  {% for step in a.fix[:3] %}
+                    <li>{{ step }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
   {# ══════════════════════════════════════
      TOOLBAR — crawl selector + exports
   ══════════════════════════════════════ #}
+  <details class="screen-options">
+    <summary>Comparer les analyses et exporter le rapport</summary>
   <div class="data-toolbar">
     <form method="get" class="filters" style="width:100%;">
       {% if live_job %}<input type="hidden" name="job" value="{{ live_job.id }}" />{% endif %}
       <label>
-        Crawl analysé
+        Analyse affichée
         <select name="crawl">
           {% for ts in project.crawls %}
             {% set t = crawl_timing.get(ts, {}) if crawl_timing is defined else {} %}
@@ -310,20 +359,37 @@
     </form>
   </div>
 
-  {# Old crawl notice #}
-  {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
-  {% if cur.used_fallback %}
-    <div class="alert notice" style="margin-bottom:20px;">
-      Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport.
-      Affichage du dernier terminé : <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
-      <a href="/jobs">Voir les jobs</a>.
-    </div>
-  {% elif cur.timestamp != latest_ts %}
-    <div class="alert notice" style="margin-bottom:20px;">
-      Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :
-      <a href="/projects/{{ project.slug }}?crawl={{ latest_ts }}"><span class="mono">{{ latest_ts }}</span></a>
-    </div>
-  {% endif %}
+  </details>
+
+    {# Anomalies breakdown — right column of hero #}
+    {% if project.current %}
+      {% set e = sum.issues_distribution.error or 0 %}
+      {% set w = sum.issues_distribution.warning or 0 %}
+      {% set n = sum.issues_distribution.notice or 0 %}
+      {% set mx = [e, w, n]|max %}
+      <details class="ov-hero-breakdown">
+        <summary>Répartition des occurrences</summary>
+        <div class="ov-section-hd" style="margin-bottom:14px;"><span>Occurrences par gravité</span></div>
+        <div class="bars">
+          <div class="bar-row">
+            <span class="bar-label">Erreurs</span>
+            <div class="bar"><div class="bar-fill error" style="--p: {{ ((e / mx) * 100)|round(0) if mx else 0 }};"></div></div>
+            <span class="mono">{{ e }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Avertissements</span>
+            <div class="bar"><div class="bar-fill warning" style="--p: {{ ((w / mx) * 100)|round(0) if mx else 0 }};"></div></div>
+            <span class="mono">{{ w }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Infos</span>
+            <div class="bar"><div class="bar-fill notice" style="--p: {{ ((n / mx) * 100)|round(0) if mx else 0 }};"></div></div>
+            <span class="mono">{{ n }}</span>
+          </div>
+        </div>
+        <p class="muted small" style="margin-top:12px;"><a href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}">Voir toutes les anomalies →</a></p>
+      </details>
+    {% endif %}
 
   {# ══════════════════════════════════════
      MAIN GRID
@@ -334,7 +400,7 @@
     <section class="card span-2">
       <div class="card-title-row">
         <h2>Évolution du score</h2>
-        <span class="muted small">derniers crawls</span>
+        <span class="muted small">dernières analyses</span>
       </div>
       {% if not project.history %}
         <p class="muted small">Aucune donnée.</p>
@@ -466,9 +532,9 @@
         </div>
       {% else %}
         {% if ps and ps.enabled %}
-          <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur ce crawl.</p>
+          <p class="muted">PageSpeed est activé, mais aucune métrique CWV n'est disponible sur cette analyse.</p>
         {% else %}
-          <p class="muted">Active PageSpeed pour ajouter LCP/TBT/CLS. La clé API est gérée côté plateforme.</p>
+          <p class="muted">Activez PageSpeed pour ajouter LCP/TBT/CLS. La clé API est gérée côté plateforme.</p>
         {% endif %}
       {% endif %}
     </section>
@@ -520,14 +586,14 @@
               {% endif %}
             {% elif gsc and gsc.enabled %}
               {# DATÉ, et ça n'est pas cosmétique. Cette valeur vient du RAPPORT du dernier
-                 crawl, pas du live : un projet connecté après ce crawl affichait « indisponible »
+                 crawl, pas du live : un projet connecté après cette analyse affichait « indisponible »
                  juste au-dessus d'un graphique qui fonctionnait. Deux mesures de deux moments
                  présentées comme une seule, et le client doute alors de tout l'écran. #}
-              <p class="muted">Au dernier crawl, GSC était indisponible : <span class="mono">{{ gsc.reason }}</span></p>
-              <p class="muted small">{% if gsc.reason == "missing_credentials" %}<a href="/settings/accounts#gsc-oauth-card">Connecter Google</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+              <p class="muted">Les données Google n’étaient pas disponibles lors de la dernière analyse.</p>
+              <p class="muted small">{% if gsc.reason == "missing_credentials" %}<a href="/settings/accounts#gsc-oauth-card">Connecter Google</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
             {% else %}
-              <p class="muted">Active GSC pour ajouter la performance + issues Google (URL Inspection).</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+              <p class="muted">Reliez Google pour suivre les clics et les recherches qui affichent votre site.</p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer le suivi</a></p>
             {% endif %}
           </div>
 
@@ -605,12 +671,12 @@
               {% endif %}
             {% elif bing and bing.enabled %}
               {# Daté pour la même raison que la carte GSC juste au-dessus : cette valeur vient
-                 du rapport du dernier crawl, le graphique en dessous est live. #}
-              <p class="muted">Au dernier crawl, Bing était indisponible : <span class="mono">{{ bing.reason }}</span></p>
-              <p class="muted small">{% if bing.reason in ["missing_api_key", "missing_credentials"] %}<a href="/settings/accounts#bing-connect-card">Connecter Bing</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Paramètres de crawl</a></p>
+                 du rapport de la dernière analyse, le graphique en dessous est live. #}
+              <p class="muted">Les données Bing n’étaient pas disponibles lors de la dernière analyse.</p>
+              <p class="muted small">{% if bing.reason in ["missing_api_key", "missing_credentials"] %}<a href="/settings/accounts#bing-connect-card">Connecter Bing</a> · {% endif %}<a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
             {% else %}
               <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer le suivi</a></p>
             {% endif %}
           </div>
 
@@ -693,61 +759,6 @@
           {% endfor %}
         </tbody>
       </table>
-    {% endif %}
-  </section>
-
-  {# ══════════════════════════════════════
-     ACTIONS PRIORITAIRES (bottom)
-  ══════════════════════════════════════ #}
-  <section class="card" style="margin-top:8px;">
-    <div class="card-title-row">
-      <h2>Top 3 actions prioritaires</h2>
-      {% if fix_pack_unlocked %}
-        <a class="btn" href="/projects/{{ project.slug }}/export/fix-pack.zip?crawl={{ cur.timestamp }}" style="font-size:11px;padding:4px 10px;">Fix Pack ZIP</a>
-      {% else %}
-        <a class="muted small" href="/billing">Débloquer Fix Pack →</a>
-      {% endif %}
-    </div>
-
-    {% if not top_actions %}
-      <p class="muted">Aucune action prioritaire détectée pour ce crawl.</p>
-    {% else %}
-      <div class="action-list">
-        {% for a in top_actions %}
-          {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(a.severity, a.severity) %}
-          {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
-          {% set effort_label = {'high': 'élevé', 'medium': 'moyen', 'low': 'faible'}.get(a.effort, a.effort) %}
-          <div class="action-item">
-            <div class="action-num">{{ loop.index }}</div>
-            <div class="action-body">
-              <div class="action-title">
-                <a href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}">{{ a.label }}</a>
-                <span class="sev {{ a.severity }}" style="margin-left:10px;">{{ sev_label }}</span>
-              </div>
-              <div class="action-meta">
-                <span class="mono">{{ a.count }}</span> occurrences
-                &nbsp;·&nbsp; Priorité <strong>{{ priority_label }}</strong>
-                &nbsp;·&nbsp; Effort {{ effort_label }}
-              </div>
-              {% if a.why %}
-                <p class="muted small" style="margin:8px 0 0;line-height:1.5;">
-                  {% if fix_pack_unlocked %}{{ a.why }}{% else %}{{ a.why | truncate(200, True, '…') }}{% endif %}
-                </p>
-              {% endif %}
-              {% if fix_pack_unlocked and a.fix %}
-                <ul class="examples" style="margin-top:8px;">
-                  {% for step in a.fix[:3] %}
-                    <li>{{ step }}</li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-              <div style="margin-top:10px;">
-                <a class="btn" href="/projects/{{ project.slug }}/issues/{{ a.issue_key }}?crawl={{ cur.timestamp }}" style="font-size:12px;">Voir le détail →</a>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
     {% endif %}
   </section>
 

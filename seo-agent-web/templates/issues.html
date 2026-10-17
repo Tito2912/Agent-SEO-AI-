@@ -15,9 +15,9 @@
 
 {% block actions %}
   {% if project %}
-    <a class="btn" href="/projects/{{ project.slug }}/corrections">Workflow corrections</a>
+    <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections à valider</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouveau crawl</button>
+      <button type="submit" class="btn primary">Nouvelle analyse</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -48,21 +48,22 @@
     } %}
     <div class="page-header">
       <h1>Anomalies</h1>
-      <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
+      <p class="muted">{{ project.site_name }} · <span data-ts-datetime="{{ cur.timestamp }}">{{ cur.label }}</span></p>
       <a href="/docs/anomalies-et-priorites" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </div>
 
     {% set defects = issues | rejectattr('is_delta') | list %}
     {% set changes = issues | selectattr('is_delta') | list %}
+    <p class="muted issue-count-summary">{{ defects|length }} types de problèmes · {{ defects|sum(attribute='count') }} occurrences{% if severity or category or q %} · résultats filtrés{% endif %}.</p>
     {% if issues %}
       {% set ns = namespace(errors=0, warnings=0, notices=0) %}
       {% for it in defects %}
-        {% if it.severity == 'error' %}{% set ns.errors = ns.errors + 1 %}
-        {% elif it.severity == 'warning' %}{% set ns.warnings = ns.warnings + 1 %}
-        {% elif it.severity == 'notice' %}{% set ns.notices = ns.notices + 1 %}
+        {% if it.severity == 'error' %}{% set ns.errors = ns.errors + it.count %}
+        {% elif it.severity == 'warning' %}{% set ns.warnings = ns.warnings + it.count %}
+        {% elif it.severity == 'notice' %}{% set ns.notices = ns.notices + it.count %}
         {% endif %}
       {% endfor %}
-      <div class="stat-strip">
+      <div class="stat-strip issue-severity-strip" aria-label="Occurrences par gravité">
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--err);">{{ ns.errors }}</div>
           <div class="stat-strip-lbl">Erreurs</div>
@@ -77,16 +78,11 @@
           <div class="stat-strip-num" style="color:var(--notice);">{{ ns.notices }}</div>
           <div class="stat-strip-lbl">Infos</div>
         </div>
-        <div class="stat-strip-sep"></div>
-        <div class="stat-strip-item">
-          <div class="stat-strip-num">{{ issues | length }}</div>
-          <div class="stat-strip-lbl">Total</div>
-          <div class="stat-strip-sub">{{ "filtré" if (severity or category or q) else "toutes catégories" }}</div>
-        </div>
       </div>
     {% endif %}
 
-    <section class="card">
+    <details class="screen-options">
+      <summary>Préparer un plan de corrections</summary>
       <div class="card-title-row">
         <h2>Plan de corrections</h2>
         {% if fix_suggestions_meta and fix_suggestions_meta.generated_at %}
@@ -94,7 +90,7 @@
         {% endif %}
       </div>
       <p class="muted small">
-        Génère des recommandations actionnables pour chaque anomalie (priorité, actions, vérifications). Pensez à valider avant déploiement.
+        Générez des recommandations concrètes pour chaque anomalie (priorité, actions, vérifications). Pensez à valider avant déploiement.
       </p>
       <form method="post" action="/projects/{{ project.slug }}/fix-suggestions/generate" class="inline">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
@@ -103,8 +99,10 @@
           <a class="btn" href="/file?path={{ fix_suggestions_path }}">Ouvrir le JSON</a>
         {% endif %}
       </form>
-    </section>
+    </details>
 
+    <details class="screen-options" {% if severity or category or q %}open{% endif %}>
+      <summary>Filtres et exports{% if severity or category or q %} · filtres actifs{% endif %}</summary>
     <div class="data-toolbar">
       <form method="get" class="filters" style="width:100%;">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
@@ -150,6 +148,7 @@
         <a class="btn" href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">PDF</a>
       </form>
     </div>
+    </details>
 
     <section class="card">
       {% if not defects %}
@@ -171,7 +170,7 @@
                 <tr>
                   <td>
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
-                    <div class="muted small mono">{{ it.key }}</div>
+                    <details class="technical-details"><summary>Détails techniques</summary><code>{{ it.key }}</code></details>
                   </td>
                   <td>{{ cat_labels.get(it.category, it.category) }}</td>
                   {% set sev_label = {'error': 'erreur', 'warning': 'avert.', 'notice': 'info'}.get(it.severity, it.severity) %}
@@ -207,7 +206,7 @@
         </div>
         <p class="muted small">
           Ce ne sont pas des anomalies : ces lignes indiquent ce qui a bougé sur le site entre les
-          deux derniers crawls. Une correction appliquée fait normalement apparaître le changement
+          deux dernières analyses. Une correction appliquée fait normalement apparaître le changement
           correspondant ici. Elles ne comptent pas dans le total d'anomalies.
         </p>
         <div class="table-wrap">
@@ -224,7 +223,7 @@
                 <tr>
                   <td>
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
-                    <div class="muted small mono">{{ it.key }}</div>
+                    <details class="technical-details"><summary>Détails techniques</summary><code>{{ it.key }}</code></details>
                   </td>
                   <td>{{ cat_labels.get(it.category, it.category) }}</td>
                   <td class="num mono">

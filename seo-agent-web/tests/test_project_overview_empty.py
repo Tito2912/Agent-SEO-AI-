@@ -86,7 +86,7 @@ def test_the_incomplete_crawl_banner_stays_out_of_the_way_before_any_crawl(
     # not merely harmless.
     client, slug = customer_with_an_uncrawled_project
     response = client.get(f"/projects/{slug}")
-    assert "Crawl incomplet" not in response.text
+    assert "Analyse incomplète" not in response.text
 
 
 def test_a_project_belonging_to_someone_else_is_not_served(

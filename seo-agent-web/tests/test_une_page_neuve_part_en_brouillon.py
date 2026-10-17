@@ -604,7 +604,7 @@ def test_sans_DEPOT_le_mode_contenu_seul_est_ouvert_et_GitHub_dit_comment_s_acti
         db.commit()
     page = client.get(f"/projects/{slug}/content").text
     assert 'id="c-go"' in page
-    assert 'value="github" disabled' in page and "Connecte un dépôt GitHub" in page
+    assert 'value="github" disabled' in page and "Connectez un dépôt GitHub" in page
     assert 'value="contenu" checked' in page
     assert 'id="c-auto-save"' not in page, "le mode automatique ecrit par PR : pas sans depot"
 
