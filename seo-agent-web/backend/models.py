@@ -462,6 +462,19 @@ class IssueTask(Base):
     )
 
 
+class CmsChange(Base):
+    __tablename__ = "cms_changes"
+    __table_args__ = (Index("ix_cms_changes_project_created", "project_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("issue_tasks.id", ondelete="CASCADE"), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False, default="preview")
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class CorrectionOperation(Base):
     __tablename__ = "correction_operations"
 

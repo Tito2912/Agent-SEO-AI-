@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Première correction - {{ project.site_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/first_correction.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/first_correction.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=1" />{% endblock %}
 {% block crumbs %}
   <a href="/">Projets</a><span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span>
@@ -100,6 +100,13 @@
     <section class="card">
       <h2>{{ state.label }}</h2>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
+      {% include "_cms_guidance.html" %}
+      {% if cms_connected and platform_guide.platform == 'wordpress' and platform_guide.seo_plugin in ['', 'yoast'] and platform_guide.field %}
+        <p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ state.task_id }}">Préparer dans WordPress</a></p>
+        <p class="muted small">Relisez l’avant/après avant de valider l’enregistrement sur votre site.</p>
+      {% elif platform_guide.platform == 'wordpress' and platform_guide.seo_plugin == 'yoast' and platform_guide.field %}
+        <p><a class="btn" href="/projects/{{ slug }}/cms">Connecter WordPress pour appliquer cette correction</a></p>
+      {% endif %}
       <h3>Modifiez votre page</h3>
       <p class="muted">Appliquez ces instructions dans votre site, ou faites-les suivre à votre prestataire.</p>
       <ul class="help-steps">{% for instruction in instructions %}<li>{{ instruction }}</li>{% endfor %}</ul>

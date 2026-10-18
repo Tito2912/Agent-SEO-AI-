@@ -90,8 +90,12 @@
               Opportunités <span class="nav-plan">Solo+</span>
             </a>
             </details>
-            <details class="nav-group" {% if '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path %}open{% endif %}>
+            <details class="nav-group" {% if '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or '/cms' in request.url.path %}open{% endif %}>
               <summary>Réglages et historique</summary>
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/cms') %}active{% endif %}" href="/projects/{{ project.slug }}/cms">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8 8H5v8h3m8-8h3v8h-3M8 12h8"/></svg>
+              CMS et intégrations
+            </a>
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}" href="/projects/{{ project.slug }}/settings/crawl">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
               Réglages de l’analyse

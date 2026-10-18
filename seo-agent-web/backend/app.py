@@ -99,12 +99,14 @@ try:
     from . import correction_guard
     from . import correction_journal
     from . import first_correction
+    from . import cms_guidance
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
     import correction_guard
     import correction_journal
     import first_correction
+    import cms_guidance
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
@@ -16082,6 +16084,10 @@ def delete_projects(request: Request, slugs: list[str] = Form(default=[])) -> Re
         )
         deleted_slugs = [str(p.slug or "").strip() for p in rows if str(p.slug or "").strip()]
         for p in rows:
+            cms_connection = db.scalar(select(UserConnection).where(
+                UserConnection.user_id == str(user.id), UserConnection.key == "CMS_WORDPRESS:" + str(p.id)))
+            if cms_connection is not None:
+                db.delete(cms_connection)
             db.delete(p)
         db.commit()
     _audit_log(
@@ -18871,6 +18877,7 @@ def project_issue_detail(
             "fix_suggestions_path": fix_path,
             "gh_tasks": gh_tasks,
             "correction_controls": correction_controls,
+            "platform_guide": cms_guidance.for_issue(proj_row.settings, issue_key),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -30824,6 +30831,7 @@ def project_automation(request: Request, slug: str) -> HTMLResponse:
                 "id": str(t.id), "issue_key": t.issue_key, "issue_label": t.issue_label,
                 "url": t.url, "status": st, "pr": pr_data,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
+                "cms_supported": bool(cms_guidance.field_for_issue(t.issue_key)),
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             })
     except Exception:
@@ -30891,7 +30899,9 @@ def _first_correction_context(request: Request, project: Project) -> dict[str, A
                 and result.get("slug") == project.slug and str(result.get("user_id") or "") == str(project.owner_user_id)):
             live_job = {"id": job.id, "status": job.status}
             break
-    return {"state": state, "candidates": candidates, "crawl_ts": crawl_ts, "instructions": instructions,
+    return {"platform_guide": cms_guidance.for_issue(project.settings, state["issue_key"] if state else ""),
+            "cms_connected": bool(_user_connection_row(user_id=str(project.owner_user_id), key="CMS_WORDPRESS:" + str(project.id))),
+            "state": state, "candidates": candidates, "crawl_ts": crawl_ts, "instructions": instructions,
             "clean": clean, "live_job": live_job, "usable": bool(report.get("pages")) and not dash.site_injoignable(report),
             "unreachable": bool(dash.site_injoignable(report)) if report else False}
 
@@ -31128,6 +31138,9 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "request": request,
             "project": project_ctx,
             "slug": slug,
+            "wordpress_connected": bool(cms_guidance.settings(proj_row.settings)["platform"] == "wordpress"
+                                        and cms_guidance.settings(proj_row.settings)["seo_plugin"] in {"", "yoast"}
+                                        and _user_connection_row(user_id=str(proj_row.owner_user_id), key="CMS_WORDPRESS:" + str(proj_row.id))),
             "groups": groups,
             "total": total,
             "github_cfg": github_cfg,
@@ -37660,3 +37673,10 @@ def cron_verify_pull_requests(request: Request) -> JSONResponse:
     if not token or not hmac.compare_digest(token, cron_secret):
         return JSONResponse({"ok": False, "error": "Unauthorized"}, status_code=401)
     return JSONResponse({"ok": True, "resultats": _balayer_verifications_pr()})
+
+
+try:
+    from .cms_routes import router as cms_router
+except ImportError:
+    from cms_routes import router as cms_router
+app.include_router(cms_router)

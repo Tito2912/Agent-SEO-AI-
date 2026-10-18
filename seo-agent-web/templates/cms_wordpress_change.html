@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block title %}Votre correction WordPress{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Votre correction</span>{% endblock %}
+{% macro action_button(action, label, primary=false) %}<form method="post" action="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}/{{ action }}"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn {% if primary %}primary{% endif %}" type="submit">{{ label }}</button></form>{% endmacro %}
+{% block content %}<div class="cms-page">
+  <div class="page-header"><h1>{% if change.state == 'preview' %}Relisez avant d’appliquer{% elif change.state == 'applied' %}Correction enregistrée dans WordPress{% elif change.state == 'restored' %}Valeur précédente rétablie{% else %}Le résultat reste à confirmer{% endif %}</h1><p class="cms-url"><a href="{{ change.data.url }}" target="_blank" rel="noreferrer">{{ change.data.url }}</a></p></div>
+  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
+  <section class="card">
+    <h2>{{ field_label }}</h2>
+    <div class="cms-comparison"><div><h3>Avant</h3><p>{{ change.data.before[change.data.field] if change.data.before[change.data.field] is not none else 'Valeur héritée du modèle Yoast' }}</p>{% if change.data.before[change.data.field] is none %}<p class="muted small">Affichage : {{ change.data.rendered_before or 'Non renseigné' }}</p>{% endif %}</div><div><h3>Après</h3><p>{{ change.data.after[change.data.field] }}</p></div></div>
+    {% if change.state == 'preview' %}
+      <p class="muted">Votre validation enregistrera cette valeur sur la page publiée. Cet aperçu reste valable 20 minutes.</p>
+      {{ action_button('apply', 'Appliquer sur mon site', true) }}
+    {% elif change.state == 'applied' %}
+      <p role="status">WordPress a confirmé l’enregistrement. Lancez une vérification pour contrôler la page publique et la résolution du problème. Si votre site utilise un cache, actualisez-le auparavant.</p>
+      <div class="cms-actions"><form method="post" action="/projects/{{ slug }}/crawl"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">Vérifier la page publiée</button></form>{{ action_button('restore', 'Rétablir la valeur précédente') }}</div>
+      <p class="muted small">Le contrôle lance une nouvelle analyse, décomptée du quota habituel de pages. Le rétablissement vérifie que les métadonnées correspondent encore à cette correction.</p>
+    {% elif change.state == 'restored' %}
+      <p role="status">WordPress a confirmé le retour à la valeur précédente. Une nouvelle analyse permettra de contrôler la page publique.</p><a class="btn primary" href="/projects/{{ slug }}/first-correction">Reprendre ma correction</a>
+    {% else %}
+      <p role="status">La réponse finale n’a pas pu être confirmée. Vérifiez l’état avant toute nouvelle correction.</p>
+      {{ action_button('check', 'Vérifier l’état dans WordPress', true) }}
+      <p class="muted small">Cette vérification lit les valeurs actuelles de la page.</p>
+    {% endif %}
+  </section>
+  {% if change.state == 'preview' %}<a href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Préparer un autre aperçu</a>{% endif %}
+</div>{% endblock %}

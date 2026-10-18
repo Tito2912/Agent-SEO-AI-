@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block title %}{{ project.issue.label if project else issue_key }} - Anomalie{% endblock %}
 
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=1" />{% endblock %}
 {% block crumbs %}
   <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
@@ -48,6 +49,8 @@
       </p>
       <details class="technical-details"><summary>Détails techniques</summary><code>{{ project.issue.key }}</code> · <code>{{ project.timestamp }}</code></details>
     </div>
+
+    {% include "_cms_guidance.html" %}
 
     <div class="metric-band" style="margin-bottom:16px;">
       <div class="metric-tile">
