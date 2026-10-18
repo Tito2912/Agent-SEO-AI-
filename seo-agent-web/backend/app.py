@@ -15559,7 +15559,9 @@ def _dashboard_onboarding_state(
         tasks_by_project.get(str(p.get("project_id")), [])) for p in projects}
     usable = [p for p in projects if p.get("timestamp") and int(p.get("pages_crawled") or 0) > 0
               and not p.get("site_injoignable")]
-    selected = next((p for p in usable if progress_by_project[str(p.get("project_id"))].get("verified")), None)
+    selected = max((p for p in projects if p.get("slug") in live_crawls),
+                   key=lambda p: float(live_crawls[p["slug"]].get("created_at") or 0), default=None)
+    selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))].get("verified")), None)
     selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))]), None)
     selected = selected or next(iter(usable), None) or next(iter(projects), {})
     slug = str(selected.get("slug") or "")

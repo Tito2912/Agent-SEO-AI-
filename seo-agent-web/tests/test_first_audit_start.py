@@ -258,3 +258,15 @@ def test_resume_does_not_use_a_host_accounts_job_with_the_same_slug(first):
         db.commit()
     page = first["client"].get("/")
     assert page.context["onboarding"]["resume"]["href"] == f"/projects/atelier-example?job={own_job.id}"
+
+
+def test_resume_prioritizes_an_active_analysis_over_an_older_sites_report(first):
+    submit(first)
+    own_job = rows(first, JobRecord)[0]
+    with m.DB.session() as db:
+        db.add(Project(owner_user_id=first["uid"], slug="ancien-site", base_url="https://ancien.example/", site_name="Ancien site"))
+        db.commit()
+    report(first, slug="ancien-site")
+    page = first["client"].get("/")
+    assert page.context["onboarding"]["resume"]["href"] == f"/projects/atelier-example?job={own_job.id}"
+    assert page.context["onboarding"]["resume"]["label"] == "Retrouver mon analyse"
