@@ -298,6 +298,7 @@ def test_client_rejects_wrong_page_schema_and_non_metadata_writes():
     with pytest.raises(wp.CmsError):
         wp.values({"seo_title": None})
     assert not client.contains("https://outside.example/a/")
+    assert wp.WordPressClient({"site_url": "https://atelier.example/wordpress"}).contains(URL)
     assert cms_guidance.field_for_issue("missing_h1") == ""
     assert cms_guidance.field_for_issue("meta_description_too_long_not_indexable") == "meta_description"
 
@@ -345,3 +346,28 @@ def test_simultaneous_approvals_send_one_write(cms, monkeypatch):
             release.set()
         assert first.result(timeout=3).status_code == 303
     assert len(writes(cms)) == 1 and row(change).state == 'applied'
+
+
+@pytest.mark.parametrize('api_base', ['https://atelier.example', 'https://atelier.example/wordpress'])
+def test_core_subdirectory_keeps_credentials_on_api_base_and_resolves_public_permalink(monkeypatch, api_base):
+    requested = []
+    page = {'post_id': 5, 'post_status': 'publish', 'post_type': 'page', 'permalink': URL,
+            'seo_title': None, 'meta_description': None}
+    monkeypatch.setattr(wp, 'public_address', lambda host: '93.184.216.34')
+    class Connection:
+        def __init__(self, host, address):
+            assert host == 'atelier.example' and address == '93.184.216.34'
+        def request(self, method, path, **kwargs):
+            assert method == 'GET' and kwargs['headers']['Authorization'].startswith('Basic ')
+            requested.append(path)
+        def getresponse(self):
+            return SimpleNamespace(status=200, read=lambda size: json.dumps([page]).encode(), getheader=lambda *args: 'application/json')
+        def close(self):
+            pass
+    monkeypatch.setattr(wp, '_PinnedHTTPS', Connection)
+    client = wp.WordPressClient({'site_url': api_base, 'username': 'editor', 'password': 'application-password'})
+    assert client.read(URL)['post_id'] == 5
+    assert len(requested) == 1
+    expected_prefix = urlsplit(api_base).path + '/wp-json/wp-abilities/v1/abilities/' + wp.READ + '/run?'
+    assert requested[0].startswith(expected_prefix)
+    assert parse_qs(urlsplit(requested[0]).query) == {'input[permalink]': [URL]}

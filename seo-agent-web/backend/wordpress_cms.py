@@ -151,9 +151,10 @@ class WordPressClient:
     def contains(self, url):
         try:
             p, base = urlsplit(url), urlsplit(self.credentials["site_url"])
+            # WordPress core can live in /wordpress while public permalinks live at /.
+            # Credentials always go to the configured API base; the permalink is only input.
             return (p.scheme == "https" and p.hostname == base.hostname and p.port in {None, 443}
-                    and not p.username and not p.password
-                    and (p.path == base.path or p.path.startswith(base.path.rstrip("/") + "/")))
+                    and not p.username and not p.password)
         except (ValueError, TypeError):
             return False
 
