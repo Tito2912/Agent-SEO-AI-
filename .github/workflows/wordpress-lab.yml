@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     env:
       NOYARU_LAB_PYTHON: python
-      NOYARU_LAB_REPORT: ${{ runner.temp }}/wordpress-lab-report.json
+      NOYARU_LAB_REPORT: ${{ github.workspace }}/wordpress-lab-report.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,6 +47,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wordpress-yoast-report
-          path: ${{ runner.temp }}/wordpress-lab-report.json
+          path: ${{ github.workspace }}/wordpress-lab-report.json
           if-no-files-found: error
           retention-days: 14
