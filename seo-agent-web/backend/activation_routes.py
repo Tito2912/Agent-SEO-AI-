@@ -4,13 +4,14 @@ from __future__ import annotations
 import csv
 import io
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 try:
-    from . import customer_activation
+    from . import customer_activation, signup_attribution
 except ImportError:
     import customer_activation
+    import signup_attribution
 
 router = APIRouter()
 
@@ -35,10 +36,16 @@ def metrics(request, date_from, date_to):
 
 
 @router.get('/settings/activation')
-def activation_page(request: Request, date_from: str = '', date_to: str = ''):
+def activation_page(request: Request, date_from: str = '', date_to: str = '', msg: str = '', err: str = ''):
     data = metrics(request, date_from, date_to)
+    m = module()
+    try:
+        campaigns = signup_attribution.links(m.DB, m._public_base_url(request))
+    except Exception:
+        raise HTTPException(503, 'Les liens de campagne ne sont pas disponibles pour le moment.') from None
     response = module().templates.TemplateResponse('settings_activation.html', {
         'request': request, 'project': None, 'metrics': data,
+        'campaigns': campaigns, 'campaign_mediums': signup_attribution.MEDIUMS, 'msg': msg, 'err': err,
     })
     response.headers['Cache-Control'] = 'no-store'
     return response
@@ -65,3 +72,46 @@ def activation_csv(request: Request, date_from: str = '', date_to: str = ''):
         'Cache-Control': 'no-store',
         'Content-Disposition': f'attachment; filename="activation-{data["date_from"]}-{data["date_to"]}.csv"',
     })
+
+
+@router.get('/settings/activation/acquisition.csv')
+def acquisition_csv(request: Request, date_from: str = '', date_to: str = ''):
+    data = metrics(request, date_from, date_to)
+    output = io.StringIO(newline='')
+    writer = csv.writer(output, delimiter=';')
+    writer.writerow(['Inscrits du', 'Au', 'Source', 'Support', 'Campagne', 'Inscriptions suivies', 'Site ajouté',
+                     'Analyse exploitable', 'Correction vérifiée', 'Bilan sans anomalie', 'Conversion correction (%)'])
+    for group in data['acquisition']:
+        writer.writerow([data['date_from'], data['date_to'], group['source'] or 'Origine non renseignée',
+                         group['medium'], group['campaign'], *group['counts'], group['clean'],
+                         str(group['rate']).replace('.', ',')])
+    return Response(('\ufeff' + output.getvalue()).encode('utf-8'), media_type='text/csv; charset=utf-8', headers={
+        'Cache-Control': 'no-store',
+        'Content-Disposition': f'attachment; filename="campagnes-{data["date_from"]}-{data["date_to"]}.csv"',
+    })
+
+
+@router.post('/settings/activation/campaigns')
+def create_campaign(request: Request, source: str = Form(''), medium: str = Form(''), campaign: str = Form('')):
+    m = module()
+    m._require_system_owner(request)
+    try:
+        signup_attribution.create(m.DB, source, medium, campaign)
+    except ValueError as error:
+        return RedirectResponse(m._path_with_flash('/settings/activation', err=str(error)) + '#campaign-links', status_code=303)
+    except Exception:
+        raise HTTPException(503, 'Le lien n’a pas pu être préparé. Réessayez dans quelques instants.') from None
+    return RedirectResponse(m._path_with_flash('/settings/activation', msg='Lien de campagne prêt à copier.') + '#campaign-links', status_code=303)
+
+
+@router.post('/settings/account/attribution/withdraw')
+def withdraw_attribution(request: Request):
+    m = module()
+    user = getattr(request.state, 'user', None)
+    if not user:
+        raise HTTPException(401, 'auth_required')
+    try:
+        signup_attribution.withdraw(m.DB, user.id)
+    except Exception:
+        raise HTTPException(503, 'Votre choix n’a pas pu être enregistré. Réessayez dans quelques instants.') from None
+    return RedirectResponse(m._path_with_flash('/settings/accounts', msg='Votre accord a été retiré et l’origine de votre inscription effacée.') + '#signup-attribution', status_code=303)

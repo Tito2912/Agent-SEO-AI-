@@ -28,9 +28,9 @@
 
   <article>
     <nav class="content-breadcrumb" aria-label="Fil d'Ariane">
-      <a href="/">Accueil</a>
+      <a href="{{ campaign_link(request, '/') }}">Accueil</a>
       <span>/</span>
-      <a href="/ressources-seo">Guides SEO</a>
+      <a href="{{ campaign_link(request, '/ressources-seo') }}">Guides SEO</a>
       <span>/</span>
       <span>{{ page.title }}</span>
     </nav>
@@ -65,10 +65,10 @@
         <h2>Mettre ce guide en pratique</h2>
         <p>{{ page.cta }}</p>
         {% if request.state.user %}
-          <a class="btn primary" href="/">Ouvrir le tableau de bord &rarr;</a>
+          <a class="btn primary" href="{{ campaign_link(request, '/') }}">Ouvrir le tableau de bord &rarr;</a>
         {% else %}
-          <a class="btn primary" href="/auth/signup">Créer un compte gratuit</a>
-          <a class="btn" href="/docs">Voir la documentation</a>
+          <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Créer un compte gratuit</a>
+          <a class="btn" href="{{ campaign_link(request, '/docs') }}">Voir la documentation</a>
         {% endif %}
       </section>
     {% endif %}
@@ -78,7 +78,7 @@
         <h2>À lire ensuite</h2>
         <div class="content-related-list">
           {% for item in related %}
-            <a class="content-related-link" href="{{ item.path }}">
+            <a class="content-related-link" href="{{ campaign_link(request, item.path) }}">
               {{ item.title }}
               <span>{{ item.kind }} &middot; {{ item.reading_time }}</span>
             </a>

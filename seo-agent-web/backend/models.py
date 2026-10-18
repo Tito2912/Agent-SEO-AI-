@@ -33,6 +33,18 @@ class User(Base):
     projects: Mapped[list["Project"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
 
+class AcquisitionCampaign(Base):
+    """System-owner campaign labels; no click or visitor records."""
+    __tablename__ = "acquisition_campaigns"
+    __table_args__ = (UniqueConstraint("source", "medium", "name", name="uq_acquisition_campaign_labels"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    source: Mapped[str] = mapped_column(String(40), nullable=False)
+    medium: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class AccountActivation(Base):
     """First observed milestones survive project removal; account deletion removes the row."""
     __tablename__ = "account_activations"
@@ -44,6 +56,9 @@ class AccountActivation(Base):
     audit_available_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     correction_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     clean_audit_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    acquisition_campaign_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("acquisition_campaigns.id", ondelete="SET NULL"), nullable=True)
+    acquisition_consented_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Project(Base):

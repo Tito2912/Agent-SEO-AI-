@@ -43,13 +43,13 @@ main.container { max-width: 900px; }
 {% block content %}
 <article class="conf">
   <h1>Politique de confidentialité</h1>
-  <p class="conf-date">Mise à jour le 30 septembre 2026</p>
+  <p class="conf-date">Mise à jour le 18 octobre 2026</p>
 
   <p class="conf-resume">
     En bref : {{ app_name }} traite les données nécessaires pour analyser votre site, corriger votre
     code et vous facturer. L'application est hébergée aux <strong>États-Unis</strong>, et plusieurs
     prestataires — dont les fournisseurs d'intelligence artificielle — y sont établis. Vos données ne
-    sont ni vendues, ni utilisées pour de la publicité. Vous pouvez supprimer votre compte à tout
+    sont ni vendues, ni utilisées pour vous cibler publicitairement. Vous pouvez supprimer votre compte à tout
     moment depuis vos paramètres.
   </p>
 
@@ -71,6 +71,7 @@ main.container { max-width: 900px; }
         <tr><th scope="row">Équipe</th><td>Adresses e-mail des collaborateurs que vous invitez.</td></tr>
         <tr><th scope="row">Facturation</th><td>Plan, identifiants client et abonnement Stripe, factures. Le paiement se fait sur une page Stripe : aucune donnée de carte ne passe par nos serveurs.</td></tr>
         <tr><th scope="row">Données techniques</th><td>Journaux du serveur (adresse IP, navigateur, adresses demandées), utilisés pour la sécurité et le diagnostic.</td></tr>
+        <tr><th scope="row">Parcours client</th><td>Dates des premières étapes atteintes : compte créé, site ajouté, analyse exploitable et correction vérifiée. Avec votre accord facultatif à l’inscription : source, support et nom de la campagne d’origine, ainsi que la date de votre accord.</td></tr>
       </tbody>
     </table>
   </div>
@@ -81,6 +82,8 @@ main.container { max-width: 900px; }
     <li><strong>Facturer</strong> — exécution du contrat, et obligations comptables et fiscales.</li>
     <li><strong>Vous écrire</strong> — vérification d'adresse, mot de passe oublié, validation d'une page rédigée : exécution du contrat.</li>
     <li><strong>Sécuriser le service</strong> — limitation des abus, protection des comptes, diagnostic des erreurs : notre intérêt légitime à faire fonctionner un service sûr.</li>
+    <li><strong>Améliorer le parcours client</strong> — statistiques des premières étapes du service : notre intérêt légitime à repérer les difficultés d’utilisation. Les résultats présentés sont des compteurs agrégés.</li>
+    <li id="signup-attribution"><strong>Mesurer les campagnes qui font connaître Noyaru</strong> — uniquement avec votre consentement facultatif, demandé par une case non cochée à l’inscription. Nous relions les trois libellés du lien de campagne à vos premières étapes dans le service. Aucun cookie de suivi, pixel publicitaire ou identifiant de clic n’est utilisé pour cette mesure. Ces données ne sont envoyées à aucune plateforme publicitaire. Vous pouvez retirer votre accord et effacer cette origine à tout moment dans <a href="/settings/accounts#signup-attribution">Comptes &amp; connexions</a>. Votre compte et les fonctions du service restent accessibles si vous refusez ou retirez votre accord.</li>
   </ul>
 
   <h2>4. Nos prestataires, et où ils se trouvent</h2>
@@ -126,6 +129,7 @@ main.container { max-width: 900px; }
   <h2>7. Combien de temps</h2>
   <ul>
     <li><strong>Compte, projets et contenus</strong> — tant que votre compte existe.</li>
+    <li><strong>Origine de l’inscription</strong> — jusqu’au retrait de votre accord ou à la suppression du compte. Le retrait efface l’association à la campagne et la date d’accord dans la base active ; les statistiques sont recalculées sans cette attribution. Les sauvegardes antérieures disparaissent au terme de leurs 30 jours de conservation.</li>
     <li><strong>À la suppression du compte</strong> — l'abonnement Stripe est résilié et le client Stripe supprimé, les accès Search Console révoqués, le compte et ses projets effacés ; dans le journal d'audit, votre identité est retirée des événements. Les sauvegardes qui les contiennent encore disparaissent au terme de leurs 30 jours de conservation.</li>
     <li><strong>Factures</strong> — le temps des obligations comptables (dix ans en France), chez Stripe.</li>
     <li><strong>Journaux techniques</strong> — la durée de conservation de notre hébergeur.</li>

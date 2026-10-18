@@ -6,6 +6,7 @@
     <title>Créer un compte - Noyaru</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=24" />
+    <link rel="stylesheet" href="/static/attribution.css?v=1" />
   </head>
   <body>
     <main class="auth-shell">
@@ -13,7 +14,7 @@
 
         <!-- Brand header -->
         <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="/" aria-label="Noyaru - Accueil" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
+          <a href="{{ campaign_link(request, '/') }}" aria-label="Noyaru - Accueil" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
           <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">Audit SEO Intelligent</p>
         </div>
 
@@ -39,6 +40,16 @@
         <form method="post" action="/auth/signup">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
+
+          {% if acquisition_campaign %}
+          <input type="hidden" name="acquisition_campaign" value="{{ acquisition_campaign.id }}" />
+          <label class="signup-attribution-choice">
+            <input type="checkbox" name="acquisition_consent" value="yes" />
+            <span>J’accepte que Noyaru relie la campagne qui m’a amené ici à mes premiers résultats.
+              <span class="muted small">Facultatif, sans effet sur votre compte. Retrait à tout moment dans « Comptes &amp; connexions ». <a href="{{ campaign_link(request, '/privacy#signup-attribution') }}">En savoir plus</a>.</span>
+            </span>
+          </label>
+          {% endif %}
 
           <button
             class="btn block"
@@ -82,12 +93,12 @@
 
           <div class="row-actions">
             <button class="btn primary" type="submit" {% if signup_disabled %}disabled{% endif %}>Créer le compte</button>
-            <a class="btn" href="/auth/login?next={{ next_q }}">J'ai déjà un compte</a>
+            <a class="btn" href="{{ campaign_link(request, '/auth/login?next=' ~ next_q) }}">J'ai déjà un compte</a>
           </div>
         </form>
 
         <p class="muted small" style="margin:18px 0 0; text-align:center;">
-          En créant un compte, vous acceptez les <a href="/terms">CGU</a> et la <a href="/privacy">politique de confidentialité</a>.
+          En créant un compte, vous acceptez les <a href="{{ campaign_link(request, '/terms') }}">CGU</a> et la <a href="{{ campaign_link(request, '/privacy') }}">politique de confidentialité</a>.
         </p>
 
       </section>
