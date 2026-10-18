@@ -49,6 +49,8 @@
       <details class="technical-details"><summary>Détails techniques</summary><code>{{ project.issue.key }}</code> · <code>{{ project.timestamp }}</code></details>
     </div>
 
+    {% include "_cms_guidance.html" %}
+
     <div class="metric-band" style="margin-bottom:16px;">
       <div class="metric-tile">
         <div class="metric-tile-label">Occurrences</div>
@@ -458,6 +460,7 @@
 {% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="/static/cms.css?v=1" />
 <script>
 (function () {
   /* ── Issue-level task status ── */

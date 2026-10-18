@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block title %}Préparer une correction WordPress{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Préparer</span>{% endblock %}
+{% block content %}<div class="cms-page">
+  <div class="page-header"><h1>Préparer {% if field == 'seo_title' %}le titre SEO{% else %}la méta-description{% endif %}</h1><p class="muted">{{ task.issue_label }}</p></div>
+  <section class="card">
+    <h2>{{ page.post_title }}</h2><p class="cms-url"><a href="{{ task.url }}" target="_blank" rel="noreferrer">{{ task.url }}</a></p>
+    <p class="muted">Valeur actuelle affichée : {{ page[field ~ '_rendered'] or 'Non renseignée' }}</p>
+    <form method="post" action="/projects/{{ slug }}/cms/wordpress/preview" class="cms-form">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
+      <label>{{ field_label }}{% if field == 'seo_title' %}<input name="value" value="{{ page[field] or '' }}" maxlength="400" required />{% else %}<textarea name="value" maxlength="2000" rows="4" required>{{ page[field] or '' }}</textarea>{% endif %}</label>
+      <p class="muted small">Écrivez un texte précis et propre à cette page. {% if field == 'seo_title' %}Visez environ 50 à 60 caractères.{% else %}Visez environ 140 à 160 caractères.{% endif %}</p>
+      <button class="btn primary" type="submit">Voir l’avant/après</button>
+      <p class="muted small">Vous validerez l’enregistrement à l’étape suivante.</p>
+    </form>
+  </section><a href="/projects/{{ slug }}/first-correction">Revenir aux instructions</a>
+</div>{% endblock %}

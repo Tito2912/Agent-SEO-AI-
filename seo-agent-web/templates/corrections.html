@@ -868,6 +868,9 @@
       </div>
 
       <div class="corr-item-detail" style="display:none;">
+        {% if wordpress_connected and task.cms_supported and task.status not in ['done', 'ignored'] %}
+          <p><a class="btn" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ task.id }}">Préparer dans WordPress</a></p>
+        {% endif %}
         <textarea class="corr-note" rows="2" placeholder="Note (optionnel)…">{{ task.user_note or '' }}</textarea>
         <div class="corr-segmented">
           {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Corrigé'),('ignored','Ignoré')] %}

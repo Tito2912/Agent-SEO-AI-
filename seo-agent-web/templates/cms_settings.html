@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block title %}CMS et intégrations - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">CMS et intégrations</span>{% endblock %}
+{% block content %}
+<div class="cms-page">
+  <div class="page-header"><h1>Votre site, vos outils</h1><p class="muted">Retrouvez les bons réglages et préparez vos corrections depuis Noyaru.</p></div>
+  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+  <section class="card">
+    <h2>Sur quelle plateforme est votre site ?</h2>
+    <p class="muted">Ce choix adapte les instructions de correction pour ce projet.</p>
+    <form method="post" action="/projects/{{ slug }}/cms/platform" class="cms-form">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <label>Plateforme<select name="platform" id="cms-platform">{% for key, label in platforms.items() %}<option value="{{ key }}" {% if site.platform == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <label id="cms-plugin">Extension SEO WordPress<select name="seo_plugin">{% for key, label in seo_plugins.items() %}<option value="{{ key }}" {% if site.seo_plugin == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      {% if wordpress.connected %}<p class="muted small">Choisir une autre plateforme ou une autre extension SEO retire la connexion WordPress de ce projet.</p>{% endif %}
+      <button class="btn" type="submit">Enregistrer ma plateforme</button>
+    </form>
+  </section>
+  <section class="card">
+    <div class="cms-heading"><h2>WordPress + Yoast SEO</h2><span class="badge {% if wordpress.connected %}ok{% endif %}">{% if wordpress.connected %}Connecté{% else %}Disponible en pilote{% endif %}</span></div>
+    <p>Appliquez un titre SEO ou une méta-description sur une page ou un article publié, après avoir validé l’aperçu.</p>
+    {% if wordpress.connected %}
+      <p class="muted">Compte : {{ wordpress.label }}. Noyaru revérifie l’accès lors de chaque opération.</p>
+      <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/corrections">Choisir une correction</a>
+      <form method="post" action="/projects/{{ slug }}/cms/wordpress/disconnect"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn" type="submit">Déconnecter WordPress</button></form></div>
+    {% else %}
+      <p class="muted small">WordPress 6.9 minimum, Yoast SEO 28.7 minimum, données SEO optimisées et compte autorisé à modifier les métadonnées Yoast. La disponibilité est vérifiée à la connexion.</p>
+      <details class="cms-help"><summary>Où trouver le mot de passe d’application ?</summary><p>Dans WordPress, ouvrez Utilisateurs → Profil → Mots de passe d’application. Créez un accès nommé « Noyaru », puis copiez le mot de passe affiché. Utilisez cet accès dédié ici.</p><a href="https://wordpress.org/documentation/article/users-your-profile-screen/#application-passwords" target="_blank" rel="noreferrer">Aide WordPress</a></details>
+      <form method="post" action="/projects/{{ slug }}/cms/wordpress/connect" class="cms-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <label>Adresse HTTPS de WordPress<input type="url" name="site_url" placeholder="https://monsite.fr" required autocomplete="url" /><span class="muted small">Même domaine que {{ project.base_url }}. Ajoutez le sous-dossier si WordPress y est installé.</span></label>
+        <label>Identifiant WordPress<input name="username" required maxlength="200" autocomplete="off" /></label>
+        <label>Mot de passe d’application<input type="password" name="password" required maxlength="200" autocomplete="new-password" /></label>
+        <button class="btn primary" type="submit">Vérifier et connecter WordPress</button>
+        <p class="muted small">La connexion vérifie l’accès. Chaque correction demande ensuite votre validation.</p>
+      </form>
+    {% endif %}
+  </section>
+  {% if history %}<section class="card"><h2>Vos dernières opérations WordPress</h2><ul class="cms-history">{% for change in history %}<li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}">{{ change.data.url }}</a><span class="muted small">{{ {'preview':'Aperçu à valider','applied':'Enregistrée','restored':'Valeur rétablie'}.get(change.state,'À confirmer') }}</span></li>{% endfor %}</ul></section>{% endif %}
+  <section class="card"><h2>Autres plateformes</h2><p class="muted">Les instructions guidées sont disponibles pour Shopify, Webflow, Wix et WordPress avec Rank Math. Vous effectuez la modification dans votre plateforme, puis Noyaru contrôle le résultat après une nouvelle analyse.</p><a class="btn" href="/projects/{{ slug }}/first-correction">Reprendre ma correction</a></section>
+</div>
+<script>document.addEventListener('DOMContentLoaded',function(){const select=document.getElementById('cms-platform');const plugin=document.getElementById('cms-plugin');function update(){plugin.hidden=select.value!=='wordpress';}select.addEventListener('change',update);update();});</script>
+{% endblock %}
