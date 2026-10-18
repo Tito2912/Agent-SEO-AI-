@@ -99,6 +99,7 @@ try:
     from . import correction_guard
     from . import correction_journal
     from . import first_correction
+    from . import customer_activation
     from . import cms_guidance
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -106,6 +107,7 @@ except ImportError:
     import correction_guard
     import correction_journal
     import first_correction
+    import customer_activation
     import cms_guidance
 
 try:
@@ -5251,6 +5253,7 @@ def _verify_corrections_after_crawl(
     user_id: str | None = None, crawl_ts: str = "",
 ) -> None:
     """Resolve only defects whose scope was successfully revisited by a newer crawl."""
+    customer_activation.observe_report(DB, slug, report, user_id=user_id)
     try:
         issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
         if not isinstance(report.get("issues"), dict):
@@ -5336,6 +5339,7 @@ def _verify_corrections_after_crawl(
 
             now_iso = datetime.now(timezone.utc).isoformat()
             changed = False
+            activation_verified = False
             for t in tasks:
                 key = str(t.issue_key or "")
                 if key == _KEYWORD_REWRITE_KEY:
@@ -5412,6 +5416,9 @@ def _verify_corrections_after_crawl(
                 result = "unverified" if reason else ("still_present" if still_present else "resolved")
                 if t.status == "in_progress" and result == "still_present" and not note_obj.get("first_correction"):
                     continue
+                # Activation requires a real defect on a target in the retained baseline.
+                activation_verified |= result == "resolved" and customer_activation.has_baseline_defect(
+                    baseline, family, scope, _verification_url)
                 prev = note_obj.get("verify") if isinstance(note_obj.get("verify"), dict) else {}
                 if prev.get("result") == result and prev.get("crawl_ts") == crawl_ts:
                     continue
@@ -5439,6 +5446,8 @@ def _verify_corrections_after_crawl(
                 changed = True
             if changed:
                 db.commit()
+        if activation_verified:
+            customer_activation.observe_report(DB, slug, report, user_id=str(proj.owner_user_id), verified=True)
     except Exception:
         logger.exception("[verify] correction verification failed for slug=%s", slug)
 
@@ -37680,3 +37689,11 @@ try:
 except ImportError:
     from cms_routes import router as cms_router
 app.include_router(cms_router)
+
+
+customer_activation.install()
+try:
+    from .activation_routes import router as activation_router
+except ImportError:
+    from activation_routes import router as activation_router
+app.include_router(activation_router)

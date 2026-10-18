@@ -153,6 +153,10 @@
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>
               Exploitation
             </a>
+            <a class="nav-item {% if request.url.path.startswith('/settings/activation') %}active{% endif %}" href="/settings/activation">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16l-6 8v7l-4 2v-9z"/></svg>
+              Parcours clients
+            </a>
             <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}" href="/settings/system">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
               Système

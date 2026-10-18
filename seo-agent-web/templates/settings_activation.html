@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block title %}Parcours clients - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/activation.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/settings/operations">Exploitation</a><span class="crumb-sep">/</span><span class="crumb-current">Parcours clients</span>{% endblock %}
+{% block actions %}<a class="btn" href="/settings/activation.csv?date_from={{ metrics.date_from }}&amp;date_to={{ metrics.date_to }}">Exporter les cohortes (CSV)</a>{% endblock %}
+{% macro number(value) %}{{ "{:,}".format(value).replace(',', ' ') }}{% endmacro %}
+{% macro rate(value) %}{% if value is not none %}{{ ('%.1f'|format(value)).replace('.', ',') }} %{% else %}—{% endif %}{% endmacro %}
+{% block content %}
+<div class="activation-page">
+  <div class="page-header"><h1>Des inscriptions aux premiers résultats</h1><p class="muted">Voyez jusqu’où avancent vos nouveaux clients et quelles étapes restent à atteindre.</p></div>
+  <form class="activation-period card" method="get" action="/settings/activation">
+    <div><h2>Période d’inscription</h2><p class="muted small">Les étapes atteintes depuis l’inscription sont observées jusqu’à aujourd’hui.</p></div>
+    <label>Du<input type="date" name="date_from" value="{{ metrics.date_from }}" max="{{ metrics.today }}" required /></label>
+    <label>Au<input type="date" name="date_to" value="{{ metrics.date_to }}" max="{{ metrics.today }}" required /></label>
+    <button type="submit" class="btn">Afficher</button>
+  </form>
+
+  {% if not metrics.steps[0].count %}
+    <section class="card activation-empty"><h2>Le suivi attend ses premières inscriptions</h2><p class="muted">Aucune nouvelle inscription suivie sur cette période. Les prochains comptes créés alimenteront ce parcours automatiquement.</p></section>
+  {% endif %}
+  <div class="activation-funnel" aria-label="Étapes du parcours client">
+    {% for step in metrics.steps %}
+      <section class="card activation-step"><span class="activation-step-label">{{ loop.index }} · {{ step.label }}</span><strong>{{ number(step.count) }}</strong><p>{{ rate(step.rate) }} <span class="muted small">des inscriptions suivies</span></p><progress max="100" value="{{ step.rate or 0 }}" aria-label="{{ step.label }} : {{ step.count }} comptes"></progress>{% if not loop.first %}<span class="muted small">{{ rate(step.previous_rate) }} depuis l’étape précédente</span>{% endif %}</section>
+    {% endfor %}
+  </div>
+
+  <div class="activation-panels">
+    <section class="card activation-value"><span class="badge ok">Première valeur obtenue</span><h2>{{ number(metrics.value_count) }} compte{% if metrics.value_count != 1 %}s{% endif %} · {{ rate(metrics.value_rate) }}</h2><p class="muted">Une correction réellement vérifiée ou un bilan complet sans anomalie.</p><p class="small">{{ number(metrics.steps[3].count) }} avec une correction vérifiée · {{ number(metrics.clean_count) }} avec un bilan sans anomalie, sans correction vérifiée.</p></section>
+    <section class="card"><h2>Étapes restant à atteindre</h2><ul class="activation-waiting">{% for item in metrics.waiting %}<li><span>{{ item.label }}</span><strong>{{ number(item.count) }}</strong></li>{% endfor %}</ul><p class="muted small">Ces comptes peuvent encore avancer. Une étape non atteinte ne prouve pas un abandon.</p></section>
+  </div>
+
+  <section class="card"><h2>Avancement par semaine d’inscription</h2><p class="muted small">Une ligne regroupe les comptes inscrits cette semaine, dans la période choisie. Les cohortes récentes ont eu moins de temps pour avancer.</p><div class="table-wrap"><table class="table compact"><thead><tr><th>Semaine du</th><th>Inscrits</th><th>Site ajouté</th><th>Analyse</th><th>Correction vérifiée</th><th>Bilan sans anomalie</th><th>Conversion correction</th></tr></thead><tbody>{% for week in metrics.weeks %}<tr><td>{{ week.week[8:10] }}/{{ week.week[5:7] }}/{{ week.week[:4] }}</td>{% for count in week.counts %}<td>{{ number(count) }}</td>{% endfor %}<td>{{ number(week.clean) }}</td><td>{{ rate(week.rate) }}</td></tr>{% else %}<tr><td colspan="7" class="muted">Aucune cohorte suivie sur cette période.</td></tr>{% endfor %}</tbody></table></div></section>
+
+  <details class="card activation-method"><summary>Comprendre les chiffres</summary><ul><li>Chaque compte est compté une seule fois, même s’il possède plusieurs sites. Les actions d’un membre d’équipe bénéficient au propriétaire du projet.</li><li>Les comptes administrateurs et les inscriptions issues d’une invitation d’équipe sont exclus du parcours.</li><li>Une analyse doit contenir une page HTML visitée avec succès. Une tâche déclarée « corrigée » ou une modification enregistrée dans le CMS ne suffit pas à confirmer une correction.</li><li>Les premières étapes atteintes sont conservées si un site est supprimé, si une correction est rétablie ou si le site régresse ensuite. Ce suivi mesure le parcours passé, pas la santé actuelle du site.</li><li>La mesure commence avec cette version. {{ number(metrics.untracked) }} inscription{% if metrics.untracked != 1 %}s{% endif %} de la période sans suivi initial et {{ number(metrics.invited) }} inscription{% if metrics.invited != 1 %}s{% endif %} par invitation sont écartées. L’historique ancien n’est pas reconstruit.</li></ul><p class="muted small">Dates et semaines en heure de Paris. Actualisé le {{ metrics.generated_at }}. Les chiffres regroupent toutes les sources d’inscription.</p></details>
+</div>
+{% endblock %}
