@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+{% set account = dossier.account %}
+{% block title %}Fiche client - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/customer-profile.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><a href="/settings/activation/accounts">Comptes clients</a><span class="crumb-sep">/</span><span class="crumb-current">Fiche client</span>{% endblock %}
+{% block actions %}<a class="btn" href="{{ account.profile_url }}/export.csv">Exporter la fiche (CSV)</a>{% endblock %}
+{% macro stored(connection) %}<span class="badge {% if connection.saved %}ok{% endif %}">{{ 'Enregistrée' if connection.saved else 'Non retrouvée en base' }}</span>{% if connection.date %}<span class="profile-date muted small">{{ connection.date }}</span>{% endif %}{% endmacro %}
+{% block content %}
+<div class="customer-profile">
+  <div class="page-header"><h1>{{ account.email }}</h1><p class="muted">Fiche du compte · Lecture : {{ dossier.generated_at }} (Paris)</p></div>
+  {% if not account.site_count and not account.analysis_count and not dossier.login_count %}<p class="profile-empty-evidence">Le compte existe, mais les données disponibles ne permettent pas encore de confirmer une utilisation du produit. La vérification de l’email et l’association Google sont indiquées séparément.</p>{% endif %}
+  <div class="profile-summary">
+    <section class="card"><span class="muted small">Formule actuelle</span><strong>{{ account.plan_label }}</strong><span class="small">{{ account.access_label }}</span></section>
+    <section class="card"><span class="muted small">Vérification de l’email</span><strong class="profile-status">{{ account.verification_label }}</strong><span class="small muted">{{ account.email_verified_at or 'Aucune date de validation conservée' }}</span></section>
+    <section class="card"><span class="muted small">Sites possédés actuellement</span><strong>{{ account.site_count }}</strong><span class="small muted">{{ dossier.members }} collaborateur{% if dossier.members != 1 %}s{% endif %} dans ce compte</span></section>
+    <section class="card"><span class="muted small">Analyses enregistrées</span><strong>{{ account.analysis_count }}</strong><span class="small muted">Tous les états, y compris attente et échec</span></section>
+  </div>
+  <div class="profile-columns">
+    <section class="card"><h2>Compte et accès</h2><dl class="profile-facts">
+      <div><dt>Identifiant</dt><dd><code>{{ account.user_id }}</code></dd></div>
+      <div><dt>Inscription</dt><dd>{{ account.created_at }} (Paris)</dd></div>
+      <div><dt>Google associé</dt><dd>{{ 'Oui' if account.google_linked else 'Non retrouvé' }}{% if dossier.google_since %}<span class="profile-date muted small">Depuis le {{ dossier.google_since }} (Paris)</span>{% endif %}</dd></div>
+      <div><dt>Fin de période d’abonnement</dt><dd>{{ account.current_period_end or 'Non renseignée' }}</dd></div>
+      <div><dt>Pays renseigné</dt><dd>{{ account.country or 'Non renseigné' }}</dd></div>
+      <div><dt>Langue renseignée</dt><dd>{{ account.language or 'Non renseignée' }}</dd></div>
+      <div><dt>Fuseau renseigné</dt><dd>{{ account.timezone or 'Non renseigné' }}</dd></div>
+    </dl><p class="small muted">Ces préférences sont celles renseignées dans le compte ; elles ne constituent pas une géolocalisation.</p></section>
+    <section class="card"><h2>Connexions connues</h2><dl class="profile-facts">
+      <div><dt>Première connexion conservée</dt><dd>{{ dossier.first_login_at or 'Non renseignée' }}</dd></div>
+      <div><dt>Dernière connexion conservée</dt><dd>{{ account.last_login_at or 'Non renseignée' }}</dd></div>
+      <div><dt>Connexions réussies conservées</dt><dd>{{ dossier.login_count }}</dd></div>
+      <div><dt>Par email et mot de passe</dt><dd>{{ dossier.password_login_count }}</dd></div>
+      <div><dt>Par Google</dt><dd>{{ dossier.google_login_count }}</dd></div>
+    </dl><p class="small muted">Dates en heure de Paris. Ces chiffres portent sur les journaux disponibles. Une session déjà ouverte, une inscription ou l’association Google ne prouvent pas une nouvelle connexion. Une information absente ne prouve pas une absence d’utilisation.</p></section>
+  </div>
+  <section class="card"><div class="profile-section-head"><h2>Consommation du mois</h2><span class="muted small">{{ dossier.period }} · Mois calendaire UTC</span></div>
+    <div class="profile-table" tabindex="0" role="region" aria-label="Consommation mensuelle"><table class="table compact"><thead><tr><th>Ressource</th><th>Comptabilisé</th><th>Plafond actuel</th></tr></thead><tbody>{% for quota in dossier.quotas %}<tr><th scope="row">{{ quota.label }}</th><td>{{ quota.used }}</td><td>{{ quota.limit_label }}</td></tr>{% endfor %}</tbody></table></div>
+    <p class="small muted">Consommation nette enregistrée, après réservations et remboursements éventuels. Les opérations des collaborateurs peuvent être imputées au propriétaire. Les droits d’accès de la formule s’appliquent aussi aux fonctionnalités.</p>
+  </section>
+  <section class="card"><h2>Sites et intégrations</h2><p class="small muted">Une configuration enregistrée indique sa présence dans Noyaru. Sa validité auprès du fournisseur n’est pas vérifiée ici. Les anciennes connexions stockées hors de la base ne figurent pas dans cet état.</p>
+    <div class="profile-table" tabindex="0" role="region" aria-label="Sites et connexions enregistrées"><table class="table compact profile-sites"><thead><tr><th>Site</th><th>Ajouté le (Paris)</th><th>CMS renseigné</th><th>Google Search Console</th><th>Bing Webmaster</th><th>WordPress</th></tr></thead><tbody>{% for site in dossier.sites %}<tr><td><strong>{{ site.name }}</strong><span class="profile-url muted small">{{ site.url }}</span></td><td>{{ site.created_at }}</td><td>{{ site.platform }}</td><td>{{ stored(site.google) }}</td><td>{{ stored(site.bing) }}</td><td>{{ stored(site.wordpress) }}</td></tr>{% else %}<tr><td colspan="6" class="muted">Aucun site possédé actuellement par ce compte.</td></tr>{% endfor %}</tbody></table></div>
+    <details class="profile-extra"><summary>Autres configurations du compte</summary><dl class="profile-facts">{% for connection in dossier.connections %}<div><dt>{{ connection.label }}</dt><dd>{{ stored(connection) }}</dd></div>{% endfor %}</dl></details>
+  </section>
+  <section class="card"><h2>Analyses récentes</h2><div class="profile-job-counts">{% for item in dossier.job_counts %}<span>{{ item.label }} : <strong>{{ item.count }}</strong></span>{% endfor %}</div>
+    <p class="small muted">Les 10 dernières demandes d’analyse conservées pour ce compte. « Terminée » décrit l’exécution ; le résultat exploitable reste une étape distincte.</p>
+    <div class="profile-table" tabindex="0" role="region" aria-label="Analyses récentes"><table class="table compact"><thead><tr><th>Site</th><th>État</th><th>Demandée le (Paris)</th><th>Démarrée le (Paris)</th><th>Fin le (Paris)</th></tr></thead><tbody>{% for job in dossier.jobs %}<tr><td>{{ job.slug or 'Non renseigné' }}<details><summary class="muted small">Identifiant</summary><code>{{ job.id }}</code></details></td><td>{{ job.status }}</td><td>{{ job.created_at }}</td><td>{{ job.started_at or 'Non renseignée' }}</td><td>{{ job.finished_at or 'Non renseignée' }}</td></tr>{% else %}<tr><td colspan="5" class="muted">Aucune demande d’analyse conservée pour ce compte.</td></tr>{% endfor %}</tbody></table></div>
+  </section>
+  <div class="profile-columns">
+    <section class="card"><h2>Premières étapes observées</h2><dl class="profile-facts">{% for milestone in dossier.milestones %}<div><dt>{{ milestone.label }}</dt><dd>{{ milestone.date or 'Non renseignée' }}</dd></div>{% endfor %}</dl><p class="small muted">Dates en heure de Paris. Ce suivi a commencé récemment : les étapes anciennes ne sont pas reconstruites. Un site ou une analyse peuvent exister sans date de première étape conservée.</p></section>
+    <section class="card"><h2>Origine de l’inscription</h2>{% if dossier.campaign %}<dl class="profile-facts"><div><dt>Source</dt><dd>{{ dossier.campaign.source }}</dd></div><div><dt>Support</dt><dd>{{ dossier.campaign.medium }}</dd></div><div><dt>Campagne</dt><dd>{{ dossier.campaign.name }}</dd></div></dl><p class="small muted">Origine enregistrée avec l’accord du client à l’inscription.</p>{% else %}<p class="muted">Origine non renseignée.</p><p class="small muted">Aucune campagne reconnue et acceptée n’est disponible, ou l’accord a été retiré. Cela ne prouve pas une visite directe.</p>{% endif %}</section>
+  </div>
+  <p><a href="/settings/activation/accounts">← Retour aux comptes clients</a></p>
+</div>
+{% endblock %}
