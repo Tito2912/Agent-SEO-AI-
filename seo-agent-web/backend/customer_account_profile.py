@@ -128,6 +128,8 @@ def csv_bytes(data):
                        ('analysis_count', 'Analyses enregistrées')]:
         row('Compte', label, account[key])
     row('Compte', 'Google associé', 'Oui' if account['google_linked'] else 'Non retrouvé')
+    row('Compte', 'Nom du pays', account['country_label'])
+    row('Compte', 'Source du pays', account['country_source'])
     row('Compte', 'Google associé depuis (Paris)', data['google_since'])
     row('Compte', 'Connexions réussies connues', data['login_count'])
     row('Compte', 'Première connexion connue (Paris)', data['first_login_at'])

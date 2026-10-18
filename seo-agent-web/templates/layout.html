@@ -7,6 +7,7 @@
     <title>{% block title %}Noyaru{% endblock %}</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=25" />
+    <link rel="stylesheet" href="/static/customer-country.css?v=1" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
@@ -253,7 +254,21 @@
         </header>
 
         <div class="content">
-          <div class="content-inner app-surfaces">{% block content %}{% endblock %}</div>
+          <div class="content-inner app-surfaces">
+            {% if request.state.user and not request.state.user.country and not request.state.can_access_system_settings %}
+              {% from "_country_field.html" import country_field %}
+              <section class="card country-prompt" aria-labelledby="country-prompt-title">
+                <div><h2 id="country-prompt-title">Quel est votre pays de résidence ?</h2><p class="muted">Complétez votre compte. Vous pourrez modifier ce choix dans vos préférences.</p></div>
+                <form action="/settings/account/country" method="post">
+                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+                  <input type="hidden" name="next" value="{{ request.url.path }}" />
+                  <div class="country-field">{{ country_field('account-declared-country', required=true) }}</div>
+                  <button class="btn" type="submit">Enregistrer mon pays</button>
+                </form>
+              </section>
+            {% endif %}
+            {% block content %}{% endblock %}
+          </div>
         </div>
       </main>
 
