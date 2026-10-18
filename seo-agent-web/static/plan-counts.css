@@ -7,6 +7,7 @@
 .live-plan h3{margin:0;font-size:14px;font-weight:600}
 .live-plan strong{display:block;font-size:34px;line-height:1.25;margin:8px 0;overflow-wrap:anywhere}
 .live-plan .small{display:block;line-height:1.5}
+.live-plan-link{display:inline-flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;flex-wrap:wrap}
 .live-plans-status{display:flex;align-items:center;justify-content:space-between;gap:10px 24px;flex-wrap:wrap;font-size:13px}
 .live-plans-error{border-left:3px solid #ce9e5b;padding-left:12px;color:var(--text);line-height:1.6}
 .live-plans-method{margin-top:16px;font-size:13px}
