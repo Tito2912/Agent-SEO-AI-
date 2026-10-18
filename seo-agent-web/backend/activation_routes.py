@@ -1,4 +1,4 @@
-"""Owner-only, aggregate activation reporting. No customer identifiers leave these routes."""
+"""System-owner activation reporting and private customer account inventory."""
 from __future__ import annotations
 
 import csv
@@ -8,8 +8,9 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 try:
-    from . import customer_activation, plan_counts, signup_attribution
+    from . import customer_accounts, customer_activation, plan_counts, signup_attribution
 except ImportError:
+    import customer_accounts
     import customer_activation
     import plan_counts
     import signup_attribution
@@ -66,6 +67,35 @@ def current_plan_counts(request: Request):
     except Exception:
         raise HTTPException(503, 'La répartition des plans est indisponible pour le moment.') from None
     return JSONResponse({'ok': True, **data}, headers={'Cache-Control': 'no-store'})
+
+
+def accounts(request, plan, q, usage, page=1, export=False):
+    m = module()
+    m._require_system_owner(request)
+    try:
+        return customer_accounts.snapshot(m.DB, plan=plan, q=q, usage=usage, page=page, export=export)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    except Exception:
+        raise HTTPException(503, 'La liste des comptes est indisponible pour le moment.') from None
+
+
+@router.get('/settings/activation/accounts')
+def accounts_page(request: Request, plan: str = '', q: str = '', usage: str = 'all', page: int = 1):
+    data = accounts(request, plan, q, usage, page)
+    return module().templates.TemplateResponse('settings_customer_accounts.html', {
+        'request': request, 'project': None, 'inventory': data, 'plan_catalog': module().billing.plan_catalog(),
+        'usage_filters': customer_accounts.USAGE_FILTERS,
+    }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+
+
+@router.get('/settings/activation/accounts.csv')
+def accounts_csv(request: Request, plan: str = '', q: str = '', usage: str = 'all'):
+    data = accounts(request, plan, q, usage, export=True)
+    return Response(customer_accounts.csv_bytes(data), media_type='text/csv; charset=utf-8', headers={
+        'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+        'Content-Disposition': 'attachment; filename="comptes-clients.csv"',
+    })
 
 
 @router.get('/api/settings/activation')
