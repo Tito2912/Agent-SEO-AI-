@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Comptes clients - Noyaru{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=2" />{% endblock %}
 {% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><span class="crumb-current">Comptes clients</span>{% endblock %}
 {% block actions %}<a class="btn" href="{{ inventory.export_url }}">Exporter les résultats (CSV)</a>{% endblock %}
 {% block content %}
@@ -15,7 +15,7 @@
   <form class="card account-filters" action="/settings/activation/accounts" method="get">
     <div class="account-field account-search"><label for="account-search">Rechercher un compte</label><input id="account-search" type="search" name="q" value="{{ inventory.q }}" maxlength="320" placeholder="Email ou identifiant du compte" /></div>
     <div class="account-field"><label for="account-plan">Formule</label><select id="account-plan" name="plan"><option value="">Toutes les formules</option>{% for key, plan in plan_catalog.items() %}<option value="{{ key }}" {% if inventory.plan == key %}selected{% endif %}>{{ plan.label }}</option>{% endfor %}</select></div>
-    <div class="account-field"><label for="account-usage">Utilisation connue</label><select id="account-usage" name="usage">{% for key, label in usage_filters.items() %}<option value="{{ key }}" {% if inventory.usage == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="account-field"><label for="account-usage">Indicateur disponible</label><select id="account-usage" name="usage">{% for key, label in usage_filters.items() %}<option value="{{ key }}" {% if inventory.usage == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
     <button class="btn primary" type="submit">Afficher</button><a class="btn" href="/settings/activation/accounts">Réinitialiser</a>
   </form>
   <section class="card account-results">
@@ -23,13 +23,13 @@
     <p class="muted small">Le CSV contient tous les résultats correspondant aux filtres, sur toutes les pages. Actualisez la page pour relire les comptes.</p>
     <div class="account-table-wrap" tabindex="0" role="region" aria-label="Détails des comptes clients, tableau à défilement horizontal">
       <table class="table compact">
-        <thead><tr><th scope="col">Compte</th><th scope="col">Inscription</th><th scope="col">Formule et accès</th><th scope="col">Sites actuels</th><th scope="col">Dernière connexion connue</th><th scope="col">Étape observée</th></tr></thead>
+        <thead><tr><th scope="col">Compte</th><th scope="col">Inscription</th><th scope="col">Formule et accès</th><th scope="col">Sites et analyses</th><th scope="col">Dernière connexion connue</th><th scope="col">Étape observée</th></tr></thead>
         <tbody>{% for row in inventory.rows %}
           <tr data-account-row>
-            <td class="account-email"><strong>{{ row.email }}</strong><details><summary class="muted small">Identifiant du compte</summary><code>{{ row.user_id }}</code></details></td>
+            <td class="account-email"><strong><a href="{{ row.profile_url }}">{{ row.email }}</a></strong><span class="account-access small {% if not row.email_verified %}muted{% endif %}">{{ row.verification_label }}{% if row.google_linked %} · Google associé{% endif %}</span><a class="account-open small" href="{{ row.profile_url }}">Voir la fiche →</a><details><summary class="muted small">Identifiant du compte</summary><code>{{ row.user_id }}</code></details></td>
             <td>{{ row.created_at }}</td>
             <td><span class="badge">{{ row.plan_label }}</span><span class="account-access muted small">{{ row.access_label }}</span>{% if row.cancel_at_period_end and row.current_period_end %}<span class="account-access muted small">Fin de période : {{ row.current_period_end }}</span>{% endif %}</td>
-            <td>{{ row.site_count }}</td>
+            <td>{{ row.site_count }} site{% if row.site_count != 1 %}s{% endif %}<span class="account-access muted small">{{ row.analysis_count }} analyse{% if row.analysis_count != 1 %}s{% endif %} enregistrée{% if row.analysis_count != 1 %}s{% endif %}</span>{% if row.last_analysis_at %}<span class="account-access muted small">Dernière demande : {{ row.last_analysis_at }}</span>{% endif %}</td>
             <td>{{ row.last_login_at or 'Non renseignée' }}</td>
             <td>{{ row.milestone }}</td>
           </tr>
@@ -42,6 +42,7 @@
     <p>La formule correspond aux droits actuels synchronisés dans Noyaru, comme dans les compteurs. Les essais restent distingués des abonnements actifs. Une résiliation programmée conserve les droits jusqu’à leur changement effectif.</p>
     <p>La dernière connexion connue provient des connexions réussies par email ou Google présentes dans le journal. « Non renseignée » signifie qu’aucune date n’est disponible ; cela ne prouve pas une absence d’utilisation. Une session déjà ouverte n’ajoute pas de nouvelle connexion. Le filtre sur 30 jours utilise ces mêmes informations.</p>
     <p>Les sites sont ceux que le compte possède actuellement. L’étape observée conserve la première progression suivie, même si un site a ensuite été supprimé. L’historique ancien n’est pas reconstruit. Les dates connues de chaque étape sont incluses dans le CSV ; une case vide indique une information absente.</p>
+    <p>La vérification d’email repose sur une preuve conservée de validation. « Vérification non retrouvée » ne signifie pas que l’adresse est invalide. Google associé indique un moyen d’accès enregistré, sans garantir une utilisation récente. Les analyses correspondent aux demandes enregistrées, tous états confondus ; une analyse terminée n’est pas nécessairement un rapport exploitable. Ouvrez la fiche pour consulter leur état et la consommation du mois.</p>
   </details>
   <p><a href="/settings/activation#active-plans">← Retour aux compteurs et au parcours clients</a></p>
 </div>

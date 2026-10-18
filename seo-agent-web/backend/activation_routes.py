@@ -8,8 +8,9 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 try:
-    from . import customer_accounts, customer_activation, plan_counts, signup_attribution
+    from . import customer_account_profile, customer_accounts, customer_activation, plan_counts, signup_attribution
 except ImportError:
+    import customer_account_profile
     import customer_accounts
     import customer_activation
     import plan_counts
@@ -96,6 +97,36 @@ def accounts_csv(request: Request, plan: str = '', q: str = '', usage: str = 'al
         'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
         'Content-Disposition': 'attachment; filename="comptes-clients.csv"',
     })
+
+
+def account_profile(request, account_id):
+    m = module()
+    m._require_system_owner(request)
+    try:
+        data = customer_account_profile.snapshot(m.DB, account_id,
+            google_key=m._gsc_oauth_connection_key, bing_key=m._bing_oauth_connection_key)
+    except Exception:
+        raise HTTPException(503, 'La fiche de ce compte est indisponible pour le moment.') from None
+    if data is None:
+        raise HTTPException(404, 'Compte client introuvable dans ce périmètre.')
+    return data
+
+
+@router.get('/settings/activation/accounts/{account_id}/export.csv')
+def account_profile_csv(request: Request, account_id: str):
+    data = account_profile(request, account_id)
+    return Response(customer_account_profile.csv_bytes(data), media_type='text/csv; charset=utf-8', headers={
+        'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+        'Content-Disposition': 'attachment; filename="fiche-client.csv"',
+    })
+
+
+@router.get('/settings/activation/accounts/{account_id}')
+def account_profile_page(request: Request, account_id: str):
+    data = account_profile(request, account_id)
+    return module().templates.TemplateResponse('settings_customer_account_profile.html', {
+        'request': request, 'project': None, 'dossier': data,
+    }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
 
 
 @router.get('/api/settings/activation')

@@ -8,20 +8,22 @@ from types import SimpleNamespace
 from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, exists, func, select
 
 try:
     from . import billing, plan_counts
-    from .models import AccountActivation, AuditLog, Project, User
+    from .models import AccountActivation, AuditLog, EmailVerificationToken, JobRecord, OAuthIdentity, Project, User
 except ImportError:
     import billing
     import plan_counts
-    from models import AccountActivation, AuditLog, Project, User
+    from models import AccountActivation, AuditLog, EmailVerificationToken, JobRecord, OAuthIdentity, Project, User
 
 PAGE_SIZE = 25
 USAGE_FILTERS = {'all': 'Tous les comptes', 'with_site': 'Avec un site', 'without_site': 'Sans site',
                  'recent_login': 'Connexion connue depuis 30 jours',
-                 'no_recent_login': 'Sans connexion connue depuis 30 jours'}
+                 'no_recent_login': 'Sans connexion connue depuis 30 jours',
+                 'verified_email': 'Email vérifié', 'unverified_email': 'Vérification d’email non retrouvée',
+                 'with_analysis': 'Avec une analyse enregistrée', 'without_analysis': 'Sans analyse enregistrée'}
 STATUSES = {'active': 'actif', 'trialing': 'en essai', 'canceled': 'terminé', 'past_due': 'en retard de paiement',
             'unpaid': 'impayé', 'incomplete': 'incomplet', 'incomplete_expired': 'expiré', 'paused': 'en pause'}
 
@@ -34,7 +36,33 @@ def display_date(value):
     return utc(value).astimezone(ZoneInfo('Europe/Paris')).strftime('%d/%m/%Y à %H:%M') if value else ''
 
 
-def snapshot(database, *, plan='', q='', usage='all', page=1, export=False):
+def login_query(now):
+    """Successful logins only; Google identifies the new session by its user target."""
+    login_user = case((AuditLog.action == 'auth.google.callback', AuditLog.target_id), else_=AuditLog.actor_user_id)
+    return select(login_user.label('user_id'), func.max(AuditLog.created_at).label('last_login_at'),
+                  func.min(AuditLog.created_at).label('first_login_at'), func.count().label('login_count'),
+                  func.sum(case((AuditLog.action == 'auth.login', 1), else_=0)).label('password_login_count'),
+                  func.sum(case((AuditLog.action == 'auth.google.callback', 1), else_=0)).label('google_login_count')).where(
+        AuditLog.status == 'ok', AuditLog.created_at <= now,
+        ((AuditLog.action == 'auth.login') | ((AuditLog.action == 'auth.google.callback') &
+                                            (AuditLog.target_type == 'user')))).group_by(login_user)
+
+
+def verification_query(now):
+    return select(EmailVerificationToken.user_id,
+                  func.min(EmailVerificationToken.used_at).label('email_verified_at')).where(
+        EmailVerificationToken.used_at.is_not(None), EmailVerificationToken.used_at <= now).group_by(
+        EmailVerificationToken.user_id)
+
+
+def csv_cell(value):
+    text = str(value) if value is not None else ''
+    if text.lstrip().startswith(('=', '+', '-', '@')) or text.startswith(('\t', '\r', '\n')):
+        return "'" + text
+    return text
+
+
+def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, account_id=None):
     catalog = billing.plan_catalog()
     plan, q, usage = plan.strip().lower(), q.strip(), usage.strip()
     if plan and plan not in catalog:
@@ -44,20 +72,24 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False):
     now = datetime.now(timezone.utc)
     projects = select(Project.owner_user_id.label('user_id'), func.count(Project.id).label('site_count')).group_by(
         Project.owner_user_id).subquery()
-    # Google logs identify the newly authenticated user as the target, which may differ
-    # from the actor of the request (or be NULL). Never join successful logins by email.
-    login_user = case((AuditLog.action == 'auth.google.callback', AuditLog.target_id), else_=AuditLog.actor_user_id)
-    logins = select(login_user.label('user_id'), func.max(AuditLog.created_at).label('last_login_at')).where(
-        AuditLog.status == 'ok', AuditLog.created_at <= now,
-        ((AuditLog.action == 'auth.login') | ((AuditLog.action == 'auth.google.callback') &
-                                            (AuditLog.target_type == 'user')))).group_by(login_user).subquery()
+    logins = login_query(now).subquery()
+    verified = verification_query(now).subquery()
+    google_linked = exists(select(OAuthIdentity.id).where(OAuthIdentity.user_id == User.id, OAuthIdentity.provider == 'google'))
+    analyses = select(JobRecord.owner_user_id.label('user_id'), func.count().label('analysis_count'),
+                      func.max(JobRecord.created_at).label('last_analysis_epoch')).where(
+        JobRecord.kind == 'crawl', JobRecord.created_at <= now.timestamp()).group_by(JobRecord.owner_user_id).subquery()
     query = plan_counts.account_query(
-        User.id.label('user_id'), User.email, User.created_at,
+        User.id.label('user_id'), User.email, User.created_at, User.country, User.language, User.timezone,
         func.coalesce(projects.c.site_count, 0).label('site_count'), logins.c.last_login_at,
+        verified.c.email_verified_at, google_linked.label('google_linked'),
+        func.coalesce(analyses.c.analysis_count, 0).label('analysis_count'), analyses.c.last_analysis_epoch,
         AccountActivation.signup_observed, AccountActivation.project_added_at, AccountActivation.audit_available_at,
         AccountActivation.correction_verified_at, AccountActivation.clean_audit_at,
     ).outerjoin(projects, projects.c.user_id == User.id).outerjoin(logins, logins.c.user_id == User.id).outerjoin(
-        AccountActivation, AccountActivation.user_id == User.id).order_by(User.created_at.desc(), User.id)
+        AccountActivation, AccountActivation.user_id == User.id).outerjoin(verified, verified.c.user_id == User.id).outerjoin(
+        analyses, analyses.c.user_id == User.id).order_by(User.created_at.desc(), User.id)
+    if account_id is not None:
+        query = query.where(User.id == str(account_id))
     with database.session() as db:
         records = db.execute(query).all()
     rows, counts = [], dict.fromkeys(catalog, 0)
@@ -76,13 +108,22 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False):
         if row['cancel_at_period_end']:
             row['access_label'] += ' · résiliation prévue'
         row['recent_login'] = bool(row['last_login_at'] and utc(row['last_login_at']) >= now - timedelta(days=30))
+        row['email_verified'] = bool(row['email_verified_at'])
+        row['verification_label'] = 'Email vérifié' if row['email_verified'] else 'Vérification non retrouvée'
+        row['profile_url'] = '/settings/activation/accounts/' + row['user_id']
+        last_analysis = row.pop('last_analysis_epoch')
+        row['last_analysis_at'] = display_date(datetime.fromtimestamp(last_analysis, timezone.utc)) if last_analysis else ''
         if plan and key != plan:
             continue
         if q.casefold() not in (row['email'] + ' ' + row['user_id']).casefold():
             continue
         if ((usage == 'with_site' and not row['site_count']) or (usage == 'without_site' and row['site_count']) or
                 (usage == 'recent_login' and not row['recent_login']) or
-                (usage == 'no_recent_login' and row['recent_login'])):
+                (usage == 'no_recent_login' and row['recent_login']) or
+                (usage == 'verified_email' and not row['email_verified']) or
+                (usage == 'unverified_email' and row['email_verified']) or
+                (usage == 'with_analysis' and not row['analysis_count']) or
+                (usage == 'without_analysis' and row['analysis_count'])):
             continue
         row['milestone'] = 'Historique non suivi'
         for field, label in [('correction_verified_at', 'Correction vérifiée'), ('clean_audit_at', 'Bilan sans anomalie'),
@@ -94,7 +135,7 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False):
             if row['signup_observed']:
                 row['milestone'] = 'Inscription suivie'
         for field in ['created_at', 'last_login_at', 'current_period_end', 'project_added_at', 'audit_available_at',
-                      'correction_verified_at', 'clean_audit_at']:
+                      'correction_verified_at', 'clean_audit_at', 'email_verified_at']:
             row[field] = display_date(row[field])
         # Price IDs are only useful for shared plan resolution, never for the output.
         row.pop('stripe_price_id')
@@ -121,17 +162,15 @@ def csv_bytes(data):
               ('audit_available_at', 'Première analyse exploitable observée (Paris)'),
               ('correction_verified_at', 'Première correction vérifiée observée (Paris)'),
               ('clean_audit_at', 'Premier bilan sans anomalie observé (Paris)')]
-
-    def cell(value):
-        text = str(value) if value is not None else ''
-        if text.lstrip().startswith(('=', '+', '-', '@')) or text.startswith(('\t', '\r', '\n')):
-            return "'" + text
-        return text
-
+    fields += [('verification_label', 'Vérification email'), ('email_verified_at', 'Email vérifié le (Paris)'),
+               ('google_linked', 'Google associé'), ('analysis_count', 'Analyses enregistrées'),
+               ('last_analysis_at', 'Dernière demande d’analyse (Paris)'),
+               ('country', 'Pays renseigné'), ('language', 'Langue renseignée'), ('timezone', 'Fuseau renseigné')]
     output = io.StringIO(newline='')
     writer = csv.writer(output, delimiter=';')
     writer.writerow([title for _, title in fields] + ['Lecture (Paris)'])
     for row in data['rows']:
-        values = {**row, 'cancel_at_period_end': 'Oui' if row['cancel_at_period_end'] else 'Non'}
-        writer.writerow([cell(values[key]) for key, _ in fields] + [data['generated_at']])
+        values = {**row, 'cancel_at_period_end': 'Oui' if row['cancel_at_period_end'] else 'Non',
+                  'google_linked': 'Oui' if row['google_linked'] else 'Non'}
+        writer.writerow([csv_cell(values[key]) for key, _ in fields] + [data['generated_at']])
     return ('\ufeff' + output.getvalue()).encode('utf-8')
