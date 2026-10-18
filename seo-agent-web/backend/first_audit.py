@@ -1,0 +1,141 @@
+"""Create a personal site and use the existing, billed crawl entry point."""
+from __future__ import annotations
+
+from urllib.parse import urlsplit
+
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import RedirectResponse
+from sqlalchemy import func, select
+
+try:
+    from .models import JobRecord, Project
+except ImportError:
+    from models import JobRecord, Project
+
+router = APIRouter()
+LIVE = {"queued", "running", "cancel_requested"}
+
+
+def module():
+    if __package__:
+        from . import app
+    else:
+        import app
+    return app
+
+
+def allowance(m, user):
+    """A read-only preview; the crawl handler checks the quota again when starting."""
+    if user.is_admin:
+        return {"admin": True, "can_start": True}
+    with m.DB.session() as db:
+        plan = m.billing.effective_plan_key(db, user_id=str(user.id))
+        limits = (m.billing.plan_catalog().get(plan) or {}).get("limits") or {}
+        remaining = m.billing.remaining_quota(db, user_id=str(user.id), metric="pages_crawled_month")
+        site_count = int(db.scalar(select(func.count()).select_from(Project).where(
+            Project.owner_user_id == str(user.id))) or 0)
+    page_cap = m.billing.crawl_config_for_plan(plan)["max_pages_per_crawl"]
+    site_limit = int(limits.get("projects") or 0)
+    return {
+        "admin": False, "plan_label": (m.billing.plan_catalog().get(plan) or {}).get("label", plan),
+        "page_cap": min(page_cap, remaining) if remaining is not None else page_cap,
+        "remaining": remaining, "monthly_limit": int(limits.get("pages_crawled_month") or 0),
+        "site_limit": site_limit, "site_count": site_count,
+        "can_start": remaining != 0 and (site_limit <= 0 or site_count < site_limit),
+    }
+
+
+def failure(m, request, raw, message, status=400):
+    response = m.projects(request, err=message, first_audit_url=raw)
+    response.status_code = status
+    return response
+
+
+def resume(selected, state, live, last_job, has_crawl, clean):
+    slug = str(selected.get("slug") or "")
+    if not slug:
+        return None
+    base = f"/projects/{slug}"
+    result = {"site_name": selected.get("site_name") or slug, "href": base, "post": False}
+    if live:
+        result.update(label="Retrouver mon analyse", href=f"{base}?job={live['id']}",
+                      detail="L’analyse continue même si vous quittez cette page.")
+    elif not has_crawl:
+        retry = last_job.get("status") in {"failed", "canceled"} or selected.get("site_injoignable")
+        result.update(label="Réessayer l’analyse" if retry else "Lancer mon analyse", post=True,
+                      href=base + "/crawl", detail="Votre site est enregistré. Lancez l’analyse pour obtenir votre bilan.")
+        if retry:
+            result["detail"] = "La dernière analyse n’a pas fourni de bilan exploitable. Votre site est conservé."
+    elif state and not state.get("verified"):
+        result.update(label="Reprendre ma correction", href=base + "/first-correction",
+                      detail="Retrouvez la modification choisie et faites vérifier le résultat.")
+    else:
+        result.update(label="Voir mes résultats", detail=("Votre bilan est disponible." if clean else
+                      "Consultez votre bilan et choisissez votre première correction."))
+    return result
+
+
+@router.post("/projects/first-audit")
+def start(request: Request, site_url: str = Form(default="")):
+    m = module()
+    user = getattr(request.state, "user", None)
+    if not user:
+        return RedirectResponse("/auth/login", status_code=303)
+    raw = str(site_url or "").strip()
+    try:
+        parsed = urlsplit(raw if "://" in raw else "https://" + raw)
+        if (not raw or len(raw) > 2048 or any(c.isspace() for c in raw)
+                or parsed.scheme.lower() not in {"http", "https"}
+                or not parsed.hostname or parsed.username is not None or parsed.password is not None):
+            raise ValueError
+        base = m._normalize_base_url(raw)
+        error = m._validate_public_crawl_target(base) if base else "URL invalide."
+    except ValueError:
+        return failure(m, request, raw[:2048], "Saisissez un domaine ou une adresse http/https valide.")
+    if error:
+        return failure(m, request, raw, error)
+    slug = m._slug_from_base_url(base)
+    if not slug:
+        return failure(m, request, raw, "Cette adresse ne permet pas de créer un site.")
+
+    # Serialize double clicks in this web process, then consult persistent owner-scoped jobs.
+    # This lock does not replace the worker's existing job claim mechanism.
+    with m._job_lock("first-audit:" + str(user.id)):
+        with m.DB.session() as db:
+            project = db.scalar(select(Project).where(
+                Project.owner_user_id == str(user.id), Project.slug == slug))
+            active_id = db.scalar(select(JobRecord.id).where(
+                JobRecord.owner_user_id == str(user.id), JobRecord.slug == slug,
+                JobRecord.kind == "crawl", JobRecord.status.in_(LIVE))
+                .order_by(JobRecord.created_at.desc()).limit(1)) if project else None
+        if project:
+            if m._normalize_base_url(project.base_url) != base:
+                return failure(m, request, raw, "Un autre site utilise déjà ce nom. Ouvrez-le depuis vos projets.")
+            if active_id:
+                return RedirectResponse(f"/projects/{slug}?job={active_id}", status_code=303)
+            runs = m._runs_dir_for_user(str(user.id))
+            summary = m.dash.project_latest_summary(runs, slug) if runs.exists() else None
+            if summary and summary.get("timestamp"):
+                return RedirectResponse(f"/projects/{slug}", status_code=303)
+        else:
+            retry = m._rate_limit_retry_after(bucket="first_audit_user", subject=str(user.id), limit=8, window_s=60)
+            if isinstance(retry, int):
+                response = failure(m, request, raw, "Trop de tentatives. Réessayez dans un instant.", 429)
+                response.headers["Retry-After"] = str(retry)
+                return response
+            available = allowance(m, user)
+            if not available["can_start"]:
+                return failure(m, request, raw, "Votre limite de sites ou de pages est atteinte. Consultez votre abonnement.")
+            # Preserve the existing site quota, target validation, creation audit and milestone.
+            created = m.add_project(request, mode="url", domain="", url=raw, site_name="",
+                                    gsc_urls=[], bulk_urls=[], next="/")
+            if "err=" in created.headers.get("location", ""):
+                return created
+            with m.DB.session() as db:
+                project = db.scalar(select(Project).where(
+                    Project.owner_user_id == str(user.id), Project.slug == slug))
+            if not project:
+                return failure(m, request, raw, "Le site n’a pas pu être ajouté. Réessayez.", 503)
+        # Explicit config avoids FastAPI Form defaults on a direct Python call. This handler
+        # owns plan bounds, rate limits, page reservation, payer identity and job persistence.
+        return m.crawl_project(request, slug, config_path=str(m.DEFAULT_CONFIG))

@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% from "_search_connection_badge.html" import connection_badge with context %}
+{% set crawl_active = live_job and live_job.status in ['queued', 'running', 'cancel_requested'] %}
 {% block title %}{{ project.site_name if project else slug }} - Vue d'ensemble{% endblock %}
 
 {% block head_extra %}
@@ -21,7 +22,7 @@
   {% if project %}
     <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouvelle analyse</button>
+      <button type="submit" class="btn primary" {% if crawl_active %}disabled{% endif %}>{% if crawl_active %}Analyse en cours{% else %}Nouvelle analyse{% endif %}</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -173,7 +174,7 @@
       data-run-ts="{% if live_job.result and live_job.result.timestamp %}{{ live_job.result.timestamp }}{% endif %}"
     >
       <div class="card-title-row">
-        <h2>Analyse en cours</h2>
+        <h2>{% if live_job.status == 'queued' %}Votre analyse est en attente{% elif live_job.status == 'cancel_requested' %}Annulation de l’analyse{% else %}Votre site est en cours d’analyse{% endif %}</h2>
         <div class="live-job-header-right">
           <span id="live-job-elapsed" class="muted small mono" style="display:none;"></span>
           <span id="live-job-ts" class="muted small mono"></span>
@@ -181,6 +182,8 @@
           <button id="live-job-cancel-btn" class="btn-cancel-crawl" title="Annuler le crawl" style="display:none;">Annuler</button>
         </div>
       </div>
+
+      <p class="muted small">Vous pouvez quitter cette page : l’analyse continue. Retrouvez-la depuis l’accueil de vos projets.</p>
 
       <div id="live-job-progress" class="crawl-meter" style="display:none;">
         <div class="crawl-meter-head">
@@ -227,16 +230,17 @@
         <h2>Première analyse</h2>
         <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a>
       </div>
-      <p class="muted" style="margin:0 0 12px;">Aucune analyse terminée pour ce projet.</p>
-      {% if live_job and live_job.status == 'failed' %}
+      <p class="muted" style="margin:0 0 12px;">{% if crawl_active %}Votre site est enregistré. Le bilan apparaîtra ici à la fin de l’analyse.{% else %}Aucune analyse terminée pour ce projet.{% endif %}</p>
+      {% if live_job and live_job.status in ['failed', 'canceled'] %}
         <p class="muted small" style="margin:0 0 14px;">
-          La dernière analyse a échoué. Ouvrez les journaux ci-dessus ou <a href="/jobs?job={{ live_job.id }}">les Exécutions</a> pour voir l'erreur complète.
+          {% if live_job.status == 'failed' %}La dernière analyse n’a pas abouti.{% else %}La dernière analyse a été annulée.{% endif %} Votre site est conservé. Vous pouvez réessayer ou <a href="/jobs?job={{ live_job.id }}">consulter le détail de cette analyse</a>.
         </p>
       {% endif %}
       <div class="topbar-actions">
-        <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-          <button type="submit" class="btn primary">Lancer la première analyse</button>
-        </form>
+        {% if crawl_active %}<a class="btn" href="#live-job-card">Suivre la progression</a>
+        {% else %}<form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
+          <button type="submit" class="btn primary">{% if live_job and live_job.status in ['failed', 'canceled'] %}Réessayer l’analyse{% else %}Lancer la première analyse{% endif %}</button>
+        </form>{% endif %}
         <a class="btn" href="/jobs{% if live_job %}?job={{ live_job.id }}{% endif %}">Voir les exécutions</a>
       </div>
     </section>
@@ -317,6 +321,7 @@
           <p class="overview-empty">Aucune action prioritaire détectée sur cette analyse.</p>
         {% endif %}
       {% else %}
+        {% if not first_correction_state %}<p><a class="btn primary" href="/projects/{{ project.slug }}/first-correction">Choisir ma première correction</a></p>{% endif %}
         <ol class="overview-action-list">
           {% for a in top_actions %}
             {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}

@@ -3,6 +3,8 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="/static/first_correction.css?v=1" />
+  <link rel="stylesheet" href="/static/first-audit.css?v=1" />
+  <script src="/static/first-audit.js?v=1" defer></script>
   {% if jobs %}
     {% set ns = namespace(live=false) %}
     {% for j in jobs %}
@@ -25,8 +27,8 @@
 
 {% block content %}
   <div class="page-header">
-    <h1>Projets</h1>
-    <p class="muted">Suivez vos sites, lancez des analyses et surveillez l'état de santé SEO en temps réel.</p>
+    <h1>{% if projects %}Projets{% else %}Votre premier audit SEO{% endif %}</h1>
+    <p class="muted">{% if projects %}Suivez vos sites, lancez des analyses et surveillez l'état de santé SEO en temps réel.{% else %}Découvrez ce qui freine votre site et par où commencer.{% endif %}</p>
   </div>
 
   {% if err %}
@@ -39,6 +41,16 @@
       <span class="badge ok">ok</span>
       <p class="muted small">{{ msg }}</p>
     </div>
+  {% endif %}
+
+  {% if projects and onboarding and onboarding.resume %}
+    {% set resume = onboarding.resume %}
+    <section class="card first-audit-resume" aria-label="Reprendre mon parcours">
+      <div><p class="first-audit-eyebrow">{{ resume.site_name }}</p><h2>Votre prochaine étape</h2><p class="muted small">{{ resume.detail }}</p></div>
+      {% if resume.post %}
+        <form method="post" action="{{ resume.href }}" data-audit-submit><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">{{ resume.label }}</button></form>
+      {% else %}<a class="btn primary" href="{{ resume.href }}">{{ resume.label }}</a>{% endif %}
+    </section>
   {% endif %}
 
   {% if projects %}
@@ -159,34 +171,7 @@
   <form id="delete-projects-form" method="post" action="/projects/delete"></form>
 
   {% if not projects %}
-    <section class="card" style="text-align:center;padding:56px 24px;">
-      <div style="width:56px;height:56px;border-radius:16px;background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accent-rgb),.18);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-        <svg viewBox="0 0 24 24" style="width:26px;height:26px;stroke:var(--accent-2);fill:none;stroke-width:1.6;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      </div>
-      <h2 style="margin:0 0 8px;letter-spacing:-.02em;">Bienvenue sur votre tableau de bord SEO</h2>
-      <p class="muted" style="max-width:480px;margin:0 auto 28px;">
-        Commencez par ajouter votre premier site. Noyaru analysera vos pages, détectera les anomalies SEO et suivra vos performances dans le temps.
-      </p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <button type="button" class="btn primary" id="add-project-open" data-open-add-project style="padding:10px 24px;">
-          Ajouter mon premier site
-        </button>
-      </div>
-      <div style="margin-top:40px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap;text-align:left;">
-        <div style="max-width:160px;">
-          <div style="font-weight:600;margin-bottom:4px;">1. Ajouter un site</div>
-          <div class="muted small">Entrez l'URL de votre domaine pour créer un projet.</div>
-        </div>
-        <div style="max-width:160px;">
-          <div style="font-weight:600;margin-bottom:4px;">2. Lancer une analyse</div>
-          <div class="muted small">Noyaru analyse les pages de votre site en quelques minutes.</div>
-        </div>
-        <div style="max-width:160px;">
-          <div style="font-weight:600;margin-bottom:4px;">3. Corriger les anomalies</div>
-          <div class="muted small">Priorisez et corrigez chaque problème SEO détecté.</div>
-        </div>
-      </div>
-    </section>
+    {% include "_first_audit_start.html" %}
   {% else %}
   <section class="card">
       <div class="card-title-row">

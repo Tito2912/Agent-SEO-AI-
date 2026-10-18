@@ -1,0 +1,31 @@
+<section class="card first-audit-start" aria-labelledby="first-audit-title">
+  <div class="first-audit-intro">
+    <p class="first-audit-eyebrow">Bienvenue sur Noyaru</p>
+    <h2 id="first-audit-title">Quel site souhaitez-vous améliorer ?</h2>
+    <p class="muted">Entrez son adresse. Noyaru ajoutera votre site et lancera sa première analyse.</p>
+    <form method="post" action="/projects/first-audit" data-audit-submit>
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <label for="first-audit-url">Adresse de votre site</label>
+      <div class="first-audit-input-row">
+        <input id="first-audit-url" name="site_url" type="text" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="exemple.fr ou https://exemple.fr" value="{{ first_audit_url }}" maxlength="2048" aria-describedby="first-audit-help first-audit-allowance" required />
+        <button class="btn primary" type="submit" {% if not first_audit.can_start %}disabled{% endif %}>Ajouter et analyser</button>
+      </div>
+      <p id="first-audit-help" class="muted small">Le domaine du site sera analysé. Aucune connexion Google ou installation n’est nécessaire pour commencer.</p>
+      <div id="first-audit-allowance" class="first-audit-allowance">
+        {% if first_audit.admin %}<strong>Accès administrateur</strong><span class="muted small">Les limites des formules clients ne s’appliquent pas à ce compte.</span>
+        {% else %}
+          <strong>Plan {{ first_audit.plan_label }} · Jusqu’à {{ first_audit.page_cap }} pages par analyse</strong>
+          <span class="muted small">{% if first_audit.remaining is not none %}{{ first_audit.remaining }} pages disponibles sur {{ first_audit.monthly_limit }} ce mois-ci.{% else %}Aucun plafond mensuel de pages configuré.{% endif %}{% if first_audit.site_limit > 0 %} {{ first_audit.site_limit }} site{% if first_audit.site_limit != 1 %}s{% endif %} inclus dans votre formule.{% endif %}</span>
+          <span class="muted small">L’analyse utilise votre quota de pages. Le décompte est ajusté aux pages réellement analysées.</span>
+          {% if not first_audit.can_start %}<span class="first-audit-limit">Votre limite de sites ou de pages est atteinte. <a href="/billing">Consulter mon abonnement</a></span>{% endif %}
+        {% endif %}
+      </div>
+    </form>
+    <details class="first-audit-options"><summary>Ajouter le site sans lancer d’analyse</summary><p class="muted small">Vous pourrez choisir les réglages et démarrer l’analyse plus tard.</p><button class="btn" type="button" id="add-project-open" data-open-add-project>Ajouter un site uniquement</button></details>
+  </div>
+  <ol class="first-audit-expectations" aria-label="Ce qui vous attend">
+    <li><span aria-hidden="true">1</span><div><h3>Votre site est ajouté</h3><p class="muted small">Un domaine suffit pour démarrer.</p></div></li>
+    <li><span aria-hidden="true">2</span><div><h3>L’analyse progresse en direct</h3><p class="muted small">Vous pouvez quitter la page et revenir consulter votre bilan.</p></div></li>
+    <li><span aria-hidden="true">3</span><div><h3>Vous savez par où commencer</h3><p class="muted small">Retrouvez les problèmes détectés et les instructions pour votre première correction.</p></div></li>
+  </ol>
+</section>

@@ -102,6 +102,7 @@ try:
     from . import customer_activation
     from . import signup_attribution
     from . import customer_country
+    from . import first_audit
     from . import cms_guidance
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -112,6 +113,7 @@ except ImportError:
     import customer_activation
     import signup_attribution
     import customer_country
+    import first_audit
     import cms_guidance
 
 try:
@@ -14582,7 +14584,7 @@ async def stripe_webhook(request: Request) -> JSONResponse:
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
-def projects(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
+def projects(request: Request, msg: str | None = None, err: str | None = None, first_audit_url: str = "") -> HTMLResponse:
     config_path = DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None
 
     user = getattr(request.state, "user", None)
@@ -14677,12 +14679,15 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
         ]
     live_crawls: dict[str, dict[str, Any]] = {}
     recent_crawl_jobs: dict[str, dict[str, Any]] = {}
+    project_owners = {p["slug"]: p["owner_user_id"] for p in projects}
     for j in jobs:
         result = j.result if isinstance(j.result, dict) else None
         if not result or result.get("type") != "crawl":
             continue
         slug = str(result.get("slug") or "").strip()
         if not slug:
+            continue
+        if str(result.get("user_id") or "") != project_owners.get(slug):
             continue
         if slug not in recent_crawl_jobs:
             recent_crawl_jobs[slug] = {
@@ -14721,6 +14726,8 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
             "live_crawls": live_crawls,
             "recent_crawl_jobs": recent_crawl_jobs,
             "onboarding": onboarding,
+            "first_audit": first_audit.allowance(sys.modules[__name__], user) if not projects else None,
+            "first_audit_url": first_audit_url[:2048],
             "msg": (msg or "").strip(),
             "err": (err or "").strip(),
         },
@@ -15552,7 +15559,9 @@ def _dashboard_onboarding_state(
         tasks_by_project.get(str(p.get("project_id")), [])) for p in projects}
     usable = [p for p in projects if p.get("timestamp") and int(p.get("pages_crawled") or 0) > 0
               and not p.get("site_injoignable")]
-    selected = next((p for p in usable if progress_by_project[str(p.get("project_id"))].get("verified")), None)
+    selected = max((p for p in projects if p.get("slug") in live_crawls),
+                   key=lambda p: float(live_crawls[p["slug"]].get("created_at") or 0), default=None)
+    selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))].get("verified")), None)
     selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))]), None)
     selected = selected or next(iter(usable), None) or next(iter(projects), {})
     slug = str(selected.get("slug") or "")
@@ -15612,6 +15621,7 @@ def _dashboard_onboarding_state(
          "action_label": "Connecter", "action_href": "/settings/accounts#github-connect-card", "optional": True},
     ])
     return {"steps": steps, "required_done": required_done, "total_required": total_required,
+            "resume": first_audit.resume(selected, state, live, last_job, has_crawl, clean),
             "done_total": sum(bool(step["done"]) for step in steps), "total": len(steps),
             "progress_pct": round(required_done / total_required * 100), "complete": required_done == total_required,
             "success_kind": "clean" if clean else "verified", "success_href": flow_url,
@@ -37732,3 +37742,4 @@ try:
 except ImportError:
     from activation_routes import router as activation_router
 app.include_router(activation_router)
+app.include_router(first_audit.router)
