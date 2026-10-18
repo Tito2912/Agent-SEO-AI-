@@ -8,9 +8,10 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 try:
-    from . import customer_activation, signup_attribution
+    from . import customer_activation, plan_counts, signup_attribution
 except ImportError:
     import customer_activation
+    import plan_counts
     import signup_attribution
 
 router = APIRouter()
@@ -43,12 +44,28 @@ def activation_page(request: Request, date_from: str = '', date_to: str = '', ms
         campaigns = signup_attribution.links(m.DB, m._public_base_url(request))
     except Exception:
         raise HTTPException(503, 'Les liens de campagne ne sont pas disponibles pour le moment.') from None
+    try:
+        current_plans = plan_counts.snapshot(m.DB)
+    except Exception:
+        current_plans = None
     response = module().templates.TemplateResponse('settings_activation.html', {
         'request': request, 'project': None, 'metrics': data,
         'campaigns': campaigns, 'campaign_mediums': signup_attribution.MEDIUMS, 'msg': msg, 'err': err,
+        'current_plans': current_plans, 'plan_catalog': m.billing.plan_catalog(),
     })
     response.headers['Cache-Control'] = 'no-store'
     return response
+
+
+@router.get('/api/settings/activation/plans')
+def current_plan_counts(request: Request):
+    m = module()
+    m._require_system_owner(request)
+    try:
+        data = plan_counts.snapshot(m.DB)
+    except Exception:
+        raise HTTPException(503, 'La répartition des plans est indisponible pour le moment.') from None
+    return JSONResponse({'ok': True, **data}, headers={'Cache-Control': 'no-store'})
 
 
 @router.get('/api/settings/activation')

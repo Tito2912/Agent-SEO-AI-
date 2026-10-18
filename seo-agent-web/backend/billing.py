@@ -687,6 +687,11 @@ def _user_id_for_customer(db: Session, *, stripe_customer_id: str) -> str:
     return str(row.user_id or "").strip() if row else ""
 
 
+def subscription_order():
+    """Shared, deterministic recency order for access checks and account counters."""
+    return (BillingSubscription.updated_at.desc(), BillingSubscription.created_at.desc(), BillingSubscription.id.desc())
+
+
 def subscription_for_user(db: Session, *, user_id: str) -> BillingSubscription | None:
     uid = (user_id or "").strip()
     if not uid:
@@ -695,17 +700,21 @@ def subscription_for_user(db: Session, *, user_id: str) -> BillingSubscription |
     sub = db.scalar(
         select(BillingSubscription)
         .where(BillingSubscription.user_id == uid, BillingSubscription.status.in_(sorted(ACTIVE_SUB_STATUSES)))
-        .order_by(BillingSubscription.updated_at.desc())
+        .order_by(*subscription_order())
     )
     if sub:
         return sub
     return db.scalar(
-        select(BillingSubscription).where(BillingSubscription.user_id == uid).order_by(BillingSubscription.updated_at.desc())
+        select(BillingSubscription).where(BillingSubscription.user_id == uid).order_by(*subscription_order())
     )
 
 
 def effective_plan_key(db: Session, *, user_id: str) -> str:
-    sub = subscription_for_user(db, user_id=user_id)
+    return plan_key_for_subscription(subscription_for_user(db, user_id=user_id))
+
+
+def plan_key_for_subscription(sub) -> str:
+    """Resolve existing access without querying Stripe; shared with aggregate reporting."""
     if not sub:
         return "free"
     status = str(getattr(sub, "status", "") or "").strip().lower()
