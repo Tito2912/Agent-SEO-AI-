@@ -285,7 +285,10 @@ def test_withdrawal_erases_only_own_origin_preserves_milestones_and_reconciles_e
 def test_migration_preserves_existing_cohorts_without_inventing_origins(tmp_path, monkeypatch):
     url = 'sqlite:///' + str(tmp_path / 'migration.db')
     monkeypatch.setenv('DATABASE_URL', url)
-    config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
+    web_root = Path(__file__).resolve().parents[1]
+    config = Config(str(web_root / 'alembic.ini'))
+    config.set_main_option('script_location', str(web_root / 'alembic'))
+    config.set_main_option('prepend_sys_path', str(web_root))
     command.upgrade(config, '20261018_0015')
     engine = create_engine(url)
     with engine.begin() as connection:
