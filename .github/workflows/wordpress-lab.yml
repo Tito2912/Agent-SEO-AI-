@@ -1,0 +1,52 @@
+name: WordPress pilot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/wordpress-lab.yml'
+      - 'seo-agent-web/ops/wordpress-lab/**'
+      - 'seo-agent-web/backend/cms_routes.py'
+      - 'seo-agent-web/backend/wordpress_cms.py'
+      - 'seo-agent-web/backend/cms_guidance.py'
+      - 'seo-agent-web/backend/first_correction.py'
+
+permissions:
+  contents: read
+
+jobs:
+  wordpress-yoast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NOYARU_LAB_PYTHON: python
+      NOYARU_LAB_REPORT: ${{ github.workspace }}/wordpress-lab-report.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.0'
+          cache: npm
+          cache-dependency-path: seo-agent-web/ops/wordpress-lab/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: seo-agent-web/requirements-dev.txt
+      - name: Install test dependencies
+        run: |
+          python -m pip install -r seo-agent-web/requirements-dev.txt
+          npm ci --prefix seo-agent-web/ops/wordpress-lab --ignore-scripts --no-audit --no-fund
+      - name: Compile and lint laboratory
+        run: |
+          python -m compileall -q seo-agent-web/ops/wordpress-lab
+          python -m ruff check --select=F,E9 seo-agent-web/ops/wordpress-lab
+      - name: Exercise native WordPress and Yoast
+        run: npm test --prefix seo-agent-web/ops/wordpress-lab
+      - name: Save report without credentials
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordpress-yoast-report
+          path: ${{ github.workspace }}/wordpress-lab-report.json
+          if-no-files-found: error
+          retention-days: 14

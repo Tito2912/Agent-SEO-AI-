@@ -20,9 +20,9 @@ La déconnexion supprime le secret pour ce projet ; la révocation distante du m
 
 ## Validation et disponibilité
 
-Tests locaux : contrat des appels, droits et isolation des comptes, chiffrage, validation du domaine/DNS/TLS, CSRF, absence d’écriture avant validation, concurrence, valeurs périmées, pertes de réponse, panne du journal, vérification et rétablissement. Les essais de navigation utilisent une API WordPress simulée, jamais un site client.
+Tests locaux : contrat des appels, droits et isolation des comptes, chiffrage, validation du domaine/DNS/TLS, CSRF, absence d’écriture avant validation, concurrence, valeurs périmées, pertes de réponse, panne du journal, vérification et rétablissement. Les essais de navigation utilisent une API WordPress simulée, jamais un site client. Le laboratoire optionnel `ops/wordpress-lab` complète ces tests avec WordPress et Yoast réels : connexion, aperçu sans écriture, application et rétablissement des deux champs, HTML réel, contrôle Noyaru, droits, modifications externes et déconnexion. Le workflow « WordPress pilot » peut être relancé depuis GitHub Actions sans site WordPress personnel.
 
-Le connecteur est présenté comme un pilote. Un essai sur une installation WordPress/Yoast de démonstration compatible reste nécessaire pour valider les particularités d’un hébergeur, d’un pare-feu ou d’une extension. Aucun site WordPress réel n’a été modifié pour cette livraison. Shopify, Webflow, Wix et Rank Math bénéficient d’instructions manuelles, pas de connecteur d’écriture dans cette version.
+Le connecteur est présenté comme un pilote. Un essai entre Noyaru en ligne et un WordPress de démonstration hébergé reste nécessaire pour valider les particularités d’un hébergeur, d’un pare-feu ou d’une extension. Le laboratoire local ne valide pas cette liaison HTTPS publique. Aucun site WordPress réel n’a été modifié pour cette livraison. Shopify, Webflow, Wix et Rank Math bénéficient d’instructions manuelles, pas de connecteur d’écriture dans cette version.
 
 ## Références officielles
 
