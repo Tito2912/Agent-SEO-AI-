@@ -81,7 +81,7 @@
   </head>
   <body>
     <header class="pub-nav">
-      <a href="/" class="pub-nav-brand" aria-label="{{ app_name }} - Accueil">
+      <a href="{{ campaign_link(request, '/') }}" class="pub-nav-brand" aria-label="{{ app_name }} - Accueil">
         <picture>
           <source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" />
           <img src="/static/brand/noyaru-logo.png?v=3" alt="{{ app_name }}" width="1200" height="316"
@@ -92,21 +92,21 @@
       <nav class="pub-nav-links">
         {% set path = request.url.path %}
         {% for item in nav_items if item.primary %}
-          <a href="{{ item.href }}"
+          <a href="{{ campaign_link(request, item.href) }}"
              {% if path == item.href or (item.href != '/' and path.startswith(item.href ~ '/')) %}class="active"{% endif %}>{{ item.label }}</a>
         {% endfor %}
       </nav>
 
       <div class="pub-nav-actions">
         {% if request.state.user %}
-          <a class="btn" href="/">Tableau de bord</a>
+          <a class="btn" href="{{ campaign_link(request, '/') }}">Tableau de bord</a>
           <form method="post" action="/auth/logout" class="inline">
             <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <button type="submit" class="btn">Se d&eacute;connecter</button>
           </form>
         {% else %}
-          <a class="btn" href="/auth/login">Se connecter</a>
-          <a class="btn primary" href="/auth/signup">{% block signup_label %}Commencer &rarr;{% endblock %}</a>
+          <a class="btn" href="{{ campaign_link(request, '/auth/login') }}">Se connecter</a>
+          <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{% block signup_label %}Commencer &rarr;{% endblock %}</a>
         {% endif %}
       </div>
     </header>
@@ -122,7 +122,7 @@
         </div>
         <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
           {% for item in nav_items %}
-            <a href="{{ item.href }}" style="color:var(--muted);">{{ item.label }}</a>
+            <a href="{{ campaign_link(request, item.href) }}" style="color:var(--muted);">{{ item.label }}</a>
           {% endfor %}
         </div>
       </div>
@@ -130,8 +130,8 @@
 
     <!-- Cookie consent banner -->
     <div id="cookie-banner" role="dialog" aria-label="Politique de cookies" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;font-size:14px;">
-      <span>Ce site utilise des cookies essentiels au fonctionnement du service. En continuant, vous acceptez leur utilisation. <a href="/privacy" style="color:#aaa;text-decoration:underline;">En savoir plus</a></span>
-      <button id="cookie-accept" type="button" style="background:#fff;color:#111;border:none;border-radius:4px;padding:7px 18px;font-weight:600;cursor:pointer;white-space:nowrap;">J'accepte</button>
+      <span>Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun cookie publicitaire. <a href="{{ campaign_link(request, '/privacy') }}" style="color:#aaa;text-decoration:underline;">En savoir plus</a></span>
+      <button id="cookie-accept" type="button" style="background:#fff;color:#111;border:none;border-radius:4px;padding:7px 18px;font-weight:600;cursor:pointer;white-space:nowrap;">Fermer</button>
     </div>
     <script>
       (() => {

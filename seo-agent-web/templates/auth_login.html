@@ -6,6 +6,7 @@
     <title>Connexion - Noyaru</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=24" />
+    <link rel="stylesheet" href="/static/attribution.css?v=1" />
   </head>
   <body>
     <main class="auth-shell">
@@ -13,7 +14,7 @@
 
         <!-- Brand header -->
         <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="/" aria-label="Noyaru - Accueil" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
+          <a href="{{ campaign_link(request, '/') }}" aria-label="Noyaru - Accueil" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
           <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">Audit SEO Intelligent</p>
         </div>
 
@@ -74,7 +75,7 @@
 
           <div class="row-actions">
             <button class="btn primary" type="submit">Se connecter</button>
-            <a class="btn" href="/auth/signup?next={{ next_q }}">Créer un compte</a>
+            <a class="btn" href="{{ campaign_link(request, '/auth/signup?next=' ~ next_q) }}">Créer un compte</a>
           </div>
         </form>
 

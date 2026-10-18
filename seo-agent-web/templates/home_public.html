@@ -138,7 +138,7 @@ section[id] { scroll-margin-top: 112px; }
         par vous ou votre prestataire.
       </p>
       <div class="hero-actions">
-        <a class="btn primary" href="/auth/signup">Lancer mon audit gratuit</a>
+        <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Lancer mon audit gratuit</a>
         <a class="btn" href="#compatibilite">Vérifier la compatibilité</a>
       </div>
       <p class="hero-note">Compte gratuit requis · Sans carte bancaire<br>Aucune connexion GitHub nécessaire pour l'audit.</p>
@@ -162,12 +162,12 @@ section[id] { scroll-margin-top: 112px; }
       <div>
         <h3>Site géré avec WordPress, Shopify ou Wix</h3>
         <p>Commencez par l'audit et les rapports exportables. Vous ou votre prestataire appliquez les changements dans votre outil. Dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite ce travail manuel.</p>
-        <a href="/docs/fix-pack-sans-depot">Voir comment corriger sans dépôt GitHub</a>
+        <a href="{{ campaign_link(request, '/docs/fix-pack-sans-depot') }}">Voir comment corriger sans dépôt GitHub</a>
       </div>
       <div>
         <h3>Code disponible sur GitHub</h3>
         <p>Pour les technologies ci-dessous, {{ app_name }} prépare les modifications dans une pull request : une proposition de changement que vous ou votre développeur relisez et validez avant publication.</p>
-        <a href="/docs/connecter-github">Voir comment connecter le dépôt</a>
+        <a href="{{ campaign_link(request, '/docs/connecter-github') }}">Voir comment connecter le dépôt</a>
       </div>
     </div>
   <div class="stacks">
@@ -327,11 +327,11 @@ section[id] { scroll-margin-top: 112px; }
       </details>
       <details>
         <summary>Que comprend le plan gratuit ?</summary>
-        <p>{% if gratuit %}{{ gratuit.sites }} site{% if gratuit.sites != 1 %}s{% endif %} suivi{% if gratuit.sites != 1 %}s{% endif %}, {{ gratuit.pages }} pages analysées par mois{% if gratuit.corrections %} et {{ gratuit.corrections }} corrections IA par mois sur un dépôt compatible{% endif %}. {% endif %}Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo. Consultez le <a href="/pricing#comparatif">comparatif complet</a> pour les autres limites.</p>
+        <p>{% if gratuit %}{{ gratuit.sites }} site{% if gratuit.sites != 1 %}s{% endif %} suivi{% if gratuit.sites != 1 %}s{% endif %}, {{ gratuit.pages }} pages analysées par mois{% if gratuit.corrections %} et {{ gratuit.corrections }} corrections IA par mois sur un dépôt compatible{% endif %}. {% endif %}Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo. Consultez le <a href="{{ campaign_link(request, '/pricing#comparatif') }}">comparatif complet</a> pour les autres limites.</p>
       </details>
       <details>
         <summary>Comment sont comptées les pages et les corrections ?</summary>
-        <p>Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages. <a href="/docs/plans-et-quotas">Lire le détail des quotas</a>.</p>
+        <p>Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages. <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">Lire le détail des quotas</a>.</p>
       </details>
       <details>
         <summary>Puis-je travailler avec mon prestataire ?</summary>
@@ -353,7 +353,7 @@ section[id] { scroll-margin-top: 112px; }
         {% for resource in featured_resources %}
           <article class="guide">
             <div>
-              <h3><a href="{{ resource.path }}">{{ resource.title }}</a></h3>
+              <h3><a href="{{ campaign_link(request, resource.path) }}">{{ resource.title }}</a></h3>
               <p>{{ resource.description }}</p>
             </div>
             <span class="guide-meta">{{ resource.kind }} · {{ resource.reading_time }}</span>
@@ -361,8 +361,8 @@ section[id] { scroll-margin-top: 112px; }
         {% endfor %}
       </div>
       <div class="guides-liens">
-        <a href="/ressources-seo">Tous les guides SEO</a>
-        <a href="/docs">Documentation du produit</a>
+        <a href="{{ campaign_link(request, '/ressources-seo') }}">Tous les guides SEO</a>
+        <a href="{{ campaign_link(request, '/docs') }}">Documentation du produit</a>
       </div>
     </section>
   {% endif %}
@@ -374,6 +374,6 @@ section[id] { scroll-margin-top: 112px; }
         Créez votre compte gratuit, ajoutez l'adresse de votre site et découvrez les problèmes à traiter en priorité. Sans carte bancaire.
       </p>
     </div>
-    <a class="btn primary" href="/auth/signup">Lancer mon audit gratuit</a>
+    <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Lancer mon audit gratuit</a>
   </section>
 {% endblock %}

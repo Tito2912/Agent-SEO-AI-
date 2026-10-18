@@ -100,6 +100,7 @@ try:
     from . import correction_journal
     from . import first_correction
     from . import customer_activation
+    from . import signup_attribution
     from . import cms_guidance
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -108,6 +109,7 @@ except ImportError:
     import correction_journal
     import first_correction
     import customer_activation
+    import signup_attribution
     import cms_guidance
 
 try:
@@ -10516,6 +10518,7 @@ def _public_url(request: Request, path: str) -> str:
 # Toutes les routes publiques ne passent pas par `_public_template_context` : une fonction globale
 # sert donc toutes les pages, y compris /status et /support.
 templates.env.globals["public_url"] = _public_url
+templates.env.globals["campaign_link"] = signup_attribution.carry
 
 
 def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
@@ -12826,6 +12829,8 @@ def auth_google_start(
     mode: str = Form(default="login"),
     invite_code: str = Form(default=""),
     next: str = Form(default="/"),
+    acquisition_campaign: str = Form(default=""),
+    acquisition_consent: str = Form(default=""),
 ) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
@@ -12836,15 +12841,16 @@ def auth_google_start(
     if m not in {"login", "signup"}:
         m = "login"
 
+    campaign = signup_attribution.find(DB, identifier=acquisition_campaign) if m == "signup" and acquisition_campaign else None
+    signup_target = signup_attribution.append_tags(f"/auth/signup?next={quote(n)}", signup_attribution.campaign_tags(campaign))
     client_id, client_secret = _google_oauth_client()
     if not client_id or not client_secret:
         _audit_log(request, action="auth.google.start", status="oauth_not_configured")
         return RedirectResponse(
-            url=_path_with_flash(f"/auth/login?next={quote(n)}", err="Google non configuré (client id/secret)."),
+            url=_path_with_flash(signup_target if m == "signup" else f"/auth/login?next={quote(n)}", err="Google non configuré (client id/secret)."),
             status_code=303,
         )
 
-    signup_target = f"/auth/signup?next={quote(n)}"
     invite_expected = _safe_env("SIGNUP_INVITE_CODE")
     invite_required = bool(invite_expected)
     invite_ok = True
@@ -12862,6 +12868,7 @@ def auth_google_start(
         state = _oauth_state_encode(
             {
                 "purpose": "auth_google",
+                **({"acquisition_campaign": campaign.id} if campaign and acquisition_consent == "yes" else {}),
                 "mode": m,
                 "ts": int(time.time()),
                 "nonce": uuid.uuid4().hex,
@@ -12878,7 +12885,7 @@ def auth_google_start(
             meta={"error": f"{type(e).__name__}: {str(e)[:180]}"},
         )
         return RedirectResponse(
-            url=_path_with_flash(f"/auth/login?next={quote(n)}", err=(str(e) or "OAuth state error")[:240]),
+            url=_path_with_flash(signup_target if m == "signup" else f"/auth/login?next={quote(n)}", err=(str(e) or "OAuth state error")[:240]),
             status_code=303,
         )
 
@@ -12935,6 +12942,10 @@ def auth_google_callback(
             return RedirectResponse(url=_path_with_flash(base_target, err="OAuth expiré. Réessaie."), status_code=303)
     except Exception:
         pass
+
+    campaign = signup_attribution.find(DB, identifier=str(payload.get("acquisition_campaign"))) if mode == "signup" and payload.get("acquisition_campaign") else None
+    signup_target = signup_attribution.append_tags(signup_target, signup_attribution.campaign_tags(campaign))
+    base_target = signup_target if mode == "signup" else login_target
 
     if error:
         details = (error_description or error or "").strip() or "Google OAuth refusé."
@@ -13151,6 +13162,7 @@ def auth_google_callback(
 
             is_admin = users_count == 0
             user = User(email=email, password_hash=auth.hash_password(secrets.token_urlsafe(32)), is_admin=is_admin)
+            signup_attribution.prepare_signup(user, campaign, "yes")
             db.add(user)
             try:
                 db.flush()
@@ -13388,6 +13400,7 @@ def auth_signup(
             "invite_required": invite_required,
             "invite_code": "",
             "signup_disabled": signup_disabled,
+            "acquisition_campaign": signup_attribution.find(DB, query=request.query_params),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -13401,11 +13414,14 @@ def auth_signup_submit(
     password: str = Form(default=""),
     invite_code: str = Form(default=""),
     next: str = Form(default="/"),
+    acquisition_campaign: str = Form(default=""),
+    acquisition_consent: str = Form(default=""),
 ) -> Response:
     secret = _safe_env("SEO_AGENT_SECRET_KEY")
     if not secret:
         raise HTTPException(status_code=500, detail="SEO_AGENT_SECRET_KEY missing")
 
+    campaign = signup_attribution.find(DB, identifier=acquisition_campaign) if acquisition_campaign else None
     e = _normalize_email(email)
     invite_expected = _safe_env("SIGNUP_INVITE_CODE")
     invite_required = bool(invite_expected)
@@ -13433,7 +13449,7 @@ def auth_signup_submit(
             actor_email=e,
             meta={"retry_after_s": retry_after},
         )
-        target = f"/auth/signup?next={quote(n)}&email={quote(e)}"
+        target = signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign))
         return RedirectResponse(
             url=_path_with_flash(target, err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
             status_code=303,
@@ -13447,7 +13463,7 @@ def auth_signup_submit(
             actor_email=e,
             meta={"reason": msg, "status_code": status_code},
         )
-        target = f"/auth/signup?next={quote(n)}&email={quote(e)}"
+        target = signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign))
         return RedirectResponse(url=_path_with_flash(target, err=msg), status_code=303)
 
     if not e or "@" not in e or len(e) > 320:
@@ -13487,6 +13503,7 @@ def auth_signup_submit(
 
         is_admin = users_count == 0
         user = User(email=e, password_hash=auth.hash_password(password), is_admin=is_admin)
+        signup_attribution.prepare_signup(user, campaign, acquisition_consent)
         db.add(user)
         try:
             db.commit()
@@ -14792,6 +14809,7 @@ def settings_accounts(
             "project": None,
             "is_admin": bool(getattr(user, "is_admin", False)),
             "can_access_system_settings": _user_can_access_system_settings(user),
+            "signup_attribution": signup_attribution.own_status(DB, user.id),
             "github_oauth": {
                 **github_oauth,
                 # Renseigne UNIQUEMENT pour un membre : sur les projets de cet hote, c'est

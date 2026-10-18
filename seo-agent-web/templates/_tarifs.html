@@ -15,11 +15,11 @@
       </header>
       <p class="tarif-prix"><span>{{ c.montant }}</span><small>{{ c.periode or "sans carte bancaire" }}</small></p>
       {% if request.state.user %}
-        <a class="btn{% if c.en_avant %} primary{% endif %}" href="/billing">Gérer mon plan</a>
+        <a class="btn{% if c.en_avant %} primary{% endif %}" href="{{ campaign_link(request, '/billing') }}">Gérer mon plan</a>
       {% elif c.cle == "free" %}
-        <a class="btn" href="/auth/signup">{% if cartes_resumees|default(false) %}Lancer mon audit gratuit{% else %}Créer un compte{% endif %}</a>
+        <a class="btn" href="{{ campaign_link(request, '/auth/signup') }}">{% if cartes_resumees|default(false) %}Lancer mon audit gratuit{% else %}Créer un compte{% endif %}</a>
       {% else %}
-        <a class="btn{% if c.en_avant %} primary{% endif %}" href="/auth/signup">Commencer avec {{ c.nom }}</a>
+        <a class="btn{% if c.en_avant %} primary{% endif %}" href="{{ campaign_link(request, '/auth/signup') }}">Commencer avec {{ c.nom }}</a>
       {% endif %}
       {% if cartes_resumees|default(false) %}
         <ul class="tarif-cles">

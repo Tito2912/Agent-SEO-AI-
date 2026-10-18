@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Parcours clients - Noyaru{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/activation.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/activation.css?v=1" /><link rel="stylesheet" href="/static/attribution.css?v=1" /><link rel="stylesheet" href="/static/plan-counts.css?v=1" /><script src="/static/plan-counts.js?v=1" defer></script>{% endblock %}
 {% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/settings/operations">Exploitation</a><span class="crumb-sep">/</span><span class="crumb-current">Parcours clients</span>{% endblock %}
 {% block actions %}<a class="btn" href="/settings/activation.csv?date_from={{ metrics.date_from }}&amp;date_to={{ metrics.date_to }}">Exporter les cohortes (CSV)</a>{% endblock %}
 {% macro number(value) %}{{ "{:,}".format(value).replace(',', ' ') }}{% endmacro %}
@@ -8,6 +8,30 @@
 {% block content %}
 <div class="activation-page">
   <div class="page-header"><h1>Des inscriptions aux premiers résultats</h1><p class="muted">Voyez jusqu’où avancent vos nouveaux clients et quelles étapes restent à atteindre.</p></div>
+  {% if msg %}<div class="alert ok"><p>{{ msg }}</p></div>{% endif %}
+  {% if err %}<div class="alert error" role="alert"><p>{{ err }}</p></div>{% endif %}
+  <section class="card live-plans" id="active-plans" data-plan-counts data-endpoint="/api/settings/activation/plans">
+    <div class="live-plans-heading">
+      <div><h2>Plans actifs</h2><p class="muted small">Tous les comptes clients, indépendamment de la période d’inscription ci-dessous.</p></div>
+      <form method="get" action="/settings/activation#active-plans" data-plan-refresh-form>
+        <input type="hidden" name="date_from" value="{{ metrics.date_from }}" /><input type="hidden" name="date_to" value="{{ metrics.date_to }}" />
+        <button class="btn" type="submit" data-plan-refresh>Actualiser</button>
+      </form>
+    </div>
+    <div class="live-plan-grid" aria-label="Nombre de comptes par plan">
+      {% for key, plan in plan_catalog.items() %}
+        {% set row = (current_plans.plans|selectattr('key', 'equalto', key)|first) if current_plans else none %}
+        <section class="live-plan" data-plan-key="{{ key }}" aria-labelledby="plan-label-{{ key }}">
+          <h3 id="plan-label-{{ key }}" data-plan-label>{{ plan.label }}</h3>
+          <strong data-plan-count aria-live="polite" aria-atomic="true">{{ number(row.count) if row else '—' }}</strong>
+          <span class="muted small" data-plan-detail>{% if key == 'free' %}Accès gratuit{% elif row %}{{ number(row.active) }} actif{% if row.active != 1 %}s{% endif %} · {{ number(row.trialing) }} essai{% if row.trialing != 1 %}s{% endif %}{% else %}—{% endif %}</span>
+        </section>
+      {% endfor %}
+    </div>
+    <div class="live-plans-status"><span><strong data-plan-total>{{ number(current_plans.total) if current_plans else '—' }}</strong> comptes clients</span><span class="muted small">Actualisation automatique toutes les 10 s · Dernière lecture : <time data-plan-time {% if current_plans %}datetime="{{ current_plans.generated_at }}"{% endif %}>{{ current_plans.generated_at_label if current_plans else 'indisponible' }}</time> (Paris)</span></div>
+    <p class="live-plans-error small" data-plan-error role="status" {% if current_plans %}hidden{% endif %}>{% if not current_plans %}Les données sont momentanément indisponibles. Nouvel essai automatique.{% endif %}</p>
+    <details class="live-plans-method"><summary>Quels comptes sont comptés ?</summary><p class="muted small">Un compte est compté une seule fois, selon les droits actuellement accordés par Noyaru. Les essais sont inclus et indiqués séparément. Les administrateurs et les collaborateurs utilisant uniquement le compte d’un hôte sont exclus. Un collaborateur ayant aussi son propre projet ou sa propre facturation reste compté pour son compte personnel.</p><p class="muted small">Les valeurs suivent l’état de facturation synchronisé dans Noyaru. Un abonnement terminé ou impayé revient dans Free si ses droits payants ont cessé ; une résiliation prévue conserve le plan tant que les droits restent ouverts. Le compteur se met à jour après réception de ces changements par Noyaru.</p></details>
+  </section>
   <form class="activation-period card" method="get" action="/settings/activation">
     <div><h2>Période d’inscription</h2><p class="muted small">Les étapes atteintes depuis l’inscription sont observées jusqu’à aujourd’hui.</p></div>
     <label>Du<input type="date" name="date_from" value="{{ metrics.date_from }}" max="{{ metrics.today }}" required /></label>
@@ -31,6 +55,31 @@
 
   <section class="card"><h2>Avancement par semaine d’inscription</h2><p class="muted small">Une ligne regroupe les comptes inscrits cette semaine, dans la période choisie. Les cohortes récentes ont eu moins de temps pour avancer.</p><div class="table-wrap"><table class="table compact"><thead><tr><th>Semaine du</th><th>Inscrits</th><th>Site ajouté</th><th>Analyse</th><th>Correction vérifiée</th><th>Bilan sans anomalie</th><th>Conversion correction</th></tr></thead><tbody>{% for week in metrics.weeks %}<tr><td>{{ week.week[8:10] }}/{{ week.week[5:7] }}/{{ week.week[:4] }}</td>{% for count in week.counts %}<td>{{ number(count) }}</td>{% endfor %}<td>{{ number(week.clean) }}</td><td>{{ rate(week.rate) }}</td></tr>{% else %}<tr><td colspan="7" class="muted">Aucune cohorte suivie sur cette période.</td></tr>{% endfor %}</tbody></table></div></section>
 
-  <details class="card activation-method"><summary>Comprendre les chiffres</summary><ul><li>Chaque compte est compté une seule fois, même s’il possède plusieurs sites. Les actions d’un membre d’équipe bénéficient au propriétaire du projet.</li><li>Les comptes administrateurs et les inscriptions issues d’une invitation d’équipe sont exclus du parcours.</li><li>Une analyse doit contenir une page HTML visitée avec succès. Une tâche déclarée « corrigée » ou une modification enregistrée dans le CMS ne suffit pas à confirmer une correction.</li><li>Les premières étapes atteintes sont conservées si un site est supprimé, si une correction est rétablie ou si le site régresse ensuite. Ce suivi mesure le parcours passé, pas la santé actuelle du site.</li><li>La mesure commence avec cette version. {{ number(metrics.untracked) }} inscription{% if metrics.untracked != 1 %}s{% endif %} de la période sans suivi initial et {{ number(metrics.invited) }} inscription{% if metrics.invited != 1 %}s{% endif %} par invitation sont écartées. L’historique ancien n’est pas reconstruit.</li></ul><p class="muted small">Dates et semaines en heure de Paris. Actualisé le {{ metrics.generated_at }}. Les chiffres regroupent toutes les sources d’inscription.</p></details>
+  <section class="card" id="campaign-results">
+    <div class="campaign-section-head"><h2>Résultats par campagne</h2><a class="btn" href="/settings/activation/acquisition.csv?date_from={{ metrics.date_from }}&amp;date_to={{ metrics.date_to }}">Exporter les campagnes (CSV)</a></div>
+    <p class="muted small">Même période et mêmes comptes que le parcours ci-dessus. Seules les origines acceptées à l’inscription sont attribuées à une campagne.</p>
+    <div class="table-wrap"><table class="table compact"><thead><tr><th>Source</th><th>Support</th><th>Campagne</th><th>Inscrits</th><th>Site ajouté</th><th>Analyse</th><th>Correction vérifiée</th><th>Bilan sans anomalie</th><th>Conversion correction</th></tr></thead><tbody>
+      {% for group in metrics.acquisition %}<tr><td>{{ group.source or 'Origine non renseignée' }}</td><td>{{ group.medium or '—' }}</td><td>{{ group.campaign or '—' }}</td>{% for count in group.counts %}<td>{{ number(count) }}</td>{% endfor %}<td>{{ number(group.clean) }}</td><td>{{ rate(group.rate) }}</td></tr>
+      {% else %}<tr><td colspan="9" class="muted">Les premières inscriptions suivies apparaîtront ici.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <p class="muted small">« Origine non renseignée » peut correspondre à un lien sans campagne reconnue, un choix non accepté ou retiré, ou une inscription antérieure à cette mesure. Ce n’est pas une preuve d’accès direct. Les liens déclarent une origine ; ils ne prouvent pas l’affichage ou le clic d’une publicité.</p>
+  </section>
+
+  <details class="card campaign-links" id="campaign-links" {% if not campaigns or err or msg %}open{% endif %}>
+    <summary>Préparer un lien de campagne</summary>
+    <p class="muted small">Créez un lien différent pour chaque source, support et campagne. Copiez-le dans votre publicité ou publication. Les liens restent disponibles quelle que soit la période affichée.</p>
+    <form method="post" action="/settings/activation/campaigns" class="campaign-form">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <label>Source<input name="source" required maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="google, linkedin, newsletter…" autocomplete="off" /></label>
+      <label>Support<select name="medium" required>{% for value, label in campaign_mediums.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+      <label>Campagne<input name="campaign" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="premier-audit-tpe" autocomplete="off" /></label>
+      <button type="submit" class="btn">Préparer le lien</button>
+    </form>
+    <p class="muted small">Lettres sans accent, chiffres, tirets et underscores. Les majuscules deviennent des minuscules. N’incluez aucune donnée personnelle dans ces libellés.</p>
+    {% for campaign in campaigns %}<label class="campaign-copy"><span>{{ campaign.source }} · {{ campaign.medium }} · {{ campaign.name }}</span><input type="text" readonly value="{{ campaign.url }}" aria-label="Lien de campagne {{ campaign.name }} sur {{ campaign.source }}" onfocus="this.select()" /></label>{% endfor %}
+    <p class="muted small">Le lien accompagne la navigation publique jusqu’à l’inscription, sans cookie de suivi ni pixel tiers. Un retour ultérieur sans ce lien ne sera pas attribué. Ce tableau ne mesure ni visiteurs, ni clics, ni dépenses publicitaires.</p>
+  </details>
+
+  <details class="card activation-method"><summary>Comprendre les chiffres</summary><ul><li>Chaque compte est compté une seule fois, même s’il possède plusieurs sites. Les actions d’un membre d’équipe bénéficient au propriétaire du projet.</li><li>Les comptes administrateurs et les inscriptions issues d’une invitation d’équipe sont exclus du parcours.</li><li>Une analyse doit contenir une page HTML visitée avec succès. Une tâche déclarée « corrigée » ou une modification enregistrée dans le CMS ne suffit pas à confirmer une correction.</li><li>Les premières étapes atteintes sont conservées si un site est supprimé, si une correction est rétablie ou si le site régresse ensuite. Ce suivi mesure le parcours passé, pas la santé actuelle du site.</li><li>La mesure commence avec cette version. {{ number(metrics.untracked) }} inscription{% if metrics.untracked != 1 %}s{% endif %} de la période sans suivi initial et {{ number(metrics.invited) }} inscription{% if metrics.invited != 1 %}s{% endif %} par invitation sont écartées. L’historique ancien n’est pas reconstruit.</li></ul><p class="muted small">Dates et semaines en heure de Paris. Actualisé le {{ metrics.generated_at }}. Le parcours regroupe toutes les sources d’inscription ; le détail par campagne dépend du lien utilisé et du choix du client.</p></details>
 </div>
 {% endblock %}

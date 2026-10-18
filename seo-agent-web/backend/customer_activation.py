@@ -12,10 +12,12 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 try:
     from . import audit_dashboard as dash
-    from .models import AccountActivation, AccountInvite, Project, User
+    from . import signup_attribution
+    from .models import AccountActivation, AccountInvite, AcquisitionCampaign, Project, User
 except ImportError:
     import audit_dashboard as dash
-    from models import AccountActivation, AccountInvite, Project, User
+    import signup_attribution
+    from models import AccountActivation, AccountInvite, AcquisitionCampaign, Project, User
 
 log = logging.getLogger('seo_agent.activation')
 PARIS = ZoneInfo('Europe/Paris')
@@ -48,7 +50,8 @@ def _after_signup(mapper, connection, target):
             invitation = connection.scalar(select(AccountInvite.id).where(
                 AccountInvite.email == target.email.lower(), AccountInvite.used_at.is_(None),
                 AccountInvite.expires_at > datetime.now(timezone.utc)).limit(1))
-            _write(connection, target.id, signup_observed=True, invited_signup=bool(invitation))
+            _write(connection, target.id, signup_observed=True, invited_signup=bool(invitation),
+                   **signup_attribution.signup_fields(connection, target))
     except Exception as error:
         log.warning('Signup milestone unavailable (%s)', type(error).__name__)
 
@@ -164,15 +167,17 @@ def snapshot(database, *, start='', end='', now=None):
     low = datetime.combine(first, time.min, PARIS).astimezone(timezone.utc)
     high = datetime.combine(last + timedelta(days=1), time.min, PARIS).astimezone(timezone.utc)
     with database.session() as db:
-        rows = db.execute(select(User.created_at, AccountActivation).outerjoin(
+        rows = db.execute(select(User.created_at, AccountActivation, AcquisitionCampaign).outerjoin(
             AccountActivation, AccountActivation.user_id == User.id).where(
             User.is_admin.is_(False), User.created_at >= low, User.created_at < high,
-            User.created_at <= now)).all()
+            User.created_at <= now).outerjoin(AcquisitionCampaign,
+            AcquisitionCampaign.id == AccountActivation.acquisition_campaign_id)).all()
     counts = [0, 0, 0, 0]
     clean = untracked = invited = 0
     weeks = {}
+    acquisition = {}
     pending = [0, 0, 0]
-    for created_at, activation in rows:
+    for created_at, activation, campaign in rows:
         if not activation or not activation.signup_observed:
             untracked += 1
             continue
@@ -191,11 +196,18 @@ def snapshot(database, *, start='', end='', now=None):
         day = created.astimezone(PARIS).date()
         monday = (day - timedelta(days=day.weekday())).isoformat()
         week = weeks.setdefault(monday, {'week': monday, 'counts': [0, 0, 0, 0], 'clean': 0})
+        consented = utc(activation.acquisition_consented_at)
+        attributed = campaign is not None and consented is not None and created <= consented <= now
+        origin = (campaign.source, campaign.medium, campaign.name) if attributed else ('', '', '')
+        group = acquisition.setdefault(origin, {'source': origin[0], 'medium': origin[1], 'campaign': origin[2],
+                                                'counts': [0, 0, 0, 0], 'clean': 0})
         for i, reached in enumerate(flags):
             counts[i] += reached
             week['counts'][i] += reached
+            group['counts'][i] += reached
         clean += clean_only
         week['clean'] += clean_only
+        group['clean'] += clean_only
         pending[0] += not flags[1]
         pending[1] += flags[1] and not flags[2]
         pending[2] += flags[2] and not flags[3] and not clean_only
@@ -210,9 +222,12 @@ def snapshot(database, *, start='', end='', now=None):
         ['Site à ajouter', 'Analyse à obtenir', 'Correction ou contrôle à terminer'], pending)]
     for week in weeks.values():
         week['rate'] = round(100 * week['counts'][3] / week['counts'][0], 1)
+    for group in acquisition.values():
+        group['rate'] = round(100 * group['counts'][3] / group['counts'][0], 1)
     value = counts[3] + clean
     return {'date_from': first.isoformat(), 'date_to': last.isoformat(), 'today': now.astimezone(PARIS).date().isoformat(), 'steps': steps,
             'weeks': [weeks[key] for key in sorted(weeks, reverse=True)], 'waiting': waiting,
+            'acquisition': sorted(acquisition.values(), key=lambda row: (-row['counts'][0], row['source'], row['medium'], row['campaign'])),
             'clean_count': clean, 'value_count': value,
             'value_rate': round(100 * value / counts[0], 1) if counts[0] else None,
             'untracked': untracked, 'invited': invited, 'generated_at': now.astimezone(PARIS).strftime('%d/%m/%Y à %H:%M')}

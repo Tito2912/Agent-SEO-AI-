@@ -694,6 +694,22 @@
   </section>
 
   {# ── Préférences utilisateur ── #}
+  <section class="card setting-card" id="signup-attribution">
+    <h2 class="setting-title">Origine de mon inscription</h2>
+    {% if not signup_attribution.available %}
+      <p class="muted">Votre choix n’est pas disponible pour le moment. Réessayez dans quelques instants.</p>
+    {% elif signup_attribution.accepted %}
+      <p class="muted">Vous avez accepté que Noyaru relie votre campagne d’origine à vos premiers résultats. Ces informations servent uniquement à mesurer les campagnes de Noyaru.</p>
+      <form method="post" action="/settings/account/attribution/withdraw">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <button class="btn" type="submit">Retirer mon accord et effacer l’origine</button>
+      </form>
+    {% else %}
+      <p class="muted">Aucune campagne d’origine n’est conservée pour votre inscription.</p>
+    {% endif %}
+    <p class="small"><a href="/privacy#signup-attribution">Comprendre l’utilisation de ces données</a></p>
+  </section>
+
   <section class="card setting-card" id="preferences-card">
     <div class="setting-head">
       <div>

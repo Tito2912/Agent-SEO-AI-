@@ -20,7 +20,7 @@
       <div class="content-aside-group">
         <div class="content-aside-title">{{ section.name }}</div>
         {% for item in section.pages %}
-          <a href="{{ item.path }}" {% if item.slug == page.slug %}class="current" aria-current="page"{% endif %}>{{ item.title }}</a>
+          <a href="{{ campaign_link(request, item.path) }}" {% if item.slug == page.slug %}class="current" aria-current="page"{% endif %}>{{ item.title }}</a>
         {% endfor %}
       </div>
     {% endfor %}
@@ -28,9 +28,9 @@
 
   <article>
     <nav class="content-breadcrumb" aria-label="Fil d'Ariane">
-      <a href="/">Accueil</a>
+      <a href="{{ campaign_link(request, '/') }}">Accueil</a>
       <span>/</span>
-      <a href="/docs">Documentation</a>
+      <a href="{{ campaign_link(request, '/docs') }}">Documentation</a>
       <span>/</span>
       <span>{{ page.title }}</span>
     </nav>
@@ -45,7 +45,7 @@
       <h1>{{ page.title }}</h1>
       <p class="content-lead">{{ page.description }}</p>
       {% if page.app_href and request.state.user %}
-        <a class="btn" href="{{ page.app_href }}">Ouvrir dans l'application &rarr;</a>
+        <a class="btn" href="{{ campaign_link(request, page.app_href) }}">Ouvrir dans l'application &rarr;</a>
       {% endif %}
     </header>
 
@@ -68,7 +68,7 @@
         <h2>À lire ensuite</h2>
         <div class="content-related-list">
           {% for item in related %}
-            <a class="content-related-link" href="{{ item.path }}">
+            <a class="content-related-link" href="{{ campaign_link(request, item.path) }}">
               {{ item.title }}
               <span>{{ item.kind }} &middot; {{ item.reading_time }}</span>
             </a>
@@ -81,7 +81,7 @@
       <section class="content-cta">
         <h2>Essayer {{ app_name }}</h2>
         <p>Créez un projet, lancez un crawl et parcourez votre premier rapport. Aucune carte bancaire n'est demandée.</p>
-        <a class="btn primary" href="/auth/signup">Créer un compte gratuit</a>
+        <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Créer un compte gratuit</a>
       </section>
     {% endif %}
   </article>
