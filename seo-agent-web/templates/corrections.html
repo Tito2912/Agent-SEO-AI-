@@ -644,6 +644,7 @@
   <div class="card-title-row">
     <div>
       <h2>Choisir une correction</h2>
+      <p><a href="/projects/{{ slug }}/first-correction">Être guidé pour ma première correction →</a></p>
       <p class="muted small" style="margin:4px 0 0;">
         {% if current_crawl_ts %}
           Analyse du <span data-ts-datetime="{{ current_crawl_ts }}">{{ current_crawl_ts[6:8] }}/{{ current_crawl_ts[4:6] }}/{{ current_crawl_ts[:4] }}</span> · {{ fix_candidates|length }} anomalie{{ 's' if fix_candidates|length > 1 else '' }} candidate{{ 's' if fix_candidates|length > 1 else '' }}.

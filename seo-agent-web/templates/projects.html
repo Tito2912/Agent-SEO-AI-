@@ -2,6 +2,7 @@
 {% block title %}Projets - Noyaru{% endblock %}
 
 {% block head_extra %}
+  <link rel="stylesheet" href="/static/first_correction.css?v=1" />
   {% if jobs %}
     {% set ns = namespace(live=false) %}
     {% for j in jobs %}
@@ -70,7 +71,15 @@
     </div>
   {% endif %}
 
-  {% if projects and onboarding and not onboarding.complete %}
+  {% if projects and onboarding and onboarding.complete %}
+    <section class="card onboarding-success" role="status">
+      <div>
+        <h2>{% if onboarding.success_kind == 'clean' %}Votre premier bilan est prêt{% else %}Votre première correction est vérifiée{% endif %}</h2>
+        <p class="muted small">{{ onboarding.site_name }} · {% if onboarding.success_kind == 'clean' %}Aucune anomalie détectée sur les pages analysées.{% else %}{{ onboarding.success_label }} · résultat confirmé par une nouvelle analyse.{% endif %}</p>
+      </div>
+      <a class="btn" href="{{ onboarding.success_href }}">Voir le résultat</a>
+    </section>
+  {% elif projects and onboarding %}
     <section class="card onboarding-card">
       <div class="card-title-row">
         <div>

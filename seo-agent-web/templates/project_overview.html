@@ -28,6 +28,12 @@
 
 {% block content %}
 <div class="overview-page">
+  {% if first_correction_state %}
+    <div class="alert {% if first_correction_state.verified %}ok{% else %}notice{% endif %}" role="status">
+      <strong>{% if first_correction_state.verified %}Première correction vérifiée.{% elif first_correction_state.declared %}Correction en attente de contrôle.{% else %}Votre première correction est choisie.{% endif %}</strong>
+      {{ first_correction_state.label }} · <a href="/projects/{{ slug }}/first-correction">{% if first_correction_state.verified %}Voir le résultat{% else %}Reprendre le suivi{% endif %}</a>
+    </div>
+  {% endif %}
   {% if not connection %}
     {% if err %}<div class="alert error" role="alert">{{ err }}</div>
     {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
