@@ -30949,9 +30949,9 @@ def project_first_correction_update(
             note = first_correction.note_data(task.note)
             if not note and task.note:
                 note["user_note"] = task.note
-            if not isinstance(note.get("first_correction"), dict):
-                note["first_correction"] = {"selected_at": now}
-                task.note = json.dumps(note, ensure_ascii=False)
+            journey = note.get("first_correction") if isinstance(note.get("first_correction"), dict) else {}
+            note["first_correction"] = {**journey, "selected_at": now}
+            task.note = json.dumps(note, ensure_ascii=False)
             message = "Correction choisie. Suivez les instructions pour modifier la page."
         else:
             task = db.scalar(select(IssueTask).where(IssueTask.id == task_id, IssueTask.project_id == str(project.id)))

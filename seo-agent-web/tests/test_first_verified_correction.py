@@ -142,6 +142,14 @@ def test_declared_edit_is_pending_until_a_new_crawl_confirms_it(journey):
     assert "Première correction vérifiée" in journey["client"].get(f'/projects/{journey["slug"]}').text
 
 
+def test_choosing_another_page_follows_the_latest_explicit_choice(journey):
+    journey["report"](issues={"missing_title": {"count": 2, "examples": [URL, OTHER]}}, urls=(URL, OTHER))
+    for url in (URL, OTHER, URL):
+        response = _post(journey, action="select", issue_key="missing_title", url=url, crawl_ts=BASELINE)
+        page = journey["client"].get(response.headers["location"])
+        assert page.context["state"]["url"] == url
+
+
 @pytest.mark.parametrize("case,result", [("still_present", "still_present"), ("not_visited", "unverified"),
                                          ("blocked", "unverified"), ("predates_edit", "unverified"),
                                          ("incomplete_examples", "unverified")])

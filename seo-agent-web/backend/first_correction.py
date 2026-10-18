@@ -70,10 +70,11 @@ def progress(tasks):
             "label": task.issue_label or task.issue_key, "url": url, "crawl_ts": task.crawl_ts,
             "verified": verified, "verify": verify,
             "declared": bool(journey.get("declared_at") or task.status in {"in_progress", "done"}),
-            "guided": bool(journey), "pr_url": web_url(note.get("pr_url")),
+            "guided": bool(journey), "selected_at": journey.get("selected_at"), "pr_url": web_url(note.get("pr_url")),
         })
     if not states:
         return {}
     # Rows arrive newest first. Keep a confirmed success, then the customer's guided choice.
-    return next((state for state in states if state["verified"]),
-                next((state for state in states if state["guided"]), states[0]))
+    guided = [state for state in states if state["guided"]]
+    selected = max(guided, key=lambda state: timestamp(state["selected_at"]) or datetime.min.replace(tzinfo=timezone.utc)) if guided else states[0]
+    return next((state for state in states if state["verified"]), selected)
