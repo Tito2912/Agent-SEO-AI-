@@ -1,0 +1,17 @@
+# Suivi du parcours client
+
+`/settings/activation`, son API et l’export CSV sont réservés au propriétaire système, avec la même règle d’accès qu’Exploitation. Les réponses portent uniquement des agrégats et sont marquées `no-store`. La période sélectionne les **dates d’inscription**, en jours calendaires de Paris ; les étapes sont observées jusqu’au moment de consultation. Le tableau hebdomadaire partage exactement ce même périmètre.
+
+Le parcours compte chaque compte une fois : inscription, premier site ajouté, première analyse exploitable, première correction vérifiée. Un bilan complet sans anomalie apparaît séparément et participe à la « première valeur obtenue », sans être présenté comme une correction. Les étapes non atteintes ne sont pas assimilées à des abandons.
+
+La table `account_activations` conserve uniquement l’identifiant du compte, deux indicateurs d’origine de l’inscription et les dates des premières étapes. Elle est créée par la migration Alembic `20261018_0015`. Les créations ORM de comptes, qu’elles proviennent du mot de passe ou de Google, et de projets enregistrent leur étape dans la transaction existante. Un échec de mesure est isolé dans un savepoint et ne bloque pas la création. Les mises à jour atomiques SQLite/PostgreSQL conservent les premières dates lors d’actions répétées ou concurrentes.
+
+Les créations d’administrateurs et les inscriptions associées à une invitation d’équipe en attente sont exclues des cohortes. Une inscription antérieure à l’installation de cette mesure ne devient pas rétrospectivement une nouvelle inscription suivie. Les comptes de la période sans observation initiale sont dénombrés à part. Il n’existe pas de reconstruction approximative de l’historique.
+
+Une analyse exploitable doit contenir un vrai rapport d’anomalies et au moins une page HTML du domaine du projet visitée en 2xx, sans erreur. Un job lancé, en file d’attente, échoué ou limité à des ressources ne suffit pas. Une analyse partielle peut être exploitable, mais ne peut pas produire le résultat « bilan complet sans anomalie ».
+
+Seul le vérificateur serveur des corrections alimente la dernière étape, après la réussite de son contrôle. La statistique exige également une anomalie positive et une URL concernée dans le rapport de référence conservé. Une note, un statut « corrigé », une PR ou une écriture CMS ne constituent pas une preuve. Les actions des collaborateurs sont attribuées au propriétaire du projet. Les projets ayant le même slug sur deux comptes restent isolés.
+
+Ces statistiques décrivent les étapes **déjà atteintes**. Une régression ultérieure, le rétablissement d’une ancienne valeur ou la suppression d’un projet ne fait pas perdre la première réussite observée. La suppression du compte efface sa ligne par cascade ; les agrégats sont recalculés sans ce compte. La page ne remplace pas l’état de santé actuel des projets.
+
+Le CSV contient uniquement les semaines, compteurs et taux de conversion des cohortes affichées. Aucun email, identifiant client, domaine, adresse IP, jeton ou contenu de rapport n’y figure. Cette première version regroupe toutes les sources d’inscription ; elle ne fournit ni attribution publicitaire, ni coût d’acquisition, ni mesure des visiteurs anonymes.

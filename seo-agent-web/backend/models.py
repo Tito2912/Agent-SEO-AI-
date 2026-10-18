@@ -33,6 +33,19 @@ class User(Base):
     projects: Mapped[list["Project"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
 
 
+class AccountActivation(Base):
+    """First observed milestones survive project removal; account deletion removes the row."""
+    __tablename__ = "account_activations"
+
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    signup_observed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    invited_signup: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    project_added_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    audit_available_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    correction_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    clean_audit_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Project(Base):
     __tablename__ = "projects"
     __table_args__ = (UniqueConstraint("owner_user_id", "slug", name="uq_projects_owner_slug"),)
