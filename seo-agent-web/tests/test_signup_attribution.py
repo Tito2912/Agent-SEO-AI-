@@ -4,13 +4,13 @@ from __future__ import annotations
 import csv
 import io
 import json
+import subprocess
+import sys
 import uuid
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from bs4 import BeautifulSoup
 from sqlalchemy import create_engine, select, text
 
@@ -286,21 +286,26 @@ def test_migration_preserves_existing_cohorts_without_inventing_origins(tmp_path
     url = 'sqlite:///' + str(tmp_path / 'migration.db')
     monkeypatch.setenv('DATABASE_URL', url)
     web_root = Path(__file__).resolve().parents[1]
-    config = Config(str(web_root / 'alembic.ini'))
-    config.set_main_option('script_location', str(web_root / 'alembic'))
-    config.set_main_option('prepend_sys_path', str(web_root))
-    command.upgrade(config, '20261018_0015')
+
+    def migrate(direction, revision):
+        # Alembic configures logging globally. A separate process preserves the application's
+        # loggers and pytest handlers, as in the existing schema migration check.
+        result = subprocess.run([sys.executable, '-m', 'alembic', '-c', str(web_root / 'alembic.ini'), direction, revision],
+                                cwd=web_root, capture_output=True, text=True, timeout=180)
+        assert result.returncode == 0, (result.stderr or result.stdout)[-2000:]
+
+    migrate('upgrade', '20261018_0015')
     engine = create_engine(url)
     with engine.begin() as connection:
         connection.execute(text("INSERT INTO users (id,email,password_hash,is_admin) VALUES ('old','old@example.invalid','test',0)"))
         connection.execute(text("INSERT INTO account_activations (user_id,signup_observed,invited_signup,project_added_at) VALUES ('old',1,0,'2026-10-01 10:00:00')"))
-    command.upgrade(config, 'head')
+    migrate('upgrade', 'head')
     with engine.connect() as connection:
         row = connection.execute(text('SELECT * FROM account_activations WHERE user_id = :id'), {'id': 'old'}).mappings().one()
         assert row['signup_observed'] and row['project_added_at']
         assert row['acquisition_campaign_id'] is None and row['acquisition_consented_at'] is None
-    command.downgrade(config, '20261018_0015')
+    migrate('downgrade', '20261018_0015')
     with engine.connect() as connection:
         assert connection.scalar(text('SELECT count(*) FROM account_activations')) == 1
-    command.upgrade(config, 'head')
+    migrate('upgrade', 'head')
     engine.dispose()
