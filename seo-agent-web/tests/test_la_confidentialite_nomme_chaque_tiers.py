@@ -66,6 +66,8 @@ ECARTES = {
     # Liens affichés ou documentation, pas des appels.
     "github.com", "app.netlify.com", "console.cloud.google.com", "developers.google.com",
     "schema.org", "www.cnil.fr",
+    # Aides CMS affichées au client : aucune requête serveur ni transmission de données.
+    "help.shopify.com", "help.webflow.com", "rankmath.com", "support.wix.com", "wordpress.org", "yoast.com",
     # Le produit lui-même, et les exemples de docstrings et de tests.
     "noyaru.com", "example.com", "app.example.com", "exemple.fr", "site.fr", "oryvalo.com",
 }

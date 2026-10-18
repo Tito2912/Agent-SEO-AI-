@@ -18877,7 +18877,7 @@ def project_issue_detail(
             "fix_suggestions_path": fix_path,
             "gh_tasks": gh_tasks,
             "correction_controls": correction_controls,
-            "platform_guide": cms_guidance.for_issue(proj_row.settings, issue_key),
+            "platform_guide": cms_guidance.for_issue(getattr(proj_row, "settings", None), issue_key),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -30831,7 +30831,6 @@ def project_automation(request: Request, slug: str) -> HTMLResponse:
                 "id": str(t.id), "issue_key": t.issue_key, "issue_label": t.issue_label,
                 "url": t.url, "status": st, "pr": pr_data,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
-                "cms_supported": bool(cms_guidance.field_for_issue(t.issue_key)),
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             })
     except Exception:
@@ -31058,6 +31057,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 "url": t.url, "status": s,
                 "pr": pr_data, "user_note": user_note, "verify": _verify,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
+                "cms_supported": bool(cms_guidance.field_for_issue(t.issue_key)),
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             }
             groups[s].append(task_ctx)

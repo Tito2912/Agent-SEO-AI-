@@ -371,3 +371,14 @@ def test_core_subdirectory_keeps_credentials_on_api_base_and_resolves_public_per
     expected_prefix = urlsplit(api_base).path + '/wp-json/wp-abilities/v1/abilities/' + wp.READ + '/run?'
     assert requested[0].startswith(expected_prefix)
     assert parse_qs(urlsplit(requested[0]).query) == {'input[permalink]': [URL]}
+
+
+def test_tracked_corrections_link_to_the_editor_and_details_render_platform_guidance(cms):
+    connect(cms)
+    page = cms['client'].get(f'/projects/{cms["slug"]}/corrections')
+    assert page.status_code == 200 and 'Préparer dans WordPress' in page.text
+    editor = cms['client'].get(cms['base'] + '/wordpress/edit?task_id=' + cms['task'].id)
+    assert editor.status_code == 200 and 'Voir l’avant/après' in editor.text
+    detail = cms['client'].get(f'/projects/{cms["slug"]}/issues/missing_title')
+    assert detail.status_code == 200 and 'Dans WordPress avec Yoast SEO' in detail.text
+    assert not writes(cms)
