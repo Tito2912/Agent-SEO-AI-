@@ -11,10 +11,11 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import case, exists, func, select
 
 try:
-    from . import billing, plan_counts
+    from . import billing, customer_country, plan_counts
     from .models import AccountActivation, AuditLog, EmailVerificationToken, JobRecord, OAuthIdentity, Project, User
 except ImportError:
     import billing
+    import customer_country
     import plan_counts
     from models import AccountActivation, AuditLog, EmailVerificationToken, JobRecord, OAuthIdentity, Project, User
 
@@ -23,6 +24,7 @@ USAGE_FILTERS = {'all': 'Tous les comptes', 'with_site': 'Avec un site', 'withou
                  'recent_login': 'Connexion connue depuis 30 jours',
                  'no_recent_login': 'Sans connexion connue depuis 30 jours',
                  'verified_email': 'Email vérifié', 'unverified_email': 'Vérification d’email non retrouvée',
+                 'with_country': 'Pays déclaré', 'without_country': 'Pays non renseigné',
                  'with_analysis': 'Avec une analyse enregistrée', 'without_analysis': 'Sans analyse enregistrée'}
 STATUSES = {'active': 'actif', 'trialing': 'en essai', 'canceled': 'terminé', 'past_due': 'en retard de paiement',
             'unpaid': 'impayé', 'incomplete': 'incomplet', 'incomplete_expired': 'expiré', 'paused': 'en pause'}
@@ -93,6 +95,7 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, acco
     with database.session() as db:
         records = db.execute(query).all()
     rows, counts = [], dict.fromkeys(catalog, 0)
+    coverage = dict.fromkeys(['verified', 'country', 'with_sites', 'with_analyses', 'with_login'], 0)
     for record in records:
         row = dict(record._mapping)
         key = billing.plan_key_for_subscription(SimpleNamespace(**row))
@@ -110,6 +113,13 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, acco
         row['recent_login'] = bool(row['last_login_at'] and utc(row['last_login_at']) >= now - timedelta(days=30))
         row['email_verified'] = bool(row['email_verified_at'])
         row['verification_label'] = 'Email vérifié' if row['email_verified'] else 'Vérification non retrouvée'
+        row['country'] = customer_country.normalize(row['country'])
+        row['country_label'] = customer_country.COUNTRIES.get(row['country'], 'Non renseigné')
+        row['country_source'] = 'Déclaré par le client' if row['country'] else 'Non renseignée'
+        for name, present in [('verified', row['email_verified']), ('country', row['country']),
+                              ('with_sites', row['site_count']), ('with_analyses', row['analysis_count']),
+                              ('with_login', row['last_login_at'])]:
+            coverage[name] += int(bool(present))
         row['profile_url'] = '/settings/activation/accounts/' + row['user_id']
         last_analysis = row.pop('last_analysis_epoch')
         row['last_analysis_at'] = display_date(datetime.fromtimestamp(last_analysis, timezone.utc)) if last_analysis else ''
@@ -122,6 +132,8 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, acco
                 (usage == 'no_recent_login' and row['recent_login']) or
                 (usage == 'verified_email' and not row['email_verified']) or
                 (usage == 'unverified_email' and row['email_verified']) or
+                (usage == 'with_country' and not row['country']) or
+                (usage == 'without_country' and row['country']) or
                 (usage == 'with_analysis' and not row['analysis_count']) or
                 (usage == 'without_analysis' and row['analysis_count'])):
             continue
@@ -145,7 +157,7 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, acco
     page = min(page, pages)
     params = {'plan': plan, 'q': q, 'usage': usage}
     return {'rows': rows if export else rows[(page - 1) * PAGE_SIZE:page * PAGE_SIZE],
-            'total': len(records), 'matched': matched, 'counts': counts, 'plan': plan, 'q': q, 'usage': usage,
+            'total': len(records), 'matched': matched, 'counts': counts, 'coverage': coverage, 'plan': plan, 'q': q, 'usage': usage,
             'page': page, 'pages': pages, 'first': (page - 1) * PAGE_SIZE + 1 if matched else 0,
             'last': min(page * PAGE_SIZE, matched), 'generated_at': display_date(now),
             'export_url': '/settings/activation/accounts.csv?' + urlencode(params),
@@ -165,7 +177,8 @@ def csv_bytes(data):
     fields += [('verification_label', 'Vérification email'), ('email_verified_at', 'Email vérifié le (Paris)'),
                ('google_linked', 'Google associé'), ('analysis_count', 'Analyses enregistrées'),
                ('last_analysis_at', 'Dernière demande d’analyse (Paris)'),
-               ('country', 'Pays renseigné'), ('language', 'Langue renseignée'), ('timezone', 'Fuseau renseigné')]
+               ('country', 'Pays renseigné'), ('country_label', 'Nom du pays'), ('country_source', 'Source du pays'),
+               ('language', 'Langue renseignée'), ('timezone', 'Fuseau renseigné')]
     output = io.StringIO(newline='')
     writer = csv.writer(output, delimiter=';')
     writer.writerow([title for _, title in fields] + ['Lecture (Paris)'])

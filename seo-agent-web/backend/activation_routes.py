@@ -6,15 +6,19 @@ import io
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
+from sqlalchemy import update
 
 try:
-    from . import customer_account_profile, customer_accounts, customer_activation, plan_counts, signup_attribution
+    from . import customer_account_profile, customer_accounts, customer_activation, customer_country, plan_counts, signup_attribution
+    from .models import User
 except ImportError:
     import customer_account_profile
     import customer_accounts
     import customer_activation
+    import customer_country
     import plan_counts
     import signup_attribution
+    from models import User
 
 router = APIRouter()
 
@@ -87,7 +91,26 @@ def accounts_page(request: Request, plan: str = '', q: str = '', usage: str = 'a
     return module().templates.TemplateResponse('settings_customer_accounts.html', {
         'request': request, 'project': None, 'inventory': data, 'plan_catalog': module().billing.plan_catalog(),
         'usage_filters': customer_accounts.USAGE_FILTERS,
+        'verification_mode': customer_country.verification_mode(module()),
     }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
+
+
+@router.post('/settings/account/country')
+def save_own_country(request: Request, country: str = Form(''), next: str = Form('/')):
+    m = module()
+    user = getattr(request.state, 'user', None)
+    if not user:
+        raise HTTPException(401, 'auth_required')
+    code = customer_country.normalize(country)
+    if code is None:
+        raise HTTPException(400, 'Choisissez votre pays de résidence dans la liste.')
+    try:
+        with m.DB.session() as db:
+            db.execute(update(User).where(User.id == user.id).values(country=code))
+            db.commit()
+    except Exception:
+        raise HTTPException(503, 'Votre pays n’a pas pu être enregistré. Réessayez dans quelques instants.') from None
+    return RedirectResponse(m._path_with_flash(m._safe_next_path(next), msg='Pays enregistré.'), status_code=303)
 
 
 @router.get('/settings/activation/accounts.csv')

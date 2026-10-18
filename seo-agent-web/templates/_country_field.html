@@ -1,0 +1,7 @@
+{% macro country_field(id, value='', required=false) %}
+  <label for="{{ id }}">Pays de résidence{% if not required %} (facultatif){% endif %}</label>
+  <select id="{{ id }}" name="country" autocomplete="country" {% if required %}required{% endif %}>
+    <option value="">Choisir un pays</option>
+    {% for code, label in country_options %}<option value="{{ code }}" {% if value == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+{% endmacro %}

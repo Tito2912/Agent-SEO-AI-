@@ -21,7 +21,7 @@
       <div><dt>Inscription</dt><dd>{{ account.created_at }} (Paris)</dd></div>
       <div><dt>Google associé</dt><dd>{{ 'Oui' if account.google_linked else 'Non retrouvé' }}{% if dossier.google_since %}<span class="profile-date muted small">Depuis le {{ dossier.google_since }} (Paris)</span>{% endif %}</dd></div>
       <div><dt>Fin de période d’abonnement</dt><dd>{{ account.current_period_end or 'Non renseignée' }}</dd></div>
-      <div><dt>Pays renseigné</dt><dd>{{ account.country or 'Non renseigné' }}</dd></div>
+      <div><dt>Pays déclaré</dt><dd>{{ account.country_label }}{% if account.country %} ({{ account.country }})<span class="profile-date muted small">{{ account.country_source }}</span>{% endif %}</dd></div>
       <div><dt>Langue renseignée</dt><dd>{{ account.language or 'Non renseignée' }}</dd></div>
       <div><dt>Fuseau renseigné</dt><dd>{{ account.timezone or 'Non renseigné' }}</dd></div>
     </dl><p class="small muted">Ces préférences sont celles renseignées dans le compte ; elles ne constituent pas une géolocalisation.</p></section>

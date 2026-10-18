@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% from "_country_field.html" import country_field %}
 {% block title %}Paramètres - Comptes & connexions{% endblock %}
 
 {% macro help_dialog(item) -%}
@@ -785,65 +786,10 @@
           </select>
         </label>
 
-        <label class="field-label">
-          Pays
-          <select name="country" class="input" style="margin-top:6px;">
-            <option value="">— non précisé —</option>
-            <option value="AE" {% if user_prefs.country == 'AE' %}selected{% endif %}>Émirats arabes unis</option>
-            <option value="AR" {% if user_prefs.country == 'AR' %}selected{% endif %}>Argentine</option>
-            <option value="AT" {% if user_prefs.country == 'AT' %}selected{% endif %}>Autriche</option>
-            <option value="AU" {% if user_prefs.country == 'AU' %}selected{% endif %}>Australie</option>
-            <option value="BE" {% if user_prefs.country == 'BE' %}selected{% endif %}>Belgique</option>
-            <option value="BR" {% if user_prefs.country == 'BR' %}selected{% endif %}>Brésil</option>
-            <option value="CA" {% if user_prefs.country == 'CA' %}selected{% endif %}>Canada</option>
-            <option value="CH" {% if user_prefs.country == 'CH' %}selected{% endif %}>Suisse</option>
-            <option value="CL" {% if user_prefs.country == 'CL' %}selected{% endif %}>Chili</option>
-            <option value="CN" {% if user_prefs.country == 'CN' %}selected{% endif %}>Chine</option>
-            <option value="CO" {% if user_prefs.country == 'CO' %}selected{% endif %}>Colombie</option>
-            <option value="CZ" {% if user_prefs.country == 'CZ' %}selected{% endif %}>République tchèque</option>
-            <option value="DE" {% if user_prefs.country == 'DE' %}selected{% endif %}>Allemagne</option>
-            <option value="DK" {% if user_prefs.country == 'DK' %}selected{% endif %}>Danemark</option>
-            <option value="EG" {% if user_prefs.country == 'EG' %}selected{% endif %}>Égypte</option>
-            <option value="ES" {% if user_prefs.country == 'ES' %}selected{% endif %}>Espagne</option>
-            <option value="FI" {% if user_prefs.country == 'FI' %}selected{% endif %}>Finlande</option>
-            <option value="FR" {% if user_prefs.country == 'FR' %}selected{% endif %}>France</option>
-            <option value="GB" {% if user_prefs.country == 'GB' %}selected{% endif %}>Royaume-Uni</option>
-            <option value="GR" {% if user_prefs.country == 'GR' %}selected{% endif %}>Grèce</option>
-            <option value="HK" {% if user_prefs.country == 'HK' %}selected{% endif %}>Hong Kong</option>
-            <option value="HR" {% if user_prefs.country == 'HR' %}selected{% endif %}>Croatie</option>
-            <option value="HU" {% if user_prefs.country == 'HU' %}selected{% endif %}>Hongrie</option>
-            <option value="ID" {% if user_prefs.country == 'ID' %}selected{% endif %}>Indonésie</option>
-            <option value="IE" {% if user_prefs.country == 'IE' %}selected{% endif %}>Irlande</option>
-            <option value="IL" {% if user_prefs.country == 'IL' %}selected{% endif %}>Israël</option>
-            <option value="IN" {% if user_prefs.country == 'IN' %}selected{% endif %}>Inde</option>
-            <option value="IT" {% if user_prefs.country == 'IT' %}selected{% endif %}>Italie</option>
-            <option value="JP" {% if user_prefs.country == 'JP' %}selected{% endif %}>Japon</option>
-            <option value="KR" {% if user_prefs.country == 'KR' %}selected{% endif %}>Corée du Sud</option>
-            <option value="MA" {% if user_prefs.country == 'MA' %}selected{% endif %}>Maroc</option>
-            <option value="MX" {% if user_prefs.country == 'MX' %}selected{% endif %}>Mexique</option>
-            <option value="MY" {% if user_prefs.country == 'MY' %}selected{% endif %}>Malaisie</option>
-            <option value="NG" {% if user_prefs.country == 'NG' %}selected{% endif %}>Nigeria</option>
-            <option value="NL" {% if user_prefs.country == 'NL' %}selected{% endif %}>Pays-Bas</option>
-            <option value="NO" {% if user_prefs.country == 'NO' %}selected{% endif %}>Norvège</option>
-            <option value="NZ" {% if user_prefs.country == 'NZ' %}selected{% endif %}>Nouvelle-Zélande</option>
-            <option value="PE" {% if user_prefs.country == 'PE' %}selected{% endif %}>Pérou</option>
-            <option value="PH" {% if user_prefs.country == 'PH' %}selected{% endif %}>Philippines</option>
-            <option value="PL" {% if user_prefs.country == 'PL' %}selected{% endif %}>Pologne</option>
-            <option value="PT" {% if user_prefs.country == 'PT' %}selected{% endif %}>Portugal</option>
-            <option value="RO" {% if user_prefs.country == 'RO' %}selected{% endif %}>Roumanie</option>
-            <option value="RU" {% if user_prefs.country == 'RU' %}selected{% endif %}>Russie</option>
-            <option value="SA" {% if user_prefs.country == 'SA' %}selected{% endif %}>Arabie saoudite</option>
-            <option value="SE" {% if user_prefs.country == 'SE' %}selected{% endif %}>Suède</option>
-            <option value="SG" {% if user_prefs.country == 'SG' %}selected{% endif %}>Singapour</option>
-            <option value="TH" {% if user_prefs.country == 'TH' %}selected{% endif %}>Thaïlande</option>
-            <option value="TR" {% if user_prefs.country == 'TR' %}selected{% endif %}>Turquie</option>
-            <option value="TW" {% if user_prefs.country == 'TW' %}selected{% endif %}>Taïwan</option>
-            <option value="UA" {% if user_prefs.country == 'UA' %}selected{% endif %}>Ukraine</option>
-            <option value="US" {% if user_prefs.country == 'US' %}selected{% endif %}>États-Unis</option>
-            <option value="VN" {% if user_prefs.country == 'VN' %}selected{% endif %}>Viêt Nam</option>
-            <option value="ZA" {% if user_prefs.country == 'ZA' %}selected{% endif %}>Afrique du Sud</option>
-          </select>
-        </label>
+        <div class="field-label country-field" style="display:grid;gap:6px;min-width:0;">
+          {{ country_field('preference-country', user_prefs.country) }}
+          <span class="muted small">Pays déclaré par vous, affiché dans les informations de votre compte.</span>
+        </div>
 
         <label class="field-label">
           Langue

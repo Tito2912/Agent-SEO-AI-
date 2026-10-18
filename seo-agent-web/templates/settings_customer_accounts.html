@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Comptes clients - Noyaru{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=2" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/customer-accounts.css?v=3" />{% endblock %}
 {% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><span class="crumb-current">Comptes clients</span>{% endblock %}
 {% block actions %}<a class="btn" href="{{ inventory.export_url }}">Exporter les résultats (CSV)</a>{% endblock %}
 {% block content %}
@@ -11,6 +11,8 @@
     <div class="account-plan-totals" aria-label="Répartition actuelle des comptes">{% for key, plan in plan_catalog.items() %}<span>{{ plan.label }} <strong>{{ inventory.counts[key] }}</strong></span>{% endfor %}</div>
     <p class="muted small">Même périmètre que les compteurs : administrateurs et collaborateurs sans compte personnel exclus. Toutes les dates d’inscription sont incluses.</p>
     <p class="small">Un compte Free dispose de l’accès gratuit. Il peut ne pas avoir de site, provenir d’un ancien abonnement ou ne pas avoir de connexion récente connue.</p>
+    <div class="account-coverage" aria-label="Informations conservées sur tous les comptes"><span><strong>{{ inventory.coverage.verified }}</strong> email{% if inventory.coverage.verified != 1 %}s{% endif %} vérifié{% if inventory.coverage.verified != 1 %}s{% endif %}</span><span><strong>{{ inventory.coverage.country }}</strong> pays déclaré{% if inventory.coverage.country != 1 %}s{% endif %}</span><span><strong>{{ inventory.coverage.with_sites }}</strong> compte{% if inventory.coverage.with_sites != 1 %}s{% endif %} avec site</span><span><strong>{{ inventory.coverage.with_analyses }}</strong> avec analyse enregistrée</span><span><strong>{{ inventory.coverage.with_login }}</strong> avec connexion conservée</span></div>
+    <div class="verification-mode" data-verification-mode="{{ verification_mode.key }}"><strong>{{ verification_mode.label }}</strong><p class="muted small">{{ verification_mode.detail }}</p><p class="muted small">Ce diagnostic décrit le réglage actuel, pas celui des anciennes inscriptions ni la livraison des emails. Une preuve absente ne permet pas de conclure que l’adresse est invalide ou que le compte a été utilisé.</p><a class="small" href="/settings/system">Consulter les réglages système</a></div>
   </section>
   <form class="card account-filters" action="/settings/activation/accounts" method="get">
     <div class="account-field account-search"><label for="account-search">Rechercher un compte</label><input id="account-search" type="search" name="q" value="{{ inventory.q }}" maxlength="320" placeholder="Email ou identifiant du compte" /></div>
@@ -23,17 +25,18 @@
     <p class="muted small">Le CSV contient tous les résultats correspondant aux filtres, sur toutes les pages. Actualisez la page pour relire les comptes.</p>
     <div class="account-table-wrap" tabindex="0" role="region" aria-label="Détails des comptes clients, tableau à défilement horizontal">
       <table class="table compact">
-        <thead><tr><th scope="col">Compte</th><th scope="col">Inscription</th><th scope="col">Formule et accès</th><th scope="col">Sites et analyses</th><th scope="col">Dernière connexion connue</th><th scope="col">Étape observée</th></tr></thead>
+        <thead><tr><th scope="col">Compte</th><th scope="col">Inscription</th><th scope="col">Pays déclaré</th><th scope="col">Formule et accès</th><th scope="col">Sites et analyses</th><th scope="col">Dernière connexion connue</th><th scope="col">Étape observée</th></tr></thead>
         <tbody>{% for row in inventory.rows %}
           <tr data-account-row>
             <td class="account-email"><strong><a href="{{ row.profile_url }}">{{ row.email }}</a></strong><span class="account-access small {% if not row.email_verified %}muted{% endif %}">{{ row.verification_label }}{% if row.google_linked %} · Google associé{% endif %}</span><a class="account-open small" href="{{ row.profile_url }}">Voir la fiche →</a><details><summary class="muted small">Identifiant du compte</summary><code>{{ row.user_id }}</code></details></td>
             <td>{{ row.created_at }}</td>
+            <td>{{ row.country_label }}{% if row.country %}<span class="account-access muted small">{{ row.country }} · Déclaré par le client</span>{% endif %}</td>
             <td><span class="badge">{{ row.plan_label }}</span><span class="account-access muted small">{{ row.access_label }}</span>{% if row.cancel_at_period_end and row.current_period_end %}<span class="account-access muted small">Fin de période : {{ row.current_period_end }}</span>{% endif %}</td>
             <td>{{ row.site_count }} site{% if row.site_count != 1 %}s{% endif %}<span class="account-access muted small">{{ row.analysis_count }} analyse{% if row.analysis_count != 1 %}s{% endif %} enregistrée{% if row.analysis_count != 1 %}s{% endif %}</span>{% if row.last_analysis_at %}<span class="account-access muted small">Dernière demande : {{ row.last_analysis_at }}</span>{% endif %}</td>
             <td>{{ row.last_login_at or 'Non renseignée' }}</td>
             <td>{{ row.milestone }}</td>
           </tr>
-        {% else %}<tr><td colspan="6" class="muted">Aucun compte ne correspond aux filtres. Essayez une autre formule ou réinitialisez la recherche.</td></tr>{% endfor %}</tbody>
+        {% else %}<tr><td colspan="7" class="muted">Aucun compte ne correspond aux filtres. Essayez une autre formule ou réinitialisez la recherche.</td></tr>{% endfor %}</tbody>
       </table>
     </div>
     <nav class="account-pagination" aria-label="Pages des comptes"><span class="muted small">{{ inventory.first }}–{{ inventory.last }} sur {{ inventory.matched }} · Page {{ inventory.page }}/{{ inventory.pages }}</span><div>{% if inventory.previous_url %}<a class="btn" rel="prev" href="{{ inventory.previous_url }}">Précédente</a>{% endif %}{% if inventory.next_url %}<a class="btn" rel="next" href="{{ inventory.next_url }}">Suivante</a>{% endif %}</div></nav>

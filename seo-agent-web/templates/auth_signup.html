@@ -1,4 +1,5 @@
 <!doctype html>
+{% from "_country_field.html" import country_field %}
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
@@ -7,6 +8,7 @@
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=24" />
     <link rel="stylesheet" href="/static/attribution.css?v=1" />
+    <link rel="stylesheet" href="/static/customer-country.css?v=1" />
   </head>
   <body>
     <main class="auth-shell">
@@ -40,6 +42,11 @@
         <form method="post" action="/auth/signup">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
+          <input type="hidden" name="country_requested" value="yes" />
+          <div class="signup-country">
+            {{ country_field('signup-country', signup_country, required=true) }}
+            <p class="muted small">Pays déclaré par vous, modifiable dans vos préférences.</p>
+          </div>
 
           {% if acquisition_campaign %}
           <input type="hidden" name="acquisition_campaign" value="{{ acquisition_campaign.id }}" />

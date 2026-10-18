@@ -101,6 +101,7 @@ try:
     from . import first_correction
     from . import customer_activation
     from . import signup_attribution
+    from . import customer_country
     from . import cms_guidance
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -110,6 +111,7 @@ except ImportError:
     import first_correction
     import customer_activation
     import signup_attribution
+    import customer_country
     import cms_guidance
 
 try:
@@ -10519,6 +10521,7 @@ def _public_url(request: Request, path: str) -> str:
 # sert donc toutes les pages, y compris /status et /support.
 templates.env.globals["public_url"] = _public_url
 templates.env.globals["campaign_link"] = signup_attribution.carry
+templates.env.globals["country_options"] = customer_country.OPTIONS
 
 
 def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
@@ -12831,6 +12834,8 @@ def auth_google_start(
     next: str = Form(default="/"),
     acquisition_campaign: str = Form(default=""),
     acquisition_consent: str = Form(default=""),
+    country: str = Form(default=""),
+    country_requested: str = Form(default=""),
 ) -> RedirectResponse:
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
@@ -12843,6 +12848,10 @@ def auth_google_start(
 
     campaign = signup_attribution.find(DB, identifier=acquisition_campaign) if m == "signup" and acquisition_campaign else None
     signup_target = signup_attribution.append_tags(f"/auth/signup?next={quote(n)}", signup_attribution.campaign_tags(campaign))
+    country_code = customer_country.normalize(country)
+    signup_target = customer_country.with_country(signup_target, country_code)
+    if m == "signup" and ((country_requested == "yes" and not country_code) or (country.strip() and not country_code)):
+        return RedirectResponse(url=_path_with_flash(signup_target, err="Choisissez votre pays de résidence dans la liste."), status_code=303)
     client_id, client_secret = _google_oauth_client()
     if not client_id or not client_secret:
         _audit_log(request, action="auth.google.start", status="oauth_not_configured")
@@ -12869,6 +12878,7 @@ def auth_google_start(
             {
                 "purpose": "auth_google",
                 **({"acquisition_campaign": campaign.id} if campaign and acquisition_consent == "yes" else {}),
+                **({"country": country_code} if m == "signup" and country_code else {}),
                 "mode": m,
                 "ts": int(time.time()),
                 "nonce": uuid.uuid4().hex,
@@ -12922,7 +12932,8 @@ def auth_google_callback(
 
     next_path = _safe_next_path(payload.get("next") if isinstance(payload, dict) else "/")
     login_target = f"/auth/login?next={quote(next_path)}"
-    signup_target = f"/auth/signup?next={quote(next_path)}"
+    signup_target = customer_country.with_country(f"/auth/signup?next={quote(next_path)}",
+                                                   payload.get("country") if isinstance(payload, dict) else None)
     base_target = signup_target if mode == "signup" else login_target
 
     if not isinstance(payload, dict) or payload.get("purpose") != "auth_google":
@@ -13041,7 +13052,7 @@ def auth_google_callback(
                     except Exception:
                         db.rollback()
 
-            if _email_verification_enabled() and email_verified:
+            if email_verified and email == _normalize_email(str(getattr(user, "email", "") or "")):
                 _mark_user_email_verified(db, user_id=uid)
 
         else:
@@ -13108,7 +13119,7 @@ def auth_google_callback(
                 is_admin = bool(getattr(existing_user, "is_admin", False))
                 linked_by_email = True
 
-                if _email_verification_enabled() and email_verified:
+                if email_verified:
                     _mark_user_email_verified(db, user_id=uid)
 
             elif mode == "login":
@@ -13161,7 +13172,8 @@ def auth_google_callback(
                     return RedirectResponse(url=_path_with_flash(signup_target, err="Accès bêta: email non autorisé."), status_code=303)
 
             is_admin = users_count == 0
-            user = User(email=email, password_hash=auth.hash_password(secrets.token_urlsafe(32)), is_admin=is_admin)
+            user = User(email=email, password_hash=auth.hash_password(secrets.token_urlsafe(32)), is_admin=is_admin,
+                        country=customer_country.normalize(payload.get("country")))
             signup_attribution.prepare_signup(user, campaign, "yes")
             db.add(user)
             try:
@@ -13175,7 +13187,7 @@ def auth_google_callback(
             db.refresh(user)
             uid = str(getattr(user, "id", "") or "")
 
-            if _email_verification_enabled() and email_verified:
+            if email_verified:
                 _mark_user_email_verified(db, user_id=uid)
 
     if not uid:
@@ -13373,6 +13385,7 @@ def auth_signup(
     request: Request,
     next: str | None = None,
     email: str | None = None,
+    country: str | None = None,
     msg: str | None = None,
     err: str | None = None,
 ) -> Response:
@@ -13397,6 +13410,7 @@ def auth_signup(
             "msg": str(msg or "").strip(),
             "err": str(err or "").strip(),
             "email": e,
+            "signup_country": customer_country.normalize(country) or "",
             "invite_required": invite_required,
             "invite_code": "",
             "signup_disabled": signup_disabled,
@@ -13416,12 +13430,15 @@ def auth_signup_submit(
     next: str = Form(default="/"),
     acquisition_campaign: str = Form(default=""),
     acquisition_consent: str = Form(default=""),
+    country: str = Form(default=""),
+    country_requested: str = Form(default=""),
 ) -> Response:
     secret = _safe_env("SEO_AGENT_SECRET_KEY")
     if not secret:
         raise HTTPException(status_code=500, detail="SEO_AGENT_SECRET_KEY missing")
 
     campaign = signup_attribution.find(DB, identifier=acquisition_campaign) if acquisition_campaign else None
+    country_code = customer_country.normalize(country)
     e = _normalize_email(email)
     invite_expected = _safe_env("SIGNUP_INVITE_CODE")
     invite_required = bool(invite_expected)
@@ -13449,7 +13466,7 @@ def auth_signup_submit(
             actor_email=e,
             meta={"retry_after_s": retry_after},
         )
-        target = signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign))
+        target = customer_country.with_country(signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign)), country_code)
         return RedirectResponse(
             url=_path_with_flash(target, err=f"Trop de tentatives. Réessaie dans {_format_retry_after(retry_after)}."),
             status_code=303,
@@ -13463,9 +13480,11 @@ def auth_signup_submit(
             actor_email=e,
             meta={"reason": msg, "status_code": status_code},
         )
-        target = signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign))
+        target = customer_country.with_country(signup_attribution.append_tags(f"/auth/signup?next={quote(n)}&email={quote(e)}", signup_attribution.campaign_tags(campaign)), country_code)
         return RedirectResponse(url=_path_with_flash(target, err=msg), status_code=303)
 
+    if (country_requested == "yes" and not country_code) or (country.strip() and not country_code):
+        return _signup_error("Choisissez votre pays de résidence dans la liste.", 400)
     if not e or "@" not in e or len(e) > 320:
         return _signup_error("Email invalide.", 400)
     if len(password or "") < 10:
@@ -13502,7 +13521,7 @@ def auth_signup_submit(
                 return _signup_error("Accès bêta: email non autorisé.", 403)
 
         is_admin = users_count == 0
-        user = User(email=e, password_hash=auth.hash_password(password), is_admin=is_admin)
+        user = User(email=e, password_hash=auth.hash_password(password), is_admin=is_admin, country=country_code)
         signup_attribution.prepare_signup(user, campaign, acquisition_consent)
         db.add(user)
         try:
@@ -13598,6 +13617,9 @@ def auth_signup_submit(
         path="/",
     )
     _audit_log(request, action="auth.signup", status="ok", user=user)
+    # This branch issued a real authenticated session; keep it distinct from a signup
+    # that still awaits email verification and has not opened access.
+    _audit_log(request, action="auth.login", status="ok", user=user, meta={"mode": "signup_session"})
     return resp
 
 
@@ -15100,12 +15122,7 @@ _VALID_TIMEZONES: set[str] = {
     "UTC",
 }
 _VALID_LANGUAGES: set[str] = {"ar","de","en","es","fr","it","ja","ko","nl","pl","pt","ru","tr","zh"}
-_VALID_COUNTRIES: set[str] = {
-    "AE","AR","AT","AU","BE","BR","CA","CH","CL","CN","CO","CZ","DE","DK","EG","ES",
-    "FI","FR","GB","GR","HK","HR","HU","ID","IE","IL","IN","IT","JP","KR","MA","MX",
-    "MY","NG","NL","NO","NZ","PE","PH","PL","PT","RO","RU","SA","SE","SG","TH","TR",
-    "TW","UA","US","VN","ZA",
-}
+_VALID_COUNTRIES: set[str] = set(customer_country.COUNTRIES)
 
 
 @app.post("/settings/account/preferences")
