@@ -1,0 +1,31 @@
+.first-correction-page { max-width: 1040px; }
+.first-correction-page .card { margin-bottom: 18px; }
+.first-correction-page h2 { font-size: 19px; line-height: 1.5; }
+.first-correction-page h3 { font-size: 15px; margin: 18px 0 10px; }
+.first-correction-page p { line-height: 1.65; }
+.first-correction-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0; margin: 0 0 24px; list-style: none; }
+.first-correction-steps li { display: flex; gap: 10px; align-items: center; padding: 14px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 13px; }
+.first-correction-steps li > span { display: grid; place-items: center; flex: 0 0 26px; height: 26px; border: 1px solid var(--border); border-radius: 50%; }
+.first-correction-steps li.done { color: var(--accent-2); border-color: rgba(var(--accent-rgb), .3); }
+.first-correction-choice { margin: 20px 0; padding: 18px 0; border-top: 1px solid var(--border); }
+.first-correction-choice h3 { margin-top: 0; }
+.first-correction-choice form { display: flex; align-items: end; gap: 14px; flex-wrap: wrap; }
+.first-correction-choice label { flex: 1 1 320px; min-width: 0; }
+.first-correction-choice select { width: 100%; min-width: 0; max-width: 100%; }
+.first-correction-url { overflow-wrap: anywhere; }
+.first-correction-result { border-color: rgba(var(--accent-rgb), .35); }
+.first-correction-result .btn { margin: 4px 8px 4px 0; }
+.onboarding-card > .onboarding-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.onboarding-success { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; border-color: rgba(var(--accent-rgb), .3); }
+.onboarding-success h2 { font-size: 16px; margin: 0 0 6px; }
+.onboarding-success p { margin: 0; }
+@media (max-width: 1100px) {
+  .first-correction-steps, .onboarding-card > .onboarding-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .first-correction-steps { grid-template-columns: 1fr; gap: 6px; }
+  .first-correction-steps li { padding: 10px 12px; }
+  .onboarding-card > .onboarding-steps { grid-template-columns: 1fr; }
+  .onboarding-success { align-items: flex-start; flex-direction: column; }
+  .first-correction-choice .btn, .first-correction-control .btn { width: 100%; justify-content: center; white-space: normal; }
+}

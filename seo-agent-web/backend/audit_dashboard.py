@@ -1657,6 +1657,9 @@ def project_latest_summary(runs_dir: Path, slug: str) -> dict[str, Any] | None:
             "urls_crawled": summary.get("urls_crawled", summary["pages_crawled"]),
             "health_score": summary["health_score"],
             "site_injoignable": summary.get("site_injoignable"),
+            "analysis_complete": isinstance(report.get("issues"), dict) and not bool(summary.get("site_injoignable")
+                or (report.get("meta") if isinstance(report.get("meta"), dict) else {}).get("stopped_on_time_budget")
+                or ((report.get("meta") if isinstance(report.get("meta"), dict) else {}).get("blocked_by_host") or {}).get("count")),
             "urls_with_errors": summary["urls_with_errors"],
             "issues_distribution": summary["issues_distribution"],
         }

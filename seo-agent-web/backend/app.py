@@ -98,11 +98,13 @@ try:
     from . import billing as billing  # type: ignore
     from . import correction_guard
     from . import correction_journal
+    from . import first_correction
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
     import correction_guard
     import correction_journal
+    import first_correction
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
@@ -5385,6 +5387,10 @@ def _verify_corrections_after_crawl(
                     for field in ("meta_robots", "x_robots_tag"))
                 if after is None or before is None or after <= before:
                     reason = "Le crawl ne prouve pas une visite postérieure au crawl de référence."
+                elif (isinstance(note_obj.get("first_correction"), dict)
+                      and (declared := _time(str(note_obj["first_correction"].get("declared_at") or "")))
+                      and after <= declared):
+                    reason = "L’analyse de contrôle doit commencer après la modification déclarée."
                 elif not comparable:
                     reason = "Les réglages du crawl de contrôle diffèrent de ceux de référence."
                 elif still_present:
@@ -5395,13 +5401,14 @@ def _verify_corrections_after_crawl(
                     reason = "Certaines URL du correctif n'ont pas été revisitées avec succès."
                 elif whole_family and expected > len(scope):
                     reason = "Le périmètre complet de cet ancien correctif est inconnu."
-                elif positive:
+                elif positive and not (note_obj.get("first_correction") and not whole_family and scope
+                                       and all(int(issues[k].get("count") or 0) == len(_impacted_norm(k)) for k in positive)):
                     # Examples are capped: an absent URL is not proof when occurrences remain.
                     reason = "Des occurrences subsistent ; les exemples ne prouvent pas leur périmètre."
                 elif meta.get("stopped_on_time_budget") or (meta.get("blocked_by_host") or {}).get("count"):
                     reason = "Le crawl est partiel ou certaines pages ont bloqué le robot."
                 result = "unverified" if reason else ("still_present" if still_present else "resolved")
-                if t.status == "in_progress" and result == "still_present":
+                if t.status == "in_progress" and result == "still_present" and not note_obj.get("first_correction"):
                     continue
                 prev = note_obj.get("verify") if isinstance(note_obj.get("verify"), dict) else {}
                 if prev.get("result") == result and prev.get("crawl_ts") == crawl_ts:
@@ -14594,6 +14601,8 @@ def projects(request: Request, msg: str | None = None, err: str | None = None) -
         # La valeur est lue sur le PROJET, pas sur le rapport : elle n'a rien a voir avec un
         # crawl et doit s'afficher meme sur un projet jamais crawle.
         reglages_p = p.settings if isinstance(p.settings, dict) else {}
+        ligne["project_id"] = str(p.id)
+        ligne["owner_user_id"] = proprietaire
         ligne["github_repo"] = str(reglages_p.get("github_repo") or "").strip()
         ligne["github_branch"] = str(reglages_p.get("github_branch") or "").strip()
         ligne["github_mode"] = str(reglages_p.get("github_mode") or "").strip()
@@ -15481,110 +15490,86 @@ def _production_operations_snapshot() -> dict[str, Any]:
 
 
 def _dashboard_onboarding_state(
-    *,
-    user: User,
-    projects: list[dict[str, Any]],
-    recent_crawl_jobs: dict[str, dict[str, Any]],
-    live_crawls: dict[str, dict[str, Any]],
+    *, user: User, projects: list[dict[str, Any]],
+    recent_crawl_jobs: dict[str, dict[str, Any]], live_crawls: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     user_id = str(getattr(user, "id", "") or "")
-    has_projects = bool(projects)
-    crawled_projects = [p for p in projects if str(p.get("timestamp") or "").strip()]
-    has_completed_crawl = bool(crawled_projects)
-    has_active_crawl = bool(live_crawls)
-    has_attempted_crawl = has_completed_crawl or has_active_crawl or any(
-        str(job.get("status") or "") in {"queued", "running", "done", "failed", "canceled", "cancel_requested"}
-        for job in recent_crawl_jobs.values()
-    )
-    first_project = projects[0] if projects else {}
-    first_slug = str(first_project.get("slug") or "").strip()
-    first_crawled_slug = str((crawled_projects[0].get("slug") if crawled_projects else "") or "").strip()
-
-    gsc_connected = False
-    if user_id:
-        for project in projects:
-            slug = str(project.get("slug") or "").strip()
-            if slug and _gsc_oauth_connected(user_id, slug):
-                gsc_connected = True
-                break
-
-    github_connected = False
+    project_ids = [str(p["project_id"]) for p in projects if p.get("project_id")]
+    tasks_by_project: dict[str, list[Any]] = {}
+    if project_ids:
+        with DB.session() as db:
+            tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id.in_(project_ids))
+                                    .order_by(IssueTask.updated_at.desc())))
+        for task in tasks:
+            tasks_by_project.setdefault(str(task.project_id), []).append(task)
+    progress_by_project = {str(p.get("project_id")): first_correction.progress(
+        tasks_by_project.get(str(p.get("project_id")), [])) for p in projects}
+    usable = [p for p in projects if p.get("timestamp") and int(p.get("pages_crawled") or 0) > 0
+              and not p.get("site_injoignable")]
+    selected = next((p for p in usable if progress_by_project[str(p.get("project_id"))].get("verified")), None)
+    selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))]), None)
+    selected = selected or next(iter(usable), None) or next(iter(projects), {})
+    slug = str(selected.get("slug") or "")
+    state = progress_by_project.get(str(selected.get("project_id")), {})
+    has_crawl = selected in usable
+    # An empty result is only a clean audit when the report confirms a complete analysis.
+    clean = bool(has_crawl and not state and selected.get("analysis_complete")
+                 and not any(int(v or 0) for v in (selected.get("issues_distribution") or {}).values()))
+    flow_url = f"/projects/{slug}/first-correction" if slug else ""
+    live = live_crawls.get(slug)
+    last_job = recent_crawl_jobs.get(slug) or {}
+    crawl_detail = ("Analyse terminée." if has_crawl else
+                    ("Analyse en cours ; cette étape sera validée à la fin." if live else
+                     ("La dernière analyse n’a pas abouti. Réessayez pour obtenir un rapport exploitable."
+                      if last_job.get("status") in {"failed", "canceled"} or selected.get("site_injoignable") else
+                      "Lancez l’analyse pour découvrir les problèmes de votre site.")))
+    steps = [
+        {"key": "project", "label": "Ajouter un site", "doc_href": "/docs/ajouter-un-projet",
+         "done": bool(projects), "detail": "Projet créé." if projects else "Créez votre premier projet.",
+         "action_label": "Ajouter", "action_href": "", "action_dialog": "add-project-dialog"},
+        {"key": "crawl", "label": "Lancer une première analyse", "doc_href": "/docs/lancer-un-crawl",
+         "done": has_crawl, "detail": crawl_detail,
+         "action_label": "Voir la progression" if live else ("Réessayer" if last_job.get("status") in {"failed", "canceled"} else "Lancer l’analyse"),
+         "action_href": f"/projects/{slug}" if slug else "", "disabled": not slug},
+    ]
+    if not clean:
+        steps.extend([
+            {"key": "issues", "label": "Choisir une correction", "doc_href": "/docs/anomalies-et-priorites",
+             "done": bool(state) and has_crawl,
+             "detail": state.get("label") or "Commencez par une page et suivez les instructions proposées.",
+             "action_label": "Choisir", "action_href": flow_url, "disabled": not has_crawl},
+            {"key": "verify", "label": "Vérifier le résultat", "doc_href": "",
+             "done": bool(state.get("verified")) and has_crawl,
+             "detail": ("La disparition du problème a été confirmée par une nouvelle analyse." if state.get("verified") else
+                        ("Le problème est encore présent. Reprenez la correction avant un nouveau contrôle."
+                         if state.get("verify", {}).get("result") == "still_present" else
+                         ("Une nouvelle analyse doit confirmer le résultat." if state.get("declared") else
+                          "Appliquez la modification, puis faites contrôler la page par Noyaru."))),
+             "action_label": "Vérifier ma modification" if state.get("declared") else "Reprendre la correction",
+             "action_href": flow_url, "disabled": not state or not has_crawl},
+        ])
+    gsc_connected = any(_gsc_oauth_connected(str(p.get("owner_user_id") or user_id), str(p.get("slug") or ""))
+                        for p in projects if p.get("slug"))
     try:
         with DB.session() as db:
-            github_connected = bool(_build_github_connection_state(user_id=user_id, db=db).get("connected"))
+            github_connected = bool(_build_github_connection_state(user_id=user_id, db=db).get("configured"))
     except Exception:
         github_connected = False
-
-    can_review_issues = bool(first_crawled_slug)
-    steps = [
-        {
-            "key": "project",
-            "label": "Ajouter un site",
-            "doc_href": "/docs/ajouter-un-projet",
-            "done": has_projects,
-            "detail": "Projet créé." if has_projects else "Créez votre premier projet.",
-            "action_label": "Ajouter",
-            "action_href": "",
-            "action_dialog": "add-project-dialog",
-        },
-        {
-            "key": "crawl",
-            "label": "Lancer une première analyse",
-            "doc_href": "/docs/lancer-un-crawl",
-            "done": has_attempted_crawl,
-            "detail": (
-                "Analyse terminée."
-                if has_completed_crawl
-                else ("Analyse en cours." if has_active_crawl else "Analysez les pages du site pour obtenir le rapport.")
-            ),
-            "action_label": "Lancer l’analyse",
-            "action_href": f"/projects/{first_slug}" if first_slug else "",
-            "disabled": not first_slug,
-        },
-        {
-            "key": "issues",
-            "label": "Traiter les anomalies",
-            "doc_href": "/docs/anomalies-et-priorites",
-            "done": can_review_issues,
-            "detail": "Rapport disponible." if can_review_issues else "Les anomalies apparaîtront après la première analyse.",
-            "action_label": "Voir",
-            "action_href": f"/projects/{first_crawled_slug}/issues" if first_crawled_slug else "",
-            "disabled": not first_crawled_slug,
-        },
-        {
-            "key": "gsc",
-            "label": "Connecter Search Console",
-            "doc_href": "/docs/connecter-search-console",
-            "done": gsc_connected,
-            "detail": "Données search connectées." if gsc_connected else "Ajoutez les performances réelles de recherche.",
-            "action_label": "Connecter",
-            "action_href": "/settings/accounts#gsc-oauth-card",
-            "optional": True,
-        },
-        {
-            "key": "github",
-            "label": "Connecter GitHub",
-            "doc_href": "/docs/connecter-github",
-            "done": github_connected,
-            "detail": "Correction via PR disponible." if github_connected else "Permet de proposer des corrections dans le code.",
-            "action_label": "Connecter",
-            "action_href": "/settings/accounts#github-connect-card",
-            "optional": True,
-        },
-    ]
-    required = [step for step in steps if not step.get("optional")]
-    required_done = sum(1 for step in required if step["done"])
-    total_required = len(required)
-    done_total = sum(1 for step in steps if step["done"])
-    return {
-        "steps": steps,
-        "required_done": required_done,
-        "total_required": total_required,
-        "done_total": done_total,
-        "total": len(steps),
-        "progress_pct": int(round((required_done / total_required) * 100)) if total_required else 100,
-        "complete": required_done >= total_required,
-    }
+    required_done = sum(bool(step["done"]) for step in steps)
+    total_required = len(steps)
+    steps.extend([
+        {"key": "gsc", "label": "Connecter Search Console", "doc_href": "/docs/connecter-search-console",
+         "done": gsc_connected, "detail": "Données de recherche connectées." if gsc_connected else "Ajoutez les performances réelles de recherche.",
+         "action_label": "Connecter", "action_href": "/settings/accounts#gsc-oauth-card", "optional": True},
+        {"key": "github", "label": "Connecter GitHub", "doc_href": "/docs/connecter-github",
+         "done": github_connected, "detail": "Correction via GitHub disponible." if github_connected else "Permet de proposer des corrections dans le code.",
+         "action_label": "Connecter", "action_href": "/settings/accounts#github-connect-card", "optional": True},
+    ])
+    return {"steps": steps, "required_done": required_done, "total_required": total_required,
+            "done_total": sum(bool(step["done"]) for step in steps), "total": len(steps),
+            "progress_pct": round(required_done / total_required * 100), "complete": required_done == total_required,
+            "success_kind": "clean" if clean else "verified", "success_href": flow_url,
+            "success_label": state.get("label") or "", "site_name": selected.get("site_name") or slug}
 
 
 # Pour lire en euros des couts factures en dollars. Un ordre de grandeur, pas une comptabilite :
@@ -18404,6 +18389,10 @@ def project_overview(
         config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
         project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
     )
+    with DB.session() as db:
+        journey_tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == str(proj_row.id))
+                                        .order_by(IssueTask.updated_at.desc())))
+    first_correction_state = first_correction.progress(journey_tasks)
     owner_id = str(proj_row.owner_user_id)
     gsc_status = _gsc_live_credentials_status(user_id=owner_id, slug=slug)
     bing_auth = _effective_bing_connection(user_id=owner_id, slug=slug)
@@ -18507,6 +18496,7 @@ def project_overview(
             "plan_key": plan_key,
             "live_series": live_series,
             "search_connections": search_connections,
+            "first_correction_state": first_correction_state,
             "connection": connection if connection in {"gsc", "bing"} else "",
             "msg": (msg or "").strip(),
             "err": (err or "").strip(),
@@ -30763,7 +30753,7 @@ def api_issue_task_upsert(request: Request, slug: str, issue_key: str, body: _Is
         if task:
             task.status = status
             if body.note is not None:
-                task.note = (body.note or "").strip() or None
+                task.note = first_correction.edited_note((body.note or "").strip(), task.note)
         else:
             task = IssueTask(
                 project_id=str(proj_row.id),
@@ -30773,7 +30763,7 @@ def api_issue_task_upsert(request: Request, slug: str, issue_key: str, body: _Is
                 crawl_ts=str(body.crawl_ts or ""),
                 url=url,
                 status=status,
-                note=(body.note or "").strip() or None,
+                note=first_correction.edited_note((body.note or "").strip()),
                 severity=str(body.severity or "notice"),
             )
             db.add(task)
@@ -30854,6 +30844,146 @@ def project_automation(request: Request, slug: str) -> HTMLResponse:
     return resp
 
 
+def _first_correction_context(request: Request, project: Project) -> dict[str, Any]:
+    runs_dir = _runs_dir_pour_slug(request, project.slug)
+    crawls = dash.list_project_crawls(runs_dir, project.slug)
+    report: dict[str, Any] = {}
+    crawl_ts = ""
+    for ts in reversed(crawls):
+        loaded = dash.load_report_json(runs_dir, project.slug, ts)
+        if isinstance(loaded, dict) and loaded:
+            report, crawl_ts = loaded, ts
+            break
+    with DB.session() as db:
+        tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == str(project.id))
+                                .order_by(IssueTask.updated_at.desc())))
+    state = first_correction.progress(tasks)
+    candidates = []
+    if report and not dash.site_injoignable(report):
+        for action in fix_pack.top_actions(report, site_name=project.site_name or project.slug,
+                                           base_url=project.base_url or "", limit=100):
+            if _is_delta_metric_key(action.issue_key):
+                continue
+            scope = dash.extract_impacted_pages(action.issue_key, (report.get("issues") or {}).get(action.issue_key))
+            urls = [url for url in action.sample_urls if url in scope and _verification_url(url)]
+            if not urls:
+                continue
+            candidates.append({**asdict(action), "urls": urls})
+            if len(candidates) == 3:
+                break
+    meta = report.get("meta") if isinstance(report.get("meta"), dict) else {}
+    clean = bool(not state and report.get("pages") and isinstance(report.get("issues"), dict)
+                 and not dash.site_injoignable(report) and not meta.get("stopped_on_time_budget")
+                 and not (meta.get("blocked_by_host") or {}).get("count")
+                 and not any(int(block.get("count") or 0) for key, block in report["issues"].items()
+                             if isinstance(block, dict) and not _is_delta_metric_key(key)))
+    instructions = []
+    if state:
+        baseline = dash.load_report_json(runs_dir, project.slug, state["crawl_ts"]) if state["crawl_ts"] in crawls else None
+        suggestion = fix_suggestions.suggest_issue_fix(
+            issue_key=state["issue_key"], label=state["label"], category="", severity="warning", count=1,
+            report=baseline or {}, site_name=project.site_name or project.slug, base_url=project.base_url or "")
+        instructions = suggestion.get("fix") or _issue_fix_hint_lines(state["issue_key"])
+    live_job = None
+    for job in _list_jobs(limit=100):
+        result = job.result if isinstance(job.result, dict) else {}
+        if (job.status in {"queued", "running", "cancel_requested"} and result.get("type") == "crawl"
+                and result.get("slug") == project.slug and str(result.get("user_id") or "") == str(project.owner_user_id)):
+            live_job = {"id": job.id, "status": job.status}
+            break
+    return {"state": state, "candidates": candidates, "crawl_ts": crawl_ts, "instructions": instructions,
+            "clean": clean, "live_job": live_job, "usable": bool(report.get("pages")) and not dash.site_injoignable(report),
+            "unreachable": bool(dash.site_injoignable(report)) if report else False}
+
+
+@app.get("/projects/{slug}/first-correction", response_class=HTMLResponse)
+def project_first_correction(request: Request, slug: str, msg: str = "", err: str = "") -> HTMLResponse:
+    project = _db_project_or_404(request, slug)
+    context = _first_correction_context(request, project)
+    response = templates.TemplateResponse("first_correction.html", {
+        "request": request, "project": {"slug": slug, "site_name": project.site_name or slug},
+        "slug": slug, "msg": msg.strip(), "err": err.strip(), **context,
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.post("/projects/{slug}/first-correction")
+def project_first_correction_update(
+    request: Request, slug: str, action: str = Form(...), issue_key: str = Form(default=""),
+    url: str = Form(default=""), crawl_ts: str = Form(default=""), task_id: str = Form(default=""),
+) -> RedirectResponse:
+    project = _db_project_or_404(request, slug)
+    if action not in {"select", "ready"}:
+        raise HTTPException(status_code=400, detail="unknown_correction_action")
+    target = f"/projects/{slug}/first-correction"
+    now = datetime.now(timezone.utc).isoformat()
+    user = getattr(request.state, "user", None)
+    with DB.session() as db:
+        if action == "select":
+            # The browser chooses among evidence from this project's latest report only.
+            context = _first_correction_context(request, project)
+            choice = next((item for item in context["candidates"] if item["issue_key"] == issue_key and url in item["urls"]), None)
+            if not choice or crawl_ts != context["crawl_ts"]:
+                return RedirectResponse(url=_path_with_flash(target, err="L’analyse a changé ou cette page n’est pas proposée. Choisissez une correction dans le dernier rapport."), status_code=303)
+            query = select(IssueTask).where(IssueTask.project_id == str(project.id),
+                                            IssueTask.issue_key == issue_key, IssueTask.url == url)
+            task = db.scalar(query)
+            if task is None:
+                task = IssueTask(project_id=str(project.id), user_id=str(project.owner_user_id),
+                                 created_by=str(getattr(user, "id", "")), issue_key=issue_key,
+                                 issue_label=choice["label"], url=url, crawl_ts=crawl_ts,
+                                 status="todo", severity=choice["severity"],
+                                 note=json.dumps({"first_correction": {"selected_at": now}, "verification_urls": [url]}))
+                db.add(task)
+                try:
+                    db.commit()
+                except IntegrityError:
+                    db.rollback()
+                    task = db.scalar(query)
+                    if task is None:
+                        raise
+            # Reusing an automatic task must preserve its PR and verification metadata.
+            if task.status == "ignored":
+                task.status = "todo"
+            note = first_correction.note_data(task.note)
+            if not note and task.note:
+                note["user_note"] = task.note
+            journey = note.get("first_correction") if isinstance(note.get("first_correction"), dict) else {}
+            note["first_correction"] = {**journey, "selected_at": now}
+            task.note = json.dumps(note, ensure_ascii=False)
+            message = "Correction choisie. Suivez les instructions pour modifier la page."
+        else:
+            task = db.scalar(select(IssueTask).where(IssueTask.id == task_id, IssueTask.project_id == str(project.id)))
+            if task is None:
+                raise HTTPException(status_code=404, detail="correction_not_found")
+            note = first_correction.note_data(task.note)
+            if not note and task.note:
+                note["user_note"] = task.note
+            verify = note.get("verify") if isinstance(note.get("verify"), dict) else {}
+            if verify.get("result") == "resolved" and first_correction.progress([task]).get("verified"):
+                return RedirectResponse(url=target, status_code=303)
+            if not task.url or not first_correction.timestamp(task.crawl_ts):
+                return RedirectResponse(url=_path_with_flash(target, err="Choisissez une page dans le dernier rapport avant de préparer le contrôle."), status_code=303)
+            journey = note.get("first_correction") if isinstance(note.get("first_correction"), dict) else {"selected_at": now}
+            # Repeat submissions before the next crawl keep the original declaration time.
+            if not journey.get("declared_at") or note.get("verify"):
+                journey["declared_at"] = now
+            note["first_correction"] = journey
+            note.setdefault("verification_urls", [task.url])
+            note.pop("verify", None)
+            task.note = json.dumps(note, ensure_ascii=False)
+            task.status = "in_progress"
+            target += "#verification"
+            message = "Modification signalée. Lancez une nouvelle analyse pour vérifier le résultat."
+        db.add(task)
+        db.commit()
+        saved_id = str(task.id)
+    _audit_log(request, action=f"first_correction.{action}", status="ok", target_type="project", target_id=slug,
+               meta={"task_id": saved_id})
+    return RedirectResponse(url=_path_with_flash(target, msg=message), status_code=303)
+
+
 @app.get("/projects/{slug}/corrections", response_class=HTMLResponse)
 def project_corrections(request: Request, slug: str) -> HTMLResponse:
     proj_row = _db_project_or_404(request, slug)
@@ -30910,8 +31040,8 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 _note_parsed = {"pr_fermee": {"pr_number": _pr_n}}
             # User-written note: only when the note isn't our internal JSON payload.
             _interne = isinstance(_note_parsed, dict) and any(
-                _note_parsed.get(k) for k in ("pr_url", "verify", "pr_fermee"))
-            user_note = "" if _interne else (t.note or "")
+                _note_parsed.get(k) for k in ("pr_url", "verify", "pr_fermee", "first_correction", "verification_urls"))
+            user_note = str(_note_parsed.get("user_note") or "") if _interne else (t.note or "")
             _verify = _note_parsed.get("verify") if isinstance(_note_parsed.get("verify"), dict) else None
             task_ctx = {
                 "id": t.id, "issue_key": t.issue_key, "issue_label": t.issue_label,

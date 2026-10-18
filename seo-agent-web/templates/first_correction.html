@@ -1,0 +1,126 @@
+{% extends "layout.html" %}
+{% block title %}Première correction - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/first_correction.css?v=1" />{% endblock %}
+{% block crumbs %}
+  <a href="/">Projets</a><span class="crumb-sep">/</span>
+  <a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span>
+  <span class="crumb-current">Première correction</span>
+{% endblock %}
+{% macro check_control() %}
+      <section class="card first-correction-control" id="verification">
+        <h2>Faites vérifier le résultat</h2>
+        <p class="muted">Noyaru doit revisiter la page et confirmer que le problème a disparu.</p>
+        {% if live_job %}
+          <p role="status">Une analyse est en cours. Le résultat apparaîtra une fois le contrôle terminé.</p>
+          <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">Voir la progression</a>
+        {% else %}
+          <form method="post" action="/projects/{{ slug }}/crawl">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <button class="btn primary" type="submit">Lancer la vérification</button>
+          </form>
+          <p class="muted small">Ce contrôle lance une nouvelle analyse, décomptée de votre quota habituel de pages.</p>
+        {% endif %}
+      </section>
+{% endmacro %}
+{% block content %}
+<div class="first-correction-page">
+  <div class="page-header">
+    <h1>Votre première correction</h1>
+    <p class="muted">Une page, une modification, puis un résultat contrôlé par Noyaru.</p>
+  </div>
+  {% if err %}<div class="alert error" role="alert">{{ err }}</div>
+  {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+
+  <ol class="first-correction-steps" aria-label="Progression de votre première correction">
+    <li class="done"><span aria-hidden="true">✓</span>Site ajouté</li>
+    <li class="{% if usable %}done{% endif %}"><span aria-hidden="true">{% if usable %}✓{% else %}2{% endif %}</span>Analyse disponible</li>
+    {% if not clean %}
+      <li class="{% if state %}done{% endif %}"><span aria-hidden="true">{% if state %}✓{% else %}3{% endif %}</span>Correction choisie</li>
+      <li class="{% if state.verified %}done{% endif %}"><span aria-hidden="true">{% if state.verified %}✓{% else %}4{% endif %}</span>Résultat vérifié</li>
+    {% endif %}
+  </ol>
+
+  {% if state.verified %}
+    <section class="card first-correction-result" role="status">
+      <span class="badge ok">Résultat confirmé</span>
+      <h2>Votre première correction est vérifiée</h2>
+      <p>Le contrôle a confirmé la résolution du problème « {{ state.label }} ».</p>
+      {% if state.url %}<p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>{% endif %}
+      <p class="muted small">Analyse de contrôle : <span data-ts-datetime="{{ state.verify.crawl_ts }}">{{ state.verify.crawl_ts }}</span>.</p>
+      {% if state.verify.introduced %}<p class="muted">D’autres anomalies sont en hausse depuis l’analyse de référence. Consultez le bilan avant de poursuivre.</p>{% endif %}
+      <a class="btn primary" href="/projects/{{ slug }}?crawl={{ state.verify.crawl_ts }}">Voir le bilan du contrôle</a>
+      <a class="btn" href="/projects/{{ slug }}/corrections">Continuer les corrections</a>
+    </section>
+  {% elif clean %}
+    <section class="card first-correction-result" role="status">
+      <span class="badge ok">Bilan disponible</span>
+      <h2>Aucune anomalie détectée sur les pages analysées</h2>
+      <p class="muted">Aucune correction n’est à préparer pour ce bilan. Vous pouvez consulter les résultats et suivre l’évolution du site lors des prochaines analyses.</p>
+      <a class="btn primary" href="/projects/{{ slug }}">Voir mon bilan</a>
+    </section>
+  {% elif not usable %}
+    <section class="card">
+      <h2>{% if unreachable %}Le site n’a pas pu être analysé{% else %}Commencez par analyser votre site{% endif %}</h2>
+      <p class="muted">{% if unreachable %}Vérifiez que le site est accessible, puis relancez l’analyse pour obtenir des corrections adaptées.{% else %}Noyaru doit visiter vos pages pour proposer une première correction.{% endif %}</p>
+      {% if live_job %}
+        <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">Voir l’analyse en cours</a>
+      {% else %}
+        <form method="post" action="/projects/{{ slug }}/crawl">
+          <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+          <button class="btn primary" type="submit">{% if unreachable %}Réessayer l’analyse{% else %}Lancer la première analyse{% endif %}</button>
+        </form>
+      {% endif %}
+    </section>
+  {% elif not state %}
+    <section class="card">
+      <h2>Choisissez un problème à traiter</h2>
+      <p class="muted">Commencez par une page. Vous pourrez lire les instructions, modifier votre site puis faire vérifier le résultat.</p>
+      {% for candidate in candidates %}
+        <article class="first-correction-choice">
+          <h3>{{ candidate.label }}</h3>
+          <p class="muted">{{ candidate.why }}</p>
+          <form method="post" action="/projects/{{ slug }}/first-correction">
+            <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+            <input type="hidden" name="action" value="select" />
+            <input type="hidden" name="crawl_ts" value="{{ crawl_ts }}" />
+            <input type="hidden" name="issue_key" value="{{ candidate.issue_key }}" />
+            <label>Page à corriger
+              <select name="url">{% for url in candidate.urls %}<option value="{{ url }}">{{ url }}</option>{% endfor %}</select>
+            </label>
+            <button class="btn {% if loop.first %}primary{% endif %}" type="submit">Choisir cette correction</button>
+          </form>
+        </article>
+      {% else %}
+        <p class="muted">Cette analyse ne permet pas de proposer une page à suivre dans ce parcours. Consultez les anomalies et les indications du rapport pour poursuivre.</p>
+      {% endfor %}
+      <a class="muted small" href="/projects/{{ slug }}/issues">Voir toutes les anomalies</a>
+    </section>
+  {% else %}
+    {% if state.declared and state.verify.result != 'still_present' %}{{ check_control() }}{% endif %}
+    <section class="card">
+      <h2>{{ state.label }}</h2>
+      <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
+      <h3>Modifiez votre page</h3>
+      <p class="muted">Appliquez ces instructions dans votre site, ou faites-les suivre à votre prestataire.</p>
+      <ul class="help-steps">{% for instruction in instructions %}<li>{{ instruction }}</li>{% endfor %}</ul>
+      <p><a href="/projects/{{ slug }}/issues/{{ state.issue_key }}?crawl={{ state.crawl_ts }}">Ouvrir les instructions détaillées</a></p>
+      {% if state.pr_url %}<p><a href="{{ state.pr_url }}" target="_blank" rel="noreferrer">Voir la proposition GitHub</a> · La modification doit être publiée sur votre site avant le contrôle.</p>{% endif %}
+      {% if state.verify.result == 'still_present' %}
+        <div class="alert warning" role="status">Le problème est encore présent. Reprenez les instructions et vérifiez que la modification a bien été publiée.</div>
+      {% elif state.verify.result == 'unverified' %}
+        <div class="alert warning" role="status">Le contrôle n’a pas pu confirmer le résultat. {{ state.verify.reason }}</div>
+      {% endif %}
+      {% if not state.declared or state.verify %}
+        <form method="post" action="/projects/{{ slug }}/first-correction">
+          <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+          <input type="hidden" name="action" value="ready" />
+          <input type="hidden" name="task_id" value="{{ state.task_id }}" />
+          <p class="muted small">Signalez la modification une fois qu’elle est visible sur votre site. Noyaru la vérifiera lors d’une nouvelle analyse.</p>
+          <button class="btn primary" type="submit">{% if state.verify %}J’ai à nouveau modifié cette page{% else %}J’ai modifié cette page{% endif %}</button>
+        </form>
+      {% endif %}
+    </section>
+    {% if state.declared and state.verify.result == 'still_present' %}{{ check_control() }}{% endif %}
+  {% endif %}
+</div>
+{% endblock %}
