@@ -22002,7 +22002,7 @@ def _texte_de_page(source: str) -> str:
 
 def _length_value_for_page(
     *, current: str, kind: str, url: str, site_name: str, model_override: str = "",
-    affix_len: int = 0, contexte: str = "",
+    affix_len: int = 0, contexte: str = "", langue: str = "",
 ) -> str:
     """Ask the model for the VALUE alone, then make the length true ourselves — at BOTH ends.
 
@@ -22036,7 +22036,9 @@ def _length_value_for_page(
     # This family shortens German, Spanish and French titles on the same account, so it runs the
     # identical risk. Naming the language is the cheap half; `_dominant_language` below is the
     # half that holds, and it abstains whenever the value does not say what it is.
-    lang_before = _dominant_language(current)
+    # `langue` : celle que le crawl a lue sur la page, pour une valeur ecrite DEPUIS RIEN (le
+    # pilote WordPress). Sans valeur actuelle, rien ne disait la langue et rien ne la verifiait.
+    lang_before = _dominant_language(current) or (langue if langue in _LANGUAGE_NAMES else "")
     too_short = _rendered_len(current) < low
     system = (
         f"Tu es un expert SEO. On te donne le {label} ACTUEL d'une page, "

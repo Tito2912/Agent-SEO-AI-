@@ -18,11 +18,12 @@
     <section class="card">
       <h2>{{ field_label }}</h2>
       {{ comparison() }}
+      {% if change.data.suggested %}<p class="muted">Texte proposé par Noyaru à partir de la page. Relisez-le, et modifiez-le s’il ne vous convient pas.</p>{% endif %}
       <p class="muted">Votre validation enregistrera cette valeur sur la page publiée. Cet aperçu reste valable 20 minutes.</p>
       {{ action_button('apply', 'Appliquer sur mon site', true, 'Enregistrement dans WordPress…') }}
       <p class="muted small">Étape suivante : vérifier le résultat sur cette page de suivi.</p>
     </section>
-    <a href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Modifier mon texte</a>
+    <a href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}&amp;change={{ change.id }}">Modifier {% if change.data.suggested %}ce{% else %}mon{% endif %} texte</a>
   {% elif change.state == 'applied' %}
     <section class="card cms-next-step" id="verification" aria-labelledby="verification-title">
       {% if verification.state == 'verified' %}

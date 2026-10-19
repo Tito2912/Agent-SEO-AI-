@@ -3,8 +3,9 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -86,7 +87,43 @@ def task_for_project(project, task_id):
     issue = (report.get("issues") or {}).get(task.issue_key)
     if not isinstance(issue, dict) or int(issue.get("count") or 0) <= 0 or task.url not in m.dash.extract_impacted_pages(task.issue_key, issue):
         raise wp.CmsError("Cette page n’est pas identifiée dans le rapport de référence de la correction.")
-    return task
+    return task, report
+
+
+# Families where Noyaru writes the value itself, with the corrector's own length writer. A
+# duplicate needs a text that differs from OTHER pages, which that writer cannot see: the
+# customer writes those.
+SUGGESTED = {"missing_title", "title_too_long", "title_too_short",
+             "missing_meta_description", "meta_description_too_long", "meta_description_too_short"}
+
+
+def issue_family(key):
+    return re.sub(r"_(?:not_)?indexable$", "", key or "")
+
+
+def page_context(report, url, post_title):
+    """What the page is about, from the crawl that flagged it: the writer must not invent."""
+    m = app_module()
+    target = m._verification_url(url)
+    row = next((page for page in report.get("pages") or [] if isinstance(page, dict)
+                and target in {m._verification_url(str(page.get(key) or "")) for key in ("url", "final_url")}), {})
+    parts = [("Titre de l’article", post_title), ("H1", " / ".join(row.get("h1") or [])),
+             ("Intertitres", " / ".join((row.get("h2") or [])[:8])), ("Description sociale", row.get("og_description"))]
+    return ("\n".join(f"{label} : {value}" for label, value in parts if value),
+            str(row.get("lang") or "")[:2].lower())
+
+
+def create_preview(request, project, task, c, page, field, value, *, suggested=False):
+    m = app_module()
+    before = wp.values(page)
+    with m.DB.session() as db:
+        change = CmsChange(project_id=str(project.id), task_id=str(task.id), created_by=str(request.state.user.id),
+                           state="preview", data={"url": task.url, "post_id": page["post_id"], "field": field,
+                           "before": before, "after": {**before, field: value}, "connection": wp.fingerprint(c, fingerprint_key()),
+                           "rendered_before": page.get(field + "_rendered"), **({"suggested": True} if suggested else {})})
+        db.add(change)
+        db.commit()
+        return str(change.id)
 
 
 @router.get("/projects/{slug}/cms")
@@ -193,16 +230,23 @@ def wordpress_disconnect(request: Request, slug: str):
 
 
 @router.get("/projects/{slug}/cms/wordpress/edit")
-def wordpress_edit(request: Request, slug: str, task_id: str):
+def wordpress_edit(request: Request, slug: str, task_id: str, change: str = "", err: str = ""):
     m = app_module()
     project = m._db_project_or_404(request, slug)
     try:
-        task = task_for_project(project, task_id)
+        task, _ = task_for_project(project, task_id)
         page = wp.WordPressClient(credentials(project)).read(task.url)
         field = cms_guidance.field_for_issue(task.issue_key)
+        draft = ""
+        if change:
+            # Reopening a preview edits ITS text (a proposal included), not WordPress's current one.
+            row = load_change(project, change)
+            if str(row.task_id) == str(task.id) and row.state == "preview":
+                draft = str(row.data["after"].get(field) or "")
         response = m.templates.TemplateResponse("cms_wordpress_edit.html", {
             "request": request, "project": project, "slug": slug, "task": task, "page": page,
             "field": field, "field_label": "Titre SEO" if field == "seo_title" else "Méta-description",
+            "draft": draft, "err": err, "can_suggest": issue_family(task.issue_key) in SUGGESTED,
         })
         response.headers["Cache-Control"] = "no-store"
         return response
@@ -215,27 +259,59 @@ def wordpress_preview(request: Request, slug: str, task_id: str = Form(...), val
     m = app_module()
     project = m._db_project_or_404(request, slug)
     try:
-        task = task_for_project(project, task_id)
+        task, _ = task_for_project(project, task_id)
         c = credentials(project)
         page = wp.WordPressClient(c).read(task.url)
         value = " ".join(value.split())
         field = cms_guidance.field_for_issue(task.issue_key)
         if not value or len(value) > (400 if field == "seo_title" else 2000) or "<" in value or ">" in value or "\0" in value:
             raise wp.CmsError("Saisissez un texte simple, sans balise HTML, pour préparer la correction.")
-        before = wp.values(page)
-        if before[field] == value:
+        if wp.values(page)[field] == value:
             raise wp.CmsError("Cette valeur est déjà enregistrée dans WordPress.")
-        with m.DB.session() as db:
-            change = CmsChange(project_id=str(project.id), task_id=str(task.id), created_by=str(request.state.user.id),
-                               state="preview", data={"url": task.url, "post_id": page["post_id"], "field": field,
-                               "before": before, "after": {**before, field: value}, "connection": wp.fingerprint(c, fingerprint_key()),
-                               "rendered_before": page.get(field + "_rendered")})
-            db.add(change)
-            db.commit()
-            change_id = str(change.id)
+        change_id = create_preview(request, project, task, c, page, field, value)
         return redirect(slug, path=f"cms/wordpress/changes/{change_id}")
     except wp.CmsError as error:
         return redirect(slug, err=str(error))
+
+
+@router.post("/projects/{slug}/cms/wordpress/suggest")
+def wordpress_suggest(request: Request, slug: str, task_id: str = Form(...)):
+    """Noyaru writes the value, as the corrector does in a repository, and bills one correction.
+
+    The proposal lands as an ordinary preview: nothing reaches WordPress before the customer
+    reads it and approves. A value that misses the crawler's bounds is not offered, nor billed."""
+    m = app_module()
+    project = m._db_project_or_404(request, slug)
+    user = request.state.user
+    try:
+        task, report = task_for_project(project, task_id)
+        family = issue_family(task.issue_key)
+        if family not in SUGGESTED:
+            raise wp.CmsError("Noyaru ne rédige pas ce texte : il doit se distinguer des autres pages. Écrivez une valeur propre à cette page.")
+        with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
+            allowed, message, _, model = m._correction_gate(user, slug=slug)
+            if not allowed:
+                raise wp.CmsError(message)
+            c = credentials(project)
+            page = wp.WordPressClient(c).read(task.url)
+            field = cms_guidance.field_for_issue(task.issue_key)
+            kind = "title" if field == "seo_title" else "description"
+            current = "" if family.startswith("missing_") else str(page.get(field) or page.get(field + "_rendered") or "")
+            contexte, langue = page_context(report, task.url, page.get("post_title"))
+            value = " ".join(str(m._length_value_for_page(
+                current=current, kind=kind, url=task.url, site_name=project.site_name or project.slug,
+                model_override=model, contexte=contexte, langue=langue) or "").split())
+            if (not value or "<" in value or ">" in value or value == wp.values(page)[field]
+                    or not m._LENGTH_FLOORS[kind] <= m._rendered_len(value) <= m._LENGTH_CEILINGS[kind]):
+                raise wp.CmsError("Noyaru n’a pas trouvé de texte fidèle à la page dans la bonne longueur. Rien n’a été décompté : écrivez-le ci-dessous.")
+            m._correction_charge(user, 1, slug=slug, motif=task.issue_key)
+            change_id = create_preview(request, project, task, c, page, field, value, suggested=True)
+        return redirect(slug, path=f"cms/wordpress/changes/{change_id}")
+    except wp.CmsError as error:
+        return redirect(slug, path="cms/wordpress/edit?" + urlencode({"task_id": task_id}), err=str(error))
+    except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
+        return redirect(slug, path="cms/wordpress/edit?" + urlencode({"task_id": task_id}),
+                        err="Une opération est en cours sur ce compte. Réessayez dans un instant.")
 
 
 def load_change(project, change_id):

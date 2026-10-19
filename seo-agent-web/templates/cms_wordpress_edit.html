@@ -6,14 +6,24 @@
 {% block content %}<div class="cms-page">
   <div class="page-header"><h1>Préparer {% if field == 'seo_title' %}le titre SEO{% else %}la méta-description{% endif %}</h1><p class="muted">{{ task.issue_label }}</p></div>
   {{ steps(1) }}
+  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
   <section class="card">
     <h2>{{ page.post_title }}</h2><p class="cms-url"><a href="{{ task.url }}" target="_blank" rel="noreferrer">{{ task.url }}</a></p>
     <p class="muted">Valeur actuelle affichée : {{ page[field ~ '_rendered'] or 'Non renseignée' }}</p>
+    {% if can_suggest %}
+      <form method="post" action="/projects/{{ slug }}/cms/wordpress/suggest" class="cms-form" id="cms-suggest">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
+        <button class="btn primary" type="submit" data-busy-label="Rédaction en cours…">Proposer un texte</button>
+        <p class="muted small">Noyaru rédige une proposition à partir de cette page, dans la bonne longueur. Elle compte pour une correction IA de votre forfait, et rien n’est modifié sur votre site avant votre validation.</p>
+      </form>
+    {% endif %}
     <form method="post" action="/projects/{{ slug }}/cms/wordpress/preview" class="cms-form">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
-      <label>{{ field_label }}{% if field == 'seo_title' %}<input name="value" value="{{ page[field] or '' }}" maxlength="400" required />{% else %}<textarea name="value" maxlength="2000" rows="4" required>{{ page[field] or '' }}</textarea>{% endif %}</label>
+      {% set initial = draft or page[field] or '' %}
+      {% if can_suggest %}<p class="muted small">Ou écrivez-le vous-même :</p>{% endif %}
+      <label>{{ field_label }}{% if field == 'seo_title' %}<input name="value" value="{{ initial }}" maxlength="400" required />{% else %}<textarea name="value" maxlength="2000" rows="4" required>{{ initial }}</textarea>{% endif %}</label>
       <p class="muted small">Écrivez un texte précis et propre à cette page. {% if field == 'seo_title' %}Visez environ 50 à 60 caractères.{% else %}Visez environ 140 à 160 caractères.{% endif %}</p>
-      <button class="btn primary" type="submit" data-busy-label="Préparation de l’aperçu…">Voir l’avant/après</button>
+      <button class="btn {% if not can_suggest %}primary{% endif %}" type="submit" data-busy-label="Préparation de l’aperçu…">Voir l’avant/après</button>
       <p class="muted small">Votre site sera modifié seulement après votre validation de l’aperçu. Vous pourrez ensuite vérifier le résultat ici.</p>
     </form>
   </section><a href="/projects/{{ slug }}/first-correction">Revenir aux instructions</a>
