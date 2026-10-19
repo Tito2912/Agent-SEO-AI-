@@ -6,19 +6,46 @@ import { configuration, gateway } from './hosted-proxy.mjs';
 
 const origin = 'https://wordpress.noyaru.test';
 const key = 'a'.repeat(48);
+// Render generateValue produces 32 random bytes encoded as standard base64.
+// This synthetic value deliberately contains +, / and the trailing padding.
+const renderKey = Buffer.alloc(32, 251).toString('base64');
 test('configuration requires a dedicated HTTPS origin, secret and bounded lifetime', () => {
   const env = { RENDER_EXTERNAL_URL: origin, NOYARU_WP_DEMO_KEY: key };
   assert.deepEqual(configuration(env), { origin, key, minutes: 120, port: 10000 });
   for (const value of ['http://demo.test', 'https://demo.test/path', 'https://a:b@demo.test', 'https://demo.test:444', 'https://demo.test/?key=a']) {
     assert.throws(() => configuration({ ...env, NOYARU_WP_DEMO_URL: value }));
   }
-  for (const value of ['', 'weak', 'x'.repeat(257), 'a b'.repeat(20)]) {
+  for (const value of ['', 'weak', 'x'.repeat(257), 'a b'.repeat(20),
+    key + '\n', '"' + key + '"', 'a'.repeat(32) + '=a', 'a'.repeat(32) + '===']) {
     assert.throws(() => configuration({ ...env, NOYARU_WP_DEMO_KEY: value }));
   }
   for (const value of ['0', '1441', 'NaN', '1.5']) {
     assert.throws(() => configuration({ ...env, NOYARU_WP_DEMO_MINUTES: value }));
   }
   assert.throws(() => gateway({ origin, key, upstream: 'https://customer.test', manifest: {} }));
+});
+
+test('Render base64 key starts the fixture and authenticates the exact bearer value', async t => {
+  assert.match(renderKey, /\+/);
+  assert.match(renderKey, /\//);
+  assert.ok(renderKey.endsWith('='));
+  const config = configuration({ RENDER_EXTERNAL_URL: origin, NOYARU_WP_DEMO_KEY: renderKey });
+  assert.equal(config.key, renderKey);
+  const server = gateway({ ...config, upstream: 'http://127.0.0.1:1',
+    manifest: { fixture: 'protected' }, expiresAt: Date.now() + 60000 });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
+  const url = `http://127.0.0.1:${server.address().port}/_noyaru-demo/credentials`;
+  for (const token of ['', 'A' + renderKey.slice(1), renderKey.slice(0, -1), renderKey + '=', '"' + renderKey + '"']) {
+    const response = await fetch(url, { headers: { authorization: 'Bearer ' + token } });
+    assert.equal(response.status, 401);
+    assert.ok(!(await response.text()).includes('protected'));
+  }
+  const response = await fetch(url, { headers: { authorization: 'Bearer ' + renderKey } });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal((await response.json()).fixture, 'protected');
 });
 
 test('gateway protects secrets, restricts routes and expires without a health restart', async t => {
