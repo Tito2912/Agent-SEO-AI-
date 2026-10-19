@@ -1,6 +1,7 @@
 """CMS guidance and an explicitly approved, journaled WordPress/Yoast connector."""
 from __future__ import annotations
 
+import html
 import json
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlsplit
@@ -251,10 +252,13 @@ def wordpress_change(request: Request, slug: str, change_id: str, err: str = "")
     m = app_module()
     project = m._db_project_or_404(request, slug)
     change = load_change(project, change_id)
+    verification = verification_state(project, change)
     response = m.templates.TemplateResponse("cms_wordpress_change.html", {
         "request": request, "project": project, "slug": slug, "change": change, "err": err,
         "field_label": "Titre SEO" if change.data["field"] == "seo_title" else "Méta-description",
-        "verification": verification_state(project, change),
+        "verification": verification,
+        "published": published_value(project, change, verification["receipt"])
+                     if verification["state"] == "still_present" else {},
     })
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -317,6 +321,36 @@ def verification_state(project, change):
             return {**state, "state": "finishing", "poll": True}
         return {**state, "state": "unverified"}
     return state
+
+
+def _same_text(left, right):
+    def norm(value):
+        return " ".join(html.unescape(str(value or "")).split()).casefold()
+    return bool(norm(left)) and norm(left) == norm(right)
+
+
+def published_value(project, change, receipt):
+    """What the control crawl actually saw, against what WordPress holds.
+
+    WordPress confirmed the new value on write, so a crawl still reading the OLD rendered value
+    is served a stale page: a cache plugin or a CDN, not a failed correction. Read only for the
+    change page (not the status poll), since it loads the control report."""
+    m = app_module()
+    field = change.data["field"]
+    report = m.dash.load_report_json(m._runs_dir_for_user(str(project.owner_user_id)), project.slug,
+                                     str(receipt.get("crawl_ts") or "")) or {}
+    target = m._verification_url(change.data["url"])
+    row = next((page for page in report.get("pages") or [] if isinstance(page, dict)
+                and target in {m._verification_url(str(page.get(key) or "")) for key in ("url", "final_url")}), None)
+    if row is None:
+        return {}
+    seen = row.get("title" if field == "seo_title" else "meta_description")
+    if _same_text(seen, change.data.get("rendered_before") or change.data["before"].get(field)):
+        if not _same_text(seen, change.data["after"][field]):
+            return {"kind": "stale", "seen": seen}
+    if _same_text(seen, change.data["after"][field]):
+        return {"kind": "live", "seen": seen}
+    return {"kind": "other", "seen": seen or ""}
 
 
 @router.get("/projects/{slug}/cms/wordpress/changes/{change_id}/status")
