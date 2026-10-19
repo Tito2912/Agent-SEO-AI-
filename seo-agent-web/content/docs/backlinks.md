@@ -5,7 +5,7 @@ description: "Importer son profil de liens, faire remonter des opportunités de 
 kind: "Documentation"
 section: "Aller plus loin"
 order: 41
-updated_at: "2026-09-30"
+updated_at: "2026-10-19"
 audience: "Solo, Pro et Business pour les opportunités"
 keywords: ["backlinks", "netlinking", "liens entrants", "Ahrefs"]
 app_href: "/"
@@ -25,7 +25,7 @@ surveille. Il n'obtient pas de liens à votre place, parce que personne ne le pe
 
 ## Inventorier vos liens entrants
 
-Page **Backlinks** d'un projet. Deux façons de la remplir :
+Page **Liens entrants** d’un projet. Le bloc « Liens vers votre site » présente les sources importées ; le bloc « Liens dans les pages analysées » présente les liens internes et sortants de l’analyse sélectionnée. Deux façons de la remplir :
 
 ![Bloc Netlinking du crawl : pages analysées, pages orphelines et domaines externes](/static/captures/netlinking.webp "Ce que le crawl dit déjà de vos liens : pages analysées, pages orphelines, domaines externes.")
 
@@ -36,15 +36,13 @@ universelle, et elle ne demande aucun abonnement.
 possibles : domaine, sous-domaines, préfixe d'URL, ou URL exacte. Le volume récupéré est
 plafonné pour éviter d'aspirer un profil entier d'un coup.
 
-Une fois les données en place, la page vous donne l'essentiel : domaines référents, pages qui
-reçoivent les liens, ancres utilisées, et surtout les **pages sans aucun lien entrant** — un
-angle mort classique, notamment sur les pages business créées après le lancement du site.
+Les imports montrent les domaines référents, les pages cibles et les ancres recensés par chaque source ; ils ne constituent pas un inventaire exhaustif. Les **pages orphelines** du bloc d’analyse sont celles sans lien interne entrant repéré dans les pages analysées. Ce chiffre ne mesure pas l’absence de liens depuis d’autres sites.
 
 ## Les opportunités
 
 *Disponible à partir du plan Solo.*
 
-Page **Opportunités**. {{app_name}} cherche des endroits où votre site aurait légitimement sa
+Page **Faire connaître mon site**. {{app_name}} cherche des endroits où votre site aurait légitimement sa
 place : discussions où votre sujet est abordé, pages de ressources, listes, articles qui citent
 des outils comparables.
 
@@ -73,8 +71,7 @@ Trois choses à savoir, et elles sont volontaires :
 
 - **C'est un brouillon.** Il est fait pour être relu et modifié. Un message générique envoyé
   tel quel se repère à dix mètres et se supprime aussi vite.
-- **Vous l'envoyez vous-même.** Le produit ne poste rien à votre place sans que vous ayez
-  activé et configuré l'automatisation.
+- **Vous l’envoyez vous-même.** « Copier et ouvrir » prépare le texte et ouvre la discussion. Après l’envoi sur le site concerné, revenez cliquer sur « J’ai envoyé la réponse ». Cette déclaration ne prouve pas encore la présence du lien ; elle met à jour votre suivi.
 - **Les brouillons sont comptés** dans un quota mensuel, comme les recherches. Les deux
   dépendent de votre plan.
 
@@ -88,7 +85,7 @@ Trois choses à savoir, et elles sont volontaires :
 
 Une recherche périodique d'opportunités peut être activée par projet : mots-clés à surveiller,
 sources, fréquence quotidienne ou hebdomadaire, nombre maximum de trouvailles par passage, et
-rédaction automatique des brouillons ou non.
+rédaction automatique des brouillons ou non. Cette automatisation ne publie pas de messages sur les sites tiers ; l’envoi reste manuel.
 
 Elle est **désactivée par défaut**, et c'est le bon réglage tant que vous n'avez pas vérifié à
 la main que les opportunités remontées sont pertinentes pour votre site.

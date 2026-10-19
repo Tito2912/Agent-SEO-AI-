@@ -225,6 +225,23 @@ def test_an_uncovered_subject_offers_to_WRITE_a_page_instead(customer, own_crawl
     assert f"/projects/{slug}/content?sujet=" in heygen_row, heygen_row
 
 
+def test_an_uncovered_subject_can_be_drafted_without_a_github_repository(customer, own_crawl) -> None:
+    client, slug, pid, _uid, _plans = customer
+    own_crawl(OWN_PAGES)
+    _add_ready_rival(pid, _uid)
+    with app_module.DB.session() as db:
+        project = db.get(Project, pid)
+        project.settings = {**project.settings, "github_repo": ""}
+        db.commit()
+    body = client.get(f"/projects/{slug}/competitors").text
+    uncovered = _row(body, "HeyGen")
+    assert f"/projects/{slug}/content?sujet=" in uncovered
+    assert "data-keyword-pr" not in uncovered
+    covered = _row(body, "Kling AI")
+    assert "Relire ma page" in covered
+    assert "data-keyword-pr" not in covered
+
+
 def test_a_COVERED_subject_is_not_offered_a_second_page(customer, own_crawl) -> None:
     """Écrire une deuxième page sur un sujet déjà traité, c'est se cannibaliser soi-même :
     deux pages du site se disputent la même requête et aucune ne gagne."""
@@ -367,9 +384,12 @@ def test_the_monthly_refresh_only_touches_what_has_gone_stale(customer) -> None:
     resp = client.post("/cron/refresh-competitors",
                        headers={"Authorization": "Bearer test-cron-secret"})
     assert resp.status_code == 200
-    # Membership, not equality: this cron is global by design, and the tests above leave their
-    # own never-crawled rivals behind — which are legitimately stale.
-    assert "vieux-rival.fr" in resp.json()["domains"]
+    # The response samples only the first 20 domains of this global cron. Other tests may
+    # leave more stale rivals, so inspect the actual queued job rather than that sample.
+    assert resp.json()["queued"] >= 1
+    with app_module.DB.session() as db:
+        stale_job = app_module._load_job(db.get(CompetitorSite, stale).last_job_id)
+    assert stale_job.result["domain"] == "vieux-rival.fr"
     with app_module.DB.session() as db:
         assert db.get(CompetitorSite, fresh).status == "ready", "a fresh rival was re-crawled"
         assert db.get(CompetitorSite, stale).status == "crawling"

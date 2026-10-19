@@ -1006,6 +1006,9 @@ def _content_security_policy(request: Request) -> str:
     if custom:
         return re.sub(r"\s+", " ", custom).strip()
 
+    # Only the editor embeds an article preview. The iframe has an opaque sandbox origin
+    # and a restrictive srcdoc policy; every other screen continues to forbid frames.
+    article_preview = bool(re.fullmatch(r"/projects/[^/]+/content", str(getattr(request.url, "path", ""))))
     directives = [
         "default-src 'self'",
         "base-uri 'self'",
@@ -1025,7 +1028,7 @@ def _content_security_policy(request: Request) -> str:
         "style-src 'self' 'unsafe-inline'",
         "script-src 'self' 'unsafe-inline'",
         "connect-src 'self'",
-        "frame-src 'none'",
+        "frame-src 'self'" if article_preview else "frame-src 'none'",
         "manifest-src 'self'",
     ]
     if _request_is_secure(request):
@@ -34454,6 +34457,7 @@ def project_content(request: Request, slug: str) -> HTMLResponse:
                 "status": str(t.status or ""),
                 "id": str(t.id),
                 "publication": str(note.get("publication") or ""),
+                "approved": bool(verif.get("valide_par_client")),
                 "updated_at": t.updated_at.strftime("%d/%m/%Y") if t.updated_at else "",
             })
     except Exception:
@@ -35397,7 +35401,7 @@ def page_contenu_valider(request: Request, slug: str, task_id: str,
         return RedirectResponse(url="/auth/login?next=" + quote(str(request.url.path)), status_code=303)
     proj, tache, note = _page_a_valider(request, slug, task_id)
     verif = note.get("verification") if isinstance(note.get("verification"), dict) else {}
-    return templates.TemplateResponse("content_valider.html", {
+    response = templates.TemplateResponse("content_valider.html", {
         "request": request, "slug": slug,
         "project": {"slug": proj.slug, "site_name": proj.site_name},
         "task_id": str(tache.id), "sujet": str(note.get("sujet") or ""),
@@ -35405,8 +35409,12 @@ def page_contenu_valider(request: Request, slug: str, task_id: str,
         "pages": [p for p in (note.get("pages") or []) if isinstance(p, dict)],
         "etat": str(verif.get("etat") or ""), "raison": str(verif.get("raison") or ""),
         "fusionnee": str(tache.status or "") == "done",
+        "approved": bool(verif.get("valide_par_client")),
+        "has_verification": bool(verif),
         "msg": msg, "err": err,
     })
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.post("/projects/{slug}/content/valider/{task_id}")
@@ -35445,15 +35453,15 @@ def page_contenu_valider_post(request: Request, slug: str, task_id: str) -> Redi
     issue = _reprendre_une_verification(tache)
     logger.info("[contenu] %s : page %s validee -> %s", slug, task_id, issue)
     if issue == "fusionnee":
-        return RedirectResponse(url=_path_with_flash(ici, msg="Page validée et fusionnée."), status_code=303)
+        return RedirectResponse(url=_path_with_flash(ici, msg="Contenu validé et proposition fusionnée. La mise en ligne dépend du déploiement de votre site."), status_code=303)
     if issue == "attendre":
         return RedirectResponse(url=_path_with_flash(ici, msg=(
-            "Page validée : elle sera fusionnée dès que les vérifications de ton dépôt passeront.")),
+            "Page validée : elle sera fusionnée dès que les vérifications de votre dépôt passeront.")),
             status_code=303)
     if issue == "echouee":
         return RedirectResponse(url=_path_with_flash(ici, err=(
-            "Les vérifications de ton dépôt échouent sur cette pull request : elle n'est pas "
-            "fusionnée. Corrige-les sur GitHub, puis valide à nouveau.")), status_code=303)
+            "Les vérifications de votre dépôt échouent sur cette pull request : elle n'est pas "
+            "fusionnée. Corrigez-les sur GitHub, puis réessayez la fusion.")), status_code=303)
     if issue == "fermee":
         return RedirectResponse(url=_path_with_flash(
             ici, err="La pull request n'est plus ouverte sur GitHub (fermée ou déjà fusionnée à la main)."),
@@ -35465,7 +35473,7 @@ def page_contenu_valider_post(request: Request, slug: str, task_id: str) -> Redi
     except Exception:
         raison = ""
     return RedirectResponse(url=_path_with_flash(ici, err=(
-        "Validée, mais la fusion n'a pas abouti (%s). Réessaie, ou fusionne-la sur GitHub."
+        "Validée, mais la fusion n'a pas abouti (%s). Réessayez ou consultez la proposition sur GitHub."
         % (raison[:200] or issue))), status_code=303)
 
 

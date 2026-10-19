@@ -5,7 +5,7 @@ description: "Les trois types d'opportunités détectées dans vos données Sear
 kind: "Documentation"
 section: "Search Console et mots-clés"
 order: 31
-updated_at: "2026-09-03"
+updated_at: "2026-10-19"
 audience: "Tous les plans, Search Console requise"
 keywords: ["mots-clés", "Search Console", "CTR", "position moyenne", "réécriture"]
 app_href: "/"
@@ -19,7 +19,7 @@ faq:
   - question: "Le gain de clics estimé est-il fiable ?"
     answer: "C'est une projection basée sur le taux de clic que votre propre site atteint sur ses positions de tête, pas sur une moyenne de marché. Elle n'est affichée que si ce point de comparaison existe, et reste une estimation."
   - question: "La réécriture change-t-elle le contenu de ma page ?"
-    answer: "Non. Elle ne touche que le title et la meta description. Si la page se classe déjà sur la requête, son contenu est pertinent — c'est sa présentation dans les résultats qui ne l'est pas."
+    answer: "Non. Elle ne touche que le title et la meta description. La présence de la page dans les résultats ne garantit pas la qualité de son contenu ; la proposition porte uniquement sur sa présentation."
 ---
 
 C'est la fonction qui répond à la question « sur quoi je travaille maintenant ? » avec autre
@@ -94,8 +94,7 @@ C'est l'action qui ferme la boucle. Search Console nomme la requête et la page 
 réécrit le `title` et la `meta description` de cette page pour répondre à cette requête, et
 ouvre une pull request sur votre dépôt.
 
-La page **garde son sujet**. Elle se classe déjà, donc le contenu est bon ; seule sa
-présentation dans les résultats change.
+La page **garde son sujet**. La proposition porte sur le titre et la description ; la présence dans les résultats ne suffit pas à conclure que le contenu est bon ni qu’il convertit.
 
 Cette fonction est volontairement plus prudente que le correcteur d'anomalies, parce qu'aucun
 crawl ne peut valider son résultat :
@@ -109,8 +108,7 @@ crawl ne peut valider son résultat :
   page réécrivent les deux mêmes lignes, et la seconde PR entrerait en conflit avec la
   première.
 
-Prérequis : un [dépôt connecté](/docs/connecter-github). Une réécriture consomme une unité de
-votre quota de corrections.
+Prérequis : un [dépôt connecté](/docs/connecter-github). Le bouton « Préparer une réécriture » ouvre d’abord un récapitulatif de la page, de la recherche et du coût. Vous confirmez ensuite la création du brouillon, puis relisez les changements sur GitHub. **Chaque fichier rédigé** est décompté du quota de corrections IA ; la création ne fusionne pas la proposition.
 
 ## Comment savoir si ça a marché
 

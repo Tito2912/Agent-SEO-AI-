@@ -7,7 +7,7 @@
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Backlinks</span>
+    <span class="crumb-current">Liens du site</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -27,7 +27,7 @@
   {% else %}
     {% set cur = project.current %}
     <div class="page-header">
-      <h1>Backlinks &amp; netlinking</h1>
+      <h1>Liens vers et dans votre site</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
     </div>
 
@@ -46,7 +46,7 @@
     <section class="card">
       <form method="get" class="filters">
         <label>
-          Crawl
+          Analyse affichée
           <select name="crawl">
             {% for ts in project.crawls %}
               <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
@@ -56,14 +56,16 @@
         <button type="submit" class="btn">Appliquer</button>
       </form>
       <p class="muted small" style="margin: 10px 0 0;">
-        Cette page combine : 1) <strong>backlinks importés</strong> (CSV GSC/Bing/Ahrefs + API Ahrefs) 2) <strong>netlinking crawl</strong> (liens internes + liens sortants).
+        Les liens <strong>vers votre site</strong> proviennent des sources importées ci-dessous. Les liens <strong>dans votre site</strong> proviennent de l’analyse sélectionnée : liens internes entre vos pages et liens sortants vers d’autres sites.
       </p>
     </section>
 
+    <h2 id="incoming-links">Liens vers votre site</h2>
+    <p class="muted">Un lien entrant est un lien placé sur un autre site qui pointe vers le vôtre. <a href="/projects/{{ project.slug }}/backlinks/opportunities">Rechercher des discussions pour faire connaître votre site</a>.</p>
     <section class="card">
       <div class="card-title-row">
-        <h2>Importer des backlinks (CSV)</h2>
-        <a class="muted small" href="/settings/accounts">Gérer Bing / GSC</a>
+        <h2>Importer les liens vers votre site</h2>
+        <a class="muted small" href="/projects/{{ project.slug }}/settings/search">Connexions Google et Bing de ce site</a>
       </div>
       <form
         method="post"
@@ -291,7 +293,7 @@
     {% else %}
       <section class="card">
         <div class="card-title-row">
-          <h2>Netlinking (crawl)</h2>
+          <h2>Liens dans les pages analysées</h2>
           <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">Voir anomalies “Liens”</a>
         </div>
         <div class="metric-band" style="margin-top:4px;">
@@ -321,7 +323,7 @@
           {% if not top_incoming %}
             <p class="muted">Aucune donnée.</p>
           {% else %}
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Liens, défilement horizontal si nécessaire">
               <table class="table compact">
                 <thead>
                   <tr>
@@ -352,7 +354,7 @@
           {% if not top_external_domains %}
             <p class="muted">Aucun lien externe détecté.</p>
           {% else %}
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Liens, défilement horizontal si nécessaire">
               <table class="table compact">
                 <thead>
                   <tr>

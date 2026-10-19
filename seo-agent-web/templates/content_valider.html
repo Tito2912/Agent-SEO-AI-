@@ -1,38 +1,43 @@
 {% extends "layout.html" %}
-{% block title %}Valider une page - {{ project.site_name }}{% endblock %}
-
+{% from '_correction_progress.html' import steps %}
+{% block title %}Relire et valider le contenu — {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=1" />{% endblock %}
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/content">Contenu</a><span class="crumb-sep">/</span><span class="crumb-current">Relecture</span>{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>Valider une page</h1>
-    <p class="muted">{{ project.site_name }} · <a href="/projects/{{ slug }}/content">Contenu</a></p>
-  </div>
-
-  {% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>{% endif %}
-  {% if msg %}<div class="alert" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>{% endif %}
-
-  <section class="card">
-    <h2 style="margin-top:0;">{{ sujet or "Page rédigée" }}</h2>
-    {% for p in pages %}
-      <p class="mono small" style="margin:2px 0;">{{ p.route }}{% if p.langue %} <span class="muted">({{ p.langue }})</span>{% endif %}</p>
-    {% endfor %}
-    {% if raison %}<p class="muted small" style="margin-top:10px;">{{ raison }}</p>{% endif %}
-
-    <p style="margin-top:14px;">
-      {% if pr_url %}<a href="{{ pr_url }}" target="_blank" rel="noreferrer">Relire la pull request #{{ pr_number }} sur GitHub</a>{% endif %}
-    </p>
-    <p class="muted small">
-      Le texte est écrit par un modèle : il est plausible, il n'est pas vérifié. Chiffres, noms,
-      dates et promesses commerciales sont à contrôler avant de valider.
-    </p>
-
-    {% if fusionnee %}
-      <p><span class="badge ok">fusionnée</span></p>
-    {% else %}
-      <form method="post" action="/projects/{{ slug }}/content/valider/{{ task_id }}" class="modal-actions between">
-        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-        <span class="muted small">Valider fusionne la pull request : la page part en ligne avec ton prochain déploiement.</span>
-        <button class="btn primary" type="submit">Valider et fusionner</button>
-      </form>
-    {% endif %}
-  </section>
+<div class="page-header"><h1>Relire et valider le contenu</h1><p class="muted">{{ project.site_name }} · une proposition à contrôler avant sa mise en ligne</p></div>
+{{ steps(4 if fusionnee else (3 if approved else 1), labels=['Relire', 'Autoriser', 'Fusionner', 'Déployer'], aria_label='Progression de votre contenu') }}
+{% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
+{% if msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+<section class="card content-review-card">
+  <h2>{{ sujet or "Page rédigée" }}</h2>
+  {% for p in pages %}<p class="mono small">{{ p.route }}{% if p.langue %} <span class="muted">({{ p.langue }})</span>{% endif %}</p>{% endfor %}
+  {% if fusionnee %}
+    <p><span class="badge ok">Proposition fusionnée</span></p>
+    <p>Le contenu est intégré dans la branche de votre site. Sa mise en ligne dépend de votre déploiement ; elle n’est pas confirmée ici.</p>
+    <div class="content-actions"><a class="btn primary" href="/projects/{{ slug }}">Revenir au projet</a><a class="btn" href="/projects/{{ slug }}/content">Préparer un autre contenu</a></div>
+  {% elif etat == 'abandonnee' %}
+    <p><span class="badge notice">Proposition fermée</span></p><p>Consultez son état sur GitHub avant de préparer une nouvelle proposition.</p>
+  {% elif approved and etat == 'en_attente' %}
+    <p><span class="badge notice">Contenu validé · fusion en attente</span></p>
+    <p>Votre autorisation est enregistrée. La proposition sera fusionnée lorsque les vérifications du dépôt le permettront. La publication dépendra ensuite de votre déploiement.</p>
+    <a class="btn" href="/projects/{{ slug }}/content/valider/{{ task_id }}">Actualiser le suivi</a>
+  {% else %}
+    {% if approved %}<p><span class="badge notice">Contenu déjà validé</span></p>{% endif %}
+    {% if etat == 'echouee' %}<p class="alert error">Les vérifications du dépôt ont échoué. La proposition reste en attente. Corrigez le problème sur GitHub avant de réessayer la fusion.</p>{% endif %}
+    <p>Relisez le texte, les liens et les différentes langues sur GitHub. Vérifiez les informations, les noms et les promesses commerciales avant d’autoriser la fusion.</p>
+  {% endif %}
+  {% if raison %}<details class="technical-details"><summary>Détails des vérifications du dépôt</summary><p>{{ raison }}</p></details>{% endif %}
+  {% if pr_url %}<p><a class="btn{% if not fusionnee and not approved %} primary{% endif %}" href="{{ pr_url }}" target="_blank" rel="noopener noreferrer">Relire la proposition #{{ pr_number }} sur GitHub</a></p>{% endif %}
+  {% if not fusionnee and etat != 'abandonnee' and not (approved and etat == 'en_attente') %}
+    {% if has_verification %}
+    <form method="post" action="/projects/{{ slug }}/content/valider/{{ task_id }}" class="content-approval">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <label class="checkbox"><input type="checkbox" required />J’ai relu ce contenu et j’autorise sa fusion dans le dépôt.</label>
+      <p class="muted small">La fusion peut avoir lieu dès que les vérifications du dépôt le permettent. Si ce dépôt ne comporte aucune vérification, votre validation suffit. Votre hébergeur peut ensuite déployer automatiquement cette branche.</p>
+      <button class="btn primary" type="submit">{{ 'Réessayer la fusion' if approved else 'Autoriser la fusion' }}</button>
+    </form>
+    {% else %}<p class="alert notice">Le suivi de cette proposition est incomplet. Consultez GitHub avant toute modification.</p>{% endif %}
+  {% endif %}
+</section>
+<p><a class="btn" href="/projects/{{ slug }}/content">Retrouver tous mes contenus</a></p>
 {% endblock %}
