@@ -1,0 +1,2729 @@
+{
+  "date": "2026-10-19",
+  "base_commit": "44f575c",
+  "browser": "Chromium (Playwright)",
+  "local_environment": "Ephemeral SQLite; synthetic accounts/reports; simulated WordPress API; worker disabled",
+  "local_display_scenarios": [
+    {
+      "role": "public",
+      "screen": "home",
+      "route": "/",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "pricing",
+      "route": "/pricing",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "support",
+      "route": "/support",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "status",
+      "route": "/status",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "terms",
+      "route": "/terms",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "privacy",
+      "route": "/privacy",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "legal",
+      "route": "/mentions-legales",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "docs",
+      "route": "/docs",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "doc",
+      "route": "/docs/demarrer",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "resources",
+      "route": "/ressources-seo",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "article",
+      "route": "/ressources-seo/audit-seo-technique-checklist-priorites",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "login",
+      "route": "/auth/login",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "signup",
+      "route": "/auth/signup",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "forgot",
+      "route": "/auth/forgot",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 368,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "reset",
+      "route": "/auth/reset",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 400,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 400,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 400,
+          "scrollWidth": 458,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 400,
+          "scrollWidth": 458,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "verify",
+      "route": "/auth/verify",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 400,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 400,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 400,
+          "scrollWidth": 412,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 400,
+          "scrollWidth": 412,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "resend",
+      "route": "/auth/verify/resend",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 382,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "empty",
+      "screen": "first-audit",
+      "route": "/",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "projects",
+      "route": "/",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Projets"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "overview",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [
+            "select-one",
+            "select-one"
+          ],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [
+            "select-one",
+            "select-one"
+          ],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 524,
+          "errors": [],
+          "unnamedInputs": [
+            "select-one",
+            "select-one"
+          ],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 524,
+          "errors": [],
+          "unnamedInputs": [
+            "select-one",
+            "select-one"
+          ],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "issues",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/issues",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "issue-detail",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/issues/missing_title",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "corrections",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/corrections",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [
+            "corr-search",
+            "corr-filter-sev",
+            "corr-filter-verify",
+            "corr-sort"
+          ],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [
+            "corr-search",
+            "corr-filter-sev",
+            "corr-filter-verify",
+            "corr-sort"
+          ],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [
+            "corr-search",
+            "corr-filter-sev",
+            "corr-filter-verify",
+            "corr-sort"
+          ],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [
+            "corr-search",
+            "corr-filter-sev",
+            "corr-filter-verify",
+            "corr-sort"
+          ],
+          "activeNav": [
+            "Corrections"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "first-correction",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/first-correction",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "cms",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/cms",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "cms-edit",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/cms/wordpress/edit?task_id=34b38970-f6c7-45c0-976b-62d9bb757181",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "cms-preview",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/cms/wordpress/changes/d63f74d8-cd7e-46f6-a736-24070848c924",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "cms-batch",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/cms/wordpress/issues/missing_title",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "performance",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/performance",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Performance"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Performance"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Performance"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Performance"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "keywords",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/keywords/opportunities",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "content",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/content",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "competitors",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/competitors",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "backlinks",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/backlinks",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "opportunities",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/backlinks/opportunities",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [
+            "opp-query",
+            "q",
+            "status",
+            "as-keywords",
+            "as-frequency",
+            "as-max-per-run"
+          ],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [
+            "opp-query",
+            "q",
+            "status",
+            "as-keywords",
+            "as-frequency",
+            "as-max-per-run"
+          ],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [
+            "opp-query",
+            "q",
+            "status",
+            "as-keywords",
+            "as-frequency",
+            "as-max-per-run"
+          ],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [
+            "opp-query",
+            "q",
+            "status",
+            "as-keywords",
+            "as-frequency",
+            "as-max-per-run"
+          ],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "automation",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/automation",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 386,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "crawl-settings",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/settings/crawl",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [
+            "max_pages",
+            "workers",
+            "timeout_s",
+            "include_regex",
+            "exclude_regex",
+            "strip_params",
+            "max_resources",
+            "pagespeed_strategy",
+            "pagespeed_max_urls",
+            "pagespeed_timeout_s",
+            "pagespeed_workers",
+            "gsc_days",
+            "gsc_min_impressions",
+            "gsc_search_type",
+            "gsc-property-input",
+            "gsc_inspection_max_urls",
+            "gsc_inspection_timeout_s",
+            "gsc_inspection_language",
+            "bing-site-url-input",
+            "bing_days",
+            "bing_min_impressions",
+            "bing_urlinfo_max",
+            "bing_queries_csv",
+            "bing_pages_csv",
+            "user_agent",
+            "max_depth",
+            "min_delay_s",
+            "max_url_length",
+            "max_query_params",
+            "deny_param_regex",
+            "gh-repo-input",
+            "gh-branch-input"
+          ],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [
+            "max_pages",
+            "workers",
+            "timeout_s",
+            "include_regex",
+            "exclude_regex",
+            "strip_params",
+            "max_resources",
+            "pagespeed_strategy",
+            "pagespeed_max_urls",
+            "pagespeed_timeout_s",
+            "pagespeed_workers",
+            "gsc_days",
+            "gsc_min_impressions",
+            "gsc_search_type",
+            "gsc-property-input",
+            "gsc_inspection_max_urls",
+            "gsc_inspection_timeout_s",
+            "gsc_inspection_language",
+            "bing-site-url-input",
+            "bing_days",
+            "bing_min_impressions",
+            "bing_urlinfo_max",
+            "bing_queries_csv",
+            "bing_pages_csv",
+            "user_agent",
+            "max_depth",
+            "min_delay_s",
+            "max_url_length",
+            "max_query_params",
+            "deny_param_regex",
+            "gh-repo-input",
+            "gh-branch-input"
+          ],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [
+            "max_pages",
+            "workers",
+            "timeout_s",
+            "include_regex",
+            "exclude_regex",
+            "strip_params",
+            "max_resources",
+            "pagespeed_strategy",
+            "pagespeed_max_urls",
+            "pagespeed_timeout_s",
+            "pagespeed_workers",
+            "gsc_days",
+            "gsc_min_impressions",
+            "gsc_search_type",
+            "gsc-property-input",
+            "gsc_inspection_max_urls",
+            "gsc_inspection_timeout_s",
+            "gsc_inspection_language",
+            "bing-site-url-input",
+            "bing_days",
+            "bing_min_impressions",
+            "bing_urlinfo_max",
+            "bing_queries_csv",
+            "bing_pages_csv",
+            "user_agent",
+            "max_depth",
+            "min_delay_s",
+            "max_url_length",
+            "max_query_params",
+            "deny_param_regex",
+            "gh-repo-input",
+            "gh-branch-input"
+          ],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 371,
+          "errors": [],
+          "unnamedInputs": [
+            "max_pages",
+            "workers",
+            "timeout_s",
+            "include_regex",
+            "exclude_regex",
+            "strip_params",
+            "max_resources",
+            "pagespeed_strategy",
+            "pagespeed_max_urls",
+            "pagespeed_timeout_s",
+            "pagespeed_workers",
+            "gsc_days",
+            "gsc_min_impressions",
+            "gsc_search_type",
+            "gsc-property-input",
+            "gsc_inspection_max_urls",
+            "gsc_inspection_timeout_s",
+            "gsc_inspection_language",
+            "bing-site-url-input",
+            "bing_days",
+            "bing_min_impressions",
+            "bing_urlinfo_max",
+            "bing_queries_csv",
+            "bing_pages_csv",
+            "user_agent",
+            "max_depth",
+            "min_delay_s",
+            "max_url_length",
+            "max_query_params",
+            "deny_param_regex",
+            "gh-repo-input",
+            "gh-branch-input"
+          ],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "crawls",
+      "route": "/projects/first-11ba04bbb1b24e58af76941153be0429/crawls",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "jobs",
+      "route": "/jobs",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "billing",
+      "route": "/billing",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "accounts",
+      "route": "/settings/accounts",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 604,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 604,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "team",
+      "route": "/settings/team",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 552,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 552,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "forbidden",
+      "route": "/settings/system",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 403,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 403,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 403,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 403,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "client",
+      "screen": "404",
+      "route": "/page-absente",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 404,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 404,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 404,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 404,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "public",
+      "screen": "session-expired",
+      "route": "/settings/accounts",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "role": "admin",
+      "screen": "admin-automation",
+      "route": "/automation",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "admin",
+      "screen": "operations",
+      "route": "/settings/operations",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [
+            "mois"
+          ],
+          "activeNav": [
+            "Exploitation"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [
+            "mois"
+          ],
+          "activeNav": [
+            "Exploitation"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [
+            "mois"
+          ],
+          "activeNav": [
+            "Exploitation"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [
+            "mois"
+          ],
+          "activeNav": [
+            "Exploitation"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "admin",
+      "screen": "system",
+      "route": "/settings/system",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Système"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Système"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Système"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Système"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "admin",
+      "screen": "activation",
+      "route": "/settings/activation",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "admin",
+      "screen": "customer-accounts",
+      "route": "/settings/activation/accounts",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        }
+      ]
+    },
+    {
+      "role": "admin",
+      "screen": "customer-profile",
+      "route": "/settings/activation/accounts/ed64f1f1-e6eb-48bd-b74f-85787841e533",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "unnamedInputs": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        }
+      ]
+    }
+  ],
+  "local_request_failures": [],
+  "production_read_only": [
+    {
+      "path": "/",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/",
+      "scrollWidth": 1440,
+      "h1": [
+        "Comprenez votre SEO.Passez aux corrections."
+      ]
+    },
+    {
+      "path": "/",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/",
+      "scrollWidth": 390,
+      "h1": [
+        "Comprenez votre SEO.Passez aux corrections."
+      ]
+    },
+    {
+      "path": "/pricing",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/pricing",
+      "scrollWidth": 1440,
+      "h1": [
+        "Des quotas réels, fonction par fonction."
+      ]
+    },
+    {
+      "path": "/pricing",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/pricing",
+      "scrollWidth": 390,
+      "h1": [
+        "Des quotas réels, fonction par fonction."
+      ]
+    },
+    {
+      "path": "/support",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/support",
+      "scrollWidth": 1440,
+      "h1": [
+        "Support"
+      ]
+    },
+    {
+      "path": "/support",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/support",
+      "scrollWidth": 390,
+      "h1": [
+        "Support"
+      ]
+    },
+    {
+      "path": "/status",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/status",
+      "scrollWidth": 1440,
+      "h1": [
+        "Statut"
+      ]
+    },
+    {
+      "path": "/status",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/status",
+      "scrollWidth": 390,
+      "h1": [
+        "Statut"
+      ]
+    },
+    {
+      "path": "/docs",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/docs",
+      "scrollWidth": 1440,
+      "h1": [
+        "Comment Noyaru fonctionne, écran par écran"
+      ]
+    },
+    {
+      "path": "/docs",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/docs",
+      "scrollWidth": 390,
+      "h1": [
+        "Comment Noyaru fonctionne, écran par écran"
+      ]
+    },
+    {
+      "path": "/docs/demarrer",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/docs/demarrer",
+      "scrollWidth": 1440,
+      "h1": [
+        "Démarrer avec Noyaru en 15 minutes"
+      ]
+    },
+    {
+      "path": "/docs/demarrer",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/docs/demarrer",
+      "scrollWidth": 390,
+      "h1": [
+        "Démarrer avec Noyaru en 15 minutes"
+      ]
+    },
+    {
+      "path": "/ressources-seo",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/ressources-seo",
+      "scrollWidth": 1440,
+      "h1": [
+        "La méthode, pas seulement l'outil"
+      ]
+    },
+    {
+      "path": "/ressources-seo",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/ressources-seo",
+      "scrollWidth": 390,
+      "h1": [
+        "La méthode, pas seulement l'outil"
+      ]
+    },
+    {
+      "path": "/ressources-seo/audit-seo-technique-checklist-priorites",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/ressources-seo/audit-seo-technique-checklist-priorites",
+      "scrollWidth": 1440,
+      "h1": [
+        "Audit SEO technique : la checklist pour prioriser les corrections"
+      ]
+    },
+    {
+      "path": "/ressources-seo/audit-seo-technique-checklist-priorites",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/ressources-seo/audit-seo-technique-checklist-priorites",
+      "scrollWidth": 390,
+      "h1": [
+        "Audit SEO technique : la checklist pour prioriser les corrections"
+      ]
+    },
+    {
+      "path": "/auth/login",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/auth/login",
+      "scrollWidth": 1440,
+      "h1": [
+        "Connexion"
+      ]
+    },
+    {
+      "path": "/auth/login",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/auth/login",
+      "scrollWidth": 390,
+      "h1": [
+        "Connexion"
+      ]
+    },
+    {
+      "path": "/auth/signup",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/auth/signup",
+      "scrollWidth": 1440,
+      "h1": [
+        "Créer un compte"
+      ]
+    },
+    {
+      "path": "/auth/signup",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/auth/signup",
+      "scrollWidth": 390,
+      "h1": [
+        "Créer un compte"
+      ]
+    },
+    {
+      "path": "/auth/forgot",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/auth/forgot",
+      "scrollWidth": 1440,
+      "h1": [
+        "Mot de passe oublié"
+      ]
+    },
+    {
+      "path": "/auth/forgot",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/auth/forgot",
+      "scrollWidth": 390,
+      "h1": [
+        "Mot de passe oublié"
+      ]
+    },
+    {
+      "path": "/terms",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/terms",
+      "scrollWidth": 1440,
+      "h1": [
+        "Conditions générales d'utilisation"
+      ]
+    },
+    {
+      "path": "/terms",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/terms",
+      "scrollWidth": 390,
+      "h1": [
+        "Conditions générales d'utilisation"
+      ]
+    },
+    {
+      "path": "/privacy",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/privacy",
+      "scrollWidth": 1440,
+      "h1": [
+        "Politique de confidentialité"
+      ]
+    },
+    {
+      "path": "/privacy",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/privacy",
+      "scrollWidth": 390,
+      "h1": [
+        "Politique de confidentialité"
+      ]
+    },
+    {
+      "path": "/mentions-legales",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/mentions-legales",
+      "scrollWidth": 1440,
+      "h1": [
+        "Mentions légales"
+      ]
+    },
+    {
+      "path": "/mentions-legales",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/mentions-legales",
+      "scrollWidth": 390,
+      "h1": [
+        "Mentions légales"
+      ]
+    },
+    {
+      "path": "/settings/accounts",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/auth/login?next=/settings/accounts",
+      "scrollWidth": 1440,
+      "h1": [
+        "Connexion"
+      ]
+    },
+    {
+      "path": "/settings/accounts",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/auth/login?next=/settings/accounts",
+      "scrollWidth": 390,
+      "h1": [
+        "Connexion"
+      ]
+    },
+    {
+      "path": "/settings/system",
+      "width": 1440,
+      "status": 200,
+      "url": "https://noyaru.com/auth/login?next=/settings/system",
+      "scrollWidth": 1440,
+      "h1": [
+        "Connexion"
+      ]
+    },
+    {
+      "path": "/settings/system",
+      "width": 390,
+      "status": 200,
+      "url": "https://noyaru.com/auth/login?next=/settings/system",
+      "scrollWidth": 390,
+      "h1": [
+        "Connexion"
+      ]
+    }
+  ],
+  "interactions": {
+    "checks": [
+      "Menu mobile au clavier, retour du focus et fenêtre ajout/fermeture",
+      "Aperçu sans écriture puis application WordPress explicitement validée (API simulée)",
+      "Contrôle simulé, résultat vérifié, conservation du succès et choix suivant",
+      "Rétablissement explicite depuis le résultat (API simulée)",
+      "Affichage exécution en attente, en cours, échouée et terminée",
+      "Affichage validation de contenu ; aucune fusion exécutée",
+      {
+        "success_message_present_after_5s": 0
+      }
+    ],
+    "js_errors": [],
+    "external_services": "simulated",
+    "real_client_writes": 0
+  }
+}
