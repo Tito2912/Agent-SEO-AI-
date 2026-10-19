@@ -1,0 +1,421 @@
+{
+  "displays": 69,
+  "screens": [
+    {
+      "screen": "overview-disconnected",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-disconnected",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-disconnected",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-disconnected",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-data",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-data",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-data",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-data",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-empty",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-empty",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-empty",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-empty",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-error",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-error",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-error",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-error",
+      "width": 1440,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-disconnected",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-disconnected",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-disconnected",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-disconnected",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-data",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-data",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-data",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-data",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-empty",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-empty",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-empty",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-empty",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-error",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-error",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-error",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-error",
+      "width": 768,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-disconnected",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-disconnected",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-disconnected",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-disconnected",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-data",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-data",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-data",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-data",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-empty",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-empty",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-empty",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-empty",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-error",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-error",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-error",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-error",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-disconnected",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-disconnected",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-disconnected",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-disconnected",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-data",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-data",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-data",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-data",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-empty",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-empty",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-empty",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-empty",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "overview-error",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "performance-error",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=28"
+    },
+    {
+      "screen": "keywords-error",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/keywords/opportunities?days=28"
+    },
+    {
+      "screen": "connections-error",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/settings/search"
+    },
+    {
+      "screen": "return-filtered-bing",
+      "width": 360,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?source=bing&days=90&dim=page&q=service%20%C3%A9t%C3%A9"
+    },
+    {
+      "screen": "period-failure-after-resize",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0"
+    },
+    {
+      "screen": "single-day-success",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance"
+    },
+    {
+      "screen": "expired-session",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance?days=90"
+    },
+    {
+      "screen": "metrics-help-keyboard",
+      "width": 390,
+      "overflow": false,
+      "url": "/projects/badge-1015a99f4f434f998de56fe96e6542d6-0/performance"
+    }
+  ],
+  "pageerrors": [],
+  "providers": "Simulated backend Google/Bing; only expired API response intercepted by browser; real OAuth not performed"
+}

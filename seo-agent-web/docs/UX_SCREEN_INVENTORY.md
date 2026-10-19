@@ -6,6 +6,10 @@ Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `4
 
 Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. Les droits sont déterminés par les middlewares et les contrôles de projet/compte, pas par cette extraction. Voir [l’audit](UX_AUDIT_2026-10-19.md) pour les accès, constats et preuves navigateur.
 
+## Ajout du lot 4
+
+`GET /projects/{slug}/settings/search` — Google et Bing du projet, template `settings_search.html`. Réservé au propriétaire et aux membres autorisés du compte ; retour conservé vers les résultats. Les formulaires réutilisent les actions par projet existantes, sans nouvelle mutation ni nouveau callback OAuth. Voir [le bilan et les preuves du lot 4](UX_SEARCH_RESULTS_LOT4.md). Les décomptes ci-dessus restent ceux de l’audit initial.
+
 ## Routes, écrans, actions et sorties
 
 Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. Le montage des fichiers statiques est distingué des écrans. Les routes automatiques du framework sont recensées séparément ci-dessous.

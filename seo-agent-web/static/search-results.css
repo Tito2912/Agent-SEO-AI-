@@ -1,0 +1,24 @@
+.result-actions, .result-period { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0; }
+.result-period label { font-weight:600; }
+.result-connections { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.project-search-connection, .empty-connection, .technical-details { min-width:0; overflow-wrap:anywhere; }
+.project-search-connection .card-title-row { flex-wrap:wrap; }
+.project-search-connection form { margin:12px 0; }
+.project-search-connection .search-connection-action { display:inline-flex; align-items:center; min-height:44px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-card); color:var(--text); cursor:pointer; font:inherit; text-decoration:none; }
+.project-search-connection .search-connection-disconnect { color:var(--muted); }
+.project-search-connection .search-connection-note { font-size:12px; color:var(--muted); }
+.metric-explanations dl { display:grid; grid-template-columns:minmax(110px,180px) 1fr; gap:12px; }
+.metric-explanations dt { font-weight:600; }
+.metric-explanations dd { margin:0; color:var(--muted); }
+.result-actions .btn, .result-period .btn { white-space:normal; min-height:44px; }
+@media(max-width:700px) {
+  .result-connections { grid-template-columns:minmax(0,1fr); }
+  .metric-explanations dl { grid-template-columns:1fr; gap:8px; }
+  .metric-explanations dd { margin-bottom:12px; }
+  .result-period { align-items:stretch; }
+  .result-period label { flex-basis:100%; }
+}
+
+.table th.num, .table td.num { white-space:nowrap; }
+.table-wrap:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.ts-recovery { display:inline-block; margin-top:10px; min-height:32px; }

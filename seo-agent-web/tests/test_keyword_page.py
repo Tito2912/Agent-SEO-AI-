@@ -92,7 +92,7 @@ def test_a_project_without_search_console_is_told_so(customer, gsc) -> None:
     gsc({"ok": False, "enabled": True, "source": "gsc", "reason": "missing_credentials"})
     client, slug, _ = customer
     body = client.get(f"/projects/{slug}/keywords/opportunities").text
-    assert "Search Console n'est pas connecté" in body
+    assert "Connectez Google pour ce site" in body
     assert "Réglages de l’analyse" in body, "the page must say where to go next"
 
 
@@ -100,7 +100,7 @@ def test_a_connected_project_with_nothing_to_report_says_that_too(customer, gsc)
     gsc({"ok": True, "items": []})
     client, slug, _ = customer
     body = client.get(f"/projects/{slug}/keywords/opportunities").text
-    assert "Aucune requête ne remplit les critères" in body
+    assert "Aucune recherche reçue ne remplit les critères" in body
     assert "Search Console n'est pas connecté" not in body
 
 

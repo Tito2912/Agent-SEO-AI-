@@ -103,6 +103,7 @@ try:
     from . import signup_attribution
     from . import customer_country
     from . import first_audit
+    from . import search_results
     from . import cms_guidance
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
@@ -114,6 +115,7 @@ except ImportError:
     import signup_attribution
     import customer_country
     import first_audit
+    import search_results
     import cms_guidance
 
 try:
@@ -17765,16 +17767,6 @@ def project_search_items(
     else:
         payload = {"ok": False, "error": "source must be gsc or bing"}
 
-    # Fallback: if live returned ok but no items, try stored crawl CSV
-    if payload.get("ok") and not payload.get("items"):
-        runs_dir = _runs_dir_pour_slug(request, slug)
-        fallback_items = _crawl_items_fallback(runs_dir, slug, source_key, dimension, requested_limit)
-        if fallback_items:
-            payload = dict(payload)
-            payload["items"] = fallback_items
-            payload["live"] = False
-            payload["fallback"] = True
-
     status_code = 200 if payload.get("ok") else 400
     fmt = str(format or "").strip().lower()
     if fmt == "csv":
@@ -18469,6 +18461,62 @@ def _set_project_search_enabled(project: Project, source: str, enabled: bool) ->
         db.commit()
 
 
+def _project_search_connections(project: Project, return_path: str) -> dict[str, Any]:
+    slug, owner_id = str(project.slug), str(project.owner_user_id)
+    _, gsc_cfg, bing_cfg = _effective_project_crawl_settings(
+        slug, config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
+        project_settings=project.settings if isinstance(project.settings, dict) else {})
+    result = {}
+    for source, label, client, cfg in (("gsc", "Google", _google_oauth_client(), gsc_cfg),
+                                       ("bing", "Bing", _bing_oauth_client(), bing_cfg)):
+        parts = urlsplit(_safe_next_path(return_path))
+        params = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
+                  if k not in {"connection", "msg", "err"}]
+        params.append(("connection", source))
+        return_to = urlunsplit(("", "", parts.path, urlencode(params), f"{source}-connection"))
+        oauth_params = {"next": return_to, "activate": "true"}
+        if source == "bing":
+            oauth_params["slug"] = slug
+        connect_path = f"/projects/{slug}/gsc/oauth/connect" if source == "gsc" else "/oauth/bing/connect"
+        ready = bool(_gsc_live_credentials_status(user_id=owner_id, slug=slug).get("ready")
+                     if source == "gsc" else _effective_bing_connection(user_id=owner_id, slug=slug).get("token"))
+        enabled = bool(cfg.get("enabled", source == "gsc"))
+        has_project_connection = (_gsc_oauth_connected(owner_id, slug) if source == "gsc"
+                                 else bool(_user_connection_row(user_id=owner_id, key=_bing_oauth_connection_key(slug))))
+        result[source] = {
+            "source": source, "label": label, "return_to": return_to,
+            "connected": bool(enabled and ready), "can_resume": bool(not enabled and ready),
+            "can_disconnect": bool((enabled and ready) or has_project_connection),
+            "oauth_ready": bool(client[0] and client[1] and _safe_env("SEO_AGENT_SECRET_KEY")),
+            "connect_url": f"{connect_path}?{urlencode(oauth_params)}",
+            "settings_url": f"/projects/{slug}/settings/search?{urlencode({'next': return_path})}#{source}-connection",
+        }
+    return result
+
+
+def _project_result_return(slug: str, next_path: str | None) -> str:
+    path = _safe_next_path(next_path)
+    project_path = f"/projects/{slug}"
+    parts = urlsplit(path)
+    if parts.path in {project_path, project_path + "/performance", project_path + "/keywords",
+                      project_path + "/keywords/opportunities"}:
+        return path
+    return project_path
+
+
+@app.get("/projects/{slug}/settings/search", response_class=HTMLResponse)
+def project_search_settings(request: Request, slug: str, next: str | None = None) -> HTMLResponse:
+    project = _db_project_or_404(request, slug)
+    return_to = _project_result_return(slug, next)
+    current = f"/projects/{slug}/settings/search?{urlencode({'next': return_to})}"
+    response = templates.TemplateResponse("settings_search.html", {
+        "request": request, "project": project, "slug": slug, "return_to": return_to,
+        "search_connections": _project_search_connections(project, current),
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.post("/projects/{slug}/search-connections/{source}")
 def project_search_connection_update(
     request: Request, slug: str, source: str,
@@ -18557,25 +18605,7 @@ def project_overview(
     }
     overview_query = urlencode({key: value for key, value in {"crawl": crawl, "compare": compare}.items() if value})
     overview_path = f"/projects/{slug}" + (f"?{overview_query}" if overview_query else "")
-    search_connections = {}
-    for source, label, client in (("gsc", "Google", _google_oauth_client()), ("bing", "Bing", _bing_oauth_client())):
-        return_to = f"{overview_path}{'&' if overview_query else '?'}connection={source}#{source}-connection"
-        params = {"next": return_to, "activate": "true"}
-        if source == "bing":
-            params["slug"] = slug
-        connect_path = f"/projects/{slug}/gsc/oauth/connect" if source == "gsc" else "/oauth/bing/connect"
-        credentials_ready = live_series[source]["credentials_ready"]
-        enabled = live_series[source]["enabled"]
-        has_project_connection = (_gsc_oauth_connected(owner_id, slug) if source == "gsc"
-                                  else bool(_user_connection_row(user_id=owner_id, key=_bing_oauth_connection_key(slug))))
-        search_connections[source] = {
-            "source": source, "label": label, "return_to": return_to,
-            "connected": bool(enabled and credentials_ready),
-            "can_resume": bool(not enabled and credentials_ready),
-            "can_disconnect": bool((enabled and credentials_ready) or has_project_connection),
-            "oauth_ready": bool(client[0] and client[1] and _safe_env("SEO_AGENT_SECRET_KEY")),
-            "connect_url": f"{connect_path}?{urlencode(params)}",
-        }
+    search_connections = _project_search_connections(proj_row, overview_path)
     plan_key = "free"
     if user and not is_admin:
         with DB.session() as db:
@@ -32449,6 +32479,7 @@ def project_keyword_opportunities(request: Request, slug: str, days: int | None 
         "crawls": [],
         "current": {"timestamp": ""},
     }
+    project.update(site_name=proj_row.site_name or slug, base_url=proj_row.base_url or "")
     user = getattr(request.state, "user", None)
     _, gsc_cfg, _bing_cfg = _effective_project_crawl_settings(
         slug,
@@ -32498,6 +32529,9 @@ def project_keyword_opportunities(request: Request, slug: str, days: int | None 
             # "nothing to report" are different answers and lead to different actions.
             "gsc_ok": bool(payload.get("ok")),
             "gsc_reason": str(payload.get("reason") or ""),
+            "live": payload,
+            "availability": search_results.availability(payload, "gsc"),
+            "connections_url": f"/projects/{slug}/settings/search?{urlencode({'next': request.url.path + '?' + str(request.url.query)})}#gsc-connection",
             # The rewrite button opens a PR, so it only renders when a repo is connected.
             "github_cfg": _project_github_cfg(proj_row),
         },
@@ -35480,6 +35514,8 @@ def project_performance(
             "current": {"timestamp": ""},
         }
 
+    project.update(site_name=proj_row.site_name or slug, base_url=proj_row.base_url or "")
+
     src = (source or "gsc").strip().lower()
     if src not in {"gsc", "bing"}:
         src = "gsc"
@@ -35526,21 +35562,14 @@ def project_performance(
             limit=fetch_limit,
         )
 
-    # Fallback to stored crawl CSV if live returned ok but empty items
-    if live_payload.get("ok") and not live_payload.get("items"):
-        fallback_items = _crawl_items_fallback(runs_dir, slug, src, dimension, fetch_limit)
-        if fallback_items:
-            live_payload = dict(live_payload)
-            live_payload["items"] = fallback_items
-            live_payload["live"] = False
-            live_payload["fallback"] = True
-
     perf_ok = bool(live_payload.get("ok"))
     needle = (q or "").strip().lower()
     all_rows: list[dict[str, Any]] = (
         list(live_payload.get("items") or []) if perf_ok and isinstance(live_payload.get("items"), list) else []
     )
 
+    totals = _timeseries_totals(all_rows)
+    source_rows = len(all_rows)
     if needle:
         all_rows = [r for r in all_rows if needle in str(r.get("keyword") or "").lower()]
 
@@ -35554,8 +35583,6 @@ def project_performance(
     start = (page - 1) * per_page
     end = start + per_page
     rows = all_rows[start:end]
-
-    totals = _timeseries_totals(all_rows)
 
     csv_url = f"/api/projects/{slug}/search-items?{urlencode({'source': src, 'dim': dimension, 'days': requested_days, 'limit': fetch_limit, 'format': 'csv'})}"
 
@@ -35579,6 +35606,9 @@ def project_performance(
             "csv_url": csv_url if perf_ok else "",
             "live": live_payload,
             "totals": totals,
+            "source_rows": source_rows,
+            "availability": search_results.availability(live_payload, src),
+            "connections_url": f"/projects/{slug}/settings/search?{urlencode({'next': request.url.path + '?' + str(request.url.query)})}#{src}-connection",
         },
     )
     resp.headers["Cache-Control"] = "no-store"

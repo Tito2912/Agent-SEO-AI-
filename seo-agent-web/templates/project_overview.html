@@ -4,9 +4,9 @@
 {% block title %}{{ project.site_name if project else slug }} - Vue d'ensemble{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="/static/project_overview.css?v=2" />
+  <link rel="stylesheet" href="/static/project_overview.css?v=3" />
   <link rel="stylesheet" href="/static/journey.css?v=1" />
-  <script src="/static/project_overview.js" defer></script>
+  <script src="/static/project_overview.js?v=4" defer></script>
 {% endblock %}
 
 {% block crumbs %}
@@ -225,7 +225,7 @@
     <section class="card">
       <div class="card-title-row">
         <h2>Première analyse</h2>
-        <a class="btn" href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a>
+        <a class="btn" href="/projects/{{ project.slug }}/settings/search">Connexions de ce site</a>
       </div>
       <p class="muted" style="margin:0 0 12px;">{% if crawl_active %}Votre site est enregistré. Le bilan apparaîtra ici à la fin de l’analyse.{% else %}Aucune analyse terminée pour ce projet.{% endif %}</p>
       {% if live_job and live_job.status in ['failed', 'canceled'] %}
@@ -514,19 +514,21 @@
     {% set live_bing = live_series.bing if live_series and live_series.bing else {} %}
     <div class="overview-search-sources">
       <div class="overview-source-grid">
-        <section class="card overview-source {% if not live_gsc.enabled and not (gsc and gsc.ok) %}overview-source-empty{% endif %}">
+        <section class="card overview-source {% if not search_connections.gsc.connected and not (gsc and gsc.ok) %}overview-source-empty{% endif %}">
           {% set gsc_days = live_gsc.days if live_gsc and live_gsc.days else (gsc.days if gsc and gsc.days else 28) %}
           <div class="card-title-row">
             <h2>Google Search Console</h2>
             <div class="card-title-actions">
-              <div class="pill-select" title="Période du graphique live">
+              {% if search_connections.gsc.connected %}
+              <div class="pill-select" title="Période du graphique Google">
                 <label for="gsc-chart-days">Période</label>
                 <select id="gsc-chart-days" class="js-ts-days" data-widget-id="gsc-live-widget">
-                  {% for d in [7, 28, 90] %}
+                  {% for d in ([7, 28, 90] + ([gsc_days] if gsc_days not in [7, 28, 90] else []))|sort %}
                     <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
                   {% endfor %}
                 </select>
               </div>
+              {% endif %}
               {{ connection_badge(search_connections.gsc) }}
             </div>
           </div>
@@ -536,6 +538,7 @@
           {% endif %}
           <div class="search-source-summary" data-summary-block {% if not (gsc and gsc.ok) %}data-summary-fallback="true"{% endif %}>
             {% if gsc and gsc.ok %}
+              <p class="muted small">Données de l’analyse enregistrée, distinctes du suivi actuel ci-dessous.</p>
               <p class="muted small">Propriété: <span class="mono">{{ gsc.property }}</span></p>
               <p class="muted small">Période: <span class="mono">{{ gsc.start_date }}</span> → <span class="mono">{{ gsc.end_date }}</span> ({{ gsc.days }}j)</p>
               {% if gsc.url_inspection and gsc.url_inspection.enabled %}
@@ -560,38 +563,38 @@
                  juste au-dessus d'un graphique qui fonctionnait. Deux mesures de deux moments
                  présentées comme une seule, et le client doute alors de tout l'écran. #}
               <p class="muted">Les données Google n’étaient pas disponibles lors de la dernière analyse.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Connexions de ce site</a></p>
             {% elif search_connections.gsc.connected %}
               <p class="muted">Le suivi Google est connecté pour ce projet.</p>
             {% else %}
               <p class="muted">Reliez Google pour suivre les clics et les recherches qui affichent votre site.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer le suivi</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Configurer le suivi</a></p>
             {% endif %}
           </div>
 
-          {% if live_gsc.enabled or (gsc and gsc.daily and (gsc.daily|length) >= 2) %}
-            <div id="gsc-live-widget" class="ts-widget" data-default-metrics="clicks,impressions" data-max-metrics="2"
+          {% if search_connections.gsc.connected or (gsc and gsc.daily and (gsc.daily|length) >= 2) %}
+            <div id="gsc-live-widget" class="ts-widget" data-connections-url="{{ search_connections.gsc.settings_url }}" data-default-metrics="clicks,impressions" data-max-metrics="2" data-stored-period="{{ gsc.start_date if gsc else '' }} → {{ gsc.end_date if gsc else '' }}"
               {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}data-series-id="gsc-daily-series"{% endif %}
-              {% if live_gsc.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}>
+              {% if search_connections.gsc.connected %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=gsc&days={{ gsc_days }}"{% endif %}>
               <div class="ts-metrics" aria-label="Métriques Google Search Console">
                 <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Clics</span><span class="ts-metric-value" data-value-for="clicks">{{ gsc.totals.clicks if gsc and gsc.ok else "-" }}</span></button>
                 <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Impressions</span><span class="ts-metric-value" data-value-for="impressions">{{ gsc.totals.impressions if gsc and gsc.ok else "-" }}</span></button>
                 <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">CTR moyen</span><span class="ts-metric-value" data-value-for="ctr">{% if gsc and gsc.ok %}{{ (gsc.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
                 <button type="button" class="ts-metric" data-metric="position" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Position moyenne</span><span class="ts-metric-value" data-value-for="position">{% if gsc and gsc.ok and gsc.totals.avg_position %}{{ gsc.totals.avg_position|round(1) }}{% else %}-{% endif %}</span></button>
               </div>
-              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas><div class="ts-empty">Chargement du graphique live…</div></div>
+              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique GSC" role="img"></canvas><div class="ts-empty" role="status">Chargement du graphique…</div></div>
               <div class="ts-meta muted small" data-ts-meta></div>
               {% if gsc and gsc.daily and (gsc.daily|length) >= 2 %}<script type="application/json" id="gsc-daily-series">{{ gsc.daily | tojson }}</script>{% endif %}
             </div>
           {% endif %}
 
-          {% if live_gsc.enabled or (crawl_items and crawl_items.gsc and (crawl_items.gsc.query or crawl_items.gsc.page)) %}
+          {% if search_connections.gsc.connected or (crawl_items and crawl_items.gsc and (crawl_items.gsc.query or crawl_items.gsc.page)) %}
             {% if crawl_items and crawl_items.gsc and crawl_items.gsc.query %}<script type="application/json" id="gsc-crawl-query">{{ crawl_items.gsc.query | tojson }}</script>{% endif %}
             {% if crawl_items and crawl_items.gsc and crawl_items.gsc.page %}<script type="application/json" id="gsc-crawl-page">{{ crawl_items.gsc.page | tojson }}</script>{% endif %}
-            <div class="search-mini" data-search-mini data-source="gsc" data-slug="{{ project.slug }}" data-days-widget="gsc-live-widget" data-limit="12"
+            <div class="search-mini" data-search-mini data-source="gsc" data-slug="{{ project.slug }}" data-stored-period="{{ gsc.start_date if gsc else '' }} → {{ gsc.end_date if gsc else '' }}" data-days-widget="gsc-live-widget" data-limit="12"
               {% if crawl_items and crawl_items.gsc and crawl_items.gsc.query %}data-crawl-query-id="gsc-crawl-query"{% endif %}
               {% if crawl_items and crawl_items.gsc and crawl_items.gsc.page %}data-crawl-page-id="gsc-crawl-page"{% endif %}
-              {% if not live_gsc.enabled %}data-crawl-only{% endif %}>
+              {% if not search_connections.gsc.connected %}data-crawl-only{% endif %}>
               <div class="search-mini-head">
                 <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
                 <a class="muted small" href="/projects/{{ project.slug }}/performance?source=gsc&dim=query&days={{ gsc_days }}">Voir tout</a>
@@ -607,19 +610,21 @@
           {% endif %}
         </section>
 
-        <section class="card overview-source {% if not live_bing.enabled and not (bing and bing.ok) %}overview-source-empty{% endif %}">
+        <section class="card overview-source {% if not search_connections.bing.connected and not (bing and bing.ok) %}overview-source-empty{% endif %}">
           {% set bing_days = live_bing.days if live_bing and live_bing.days else (bing.days if bing and bing.days else 28) %}
           <div class="card-title-row">
             <h2>Bing Webmaster Tools</h2>
             <div class="card-title-actions">
-              <div class="pill-select" title="Période du graphique live">
+              {% if search_connections.bing.connected %}
+              <div class="pill-select" title="Période du graphique Bing">
                 <label for="bing-chart-days">Période</label>
                 <select id="bing-chart-days" class="js-ts-days" data-widget-id="bing-live-widget">
-                  {% for d in [7, 28, 90] %}
+                  {% for d in ([7, 28, 90] + ([bing_days] if bing_days not in [7, 28, 90] else []))|sort %}
                     <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
                   {% endfor %}
                 </select>
               </div>
+              {% endif %}
               {{ connection_badge(search_connections.bing) }}
             </div>
           </div>
@@ -629,6 +634,7 @@
           {% endif %}
           <div class="search-source-summary" data-summary-block {% if not (bing and bing.ok) %}data-summary-fallback="true"{% endif %}>
             {% if bing and bing.ok %}
+              <p class="muted small">Données de l’analyse enregistrée, distinctes du suivi actuel ci-dessous.</p>
               {% if bing.site_url %}<p class="muted small">siteUrl: <span class="mono">{{ bing.site_url }}</span></p>{% endif %}
               {% if bing.start_date and bing.end_date %}<p class="muted small">Période: <span class="mono">{{ bing.start_date }}</span> → <span class="mono">{{ bing.end_date }}</span> ({{ bing.days }}j)</p>{% endif %}
               <div class="issue-chips">
@@ -647,37 +653,37 @@
               {# Daté pour la même raison que la carte GSC juste au-dessus : cette valeur vient
                  du rapport de la dernière analyse, le graphique en dessous est live. #}
               <p class="muted">Les données Bing n’étaient pas disponibles lors de la dernière analyse.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Réglages de l’analyse</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Connexions de ce site</a></p>
             {% elif search_connections.bing.connected %}
               <p class="muted">Le suivi Bing est connecté pour ce projet.</p>
             {% else %}
               <p class="muted">Activez Bing pour ajouter les données de performance et les anomalies.</p>
-              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/crawl">Configurer le suivi</a></p>
+              <p class="muted small"><a href="/projects/{{ project.slug }}/settings/search">Configurer le suivi</a></p>
             {% endif %}
           </div>
 
-          {% if live_bing.enabled or (bing and bing.daily and (bing.daily|length) >= 2) %}
-            <div id="bing-live-widget" class="ts-widget" data-default-metrics="clicks,impressions" data-max-metrics="2"
+          {% if search_connections.bing.connected or (bing and bing.daily and (bing.daily|length) >= 2) %}
+            <div id="bing-live-widget" class="ts-widget" data-connections-url="{{ search_connections.bing.settings_url }}" data-default-metrics="clicks,impressions" data-max-metrics="2" data-stored-period="{{ bing.start_date if bing else '' }} → {{ bing.end_date if bing else '' }}"
               {% if bing and bing.daily and (bing.daily|length) >= 2 %}data-series-id="bing-daily-series"{% endif %}
-              {% if live_bing.enabled %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}>
+              {% if search_connections.bing.connected %}data-live-url="/api/projects/{{ project.slug }}/search-series?source=bing&days={{ bing_days }}"{% endif %}>
               <div class="ts-metrics" aria-label="Métriques Bing Webmaster Tools">
                 <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Clics</span><span class="ts-metric-value" data-value-for="clicks">{{ bing.totals.clicks if bing and bing.ok else "-" }}</span></button>
                 <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true"><span class="ts-metric-check">✓</span><span class="ts-metric-label">Impressions</span><span class="ts-metric-value" data-value-for="impressions">{{ bing.totals.impressions if bing and bing.ok else "-" }}</span></button>
                 <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false"><span class="ts-metric-check">✓</span><span class="ts-metric-label">CTR moyen</span><span class="ts-metric-value" data-value-for="ctr">{% if bing and bing.ok %}{{ (bing.totals.avg_ctr * 100)|round(1) }}%{% else %}-{% endif %}</span></button>
               </div>
-              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas><div class="ts-empty">Chargement du graphique live…</div></div>
+              <div class="ts-chart"><canvas class="ts-canvas" aria-label="Graphique Bing" role="img"></canvas><div class="ts-empty" role="status">Chargement du graphique…</div></div>
               <div class="ts-meta muted small" data-ts-meta></div>
               {% if bing and bing.daily and (bing.daily|length) >= 2 %}<script type="application/json" id="bing-daily-series">{{ bing.daily | tojson }}</script>{% endif %}
             </div>
           {% endif %}
 
-          {% if live_bing.enabled or (crawl_items and crawl_items.bing and (crawl_items.bing.query or crawl_items.bing.page)) %}
+          {% if search_connections.bing.connected or (crawl_items and crawl_items.bing and (crawl_items.bing.query or crawl_items.bing.page)) %}
             {% if crawl_items and crawl_items.bing and crawl_items.bing.query %}<script type="application/json" id="bing-crawl-query">{{ crawl_items.bing.query | tojson }}</script>{% endif %}
             {% if crawl_items and crawl_items.bing and crawl_items.bing.page %}<script type="application/json" id="bing-crawl-page">{{ crawl_items.bing.page | tojson }}</script>{% endif %}
-            <div class="search-mini" data-search-mini data-source="bing" data-slug="{{ project.slug }}" data-days-widget="bing-live-widget" data-limit="12"
+            <div class="search-mini" data-search-mini data-source="bing" data-slug="{{ project.slug }}" data-stored-period="{{ bing.start_date if bing else '' }} → {{ bing.end_date if bing else '' }}" data-days-widget="bing-live-widget" data-limit="12"
               {% if crawl_items and crawl_items.bing and crawl_items.bing.query %}data-crawl-query-id="bing-crawl-query"{% endif %}
               {% if crawl_items and crawl_items.bing and crawl_items.bing.page %}data-crawl-page-id="bing-crawl-page"{% endif %}
-              {% if not live_bing.enabled %}data-crawl-only{% endif %}>
+              {% if not search_connections.bing.connected %}data-crawl-only{% endif %}>
               <div class="search-mini-head">
                 <div class="tab-buttons"><button type="button" class="tab-btn active" data-dim="query">Requêtes</button><button type="button" class="tab-btn" data-dim="page">Pages</button></div>
                 <a class="muted small" href="/projects/{{ project.slug }}/performance?source=bing&dim=query&days={{ bing_days }}">Voir tout</a>

@@ -1,0 +1,9 @@
+<section class="card empty-connection" role="status">
+  <h2>{{ availability.title }}</h2>
+  <p class="muted">{{ availability.detail }}</p>
+  <div class="result-actions">
+    <a class="btn primary" href="{{ connections_url }}">{{ availability.action }}</a>
+    {% if availability.kind == 'unavailable' %}<a class="btn" href="{{ request.url.path }}?{{ request.url.query }}">Réessayer</a>{% endif %}
+  </div>
+  {% if live.reason or live.error %}<details class="technical-details"><summary>Détails du service</summary><p>{{ live.reason or '' }}</p>{% if live.error %}<p>{{ live.error }}</p>{% endif %}</details>{% endif %}
+</section>
