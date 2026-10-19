@@ -32,7 +32,7 @@ foreach (['editor' => 'noyaru_demo', 'subscriber' => 'noyaru_reader'] as $role =
     $accounts[$role] = ['username' => $login, 'password' => $result[0]];
 }
 // Outside the web document root; exposed only by the gateway's bearer-authenticated endpoint.
-file_put_contents('/noyaru-demo.json', wp_json_encode([
+file_put_contents(getenv('NOYARU_WP_DEMO_MANIFEST') ?: '/noyaru-demo.json', wp_json_encode([
     'post_id' => $id, 'url' => get_permalink($id), 'site_url' => home_url(),
     'accounts' => $accounts, 'wp' => get_bloginfo('version'), 'yoast' => WPSEO_VERSION,
 ]));
