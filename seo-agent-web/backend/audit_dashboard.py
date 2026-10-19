@@ -1577,7 +1577,7 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
     return {
         "base_url": str(meta.get("base_url") or ""),
         "pages_crawled": int(pages_crawled),
-        "analysis_complete": bool(pages_crawled > 0 and isinstance(report.get("issues"), dict)
+        "analysis_complete": bool(pages_crawled > 0 and report.get("pages") and isinstance(report.get("issues"), dict)
                                   and not site_injoignable(report) and not blocked_count
                                   and not meta.get("stopped_on_time_budget")),
         "stopped_on_time_budget": bool(meta.get("stopped_on_time_budget")),

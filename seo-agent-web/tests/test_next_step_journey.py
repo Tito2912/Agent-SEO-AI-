@@ -114,9 +114,11 @@ def test_filter_miss_can_be_cleared_without_losing_analysis_or_comparison(journe
     assert action(soup)["href"] == f'/projects/{journey["slug"]}'
 
 
-@pytest.mark.parametrize("condition", ["complete", "blocked", "time_budget", "missing_issues", "empty"])
+@pytest.mark.parametrize("condition", ["complete", "blocked", "time_budget", "missing_issues", "empty", "metadata_only"])
 def test_zero_issues_is_a_clean_result_only_with_a_usable_complete_report(journey, condition):
-    payload = journey["report"](issues={}, blocked=condition == "blocked", urls=() if condition == "empty" else (URL,))
+    payload = journey["report"](issues={}, blocked=condition == "blocked", urls=() if condition in {"empty", "metadata_only"} else (URL,))
+    if condition == "metadata_only":
+        payload["meta"]["pages_crawled"] = 3
     if condition == "time_budget":
         payload["meta"]["stopped_on_time_budget"] = True
     if condition == "missing_issues":
