@@ -31028,7 +31028,7 @@ def _first_correction_context(request: Request, project: Project) -> dict[str, A
     with DB.session() as db:
         tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == str(project.id))
                                 .order_by(IssueTask.updated_at.desc())))
-    state = first_correction.progress(tasks)
+    state = first_correction.progress(tasks, prefer_selection=True)
     candidates = []
     if report and not dash.site_injoignable(report):
         for action in fix_pack.top_actions(report, site_name=project.site_name or project.slug,
@@ -31076,7 +31076,7 @@ def project_first_correction(request: Request, slug: str, msg: str = "", err: st
     response = templates.TemplateResponse("first_correction.html", {
         "request": request, "project": {"slug": slug, "site_name": project.site_name or slug},
         "slug": slug, "msg": msg.strip(), "err": err.strip(), **context,
-        "choosing": bool(choose and context["state"] and not context["state"].get("verified")),
+        "choosing": bool(choose and context["state"]),
     })
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -31223,6 +31223,8 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
                 "pr": pr_data, "user_note": user_note, "verify": _verify,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
                 "cms_supported": bool(cms_guidance.field_for_issue(t.issue_key)),
+                "cms_change_id": str(_note_parsed.get("cms_change_id") or ""),
+                "verified": bool(first_correction.progress([t]).get("verified")),
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             }
             groups[s].append(task_ctx)

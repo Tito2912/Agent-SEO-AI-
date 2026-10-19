@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% from "_cms_workflow.html" import steps %}
 {% block title %}Votre correction WordPress{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=1" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Votre correction</span>{% endblock %}
 {% macro action_button(action, label, primary=false, busy='Traitement en cours…') %}
 <form method="post" action="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}/{{ action }}"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn {% if primary %}primary{% endif %}" type="submit" data-busy-label="{{ busy }}">{{ label }}</button></form>
@@ -54,7 +54,7 @@
       {% endif %}
     </section>
     <section class="card"><details><summary>Voir la modification appliquée</summary>{{ comparison() }}</details></section>
-    <details class="cms-help"><summary>Rétablir la valeur précédente</summary><p>Vous pouvez annuler cette modification si les métadonnées de la page n’ont pas changé depuis son application.</p>{{ action_button('restore', 'Confirmer le rétablissement', false, 'Rétablissement dans WordPress…') }}</details>
+    <details class="cms-help" id="restoration"><summary>Rétablir la valeur précédente</summary><p>Vous pouvez annuler cette modification si les métadonnées de la page n’ont pas changé depuis son application.</p>{{ action_button('restore', 'Confirmer le rétablissement', false, 'Rétablissement dans WordPress…') }}</details>
   {% elif change.state == 'restored' %}
     <section class="card"><h2>Modification annulée</h2><p role="status">WordPress a confirmé le retour à la valeur précédente. Pour corriger le problème, préparez un nouvel aperçu.</p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Préparer une nouvelle correction</a></section>
   {% else %}

@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+from bs4 import BeautifulSoup
 from sqlalchemy import select
 
 from backend import app as m, cms_guidance, cms_routes, first_correction, wordpress_cms as wp
@@ -113,6 +114,65 @@ def test_workflow_keeps_application_followup_and_verified_result_on_the_change(c
     page = change_page(cms, change)
     assert "Correction vérifiée" in page.text and "Continuer les corrections" in page.text
     assert len(writes(cms)) == 1
+
+
+def test_verified_guided_result_links_to_the_exact_restore_operation(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    page = _verify(cms)
+    link = BeautifulSoup(page.text, "html.parser").find("a", string="Rétablir la valeur précédente")
+    assert link["href"] == cms["base"] + "/wordpress/changes/" + change + "#restoration"
+    management = cms["client"].get(link["href"])
+    assert management.status_code == 200
+    assert BeautifulSoup(management.text, "html.parser").select_one('details#restoration form[action$="/restore"]')
+    assert len(writes(cms)) == 1  # Navigation never restores or applies anything.
+    action(cms, change, "restore")
+    assert row(change).state == "restored" and cms["remote"]["page"]["seo_title"] is None
+    assert workflow_status(cms, change).json() != {"state": "verified", "poll": False}
+
+
+def test_same_anomaly_on_another_url_stays_actionable_while_verified_page_is_history(cms):
+    root = "https://atelier.example/"
+    cms["report"](issues={"missing_meta_description": {"count": 2, "examples": [URL, root]}}, urls=(URL, root))
+    with m.DB.session() as db:
+        task = db.get(IssueTask, cms["task"].id)
+        task.issue_key, task.issue_label = "missing_meta_description", "Meta description manquante / vide"
+        db.commit()
+    cms["remote"]["page"]["meta_description"] = None
+    connect(cms)
+    change = preview(cms, "Description de notre atelier de réparation de vélos à Lyon.")
+    action(cms, change, "apply")
+    _verify(cms, issues={"missing_meta_description": {"count": 1, "examples": [root]}}, urls=(URL, root))
+    page = cms["client"].get(f'/projects/{cms["slug"]}/corrections')
+    assert page.context["stats"]["verified_resolved"] == 1 and page.context["stats"]["done"] == 1
+    candidate = next(item for item in page.context["fix_candidates"] if item["key"] == "missing_meta_description")
+    assert candidate["url"] == root and candidate["count"] == 1
+    soup = BeautifulSoup(page.text, "html.parser")
+    pending = next(item for item in soup.select(".corr-flow-item") if "Meta description" in item.get_text())
+    assert pending.select_one(".corr-row-sub a")["href"] == root
+    assert "Page à traiter" in pending.get_text() and URL not in pending.get_text()
+    history = soup.select_one('.corr-group[data-col="done"]')
+    assert "collapsed" in history["class"] and "Historique des corrections vérifiées" in history.get_text()
+    assert history.select_one(".corr-item-url").get_text() == URL
+    assert history.select_one(".corr-item-label")["href"].endswith("/changes/" + change)
+    assert history.select_one("button.corr-group-hd")["aria-expanded"] == "false"
+    assert soup.find("a", string="Choisir une correction guidée →")["href"].endswith("/first-correction?choose=1")
+
+
+def test_declared_done_without_evidence_stays_visible_outside_verified_history(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    _verify(cms)
+    with m.DB.session() as db:
+        db.add(IssueTask(project_id=cms["project_id"], user_id=cms["owner"], issue_key="missing_meta_description",
+                         issue_label="Description à vérifier", url="https://atelier.example/autre/", status="done"))
+        db.commit()
+    page = cms["client"].get(f'/projects/{cms["slug"]}/corrections')
+    history = BeautifulSoup(page.text, "html.parser").select_one('.corr-group[data-col="done"]')
+    assert "collapsed" not in history["class"] and "Historique des corrections vérifiées" not in history.get_text()
+    assert page.context["stats"]["done"] == 2 and page.context["stats"]["verified_resolved"] == 1
 
 
 def test_verification_enqueues_real_owner_billed_crawl_once_and_keeps_the_same_screen(cms):

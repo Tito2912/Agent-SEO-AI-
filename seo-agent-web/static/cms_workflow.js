@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+  function revealAnchor() {
+    const target = document.getElementById(window.location.hash.slice(1));
+    if (target?.matches('details')) target.open = true;
+  }
+  revealAnchor();
+  window.addEventListener('hashchange', revealAnchor);
   document.querySelectorAll('.cms-page form').forEach(form => {
     form.addEventListener('submit', event => {
       if (event.defaultPrevented) return;

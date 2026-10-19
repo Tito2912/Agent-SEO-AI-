@@ -55,6 +55,7 @@
 /* Group */
 .corr-group { margin-bottom: 6px; }
 .corr-group-hd {
+  width: 100%; border: 0; background: transparent; color: inherit; font: inherit; text-align: left;
   display: flex; align-items: center; gap: 9px;
   padding: 8px 6px 8px;
   cursor: pointer; user-select: none;
@@ -94,7 +95,7 @@
 .corr-item-label:hover { color: var(--accent-2); text-decoration: none; }
 .corr-item-url {
   font-size: 11px; font-family: monospace; color: var(--muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   display: block; margin-top: 2px;
 }
 .corr-item-meta {
@@ -155,10 +156,10 @@
 .corr-row-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .corr-row-name { font-size: 14px; font-weight: 700; line-height: 1.3; }
 .corr-row-sub {
-  font-size: 11px; color: var(--muted); margin-top: 5px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.6;
+  overflow-wrap: anywhere; max-width: 100%;
 }
-.corr-row-sub a { color: var(--muted); font-family: monospace; text-decoration: none; }
+.corr-row-sub a { display: block; color: var(--text); font-family: monospace; text-decoration: none; }
 .corr-row-sub a:hover { color: var(--accent-2, #818cf8); text-decoration: underline; }
 .corr-flow-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
 .corr-flow-status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 18px; }
@@ -479,7 +480,8 @@
   document.addEventListener('click', function (e) {
     var hd = e.target.closest('.corr-group-hd');
     if (!hd) return;
-    hd.closest('.corr-group').classList.toggle('collapsed');
+    var collapsed = hd.closest('.corr-group').classList.toggle('collapsed');
+    hd.setAttribute('aria-expanded', String(!collapsed));
   });
 
   /* ── Filters / search / sort over tracked corrections ── */
@@ -503,6 +505,11 @@
       });
       var empty = col.parentNode.querySelector('.corr-col-empty');
       if (empty) empty.style.display = (visible === 0 && col.querySelectorAll('.corr-card').length > 0) ? '' : 'none';
+      if (visible > 0 && (q || sev !== 'all' || vf !== 'all')) {
+        var group = col.closest('.corr-group');
+        group.classList.remove('collapsed');
+        group.querySelector('.corr-group-hd').setAttribute('aria-expanded', 'true');
+      }
     });
   }
   function sevRank(s) { return s === 'error' ? 0 : (s === 'warning' ? 1 : (s === 'notice' ? 2 : 9)); }
@@ -623,7 +630,7 @@
 {% block content %}
 {% set sev_color = {'error': '#ef4444', 'warning': '#f59e0b', 'notice': '#818cf8'} %}
 <div class="page-header">
-  <h1>Corrections à valider</h1>
+  <h1>Corrections</h1>
   <p class="muted">{{ stats.total }} correction{{ 's' if stats.total > 1 else '' }} suivie{{ 's' if stats.total > 1 else '' }} · {{ project.site_name }}</p>
   <a href="/docs/corrections-automatiques" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
 </div>
@@ -643,8 +650,9 @@
 <section class="card">
   <div class="card-title-row">
     <div>
-      <h2>Choisir une correction</h2>
-      <p><a href="/projects/{{ slug }}/first-correction">Être guidé pour ma première correction →</a></p>
+      <h2>Anomalies encore détectées</h2>
+      <p><a href="/projects/{{ slug }}/first-correction?choose=1">Choisir une correction guidée →</a></p>
+      <p class="muted small">Chaque anomalie concerne les URL de la dernière analyse. Une correction vérifiée sur une page peut encore être nécessaire sur une autre.</p>
       <p class="muted small" style="margin:4px 0 0;">
         {% if current_crawl_ts %}
           Analyse du <span data-ts-datetime="{{ current_crawl_ts }}">{{ current_crawl_ts[6:8] }}/{{ current_crawl_ts[4:6] }}/{{ current_crawl_ts[:4] }}</span> · {{ fix_candidates|length }} anomalie{{ 's' if fix_candidates|length > 1 else '' }} candidate{{ 's' if fix_candidates|length > 1 else '' }}.
@@ -672,7 +680,8 @@
   </div>
 
   {% if not (github_cfg and github_cfg.repo) %}
-  <p class="muted">Votre site est géré dans un CMS ou par un prestataire ? Ouvrez les instructions de chaque problème pour modifier la page, ou transmettez le rapport PDF. Après modification, lancez une nouvelle analyse pour vérifier le résultat.</p>
+  {% if wordpress_connected %}<p class="muted">WordPress est connecté. Utilisez le parcours guidé pour appliquer un titre SEO ou une méta-description, puis vérifier le résultat. Pour les autres anomalies, consultez les instructions.</p>
+  {% else %}<p class="muted">Votre site est géré dans un CMS ou par un prestataire ? Ouvrez les instructions de chaque problème pour modifier la page, ou transmettez le rapport PDF. Après modification, lancez une nouvelle analyse pour vérifier le résultat.</p>{% endif %}
   <div id="gh-connect-panel" style="display:none;margin-top:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
     <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Connecter un dépôt GitHub à ce projet</div>
     <div id="gh-connect-body" style="font-size:12px;color:var(--muted);">Chargement…</div>
@@ -721,8 +730,8 @@
                 {% endif %}
               </div>
               <div class="corr-row-sub">
-                {{ candidate.count }}×
-                {% if candidate.url %} · <a href="{{ candidate.url }}" target="_blank" rel="noreferrer" title="{{ candidate.url }}">{{ candidate.url }}</a>{% else %} · URL non détectée{% endif %}
+                {{ candidate.count }} occurrence{{ 's' if candidate.count > 1 else '' }} dans la dernière analyse.<br>
+                {% if candidate.url %}{{ 'Page à traiter' if candidate.count == 1 else 'Exemple de page à traiter' }} : <a href="{{ candidate.url }}" target="_blank" rel="noreferrer">{{ candidate.url }}</a>{% else %}URL non détectée.{% endif %}
               </div>
             </div>
             <div class="corr-flow-actions">
@@ -796,21 +805,23 @@
 <div class="card" style="padding:0;overflow:hidden;">
 {% for col in ['todo','in_progress','done','ignored'] %}
 {% set meta = col_meta[col] %}
-<div class="corr-group{% if not groups[col] %} collapsed{% endif %}" data-col="{{ col }}">
-  <div class="corr-group-hd">
+{% set verified_history = col == 'done' and groups[col] and not (groups[col]|rejectattr('verified')|list) %}
+{% set collapsed = not groups[col] or verified_history %}
+<div class="corr-group{% if collapsed %} collapsed{% endif %}" data-col="{{ col }}">
+  <button class="corr-group-hd" type="button" aria-expanded="{{ 'false' if collapsed else 'true' }}"{% if groups[col] %} aria-controls="correction-group-{{ col }}"{% else %} disabled{% endif %}>
     <span class="corr-dot" style="background:{{ meta.color }};"></span>
-    <span class="corr-group-name">{{ meta.label }}</span>
+    <span class="corr-group-name">{{ 'Historique des corrections vérifiées' if verified_history else meta.label }}</span>
     {% if groups[col] %}
       <span class="badge {{ meta.badge }}" style="font-size:10px;">{{ groups[col]|length }}</span>
     {% else %}
       <span class="muted small">Aucune tâche</span>
     {% endif %}
     <svg class="corr-group-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-  </div>
+  </button>
 
   {% if groups[col] %}
     <p class="corr-col-empty" style="display:none;padding:6px 6px 8px;">Aucun résultat pour ce filtre.</p>
-    <div class="corr-col-cards">
+    <div class="corr-col-cards" id="correction-group-{{ col }}">
     {% for task in groups[col] %}
     <div class="corr-card"
          data-issue-key="{{ task.issue_key }}"
@@ -826,7 +837,9 @@
         <div class="corr-item-info">
           {# A keyword rewrite has no anomaly page: no crawl produced it. Linking to one would
              be a 404 on the row that describes the correction. #}
-          {% if task.issue_key == 'keyword_snippet_rewrite' %}
+          {% if task.cms_change_id %}
+            <a href="/projects/{{ slug }}/cms/wordpress/changes/{{ task.cms_change_id }}" class="corr-item-label">{{ task.issue_label }}</a>
+          {% elif task.issue_key == 'keyword_snippet_rewrite' %}
             <a href="/projects/{{ slug }}/keywords/opportunities" class="corr-item-label">{{ task.issue_label }}</a>
           {% else %}
             <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
@@ -842,8 +855,8 @@
               ⎇ PR #{{ task.pr.pr_number or '?' }}{% if task.pr.get('merged') %} ✓{% endif %}
             </a>
           {% endif %}
-          {% if task.verify and task.verify.result == 'resolved' %}
-            <span class="corr-verify-text ok" title="Confirmé résolu">✓</span>
+          {% if task.verified %}
+            <span class="corr-verify-text ok" title="Confirmé résolu">✓ Vérifiée</span>
           {% elif task.verify and task.verify.result == 'still_present' %}
             <span class="corr-verify-text err" title="Toujours présent">⚠</span>
           {% elif task.verify and task.verify.result == 'unverified' %}

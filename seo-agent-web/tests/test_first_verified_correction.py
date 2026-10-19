@@ -135,7 +135,7 @@ def test_declared_edit_is_pending_until_a_new_crawl_confirms_it(journey):
         assert row.status == "in_progress" and not first_correction.note_data(row.note).get("verify")
     assert not _state(journey)["complete"]
     page = _verify(journey)
-    assert page.status_code == 200 and "Votre première correction est vérifiée" in page.text
+    assert page.status_code == 200 and "Votre correction est vérifiée" in page.text
     state = _state(journey)
     assert state["complete"] and state["progress_pct"] == 100 and state["success_kind"] == "verified"
     dashboard = journey["client"].get("/")
@@ -205,13 +205,41 @@ def test_invalid_reselection_keeps_the_current_task_and_reopens_choices(journey,
 
 
 def test_reopening_the_choice_does_not_reset_a_verified_success(journey):
-    _ready(journey)
-    _verify(journey)
-    page = journey["client"].get(f'/projects/{journey["slug"]}/first-correction?choose=1')
-    assert page.context["state"]["verified"] and not page.context["choosing"]
-    assert "Votre première correction est vérifiée" in page.text
-    assert "Choisir une autre page" not in page.text
+    task = _ready(journey)
+    _verify(journey, issues={"missing_title": {"count": 1, "examples": [OTHER]}}, urls=(URL, OTHER))
+    path = f'/projects/{journey["slug"]}/first-correction'
+    current = journey["client"].get(path)
+    link = BeautifulSoup(current.text, "html.parser").find("a", string="Choisir une autre correction")
+    with m.DB.session() as db:
+        previous = db.get(IssueTask, task.id)
+        saved = (previous.status, previous.note, previous.updated_at)
+    page = journey["client"].get(link["href"])
+    assert page.context["state"]["verified"] and page.context["choosing"]
+    soup = BeautifulSoup(page.text, "html.parser")
+    assert soup.find("option", attrs={"value": OTHER})
+    assert not soup.select(".first-correction-steps")
+    cancel = journey["client"].get(soup.find("a", string="Revenir au résultat vérifié")["href"])
+    assert "Votre correction est vérifiée" in cancel.text
+    assert not cancel.context["choosing"]
     assert _state(journey)["complete"]
+    with m.DB.session() as db:
+        previous = db.get(IssueTask, task.id)
+        assert (previous.status, previous.note, previous.updated_at) == saved
+
+    form = soup.select_one(f'form[action="{path}"]')
+    payload = {field["name"]: field.get("value", "") for field in form.select("input[name]")}
+    invalid = journey["client"].post(path, data={**payload, "url": URL}, follow_redirects=False)
+    invalid_page = journey["client"].get(invalid.headers["location"])
+    assert invalid_page.context["choosing"] and invalid_page.context["state"]["verified"]
+    response = journey["client"].post(path, data={**payload, "url": OTHER}, follow_redirects=False)
+    following = journey["client"].get(response.headers["location"])
+    assert following.context["state"]["url"] == OTHER and not following.context["state"]["verified"]
+    assert not following.context["choosing"] and "Votre correction est vérifiée" not in following.text
+    assert _state(journey)["complete"]  # The first achievement survives a new, unfinished correction.
+    with m.DB.session() as db:
+        previous = db.get(IssueTask, task.id)
+        assert (previous.status, previous.note, previous.updated_at) == saved
+        assert len(list(db.scalars(select(IssueTask).where(IssueTask.project_id == journey["project_id"])))) == 2
 
 
 @pytest.mark.parametrize("case,result", [("still_present", "still_present"), ("not_visited", "unverified"),
@@ -234,7 +262,7 @@ def test_failed_or_inconclusive_controls_keep_the_journey_open(journey, case, re
     assert page.status_code == 200
     assert page.context["state"]["verify"]["result"] == result
     assert not page.context["state"]["verified"] and not _state(journey)["complete"]
-    assert "Votre première correction est vérifiée" not in page.text
+    assert "Votre correction est vérifiée" not in page.text
 
 
 def test_one_page_can_be_verified_while_other_fully_listed_occurrences_remain(journey):
@@ -250,7 +278,7 @@ def test_a_clean_first_audit_finishes_with_an_honest_audit_result(journey):
     assert state["complete"] and state["success_kind"] == "clean"
     page = journey["client"].get(f'/projects/{journey["slug"]}/first-correction')
     assert "Aucune anomalie détectée sur les pages analysées" in page.text
-    assert "Votre première correction est vérifiée" not in page.text
+    assert "Votre correction est vérifiée" not in page.text
 
 
 def test_a_partial_clean_audit_does_not_finish_the_journey(journey):
@@ -297,7 +325,7 @@ def test_another_accounts_success_cannot_complete_this_accounts_journey(journey)
         db.commit()
     page = journey["stranger"].get("/")
     assert not page.context["onboarding"]["complete"]
-    assert "Votre première correction est vérifiée" not in page.text
+    assert "Votre correction est vérifiée" not in page.text
 
 
 def test_notes_or_a_declared_done_status_cannot_forge_a_verified_result(journey):
