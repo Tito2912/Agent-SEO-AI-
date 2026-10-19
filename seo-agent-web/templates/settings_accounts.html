@@ -124,7 +124,7 @@
   <div class="account-connections-page">
   <div class="page-header">
     <h1>Comptes &amp; connexions</h1>
-    <p class="muted">Reliez Google pour suivre vos visiteurs et GitHub pour proposer des corrections dans le code.</p>
+    <p class="muted">Gérez vos préférences et les comptes connectés. Pour Google et Bing, les connexions et les résultats restent propres à chaque site.</p>
     <nav class="account-shortcuts" aria-label="Sections du compte">
       <a class="btn" href="#gsc-oauth-card">Google</a><a class="btn" href="#github-connect-card">GitHub</a>
       <a class="btn" href="#bing-connect-card">Bing</a><a class="btn" href="#netlify-connect-card">Netlify</a>
@@ -222,7 +222,7 @@
                   <div class="gsc-proj-row gsc-row-ok">
                     <span class="gsc-dot ok"></span>
                     <div class="gsc-proj-meta">
-                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="gsc-proj-name"><a href="/projects/{{ p.slug }}/settings/search#gsc-connection">{{ p.site_name }}</a></div>
                       <div class="muted small">{{ p.base_url or p.slug }}</div>
                     </div>
                     <div class="gsc-proj-act">
@@ -243,7 +243,7 @@
                   <div class="gsc-proj-row gsc-row-err">
                     <span class="gsc-dot err"></span>
                     <div class="gsc-proj-meta">
-                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="gsc-proj-name"><a href="/projects/{{ p.slug }}/settings/search#gsc-connection">{{ p.site_name }}</a></div>
                       <div class="muted small">{{ p.base_url or p.slug }}</div>
                       {% if p.oauth_status_hint %}
                         <div class="small" style="color:var(--err);margin-top:2px;">{{ p.oauth_status_hint }}</div>
@@ -262,7 +262,7 @@
                   <div class="gsc-proj-row">
                     <span class="gsc-dot off"></span>
                     <div class="gsc-proj-meta">
-                      <div class="gsc-proj-name">{{ p.site_name }}</div>
+                      <div class="gsc-proj-name"><a href="/projects/{{ p.slug }}/settings/search#gsc-connection">{{ p.site_name }}</a></div>
                       <div class="muted small">{{ p.base_url or p.slug }}</div>
                     </div>
                     <div class="gsc-proj-act">
@@ -484,7 +484,7 @@
             {% for project_item in bing_projects %}
               <div class="oauth-project-item">
                 <div>
-                  <div class="oauth-project-title">{{ project_item.site_name }}</div>
+                  <div class="oauth-project-title"><a href="/projects/{{ project_item.slug }}/settings/search#bing-connection">{{ project_item.site_name }}</a></div>
                   <div class="muted small">{{ project_item.base_url or project_item.slug }}</div>
                 </div>
                 <div class="oauth-project-actions">

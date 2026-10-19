@@ -353,8 +353,8 @@
 
   function liveMetaText(data) {
     const parts = [];
-    if (data.source === "gsc" && data.property) parts.push(`Live · ${data.property}`);
-    if (data.source === "bing" && data.site_url) parts.push(`Live · ${data.site_url}`);
+    if (data.source === "gsc" && data.property) parts.push(`Google · ${data.property}`);
+    if (data.source === "bing" && data.site_url) parts.push(`Bing · ${data.site_url}`);
     if (data.start_date && data.end_date) {
       const days = Number(data.days || 0);
       parts.push(`${data.start_date} → ${data.end_date}${days > 0 ? ` (${days}j)` : ""}`);
@@ -364,22 +364,32 @@
   }
 
   function errorLabel(data) {
-    const reason = String((data && (data.error || data.reason)) || "").trim();
-    const source = String((data && data.source) || "").trim();
-    if (reason === "missing_credentials") {
-      return source === "bing"
-        ? "Bing Webmaster Tools non connecté."
-        : "Google Search Console non connecté pour ce projet.";
-    }
-    if (reason === "oauth_not_configured") return "OAuth Google non configuré (client id/secret).";
-    if (reason === "oauth_invalid_client") return "OAuth Google invalide (client id/secret).";
-    if (reason === "credentials_file_not_found") return "Credentials GSC introuvables sur le serveur.";
-    if (reason === "oauth_invalid_grant") return "Accès Google révoqué. Reconnecte Google.";
-    if (reason === "missing_api_key") return "Clé Bing Webmaster API manquante.";
-    if (reason === "site_not_found") return "Site Bing introuvable dans le compte connecté.";
-    if (reason === "no_data") return source === "bing" ? "Aucune donnée Bing disponible sur la période." : "Aucune donnée GSC disponible sur la période.";
-    if (!reason) return "Données indisponibles.";
-    return reason;
+    const reason = String(data?.reason || "");
+    if (reason === "session_expired") return "Votre session a expiré. Reconnectez-vous pour reprendre cet écran.";
+    if (reason === "disabled") return "Le suivi est désactivé pour ce site.";
+    if (["missing_credentials", "oauth_not_connected", "not_connected", "missing_api_key", "oauth_invalid_grant"].includes(reason)) return "Autorisation absente ou expirée. Vérifiez la connexion de ce site.";
+    if (["site_not_found", "forbidden"].includes(reason)) return "Le compte autorisé n’a pas accès aux données de ce site.";
+    if (reason === "no_data") return "Aucune donnée reçue sur cette période.";
+    return "Les données sont indisponibles. Réessayez ou vérifiez l’accès à ce site.";
+  }
+
+  function loginUrl() {
+    return `/auth/login?next=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`;
+  }
+
+  function setWidgetRecovery(widget, reason = "") {
+    widget.querySelector(".ts-recovery")?.remove();
+    if (!reason) return;
+    const link = document.createElement("a");
+    link.className = "ts-recovery muted small";
+    link.href = reason === "session_expired" ? loginUrl() : (widget.dataset.connectionsUrl || window.location.href);
+    link.textContent = reason === "session_expired" ? "Se reconnecter" : "Vérifier la connexion de ce site";
+    widget.append(link);
+  }
+
+  function storedPeriod(el) {
+    const period = el.getAttribute("data-stored-period") || "";
+    return `Analyse enregistrée${period.replace(/[ →]/g, "") ? ` · ${period}` : " · période non renseignée"}`;
   }
 
   function miniDays(widgetId) {
@@ -395,6 +405,7 @@
     try {
       const url = new URL(link.getAttribute("href") || "", window.location.origin);
       url.searchParams.set("dim", String(dim || "query"));
+      url.searchParams.set("days", String(miniDays(miniStates.get(el)?.daysWidgetId)));
       link.setAttribute("href", url.pathname + url.search);
     } catch {
       // ignore
@@ -408,21 +419,23 @@
     if (meta) {
       if (payload && payload.ok) {
         meta.textContent = payload.fallback
-          ? "Données du dernier crawl · live indisponible"
+          ? storedPeriod(el)
           : liveMetaText(payload);
       } else {
-        meta.textContent = `Live indisponible · ${errorLabel(payload || {})}`;
+        meta.textContent = errorLabel(payload || {});
       }
     }
 
     if (!payload || !payload.ok) {
-      body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(errorLabel(payload || {}))}</td></tr>`;
+      const target = payload?.reason === "session_expired" ? loginUrl() : `/projects/${encodeURIComponent(miniStates.get(el)?.slug || "")}/settings/search?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      const label = payload?.reason === "session_expired" ? "Se reconnecter" : "Vérifier la connexion";
+      body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(errorLabel(payload || {}))} <a href="${escapeHtml(target)}">${label}</a></td></tr>`;
       return;
     }
 
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) {
-      body.innerHTML = `<tr><td colspan="5" class="muted">Aucune donnée sur la période.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="5" class="muted">Aucune donnée reçue sur cette période.</td></tr>`;
       return;
     }
 
@@ -457,6 +470,8 @@
 
     const body = el.querySelector("[data-mini-body]");
     if (body) body.innerHTML = `<tr><td colspan="5" class="muted">Chargement…</td></tr>`;
+    const meta = el.querySelector("[data-mini-meta]");
+    if (meta) meta.textContent = "Consultation de la période sélectionnée…";
 
     const days = miniDays(state.daysWidgetId);
     const url = new URL(`/api/projects/${state.slug}/search-items`, window.location.origin);
@@ -469,7 +484,8 @@
     let payload;
     try {
       resp = await fetch(url.toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
-      payload = await resp.json();
+      payload = resp.status === 401 || resp.redirected
+        ? { ok: false, reason: "session_expired" } : await resp.json();
     } catch (error) {
       if (state.requestId !== requestId) return;
       miniRender(el, { ok: false, source: state.source, error: error instanceof Error ? error.message : "request_failed" }, state.dim);
@@ -477,7 +493,7 @@
     }
 
     if (state.requestId !== requestId) return;
-    miniRender(el, payload, state.dim);
+    miniRender(el, resp.ok ? payload : { ...payload, ok: false }, state.dim);
   }
 
   function miniSetDim(el, dim) {
@@ -492,8 +508,8 @@
     }
     // Show crawl data immediately while live fetches
     const crawlItems = state.crawlData && state.crawlData[dim];
-    if (crawlItems && crawlItems.length) {
-      miniRender(el, { ok: true, items: crawlItems, fallback: true }, dim);
+    if (el.hasAttribute("data-crawl-only")) {
+      miniRender(el, { ok: true, items: crawlItems || [], fallback: true }, dim);
     }
     if (!el.hasAttribute("data-crawl-only")) miniFetch(el);
   }
@@ -501,7 +517,10 @@
   function miniRefreshForWidgetId(widgetId) {
     if (!widgetId) return;
     const widgets = document.querySelectorAll(`[data-search-mini][data-days-widget="${CSS.escape(widgetId)}"]`);
-    for (const el of widgets) miniFetch(el);
+    for (const el of widgets) {
+      miniUpdateLink(el, miniStates.get(el)?.dim);
+      miniFetch(el);
+    }
   }
 
   function _readCrawlItems(id) {
@@ -534,7 +553,7 @@
       miniUpdateLink(el, state.dim);
 
       // Render crawl data immediately (no spinner) while live fetch happens
-      if (crawlData.query.length) {
+      if (crawlOnly) {
         miniRender(el, { ok: true, items: crawlData.query, fallback: true }, "query");
       }
 
@@ -559,29 +578,40 @@
 
     const requestId = (state.requestId || 0) + 1;
     state.requestId = requestId;
+    setWidgetRecovery(widget);
 
-    if (!state.points.length) setWidgetEmpty(widget, "Chargement du graphique live…");
-    setWidgetMeta(widget, "Chargement des données live…");
+    // A newly selected period must never retain the previous period's values or curve.
+    if (days) {
+      state.points = [];
+      state.totals = computeTotals([]);
+      updateMetricCards(widget, state.totals);
+    }
+    state.emptyMessage = "Chargement du graphique…";
+    if (!state.points.length) setWidgetEmpty(widget, state.emptyMessage);
+    setWidgetMeta(widget, "Consultation de la période sélectionnée…");
 
     let response;
     let data = null;
     try {
       response = await fetch(liveUrl, { headers: { Accept: "application/json" }, cache: "no-store" });
-      data = await response.json();
+      data = response.status === 401 || response.redirected
+        ? { ok: false, reason: "session_expired" } : await response.json();
     } catch (error) {
       if (state.requestId !== requestId) return;
-      if (!state.points.length) setWidgetEmpty(widget, "Erreur de chargement du graphique.");
-      setWidgetMeta(widget, `Erreur live · ${error instanceof Error ? error.message : "request_failed"}`);
+      state.emptyMessage = errorLabel({});
+      setWidgetRecovery(widget, "unavailable");
+      if (!state.points.length) setWidgetEmpty(widget, state.emptyMessage);
+      setWidgetMeta(widget, `${state.points.length ? storedPeriod(widget) + " · " : ""}${state.emptyMessage}`);
       return;
     }
 
     if (state.requestId !== requestId) return;
 
     const nextPoints = parseSeries(data && data.daily);
-    if (response.ok && nextPoints.length >= 2) {
+    if (response.ok && data?.ok) {
       state.points = nextPoints;
       state.totals = computeTotals(nextPoints);
-      state.emptyMessage = "";
+      state.emptyMessage = nextPoints.length === 1 ? "Un seul jour reçu : pas encore assez de points pour tracer une évolution." : "Aucune donnée reçue sur cette période.";
       const summaryBlock = widget.closest(".card")?.querySelector("[data-summary-block][data-summary-fallback='true']");
       if (summaryBlock) summaryBlock.hidden = true;
       updateMetricCards(widget, state.totals);
@@ -590,8 +620,10 @@
       return;
     }
 
-    if (!state.points.length) setWidgetEmpty(widget, errorLabel(data || {}));
-    setWidgetMeta(widget, `Live indisponible · ${errorLabel(data || {})}`);
+    state.emptyMessage = errorLabel(data || {});
+    setWidgetRecovery(widget, data?.reason || "unavailable");
+    if (!state.points.length) setWidgetEmpty(widget, state.emptyMessage);
+    setWidgetMeta(widget, `${state.points.length ? storedPeriod(widget) + " · " : ""}${state.emptyMessage}`);
   }
 
   function initTimeseriesWidgets() {
@@ -619,7 +651,7 @@
         metrics: defaultMetrics.length ? defaultMetrics : metricOrder.slice(0, Math.min(2, metricOrder.length)),
         points: inlinePoints,
         totals: inlineTotals,
-        emptyMessage: inlinePoints.length ? "" : "Chargement du graphique…",
+        emptyMessage: inlinePoints.length ? "Un seul jour enregistré : pas encore assez de points pour tracer une évolution." : "Aucune donnée enregistrée.",
         requestId: 0,
       };
       widgetStates.set(widget, state);
@@ -646,7 +678,7 @@
       }
 
       if (inlinePoints.length >= 2) {
-        setWidgetMeta(widget, "Dernier crawl enregistré.");
+        setWidgetMeta(widget, storedPeriod(widget));
       }
 
       syncMetricButtons(widget);

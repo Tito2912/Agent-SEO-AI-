@@ -97,8 +97,12 @@
               Opportunités <span class="nav-plan">Solo+</span>
             </a>
             </details>
-            <details class="nav-group" {% if '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or request.url.path == project_path ~ '/cms' %}open{% endif %}>
+            <details class="nav-group" {% if '/settings/search' in request.url.path or '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or request.url.path == project_path ~ '/cms' %}open{% endif %}>
               <summary>Réglages et historique</summary>
+            <a class="nav-item {% if request.url.path == project_path ~ '/settings/search' %}active{% endif %}"{% if request.url.path == project_path ~ '/settings/search' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/settings/search">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
+              Google et Bing
+            </a>
             <a class="nav-item {% if request.url.path == project_path ~ '/cms' %}active{% endif %}"{% if request.url.path == project_path ~ '/cms' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/cms">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8 8H5v8h3m8-8h3v8h-3M8 12h8"/></svg>
               CMS et intégrations

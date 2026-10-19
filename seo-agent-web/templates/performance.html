@@ -2,7 +2,8 @@
 {% block title %}Performance - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}
-  <script src="/static/project_overview.js" defer></script>
+  <link rel="stylesheet" href="/static/search-results.css?v=1" />
+  <script src="/static/project_overview.js?v=4" defer></script>
 {% endblock %}
 
 {% block crumbs %}
@@ -18,11 +19,7 @@
 {% endblock %}
 
 {% block actions %}
-  {% if project %}
-    <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouvelle analyse</button>
-    </form>
-  {% endif %}
+  {% if project %}<a class="btn primary" href="{{ request.url.path }}?{{ request.url.query }}">Actualiser les résultats</a>{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -36,34 +33,17 @@
         {% if live and live.fallback %}
           Données de la dernière analyse
         {% elif live and live.ok and live.start_date %}
-          Live · {{ live.start_date }} → {{ live.end_date }} ({{ days }}j)
+          Données reçues · {{ live.start_date }} → {{ live.end_date }} ({{ days }}j)
         {% else %}
           {{ days }}j
         {% endif %}
       </p>
     </div>
 
+    <p class="result-actions"><a class="btn" href="{{ connections_url }}">Google et Bing pour ce site</a>{% if source == 'gsc' %}<a class="btn" href="/projects/{{ slug }}/keywords/opportunities?days={{ days }}">Trouver des pistes d’amélioration</a>{% endif %}</p>
     {% if not perf_ok %}
-      <section class="card empty-connection">
-        {% set reason = live.reason if live else '' %}
-        {% if reason == 'disabled' %}
-          <h2>Activez le suivi des recherches</h2>
-          <p class="muted">Le suivi {{ 'Google' if source == 'gsc' else 'Bing' }} est désactivé pour ce projet.</p>
-          <a class="btn primary" href="/projects/{{ project.slug }}/settings/crawl">Activer le suivi</a>
-        {% elif reason in ['missing_credentials', 'not_connected', 'oauth_not_connected', ''] %}
-          <h2>Découvrez les recherches qui amènent des visiteurs</h2>
-          <p class="muted">Connectez {{ 'Google Search Console' if source == 'gsc' else 'Bing Webmaster' }} pour suivre les clics, les recherches et les positions de votre site.</p>
-          <a class="btn primary" href="/settings/accounts#{{ 'gsc-oauth-card' if source == 'gsc' else 'bing-connect-card' }}">Connecter {{ 'Google' if source == 'gsc' else 'Bing' }}</a>
-        {% else %}
-          <h2>Les données ne sont pas disponibles pour le moment</h2>
-          <p class="muted">Vérifiez la connexion et les autorisations du compte pour ce site, puis réessayez.</p>
-          <a class="btn primary" href="/settings/accounts#{{ 'gsc-oauth-card' if source == 'gsc' else 'bing-connect-card' }}">Vérifier la connexion</a>
-          <a class="btn" href="?source={{ source }}&days={{ days }}">Réessayer</a>
-        {% endif %}
-        <p class="muted small"><a href="?source={{ 'bing' if source == 'gsc' else 'gsc' }}">Voir le suivi {{ 'Bing' if source == 'gsc' else 'Google' }}</a></p>
-        {% if live and (live.reason or live.error) %}<details class="technical-details"><summary>Détails techniques</summary><code>{{ live.reason or live.error }}</code></details>{% endif %}
-      </section>
-    {% else %}
+      {% include "_search_unavailable.html" %}
+    {% endif %}
       <details class="screen-options" {% if q %}open{% endif %}>
         <summary>Source, période et filtres{% if q %} · filtres actifs{% endif %}</summary>
     <div class="data-toolbar">
@@ -76,16 +56,16 @@
           </select>
         </label>
         <label>
-          Dimension
+          Voir par
           <select name="dim">
-            <option value="query" {% if dim == 'query' %}selected{% endif %}>Requêtes</option>
+            <option value="query" {% if dim == 'query' %}selected{% endif %}>Recherches des internautes</option>
             <option value="page" {% if dim == 'page' %}selected{% endif %}>Pages</option>
           </select>
         </label>
         <label>
           Période
           <select name="days">
-            {% for d in [7, 28, 90] %}
+            {% for d in ([7, 28, 90] + ([days] if days not in [7, 28, 90] else []))|sort %}
               <option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }} jours</option>
             {% endfor %}
           </select>
@@ -99,7 +79,7 @@
           <select name="sort">
             <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>Clics</option>
             <option value="impressions" {% if sort == 'impressions' %}selected{% endif %}>Impressions</option>
-            <option value="ctr" {% if sort == 'ctr' %}selected{% endif %}>CTR</option>
+            <option value="ctr" {% if sort == 'ctr' %}selected{% endif %}>Taux de clics</option>
             <option value="position" {% if sort == 'position' %}selected{% endif %}>Position</option>
           </select>
         </label>
@@ -115,6 +95,8 @@
     </div>
 
       </details>
+    {% if perf_ok %}
+      <p class="muted small">Synthèse des {{ source_rows }} lignes reçues (5 000 au maximum). Les filtres portent sur le tableau ; le graphique couvre toute la source.</p>
       <div class="stat-strip">
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ totals.clicks }}</div>
@@ -133,31 +115,33 @@
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ (totals.avg_ctr * 100)|round(1) }}<span style="font-size:18px;font-weight:600;">%</span></div>
-          <div class="stat-strip-lbl">CTR moyen</div>
+          <div class="stat-strip-lbl">Taux de clics</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
-          <div class="stat-strip-num">{{ "%.1f"|format(totals.avg_position or 0) }}</div>
+          <div class="stat-strip-num">{{ "%.1f"|format(totals.avg_position) if totals.avg_position else "—" }}</div>
           <div class="stat-strip-lbl">Position moyenne</div>
         </div>
         {% if csv_url %}
           <div style="margin-left:auto;align-self:center;">
-            <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">CSV</a>
+            <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">CSV complet</a>
           </div>
         {% endif %}
       </div>
 
+      {% include "_search_metrics_help.html" %}
       <section class="card">
         <div class="card-title-row">
           <h2>Évolution</h2>
           <span class="muted small">
             {{ source|upper }} ·
-            {% if live and live.fallback %}Dernière analyse{% else %}{{ days }}j · live{% endif %}
+            {% if live and live.fallback %}Dernière analyse{% else %}{{ days }}j · données reçues{% endif %}
           </span>
         </div>
 
         <div
           id="perf-live-widget"
+          data-connections-url="{{ connections_url }}"
           class="ts-widget"
           data-default-metrics="clicks,impressions"
           data-max-metrics="2"
@@ -176,18 +160,18 @@
             </button>
             <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
               <span class="ts-metric-check">✓</span>
-              <span class="ts-metric-label">CTR moyen</span>
+              <span class="ts-metric-label">Taux de clics</span>
               <span class="ts-metric-value" data-value-for="ctr">{{ (totals.avg_ctr * 100)|round(1) }}%</span>
             </button>
             <button type="button" class="ts-metric" data-metric="position" aria-pressed="false">
               <span class="ts-metric-check">✓</span>
               <span class="ts-metric-label">Position moyenne</span>
-              <span class="ts-metric-value" data-value-for="position">{{ totals.avg_position|round(1) }}</span>
+              <span class="ts-metric-value" data-value-for="position">{{ totals.avg_position|round(1) if totals.avg_position else "—" }}</span>
             </button>
           </div>
           <div class="ts-chart">
             <canvas class="ts-canvas" aria-label="Graphique {{ source|upper }}" role="img"></canvas>
-            <div class="ts-empty">Chargement du graphique live…</div>
+            <div class="ts-empty" role="status">Chargement du graphique…</div>
           </div>
           <div class="ts-meta muted small" data-ts-meta></div>
         </div>
@@ -200,23 +184,28 @@
         </div>
 
         {% if not rows %}
-          <p class="muted">Aucun résultat pour ces filtres.</p>
+          {% if q %}
+          <p class="muted">Aucun résultat pour « {{ q }} » sur cette période.</p>
+          <a class="btn" href="?source={{ source }}&amp;dim={{ dim }}&amp;days={{ days }}">Effacer la recherche</a>
+          {% else %}
+          <p class="muted">Aucune recherche ou page reçue pour cette période. Cela ne permet pas de conclure sur les visites ou les ventes de votre site.</p>
+          {% endif %}
         {% else %}
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Résultats détaillés, défilement horizontal si nécessaire">
             <table class="table compact">
               <thead>
                 <tr>
                   <th>{% if dim == 'page' %}Page{% else %}Mot-clé{% endif %}</th>
                   <th class="num">Clics</th>
                   <th class="num">Impressions</th>
-                  <th class="num">CTR</th>
+                  <th class="num">Taux de clics</th>
                   <th class="num">Pos. moy.</th>
                 </tr>
               </thead>
               <tbody>
                 {% for r in rows %}
                   {% set pos = r.position or 0 %}
-                  {% set pos_cls = 'ok' if pos <= 3 else ('warning' if pos <= 10 else '') %}
+                  {% set pos_cls = 'ok' if 0 < pos <= 3 else ('warning' if pos <= 10 else '') %}
                   <tr>
                     <td>
                       {% if dim == 'page' %}
@@ -230,9 +219,9 @@
                     <td class="num mono">{{ "%.1f"|format((r.ctr or 0) * 100) }}%</td>
                     <td class="num mono">
                       {% if pos_cls %}
-                        <span class="badge {{ pos_cls }}" style="font-size:11px;">{{ "%.1f"|format(pos) }}</span>
+                        <span class="badge {{ pos_cls }}" style="font-size:11px;">{{ "%.1f"|format(pos) if pos > 0 else "—" }}</span>
                       {% else %}
-                        {{ "%.1f"|format(pos) }}
+                        {{ "%.1f"|format(pos) if pos > 0 else "—" }}
                       {% endif %}
                     </td>
                   </tr>

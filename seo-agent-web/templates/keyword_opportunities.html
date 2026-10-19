@@ -1,27 +1,30 @@
 {% extends "layout.html" %}
 {% block title %}Mots-clés - {{ project.site_name if project else slug }}{% endblock %}
 
+{% block head_extra %}<link rel="stylesheet" href="/static/search-results.css?v=1" />{% endblock %}
+
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">Mots-clés</span>{% endblock %}
+
 {% block content %}
   <div class="page-header">
     <h1>Mots-clés</h1>
     <p class="muted">
-      {{ project.site_name }} · Search Console · {{ days }} derniers jours
+      {{ project.site_name }} · Google Search Console · période demandée : {{ days }} jours
       <a href="/docs/opportunites-de-mots-cles" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </p>
   </div>
 
+  <form method="get" class="result-period">
+    <label for="keyword-days">Période des recommandations</label>
+    <select name="days" id="keyword-days">
+      {% for d in ([7, 28, 90] + ([days] if days not in [7, 28, 90] else []))|sort %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }} jours</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Actualiser</button>
+    <a class="btn" href="{{ connections_url }}">Connexion Google de ce site</a>
+  </form>
+  {% if live.start_date and live.end_date %}<p class="muted small">Du {{ live.start_date }} au {{ live.end_date }} · {{ live.data_delay_hint or 'Les données de recherche arrivent avec un décalage.' }}</p>{% endif %}
   {% if not gsc_ok %}
-    {# "Not connected" and "nothing to report" are different answers and lead to different
-       actions, so the page says which one it is instead of showing an empty table. #}
-    <section class="card">
-      <h2 style="margin-top:0;">Search Console n'est pas connecté</h2>
-      <p class="muted">
-        Ces recommandations viennent des données de recherche de ton propre site : rien n'est
-        deviné, rien n'est acheté à un tiers. Connecte Search Console dans
-        <a href="/projects/{{ slug }}/settings/crawl">Réglages de l’analyse</a> pour les obtenir.
-      </p>
-      {% if gsc_reason %}<p class="muted small mono">{{ gsc_reason }}</p>{% endif %}
-    </section>
+    {% include "_search_unavailable.html" %}
   {% else %}
 
     <section class="card">
@@ -32,16 +35,13 @@
 
       {% if not opportunities %}
         <p class="muted">
-          Aucune requête ne remplit les critères sur cette période. C'est le bon résultat quand
-          le site convertit correctement ce qu'il montre.
+          Aucune recherche reçue ne remplit les critères sur cette période (au moins 50 affichages, puis clics ou position à améliorer). Cela ne mesure ni les conversions ni les ventes. Vous pouvez essayer une autre période ou consulter les résultats détaillés.
         </p>
       {% else %}
         <p class="muted small">
-          Ces requêtes sont déjà vues par des internautes. Elles n'ont pas besoin d'un meilleur
-          classement mais d'un meilleur titre, d'une meilleure description — ou, pour celles de
-          seconde page, d'un meilleur contenu.
+          Ces recherches affichent déjà votre site. Relire le titre, la description ou le contenu de la page peut aider ; ces pistes ne garantissent pas de nouveaux clics ni un meilleur classement.
         </p>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Mots-clés, défilement horizontal si nécessaire">
           <table class="table compact">
             <thead>
               <tr>
@@ -104,19 +104,19 @@
         {% if summary.potential_clicks is none %}
           <p class="muted small" style="margin-top:10px;">
             Aucune estimation de gain n'est affichée : ce site n'a encore aucune requête dans les
-            trois premières positions, donc rien de vérifiable à quoi le comparer. Un chiffre que
-            tu ne peux pas contrôler ne vaut pas la peine d'être affiché.
+            trois premières positions, donc rien de vérifiable à quoi le comparer. La comparaison sera disponible si des données suffisantes sont reçues.
           </p>
         {% else %}
           <p class="muted small" style="margin-top:10px;">
-            Environ <strong>{{ summary.potential_clicks }}</strong> clics par période si ces
-            requêtes convertissaient comme celles où ce site est déjà dans les trois premiers.
+            Environ <strong>{{ summary.potential_clicks }}</strong> clics supplémentaires sur cette période si ces
+            recherches obtenaient le même taux de clics que celles où ce site est déjà dans les trois premiers. C’est une comparaison indicative, sans garantie de gain.
           </p>
         {% endif %}
       {% endif %}
     </section>
   {% endif %}
 
+  <p><a class="btn" href="/projects/{{ slug }}/performance?source=gsc&amp;days={{ days }}">Voir les résultats Google détaillés</a></p>
   <section class="card">
     <div class="card-title-row">
       <h2 style="margin:0;">Mots-clés suivis</h2>
@@ -131,7 +131,7 @@
         <input name="query" placeholder="ex. logiciel de voix off IA" required />
       </label>
       <label>
-        Page qui doit le gagner (facultatif)
+        Page à suivre (facultatif)
         <input name="target_url" placeholder="https://…" />
       </label>
       <div class="modal-actions between">
@@ -181,15 +181,13 @@
       </div>
     {% else %}
       <p class="muted" style="margin-top:12px;">
-        Aucun mot-clé suivi pour l'instant. Search Console ne garde qu'environ seize mois et ne
-        conserve pas d'historique par projet : suivre une requête ici est ce qui permet d'en voir
-        l'évolution dans le temps.
+        Aucun mot-clé suivi pour l’instant. Ajoutez une recherche et, si vous la connaissez, la page concernée pour les retrouver ici.
       </p>
     {% endif %}
   </section>
 
   <style>
-    .kw-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; }
+    .kw-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:flex-end; }
     #kw-status { margin-top:10px; font-size:13px; }
     #kw-status.ok { color:var(--ok-2); }
     #kw-status.error { color:#f87171; }
