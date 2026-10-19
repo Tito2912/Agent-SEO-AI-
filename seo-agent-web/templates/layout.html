@@ -6,11 +6,12 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}Noyaru{% endblock %}</title>
     {% include "_favicons.html" %}
-    <link rel="stylesheet" href="/static/styles.css?v=25" />
+    <link rel="stylesheet" href="/static/styles.css?v=26" />
     <link rel="stylesheet" href="/static/customer-country.css?v=1" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Aller au contenu</a>
     <div class="app">
       {#- MENU MOBILE (04/10/2026) : sous 980 px la barre laterale etait masquee sans rien pour la
           remplacer — aucun acces a l'abonnement, aux comptes ni aux sections d'un projet. Une case
@@ -38,76 +39,81 @@
         <!-- Nav -->
         <nav class="nav">
 
-          <a class="nav-item {% if request.url.path == '/' %}active{% endif %}" href="/">
+          <a class="nav-item {% if request.url.path == '/' %}active{% endif %}"{% if request.url.path == '/' %} aria-current="page"{% endif %} href="/">
             <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
             Projets
           </a>
 
           {% if project and project.slug %}
+            {% set project_path = '/projects/' ~ project.slug %}
+            {% set correction_path = request.url.path == project_path ~ '/first-correction' or request.url.path.startswith(project_path ~ '/corrections') or request.url.path.startswith(project_path ~ '/cms/wordpress/') %}
+            {% set report_params = request.query_params if request.url.query else {} %}
+            {% set report_query = '?crawl=' ~ (report_params.get('crawl') | urlencode) if report_params.get('crawl') else '' %}
+            {% if report_params.get('compare') %}{% set report_query = report_query ~ ('&compare=' if report_query else '?compare=') ~ (report_params.get('compare') | urlencode) %}{% endif %}
             <div class="nav-section">{{ project.site_name }}</div>
-            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}" href="/projects/{{ project.slug }}">
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}"{% if request.url.path == '/projects/' ~ project.slug %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}{{ report_query }}">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
               Vue d'ensemble
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}" href="/projects/{{ project.slug }}/issues">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/issues{{ report_query }}">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
               Anomalies
             </a>
 
-            <a class="nav-item {% if '/corrections' in request.url.path %}active{% endif %}" href="/projects/{{ project.slug }}/corrections">
+            <a class="nav-item {% if correction_path %}active{% endif %}"{% if correction_path %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/corrections">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
               Corrections
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %}active{% endif %}" href="/projects/{{ project.slug }}/content">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/content">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
               Contenu <span class="nav-plan">Pro+</span>
             </a>
             <details class="nav-group" {% if '/performance' in request.url.path or '/keywords' in request.url.path or '/competitors' in request.url.path or '/backlinks' in request.url.path or '/netlinking' in request.url.path %}open{% endif %}>
               <summary>Visibilité et acquisition</summary>
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %}active{% endif %}" href="/projects/{{ project.slug }}/performance">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/performance">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
               Performance
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %}active{% endif %}" href="/projects/{{ project.slug }}/keywords/opportunities">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/keywords/opportunities">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               Mots-clés
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}" href="/projects/{{ project.slug }}/competitors">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/competitors">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
               Concurrents <span class="nav-plan">Pro+</span>
             </a>
 
-            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks">
+            <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}"{% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/backlinks">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
               Liens entrants
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}" href="/projects/{{ project.slug }}/backlinks/opportunities">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/backlinks/opportunities">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
               Opportunités <span class="nav-plan">Solo+</span>
             </a>
             </details>
-            <details class="nav-group" {% if '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or '/cms' in request.url.path %}open{% endif %}>
+            <details class="nav-group" {% if '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or request.url.path == project_path ~ '/cms' %}open{% endif %}>
               <summary>Réglages et historique</summary>
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/cms') %}active{% endif %}" href="/projects/{{ project.slug }}/cms">
+            <a class="nav-item {% if request.url.path == project_path ~ '/cms' %}active{% endif %}"{% if request.url.path == project_path ~ '/cms' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/cms">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8 8H5v8h3m8-8h3v8h-3M8 12h8"/></svg>
               CMS et intégrations
             </a>
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}" href="/projects/{{ project.slug }}/settings/crawl">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/settings/crawl">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
               Réglages de l’analyse
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %}active{% endif %}" href="/projects/{{ project.slug }}/automation">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/automation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               Automatisation
             </a>
 
-            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}" href="/projects/{{ project.slug }}/crawls">
+            <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/crawls">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
               Historique des analyses
             </a>
@@ -115,50 +121,51 @@
           {% endif %}
             <div class="nav-section">Votre espace</div>
 
-          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}" href="/jobs">
+          <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}"{% if request.url.path.startswith('/jobs') %} aria-current="page"{% endif %} href="/jobs">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
             Exécutions
           </a>
 
-          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}" href="/billing">
+          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}"{% if request.url.path.startswith('/billing') %} aria-current="page"{% endif %} href="/billing">
             <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h3"/></svg>
             Abonnement
           </a>
 
-          <a class="nav-item {% if request.url.path.startswith('/docs') %}active{% endif %}" href="/docs">
+          <a class="nav-item {% if request.url.path.startswith('/docs') %}active{% endif %}"{% if request.url.path.startswith('/docs') %} aria-current="page"{% endif %} href="/docs">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h9a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 4h-4a3 3 0 00-3 3v13a2.5 2.5 0 012.5-2.5H20z"/></svg>
             Documentation
           </a>
 
           {% if request.state.user and request.state.user.is_admin %}
-            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}" href="/automation">
+            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}"{% if request.url.path.startswith('/automation') %} aria-current="page"{% endif %} href="/automation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
               Automatisation
             </a>
           {% endif %}
 
-          <div class="nav-section">Paramètres</div>
+          <div class="nav-section">Votre compte</div>
 
-          <a class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}" href="/settings/accounts">
+          <a class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}"{% if request.url.path.startswith('/settings/accounts') %} aria-current="page"{% endif %} href="/settings/accounts">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/></svg>
             Comptes &amp; connexions
           </a>
 
-          <a class="nav-item {% if request.url.path.startswith('/settings/team') %}active{% endif %}" href="/settings/team">
+          <a class="nav-item {% if request.url.path.startswith('/settings/team') %}active{% endif %}"{% if request.url.path.startswith('/settings/team') %} aria-current="page"{% endif %} href="/settings/team">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.8"/><path d="M16 14.3c3 .3 5.5 2.6 5.5 5.7"/></svg>
             Équipe
           </a>
 
           {% if request.state.can_access_system_settings %}
-            <a class="nav-item {% if request.url.path.startswith('/settings/operations') %}active{% endif %}" href="/settings/operations">
+            <div class="nav-section">Administration Noyaru</div>
+            <a class="nav-item {% if request.url.path.startswith('/settings/operations') %}active{% endif %}"{% if request.url.path.startswith('/settings/operations') %} aria-current="page"{% endif %} href="/settings/operations">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>
               Exploitation
             </a>
-            <a class="nav-item {% if request.url.path.startswith('/settings/activation') %}active{% endif %}" href="/settings/activation">
+            <a class="nav-item {% if request.url.path.startswith('/settings/activation') %}active{% endif %}"{% if request.url.path.startswith('/settings/activation') %} aria-current="page"{% endif %} href="/settings/activation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16l-6 8v7l-4 2v-9z"/></svg>
               Parcours clients
             </a>
-            <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}" href="/settings/system">
+            <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}"{% if request.url.path.startswith('/settings/system') %} aria-current="page"{% endif %} href="/settings/system">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
               Système
             </a>
@@ -180,7 +187,7 @@
             </div>
             <form method="post" action="/auth/logout">
               <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-              <button type="submit" class="sidebar-logout" title="Se déconnecter">
+              <button type="submit" class="sidebar-logout" title="Se déconnecter" aria-label="Se déconnecter">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
               </button>
             </form>
@@ -226,7 +233,7 @@
           </div>
           <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
           <form class="assistant-form" id="assistant-form">
-            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" placeholder="Posez une question..." maxlength="2000" />
+            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" aria-label="Votre question à l’assistant" placeholder="Posez une question..." maxlength="2000" />
             <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
             </button>
@@ -236,7 +243,7 @@
       </div>
 
       <!-- MAIN -->
-      <main class="main">
+      <main class="main" id="main-content" tabindex="-1">
         <header class="topbar">
           <label for="nav-mobile" class="nav-mobile-bouton" role="button" tabindex="0" aria-controls="barre-laterale" aria-expanded="false"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
