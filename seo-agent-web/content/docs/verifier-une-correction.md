@@ -41,6 +41,13 @@ correction**, ou dans **CMS et intégrations → Vos dernières opérations Word
 La section **Rétablir la valeur précédente** permet d’annuler la modification si les
 métadonnées n’ont pas changé depuis son application.
 
+Après un résultat confirmé, **Choisir une autre correction** ouvre les problèmes du dernier
+rapport. Le résultat précédent reste conservé pendant ce choix. Le bouton **Rétablir la
+valeur précédente** reste accessible depuis l’écran de réussite de la correction guidée.
+Dans **Corrections**, les anomalies restantes indiquent leur URL ; une même anomalie peut
+être résolue sur une page et subsister sur une autre. Les corrections vérifiées sont
+conservées dans l’historique, avec un lien vers leur opération WordPress.
+
 ## Comment ça marche
 
 À la fin de chaque crawl, le produit reprend les tâches de correction du projet et confronte

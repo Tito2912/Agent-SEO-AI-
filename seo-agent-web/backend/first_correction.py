@@ -49,7 +49,7 @@ def web_url(value):
         return ""
 
 
-def progress(tasks):
+def progress(tasks, *, prefer_selection=False):
     """A declared correction is distinct from a newer crawl confirming its resolution."""
     states = []
     for task in tasks:
@@ -78,4 +78,8 @@ def progress(tasks):
     # Rows arrive newest first. Keep a confirmed success, then the customer's guided choice.
     guided = [state for state in states if state["guided"]]
     selected = max(guided, key=lambda state: timestamp(state["selected_at"]) or datetime.min.replace(tzinfo=timezone.utc)) if guided else states[0]
+    # The guided screen follows the latest explicit choice; account activation keeps
+    # its first success even while the customer works on another correction.
+    if prefer_selection and guided:
+        return selected
     return next((state for state in states if state["verified"]), selected)

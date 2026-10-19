@@ -193,7 +193,8 @@ def test_corrections_page_renders_accelerator_for_authenticated_user() -> None:
         response = client.get(f"/projects/{slug}/corrections")
 
     assert response.status_code == 200
-    assert "Choisir une correction" in response.text
+    assert "Anomalies encore détectées" in response.text
+    assert "Être guidé pour ma première correction" in response.text
     assert "Connecter GitHub" in response.text
 
 
