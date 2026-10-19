@@ -9,7 +9,7 @@ updated_at: "2026-10-19"
 audience: "Solo, Pro et Business"
 keywords: ["vérification", "régression SEO", "suivi des corrections", "crawl de contrôle"]
 app_href: "/"
-related: ["corrections-automatiques", "lire-le-rapport", "automatiser-les-audits"]
+related: ["corrections-automatiques", "corriger-dans-wordpress", "lire-le-rapport", "automatiser-les-audits"]
 faq:
   - question: "Pourquoi une correction reste-t-elle « en cours » après la fusion de la PR ?"
     answer: "Parce que la vérification a besoin d'un crawl postérieur au déploiement. Tant que le site en ligne n'a pas été réexploré, le produit n'a aucune preuve et refuse d'en inventer une."
@@ -28,13 +28,21 @@ déploiement, un cache, parfois un CDN, et l'hypothèse que le correctif était 
 
 Le suivi conserve quatre étapes : **Préparer → Relire → Appliquer → Vérifier**.
 
-1. Saisissez le titre SEO ou la méta-description, puis choisissez **Voir l’avant/après**.
+1. Choisissez **Proposer un texte** pour que {{app_name}} le rédige, ou saisissez vous-même le
+   titre SEO ou la méta-description, puis choisissez **Voir l’avant/après**.
 2. Relisez l’aperçu et choisissez **Appliquer sur mon site** pour enregistrer la valeur.
 3. Sur le même écran, choisissez **Vérifier le résultat**. Si votre site utilise un cache,
    actualisez-le auparavant. Ce contrôle lance une nouvelle analyse et utilise votre quota
    habituel de pages ; une analyse déjà en cours est suivie sans en lancer une seconde.
 4. Le résultat apparaît automatiquement sur cet écran : **Correction vérifiée**, **Le problème
    est encore présent**, ou un motif expliquant pourquoi le contrôle n’a pas pu conclure.
+   Si l’analyse a encore lu l’ancienne valeur alors que WordPress a enregistré la nouvelle,
+   l’écran affiche **Votre site affiche encore l’ancienne version** : c’est un cache à vider,
+   pas un texte à réécrire.
+
+Pour plusieurs pages d’une même anomalie, **Corriger ces pages dans WordPress** regroupe la
+relecture et lance une seule analyse de contrôle pour toutes.
+→ [Corriger dans WordPress avec Yoast SEO](/docs/corriger-dans-wordpress)
 
 Vous pouvez quitter le suivi et le retrouver depuis **Première correction → Suivre ma
 correction**, ou dans **CMS et intégrations → Vos dernières opérations WordPress**.

@@ -5,7 +5,7 @@ description: "Les trois portées de correction, ce que {{app_name}} écrit réel
 kind: "Documentation"
 section: "Corriger"
 order: 22
-updated_at: "2026-09-30"
+updated_at: "2026-10-19"
 audience: "Solo, Pro et Business"
 keywords: ["correction automatique", "pull request", "SEO technique", "IA"]
 app_href: "/"
@@ -74,8 +74,10 @@ et les gabarits Jinja d'un site Flask, ainsi que les fichiers de configuration d
 
 Puis il fait la distinction qui compte : **l'anomalie vient-elle de la page ou du gabarit ?**
 
-Pour un CMS sans correction automatique prise en charge, comme WordPress, utilisez l'audit,
-les rapports exportables et, dès le plan Solo, le [fix-pack à appliquer manuellement](/docs/fix-pack-sans-depot).
+Sur WordPress avec Yoast SEO, les titres et méta-descriptions se corrigent sans dépôt, depuis
+{{app_name}} : voir [Corriger dans WordPress](/docs/corriger-dans-wordpress). Pour les autres
+corrections et les autres CMS (Shopify, Webflow, Wix), utilisez l'audit, les rapports
+exportables et, dès le plan Solo, le [fix-pack à appliquer manuellement](/docs/fix-pack-sans-depot).
 
 - Une seule page en cause → le fichier de cette page.
 - Toutes les pages en cause → le layout, le composant `<head>`, ou le fichier de

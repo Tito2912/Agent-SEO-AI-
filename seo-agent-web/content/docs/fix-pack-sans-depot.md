@@ -5,7 +5,7 @@ description: "L'archive de correctifs à appliquer sur WordPress, Shopify, Webfl
 kind: "Documentation"
 section: "Corriger"
 order: 24
-updated_at: "2026-09-03"
+updated_at: "2026-10-19"
 audience: "Tous les plans"
 keywords: ["fix pack", "WordPress", "Shopify", "Webflow", "sans dépôt"]
 app_href: "/"
@@ -81,6 +81,8 @@ Le fichier `HOW_TO_APPLY.md` détaille chaque cas. En résumé :
 
 **WordPress** — `title`, description et canonicals via votre extension SEO (Yoast, Rank Math)
 ou l'éditeur. Redirections via une extension dédiée, qui accepte généralement un import CSV.
+Avec Yoast SEO, les titres et descriptions peuvent aussi être corrigés directement depuis
+{{app_name}} : voir [Corriger dans WordPress](/docs/corriger-dans-wordpress).
 
 **Shopify** — `title` et descriptions dans l'admin, produit par produit ou par import. Les
 données structurées sont dans le thème, le plus souvent `theme.liquid`.

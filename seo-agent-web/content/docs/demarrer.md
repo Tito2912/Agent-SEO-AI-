@@ -5,7 +5,7 @@ description: "Le parcours complet du premier compte au premier correctif : crée
 kind: "Prise en main"
 section: "Prise en main"
 order: 10
-updated_at: "2026-09-30"
+updated_at: "2026-10-19"
 audience: "Nouveau compte"
 keywords: ["prise en main", "démarrer", "premier crawl", "onboarding"]
 app_href: "/"
@@ -88,7 +88,9 @@ Vous gardez la main : rien n'est fusionné sans vous.
 [Corrections automatiques](/docs/corrections-automatiques)
 
 !!! note "Pas de dépôt Git ?"
-    Site sous WordPress, Wix, Shopify, ou dépôt inaccessible : le
+    Sur WordPress avec Yoast SEO, {{app_name}} corrige les titres et méta-descriptions
+    directement : [Corriger dans WordPress](/docs/corriger-dans-wordpress). Pour le reste,
+    et sous Wix, Shopify ou avec un dépôt inaccessible, le
     [fix-pack](/docs/fix-pack-sans-depot) exporte les correctifs prêts à coller, avec le
     mode d'emploi. Vous perdez l'automatisation, pas les corrections.
 
