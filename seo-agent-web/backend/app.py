@@ -19403,7 +19403,8 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             site_name=site_url, owner=owner, repo_name=repo_name, branch=branch, token=token,
             model_override=gate_model, pages=report_pages)
         if _prep["refusal"]:
-            results.append({**result, "error": _prep["refusal"]})
+            results.append({**result, "error": _prep["refusal"],
+                            "paires": _paires_de_preuve(report_issues, issue_key)})
             continue
         ecartes: list[str] = []
         applied = _apply_prepared_issue_fix(
@@ -19434,7 +19435,10 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
             "partial": bool(applied["skipped"] or ecartes),
             "notes": _notes_de_famille(issue_key, applied["skipped"], applied["targets"], ecartes,
                                        _plafond, _prep.get("side_effects")),
+            "targets": applied["targets"], "effets": str(_prep.get("side_effects") or ""),
+            "paires": _paires_de_preuve(report_issues, issue_key),
             "error": "" if patched else (applied["error"] or "Aucun patch appliqué")})
+    _lier_les_familles(results, _plafond)
 
     fixed_results = [r for r in results if r.get("ok")]
     if not fixed_results:
@@ -27749,10 +27753,59 @@ def _blocs_markdown(*blocs: str) -> str:
 
 
 def _notes_de_famille(issue_key: str, skipped: list[str], targets: list[str], ecartes: list[str],
-                      plafond: "_Plafond | None", effets: Any) -> str:
+                      plafond: "_Plafond | None", effets: Any, lie_a: str = "") -> str:
     """Les notes d'une famille dans la PR groupee : non corriges, non traites, effets de bord."""
-    return _blocs_markdown(_skipped_note(issue_key, skipped, targets),
-                           _note_de_troncature(ecartes, plafond), str(effets or ""))
+    return _blocs_markdown(_skipped_note(issue_key, skipped, targets, lie_a=lie_a),
+                           _note_de_troncature(ecartes, plafond, lie_a=lie_a), str(effets or ""))
+
+
+def _suite_au_prochain_crawl(lie_a: str) -> str:
+    """Ce que le prochain crawl montrera des pages laissees de cote — sans promettre ce qu'on ignore."""
+    if lie_a:
+        return f" Le prochain crawl dira si ces pages tombent avec la correction {lie_a} :\n"
+    return " Ces pages resteront signalées au prochain crawl :\n"
+
+
+def _paires_de_preuve(issues: dict[str, Any] | None, issue_key: str) -> list[list[str]]:
+    """Les paires « de -> vers » que le crawl attache a la famille (canonical, sitemap, hreflang…)."""
+    out: list[list[str]] = []
+    for cle in _verification_family_keys(issue_key):
+        bloc = (issues or {}).get(cle)
+        preuve = bloc.get("evidence") if isinstance(bloc, dict) else None
+        if not isinstance(preuve, dict) or preuve.get("kind") != "url_pairs":
+            continue
+        for item in preuve.get("items") or []:
+            if isinstance(item, dict) and item.get("from") and item.get("to"):
+                paire = [str(item["from"]).strip(), str(item["to"]).strip()]
+                if paire not in out:
+                    out.append(paire)
+    return out
+
+
+def _lier_les_familles(results: list[dict[str, Any]], plafond: "_Plafond | None") -> None:
+    """Une famille SANS correctif dont TOUTES les paires « de -> vers » sont celles d'une famille
+    corrigee dans la meme PR peut tomber avec elle : elle ne se dit plus « resteront signalees ».
+
+    PR #1 de cityscootlab, 15/10/2026 : « Sitemap : URL en 3XX » et « Hreflang vers redirect »
+    annonces en echec, alors que le canonical repare dans la meme PR (`/de/` -> `/de`) les a
+    regles — Next construit sitemap et hreflang a partir du canonical. Le correcteur ne sait pas
+    si un site fait cela ; il sait seulement que les URL sont les memes, et c'est tout ce qu'il dit.
+    """
+    for r in results:
+        mes = {tuple(p) for p in r.get("paires") or []}
+        if r.get("ok") or not mes:
+            continue
+        couvrantes = [a for a in results if a is not r and a.get("ok")
+                      and mes & {tuple(p) for p in a.get("paires") or []}]
+        couvert: set[tuple[str, ...]] = set()
+        for a in couvrantes:
+            couvert |= {tuple(p) for p in a.get("paires") or []}
+        if not couvrantes or not mes <= couvert:
+            continue
+        r["lie_a"] = " et ".join(f"« {a['issue_label']} »" for a in couvrantes)
+        r["notes"] = _notes_de_famille(r["issue_key"], r.get("skipped") or [], r.get("targets") or [],
+                                       r.get("not_attempted_files") or [], plafond, r.get("effets"),
+                                       lie_a=r["lie_a"])
 
 
 def _corps_pr_groupee(*, site_name: str, ts: str, results: list[dict[str, Any]], files_total: int,
@@ -27765,18 +27818,24 @@ def _corps_pr_groupee(*, site_name: str, ts: str, results: list[dict[str, Any]],
         f"**Anomalies corrigées :** {fixed} · **Fichiers modifiés :** {files_total}",
     ]
     for r in results:
-        icon = "✅" if r.get("ok") else "❌"
+        lie = r.get("lie_a") or ""
+        icon = "✅" if r.get("ok") else ("↪" if lie else "❌")
         files = r.get("files") or []
-        detail = ", ".join(f"`{f}`" for f in files) if files else (r.get("error") or "")
+        detail = ", ".join(f"`{f}`" for f in files) if files else (
+            f"aucun fichier propre à cette famille ; mêmes URL que {lie}" if lie else (r.get("error") or ""))
         ligne = "\n".join([f"{icon} **{r['issue_label']}** — {detail}"]
                           + [f"- {note}" for note in r.get("config_fixed", [])])
-        blocs.append(_blocs_markdown(ligne, r.get("notes") or ""))
+        liaison = (f"> ↪ **Peut tomber avec {lie}.** Ses URL sont exactement celles que cette correction "
+                   "modifie. Si le site construit l'un à partir de l'autre — Next.js, Astro et Nuxt tirent "
+                   "sitemap et hreflang du canonical —, elle tombera avec ; sinon elle restera signalée. "
+                   "Le prochain crawl le dira.") if lie else ""
+        blocs.append(_blocs_markdown(ligne, liaison, r.get("notes") or ""))
     blocs.append(_fix_nature_note(ai_written, premise_key))
     blocs.append("Correction générée par [Noyaru](https://noyaru.com).")
     return _blocs_markdown(*blocs)
 
 
-def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None") -> str:
+def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None", *, lie_a: str = "") -> str:
     """Les fichiers qu'une correction n'a meme pas ESSAYES, faute de place sous le plafond.
 
     `_skipped_note` couvre les fichiers essayes puis refuses, et sa docstring enonce
@@ -27799,14 +27858,14 @@ def _note_de_troncature(ecartes: list[str], plafond: "_Plafond | None") -> str:
         conseil = ("Ton forfait traite %d fichier(s) par correction. Relance la correction "
                    "pour traiter les suivants." % (plafond.plan if plafond else len(rows)))
     head = (f"\n\n> 📄 **Non traités : {len(rows)} fichier(s)** — le plafond a coupé avant "
-            f"de les atteindre. {conseil} Ces pages resteront signalées au prochain crawl :\n")
+            f"de les atteindre. {conseil}" + _suite_au_prochain_crawl(lie_a))
     # La liste s'arrete a 12 ; sans le dire, « 28 » et douze lignes se lisent comme une erreur
     # de compte (PR #12 de prosperfactory, 13/10/2026).
     reste = (f"\n> - … et {len(rows) - 12} autre(s)" if len(rows) > 12 else "")
     return head + "\n".join(f"> - `{p}`" for p in rows[:12]) + reste
 
 
-def _skipped_note(issue_key: str, skipped: list[str], targets: list[str]) -> str:
+def _skipped_note(issue_key: str, skipped: list[str], targets: list[str], *, lie_a: str = "") -> str:
     """The files this run could NOT fix, and why — inside the pull request.
 
     A correction that silently drops two thirds of its targets looks like a complete one. The
@@ -27818,7 +27877,7 @@ def _skipped_note(issue_key: str, skipped: list[str], targets: list[str]) -> str
     reason = (_SKIPPED_REASONS["length"] if _length_family_name(issue_key)
               else "le modèle n'a rien renvoyé d'exploitable pour ces fichiers.")
     head = (f"\n\n> ⏭️ **Non corrigés : {len(rows)} fichier(s) sur {len(targets or rows)}.** "
-            + reason + " Ces pages resteront signalées au prochain crawl :\n")
+            + reason + _suite_au_prochain_crawl(lie_a))
     return head + "\n".join(f"> - `{p}`" for p in rows[:12])
 
 

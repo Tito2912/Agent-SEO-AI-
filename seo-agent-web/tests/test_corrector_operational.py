@@ -1377,6 +1377,31 @@ def _rendu(md):
     return out
 
 
+def test_bulk_links_a_refused_family_to_the_correction_that_shares_its_urls(harness, monkeypatch):
+    """cityscootlab PR #1: the sitemap family was refused while the canonical fixed in the same PR
+    carried exactly its URL pairs. The bulk route must hand both families their pairs (refusal
+    path included) and link them before writing the body."""
+    state, run = harness
+    pairs = [{"from": "https://site.test/de/", "to": "https://site.test/de"}]
+    state["report"] = {"pages": [], "issues": {
+        key: {"count": 1, "examples": [URL], "evidence": {"kind": "url_pairs", "items": pairs}}
+        for key in ("canonical_points_to_redirect", "sitemap_3xx_redirect")}}
+    monkeypatch.setattr(m, "_github_fixable_issue_candidates", lambda **k: [
+        {"key": "canonical_points_to_redirect", "label": "Canonical → redirection", "url": URL},
+        {"key": "sitemap_3xx_redirect", "label": "Sitemap : URL en 3XX", "url": URL}])
+    monkeypatch.setattr(m, "_prepare_issue_fix", lambda **k: {
+        "refusal": "Aucune destination verifiee." if k["issue_key"] == "sitemap_3xx_redirect" else None,
+        "side_effects": "", "evidence": []})
+    monkeypatch.setattr(m, "_apply_prepared_issue_fix", lambda **k: {
+        "patched": ["index.html"], "skipped": [], "targets": ["index.html"], "ai_files": [],
+        "config_changes": [], "config_notes": [], "error": ""})
+    assert run("bulk")["status"] == 200
+    body = state["pr_bodies"][-1]
+
+    assert "↪ **Sitemap : URL en 3XX**" in body and "❌" not in body
+    assert "Peut tomber avec « Canonical → redirection »" in body
+
+
 def test_both_pr_bodies_keep_every_block_in_its_place(harness):
     """cityscootlab PR #1 (15/10/2026): a line glued under a note fell INTO its quote. Both
     entry points assemble their body from the same blocks; each must render apart."""
