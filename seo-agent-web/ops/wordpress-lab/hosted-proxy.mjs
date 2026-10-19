@@ -2,6 +2,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer, request } from 'node:http';
 
+// Accept Render's standard base64 secrets as well as existing base64url keys.
+// Use the same bounds and alphabet at startup and on the protected endpoint.
+const validDemoKey = value => typeof value === 'string' && value.length >= 32 && value.length <= 256 &&
+  /^[A-Za-z0-9_+/-]+={0,2}$/.test(value);
+
 export function configuration(env) {
   const origin = new URL(env.NOYARU_WP_DEMO_URL || env.RENDER_EXTERNAL_URL || '');
   if (origin.protocol !== 'https:' || origin.username || origin.password || origin.port ||
@@ -9,7 +14,7 @@ export function configuration(env) {
     throw new Error('A public HTTPS origin without a path is required');
   }
   const key = env.NOYARU_WP_DEMO_KEY || '';
-  if (!/^[A-Za-z0-9_-]{32,256}$/.test(key)) throw new Error('A random demo key is required');
+  if (!validDemoKey(key)) throw new Error('NOYARU_WP_DEMO_KEY must be a random base64 or base64url secret (32–256 characters)');
   const minutes = Number(env.NOYARU_WP_DEMO_MINUTES || '120');
   const port = Number(env.PORT || '10000');
   if (!Number.isInteger(minutes) || minutes < 10 || minutes > 1440 ||
@@ -46,7 +51,8 @@ export function gateway({ origin, key, upstream, manifest, expiresAt, now = Date
     }
     if (now() >= expiresAt) return reply(410, { error: 'demonstration_expired' });
     if (req.url === '/_noyaru-demo/credentials' && req.method === 'GET') {
-      const token = /^Bearer ([A-Za-z0-9_-]{32,256})$/.exec(req.headers.authorization || '')?.[1] || '';
+      const candidate = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1] || '';
+      const token = validDemoKey(candidate) ? candidate : '';
       if (!timingSafeEqual(digest(token), digest(key))) return reply(401, { error: 'unauthorized' });
       return reply(200, { ...manifest, expires_at: new Date(expiresAt).toISOString() });
     }

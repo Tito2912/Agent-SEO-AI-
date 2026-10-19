@@ -16,7 +16,7 @@ Après deux heures, la page, l'API et le manifeste renvoient HTTP 410. La santé
 
 ## Récupérer les identifiants
 
-L'origine publique vient de `RENDER_EXTERNAL_URL`. Render génère `NOYARU_WP_DEMO_KEY` dans les variables **de ce seul service**. Le manifeste avec les mots de passe d'application n'est accessible qu'avec l'en-tête `Authorization: Bearer …` sur `/_noyaru-demo/credentials`. Aucun secret n'est écrit dans les logs.
+L'origine publique vient de `RENDER_EXTERNAL_URL`. Render génère `NOYARU_WP_DEMO_KEY` dans les variables **de ce seul service**. Conserver cette valeur exactement, y compris les caractères `+`, `/` et le `=` final de son format base64. Les anciennes clés base64url restent acceptées. Le manifeste avec les mots de passe d'application n'est accessible qu'avec l'en-tête `Authorization: Bearer …` sur `/_noyaru-demo/credentials`. Aucun secret n'est écrit dans les logs.
 
 Dans un terminal privé avec Python et `requests`, remplacer uniquement le domaine dans ce script. La clé est demandée sans affichage ; le fichier est créé sans écraser un fichier existant. Conserver la vérification TLS et le refus des redirections. Ne jamais placer ces identifiants dans une URL, une PR, une capture, un message ou un rapport.
 

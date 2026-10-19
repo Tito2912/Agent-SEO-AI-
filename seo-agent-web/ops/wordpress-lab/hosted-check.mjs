@@ -12,7 +12,7 @@ probe.listen(0, '127.0.0.1');
 await once(probe, 'listening');
 const port = probe.address().port;
 await new Promise(resolve => probe.close(resolve));
-const key = randomBytes(32).toString('hex');
+const key = randomBytes(32).toString('base64'); // same format as Render generateValue
 const child = spawn(process.execPath, [fileURLToPath(new URL('./hosted.mjs', import.meta.url))], {
   env: { ...process.env, PORT: String(port), NOYARU_WP_DEMO_URL: 'https://wordpress.noyaru.test',
     NOYARU_WP_DEMO_KEY: key }, stdio: ['ignore', 'ignore', 'pipe'],
