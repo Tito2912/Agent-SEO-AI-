@@ -45,4 +45,6 @@ Les écrans authentifiés de production, les connexions Google/Bing/CMS réelles
 
 Les tests de parcours couvrent le choix réel du bouton, les étapes non acquises avant vérification, le contrôle qui retrouve le problème, la reprise d’une nouvelle correction, les limites du bilan, le retour après filtre et la séparation des comptes avec le même identifiant de projet. Les tests antérieurs sur le premier audit, les corrections, les CMS et les rapports perdus restent exécutés.
 
-Ruff F/E9, compilation Python sur les cibles de CI et Bandit moyen/élevé passent. Résultats de la suite complète et de la CI GitHub ajoutés à la PR une fois disponibles.
+173 tests ciblés passent sur une base temporaire : reprise, premier audit, première correction, CMS, rapports perdus, droits partagés, navigation et connexions de recherche. Le contrôle HTTP/TLS local existant passe aussi avec les bibliothèques Chromium disponibles.
+
+Ruff F/E9, compilation Python sur les cibles de CI, analyse des 71 templates Jinja et Bandit moyen/élevé passent. La CI GitHub complète est distincte de ces contrôles locaux ; son résultat est indiqué dans la PR.

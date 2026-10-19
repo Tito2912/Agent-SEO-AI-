@@ -164,7 +164,7 @@ def test_dashboard_onboarding_renders_for_authenticated_user() -> None:
         response = client.get("/")
 
     assert response.status_code == 200
-    assert "Prochaines étapes" in response.text
+    assert "Votre prochaine étape" in response.text
     assert "Lancer une première analyse" in response.text
 
 
