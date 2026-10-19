@@ -5,14 +5,14 @@ description: "Ce que chaque plan {{app_name}} inclut : projets, pages crawlées,
 kind: "Référence"
 section: "Compte et facturation"
 order: 50
-updated_at: "2026-09-21"
+updated_at: "2026-10-19"
 audience: "Tous les plans"
 keywords: ["tarifs", "quotas", "limites", "abonnement"]
 app_href: "/billing"
 related: ["corrections-automatiques", "lancer-un-crawl", "rediger-du-contenu", "comptes-d-equipe"]
 faq:
   - question: "Comment se compte une correction IA ?"
-    answer: "Un fichier écrit par le modèle égale une unité. Une pull request qui modifie un seul gabarit et règle 300 URLs coûte donc une unité — le quota mesure le travail du modèle, pas le nombre de lignes du rapport."
+    answer: "Un fichier écrit par le modèle égale une unité — sur WordPress, un titre ou une méta-description rédigé pour une page. Une pull request qui modifie un seul gabarit et règle 300 URLs coûte donc une unité : le quota mesure le travail du modèle, pas le nombre de lignes du rapport."
   - question: "Que se passe-t-il quand j'atteins un quota ?"
     answer: "L'action concernée est refusée avec un message qui nomme le quota atteint, et un lien vers la page Abonnement. Rien d'autre ne s'arrête : un quota de corrections épuisé ne bloque ni les crawls, ni les rapports, ni les exports."
   - question: "Les quotas se reportent-ils d'un mois sur l'autre ?"
@@ -52,11 +52,16 @@ C'est la seule règle, et elle a une conséquence qu'il vaut la peine de compren
 correction qui règle 300 URLs en modifiant un seul gabarit coûte **une** unité. Le quota
 mesure le travail du modèle, pas la taille du problème.
 
+Sur WordPress, la même règle s'applique page par page : chaque titre ou méta-description que
+{{app_name}} rédige compte pour une unité, et un texte que vous écrivez vous-même ne compte pas.
+→ [Corriger dans WordPress](/docs/corriger-dans-wordpress)
+
 En pratique, un site de taille moyenne consomme quelques dizaines d'unités le premier mois —
 celui où l'on rattrape le retard — puis nettement moins ensuite, une fois les anomalies de
 gabarit réglées.
 
-Le plan Free inclut {{corrections_free}} corrections IA par mois sur un dépôt GitHub compatible,
+Le plan Free inclut {{corrections_free}} corrections IA par mois, sur un dépôt GitHub compatible
+ou avec WordPress et Yoast SEO,
 ainsi que l'audit et les exports PDF et CSV. Le fix-pack sans dépôt est disponible dès le plan
 Solo. Les limites réellement disponibles figurent dans le tableau ci-dessus.
 

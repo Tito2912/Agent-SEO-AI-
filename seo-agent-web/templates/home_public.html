@@ -43,7 +43,7 @@ section[id] { scroll-margin-top: 112px; }
 .compat-cas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-top: 28px; }
 .compat-cas h3 { margin: 0 0 10px; font-size: 17px; font-weight: 600; }
 .compat-cas p { margin: 0; font-size: 14.5px; line-height: 1.65; color: rgba(255,255,255,.68); }
-.compat-cas a { display: inline-block; margin-top: 12px; font-size: 14px; }
+.compat-cas a { display: inline-block; margin-top: 12px; margin-right: 18px; font-size: 14px; }
 .faq { margin-top: 32px; border-top: 1px solid var(--border-2); }
 .faq details { padding: 20px 0; border-bottom: 1px solid var(--border); }
 .faq summary { cursor: pointer; font-size: 16px; font-weight: 600; line-height: 1.5; }
@@ -142,7 +142,7 @@ section[id] { scroll-margin-top: 112px; }
         <a class="btn" href="#compatibilite">Vérifier la compatibilité</a>
       </div>
       <p class="hero-note">Compte gratuit requis · Sans carte bancaire<br>Aucune connexion GitHub nécessaire pour l'audit.</p>
-      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ gratuit.corrections }} corrections IA par mois incluses, sur un dépôt compatible.</p>{% endif %}
+      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ gratuit.corrections }} corrections IA par mois incluses, sur un dépôt compatible ou avec WordPress et Yoast SEO.</p>{% endif %}
     </div>
 
     <div class="hero-apercu">
@@ -161,7 +161,8 @@ section[id] { scroll-margin-top: 112px; }
     <div class="compat-cas">
       <div>
         <h3>Site géré avec WordPress, Shopify ou Wix</h3>
-        <p>Commencez par l'audit et les rapports exportables. Vous ou votre prestataire appliquez les changements dans votre outil. Dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite ce travail manuel.</p>
+        <p>Avec WordPress et Yoast SEO, {{ app_name }} rédige et enregistre les titres SEO et méta-descriptions, après votre relecture de chaque texte. Pour les autres changements, et sur Shopify ou Wix, vous ou votre prestataire les appliquez dans votre outil ; dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite ce travail.</p>
+        <a href="{{ campaign_link(request, '/docs/corriger-dans-wordpress') }}">Voir comment corriger dans WordPress</a>
         <a href="{{ campaign_link(request, '/docs/fix-pack-sans-depot') }}">Voir comment corriger sans dépôt GitHub</a>
       </div>
       <div>
@@ -200,7 +201,7 @@ section[id] { scroll-margin-top: 112px; }
       <div class="etape">
         <div class="etape-num">03</div>
         <h3>Passez aux corrections</h3>
-        <p>Relisez les modifications proposées sur votre dépôt compatible, ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.</p>
+        <p>Relisez les modifications proposées sur votre dépôt compatible ou dans WordPress, ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.</p>
       </div>
     </div>
   </section>
@@ -238,8 +239,8 @@ section[id] { scroll-margin-top: 112px; }
           <p>Votre chaîne d'intégration vérifie que le site se construit. La proposition reste en brouillon jusqu'au résultat de ces contrôles.</p>
         </div>
         <div class="fonction">
-          <h4>Un mode d'emploi sans dépôt</h4>
-          <p>Dès le plan Solo, téléchargez une archive de données et de modèles à appliquer vous-même ou à confier à votre prestataire.</p>
+          <h4>Sans dépôt, sur WordPress</h4>
+          <p>Avec Yoast SEO, faites rédiger les titres et méta-descriptions de toutes les pages d'une anomalie, relisez-les sur un seul écran, puis enregistrez-les dans WordPress. Pour le reste, dès le plan Solo, une archive de données et de modèles se transmet à votre prestataire.</p>
         </div>
       </div>
 
@@ -319,19 +320,19 @@ section[id] { scroll-margin-top: 112px; }
     <div class="faq">
       <details>
         <summary>Faut-il savoir coder ou connecter GitHub ?</summary>
-        <p>Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur.</p>
+        <p>Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur. Sur WordPress avec Yoast SEO, les titres et méta-descriptions se corrigent sans dépôt ni code : vous relisez chaque texte avant son enregistrement.</p>
       </details>
       <details>
         <summary>Mon site sera-t-il modifié pendant l'audit ?</summary>
-        <p>L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site.</p>
+        <p>L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site. Avec WordPress, rien n'est enregistré avant que vous ayez validé l'aperçu.</p>
       </details>
       <details>
         <summary>Que comprend le plan gratuit ?</summary>
-        <p>{% if gratuit %}{{ gratuit.sites }} site{% if gratuit.sites != 1 %}s{% endif %} suivi{% if gratuit.sites != 1 %}s{% endif %}, {{ gratuit.pages }} pages analysées par mois{% if gratuit.corrections %} et {{ gratuit.corrections }} corrections IA par mois sur un dépôt compatible{% endif %}. {% endif %}Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo. Consultez le <a href="{{ campaign_link(request, '/pricing#comparatif') }}">comparatif complet</a> pour les autres limites.</p>
+        <p>{% if gratuit %}{{ gratuit.sites }} site{% if gratuit.sites != 1 %}s{% endif %} suivi{% if gratuit.sites != 1 %}s{% endif %}, {{ gratuit.pages }} pages analysées par mois{% if gratuit.corrections %} et {{ gratuit.corrections }} corrections IA par mois, sur un dépôt compatible ou avec WordPress et Yoast SEO{% endif %}. {% endif %}Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo. Consultez le <a href="{{ campaign_link(request, '/pricing#comparatif') }}">comparatif complet</a> pour les autres limites.</p>
       </details>
       <details>
         <summary>Comment sont comptées les pages et les corrections ?</summary>
-        <p>Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages. <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">Lire le détail des quotas</a>.</p>
+        <p>Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages ; sur WordPress, à un titre ou une méta-description rédigé pour une page. <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">Lire le détail des quotas</a>.</p>
       </details>
       <details>
         <summary>Puis-je travailler avec mon prestataire ?</summary>
