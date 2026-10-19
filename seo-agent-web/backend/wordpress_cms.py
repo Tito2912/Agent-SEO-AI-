@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import http.client
 import ipaddress
 import json
@@ -100,8 +101,17 @@ def exchange(base_url, username, password, method, path, payload=None):
         connection.close()
 
 
-def fingerprint(credentials):
-    return hashlib.sha256(json.dumps(credentials, sort_keys=True).encode()).hexdigest()
+def fingerprint(credentials, key):
+    # Keyed: a stored fingerprint must not let anyone test a guessed password offline.
+    return "hmac:" + hmac.new(key, json.dumps(credentials, sort_keys=True).encode(), hashlib.sha256).hexdigest()
+
+
+def same_connection(credentials, stored, key):
+    stored = str(stored or "")
+    if stored.startswith("hmac:"):
+        return hmac.compare_digest(stored, fingerprint(credentials, key))
+    # Changes recorded before the keyed fingerprint can still be restored.
+    return hmac.compare_digest(stored, hashlib.sha256(json.dumps(credentials, sort_keys=True).encode()).hexdigest())
 
 
 def values(page):

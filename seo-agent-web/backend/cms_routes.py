@@ -52,6 +52,13 @@ def credentials(project):
         raise wp.CmsError("La connexion WordPress doit être rétablie.") from None
 
 
+def fingerprint_key():
+    key = app_module()._safe_env("SEO_AGENT_SECRET_KEY")
+    if not key:
+        raise wp.CmsError("La connexion WordPress n’est pas disponible pour le moment.")
+    return key.encode()
+
+
 def connection_state(project):
     m = app_module()
     row = m._user_connection_row(user_id=str(project.owner_user_id), key=connection_key(project))
@@ -193,7 +200,7 @@ def wordpress_preview(request: Request, slug: str, task_id: str = Form(...), val
         with m.DB.session() as db:
             change = CmsChange(project_id=str(project.id), task_id=str(task.id), created_by=str(request.state.user.id),
                                state="preview", data={"url": task.url, "post_id": page["post_id"], "field": field,
-                               "before": before, "after": {**before, field: value}, "connection": wp.fingerprint(c),
+                               "before": before, "after": {**before, field: value}, "connection": wp.fingerprint(c, fingerprint_key()),
                                "rendered_before": page.get(field + "_rendered")})
             db.add(change)
             db.commit()
@@ -364,7 +371,8 @@ def wordpress_change_action(request: Request, slug: str, change_id: str, action:
             if action == "verify":
                 return start_verification(request, project, change)
             c = credentials(project)
-            if wp.fingerprint(c) != change.data["connection"]:
+            key = fingerprint_key()
+            if not wp.same_connection(c, change.data["connection"], key):
                 raise wp.CmsError("La connexion WordPress a changé. Préparez un nouvel aperçu avec la connexion actuelle.")
             client = wp.WordPressClient(c)
             live = client.read(change.data["url"])
@@ -392,7 +400,8 @@ def wordpress_change_action(request: Request, slug: str, change_id: str, action:
                 raise wp.CmsError("La page a changé depuis l’aperçu. L’opération est arrêtée pour conserver les modifications actuelles.")
             field = change.data["field"]
             destination = change.data["after" if action == "apply" else "before"]
-            save_state(change.id, "applying" if action == "apply" else "restoring", pending=action)
+            save_state(change.id, "applying" if action == "apply" else "restoring", pending=action,
+                       connection=wp.fingerprint(c, key))
             correction_guard.ensure_active()
             sending = True
             result = client.update(live, {field: destination[field]})

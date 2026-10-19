@@ -15656,9 +15656,13 @@ def _dashboard_onboarding_state(
         ])
     gsc_connected = any(_gsc_oauth_connected(str(p.get("owner_user_id") or user_id), str(p.get("slug") or ""))
                         for p in projects if p.get("slug"))
+    # Les corrections poussent avec le jeton du PAYEUR (le proprietaire du projet), et un jeton
+    # de plateforme n'est pas une connexion du client : seul un jeton de compte coche l'etape.
+    comptes_github = {str(p.get("owner_user_id") or user_id) for p in projects} or {user_id}
     try:
         with DB.session() as db:
-            github_connected = bool(_build_github_connection_state(user_id=user_id, db=db).get("configured"))
+            github_connected = any(_build_github_connection_state(user_id=compte, db=db).get("source") == "user"
+                                   for compte in comptes_github)
     except Exception:
         github_connected = False
     required_done = sum(bool(step["done"]) for step in steps)
@@ -31050,18 +31054,21 @@ def _first_correction_context(request: Request, project: Project) -> dict[str, A
                              if isinstance(block, dict) and not _is_delta_metric_key(key)))
     instructions = []
     if state:
-        baseline = dash.load_report_json(runs_dir, project.slug, state["crawl_ts"]) if state["crawl_ts"] in crawls else None
+        # Le cas courant : la correction vient du dernier rapport, deja lu ci-dessus.
+        baseline = (report if state["crawl_ts"] == crawl_ts else
+                    dash.load_report_json(runs_dir, project.slug, state["crawl_ts"]) if state["crawl_ts"] in crawls else None)
         suggestion = fix_suggestions.suggest_issue_fix(
             issue_key=state["issue_key"], label=state["label"], category="", severity="warning", count=1,
             report=baseline or {}, site_name=project.site_name or project.slug, base_url=project.base_url or "")
         instructions = suggestion.get("fix") or _issue_fix_hint_lines(state["issue_key"])
-    live_job = None
-    for job in _list_jobs(limit=100):
-        result = job.result if isinstance(job.result, dict) else {}
-        if (job.status in {"queued", "running", "cancel_requested"} and result.get("type") == "crawl"
-                and result.get("slug") == project.slug and str(result.get("user_id") or "") == str(project.owner_user_id)):
-            live_job = {"id": job.id, "status": job.status}
-            break
+    # Une requete ciblee : les 100 derniers travaux de TOUS les comptes (journaux compris)
+    # coutaient cher a chaque affichage et pouvaient deja ne plus contenir l'analyse en cours.
+    with DB.session() as db:
+        en_cours = db.scalar(select(JobRecord).where(
+            JobRecord.owner_user_id == str(project.owner_user_id), JobRecord.slug == project.slug,
+            JobRecord.kind == "crawl", JobRecord.status.in_(["queued", "running", "cancel_requested"]))
+            .order_by(JobRecord.created_at.desc()).limit(1))
+        live_job = {"id": str(en_cours.id), "status": str(en_cours.status)} if en_cours else None
     return {"platform_guide": cms_guidance.for_issue(project.settings, state["issue_key"] if state else ""),
             "cms_connected": bool(_user_connection_row(user_id=str(project.owner_user_id), key="CMS_WORDPRESS:" + str(project.id))),
             "state": state, "candidates": candidates, "crawl_ts": crawl_ts, "instructions": instructions,
