@@ -720,6 +720,25 @@ def _analyse_en_cours(project: Any) -> bool:
                                                       slug=str(project.slug), statuts=actifs))
 
 
+def _project_crawl_job(project: Any, job_id: str = "") -> dict[str, Any] | None:
+    """Resolve a crawl for the authorized project's owner, even with duplicate slugs."""
+    def belongs(job: Any) -> bool:
+        result = job.result if isinstance(job.result, dict) else {}
+        return (result.get("type") == "crawl" and result.get("slug") == project.slug
+                and str(result.get("user_id") or "") == str(project.owner_user_id))
+
+    requested = _load_job(job_id) if job_id else None
+    candidates = [candidate for candidate in _travaux_recents_et_actifs(
+        [str(project.owner_user_id)], slug=str(project.slug)) if belongs(candidate)]
+    active = next((candidate for candidate in candidates if candidate.status in first_audit.LIVE), None)
+    job = active or (requested if requested and belongs(requested) else next(iter(candidates), None))
+    if not job:
+        return None
+    return {"id": job.id, "status": job.status, "created_at": job.created_at,
+            "started_at": job.started_at, "finished_at": job.finished_at,
+            "progress": job.progress, "result": job.result}
+
+
 def _delete_runs_path_from_object_store(path: Path, *, recursive: bool = False) -> None:
     try:
         object_store.delete_runs_path(DEFAULT_RUNS_DIR, path.resolve(), recursive=recursive)
@@ -14754,6 +14773,8 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
         reglages_p = p.settings if isinstance(p.settings, dict) else {}
         ligne["project_id"] = str(p.id)
         ligne["owner_user_id"] = proprietaire
+        ligne["site_name"] = p.site_name or ligne["site_name"]
+        ligne["base_url"] = p.base_url or ligne["base_url"]
         ligne["github_repo"] = str(reglages_p.get("github_repo") or "").strip()
         ligne["github_branch"] = str(reglages_p.get("github_branch") or "").strip()
         ligne["github_mode"] = str(reglages_p.get("github_mode") or "").strip()
@@ -15650,10 +15671,14 @@ def _dashboard_onboarding_state(
             tasks_by_project.setdefault(str(task.project_id), []).append(task)
     progress_by_project = {str(p.get("project_id")): first_correction.progress(
         tasks_by_project.get(str(p.get("project_id")), [])) for p in projects}
+    selection_by_project = {str(p.get("project_id")): first_correction.progress(
+        tasks_by_project.get(str(p.get("project_id")), []), prefer_selection=True) for p in projects}
     usable = [p for p in projects if p.get("timestamp") and int(p.get("pages_crawled") or 0) > 0
               and not p.get("site_injoignable")]
     selected = max((p for p in projects if p.get("slug") in live_crawls),
                    key=lambda p: float(live_crawls[p["slug"]].get("created_at") or 0), default=None)
+    selected = selected or next((p for p in usable if selection_by_project[str(p.get("project_id"))]
+                                 and not selection_by_project[str(p.get("project_id"))].get("verified")), None)
     selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))].get("verified")), None)
     selected = selected or next((p for p in usable if progress_by_project[str(p.get("project_id"))]), None)
     selected = selected or next(iter(usable), None) or next(iter(projects), {})
@@ -15717,8 +15742,10 @@ def _dashboard_onboarding_state(
          "done": github_connected, "detail": "Correction via GitHub disponible." if github_connected else "Permet de proposer des corrections dans le code.",
          "action_label": "Connecter", "action_href": "/settings/accounts#github-connect-card", "optional": True},
     ])
+    # Keep the first achievement, while the next action follows the customer's latest choice.
+    selected_state = selection_by_project.get(str(selected.get("project_id")), {})
     return {"steps": steps, "required_done": required_done, "total_required": total_required,
-            "resume": first_audit.resume(selected, state, live, last_job, has_crawl, clean),
+            "resume": first_audit.resume(selected, selected_state, live, last_job, has_crawl, clean),
             "done_total": sum(bool(step["done"]) for step in steps), "total": len(steps),
             "progress_pct": round(required_done / total_required * 100), "complete": required_done == total_required,
             "success_kind": "clean" if clean else "verified", "success_href": flow_url,
@@ -18479,55 +18506,7 @@ def project_overview(
     runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
 
-    live_job: dict[str, Any] | None = None
-    job_id = (job or "").strip()
-    j = None
-    if job_id:
-        j = _load_job(job_id)
-        if j:
-            user = getattr(request.state, "user", None)
-            is_admin = bool(getattr(user, "is_admin", False))
-            if not is_admin:
-                result = j.result if isinstance(j.result, dict) else {}
-                owner_id = str(result.get("user_id") or "").strip()
-                if owner_id not in _comptes_visibles(user):
-                    j = None
-
-        if j:
-            # Guardrail: only attach the job if it looks like it belongs to this project crawl.
-            job_slug = j.result.get("slug") if isinstance(j.result, dict) else None
-            if job_slug in {None, "", slug}:
-                live_job = {
-                    "id": j.id,
-                    "status": j.status,
-                    "created_at": j.created_at,
-                    "started_at": j.started_at,
-                    "finished_at": j.finished_at,
-                    "progress": j.progress,
-                    "result": j.result,
-                }
-    if not live_job:
-        user = getattr(request.state, "user", None)
-        is_admin = bool(getattr(user, "is_admin", False))
-        visibles = _comptes_visibles(user)
-        for candidate in _travaux_recents_et_actifs(None if is_admin else visibles, slug=slug):
-            result = candidate.result if isinstance(candidate.result, dict) else {}
-            if result.get("type") != "crawl":
-                continue
-            if str(result.get("slug") or "").strip() != slug:
-                continue
-            if not is_admin and str(result.get("user_id") or "").strip() not in visibles:
-                continue
-            live_job = {
-                "id": candidate.id,
-                "status": candidate.status,
-                "created_at": candidate.created_at,
-                "started_at": candidate.started_at,
-                "finished_at": candidate.finished_at,
-                "progress": candidate.progress,
-                "result": candidate.result,
-            }
-            break
+    live_job = _project_crawl_job(proj_row, (job or "").strip())
 
     if not data:
         data = {
@@ -18547,10 +18526,12 @@ def project_overview(
         config_path=DEFAULT_CONFIG if DEFAULT_CONFIG.exists() else None,
         project_settings=(proj_row.settings if isinstance(proj_row.settings, dict) else {}),
     )
+    data["site_name"] = proj_row.site_name or data["site_name"]
+    data["base_url"] = proj_row.base_url or data["base_url"]
     with DB.session() as db:
         journey_tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == str(proj_row.id))
                                         .order_by(IssueTask.updated_at.desc())))
-    first_correction_state = first_correction.progress(journey_tasks)
+    first_correction_state = first_correction.progress(journey_tasks, prefer_selection=True)
     owner_id = str(proj_row.owner_user_id)
     gsc_status = _gsc_live_credentials_status(user_id=owner_id, slug=slug)
     bing_auth = _effective_bing_connection(user_id=owner_id, slug=slug)
@@ -18649,13 +18630,15 @@ def project_overview(
             "project": data,
             "slug": slug,
             "live_job": live_job,
-            "analyse_en_cours": bool((data.get("current") or {}).get("used_fallback")) and _analyse_en_cours(proj_row),
+            "analyse_en_cours": bool(live_job and live_job["status"] in first_audit.LIVE),
             "top_actions": top_actions,
             "fix_pack_unlocked": bool(fix_pack_unlocked),
             "plan_key": plan_key,
             "live_series": live_series,
             "search_connections": search_connections,
             "first_correction_state": first_correction_state,
+            "next_step": first_audit.report_resume(data, first_correction_state,
+                live_job if live_job and live_job["status"] in first_audit.LIVE else None),
             "connection": connection if connection in {"gsc", "bing"} else "",
             "msg": (msg or "").strip(),
             "err": (err or "").strip(),
@@ -18879,12 +18862,14 @@ def project_issues(
     if not data:
         resp = templates.TemplateResponse(
             "issues.html",
-            {"request": request, "project": None, "slug": slug},
-            status_code=404,
+            {"request": request, "project": {"slug": slug, "site_name": proj.site_name or slug,
+                "current": None}, "slug": slug, "analyse_en_cours": _analyse_en_cours(proj)},
         )
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
+    data["site_name"] = proj.site_name or data["site_name"]
+    data["base_url"] = proj.base_url or data["base_url"]
     issues = data["current"]["summary"]["issues"]
     issues_filtered = dash.filter_issues(issues, severity=severity, category=category, query=q)
 
@@ -18894,6 +18879,12 @@ def project_issues(
     cur_ts = str(cur_node.get("timestamp") or "")
     fix_meta = _load_fix_suggestions_meta(runs_dir, slug, cur_ts) if cur_ts else None
     fix_path = str(_fix_suggestions_path(runs_dir, slug, cur_ts)) if (cur_ts and fix_meta) else ""
+    job = _project_crawl_job(proj)
+    active_job = job if job and job["status"] in first_audit.LIVE else None
+    with DB.session() as db:
+        tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == str(proj.id))
+                               .order_by(IssueTask.updated_at.desc())))
+    state = first_correction.progress(tasks, prefer_selection=True)
     resp = templates.TemplateResponse(
         "issues.html",
         {
@@ -18906,7 +18897,8 @@ def project_issues(
             "categories": categories,
             "fix_suggestions_meta": fix_meta,
             "fix_suggestions_path": fix_path,
-            "analyse_en_cours": bool(cur_node.get("used_fallback")) and _analyse_en_cours(proj),
+            "analyse_en_cours": bool(active_job),
+            "next_step": first_audit.report_resume(data, state, active_job),
         },
     )
     resp.headers["Cache-Control"] = "no-store"

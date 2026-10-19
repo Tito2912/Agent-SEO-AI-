@@ -5,6 +5,7 @@
 
 {% block head_extra %}
   <link rel="stylesheet" href="/static/project_overview.css?v=2" />
+  <link rel="stylesheet" href="/static/journey.css?v=1" />
   <script src="/static/project_overview.js" defer></script>
 {% endblock %}
 
@@ -22,19 +23,13 @@
   {% if project %}
     <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary" {% if crawl_active %}disabled{% endif %}>{% if crawl_active %}Analyse en cours{% else %}Nouvelle analyse{% endif %}</button>
+      <button type="submit" class="btn" {% if crawl_active %}disabled{% endif %}>{% if crawl_active %}Analyse en cours{% else %}Nouvelle analyse{% endif %}</button>
     </form>
   {% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="overview-page">
-  {% if first_correction_state %}
-    <div class="alert {% if first_correction_state.verified %}ok{% else %}notice{% endif %}" role="status">
-      <strong>{% if first_correction_state.verified %}Première correction vérifiée.{% elif first_correction_state.declared %}Correction en attente de contrôle.{% else %}Votre première correction est choisie.{% endif %}</strong>
-      {{ first_correction_state.label }} · <a href="/projects/{{ slug }}/first-correction">{% if first_correction_state.verified %}Voir le résultat{% else %}Reprendre le suivi{% endif %}</a>
-    </div>
-  {% endif %}
   {% if not connection %}
     {% if err %}<div class="alert error" role="alert">{{ err }}</div>
     {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
@@ -112,6 +107,8 @@
     {% endif %}
   </header>
 
+  {% include "_next_step.html" %}
+
   {% if project.current %}
     {% set defects = sum.issues | rejectattr('is_delta') | list %}
     <div class="overview-metrics">
@@ -158,7 +155,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a class="btn" href="/jobs/{{ live_job.id }}" style="font-size:12px;">Voir le détail →</a>
         <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-          <button type="submit" class="btn primary" style="font-size:12px;">Relancer une analyse</button>
+          <button type="submit" class="btn" style="font-size:12px;">Relancer une analyse</button>
         </form>
       </div>
     </div>
@@ -317,7 +314,6 @@
           <p class="overview-empty">Aucune action prioritaire détectée sur cette analyse.</p>
         {% endif %}
       {% else %}
-        {% if not first_correction_state %}<p><a class="btn primary" href="/projects/{{ project.slug }}/first-correction">Choisir ma première correction</a></p>{% endif %}
         <ol class="overview-action-list">
           {% for a in top_actions %}
             {% set priority_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(a.priority, a.priority) %}
@@ -356,7 +352,7 @@
       </div>
     </div>
     {% if not sum.top_issues %}
-      <p class="muted">Aucune anomalie détectée.</p>
+      <p class="muted">{% if sum.analysis_complete %}Aucune anomalie détectée sur les pages analysées.{% else %}Ce bilan ne permet pas de conclure à l’absence de problèmes. Consultez les limites de l’analyse.{% endif %}</p>
     {% else %}
       <div class="table-wrap" tabindex="0" role="region" aria-label="Principales anomalies">
       <table class="ov-issue-table">

@@ -2,7 +2,7 @@
 {% block title %}Projets - Noyaru{% endblock %}
 
 {% block head_extra %}
-  <link rel="stylesheet" href="/static/first_correction.css?v=1" />
+  <link rel="stylesheet" href="/static/journey.css?v=1" />
   <link rel="stylesheet" href="/static/first-audit.css?v=1" />
   <script src="/static/first-audit.js?v=1" defer></script>
   {% if jobs %}
@@ -28,7 +28,7 @@
 {% block content %}
   <div class="page-header">
     <h1>{% if projects %}Projets{% else %}Votre premier audit SEO{% endif %}</h1>
-    <p class="muted">{% if projects %}Suivez vos sites, lancez des analyses et surveillez l'état de santé SEO en temps réel.{% else %}Découvrez ce qui freine votre site et par où commencer.{% endif %}</p>
+    <p class="muted">{% if projects %}Retrouvez votre prochaine action et suivez les résultats de vos sites.{% else %}Découvrez ce qui freine votre site et par où commencer.{% endif %}</p>
   </div>
 
   {% if err %}
@@ -44,19 +44,15 @@
   {% endif %}
 
   {% if projects and onboarding and onboarding.resume %}
-    {% set resume = onboarding.resume %}
-    <section class="card first-audit-resume" aria-label="Reprendre mon parcours">
-      <div><p class="first-audit-eyebrow">{{ resume.site_name }}</p><h2>Votre prochaine étape</h2><p class="muted small">{{ resume.detail }}</p></div>
-      {% if resume.post %}
-        <form method="post" action="{{ resume.href }}" data-audit-submit><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">{{ resume.label }}</button></form>
-      {% else %}<a class="btn primary" href="{{ resume.href }}">{{ resume.label }}</a>{% endif %}
-    </section>
+    {% set next_step = onboarding.resume %}
+    {% set journey = onboarding %}
+    {% include "_next_step.html" %}
   {% endif %}
 
   {% if projects %}
     {% set ns = namespace(live_count=0, crawled_count=0) %}
     {% for p in projects %}
-      {% if p.timestamp %}{% set ns.crawled_count = ns.crawled_count + 1 %}{% endif %}
+      {% if p.timestamp and p.pages_crawled and not p.site_injoignable %}{% set ns.crawled_count = ns.crawled_count + 1 %}{% endif %}
       {% set lc = (live_crawls.get(p.slug) if live_crawls else none) %}
       {% if lc and lc.status in ['queued', 'running', 'cancel_requested'] %}{% set ns.live_count = ns.live_count + 1 %}{% endif %}
     {% endfor %}
@@ -70,7 +66,7 @@
       <div class="stat-strip-item">
         <div class="stat-strip-num">{{ ns.crawled_count }}</div>
         <div class="stat-strip-lbl">Analysés</div>
-        <div class="stat-strip-sub">au moins une analyse effectuée</div>
+        <div class="stat-strip-sub">avec un bilan exploitable</div>
       </div>
       {% if ns.live_count %}
         <div class="stat-strip-sep"></div>
@@ -81,88 +77,6 @@
         </div>
       {% endif %}
     </div>
-  {% endif %}
-
-  {% if projects and onboarding and onboarding.complete %}
-    <section class="card onboarding-success" role="status">
-      <div>
-        <h2>{% if onboarding.success_kind == 'clean' %}Votre premier bilan est prêt{% else %}Votre première correction est vérifiée{% endif %}</h2>
-        <p class="muted small">{{ onboarding.site_name }} · {% if onboarding.success_kind == 'clean' %}Aucune anomalie détectée sur les pages analysées.{% else %}{{ onboarding.success_label }} · résultat confirmé par une nouvelle analyse.{% endif %}</p>
-      </div>
-      <a class="btn" href="{{ onboarding.success_href }}">Voir le résultat</a>
-    </section>
-  {% elif projects and onboarding %}
-    <section class="card onboarding-card">
-      <div class="card-title-row">
-        <div>
-          <h2>Prochaines étapes</h2>
-          <p class="muted small" style="margin:4px 0 0;">{{ onboarding.required_done }}/{{ onboarding.total_required }} étapes essentielles terminées.</p>
-        </div>
-        <span class="badge {{ 'ok' if onboarding.progress_pct >= 100 else 'warning' }}">{{ onboarding.progress_pct }}%</span>
-      </div>
-      <div class="progress slim" aria-hidden="true">
-        <div class="progress-fill" style="--p: {{ onboarding.progress_pct }};"></div>
-      </div>
-      <div class="onboarding-steps">
-        {% set next_step = namespace(pending=true) %}
-        {% for step in onboarding.steps | rejectattr('optional') %}
-          <div class="onboarding-step {{ 'done' if step.done else ('next' if next_step.pending else '') }}">
-            <div class="onboarding-step-mark">{{ '✓' if step.done else loop.index }}</div>
-            <div class="onboarding-step-body">
-              <div class="onboarding-step-title">
-                {% if not step.done and next_step.pending %}<span class="next-step-label">À faire maintenant</span>{% endif %}
-                {{ step.label }}
-                {% if step.optional %}<span class="muted small">optionnel</span>{% endif %}
-              </div>
-              <div class="muted small">
-                {{ step.detail }}
-                {% if step.doc_href %}
-                  &middot; <a href="{{ step.doc_href }}" class="muted">Comment faire</a>
-                {% endif %}
-              </div>
-            </div>
-            {% if not step.done %}
-              {% if step.action_dialog %}
-                <button type="button" class="btn" data-open-add-project>{{ step.action_label }}</button>
-              {% elif step.action_href and not step.disabled %}
-                <a class="btn" href="{{ step.action_href }}">{{ step.action_label }}</a>
-              {% else %}
-                <button type="button" class="btn" disabled>{{ step.action_label }}</button>
-              {% endif %}
-            {% endif %}
-          </div>
-          {% if not step.done %}{% set next_step.pending = false %}{% endif %}
-        {% endfor %}
-      </div>
-      <details class="screen-options optional-connections"><summary>Connexions facultatives pour aller plus loin</summary><div class="onboarding-steps">
-        {% for step in onboarding.steps | selectattr('optional') %}
-          <div class="onboarding-step {{ 'done' if step.done else '' }}">
-            <div class="onboarding-step-mark">{{ '✓' if step.done else '+' }}</div>
-            <div class="onboarding-step-body">
-              <div class="onboarding-step-title">
-                {{ step.label }}
-                {% if step.optional %}<span class="muted small">optionnel</span>{% endif %}
-              </div>
-              <div class="muted small">
-                {{ step.detail }}
-                {% if step.doc_href %}
-                  &middot; <a href="{{ step.doc_href }}" class="muted">Comment faire</a>
-                {% endif %}
-              </div>
-            </div>
-            {% if not step.done %}
-              {% if step.action_dialog %}
-                <button type="button" class="btn" data-open-add-project>{{ step.action_label }}</button>
-              {% elif step.action_href and not step.disabled %}
-                <a class="btn" href="{{ step.action_href }}">{{ step.action_label }}</a>
-              {% else %}
-                <button type="button" class="btn" disabled>{{ step.action_label }}</button>
-              {% endif %}
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div></details>
-    </section>
   {% endif %}
 
   <form id="batch-crawl-form" method="post" action="/projects/crawl-batch">
@@ -177,6 +91,7 @@
       <div class="card-title-row">
 	        <h2>Vos sites</h2>
 	        <div class="topbar-actions">
+              <label class="checkbox small"><input type="checkbox" id="select-all-projects" />Tout sélectionner</label>
 	          <div id="batch-project-actions" class="batch-project-actions" hidden>
               <span class="muted small" id="batch-crawl-count">0 sélectionné</span>
 	          <button type="submit" form="batch-crawl-form" class="btn primary" id="batch-crawl-btn" disabled>
@@ -186,18 +101,14 @@
 	            Supprimer
 	          </button>
 	          </div>
-              <button type="button" class="btn primary" id="add-project-open" data-open-add-project>Ajouter un site</button>
+              <button type="button" class="btn" id="add-project-open" data-open-add-project>Ajouter un site</button>
 	        </div>
 	      </div>
 	      <div class="table-wrap">
-	        <table class="table">
+	        <table class="table projects-table" role="table" aria-label="Vos sites">
           <thead>
             <tr>
-              <th style="width: 42px;">
-                <label class="checkbox" style="justify-content:center;">
-                  <input type="checkbox" id="select-all-projects" />
-                </label>
-              </th>
+              <th style="width: 42px;" aria-label="Sélection"></th>
               <th>Projet</th>
               <th>Dernière analyse</th>
               <th>Santé</th>
@@ -217,6 +128,7 @@
 	                    <input
 	                      type="checkbox"
 	                      class="project-select"
+                        aria-label="Sélectionner {{ p.site_name }}"
 	                      value="{{ p.slug }}"
 	                    />
 	                  </label>
@@ -244,7 +156,7 @@
                           <a href="https://github.com/{{ p.github_repo }}" target="_blank"
                              rel="noreferrer noopener" title="Dépôt lié à ce projet">⎇ {{ p.github_repo }}</a>{% if p.github_branch %}<span class="muted"> · {{ p.github_branch }}</span>{% endif %}
                         {% else %}
-                          <button type="button" class="gh-lier" data-slug="{{ p.slug }}"
+                          <button type="button" class="btn gh-lier" data-slug="{{ p.slug }}"
                                   title="Lier un dépôt GitHub pour pouvoir corriger ce projet">
                             Connecter GitHub
                           </button>
@@ -255,18 +167,17 @@
 	                  </td>
                 <td>
 	                  {% if p.timestamp %}
-	                    <div>{{ p.timestamp_label }}</div>
-	                    <div class="muted small">{{ p.timestamp }}</div>
+	                    <span class="project-mobile-label" aria-hidden="true">Dernière analyse</span><div data-ts-datetime="{{ p.timestamp }}">{{ p.timestamp_label }}</div>
 	                  {% else %}
 	                    <div class="muted">-</div>
                       {% if recent_job and recent_job.status == 'failed' %}
 	                    <div class="muted small">Dernière tentative en échec</div>
                       {% elif recent_job and recent_job.status == 'done' %}
-                      <div class="muted small">Crawl terminé, page à actualiser</div>
+                      <div class="muted small">Bilan indisponible : ouvrez le projet pour réessayer</div>
                       {% elif recent_job and recent_job.status in ['queued', 'running', 'cancel_requested'] %}
-                      <div class="muted small">Crawl en cours</div>
+                      <div class="muted small">Analyse en cours</div>
                       {% else %}
-	                    <div class="muted small">Pas encore crawlé</div>
+	                    <div class="muted small">Pas encore analysé</div>
                       {% endif %}
 		                  {% endif %}
 		                  <div class="row-crawl-slot" data-project-slug="{{ p.slug }}">
@@ -322,6 +233,7 @@
 	                  </div>
 	                </td>
 	                <td>
+                    <span class="project-mobile-label" aria-hidden="true">Santé des pages analysées</span>
 	                  {% if p.timestamp and p.site_injoignable %}
 	                    <span class="badge error" title="Aucune page n'a répondu au dernier crawl">Site injoignable</span>
 	                  {% elif p.timestamp %}
@@ -334,8 +246,9 @@
 	                    <span class="muted">-</span>
 	                  {% endif %}
 	                </td>
-	                <td class="num mono">{% if p.timestamp %}{{ p.urls_crawled }}{% else %}-{% endif %}</td>
+	                <td class="num mono"><span class="project-mobile-label" aria-hidden="true">URL analysées</span>{% if p.timestamp %}{{ p.urls_crawled }}{% else %}-{% endif %}</td>
 	                <td class="num mono">
+                    <span class="project-mobile-label" aria-hidden="true">URL avec erreurs</span>
 	                  {% if p.timestamp %}
 	                    {% if p.urls_with_errors > 0 %}
 	                      <span class="badge error">{{ p.urls_with_errors }}</span>
@@ -347,6 +260,7 @@
 	                  {% endif %}
 	                </td>
 	                <td>
+                    <span class="project-mobile-label" aria-hidden="true">Erreurs · avertissements · infos</span>
 	                  {% if p.timestamp %}
 	                    <div class="issues-inline">
 	                      <span class="dot error"></span><span class="mono">{{ p.issues_distribution.error or 0 }}</span>
@@ -367,8 +281,8 @@
 		                    >⚙</a>
 		                    <form method="post" action="/projects/{{ p.slug }}/crawl" class="crawl-start-form" data-slug="{{ p.slug }}">
 		                      <input type="hidden" name="config_path" value="{{ config_path }}" />
-		                      {% set live_running = live and live.status in ['queued','running'] %}
-		                      <button type="submit" class="btn primary" data-role="start-btn" {% if live_running %}disabled{% endif %}>
+		                      {% set live_running = live and live.status in ['queued','running','cancel_requested'] %}
+		                      <button type="submit" class="btn" data-role="start-btn" {% if live_running %}disabled{% endif %}>
 		                        {% if live_running %}En cours{% else %}Lancer l’analyse{% endif %}
 		                      </button>
 		                    </form>

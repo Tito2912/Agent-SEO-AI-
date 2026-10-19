@@ -1,0 +1,40 @@
+{% if next_step %}
+<section class="card journey-card" aria-labelledby="next-step-title">
+  <div class="journey-main">
+    <div class="journey-copy">
+      <p class="journey-eyebrow">{{ next_step.site_name }} · Votre prochaine étape</p>
+      <h2 id="next-step-title">{{ next_step.title }}</h2>
+      <p class="muted">{{ next_step.detail }}</p>
+    </div>
+    {% if next_step.post %}
+      <form method="post" action="{{ next_step.href }}" data-audit-submit>
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <button class="btn primary" type="submit">{{ next_step.label }}</button>
+      </form>
+    {% else %}<a class="btn primary" href="{{ next_step.href }}">{{ next_step.label }}</a>{% endif %}
+  </div>
+  {% if journey is defined and journey %}
+    <div class="journey-progress-label"><span>Vers votre premier résultat</span><span>{{ journey.required_done }}/{{ journey.total_required }} étapes terminées</span></div>
+    <div class="progress slim" role="progressbar" aria-label="Progression vers votre premier résultat" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ journey.progress_pct }}">
+      <div class="progress-fill" style="--p: {{ journey.progress_pct }};"></div>
+    </div>
+    <ol class="journey-milestones" aria-label="Étapes vers votre premier résultat">
+      {% set next_pending = namespace(value=true) %}
+      {% for step in journey.steps | rejectattr('optional') %}
+        <li class="{{ 'done' if step.done else '' }}" {% if not step.done and next_pending.value %}aria-current="step"{% endif %} {% if step.done %}aria-label="{{ step.label }} · étape terminée"{% endif %}>
+          <span class="journey-mark" aria-hidden="true">{{ '✓' if step.done else loop.index }}</span>{{ step.label }}
+        </li>
+        {% if not step.done %}{% set next_pending.value = false %}{% endif %}
+      {% endfor %}
+    </ol>
+    <details class="journey-help">
+      <summary>Comprendre les étapes et les connexions facultatives</summary>
+      <ul>
+        {% for step in journey.steps %}
+          <li><strong>{{ step.label }}{% if step.optional %} · facultatif{% endif %}</strong><p class="muted small">{{ step.detail }}{% if step.doc_href %} <a href="{{ step.doc_href }}">Comment faire</a>{% endif %}{% if step.optional and not step.done %} · <a href="{{ step.action_href }}">{{ step.action_label }}</a>{% endif %}</p></li>
+        {% endfor %}
+      </ul>
+    </details>
+  {% endif %}
+</section>
+{% endif %}
