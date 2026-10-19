@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Corriger dans WordPress - {{ project.site_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% if poll %}<meta http-equiv="refresh" content="20" />{% endif %}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% if poll %}<meta http-equiv="refresh" content="20" />{% endif %}{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">{{ label }}</span>{% endblock %}
 {% block content %}
 {#- LE LOT WORDPRESS (19/10/2026) : toutes les pages d'une anomalie, une validation, UNE analyse de
@@ -21,6 +21,12 @@
   </div>
   {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
   {% if msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+  <dl class="correction-counts" aria-label="Avancement des pages du lot">
+    <div><dt>À préparer</dt><dd>{{ a_preparer|length }}</dd></div>
+    <div><dt>À relire</dt><dd>{{ apercus|length }}</dd></div>
+    <div><dt>État à confirmer</dt><dd>{{ a_confirmer|length }}</dd></div>
+    <div><dt>Enregistrées</dt><dd>{{ enregistrees|length }}</dd><p class="muted small">dont {{ enregistrees|selectattr('verification.state', 'equalto', 'verified')|list|length }} vérifiée(s) par l’analyse</p></div>
+  </dl>
 
   {% if a_preparer %}
     <section class="card" id="batch-prepare">

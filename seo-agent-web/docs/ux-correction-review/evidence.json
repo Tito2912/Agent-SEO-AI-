@@ -1,0 +1,663 @@
+{
+  "baseCommit": "d215d40936a45c2beaa83c9d84940090d14a5a5f",
+  "environment": "Local ; comptes et rapports fictifs ; API de correction GitHub interceptée ; transport WordPress simulé",
+  "displays": [
+    {
+      "scenario": "automation",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "corrections",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "corrections",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "corrections",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "corrections",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "issue",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "issue",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "issue",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "issue",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "guided",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "guided",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "guided",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "guided",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-edit",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-edit",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-edit",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-edit",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-preview",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-preview",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-preview",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-preview",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "review-initial",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "review-diff",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "review-created",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "review-initial",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "review-diff",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "review-created",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "partial",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "partial",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "quota",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "session",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "legacy",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "conflict",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "lost",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": 878,
+      "dialogScroll": 878
+    },
+    {
+      "scenario": "review-initial",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "review-diff",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "review-created",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "review-initial",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "review-diff",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "review-created",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "partial",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "partial",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "quota",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "session",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "legacy",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "conflict",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "lost",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": 728,
+      "dialogScroll": 728
+    },
+    {
+      "scenario": "review-initial",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "review-diff",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "review-created",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "review-initial",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "review-diff",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "review-created",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "partial",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "partial",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "quota",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "session",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "legacy",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "conflict",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "lost",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    },
+    {
+      "scenario": "review-initial",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "review-diff",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "review-created",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "review-initial",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "review-diff",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "review-created",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "partial",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "partial",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "quota",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "session",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "legacy",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "conflict",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "lost",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": 320,
+      "dialogScroll": 320
+    },
+    {
+      "scenario": "cms-verified",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    }
+  ],
+  "checks": [
+    "Ouvrir puis annuler la préparation ne déclenche aucune requête de correction.",
+    "Aperçu unitaire sans confirmation automatique ; relecture exigée ; double clic : une seule confirmation.",
+    "Annulation et Escape rendent le focus au déclencheur ; analyse de référence conservée.",
+    "Préparations étendues et globales : review_only=true et résultat partiel explicite.",
+    "Quota, session expirée, ancien aperçu, conflit et réponse perdue parcourus ; récupération par lecture du suivi sans seconde écriture.",
+    "WordPress : aperçu sans écriture, application explicite sur API simulée, contrôle par rapport synthétique et choix suivant. Les quatre étapes sont communes au parcours guidé et au dépôt."
+  ],
+  "jsErrors": []
+}

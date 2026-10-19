@@ -3836,6 +3836,11 @@ def _correction_operation(function):
                     return function(*bound.args, **bound.kwargs)
                 values = {k: v.model_dump(mode="json") if isinstance(v, BaseModel) else v
                           for k, v in bound.arguments.items() if k not in {"request", "slug"}}
+                # Preserve existing receipts when the new review-only option is not requested.
+                if isinstance(values.get("body"), dict) and values["body"].get("review_only") is False:
+                    values["body"].pop("review_only")
+                if function.__name__ == "api_github_bulk_fix" and not values.get("body"):
+                    values.pop("body", None)
                 payload = {"values": values, "github": _project_github_cfg(project)}
                 key = correction_journal.request_key(payer, str(project.id), function.__name__, payload)
                 row = correction_journal.find(DB, key=key)
@@ -4804,7 +4809,8 @@ def _issue_correction_controls(issue_key: str) -> dict[str, bool]:
 
 
 def _project_github_cfg(proj) -> dict[str, str]:
-    s = proj.settings if isinstance(proj.settings, dict) else {}
+    s = getattr(proj, "settings", None)
+    s = s if isinstance(s, dict) else {}
     mode = str(s.get("github_mode") or "review").strip()
     return {
         "repo": str(s.get("github_repo") or "").strip(),
@@ -19003,12 +19009,14 @@ def project_issue_detail(
             _verify = _note_data.get("verify") if isinstance(_note_data, dict) else None
             gh_tasks[_t.url] = {
                 "status": _t.status,
+                "verified": bool(first_correction.progress([_t]).get("verified")),
                 "pr": _note_data,
                 "verify": _verify if isinstance(_verify, dict) else None,
             }
     except Exception:
         pass
 
+    data["site_name"] = proj_row.site_name or slug
     resp = templates.TemplateResponse(
         "issue_detail.html",
         {
@@ -19022,6 +19030,7 @@ def project_issue_detail(
             "fix_suggestion": fix_suggestion,
             "fix_suggestions_path": fix_path,
             "gh_tasks": gh_tasks,
+            "github_cfg": _project_github_cfg(proj_row),
             "correction_controls": correction_controls,
             "platform_guide": cms_guidance.for_issue(getattr(proj_row, "settings", None), issue_key),
             "wordpress_batch_href": cms_batch_href(proj_row, issue_key),
@@ -19170,7 +19179,6 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
     branch = cfg["branch"]
     if not _github_branch_allowed(branch):
         return JSONResponse({"ok": False, "needs_setup": True, "error": "Branche GitHub invalide."}, status_code=400)
-    mode = cfg["mode"]
     url = (body.url or "").strip()
     if not url:
         return JSONResponse({"ok": False, "error": "URL manquante."}, status_code=400)
@@ -19350,6 +19358,7 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         return JSONResponse({"ok": False, "error": content_error}, status_code=400)
     original_lines = best["content"].splitlines()
     patched_lines = patch["patched_content"].splitlines()
+    import difflib
     preview = {
         "ok": True, "mode": "review", "file": best["path"],
         "pr_title": patch.get("pr_title", f"fix(seo): {issue_label}"),
@@ -19357,27 +19366,23 @@ def api_github_fix(request: Request, slug: str, issue_key: str, body: _GithubFix
         "original_preview": "\n".join(original_lines[:30]),
         "patched_preview": "\n".join(patched_lines[:30]),
         "patched_content": patch["patched_content"],
+        "diff": "\n".join(difflib.unified_diff(original_lines, patched_lines,
+            fromfile=f"Avant/{best['path']}", tofile=f"Proposé/{best['path']}", lineterm="")),
     }
     correction_journal.preview(preview, original=best["content"])
     _correction_charge(user, 1, slug=slug, motif=issue_key)
 
-    # In auto mode: apply immediately without confirm step
-    if mode == "auto":
-        auto_body = _GithubFixBody(
-            url=url, crawl_ts=body.crawl_ts,
-            confirm=True,
-            file_path=best["path"],
-            patched_content=patch["patched_content"],
-        )
-        return api_github_fix(request, slug, issue_key, auto_body)
-
-    # Review mode: return preview
+    # Model-written content always waits for an explicit confirmation, including auto mode.
     return JSONResponse(preview)
+
+
+class _ReviewFixBody(BaseModel):
+    review_only: bool = False
 
 
 @app.post("/api/projects/{slug}/github/bulk-fix")
 @_correction_operation
-def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
+def api_github_bulk_fix(request: Request, slug: str, body: _ReviewFixBody | None = None) -> JSONResponse:
     """Generate and push fixes for all crawl errors in a single PR."""
     proj = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
@@ -19572,7 +19577,7 @@ def api_github_bulk_fix(request: Request, slug: str) -> JSONResponse:
     # d'ecrit par le modele — mais elles decident desormais d'un DROIT a fusionner, exerce par
     # `/cron/verify-pull-requests` une fois les verifications du depot connues. Sur un depot
     # muet, la fusion est suspendue plutot que tentee a l'aveugle.
-    _fusion_auto = bool(mode == "auto" and pr_number and not config_changed
+    _fusion_auto = bool(not (body and body.review_only) and mode == "auto" and pr_number and not config_changed
                         and not any_ai_written and not any_premise_key)
     _merged = False
 
@@ -30707,6 +30712,7 @@ def _apply_prepared_issue_fix(
 class _DeepFixBody(BaseModel):
     url: str = ""
     crawl_ts: str = ""
+    review_only: bool = False
 
 
 @app.post("/api/projects/{slug}/issues/{issue_key}/deep-fix")
@@ -30900,7 +30906,7 @@ def api_issue_deep_fix(request: Request, slug: str, issue_key: str, body: _DeepF
     # mais meme une reparation mecanique attend desormais que le depot ait dit que son build
     # passe. C'est le seul automatisme que cette etape retire, et c'est celui qui pouvait
     # casser un site.
-    _fusion_auto = bool(mode == "auto" and pr_number and not config_changes and not _ai_files
+    _fusion_auto = bool(not body.review_only and mode == "auto" and pr_number and not config_changes and not _ai_files
                         and not _fix_premise_note(issue_key))
 
     try:
@@ -31043,6 +31049,7 @@ def project_automation(request: Request, slug: str) -> HTMLResponse:
                 "id": str(t.id), "issue_key": t.issue_key, "issue_label": t.issue_label,
                 "url": t.url, "status": st, "pr": pr_data,
                 "severity": t.severity, "crawl_ts": t.crawl_ts,
+                "verified": bool(first_correction.progress([t]).get("verified")),
                 "updated_at": t.updated_at.isoformat() if t.updated_at else "",
             })
     except Exception:

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% from "_cms_workflow.html" import steps %}
 {% block title %}Votre correction WordPress{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Votre correction</span>{% endblock %}
 {% macro action_button(action, label, primary=false, busy='Traitement en cours…') %}
 <form method="post" action="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}/{{ action }}"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn {% if primary %}primary{% endif %}" type="submit" data-busy-label="{{ busy }}">{{ label }}</button></form>
@@ -32,7 +32,7 @@
         <p role="status">La nouvelle analyse a revisité cette page et confirmé la résolution du problème suivi.</p>
         <p class="muted small">Analyse de contrôle : <span data-ts-datetime="{{ verification.receipt.crawl_ts }}">{{ verification.receipt.crawl_ts }}</span>.</p>
         {% if verification.receipt.introduced %}<p class="muted">D’autres anomalies sont en hausse. Consultez le bilan du contrôle avant de poursuivre.</p>{% endif %}
-        <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/corrections">Continuer les corrections</a><a class="btn" href="/projects/{{ slug }}?crawl={{ verification.receipt.crawl_ts }}">Voir le bilan du contrôle</a></div>
+        <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/first-correction?choose=1">Choisir la correction suivante</a><a class="btn" href="/projects/{{ slug }}?crawl={{ verification.receipt.crawl_ts }}">Voir le bilan du contrôle</a></div>
       {% elif verification.poll %}
         <span class="badge">Application confirmée</span>
         <h2 id="verification-title">Vérification en cours</h2>

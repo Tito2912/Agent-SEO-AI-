@@ -2,6 +2,7 @@
 {% block title %}Corrections - {{ project.site_name }}{% endblock %}
 
 {% block head_extra %}
+  <link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=1" defer></script>
 <style>
 /* ── Stats summary bar ── */
 .corr-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
@@ -237,202 +238,6 @@
       });
   });
 
-  function runSingleFix(issue, url, crawl) {
-    return fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/github-fix', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({url: url, crawl_ts: crawl || '', confirm: false})
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      if (!d.ok) return d;
-      if (d.pr_url) return d;
-      if (!d.file || !d.patched_content) return {ok: false, error: 'Prévisualisation incomplète.'};
-      return fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/github-fix', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ url: url, crawl_ts: crawl || '', confirm: true, file_path: d.file, patched_content: d.patched_content })
-      }).then(function(r) { return r.json(); });
-    });
-  }
-
-  /* PR creation can take 30-60s (tarball + several AI patches); a slow request may drop
-     client-side even though the server created the PR. Poll the server and reload when the
-     PR shows up, so the user never has to refresh manually. */
-  // La correction part en BROUILLON et attend les vérifications du dépôt (GitHub Actions,
-  // preview Netlify ou Vercel). Annoncer « Pull Request créée » laisserait croire qu'il y a
-  // quelque chose à relire tout de suite, et « Correction mergée » ne serait plus jamais vrai
-  // à cet instant : la fusion attend désormais le verdict.
-  function statutCorrection(d) {
-    if (d.merged) return 'Correction mergée.';
-    if (d.verification) return 'Correction ouverte en brouillon — en attente des vérifications de votre dépôt.';
-    return 'Pull Request créée.';
-  }
-
-  function noteHasPr(note) {
-    if (!note) return false;
-    try { return !!JSON.parse(note).pr_url; } catch (e) { return false; }
-  }
-  // Signature of a task's PR (number/url) — '' if none. Used to detect a NEW PR vs a stale one.
-  function prSig(t) {
-    try { var n = JSON.parse(t.note || '{}'); return n.pr_url ? String(n.pr_number || n.pr_url) : ''; }
-    catch (e) { return ''; }
-  }
-  function matchTask(list, issue, url) {
-    for (var i = 0; i < list.length; i++) {
-      var t = list[i];
-      if (t.issue_key !== issue) continue;
-      if (url && t.url && t.url !== url) continue;
-      return t;
-    }
-    return null;
-  }
-  function fetchPrSig(issue, url) {
-    return fetch('/api/projects/' + encodeURIComponent(_slug) + '/tasks', { cache: 'no-store' })
-      .then(function (r) { return r.json(); })
-      .then(function (list) { if (!Array.isArray(list)) return ''; var t = matchTask(list, issue, url); return t ? prSig(t) : ''; })
-      .catch(function () { return ''; });
-  }
-  function startPrPoll(opts) {
-    // opts: {issue, url, baseSig} for single (reload on a NEW PR signature), or
-    // {baseline:<count>} for bulk (reload when PR count grows). Returns a stop() fn.
-    var tries = 0;
-    var iv = setInterval(function () {
-      tries++;
-      if (tries > 30) { clearInterval(iv); return; }  // ~2.5 min max
-      fetch('/api/projects/' + encodeURIComponent(_slug) + '/tasks', { cache: 'no-store' })
-        .then(function (r) { return r.json(); })
-        .then(function (list) {
-          if (!Array.isArray(list)) return;
-          if (opts && opts.issue) {
-            var t = matchTask(list, opts.issue, opts.url);
-            var sig = t ? prSig(t) : '';
-            if (sig && sig !== (opts.baseSig || '')) { clearInterval(iv); window.location.reload(); }
-          } else if (opts && typeof opts.baseline === 'number') {
-            var n = list.filter(function (t) { return noteHasPr(t.note); }).length;
-            if (n > opts.baseline) { clearInterval(iv); window.location.reload(); }
-          }
-        }).catch(function () {});
-    }, 5000);
-    return function () { clearInterval(iv); };
-  }
-  function prCount() {
-    return fetch('/api/projects/' + encodeURIComponent(_slug) + '/tasks', { cache: 'no-store' })
-      .then(function (r) { return r.json(); })
-      .then(function (list) { return Array.isArray(list) ? list.filter(function (t) { return noteHasPr(t.note); }).length : 0; })
-      .catch(function () { return 0; });
-  }
-
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-correction-bulk-fix]');
-    if (!btn) return;
-    var original = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Création de la PR...';
-    showFlowStatus('Lecture du dernier rapport et préparation des corrections...', '');
-    prCount().then(function (baseline) {
-      var stopPoll = startPrPoll({ baseline: baseline });
-      fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/bulk-fix', {
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
-      })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (!d.ok) {
-            stopPoll();
-            btn.disabled = false; btn.textContent = original;
-            showFlowStatus(esc(d.error || 'Erreur pendant la correction globale.'), 'error');
-            return;
-          }
-          stopPoll();
-          var label = d.merged ? 'Corrections mergées' : 'PR créée';
-          var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-          var detail = d.partial ? ' - Correction partielle.' : '';
-          if (d.not_attempted_issues_count) detail += ' ' + d.not_attempted_issues_count + ' anomalie(s) non traitée(s).';
-          if (d.not_attempted_count) detail += ' ' + d.not_attempted_count + ' fichier(s) non traité(s).';
-          showFlowStatus(label + ' (' + esc(d.fixed_count || 0) + '/' + esc(d.total_count || 0) + ')' + esc(detail) + link, d.partial ? '' : 'ok');
-          if (d.partial) { btn.disabled = false; btn.textContent = original; }
-          else setTimeout(function() { window.location.reload(); }, 2200);
-        })
-        .catch(function() {
-          // Slow request dropped client-side — server may still finish; poller will reload.
-          btn.textContent = 'Création en cours…';
-          showFlowStatus('Correction en cours côté serveur… la page se rafraîchira automatiquement dès que la PR est prête.', '');
-        });
-    });
-  });
-
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-correction-single-fix]');
-    if (!btn) return;
-    var original = btn.textContent;
-    var issue = btn.dataset.issue || '', url = btn.dataset.url || '', crawl = btn.dataset.crawl || '';
-    btn.disabled = true; btn.textContent = 'Création PR...';
-    runSingleFix(issue, url, crawl)
-      .then(function(d) {
-        if (!d.ok) {
-          btn.disabled = false; btn.textContent = 'Erreur'; btn.title = d.error || 'Erreur';
-          showFlowStatus(esc(d.error || 'Erreur pendant la correction.'), 'error');
-          setTimeout(function() { btn.textContent = original; }, 1600);
-          return;
-        }
-        btn.textContent = d.merged ? 'Mergé' : (d.verification ? 'En vérification' : 'PR créée');
-        var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-        showFlowStatus(statutCorrection(d) + link, 'ok');
-        setTimeout(function() { window.location.reload(); }, 1800);
-      })
-      .catch(function() {
-        btn.disabled = false; btn.textContent = 'Erreur';
-        showFlowStatus('Erreur réseau pendant la correction.', 'error');
-        setTimeout(function() { btn.textContent = original; }, 1600);
-      });
-  });
-
-  /* Deep fix: patch every impacted file for one issue in a single PR. */
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-correction-deep-fix]');
-    if (!btn) return;
-    var issue = btn.dataset.issue || '', url = btn.dataset.url || '', crawl = btn.dataset.crawl || _crawl || '';
-    var original = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Correction…';
-    showFlowStatus('Analyse des pages impactées et génération des corrections (cela peut prendre jusqu\'à une minute)…', '');
-    fetchPrSig(issue, url).then(function (baseSig) {
-    var stopPoll = startPrPoll({ issue: issue, url: url, baseSig: baseSig });
-    fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/deep-fix', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: url, crawl_ts: crawl })
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (!d.ok) {
-          stopPoll();
-          btn.disabled = false; btn.textContent = original; btn.title = d.error || '';
-          // A refusal can still point somewhere useful (e.g. the PR already awaiting review).
-          var errLink = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
-          showFlowStatus(esc(d.error || 'Erreur pendant la correction.') + errLink, 'error');
-          return;
-        }
-        stopPoll();
-        btn.textContent = d.merged ? 'Mergé' : (d.verification ? 'En vérification' : 'PR créée');
-        var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir GitHub</a>' : '';
-        // Le plafond a pu couper avant d'atteindre tous les candidats. Sans cette phrase, la
-        // ligne ci-dessus affiche « 8 fichier(s) pour 9 page(s) » et laisse le client faire la
-        // soustraction — puis se demander si le reste est une abstention, un défaut, ou un
-        // second clic. On nomme la borne : relancer ne sert que si c'est le forfait qui a coupé.
-        var reste = '';
-        if (d.not_attempted_count) {
-          var cap = d.cap || {};
-          reste = ' <strong>' + esc(d.not_attempted_count) + ' fichier(s) non traité(s)</strong> : '
-                + (typeof cap.left === 'number' && cap.left <= cap.files
-                   ? 'il te restait ' + esc(cap.left) + ' correction(s) IA ce mois-ci.'
-                   : 'votre forfait en traite ' + esc(cap.files) + ' par correction — relance pour les suivants.');
-        }
-        showFlowStatus(statutCorrection(d) + ' — ' + esc(d.files_count) + ' fichier(s) pour ' + esc(d.pages_count) + ' page(s) impactée(s)' + link + reste, 'ok');
-        setTimeout(function () { window.location.reload(); }, 2400);
-      })
-      .catch(function () {
-        // Request dropped client-side (slow) — the server may still finish. Keep the poller
-        // running; it will reload when the PR appears. No hard error.
-        btn.textContent = 'Création en cours…';
-        showFlowStatus('Correction en cours côté serveur… la page se rafraîchira automatiquement dès que la PR est prête.', '');
-      });
-    });
-  });
-
   function setStatus(issueKey, url, newStatus) {
     fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issueKey) + '/task', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -642,7 +447,7 @@
   <div class="corr-stat"><span class="num">{{ stats.total }}</span><span class="lbl">Suivies</span></div>
   <div class="corr-stat accent"><span class="num">{{ stats.todo }}</span><span class="lbl">À traiter</span></div>
   <div class="corr-stat"><span class="num">{{ stats.in_progress }}</span><span class="lbl">En cours</span></div>
-  <div class="corr-stat"><span class="num">{{ stats.done }}</span><span class="lbl">Déclarées corrigées</span></div>
+  <div class="corr-stat"><span class="num">{{ stats.done }}</span><span class="lbl">Déclarées modifiées</span></div>
   {% if stats.with_pr %}<div class="corr-stat"><span class="num">{{ stats.with_pr }}</span><span class="lbl">PR ouvertes</span></div>{% endif %}
   <div class="corr-stat ok"><span class="num">{{ stats.verified_resolved }}</span><span class="lbl">✓ Vérifiées résolues</span></div>
   {% if stats.still_present %}<div class="corr-stat err"><span class="num">{{ stats.still_present }}</span><span class="lbl">⚠ Encore présentes</span></div>{% endif %}
@@ -674,7 +479,7 @@
         <a class="btn" href="/projects/{{ slug }}/export/report.pdf?crawl={{ current_crawl_ts }}">Rapport à transmettre (PDF)</a>
       {% endif %}
       {% if github_cfg and github_cfg.repo and fix_candidates %}
-        <button type="button" class="btn primary" data-correction-bulk-fix>Tout corriger en 1 PR</button>
+        <button type="button" class="btn primary" data-correction-bulk-fix>Préparer un brouillon GitHub</button>
       {% elif not (github_cfg and github_cfg.repo) %}
         <button type="button" class="btn" id="gh-connect-toggle">Connecter GitHub (facultatif)</button>
       {% endif %}
@@ -692,7 +497,7 @@
 
   {% if github_cfg and github_cfg.repo %}
     <p class="muted small" style="margin:8px 0 0;">
-      Dépôt connecté : <span class="mono">{{ github_cfg.repo }}</span> · branche <span class="mono">{{ github_cfg.branch }}</span> · mode {{ 'auto-merge' if github_cfg.mode == 'auto' else 'PR à vérifier' }}.
+      Dépôt connecté : <span class="mono">{{ github_cfg.repo }}</span> · branche <span class="mono">{{ github_cfg.branch }}</span>. Les propositions préparées ici attendent votre relecture et votre fusion sur GitHub.
     </p>
     {# Le lien de la PR survit au rechargement : le message « PR créée » disparait avec lui. #}
     {% if prs_ouvertes %}
@@ -773,7 +578,7 @@
 {% set col_meta = {
   'todo':        {'label': 'À traiter',  'badge': 'notice',  'color': '#818cf8'},
   'in_progress': {'label': 'En cours',   'badge': 'warning', 'color': '#f59e0b'},
-  'done':        {'label': 'Corrigé',    'badge': 'ok',      'color': 'var(--ok-2)'},
+  'done':        {'label': 'Déclarées modifiées',    'badge': 'ok',      'color': 'var(--ok-2)'},
   'ignored':     {'label': 'Ignoré',     'badge': '',        'color': 'var(--border-2)'}
 } %}
 
@@ -888,7 +693,7 @@
         {% endif %}
         <textarea class="corr-note" rows="2" placeholder="Note (optionnel)…">{{ task.user_note or '' }}</textarea>
         <div class="corr-segmented">
-          {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Corrigé'),('ignored','Ignoré')] %}
+          {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Modifié · à vérifier'),('ignored','Ignoré')] %}
           <button type="button"
             class="corr-seg-btn{% if task.status == st %} active{% endif %}"
             data-set-status="{{ st }}"
@@ -908,4 +713,5 @@
 {% endfor %}
 </div>
 {% endif %}
+{% include "_correction_review.html" %}
 {% endblock %}

@@ -23,76 +23,7 @@
   .pa-task-row { grid-template-columns: minmax(0, 1fr); }
 }
 </style>
-<script>
-(function(){
-  var _slug = {{ slug | tojson }};
-
-  /* ── Bulk fix ── */
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('[data-bulk-fix]');
-    if(!btn) return;
-    var orig = btn.innerHTML;
-    btn.disabled = true; btn.innerHTML = 'Génération en cours…';
-    fetch('/api/projects/'+_slug+'/github/bulk-fix',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(d.ok){
-          var msg = d.merged ? '✓ '+d.fixed_count+' correction(s) mergée(s) sur main' : '✓ PR #'+d.pr_number+' créé ('+d.fixed_count+' fix)';
-          btn.innerHTML = msg;
-          btn.style.background = 'var(--accent)';
-          if(d.pr_url){
-            var a = document.createElement('a');
-            a.href=d.pr_url; a.target='_blank'; a.rel='noreferrer';
-            a.textContent=' ↗'; a.style.cssText='color:#fff;margin-left:6px;';
-            btn.parentNode.insertBefore(a, btn.nextSibling);
-          }
-          setTimeout(function(){window.location.reload();}, 2500);
-        } else {
-          btn.disabled=false; btn.innerHTML=orig;
-          var errEl = document.getElementById('bulk-fix-err');
-          if(errEl){ errEl.textContent = d.error||'Erreur inconnue'; errEl.style.display='block'; }
-        }
-      }).catch(function(){
-        btn.disabled=false; btn.innerHTML=orig;
-        var errEl = document.getElementById('bulk-fix-err');
-        if(errEl){ errEl.textContent='Erreur réseau'; errEl.style.display='block'; }
-      });
-  });
-
-  /* ── Single fix ── */
-  function runSingleFix(btn, issue, url, crawl) {
-    return fetch('/api/projects/'+_slug+'/issues/'+encodeURIComponent(issue)+'/github-fix',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({url:url, crawl_ts:crawl||'', confirm:false})
-    }).then(function(r){return r.json();}).then(function(d){
-      if(!d.ok) return d;
-      if(d.pr_url) return d;
-      if(!d.file || !d.patched_content) return {ok:false,error:'Prévisualisation incomplète.'};
-      return fetch('/api/projects/'+_slug+'/issues/'+encodeURIComponent(issue)+'/github-fix',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          url:url, crawl_ts:crawl||'', confirm:true,
-          file_path:d.file, patched_content:d.patched_content
-        })
-      }).then(function(r){return r.json();});
-    });
-  }
-
-  document.addEventListener('click', function(e){
-    var btn = e.target.closest('[data-single-fix]');
-    if(!btn) return;
-    var issue = btn.dataset.issue;
-    var url = btn.dataset.url || '';
-    var crawl = btn.dataset.crawl||'';
-    btn.disabled=true; btn.textContent='Création PR...';
-    runSingleFix(btn, issue, url, crawl)
-      .then(function(d){
-        if(d.ok){ btn.textContent=d.merged?'Mergé':'PR créée'; btn.style.background='var(--accent)'; setTimeout(function(){window.location.reload();},1800); }
-        else { btn.disabled=false; btn.textContent='Erreur'; btn.title=d.error||'?'; }
-      }).catch(function(){ btn.disabled=false; btn.textContent='Erreur'; });
-  });
-})();
-</script>
+<link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=1" defer></script>
 {% endblock %}
 
 {% block crumbs %}
@@ -110,7 +41,7 @@
 {% block content %}
 <div class="page-header">
   <h1>Automatisation</h1>
-  <p class="muted">Corrections GitHub automatiques pour {{ project.site_name }}</p>
+  <p class="muted">Préparation et suivi des corrections GitHub pour {{ project.site_name }}</p>
 </div>
 
 {# ── Stats ── #}
@@ -126,7 +57,7 @@
   </div>
   <div class="pa-stat">
     <span class="pa-stat-num" style="color:var(--ok-2);">{{ counts.done }}</span>
-    <span class="pa-stat-label">Corrigés</span>
+    <span class="pa-stat-label">Déclarées modifiées</span>
   </div>
   {% if counts.ignored %}
   <div class="pa-stat">
@@ -149,7 +80,7 @@
         <div class="muted small">Branche : <span class="mono">{{ github_cfg.branch }}</span></div>
       </div>
       <span class="badge {{ 'ok' if github_cfg.mode == 'auto' else 'notice' }}" style="font-size:11px;">
-        {{ 'Full Access (auto-merge)' if github_cfg.mode == 'auto' else 'Vérification (PR)' }}
+        {{ 'Automatisation configurée' if github_cfg.mode == 'auto' else 'Relecture sur GitHub' }}
       </span>
       <span style="flex:1"></span>
       <a class="btn small" href="/projects/{{ slug }}/settings/crawl#github-section">Modifier</a>
@@ -159,7 +90,7 @@
   <div class="gh-connect-card">
     <svg style="width:32px;height:32px;margin-bottom:12px;color:var(--muted);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
     <p style="margin:0 0 6px;font-weight:600;">Aucun dépôt GitHub connecté</p>
-    <p class="muted small" style="margin:0 0 16px;">Connectez un dépôt pour que l'agent pousse les corrections directement dans votre code.</p>
+    <p class="muted small" style="margin:0 0 16px;">Connectez un dépôt pour préparer des propositions de modification du code à relire sur GitHub.</p>
     <a class="btn primary" href="/projects/{{ slug }}/settings/crawl#github-section">Connecter un dépôt →</a>
   </div>
   {% endif %}
@@ -172,16 +103,12 @@
   <div class="card" style="padding:16px 18px;">
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:200px;">
-        <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Corriger toutes les erreurs du crawl</div>
-        <div class="muted small">Analyse le dernier rapport, génère les patches IA pour chaque anomalie corrigeable et pousse <strong>1 seul PR</strong> avec tous les changements.</div>
-        {% if github_cfg.mode == 'auto' %}
-        <div class="muted small" style="margin-top:4px;color:var(--ok-2);">Mode Full Access : le PR sera mergé automatiquement sur <span class="mono">{{ github_cfg.branch }}</span>.</div>
-        {% else %}
-        <div class="muted small" style="margin-top:4px;">Mode Vérification : tu devras merger le PR sur GitHub.</div>
-        {% endif %}
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Préparer plusieurs corrections</div>
+        <div class="muted small">Prépare les fichiers traitables du dernier bilan dans <strong>une proposition GitHub à relire</strong>, selon les limites de votre forfait.</div>
+        <p class="muted small">Les propositions préparées ici attendent votre relecture et votre fusion sur GitHub.</p>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">Tout corriger en 1 PR</button>
+        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">Préparer un brouillon GitHub</button>
         <span id="bulk-fix-err" style="display:none;font-size:11px;color:var(--err);max-width:220px;text-align:right;"></span>
       </div>
     </div>
@@ -196,12 +123,12 @@
 {% if total == 0 %}
 <div class="card" style="text-align:center;padding:32px;">
   <p class="muted">Aucune correction enregistrée pour ce projet.</p>
-  <p class="muted small" style="margin-top:6px;">Lance une correction depuis la page d'une anomalie ou utilise "Tout corriger" ci-dessus.</p>
+  <p class="muted small" style="margin-top:6px;">Choisissez un problème à préparer, puis relisez la proposition avant de poursuivre.</p>
   <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">Voir les anomalies</a>
 </div>
 {% else %}
 
-{% for col, col_label in [('in_progress','En cours'), ('todo','À corriger'), ('done','Corrigés'), ('ignored','Ignorés')] %}
+{% for col, col_label in [('in_progress','En cours'), ('todo','À corriger'), ('done','Déclarées modifiées'), ('ignored','Ignorés')] %}
 {% if tasks_by_status[col] %}
 <div class="pa-section">
   <div class="pa-section-title">
@@ -217,6 +144,7 @@
       <div class="pa-task-label">
         <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}" style="color:var(--text);">{{ task.issue_label }}</a>
       </div>
+      {% if task.verified %}<span class="badge ok">Vérifié par analyse</span>{% elif task.status == 'done' %}<span class="badge warning">Résultat à vérifier</span>{% endif %}
       <div class="pa-task-url" title="{{ task.url or '' }}">{{ task.url or '—' }}</div>
       {% if task.pr and task.pr.pr_url %}
       <a href="{{ task.pr.pr_url }}" target="_blank" rel="noreferrer" class="pa-pr-link">
@@ -229,9 +157,9 @@
         <button type="button" class="btn small" style="font-size:10px;"
           data-single-fix data-issue="{{ task.issue_key }}"
           data-url="{{ task.url or '' }}"
-          data-crawl="{{ task.crawl_ts or '' }}">Corriger</button>
+          data-crawl="{{ task.crawl_ts or '' }}">Préparer</button>
       {% endif %}
-      <a class="btn small" style="font-size:10px;" href="/projects/{{ slug }}/corrections">Workflow</a>
+      <a class="btn small" style="font-size:10px;" href="/projects/{{ slug }}/corrections">Suivi des corrections</a>
     </div>
   </div>
   {% endfor %}
@@ -240,4 +168,5 @@
 {% endfor %}
 {% endif %}
 
+{% include "_correction_review.html" %}
 {% endblock %}

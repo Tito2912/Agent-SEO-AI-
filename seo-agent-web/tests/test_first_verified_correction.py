@@ -217,7 +217,7 @@ def test_reopening_the_choice_does_not_reset_a_verified_success(journey):
     assert page.context["state"]["verified"] and page.context["choosing"]
     soup = BeautifulSoup(page.text, "html.parser")
     assert soup.find("option", attrs={"value": OTHER})
-    assert not soup.select(".first-correction-steps")
+    assert not soup.select(".correction-steps")
     cancel = journey["client"].get(soup.find("a", string="Revenir au résultat vérifié")["href"])
     assert "Votre correction est vérifiée" in cancel.text
     assert not cancel.context["choosing"]

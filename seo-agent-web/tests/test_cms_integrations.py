@@ -115,7 +115,8 @@ def test_workflow_keeps_application_followup_and_verified_result_on_the_change(c
     _verify(cms)
     assert workflow_status(cms, change).json() == {"state": "verified", "poll": False}
     page = change_page(cms, change)
-    assert "Correction vérifiée" in page.text and "Continuer les corrections" in page.text
+    assert "Correction vérifiée" in page.text and "Choisir la correction suivante" in page.text
+    assert f'/projects/{cms["slug"]}/first-correction?choose=1' in page.text
     corrections = cms["client"].get(f'/projects/{cms["slug"]}/corrections')
     assert corrections.context["first_correction_complete"]
     assert "Être guidé pour ma première correction" not in corrections.text
