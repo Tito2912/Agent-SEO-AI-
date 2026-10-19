@@ -5,7 +5,7 @@
   <a href="/">Projets</a>
   <span class="crumb-sep">/</span>
   {% if project %}
-    <a href="/projects/{{ project.slug }}">{{ project.slug }}</a>
+    <a href="/projects/{{ project.slug }}">{{ project.site_name or project.slug }}</a>
     <span class="crumb-sep">/</span>
     <a href="/projects/{{ project.slug }}/issues?crawl={{ project.timestamp }}">Anomalies</a>
     <span class="crumb-sep">/</span>
@@ -95,7 +95,7 @@
       {# ── Suivi de correction ── #}
       <div class="issue-task-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:8px 10px;background:var(--bg);border-radius:4px;border:1px solid var(--border);">
         <span class="muted small" style="flex-shrink:0;">Statut :</span>
-        {% for st, lbl, icon in [('todo','À traiter','○'),('in_progress','En cours','◑'),('done','Corrigé','●'),('ignored','Ignoré','—')] %}
+        {% for st, lbl, icon in [('todo','À traiter','○'),('in_progress','En cours','◑'),('done','Modifié · à vérifier','●'),('ignored','Ignoré','—')] %}
           <button type="button"
             class="btn task-status-btn"
             style="font-size:11px;padding:3px 9px;"
@@ -152,8 +152,8 @@
                 <a href="{{ u }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;min-width:0;word-break:break-all;">{{ u }}</a>
                 {# ── GitHub PR badge ── #}
                 {% if _gh_pr and _gh_pr.pr_url %}
-                  {% if _gh.status == 'done' %}
-                    <span class="badge ok" style="font-size:10px;padding:2px 7px;">✓ Corrigé</span>
+                  {% if _gh.verified %}
+                    <span class="badge ok" style="font-size:10px;padding:2px 7px;">✓ Vérifié par analyse</span>
                   {% else %}
                     <span class="badge warning" style="font-size:10px;padding:2px 7px;">PR en cours</span>
                   {% endif %}
@@ -458,9 +458,11 @@
 	      {% endif %}
 	    </section>
 	  {% endif %}
+{% if project %}{% include "_correction_review.html" %}{% endif %}
 {% endblock %}
 
 {% block head_extra %}
+<link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=1" defer></script>
 <link rel="stylesheet" href="/static/cms.css?v=1" />
 <script>
 (function () {
@@ -488,8 +490,8 @@
       .then(function(data) {
         btn.disabled = false;
         if (data.ok) {
-          var labels = { todo:'À traiter', in_progress:'En cours', done:'Corrigé', ignored:'Ignoré' };
-          if (msg) { msg.textContent = '✓ Statut mis à jour : ' + (labels[status] || status); }
+          var labels = { todo:'À traiter', in_progress:'En cours', done:'Modifié · à vérifier', ignored:'Ignoré' };
+          if (msg) { msg.textContent = status === 'done' ? 'Modification déclarée. Une nouvelle analyse doit vérifier le résultat.' : 'Statut mis à jour : ' + (labels[status] || status); }
           bar && bar.querySelectorAll('.task-status-btn').forEach(function(b) {
             b.style.fontWeight = b.dataset.status === status ? '700' : '';
             b.style.opacity = b.dataset.status === status ? '1' : '0.6';
@@ -544,209 +546,6 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  /* ── GitHub fix handler ── */
-  /* ── Shared PR success renderer ── */
-  function _buildGhSuccess(container, d, origPreview, patchPreview) {
-    var uid = 'ghdiff-' + Math.random().toString(36).slice(2,7);
-    var prLabel = d.pr_number ? 'PR #' + d.pr_number : 'PR';
-    var h = '<div style="padding:12px 14px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);border-radius:6px;font-size:12px;">';
-    h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">';
-    h += '<span style="color:var(--ok-2);font-size:15px;">&#x2713;</span>';
-    h += '<strong>' + _esc(prLabel) + ' créée</strong>';
-    if (d.pr_url) h += '<a href="' + _esc(d.pr_url) + '" target="_blank" rel="noreferrer" class="btn" style="font-size:11px;padding:2px 9px;">Voir sur GitHub ↗</a>';
-    if (d.commit_sha && d.commit_url) {
-      h += '<a href="' + _esc(d.commit_url) + '" target="_blank" rel="noreferrer" style="font-family:monospace;font-size:11px;color:var(--muted);text-decoration:none;padding:2px 7px;border:1px solid var(--border);border-radius:4px;" title="Voir le commit">' + _esc(d.commit_sha) + '</a>';
-    } else if (d.commit_sha) {
-      h += '<code style="font-size:11px;color:var(--muted);padding:2px 7px;border:1px solid var(--border);border-radius:4px;">' + _esc(d.commit_sha) + '</code>';
-    }
-    if (d.file) h += '<span style="font-size:11px;color:var(--muted);">· <code>' + _esc(d.file) + '</code></span>';
-    if (origPreview || patchPreview) {
-      h += '<button type="button" onclick="var p=document.getElementById(\'' + uid + '\');p.style.display=p.style.display===\'none\'?\'grid\':\'none\';this.textContent=p.style.display===\'none\'?\'Voir les modifications ▼\':\'Masquer ▲\';" class="btn" style="font-size:11px;padding:2px 9px;margin-left:auto;">Voir les modifications ▼</button>';
-    }
-    h += '</div>';
-    if (d.branch) h += '<p style="margin:5px 0 0;font-size:11px;color:var(--muted);">Branche : <code>' + _esc(d.branch) + '</code></p>';
-    if (origPreview || patchPreview) {
-      h += '<div id="' + uid + '" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">';
-      h += '<div><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">AVANT</div><pre style="margin:0;padding:8px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:4px;font-size:10px;white-space:pre-wrap;word-break:break-all;overflow-x:auto;">' + _esc(origPreview || '') + '</pre></div>';
-      h += '<div><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">APRÈS</div><pre style="margin:0;padding:8px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:4px;font-size:10px;white-space:pre-wrap;word-break:break-all;overflow-x:auto;">' + _esc(patchPreview || '') + '</pre></div>';
-      h += '</div>';
-    }
-    h += '</div>';
-    container.innerHTML = h;
-  }
-
-  document.addEventListener('click', function(e) {
-    // Handle confirm button click (inside already-rendered preview)
-    var confirmBtn = e.target.closest('.gh-confirm-btn');
-    if (confirmBtn) {
-      var ghResultConfirm = confirmBtn.closest('.gh-fix-result');
-      if (!ghResultConfirm) return;
-      var filePath = confirmBtn.dataset.file;
-      var patchedContent = decodeURIComponent(confirmBtn.dataset.content);
-      var origPreview = decodeURIComponent(confirmBtn.dataset.orig || '');
-      var patchPreview = decodeURIComponent(confirmBtn.dataset.patch || '');
-      var urlConfirm = confirmBtn.dataset.url;
-      var issueConfirm = confirmBtn.dataset.issue;
-      var slugConfirm = confirmBtn.dataset.slug;
-      confirmBtn.textContent = 'Création PR…';
-      confirmBtn.disabled = true;
-      fetch('/api/projects/' + encodeURIComponent(slugConfirm) + '/issues/' + encodeURIComponent(issueConfirm) + '/github-fix', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({url: urlConfirm, confirm: true, file_path: filePath, patched_content: patchedContent})
-      }).then(function(r){return r.json();}).then(function(d){
-        if (d.ok && d.pr_url) {
-          _buildGhSuccess(ghResultConfirm, d, origPreview, patchPreview);
-        } else {
-          ghResultConfirm.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">&#x2717; ' + _esc(d.error || 'Erreur') + '</p>';
-        }
-      }).catch(function(err){ ghResultConfirm.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">' + String(err) + '</p>'; });
-      return;
-    }
-
-    var btn = e.target.closest('.gh-fix-btn');
-    if (!btn) return;
-    var row = btn.closest('.url-ai-row');
-    var ghResult = row && row.querySelector('.gh-fix-result');
-    if (!ghResult) return;
-
-    var url = btn.dataset.url;
-    var issue = btn.dataset.issue;
-    var crawl = btn.dataset.crawl;
-    var slug = btn.dataset.slug;
-
-    btn.disabled = true;
-    btn.textContent = 'Analyse…';
-    ghResult.style.display = 'block';
-    ghResult.innerHTML = '<p style="font-size:12px;color:var(--muted);">Analyse du repo en cours…</p>';
-
-    var fixRoute = btn.dataset.fixRoute === 'deep-fix' ? 'deep-fix' : 'github-fix';
-    var fixBody = {url: url, crawl_ts: crawl || ''};
-    if (fixRoute === 'github-fix') fixBody.confirm = false;
-    fetch('/api/projects/' + encodeURIComponent(slug) + '/issues/' + encodeURIComponent(issue) + '/' + fixRoute, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(fixBody)
-    }).then(function(r){return r.json();}).then(function(d){
-      btn.disabled = false;
-      btn.innerHTML = '&#8982; GitHub';
-      if (!d.ok) {
-        if (d.needs_setup) {
-          _showGhSetup(ghResult, d.slug || slug, url, issue, crawl, btn);
-          return;
-        }
-        ghResult.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">&#x2717; ' + _esc(d.error || 'Erreur') + '</p>';
-        return;
-      }
-      if (d.pr_url) {
-        // auto mode — PR already created
-        _buildGhSuccess(ghResult, d, '', '');
-        btn.style.display = 'none';
-        return;
-      }
-      // review mode — show preview
-      var encodedContent = encodeURIComponent(d.patched_content || '');
-      var encodedOrig = encodeURIComponent(d.original_preview || '');
-      var encodedPatch = encodeURIComponent(d.patched_preview || '');
-      var html = '<div style="font-size:12px;line-height:1.6;">';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">';
-      html += '<strong>Fichier :</strong> <code style="font-size:11px;">' + _esc(d.file) + '</code>';
-      html += '</div>';
-      if (d.description) html += '<p style="margin:0 0 8px;color:var(--muted);">' + _esc(d.description) + '</p>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
-      html += '<div><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">AVANT</div><pre style="margin:0;padding:8px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);border-radius:4px;font-size:10px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + _esc(d.original_preview || '') + '</pre></div>';
-      html += '<div><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">APRÈS</div><pre style="margin:0;padding:8px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:4px;font-size:10px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;">' + _esc(d.patched_preview || '') + '</pre></div>';
-      html += '</div>';
-      html += '<button type="button" class="btn primary gh-confirm-btn"'
-            + ' data-file="' + _esc(d.file) + '"'
-            + ' data-content="' + encodedContent + '"'
-            + ' data-orig="' + encodedOrig + '"'
-            + ' data-patch="' + encodedPatch + '"'
-            + ' data-url="' + _esc(url) + '"'
-            + ' data-issue="' + _esc(issue) + '"'
-            + ' data-slug="' + _esc(slug) + '"'
-            + ' style="font-size:12px;">Créer la Pull Request ↗</button>';
-      html += ' <button type="button" onclick="this.closest(\'.gh-fix-result\').style.display=\'none\'" class="btn" style="font-size:12px;">Annuler</button>';
-      html += '</div>';
-      ghResult.innerHTML = html;
-    }).catch(function(err){
-      btn.disabled = false;
-      btn.innerHTML = '&#8982; GitHub';
-      ghResult.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">' + String(err) + '</p>';
-    });
-  });
-
-  /* ── Inline GitHub setup panel ── */
-  function _showGhSetup(ghResult, slug, url, issue, crawl, triggerBtn) {
-    var settingsUrl = '/projects/' + encodeURIComponent(slug) + '/settings/crawl#github-repo';
-    ghResult.style.display = 'block';
-    ghResult.innerHTML = [
-      '<div style="padding:12px 14px;background:var(--bg-card,#18181b);border:1px solid var(--border);border-radius:6px;font-size:12px;">',
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">',
-      '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;opacity:.7"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.49.5.09.66-.22.66-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0112 6.8c.85.004 1.7.115 2.5.337 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.16.58.67.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/></svg>',
-      '<strong>Connectez un dépôt GitHub pour corriger ce code automatiquement</strong>',
-      '</div>',
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">',
-      '<select id="gh-quick-repo-' + issue + '" style="flex:1;min-width:160px;font-size:12px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:inherit;"><option value="">Chargement des dépôts…</option></select>',
-      '<input id="gh-quick-branch-' + issue + '" type="text" value="main" placeholder="branche" style="width:80px;font-size:12px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:inherit;">',
-      '<button type="button" id="gh-quick-connect-' + issue + '" class="btn primary" style="font-size:12px;">Connecter</button>',
-      '<a href="' + settingsUrl + '" class="btn" style="font-size:12px;">Paramètres ↗</a>',
-      '</div>',
-      '<p id="gh-quick-msg-' + issue + '" style="margin:6px 0 0;font-size:11px;color:var(--muted);"></p>',
-      '</div>'
-    ].join('');
-
-    // Load repos into select
-    var sel = document.getElementById('gh-quick-repo-' + issue);
-    fetch('/api/github/repos', {cache:'no-store'})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if (!d.ok) { sel.innerHTML = '<option value="">GitHub non connecté — va dans Comptes &amp; connexions</option>'; return; }
-        sel.innerHTML = '<option value="">— Choisir un dépôt —</option>';
-        (d.repos || []).forEach(function(repo) {
-          var opt = document.createElement('option');
-          opt.value = repo.full_name + '|' + (repo.default_branch || 'main');
-          opt.textContent = repo.full_name + (repo.private ? ' [privé]' : '');
-          sel.appendChild(opt);
-        });
-        sel.addEventListener('change', function() {
-          var parts = (sel.value || '').split('|');
-          if (parts[1]) document.getElementById('gh-quick-branch-' + issue).value = parts[1];
-        });
-      }).catch(function(){sel.innerHTML = '<option value="">Erreur de chargement</option>';});
-
-    // Connect button
-    document.getElementById('gh-quick-connect-' + issue).addEventListener('click', function() {
-      var parts = (sel.value || '').split('|');
-      var repo = parts[0];
-      var branch = document.getElementById('gh-quick-branch-' + issue).value.trim() || 'main';
-      var msg = document.getElementById('gh-quick-msg-' + issue);
-      if (!repo || !repo.includes('/')) { msg.textContent = 'Sélectionne un dépôt.'; msg.style.color='var(--error,#f87171)'; return; }
-      var connectBtn = document.getElementById('gh-quick-connect-' + issue);
-      connectBtn.textContent = 'Connexion…'; connectBtn.disabled = true;
-      fetch('/api/projects/' + encodeURIComponent(slug) + '/github/connect', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({repo:repo, branch:branch, mode:'review'})
-      }).then(function(r){return r.json();}).then(function(d){
-        if (d.ok) {
-          msg.textContent = '✓ Dépôt connecté ! Lancement de l\'analyse…';
-          msg.style.color = 'var(--ok-2)';
-          // Auto-trigger the fix now that the repo is connected
-          setTimeout(function() {
-            ghResult.style.display = 'none';
-            if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.click(); }
-          }, 800);
-        } else {
-          msg.textContent = '✗ ' + (d.error || 'Erreur');
-          msg.style.color = 'var(--error,#f87171)';
-          connectBtn.textContent = 'Connecter'; connectBtn.disabled = false;
-        }
-      }).catch(function(e){
-        msg.textContent = String(e); msg.style.color='var(--error,#f87171)';
-        connectBtn.textContent = 'Connecter'; connectBtn.disabled = false;
-      });
-    });
-  }
 
 })();
 </script>

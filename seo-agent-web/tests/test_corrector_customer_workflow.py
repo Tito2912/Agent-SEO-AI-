@@ -142,12 +142,16 @@ def test_real_customer_structured_advice_checks_access_before_refusal_without_sp
             db.commit()
 
 
-def test_auto_mode_can_apply_the_patch_written_with_the_last_credit(customer):
+def test_auto_mode_requires_review_and_can_confirm_with_the_last_credit(customer):
     state, send, used, _, _ = customer
     state["mode"] = "auto"
     response = send()
     assert response.status_code == 200, response.text
-    assert response.json()["pr_number"] == 42
+    assert response.json()["mode"] == "review" and response.json()["diff"]
+    assert not state["writes"] and not state["posts"]
+    assert used() == 1 and state["models"] == 1
+    confirmed = send(confirm=True, file_path=response.json()["file"], patched_content=response.json()["patched_content"])
+    assert confirmed.status_code == 200 and confirmed.json()["pr_number"] == 42
     assert used() == 1 and state["models"] == 1
 
 

@@ -568,9 +568,10 @@ def test_l_ecran_DISTINGUE_le_brouillon_de_la_pr_prete() -> None:
     """Le drapeau ne sert a rien si l'ecran ne le lit pas."""
     page = (Path(m.__file__).resolve().parents[1] / "templates" / "corrections.html").read_text(
         encoding="utf-8")
-    assert "function statutCorrection" in page, "l'écran n'a plus de message dédié au brouillon"
-    assert "d.verification" in page, "l'écran ne lit pas l'état de vérification"
-    assert "brouillon" in page, "le mot « brouillon » a disparu du message"
+    assert '/static/correction-review.js' in page
+    script = (Path(m.__file__).resolve().parents[1] / 'static' / 'correction-review.js').read_text(encoding='utf-8')
+    assert 'data.verification' in script, "l'écran ne lit pas l'état de vérification"
+    assert 'en brouillon' in script and 'vérifications du dépôt sont en cours' in script
 
 
 # --- le balayage tourne SANS ordonnanceur externe -----------------------------------------

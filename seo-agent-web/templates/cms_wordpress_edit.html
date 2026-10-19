@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% from "_cms_workflow.html" import steps %}
 {% block title %}Préparer une correction WordPress{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Préparer</span>{% endblock %}
 {% block content %}<div class="cms-page">
   <div class="page-header"><h1>Préparer {% if field == 'seo_title' %}le titre SEO{% else %}la méta-description{% endif %}</h1><p class="muted">{{ task.issue_label }}</p></div>

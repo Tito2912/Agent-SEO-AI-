@@ -1,9 +1,2 @@
-{% macro steps(stage, complete=false) %}
-<ol class="cms-steps" aria-label="Progression de votre correction WordPress">
-  {% for label in ['Préparer', 'Relire', 'Appliquer', 'Vérifier'] %}
-    <li class="{% if loop.index < stage or complete %}done{% elif loop.index == stage %}current{% endif %}"{% if loop.index == stage and not complete %} aria-current="step"{% endif %}>
-      <span aria-hidden="true">{% if loop.index < stage or complete %}✓{% else %}{{ loop.index }}{% endif %}</span>{{ label }}
-    </li>
-  {% endfor %}
-</ol>
-{% endmacro %}
+{% from '_correction_progress.html' import steps as correction_steps %}
+{% macro steps(stage, complete=false) %}{{ correction_steps(stage, complete) }}{% endmacro %}

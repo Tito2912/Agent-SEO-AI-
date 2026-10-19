@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
+{% from "_correction_progress.html" import steps %}
 {% block title %}Correction guidée - {{ project.site_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/first_correction.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/first_correction.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" />{% endblock %}
 {% block crumbs %}
   <a href="/">Projets</a><span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span>
@@ -31,14 +32,7 @@
   {% if err %}<div class="alert error" role="alert">{{ err }}</div>
   {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
 
-  {% if not choosing %}<ol class="first-correction-steps" aria-label="Progression de votre correction">
-    <li class="done"><span aria-hidden="true">✓</span>Site ajouté</li>
-    <li class="{% if usable %}done{% endif %}"><span aria-hidden="true">{% if usable %}✓{% else %}2{% endif %}</span>Analyse disponible</li>
-    {% if not clean %}
-      <li class="{% if state %}done{% endif %}"><span aria-hidden="true">{% if state %}✓{% else %}3{% endif %}</span>Correction choisie</li>
-      <li class="{% if state.verified %}done{% endif %}"><span aria-hidden="true">{% if state.verified %}✓{% else %}4{% endif %}</span>Résultat vérifié</li>
-    {% endif %}
-  </ol>{% endif %}
+  {% if not choosing and not clean %}{{ steps(4 if state.declared else 2 if state.pr_url else 1, state.verified) }}{% endif %}
 
   {% if state.verified and not choosing %}
     <section class="card first-correction-result" role="status">
@@ -103,6 +97,18 @@
         <p class="muted">Cette analyse ne permet pas de proposer une page à suivre dans ce parcours. Consultez les anomalies et les indications du rapport pour poursuivre.</p>
       {% endfor %}
       <a class="muted small" href="/projects/{{ slug }}/issues">Voir toutes les anomalies</a>
+    </section>
+  {% elif state.pr_url and not state.declared %}
+    <section class="card first-correction-control">
+      <h2>Relisez et publiez votre proposition</h2>
+      <p>{{ state.label }}</p><p class="first-correction-url">{{ state.url }}</p>
+      <p class="muted">La proposition doit passer les vérifications du dépôt, être relue puis fusionnée sur GitHub. La modification doit ensuite être publiée sur votre site.</p>
+      <a class="btn primary" href="{{ state.pr_url }}" target="_blank" rel="noopener noreferrer">Relire la proposition GitHub</a>
+      <form method="post" action="/projects/{{ slug }}/first-correction">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="action" value="ready" /><input type="hidden" name="task_id" value="{{ state.task_id }}" />
+        <p class="muted small">Une fois la modification visible sur votre site, signalez-la pour passer au contrôle SEO.</p>
+        <button class="btn" type="submit">La modification est en ligne</button>
+      </form>
     </section>
   {% elif state.cms_change_id %}
     <section class="card first-correction-control" id="verification">

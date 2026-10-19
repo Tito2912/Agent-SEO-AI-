@@ -83,6 +83,9 @@ def resume(selected, state, live, last_job, has_crawl, clean):
         elif state.get("declared"):
             result.update(title="Votre modification attend son contrôle",
                           detail="La modification est déclarée. Une nouvelle analyse doit confirmer que le problème a disparu.")
+        elif state.get("pr_url"):
+            result.update(title="Votre proposition attend sa publication",
+                          detail="Relisez et fusionnez la proposition sur GitHub. Une fois la modification en ligne, signalez-la dans le suivi pour faire vérifier le résultat.")
     elif state.get("verified"):
         remaining = any(int(v or 0) for v in (selected.get("issues_distribution") or {}).values())
         result.update(title="Votre première correction est vérifiée", href=base + "/first-correction",
