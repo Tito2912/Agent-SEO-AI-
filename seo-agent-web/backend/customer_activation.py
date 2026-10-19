@@ -122,7 +122,7 @@ def has_baseline_defect(baseline, family, scope, normalize):
         return False
 
 
-def observe_report(database, slug, report, *, user_id=None, verified=False):
+def observe_report(database, slug, report, *, user_id=None, verified=False, crawl_ts=''):
     """Called by the crawl verifier, never from a client note or a declared task status."""
     try:
         with database.session() as db:
@@ -145,6 +145,12 @@ def observe_report(database, slug, report, *, user_id=None, verified=False):
         with database.session() as db:
             _write(db.connection(), project.owner_user_id, **values)
             db.commit()
+        if not verified:
+            try:
+                from . import customer_follow_up
+            except ImportError:
+                import customer_follow_up
+            customer_follow_up.observe(database, project, report, facts, crawl_ts=crawl_ts)
     except Exception as error:
         log.warning('Crawl milestone unavailable (%s)', type(error).__name__)
 

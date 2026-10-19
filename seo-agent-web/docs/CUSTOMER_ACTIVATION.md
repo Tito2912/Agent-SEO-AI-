@@ -1,5 +1,7 @@
 # Suivi du parcours client
 
+Le bloc **Clients à accompagner** complète les cohortes avec quatre situations actuelles et des liens vers les comptes, fiches et exports filtrés. Son périmètre, les preuves conservées et le traitement des historiques incomplets sont décrits dans [CUSTOMER_FOLLOW_UP.md](CUSTOMER_FOLLOW_UP.md).
+
 `/settings/activation`, son API et l’export CSV sont réservés au propriétaire système, avec la même règle d’accès qu’Exploitation. Le parcours, son API et son CSV portent uniquement des agrégats et sont marqués `no-store`. Le nouveau tableau privé des comptes et son export nominatif sont décrits plus bas. La période sélectionne les **dates d’inscription**, en jours calendaires de Paris ; les étapes sont observées jusqu’au moment de consultation. Le tableau hebdomadaire partage exactement ce même périmètre.
 
 Le parcours compte chaque compte une fois : inscription, premier site ajouté, première analyse exploitable, première correction vérifiée. Un bilan complet sans anomalie apparaît séparément et participe à la « première valeur obtenue », sans être présenté comme une correction. Les étapes non atteintes ne sont pas assimilées à des abandons.

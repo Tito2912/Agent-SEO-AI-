@@ -9,13 +9,14 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy import update
 
 try:
-    from . import customer_account_profile, customer_accounts, customer_activation, customer_country, plan_counts, signup_attribution
+    from . import customer_account_profile, customer_accounts, customer_activation, customer_country, customer_follow_up, plan_counts, signup_attribution
     from .models import User
 except ImportError:
     import customer_account_profile
     import customer_accounts
     import customer_activation
     import customer_country
+    import customer_follow_up
     import plan_counts
     import signup_attribution
     from models import User
@@ -54,10 +55,14 @@ def activation_page(request: Request, date_from: str = '', date_to: str = '', ms
         current_plans = plan_counts.snapshot(m.DB)
     except Exception:
         current_plans = None
+    try:
+        follow_up = customer_follow_up.snapshot(m.DB)
+    except Exception:
+        follow_up = None
     response = module().templates.TemplateResponse('settings_activation.html', {
         'request': request, 'project': None, 'metrics': data,
         'campaigns': campaigns, 'campaign_mediums': signup_attribution.MEDIUMS, 'msg': msg, 'err': err,
-        'current_plans': current_plans, 'plan_catalog': m.billing.plan_catalog(),
+        'current_plans': current_plans, 'plan_catalog': m.billing.plan_catalog(), 'follow_up': follow_up,
     })
     response.headers['Cache-Control'] = 'no-store'
     return response
@@ -74,11 +79,15 @@ def current_plan_counts(request: Request):
     return JSONResponse({'ok': True, **data}, headers={'Cache-Control': 'no-store'})
 
 
-def accounts(request, plan, q, usage, page=1, export=False):
+def accounts(request, plan, q, usage, page=1, export=False, attention=''):
     m = module()
     m._require_system_owner(request)
     try:
-        return customer_accounts.snapshot(m.DB, plan=plan, q=q, usage=usage, page=page, export=export)
+        if attention and attention not in {'any', *customer_follow_up.GROUPS}:
+            raise ValueError('Situation à accompagner inconnue.')
+        follow_up = customer_follow_up.snapshot(m.DB) if attention else None
+        return customer_accounts.snapshot(m.DB, plan=plan, q=q, usage=usage, page=page, export=export,
+                                          attention=attention, follow_up=follow_up)
     except ValueError as error:
         raise HTTPException(400, str(error)) from None
     except Exception:
@@ -86,11 +95,12 @@ def accounts(request, plan, q, usage, page=1, export=False):
 
 
 @router.get('/settings/activation/accounts')
-def accounts_page(request: Request, plan: str = '', q: str = '', usage: str = 'all', page: int = 1):
-    data = accounts(request, plan, q, usage, page)
+def accounts_page(request: Request, plan: str = '', q: str = '', usage: str = 'all', page: int = 1, attention: str = ''):
+    data = accounts(request, plan, q, usage, page, attention=attention)
     return module().templates.TemplateResponse('settings_customer_accounts.html', {
         'request': request, 'project': None, 'inventory': data, 'plan_catalog': module().billing.plan_catalog(),
         'usage_filters': customer_accounts.USAGE_FILTERS,
+        'attention_filters': customer_follow_up.GROUPS,
         'verification_mode': customer_country.verification_mode(module()),
     }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
 
@@ -114,8 +124,8 @@ def save_own_country(request: Request, country: str = Form(''), next: str = Form
 
 
 @router.get('/settings/activation/accounts.csv')
-def accounts_csv(request: Request, plan: str = '', q: str = '', usage: str = 'all'):
-    data = accounts(request, plan, q, usage, export=True)
+def accounts_csv(request: Request, plan: str = '', q: str = '', usage: str = 'all', attention: str = ''):
+    data = accounts(request, plan, q, usage, export=True, attention=attention)
     return Response(customer_accounts.csv_bytes(data), media_type='text/csv; charset=utf-8', headers={
         'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
         'Content-Disposition': 'attachment; filename="comptes-clients.csv"',
