@@ -5,16 +5,14 @@ previews:
 services:
   - type: web
     name: noyaru-wordpress-demo
-    runtime: node
+    runtime: docker
+    dockerfilePath: ./seo-agent-web/ops/wordpress-lab/native/Dockerfile
+    dockerContext: ./seo-agent-web/ops/wordpress-lab
     plan: free
     branch: main
     autoDeployTrigger: "off"
-    buildCommand: npm ci --prefix seo-agent-web/ops/wordpress-lab --ignore-scripts --no-audit --no-fund
-    startCommand: node seo-agent-web/ops/wordpress-lab/hosted.mjs
     healthCheckPath: /_noyaru-demo/health
     envVars:
-      - key: NODE_VERSION
-        value: 24.22.0
       - key: NOYARU_WP_DEMO_KEY
         generateValue: true
       - key: NOYARU_WP_DEMO_MINUTES

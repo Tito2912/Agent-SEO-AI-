@@ -16,6 +16,20 @@ permissions:
   contents: read
 
 jobs:
+  wordpress-free-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.0'
+      - name: Build native PHP WordPress demo
+        run: docker build --tag noyaru-wordpress-free --file seo-agent-web/ops/wordpress-lab/native/Dockerfile seo-agent-web/ops/wordpress-lab
+      - name: Check real container with 480 MiB and 0.1 CPU, without swap
+        env:
+          NOYARU_DEMO_CONTAINER_IMAGE: noyaru-wordpress-free
+        run: node seo-agent-web/ops/wordpress-lab/hosted-check.mjs
   wordpress-yoast:
     runs-on: ubuntu-latest
     timeout-minutes: 15

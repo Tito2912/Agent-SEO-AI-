@@ -1,0 +1,33 @@
+<?php
+// Disposable native WordPress only. State is outside the public document root.
+$state = getenv('NOYARU_WP_DEMO_STATE');
+$origin = getenv('NOYARU_WP_DEMO_URL');
+if (!$state || !$origin) throw new RuntimeException('Missing demonstration configuration');
+require $state . '/salts.php';
+define('DB_NAME', 'noyaru_demo');
+define('DB_USER', 'unused');
+define('DB_PASSWORD', 'unused');
+define('DB_HOST', 'unused');
+define('DB_CHARSET', 'utf8');
+define('DB_COLLATE', '');
+define('DB_DIR', $state . '/');
+define('DB_FILE', 'wordpress.sqlite');
+define('WP_HOME', $origin);
+define('WP_SITEURL', $origin);
+define('WP_ENVIRONMENT_TYPE', 'production');
+define('WP_DEBUG', false);
+define('WP_DEBUG_DISPLAY', false);
+define('DISABLE_WP_CRON', true);
+define('DISALLOW_FILE_MODS', true);
+define('AUTOMATIC_UPDATER_DISABLED', true);
+define('WP_HTTP_BLOCK_EXTERNAL', true);
+define('WP_MEMORY_LIMIT', '128M');
+define('WP_MAX_MEMORY_LIMIT', '128M');
+$table_prefix = 'wp_';
+$_SERVER['HTTPS'] = 'on';
+$_SERVER['HTTP_HOST'] = parse_url($origin, PHP_URL_HOST);
+$_SERVER['SERVER_PORT'] = '443';
+$_SERVER['SERVER_NAME'] = $_SERVER['HTTP_HOST'];
+$_SERVER['SERVER_PROTOCOL'] = 'HTTP/1.1';
+if (!defined('ABSPATH')) define('ABSPATH', '/wordpress/');
+require_once ABSPATH . 'wp-settings.php';
