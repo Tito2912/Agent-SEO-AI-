@@ -93,7 +93,7 @@ La rédaction suit votre fréquence, votre jour, votre heure et votre fuseau, da
   personne ne lira l'avertissement, donc une page qu'il ne sait pas relier n'est pas écrite du
   tout.
 
-La publication se règle séparément : **avec votre validation**, la proposition attend votre relecture puis votre autorisation de fusion ; **fusion automatique après contrôles**, elle peut être fusionnée lorsque les vérifications du dépôt passent. Sans contrôle exploitable ou en cas d’échec, une validation est demandée.
+La publication se règle séparément : **avec votre validation**, la proposition attend votre relecture puis votre autorisation de fusion ; **Automatique · fusion après contrôles**, elle peut être fusionnée lorsque les vérifications du dépôt passent. Sans contrôle exploitable ou en cas d’échec, une validation est demandée.
 
 Une proposition validée peut donc rester en attente. Une proposition fusionnée n’est pas une preuve de mise en ligne : celle-ci dépend du déploiement de votre site.
 
