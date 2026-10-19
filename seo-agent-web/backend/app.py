@@ -5259,7 +5259,7 @@ def _verify_corrections_after_crawl(
     user_id: str | None = None, crawl_ts: str = "",
 ) -> None:
     """Resolve only defects whose scope was successfully revisited by a newer crawl."""
-    customer_activation.observe_report(DB, slug, report, user_id=user_id)
+    customer_activation.observe_report(DB, slug, report, user_id=user_id, crawl_ts=crawl_ts)
     try:
         issues = report.get("issues") if isinstance(report.get("issues"), dict) else {}
         if not isinstance(report.get("issues"), dict):
@@ -5453,7 +5453,7 @@ def _verify_corrections_after_crawl(
             if changed:
                 db.commit()
         if activation_verified:
-            customer_activation.observe_report(DB, slug, report, user_id=str(proj.owner_user_id), verified=True)
+            customer_activation.observe_report(DB, slug, report, user_id=str(proj.owner_user_id), verified=True, crawl_ts=crawl_ts)
     except Exception:
         logger.exception("[verify] correction verification failed for slug=%s", slug)
 

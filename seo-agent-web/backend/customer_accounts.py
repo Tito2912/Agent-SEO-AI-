@@ -64,13 +64,21 @@ def csv_cell(value):
     return text
 
 
-def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, account_id=None):
+def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, account_id=None,
+             attention='', follow_up=None):
     catalog = billing.plan_catalog()
     plan, q, usage = plan.strip().lower(), q.strip(), usage.strip()
     if plan and plan not in catalog:
         raise ValueError('Formule inconnue.')
     if usage not in USAGE_FILTERS or len(q) > 320 or page < 1:
         raise ValueError('Filtres de comptes invalides.')
+    if attention:
+        try:
+            from .customer_follow_up import GROUPS
+        except ImportError:
+            from customer_follow_up import GROUPS
+        if attention not in {'any', *GROUPS} or follow_up is None:
+            raise ValueError('Situation à accompagner inconnue.')
     now = datetime.now(timezone.utc)
     projects = select(Project.owner_user_id.label('user_id'), func.count(Project.id).label('site_count')).group_by(
         Project.owner_user_id).subquery()
@@ -121,11 +129,14 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, acco
                               ('with_login', row['last_login_at'])]:
             coverage[name] += int(bool(present))
         row['profile_url'] = '/settings/activation/accounts/' + row['user_id']
+        row['follow_up'] = (follow_up or {}).get('reasons', {}).get(row['user_id'], [])
         last_analysis = row.pop('last_analysis_epoch')
         row['last_analysis_at'] = display_date(datetime.fromtimestamp(last_analysis, timezone.utc)) if last_analysis else ''
         if plan and key != plan:
             continue
         if q.casefold() not in (row['email'] + ' ' + row['user_id']).casefold():
+            continue
+        if attention and not any(attention in {'any', item['key']} for item in row['follow_up']):
             continue
         if ((usage == 'with_site' and not row['site_count']) or (usage == 'without_site' and row['site_count']) or
                 (usage == 'recent_login' and not row['recent_login']) or
@@ -156,8 +167,11 @@ def snapshot(database, *, plan='', q='', usage='all', page=1, export=False, acco
     pages = max(1, (matched + PAGE_SIZE - 1) // PAGE_SIZE)
     page = min(page, pages)
     params = {'plan': plan, 'q': q, 'usage': usage}
+    if attention:
+        params['attention'] = attention
     return {'rows': rows if export else rows[(page - 1) * PAGE_SIZE:page * PAGE_SIZE],
             'total': len(records), 'matched': matched, 'counts': counts, 'coverage': coverage, 'plan': plan, 'q': q, 'usage': usage,
+            'attention': attention,
             'page': page, 'pages': pages, 'first': (page - 1) * PAGE_SIZE + 1 if matched else 0,
             'last': min(page * PAGE_SIZE, matched), 'generated_at': display_date(now),
             'export_url': '/settings/activation/accounts.csv?' + urlencode(params),
@@ -179,11 +193,15 @@ def csv_bytes(data):
                ('last_analysis_at', 'Dernière demande d’analyse (Paris)'),
                ('country', 'Pays renseigné'), ('country_label', 'Nom du pays'), ('country_source', 'Source du pays'),
                ('language', 'Langue renseignée'), ('timezone', 'Fuseau renseigné')]
+    if data.get('attention'):
+        fields += [('follow_up_details', 'Situations à accompagner, sites et dates (Paris)')]
     output = io.StringIO(newline='')
     writer = csv.writer(output, delimiter=';')
     writer.writerow([title for _, title in fields] + ['Lecture (Paris)'])
     for row in data['rows']:
         values = {**row, 'cancel_at_period_end': 'Oui' if row['cancel_at_period_end'] else 'Non',
-                  'google_linked': 'Oui' if row['google_linked'] else 'Non'}
+                  'google_linked': 'Oui' if row['google_linked'] else 'Non',
+                  'follow_up_details': ' | '.join(' · '.join(filter(None, [item['label'], item['site'],
+                      item['date_label'] + ' : ' + item['date']])) for item in row['follow_up'])}
         writer.writerow([csv_cell(values[key]) for key, _ in fields] + [data['generated_at']])
     return ('\ufeff' + output.getvalue()).encode('utf-8')

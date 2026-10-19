@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Parcours clients - Noyaru{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/activation.css?v=1" /><link rel="stylesheet" href="/static/attribution.css?v=1" /><link rel="stylesheet" href="/static/plan-counts.css?v=2" /><script src="/static/plan-counts.js?v=1" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/activation.css?v=1" /><link rel="stylesheet" href="/static/attribution.css?v=1" /><link rel="stylesheet" href="/static/plan-counts.css?v=2" /><link rel="stylesheet" href="/static/customer-follow-up.css?v=1" /><script src="/static/plan-counts.js?v=1" defer></script>{% endblock %}
 {% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/settings/operations">Exploitation</a><span class="crumb-sep">/</span><span class="crumb-current">Parcours clients</span>{% endblock %}
 {% block actions %}<a class="btn" href="/settings/activation.csv?date_from={{ metrics.date_from }}&amp;date_to={{ metrics.date_to }}">Exporter les cohortes (CSV)</a>{% endblock %}
 {% macro number(value) %}{{ "{:,}".format(value).replace(',', ' ') }}{% endmacro %}
@@ -34,6 +34,7 @@
     <p class="small"><a href="/settings/activation/accounts">Tableau détaillé et export des comptes</a></p>
     <details class="live-plans-method"><summary>Quels comptes sont comptés ?</summary><p class="muted small">Un compte est compté une seule fois, selon les droits actuellement accordés par Noyaru. Les essais sont inclus et indiqués séparément. Les administrateurs et les collaborateurs utilisant uniquement le compte d’un hôte sont exclus. Un collaborateur ayant aussi son propre projet ou sa propre facturation reste compté pour son compte personnel.</p><p class="muted small">Les valeurs suivent l’état de facturation synchronisé dans Noyaru. Un abonnement terminé ou impayé revient dans Free si ses droits payants ont cessé ; une résiliation prévue conserve le plan tant que les droits restent ouverts. Le compteur se met à jour après réception de ces changements par Noyaru.</p></details>
   </section>
+  {% include "_customer_follow_up.html" %}
   <form class="activation-period card" method="get" action="/settings/activation">
     <div><h2>Période d’inscription</h2><p class="muted small">Les étapes atteintes depuis l’inscription sont observées jusqu’à aujourd’hui.</p></div>
     <label>Du<input type="date" name="date_from" value="{{ metrics.date_from }}" max="{{ metrics.today }}" required /></label>
