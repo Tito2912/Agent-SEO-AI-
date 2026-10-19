@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -148,6 +149,69 @@ def test_choosing_another_page_follows_the_latest_explicit_choice(journey):
         response = _post(journey, action="select", issue_key="missing_title", url=url, crawl_ts=BASELINE)
         page = journey["client"].get(response.headers["location"])
         assert page.context["state"]["url"] == url
+
+
+def test_customer_can_reopen_cancel_and_submit_the_page_choice(journey):
+    task = _choose(journey)
+    journey["report"](issues={"missing_title": {"count": 2, "examples": [URL, OTHER]}}, urls=(URL, OTHER))
+    path = f'/projects/{journey["slug"]}/first-correction'
+    with m.DB.session() as db:
+        original = db.get(IssueTask, task.id)
+        saved = (original.status, original.note, original.updated_at)
+
+    current = journey["client"].get(path)
+    link = BeautifulSoup(current.text, "html.parser").find("a", string="Choisir une autre page")
+    choice = journey["client"].get(link["href"])
+    assert choice.context["choosing"] and choice.context["state"]["url"] == URL
+    soup = BeautifulSoup(choice.text, "html.parser")
+    form = soup.select_one(f'form[action="{path}"]')
+    selector = form.find("select", attrs={"name": "url"})
+    assert selector.has_attr("required")
+    assert selector.find("option", selected=True)["value"] == ""
+    assert selector.find("option", attrs={"value": OTHER})
+
+    cancel = journey["client"].get(soup.find("a", string="Revenir à ma correction")["href"])
+    assert not cancel.context["choosing"] and cancel.context["state"]["url"] == URL
+    with m.DB.session() as db:
+        original = db.get(IssueTask, task.id)
+        assert (original.status, original.note, original.updated_at) == saved
+
+    payload = {field["name"]: field.get("value", "") for field in form.select("input[name]")}
+    response = journey["client"].post(form["action"], data={**payload, "url": OTHER}, follow_redirects=False)
+    assert response.status_code == 303 and "err=" not in response.headers["location"]
+    selected = journey["client"].get(response.headers["location"])
+    assert not selected.context["choosing"] and selected.context["state"]["url"] == OTHER
+    with m.DB.session() as db:
+        tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == journey["project_id"])))
+        assert len(tasks) == 2
+        original = db.get(IssueTask, task.id)
+        assert (original.status, original.note, original.updated_at) == saved
+
+
+@pytest.mark.parametrize("case", ["unlisted_page", "stale_report"])
+def test_invalid_reselection_keeps_the_current_task_and_reopens_choices(journey, case):
+    task = _choose(journey)
+    if case == "stale_report":
+        journey["report"]("20261002-100000")
+    response = _post(journey, action="select", issue_key="missing_title",
+                     url=OTHER if case == "unlisted_page" else URL, crawl_ts=BASELINE)
+    assert response.status_code == 303 and "choose=1" in response.headers["location"]
+    page = journey["client"].get(response.headers["location"])
+    assert page.context["choosing"] and page.context["state"]["task_id"] == str(task.id)
+    assert "L’analyse a changé ou cette page n’est pas proposée" in page.text
+    with m.DB.session() as db:
+        tasks = list(db.scalars(select(IssueTask).where(IssueTask.project_id == journey["project_id"])))
+        assert len(tasks) == 1 and tasks[0].status == "todo" and tasks[0].url == URL
+
+
+def test_reopening_the_choice_does_not_reset_a_verified_success(journey):
+    _ready(journey)
+    _verify(journey)
+    page = journey["client"].get(f'/projects/{journey["slug"]}/first-correction?choose=1')
+    assert page.context["state"]["verified"] and not page.context["choosing"]
+    assert "Votre première correction est vérifiée" in page.text
+    assert "Choisir une autre page" not in page.text
+    assert _state(journey)["complete"]
 
 
 @pytest.mark.parametrize("case,result", [("still_present", "still_present"), ("not_visited", "unverified"),

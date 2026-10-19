@@ -71,10 +71,14 @@
         </form>
       {% endif %}
     </section>
-  {% elif not state %}
+  {% elif not state or choosing %}
     <section class="card">
-      <h2>Choisissez un problème à traiter</h2>
+      <h2>{% if choosing %}Choisissez une autre page à corriger{% else %}Choisissez un problème à traiter{% endif %}</h2>
       <p class="muted">Commencez par une page. Vous pourrez lire les instructions, modifier votre site puis faire vérifier le résultat.</p>
+      {% if choosing %}
+        <p class="muted small">Votre correction actuelle reste sélectionnée jusqu’à la validation d’un nouveau choix. Retrouvez les corrections déjà suivies dans Corrections.</p>
+        <p><a class="btn" href="/projects/{{ slug }}/first-correction">Revenir à ma correction</a></p>
+      {% endif %}
       {% for candidate in candidates %}
         <article class="first-correction-choice">
           <h3>{{ candidate.label }}</h3>
@@ -85,7 +89,10 @@
             <input type="hidden" name="crawl_ts" value="{{ crawl_ts }}" />
             <input type="hidden" name="issue_key" value="{{ candidate.issue_key }}" />
             <label>Page à corriger
-              <select name="url">{% for url in candidate.urls %}<option value="{{ url }}">{{ url }}</option>{% endfor %}</select>
+              <select name="url" required>
+                {% if candidate.urls|length > 1 %}<option value="" disabled selected>Sélectionnez une page</option>{% endif %}
+                {% for url in candidate.urls %}<option value="{{ url }}">{{ url }}</option>{% endfor %}
+              </select>
             </label>
             <button class="btn {% if loop.first %}primary{% endif %}" type="submit">Choisir cette correction</button>
           </form>
@@ -100,6 +107,7 @@
     <section class="card">
       <h2>{{ state.label }}</h2>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
+      <p><a class="btn" href="/projects/{{ slug }}/first-correction?choose=1">Choisir une autre page</a></p>
       {% include "_cms_guidance.html" %}
       {% if cms_connected and platform_guide.platform == 'wordpress' and platform_guide.seo_plugin in ['', 'yoast'] and platform_guide.field %}
         <p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ state.task_id }}">Préparer dans WordPress</a></p>
