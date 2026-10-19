@@ -19,6 +19,9 @@
 .pa-section-title { font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px; }
 .pa-section-title::after { content:"";flex:1;height:1px;background:var(--border); }
 .gh-connect-card { border:1px dashed var(--border-2);border-radius:8px;padding:24px;text-align:center;background:rgba(255,255,255,.015); }
+@media (max-width: 640px) {
+  .pa-task-row { grid-template-columns: minmax(0, 1fr); }
+}
 </style>
 <script>
 (function(){

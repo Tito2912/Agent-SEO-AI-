@@ -79,6 +79,23 @@ body {
 a { color: var(--link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 10000;
+  padding: 12px 18px;
+  background: var(--panel);
+  border: 1px solid var(--accent-2);
+  border-radius: var(--radius-sm);
+  transform: translateY(-180%);
+}
+.skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--accent-2);
+  outline-offset: 3px;
+}
+
 /* ═══════════════════════════════════════════════════════
    Utilities
 ═══════════════════════════════════════════════════════ */
@@ -102,11 +119,11 @@ a:hover { text-decoration: underline; }
   padding: 48px 18px;
   background: var(--bg);
 }
-.auth-card { width: min(480px, 100%); }
+.auth-card { width: min(480px, 100%); min-width: 0; }
 .auth-card .page-header { margin-bottom: 16px; }
 .auth-card .page-header h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; font-weight: 650; }
 .auth-card .page-header p { margin: 6px 0 0; color: var(--muted); }
-.row-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 14px; }
 .btn.block { width: 100%; justify-content: center; }
 .oauth-logo { width: 17px; height: 17px; display: block; flex: 0 0 17px; }
 .auth-divider {
@@ -1520,7 +1537,7 @@ pre {
 /* ═══════════════════════════════════════════════════════
    App surfaces (content wrapper)
 ═══════════════════════════════════════════════════════ */
-.app-surfaces { }
+.app-surfaces { overflow-wrap: anywhere; }
 
 .app-surfaces .page-header {
   padding-bottom: 16px;

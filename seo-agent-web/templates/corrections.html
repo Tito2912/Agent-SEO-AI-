@@ -780,24 +780,24 @@
 <div class="corr-filterbar">
   <div class="corr-search-wrap">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="search" id="corr-search" placeholder="Rechercher une anomalie ou une URL…" autocomplete="off">
+    <input type="search" id="corr-search" aria-label="Rechercher une anomalie ou une URL" placeholder="Rechercher une anomalie ou une URL…" autocomplete="off">
   </div>
   <div class="corr-filter-sep"></div>
   <div class="corr-filter-selects">
-    <select id="corr-filter-sev" title="Filtrer par sévérité">
+    <select id="corr-filter-sev" aria-label="Filtrer par sévérité" title="Filtrer par sévérité">
       <option value="all">Sévérité</option>
       <option value="error">Erreur</option>
       <option value="warning">Avertissement</option>
       <option value="notice">Info</option>
     </select>
-    <select id="corr-filter-verify" title="Filtrer par vérification">
+    <select id="corr-filter-verify" aria-label="Filtrer par vérification" title="Filtrer par vérification">
       <option value="all">Vérification</option>
       <option value="resolved">✓ Résolues</option>
       <option value="still_present">⚠ Encore présentes</option>
       <option value="unverified">Non vérifiables</option>
       <option value="none">Non vérifiées</option>
     </select>
-    <select id="corr-sort" title="Trier">
+    <select id="corr-sort" aria-label="Trier les corrections" title="Trier">
       <option value="recent">Plus récentes</option>
       <option value="severity">Par sévérité</option>
     </select>

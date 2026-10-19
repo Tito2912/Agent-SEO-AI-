@@ -31913,7 +31913,7 @@ def project_crawls(request: Request, slug: str) -> HTMLResponse:
         "crawls.html",
         {
             "request": request,
-            "project": {"slug": slug},
+            "project": {"slug": slug, "site_name": proj.site_name, "base_url": proj.base_url},
             "slug": slug,
             "crawls": list(reversed(crawls)),
             "timing": timing,

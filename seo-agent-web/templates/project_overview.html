@@ -528,8 +528,8 @@
             <h2>Google Search Console</h2>
             <div class="card-title-actions">
               <div class="pill-select" title="Période du graphique live">
-                <label>Période</label>
-                <select class="js-ts-days" data-widget-id="gsc-live-widget">
+                <label for="gsc-chart-days">Période</label>
+                <select id="gsc-chart-days" class="js-ts-days" data-widget-id="gsc-live-widget">
                   {% for d in [7, 28, 90] %}
                     <option value="{{ d }}" {% if d == gsc_days %}selected{% endif %}>{{ d }}j</option>
                   {% endfor %}
@@ -621,8 +621,8 @@
             <h2>Bing Webmaster Tools</h2>
             <div class="card-title-actions">
               <div class="pill-select" title="Période du graphique live">
-                <label>Période</label>
-                <select class="js-ts-days" data-widget-id="bing-live-widget">
+                <label for="bing-chart-days">Période</label>
+                <select id="bing-chart-days" class="js-ts-days" data-widget-id="bing-live-widget">
                   {% for d in [7, 28, 90] %}
                     <option value="{{ d }}" {% if d == bing_days %}selected{% endif %}>{{ d }}j</option>
                   {% endfor %}

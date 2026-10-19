@@ -1,0 +1,2008 @@
+{
+  "base_commit": "41ad1b7",
+  "lot": 1,
+  "environment": "HTTP local, fresh SQLite, fictional accounts and reports; WordPress API simulated",
+  "display_cases": 204,
+  "screens": [
+    {
+      "screen": "home",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "pricing",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "support",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "status",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "terms",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "privacy",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "legal",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "docs",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "doc",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "wordpress-doc",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "resources",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "article",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "login",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "signup",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "forgot",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "reset",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 400,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 400,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 400,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 400,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "verify",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 400,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 400,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 400,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 400,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "resend",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "first-audit",
+      "role": "empty",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "projects",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Projets"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "overview",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Vue d'ensemble"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "issues",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "issue-detail",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Anomalies"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "corrections",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "first-correction",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "cms",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "CMS et intégrations"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "cms-edit",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "cms-preview",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "cms-batch",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Corrections"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "performance",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Performance"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Performance"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Performance"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Performance"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "keywords",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Mots-clés"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "content",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Contenu Pro+"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "competitors",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Concurrents Pro+"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "backlinks",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Liens entrants"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "opportunities",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Opportunités Solo+"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "automation",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "crawl-settings",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Réglages de l’analyse"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "crawls",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Historique des analyses"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "jobs",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Exécutions"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "billing",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Abonnement"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "accounts",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Comptes & connexions"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "team",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Équipe"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "forbidden",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 403,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 403,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 403,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 403,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "404",
+      "role": "client",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 404,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 404,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 404,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 404,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "session-expired",
+      "role": "public",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": []
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": []
+        }
+      ]
+    },
+    {
+      "screen": "admin-automation",
+      "role": "admin",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Automatisation"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "operations",
+      "role": "admin",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Exploitation"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Exploitation"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Exploitation"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Exploitation"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "system",
+      "role": "admin",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Système"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Système"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Système"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Système"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "activation",
+      "role": "admin",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "customer-accounts",
+      "role": "admin",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        }
+      ]
+    },
+    {
+      "screen": "customer-profile",
+      "role": "admin",
+      "sizes": [
+        {
+          "width": 1440,
+          "status": 200,
+          "scrollWidth": 1440,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 768,
+          "status": 200,
+          "scrollWidth": 768,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 390,
+          "status": 200,
+          "scrollWidth": 390,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        },
+        {
+          "width": 360,
+          "status": 200,
+          "scrollWidth": 360,
+          "errors": [],
+          "activeNav": [
+            "Parcours clients"
+          ]
+        }
+      ]
+    }
+  ],
+  "navigation": {
+    "checks": [
+      "Le premier Tab ouvre le lien d’évitement et Entrée déplace le focus au contenu",
+      "Un seul repère Corrections pour les quatre étapes, réglage CMS distinct",
+      "Analyse et comparaison conservées en consultation ; aucun ancien contexte transmis au suivi courant",
+      "Nom réel du projet dans l’historique et libellés Analyse",
+      "Les deux sélecteurs de période ont un label lié"
+    ],
+    "js_errors": []
+  },
+  "interactions": {
+    "checks": [
+      "Menu mobile au clavier, retour du focus et fenêtre ajout/fermeture",
+      "Aperçu sans écriture puis application WordPress explicitement validée (API simulée)",
+      "Contrôle simulé, résultat vérifié, conservation du succès et choix suivant",
+      "Rétablissement explicite depuis le résultat (API simulée)",
+      "Affichage exécution en attente, en cours, échouée et terminée",
+      "Affichage validation de contenu ; aucune fusion exécutée",
+      {
+        "success_message_present_after_5s": 0
+      }
+    ],
+    "js_errors": [],
+    "external_services": "simulated",
+    "real_client_writes": 0
+  }
+}
