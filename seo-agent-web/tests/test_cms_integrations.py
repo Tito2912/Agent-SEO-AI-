@@ -109,10 +109,16 @@ def test_workflow_keeps_application_followup_and_verified_result_on_the_change(c
     followup = cms["client"].get(f'/projects/{cms["slug"]}/first-correction')
     assert "Suivre ma correction" in followup.text and f"/changes/{change}" in followup.text
     assert "J’ai modifié cette page" not in followup.text
+    corrections = cms["client"].get(f'/projects/{cms["slug"]}/corrections')
+    assert not corrections.context["first_correction_complete"]
+    assert "Être guidé pour ma première correction" in corrections.text
     _verify(cms)
     assert workflow_status(cms, change).json() == {"state": "verified", "poll": False}
     page = change_page(cms, change)
     assert "Correction vérifiée" in page.text and "Continuer les corrections" in page.text
+    corrections = cms["client"].get(f'/projects/{cms["slug"]}/corrections')
+    assert corrections.context["first_correction_complete"]
+    assert "Être guidé pour ma première correction" not in corrections.text
     assert len(writes(cms)) == 1
 
 
@@ -157,7 +163,8 @@ def test_same_anomaly_on_another_url_stays_actionable_while_verified_page_is_his
     assert history.select_one(".corr-item-url").get_text() == URL
     assert history.select_one(".corr-item-label")["href"].endswith("/changes/" + change)
     assert history.select_one("button.corr-group-hd")["aria-expanded"] == "false"
-    assert soup.find("a", string="Choisir une correction guidée →")["href"].endswith("/first-correction?choose=1")
+    assert page.context["first_correction_complete"]
+    assert not soup.find("a", string="Être guidé pour ma première correction →")
 
 
 def test_declared_done_without_evidence_stays_visible_outside_verified_history(cms):

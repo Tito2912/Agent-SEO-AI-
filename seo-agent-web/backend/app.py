@@ -31315,6 +31315,7 @@ def project_corrections(request: Request, slug: str) -> HTMLResponse:
             "fix_candidates": fix_candidates,
             "fix_pack_unlocked": fix_pack_unlocked,
             "stats": stats,
+            "first_correction_complete": any(task.get("verified") for group in groups.values() for task in group),
             "prs_ouvertes": prs_ouvertes,
         },
     )

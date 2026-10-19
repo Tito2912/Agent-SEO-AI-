@@ -236,6 +236,9 @@ def test_reopening_the_choice_does_not_reset_a_verified_success(journey):
     assert following.context["state"]["url"] == OTHER and not following.context["state"]["verified"]
     assert not following.context["choosing"] and "Votre correction est vérifiée" not in following.text
     assert _state(journey)["complete"]  # The first achievement survives a new, unfinished correction.
+    corrections = journey["client"].get(f'/projects/{journey["slug"]}/corrections')
+    assert corrections.context["first_correction_complete"]
+    assert "Être guidé pour ma première correction" not in corrections.text
     with m.DB.session() as db:
         previous = db.get(IssueTask, task.id)
         assert (previous.status, previous.note, previous.updated_at) == saved
@@ -340,6 +343,9 @@ def test_notes_or_a_declared_done_status_cannot_forge_a_verified_result(journey)
     with m.DB.session() as db:
         note = first_correction.note_data(db.get(IssueTask, task.id).note)
     assert not note.get("verify") and note.get("first_correction")
+    corrections = client.get(f'/projects/{journey["slug"]}/corrections')
+    assert not corrections.context["first_correction_complete"]
+    assert "Être guidé pour ma première correction" in corrections.text
 
 
 @pytest.mark.parametrize("field,value", [("url", "https://stranger.example/"), ("issue_key", "invented"),

@@ -150,6 +150,8 @@
 
 /* ── Accelerator (full-width list rows) ── */
 .corr-flow-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.corr-candidates-heading { flex-wrap: wrap; gap: 14px; }
+.corr-candidates-heading > div:first-child { flex: 1 1 320px; min-width: 0; }
 .corr-flow-item { padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.018); }
 .corr-row-main { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .corr-row-info { flex: 1 1 320px; min-width: 0; }
@@ -648,10 +650,10 @@
 {% endif %}
 
 <section class="card">
-  <div class="card-title-row">
+  <div class="card-title-row corr-candidates-heading">
     <div>
       <h2>Anomalies encore détectées</h2>
-      <p><a href="/projects/{{ slug }}/first-correction?choose=1">Choisir une correction guidée →</a></p>
+      {% if not first_correction_complete %}<p><a href="/projects/{{ slug }}/first-correction">Être guidé pour ma première correction →</a></p>{% endif %}
       <p class="muted small">Chaque anomalie concerne les URL de la dernière analyse. Une correction vérifiée sur une page peut encore être nécessaire sur une autre.</p>
       <p class="muted small" style="margin:4px 0 0;">
         {% if current_crawl_ts %}
