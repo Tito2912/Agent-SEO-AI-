@@ -4,7 +4,7 @@ Objectif : tester **Noyaru en ligne → HTTPS public → WordPress + Yoast**, av
 
 ## Déployer une démonstration distincte
 
-Le fichier optionnel [`render.wordpress-demo.yaml`](../../../../render.wordpress-demo.yaml) prépare un **nouveau service**, sans base, disque, groupe de variables ni secret de Noyaru. Après fusion, créer un nouveau Blueprint depuis le dépôt en sélectionnant explicitement ce chemin. Ne jamais synchroniser ce fichier sur le Blueprint de production. Désactiver Auto Sync pour ce nouveau Blueprint. Vérifier le récapitulatif Render avant création ; ne pas sélectionner une offre payante pour contourner une limite sans accord.
+Le fichier optionnel [`render.wordpress-demo.yaml`](../../../render.wordpress-demo.yaml) prépare un **nouveau service**, sans base, disque, groupe de variables ni secret de Noyaru. Après fusion, créer un nouveau Blueprint depuis le dépôt en sélectionnant explicitement ce chemin. Ne jamais synchroniser ce fichier sur le Blueprint de production. Désactiver Auto Sync pour ce nouveau Blueprint. Vérifier le récapitulatif Render avant création ; ne pas sélectionner une offre payante pour contourner une limite sans accord.
 
 L'offre Free comporte des quotas, une mise en veille après inactivité et un stockage éphémère. Le runtime Playground doit encore être validé dans les limites mémoire de cette instance : son démarrage local ne garantit pas son démarrage chez Render. En cas de mémoire insuffisante, arrêter la recette et examiner l'hébergement et son coût. Sources : [services web](https://render.com/docs/web-services), [limites Free](https://render.com/docs/free), [Blueprints](https://render.com/docs/blueprint-spec).
 
