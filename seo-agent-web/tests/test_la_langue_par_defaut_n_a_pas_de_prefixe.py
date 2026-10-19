@@ -99,6 +99,42 @@ def test_un_site_monolingue_a_dossier_de_langue_unique() -> None:
     assert route_de(paths, "content/en/about.mdx") == "/about"
 
 
+# creativeai-tools, 19/10/2026 : UN SEUL attrape-tout de racine sert toutes les langues AVEC leur
+# prefixe, et la langue par defaut vit hors de tout dossier. On retirait `de`/`es`/`fr` : les 63
+# pages traduites tombaient sur les routes anglaises (`/blog-akool` -> 4 fichiers), incorrigibles,
+# et offertes aux corrections de la page anglaise.
+UN_SEUL_ATTRAPE_TOUT = [
+    "package.json", "next.config.mjs", "app/layout.tsx", "app/page.tsx", "app/[...slug]/page.tsx",
+    "content/index.mdx", "content/blog-akool/index.mdx",
+    "content/de/index.mdx", "content/de/blog-akool/index.mdx", "content/de/nur-auf-deutsch/index.mdx",
+    "content/es/blog-akool/index.mdx",
+    "content/it/solo/index.mdx",
+]
+
+
+@pytest.mark.parametrize("fichier,attendue", [
+    ("content/de/blog-akool/index.mdx", "/de/blog-akool"),
+    ("content/es/blog-akool/index.mdx", "/es/blog-akool"),
+    ("content/de/index.mdx", "/de"),
+    # Aucune page anglaise en face, mais la LANGUE est prouvee par une autre de ses pages.
+    ("content/de/nur-auf-deutsch/index.mdx", "/de/nur-auf-deutsch"),
+    ("content/blog-akool/index.mdx", "/blog-akool"),
+])
+def test_une_collision_prouve_que_la_langue_garde_son_prefixe(fichier: str, attendue: str) -> None:
+    assert route_de(UN_SEUL_ATTRAPE_TOUT, fichier) == attendue
+
+
+def test_la_page_anglaise_ne_porte_plus_ses_traductions() -> None:
+    index = repo_index.build_repo_index(UN_SEUL_ATTRAPE_TOUT)
+    assert repo_index.route_files(index, "https://site.test/blog-akool/") == ["content/blog-akool/index.mdx"]
+    assert repo_index.route_files(index, "https://site.test/") == ["app/page.tsx", "content/index.mdx"]
+
+
+def test_une_langue_sans_collision_garde_l_ancienne_regle() -> None:
+    """`it` n'a aucune page qui heurte la racine : rien ne prouve son prefixe, il sort a la racine."""
+    assert route_de(UN_SEUL_ATTRAPE_TOUT, "content/it/solo/index.mdx") == "/solo"
+
+
 def test_sans_attrape_tout_de_racine_rien_ne_change() -> None:
     """La correction ne s'applique QUE sur la branche de l'attrape-tout. Quand chaque langue a
     sa route, la question ne se pose pas — et on ne doit rien toucher."""

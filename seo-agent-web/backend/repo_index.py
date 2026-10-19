@@ -594,15 +594,19 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
     # onto every page of the route. Only mapped when a dynamic template covers the prefix.
     if stack in {STACK_NEXT_APP, STACK_NEXT_PAGES, STACK_ASTRO, STACK_NUXT}:
         prefixes = sorted({v for v in dynamic.values()}, key=len, reverse=True)
-        for p in paths:
-            # Astro's documented location is `src/content/`; Next and Nuxt use `content/`.
-            rel = _strip_src(p)
-            if not rel.startswith("content/") or _ext(rel) not in _CONTENT_EXTS:
-                continue
-            inner = rel[len("content/"):]
-            stem = inner.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-            parents = inner.split("/")[:-1]
-            candidate = _route_from_segments(parents + ([] if stem in {"index", "_index"} else [stem]))
+        # Astro's documented location is `src/content/`; Next and Nuxt use `content/`.
+        contenus = [(p, _route_de_contenu(rel)) for p in paths
+                    if (rel := _strip_src(p)).startswith("content/") and _ext(rel) in _CONTENT_EXTS]
+        # Les langues SERVIES AVEC LEUR PREFIXE par l'attrape-tout de racine, prouvees par
+        # collision : deux pages n'ont pas la meme URL. creativeai-tools, 19/10/2026 : un seul
+        # `app/[...slug]` sert /de /es /fr ; sans prefixe, `content/de/blog-akool` tomberait sur
+        # `/blog-akool`, deja la page de `content/blog-akool` (la langue par defaut, hors de tout
+        # dossier). On retirait pourtant `de` : les 63 pages traduites etaient rattachees aux
+        # routes anglaises — incorrigibles, et offertes aux corrections des pages anglaises.
+        racine = {c for _, c in contenus if not _langue_de_route(c)}
+        prefixees = {_langue_de_route(c) for _, c in contenus
+                     if _langue_de_route(c) and _sans_langue_non_routee(c) in racine}
+        for p, candidate in contenus:
             # CHEZ ASTRO, `src/content/<collection>/` porte UN NIVEAU DE PLUS que chez Next et
             # Nuxt : le premier segment est le nom de la COLLECTION, et rien ne dit qu'il
             # apparaisse dans l'URL. C'est la route dynamique qui decide ou la collection est
@@ -631,8 +635,10 @@ def build_repo_index(all_paths: list[str]) -> dict[str, Any]:
                     break
                 if prefix == "/":
                     # L'attrape-tout de racine prend tout ce qui reste — mais le premier
-                    # segment du candidat vient du NOM D'UN DOSSIER, pas d'une route.
-                    add(_sans_langue_non_routee(candidate), p)
+                    # segment du candidat vient du NOM D'UN DOSSIER, pas d'une route : il ne
+                    # reste dans l'URL que si une collision le prouve (voir `prefixees`).
+                    add(candidate if _langue_de_route(candidate) in prefixees
+                        else _sans_langue_non_routee(candidate), p)
                     break
 
     return {"stack": stack, "routes": routes, "dynamic": dynamic, "shared": sorted(set(shared)),
@@ -684,6 +690,20 @@ def _transposer(chemin_soeur: str, slug_soeur: str, slug_neuf: str, *, date: str
 
 
 _CODE_LANGUE_RE = re.compile(r"^[a-z]{2}(?:-[a-z]{2})?$")
+
+
+def _route_de_contenu(rel: str) -> str:
+    """`content/de/blog/x/index.mdx` -> `/de/blog/x` : la route que dessine l'arborescence."""
+    inner = rel[len("content/"):]
+    stem = inner.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    parents = inner.split("/")[:-1]
+    return _route_from_segments(parents + ([] if stem in {"index", "_index"} else [stem]))
+
+
+def _langue_de_route(route: str) -> str:
+    """Le code de langue qui ouvre la route, ou ''."""
+    premier = next((s for s in str(route or "").split("/") if s), "").lower()
+    return premier if _CODE_LANGUE_RE.match(premier) else ""
 
 
 def _sans_langue_non_routee(candidate: str) -> str:
