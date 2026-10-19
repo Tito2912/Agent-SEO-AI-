@@ -1,6 +1,6 @@
 # Inventaire des écrans et interactions Noyaru
 
-Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `44f575c` (main, 19 octobre 2026).
+Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `41ad1b7` (main, 19 octobre 2026 ; preuves navigateur initiales sur `44f575c`).
 
 193 déclarations de routes ; 50 templates directement référencés par les routes ; 69 templates HTML au total (inclusions et anciens templates compris).
 
@@ -480,12 +480,12 @@ Template de route.
 
 Template de route.
 
-- Ligne 320 : `<details>`
-- Ligne 324 : `<details>`
-- Ligne 328 : `<details>`
-- Ligne 332 : `<details>`
-- Ligne 336 : `<details>`
-- Ligne 340 : `<details>`
+- Ligne 321 : `<details>`
+- Ligne 325 : `<details>`
+- Ligne 329 : `<details>`
+- Ligne 333 : `<details>`
+- Ligne 337 : `<details>`
+- Ligne 341 : `<details>`
 
 ### index.html
 
@@ -755,6 +755,7 @@ Une ligne par contenu versionné. La preuve navigateur de chaque variante est in
 | `/docs/connecter-github` | [connecter-github.md](../content/docs/connecter-github.md) |
 | `/docs/connecter-search-console` | [connecter-search-console.md](../content/docs/connecter-search-console.md) |
 | `/docs/corrections-automatiques` | [corrections-automatiques.md](../content/docs/corrections-automatiques.md) |
+| `/docs/corriger-dans-wordpress` | [corriger-dans-wordpress.md](../content/docs/corriger-dans-wordpress.md) |
 | `/docs/demarrer` | [demarrer.md](../content/docs/demarrer.md) |
 | `/docs/depannage` | [depannage.md](../content/docs/depannage.md) |
 | `/docs/exports-et-rapports` | [exports-et-rapports.md](../content/docs/exports-et-rapports.md) |

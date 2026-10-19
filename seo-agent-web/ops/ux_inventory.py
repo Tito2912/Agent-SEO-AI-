@@ -47,7 +47,7 @@ def inventory() -> str:
     templates = sorted((WEB / "templates").glob("*.html"))
     rendered = {name for _, _, names, _, _, _ in rows for name in names.split(", ") if name != "—"}
     parts = ["# Inventaire des écrans et interactions Noyaru", "",
-             "Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `44f575c` (main, 19 octobre 2026).",
+             "Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `41ad1b7` (main, 19 octobre 2026 ; preuves navigateur initiales sur `44f575c`).",
              "", f"{len(rows)} déclarations de routes ; {len(rendered)} templates directement référencés par les routes ; "
              f"{len(templates)} templates HTML au total (inclusions et anciens templates compris).", "",
              "Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. "
