@@ -38,7 +38,7 @@ from email.message import EmailMessage
 from email.utils import formataddr
 from functools import lru_cache, wraps
 from pathlib import Path
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any, NamedTuple
 from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
@@ -8115,9 +8115,23 @@ def _load_job(job_id: str) -> Job | None:
                 return None
 
 
-def _list_jobs(limit: int = 25) -> list[Job]:
+def _list_jobs(limit: int = 25, *, comptes: Iterable[str] | None = None, slug: str = "",
+               statuts: Iterable[str] | None = None) -> list[Job]:
+    """Les derniers travaux, filtres EN BASE par payeur (`comptes`), projet et statut.
+
+    Sans filtre, ce sont les derniers travaux de TOUS les comptes : un ecran client qui triait
+    ensuite les siens perdait son crawl en cours des que d'autres comptes en avaient lance
+    `limit` depuis. `comptes=None` reste reserve aux vues d'administration.
+    """
+    query = select(JobRecord)
+    if comptes is not None:
+        query = query.where(JobRecord.owner_user_id.in_(sorted({str(c) for c in comptes if c})))
+    if slug:
+        query = query.where(JobRecord.slug == slug)
+    if statuts is not None:
+        query = query.where(JobRecord.status.in_(sorted(set(statuts))))
     with DB.session() as db:
-        rows = list(db.scalars(select(JobRecord).order_by(JobRecord.created_at.desc()).limit(int(limit))))
+        rows = list(db.scalars(query.order_by(JobRecord.created_at.desc()).limit(int(limit))))
 
     jobs: list[Job] = []
     for row in rows:
@@ -8144,6 +8158,17 @@ def _list_jobs(limit: int = 25) -> list[Job]:
         _finalize_stale_job(job)
         jobs.append(job)
     return jobs
+
+
+def _travaux_recents_et_actifs(comptes: Iterable[str] | None, *, limit: int = 100, slug: str = "") -> list[Job]:
+    """Les `limit` derniers travaux, PLUS tous ceux encore actifs, du plus recent au plus ancien.
+
+    Une agence dont le cron met 150 projets en file sortirait les plus anciens de ses 100 derniers
+    travaux alors qu'ils attendent encore : l'ecran dirait « aucune analyse en cours ».
+    """
+    recents = _list_jobs(limit=limit, comptes=comptes, slug=slug)
+    actifs = _list_jobs(limit=500, comptes=comptes, slug=slug, statuts=("queued", "running", "cancel_requested"))
+    return sorted({j.id: j for j in recents + actifs}.values(), key=lambda j: float(j.created_at or 0), reverse=True)
 
 
 _WORKER_STOP = threading.Event()
@@ -11514,9 +11539,9 @@ def _fmt_duration(seconds: int) -> str:
     return f"{h}h{m:02d}m"
 
 
-def _crawl_timing_map(slug: str) -> dict[str, dict[str, Any]]:
+def _crawl_timing_map(slug: str, owner_user_id: str) -> dict[str, dict[str, Any]]:
     timing: dict[str, dict[str, Any]] = {}
-    for j in _list_jobs(limit=500):
+    for j in _list_jobs(limit=500, comptes=[owner_user_id], slug=slug):
         r = j.result if isinstance(j.result, dict) else {}
         if r.get("type") != "crawl" or str(r.get("slug") or "").strip() != slug:
             continue
@@ -14713,21 +14738,14 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
 
     projects.sort(key=lambda p: (p.get("site_name") or p.get("slug") or "").lower())
 
+    is_admin = bool(getattr(user, "is_admin", False))
     try:
-        jobs = _list_jobs(limit=100)
+        # Meme elargissement que la liste : sans lui, un membre verrait « aucun crawl en cours »
+        # pendant qu'un crawl du compte hote tourne, et relancerait par-dessus.
+        jobs = _travaux_recents_et_actifs(None if is_admin else comptes)
     except Exception as _e:
         logger.error("[projects] _list_jobs failed: %s: %s", type(_e).__name__, _e)
         jobs = []
-    is_admin = bool(getattr(user, "is_admin", False))
-    if not is_admin:
-        # Meme elargissement que la liste : sans lui, un membre verrait « aucun crawl en cours »
-        # pendant qu'un crawl du compte hote tourne, et relancerait par-dessus.
-        _comptes = set(comptes)
-        jobs = [
-            j
-            for j in jobs
-            if isinstance(j.result, dict) and str(j.result.get("user_id") or "") in _comptes
-        ]
     live_crawls: dict[str, dict[str, Any]] = {}
     recent_crawl_jobs: dict[str, dict[str, Any]] = {}
     project_owners = {p["slug"]: p["owner_user_id"] for p in projects}
@@ -17911,11 +17929,11 @@ def cron_autopilot(request: Request) -> JSONResponse:
 
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs(request: Request, job: str | None = None) -> HTMLResponse:
-    raw_jobs = _list_jobs(limit=100)
     jobs_view: list[dict[str, Any]] = []
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
     visibles = _comptes_visibles(user)
+    raw_jobs = _travaux_recents_et_actifs(None if is_admin else visibles)
     for j in raw_jobs:
         result = j.result if isinstance(j.result, dict) else None
         if not is_admin:
@@ -18467,7 +18485,7 @@ def project_overview(
         user = getattr(request.state, "user", None)
         is_admin = bool(getattr(user, "is_admin", False))
         visibles = _comptes_visibles(user)
-        for candidate in _list_jobs(limit=100):
+        for candidate in _travaux_recents_et_actifs(None if is_admin else visibles, slug=slug):
             result = candidate.result if isinstance(candidate.result, dict) else {}
             if result.get("type") != "crawl":
                 continue
@@ -18593,7 +18611,7 @@ def project_overview(
     except Exception as e:
         print(f"[OVERVIEW] crawl items error: {type(e).__name__}: {e}")
 
-    crawl_timing = _crawl_timing_map(slug)
+    crawl_timing = _crawl_timing_map(slug, str(proj_row.owner_user_id))
     for h in (data.get("history") or []):
         t = crawl_timing.get(str(h.get("timestamp") or ""), {})
         h["duration_s"] = t.get("duration_s")
@@ -31878,10 +31896,10 @@ def export_project_issue_pdf(request: Request, slug: str, issue_key: str, crawl:
 
 @app.get("/projects/{slug}/crawls", response_class=HTMLResponse)
 def project_crawls(request: Request, slug: str) -> HTMLResponse:
-    _ = _db_project_or_404(request, slug)
+    proj = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_pour_slug(request, slug)
     crawls = dash.list_project_crawls(runs_dir, slug)
-    timing = _crawl_timing_map(slug)
+    timing = _crawl_timing_map(slug, str(proj.owner_user_id))
     resp = templates.TemplateResponse(
         "crawls.html",
         {
