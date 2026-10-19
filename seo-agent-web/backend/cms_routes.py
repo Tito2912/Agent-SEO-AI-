@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 try:
     from . import cms_guidance, correction_guard, first_correction, wordpress_cms as wp
@@ -274,6 +275,35 @@ def wordpress_preview(request: Request, slug: str, task_id: str = Form(...), val
         return redirect(slug, err=str(error))
 
 
+def propose_value(request, project, task, report):
+    """Write one value with the corrector's length writer, bill it, land it as a preview.
+
+    Runs under the payer's correction lock. Raises CmsError — `code="plafond"` when the plan has
+    no correction left, which is what stops a batch instead of failing its pages one by one."""
+    m = app_module()
+    user = request.state.user
+    family = issue_family(task.issue_key)
+    if family not in SUGGESTED:
+        raise wp.CmsError("Noyaru ne rédige pas ce texte : il doit se distinguer des autres pages. Écrivez une valeur propre à cette page.")
+    allowed, message, _, model = m._correction_gate(user, slug=project.slug)
+    if not allowed:
+        raise wp.CmsError(message, code="plafond")
+    c = credentials(project)
+    page = wp.WordPressClient(c).read(task.url)
+    field = cms_guidance.field_for_issue(task.issue_key)
+    kind = "title" if field == "seo_title" else "description"
+    current = "" if family.startswith("missing_") else str(page.get(field) or page.get(field + "_rendered") or "")
+    contexte, langue = page_context(report, task.url, page.get("post_title"))
+    value = " ".join(str(m._length_value_for_page(
+        current=current, kind=kind, url=task.url, site_name=project.site_name or project.slug,
+        model_override=model, contexte=contexte, langue=langue) or "").split())
+    if (not value or "<" in value or ">" in value or value == wp.values(page)[field]
+            or not m._LENGTH_FLOORS[kind] <= m._rendered_len(value) <= m._LENGTH_CEILINGS[kind]):
+        raise wp.CmsError("Noyaru n’a pas trouvé de texte fidèle à la page dans la bonne longueur. Rien n’a été décompté : écrivez-le vous-même.")
+    m._correction_charge(user, 1, slug=project.slug, motif=task.issue_key)
+    return create_preview(request, project, task, c, page, field, value, suggested=True)
+
+
 @router.post("/projects/{slug}/cms/wordpress/suggest")
 def wordpress_suggest(request: Request, slug: str, task_id: str = Form(...)):
     """Noyaru writes the value, as the corrector does in a repository, and bills one correction.
@@ -282,30 +312,10 @@ def wordpress_suggest(request: Request, slug: str, task_id: str = Form(...)):
     reads it and approves. A value that misses the crawler's bounds is not offered, nor billed."""
     m = app_module()
     project = m._db_project_or_404(request, slug)
-    user = request.state.user
     try:
         task, report = task_for_project(project, task_id)
-        family = issue_family(task.issue_key)
-        if family not in SUGGESTED:
-            raise wp.CmsError("Noyaru ne rédige pas ce texte : il doit se distinguer des autres pages. Écrivez une valeur propre à cette page.")
         with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
-            allowed, message, _, model = m._correction_gate(user, slug=slug)
-            if not allowed:
-                raise wp.CmsError(message)
-            c = credentials(project)
-            page = wp.WordPressClient(c).read(task.url)
-            field = cms_guidance.field_for_issue(task.issue_key)
-            kind = "title" if field == "seo_title" else "description"
-            current = "" if family.startswith("missing_") else str(page.get(field) or page.get(field + "_rendered") or "")
-            contexte, langue = page_context(report, task.url, page.get("post_title"))
-            value = " ".join(str(m._length_value_for_page(
-                current=current, kind=kind, url=task.url, site_name=project.site_name or project.slug,
-                model_override=model, contexte=contexte, langue=langue) or "").split())
-            if (not value or "<" in value or ">" in value or value == wp.values(page)[field]
-                    or not m._LENGTH_FLOORS[kind] <= m._rendered_len(value) <= m._LENGTH_CEILINGS[kind]):
-                raise wp.CmsError("Noyaru n’a pas trouvé de texte fidèle à la page dans la bonne longueur. Rien n’a été décompté : écrivez-le ci-dessous.")
-            m._correction_charge(user, 1, slug=slug, motif=task.issue_key)
-            change_id = create_preview(request, project, task, c, page, field, value, suggested=True)
+            change_id = propose_value(request, project, task, report)
         return redirect(slug, path=f"cms/wordpress/changes/{change_id}")
     except wp.CmsError as error:
         return redirect(slug, path="cms/wordpress/edit?" + urlencode({"task_id": task_id}), err=str(error))
@@ -437,18 +447,10 @@ def wordpress_change_status(request: Request, slug: str, change_id: str):
     return JSONResponse({"state": state["state"], "poll": state["poll"]}, headers={"Cache-Control": "no-store"})
 
 
-def start_verification(request, project, change):
-    m = app_module()
-    path = f"cms/wordpress/changes/{change.id}"
-    if change.state != "applied":
-        raise wp.CmsError("Appliquez la correction avant de vérifier son résultat.")
-    state = verification_state(project, change)
-    if state["poll"] or state["state"] == "verified":
-        return redirect(project.slug, path=path)
-    if state["state"] == "superseded":
-        raise wp.CmsError("Une autre opération a remplacé le suivi de cette correction. Reprenez votre correction actuelle.")
+def launch_control_crawl(request, project):
     # Reuse the actual crawl entry point: owner billing, quota, rate limit and worker
     # settings remain identical to a normal analysis. No WordPress write is performed.
+    m = app_module()
     response = m.crawl_project(request, project.slug, config_path=str(m.DEFAULT_CONFIG))
     if isinstance(response, RedirectResponse):
         params = parse_qs(urlsplit(response.headers["location"]).query)
@@ -459,6 +461,20 @@ def start_verification(request, project, change):
         job_id, error = payload.get("job_id", ""), payload.get("error", "")
     if not project_crawl_job(project, job_id):
         raise wp.CmsError(error or "La vérification n’a pas pu démarrer. Réessayez dans un instant.")
+    return job_id
+
+
+def start_verification(request, project, change):
+    m = app_module()
+    path = f"cms/wordpress/changes/{change.id}"
+    if change.state != "applied":
+        raise wp.CmsError("Appliquez la correction avant de vérifier son résultat.")
+    state = verification_state(project, change)
+    if state["poll"] or state["state"] == "verified":
+        return redirect(project.slug, path=path)
+    if state["state"] == "superseded":
+        raise wp.CmsError("Une autre opération a remplacé le suivi de cette correction. Reprenez votre correction actuelle.")
+    job_id = launch_control_crawl(request, project)
     with m.DB.session() as db:
         row = db.get(CmsChange, change.id)
         row.data = {**row.data, "verification_job_id": job_id}
@@ -494,6 +510,39 @@ def confirmed(change, state):
         db.commit()
 
 
+def write_change(change, action, client, live, c, key, *, approved_at=None):
+    """Apply or restore one change on the page just read (`live`), fenced as always.
+
+    `approved_at`: when the customer approved a batch screen, which may be later than the
+    preview itself; the 20-minute freshness runs from the latest of the two. A write already
+    sent that fails is left "unknown", never retried."""
+    current = wp.values(live)
+    if (action == "apply" and change.state == "applied") or (action == "restore" and change.state == "restored"):
+        return False
+    if change.state != ("preview" if action == "apply" else "applied"):
+        raise wp.CmsError("Cette opération ne peut pas être relancée. Vérifiez son état avant de poursuivre.")
+    created = change.created_at.replace(tzinfo=timezone.utc) if change.created_at.tzinfo is None else change.created_at
+    if action == "apply" and datetime.now(timezone.utc) - max(created, approved_at or created) > timedelta(minutes=20):
+        raise wp.CmsError("Cet aperçu a expiré. Préparez un nouvel aperçu avec les valeurs actuelles de la page.")
+    expected = change.data["before" if action == "apply" else "after"]
+    if current != expected:
+        raise wp.CmsError("La page a changé depuis l’aperçu. L’opération est arrêtée pour conserver les modifications actuelles.")
+    field = change.data["field"]
+    destination = change.data["after" if action == "apply" else "before"]
+    save_state(change.id, "applying" if action == "apply" else "restoring", pending=action,
+               connection=wp.fingerprint(c, key))
+    correction_guard.ensure_active()
+    try:
+        result = client.update(live, {field: destination[field]})
+        if wp.values(result) != destination:
+            raise wp.CmsError("WordPress a renvoyé des valeurs différentes de celles attendues.", uncertain=True)
+    except wp.CmsError:
+        save_state(change.id, "unknown")
+        raise
+    confirmed(change, "applied" if action == "apply" else "restored")
+    return True
+
+
 @router.post("/projects/{slug}/cms/wordpress/changes/{change_id}/{action}")
 def wordpress_change_action(request: Request, slug: str, change_id: str, action: str):
     m = app_module()
@@ -501,7 +550,6 @@ def wordpress_change_action(request: Request, slug: str, change_id: str, action:
     if action not in {"apply", "restore", "check", "verify"}:
         raise HTTPException(400, "unknown_cms_action")
     path = f"cms/wordpress/changes/{change_id}"
-    sending = False
     try:
         with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
             change = load_change(project, change_id)
@@ -525,32 +573,12 @@ def wordpress_change_action(request: Request, slug: str, change_id: str, action:
                     raise wp.CmsError("Les valeurs attendues ne sont pas confirmées. Vérifiez la page dans WordPress ; aucune nouvelle écriture n’est relancée automatiquement.")
                 confirmed(change, "applied" if pending == "apply" else "restored")
                 return redirect(slug, path=path)
-            if (action == "apply" and change.state == "applied") or (action == "restore" and change.state == "restored"):
+            if not write_change(change, action, client, live, c, key):
                 return redirect(slug, path=path)
-            if change.state != ("preview" if action == "apply" else "applied"):
-                raise wp.CmsError("Cette opération ne peut pas être relancée. Vérifiez son état avant de poursuivre.")
-            created = change.created_at.replace(tzinfo=timezone.utc) if change.created_at.tzinfo is None else change.created_at
-            if action == "apply" and datetime.now(timezone.utc) - created > timedelta(minutes=20):
-                raise wp.CmsError("Cet aperçu a expiré. Préparez un nouvel aperçu avec les valeurs actuelles de la page.")
-            expected = change.data["before" if action == "apply" else "after"]
-            if current != expected:
-                raise wp.CmsError("La page a changé depuis l’aperçu. L’opération est arrêtée pour conserver les modifications actuelles.")
-            field = change.data["field"]
-            destination = change.data["after" if action == "apply" else "before"]
-            save_state(change.id, "applying" if action == "apply" else "restoring", pending=action,
-                       connection=wp.fingerprint(c, key))
-            correction_guard.ensure_active()
-            sending = True
-            result = client.update(live, {field: destination[field]})
-            if wp.values(result) != destination:
-                raise wp.CmsError("WordPress a renvoyé des valeurs différentes de celles attendues.", uncertain=True)
-            confirmed(change, "applied" if action == "apply" else "restored")
         m._audit_log(request, action=f"cms.wordpress.{action}", status="ok", target_type="project", target_id=slug,
                      meta={"change_id": change_id})
         return redirect(slug, path=path)
     except wp.CmsError as error:
-        if sending:
-            save_state(change_id, "unknown")
         return redirect(slug, path=path, err=str(error))
     except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
         return redirect(slug, path=path, err="Une opération est en cours ou le suivi n’est pas disponible. Vérifiez l’état avant de poursuivre.")
@@ -559,3 +587,227 @@ def wordpress_change_action(request: Request, slug: str, change_id: str, action:
     except Exception:
         # The persisted applying/restoring state fences retries after a lost response or DB failure.
         return redirect(slug, path=path, err="Le résultat n’a pas pu être enregistré. Vérifiez l’état de la page avant de poursuivre.")
+
+
+BATCH_ROWS = 100
+ACTIVE = {"preview", "applying", "restoring", "unknown", "applied"}
+
+
+def batch_href(project, issue_key):
+    """The batch screen, when this anomaly can be corrected there; "" otherwise."""
+    # The issue page reads its project defensively (`getattr`): so does this.
+    if issue_family(issue_key) not in SUGGESTED or not all(getattr(project, name, None) for name in ("id", "slug", "owner_user_id")):
+        return ""
+    site = cms_guidance.settings(getattr(project, "settings", None))
+    if site["platform"] != "wordpress" or site["seo_plugin"] not in {"", "yoast"}:
+        return ""
+    if not app_module()._user_connection_row(user_id=str(project.owner_user_id), key=connection_key(project)):
+        return ""
+    return f"/projects/{project.slug}/cms/wordpress/issues/{issue_key}"
+
+
+def latest_report(project):
+    m = app_module()
+    runs = m._runs_dir_for_user(str(project.owner_user_id))
+    for ts in reversed(m.dash.list_project_crawls(runs, project.slug)):
+        report = m.dash.load_report_json(runs, project.slug, ts)
+        if isinstance(report, dict) and report:
+            return ts, report
+    return "", {}
+
+
+def batch_scope(project, issue_key):
+    """The pages of this anomaly in the latest analysis that the connected WordPress holds."""
+    m = app_module()
+    if issue_family(issue_key) not in SUGGESTED or not cms_guidance.field_for_issue(issue_key):
+        raise HTTPException(404, "cms_batch_not_available")
+    ts, report = latest_report(project)
+    issue = (report.get("issues") or {}).get(issue_key)
+    client = wp.WordPressClient(credentials(project))
+    urls = [url for url in m.dash.extract_impacted_pages(issue_key, issue) if client.contains(url)] if isinstance(issue, dict) else []
+    return ts, report, urls[:BATCH_ROWS], max(0, len(urls) - BATCH_ROWS)
+
+
+def ensure_task(project, user, issue_key, url, ts):
+    m = app_module()
+    meta = m.dash.issue_meta(issue_key)
+    with m.DB.session() as db:
+        query = select(IssueTask).where(IssueTask.project_id == str(project.id), IssueTask.issue_key == issue_key,
+                                        IssueTask.url == url)
+        task = db.scalar(query)
+        if task is None:
+            db.add(IssueTask(project_id=str(project.id), user_id=str(project.owner_user_id), created_by=str(user.id),
+                             issue_key=issue_key, issue_label=meta.label, url=url, crawl_ts=ts,
+                             status="todo", severity=meta.severity))
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+            task = db.scalar(query)
+        elif task.status in {"todo", "ignored"} and task.crawl_ts != ts:
+            # A new attempt starts from the analysis that flags the page now; a task in progress
+            # keeps the baseline its receipt is measured against.
+            task.crawl_ts, task.status = ts, "todo"
+            db.commit()
+        return str(task.id)
+
+
+def followed(project, issue_key, urls, days=30):
+    """Pages written for this anomaly lately but no longer flagged: a resolved page leaves the
+    report, and its verdict must not leave the batch screen with it."""
+    m = app_module()
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    with m.DB.session() as db:
+        rows = db.execute(select(IssueTask.url).join(CmsChange, CmsChange.task_id == IssueTask.id).where(
+            IssueTask.project_id == str(project.id), IssueTask.issue_key == issue_key,
+            CmsChange.state.in_(["applying", "restoring", "unknown", "applied"]), CmsChange.created_at >= since))
+        return [url for url in dict.fromkeys(row[0] for row in rows) if url not in urls]
+
+
+def batch_rows(project, issue_key, urls):
+    m = app_module()
+    with m.DB.session() as db:
+        tasks = {task.url: task for task in db.scalars(select(IssueTask).where(
+            IssueTask.project_id == str(project.id), IssueTask.issue_key == issue_key, IssueTask.url.in_(urls)))}
+        changes = {}
+        for change in db.scalars(select(CmsChange).where(CmsChange.project_id == str(project.id),
+                                                         CmsChange.task_id.in_([str(t.id) for t in tasks.values()]))
+                                 .order_by(CmsChange.created_at.desc())):
+            changes.setdefault(change.task_id, change)
+    rows = []
+    for url in urls:
+        task = tasks.get(url)
+        change = changes.get(str(task.id)) if task else None
+        if change is not None and change.state not in ACTIVE:
+            change = None  # restored: the page is back to square one
+        rows.append({"url": url, "task": task, "change": change,
+                     "verification": verification_state(project, change) if change is not None and change.state == "applied" else None})
+    return rows
+
+
+@router.get("/projects/{slug}/cms/wordpress/issues/{issue_key}")
+def wordpress_batch(request: Request, slug: str, issue_key: str, msg: str = "", err: str = ""):
+    m = app_module()
+    project = m._db_project_or_404(request, slug)
+    try:
+        ts, _, urls, beyond = batch_scope(project, issue_key)
+    except wp.CmsError as error:
+        return redirect(slug, err=str(error))
+    rows = batch_rows(project, issue_key, urls + followed(project, issue_key, urls))
+    plafond = m._plafond_de_correction(request.state.user, slug=slug)
+    response = m.templates.TemplateResponse("cms_wordpress_batch.html", {
+        "request": request, "project": project, "slug": slug, "issue_key": issue_key, "crawl_ts": ts,
+        "label": m.dash.issue_meta(issue_key).label, "rows": rows, "beyond": beyond,
+        "field": cms_guidance.field_for_issue(issue_key),
+        "remaining": None if plafond.illimite else plafond.applique, "now": datetime.now(timezone.utc).isoformat(),
+        "msg": msg, "err": err, "poll": any((row["verification"] or {}).get("poll") for row in rows),
+    })
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _batch_answer(request, slug, issue_key, *, ok, msg="", err="", **extra):
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"ok": ok, "error": err, **extra}, status_code=200 if ok else 422)
+    return redirect(slug, path=f"cms/wordpress/issues/{issue_key}", msg=msg, err=err)
+
+
+@router.post("/projects/{slug}/cms/wordpress/issues/{issue_key}/propose")
+def wordpress_batch_propose(request: Request, slug: str, issue_key: str, url: str = Form(...)):
+    """One page of the batch. The browser calls it page after page: forty AI writes in a single
+    request would outlast any proxy, and one stuck page would take the others with it."""
+    m = app_module()
+    project = m._db_project_or_404(request, slug)
+    try:
+        ts, _, urls, _ = batch_scope(project, issue_key)
+        if url not in urls:
+            raise wp.CmsError("Cette page n’est pas signalée pour cette anomalie dans la dernière analyse.")
+        task, report = task_for_project(project, ensure_task(project, request.state.user, issue_key, url, ts))
+        with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
+            change_id = propose_value(request, project, task, report)
+        return _batch_answer(request, slug, issue_key, ok=True, change_id=change_id)
+    except wp.CmsError as error:
+        return _batch_answer(request, slug, issue_key, ok=False, err=str(error), stop=error.code == "plafond")
+    except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
+        return _batch_answer(request, slug, issue_key, ok=False, stop=True,
+                             err="Une opération est en cours sur ce compte. Réessayez dans un instant.")
+
+
+@router.post("/projects/{slug}/cms/wordpress/issues/{issue_key}/apply")
+def wordpress_batch_apply(request: Request, slug: str, issue_key: str, pick: list[str] = Form(default=[]),
+                          ids: list[str] = Form(default=[]), values: list[str] = Form(default=[]),
+                          shown_at: str = Form(default="")):
+    """One approval for the selected previews; each page is still written and read back alone."""
+    m = app_module()
+    project = m._db_project_or_404(request, slug)
+    if not pick:
+        return redirect(slug, path=f"cms/wordpress/issues/{issue_key}", err="Cochez au moins une page à enregistrer.")
+    edited = dict(zip(ids, values))
+    shown = first_correction.timestamp(shown_at)
+    approved_at = min(shown, datetime.now(timezone.utc)) if shown else None
+    written, failures = 0, []
+    try:
+        with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
+            c = credentials(project)
+            key = fingerprint_key()
+            client = wp.WordPressClient(c)
+            for change_id in dict.fromkeys(pick):
+                change = load_change(project, change_id)
+                try:
+                    with m.DB.session() as db:
+                        task = db.get(IssueTask, change.task_id)
+                    if task is None or task.issue_key != issue_key or change.state != "preview":
+                        raise wp.CmsError("Cet aperçu ne fait plus partie de ce lot.")
+                    field = change.data["field"]
+                    value = " ".join(str(edited.get(change_id, change.data["after"][field]) or "").split())
+                    if value != change.data["after"][field]:
+                        if (not value or len(value) > (400 if field == "seo_title" else 2000)
+                                or "<" in value or ">" in value or "\0" in value):
+                            raise wp.CmsError("Saisissez un texte simple, sans balise HTML.")
+                        save_state(change.id, "preview", after={**change.data["after"], field: value}, edited=True)
+                        change = load_change(project, change_id)
+                    if not wp.same_connection(c, change.data["connection"], key):
+                        raise wp.CmsError("La connexion WordPress a changé. Préparez un nouvel aperçu avec la connexion actuelle.")
+                    live = client.read(change.data["url"])
+                    if live["post_id"] != change.data["post_id"]:
+                        raise wp.CmsError("Cette adresse ne correspond plus à la page prévue dans l’aperçu.")
+                    written += bool(write_change(change, "apply", client, live, c, key, approved_at=approved_at))
+                except wp.CmsError as error:
+                    failures.append(f"{change.data['url']} : {error}")
+    except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
+        failures.append("Une opération est en cours ou le suivi n’est pas disponible. Vérifiez l’état avant de poursuivre.")
+    except wp.CmsError as error:
+        failures.append(str(error))
+    m._audit_log(request, action="cms.wordpress.batch_apply", status="ok" if not failures else "partial",
+                 target_type="project", target_id=slug, meta={"issue_key": issue_key, "written": written,
+                                                              "failed": len(failures)})
+    return redirect(slug, path=f"cms/wordpress/issues/{issue_key}",
+                    msg=f"{written} page(s) enregistrée(s) dans WordPress." if written else "",
+                    err=" · ".join(failures[:3]) + (f" (+{len(failures) - 3})" if len(failures) > 3 else ""))
+
+
+@router.post("/projects/{slug}/cms/wordpress/issues/{issue_key}/verify")
+def wordpress_batch_verify(request: Request, slug: str, issue_key: str):
+    """ONE control crawl for every page of the batch, not one per page."""
+    m = app_module()
+    project = m._db_project_or_404(request, slug)
+    try:
+        with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
+            _, _, urls, _ = batch_scope(project, issue_key)
+            rows = [row for row in batch_rows(project, issue_key, urls + followed(project, issue_key, urls))
+                    if row["verification"]]
+            pending = [row for row in rows if row["verification"]["state"] not in {"verified", "superseded"}]
+            if not pending:
+                raise wp.CmsError("Aucune modification enregistrée n’attend de vérification.")
+            if any(row["verification"]["poll"] for row in rows):
+                return redirect(slug, path=f"cms/wordpress/issues/{issue_key}")
+            job_id = launch_control_crawl(request, project)
+            for row in pending:
+                save_state(row["change"].id, "applied", verification_job_id=job_id)
+        return redirect(slug, path=f"cms/wordpress/issues/{issue_key}",
+                        msg="L’analyse de contrôle est lancée pour toutes les pages enregistrées.")
+    except wp.CmsError as error:
+        return redirect(slug, path=f"cms/wordpress/issues/{issue_key}", err=str(error))
+    except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
+        return redirect(slug, path=f"cms/wordpress/issues/{issue_key}",
+                        err="Une opération est en cours sur ce compte. Réessayez dans un instant.")

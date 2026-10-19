@@ -1,0 +1,127 @@
+{% extends "layout.html" %}
+{% block title %}Corriger dans WordPress - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% if poll %}<meta http-equiv="refresh" content="20" />{% endif %}{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">{{ label }}</span>{% endblock %}
+{% block content %}
+{#- LE LOT WORDPRESS (19/10/2026) : toutes les pages d'une anomalie, une validation, UNE analyse de
+    controle. Les textes se redigent page par page depuis le navigateur : quarante ecritures d'IA
+    dans une seule requete depasseraient n'importe quel proxy. -#}
+{% set field_label = 'Titre SEO' if field == 'seo_title' else 'Méta-description' %}
+{% set a_preparer = rows | selectattr('change', 'none') | list %}
+{% set apercus = rows | rejectattr('change', 'none') | selectattr('change.state', 'equalto', 'preview') | list %}
+{% set a_confirmer = rows | rejectattr('change', 'none') | selectattr('change.state', 'in', ['applying', 'restoring', 'unknown']) | list %}
+{% set enregistrees = rows | rejectattr('verification', 'none') | list %}
+{% set etats = {'verified': 'Résolu, confirmé par l’analyse', 'still_present': 'Encore signalé', 'unverified': 'Non confirmé',
+                'failed': 'Contrôle interrompu', 'running': 'Contrôle en cours', 'finishing': 'Contrôle en cours',
+                'pending': 'Enregistrée, à vérifier', 'superseded': 'Remplacée par une autre opération'} %}
+<div class="cms-page">
+  <div class="page-header">
+    <h1>{{ label }}</h1>
+    <p class="muted">{{ rows | length }} page(s) signalée(s) dans la dernière analyse · {{ field_label }} · WordPress + Yoast SEO</p>
+  </div>
+  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
+  {% if msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+
+  {% if a_preparer %}
+    <section class="card" id="batch-prepare">
+      <h2>1. Faire rédiger les textes</h2>
+      <p>Noyaru rédige un texte pour chaque page, à partir de son contenu et dans la bonne longueur. Chaque texte compte pour une correction IA{% if remaining is not none %} : il vous en reste {{ remaining }} ce mois-ci{% endif %}. Rien n’est écrit sur votre site à cette étape.</p>
+      {% if remaining is none or remaining > 0 %}
+        <button class="btn primary" type="button" id="batch-propose-all"
+                data-action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/propose"
+                data-limit="{{ remaining if remaining is not none else '' }}">Proposer les textes ({{ a_preparer | length if remaining is none else [a_preparer | length, remaining] | min }} page(s))</button>
+        <p class="muted small" id="batch-progress" aria-live="polite"></p>
+      {% else %}
+        <p class="muted">Votre forfait n’a plus de correction IA ce mois-ci. Vous pouvez écrire chaque texte vous-même.</p>
+      {% endif %}
+      <ul class="cms-history">
+        {% for row in a_preparer %}
+          <li data-batch-url="{{ row.url }}">
+            <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>
+            <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/propose" class="inline">
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="url" value="{{ row.url }}" />
+              <button class="btn small" type="submit" data-busy-label="Rédaction…">Proposer</button>
+            </form>
+            {% if row.task %}<a class="small" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ row.task.id }}">Écrire moi-même</a>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if apercus %}
+    <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/apply" class="card" id="batch-review">
+      <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+      <input type="hidden" name="shown_at" value="{{ now }}" />
+      <h2>2. Relire et enregistrer</h2>
+      <p class="muted">Corrigez un texte si besoin, décochez une page pour la laisser de côté. Chaque page est relue dans WordPress juste avant d’être modifiée, et son état est vérifié après.</p>
+      {% for row in apercus %}{% set ch = row.change %}{% set f = ch.data.field %}
+        <div class="cms-form" data-batch-change="{{ ch.id }}">
+          <label><input type="checkbox" name="pick" value="{{ ch.id }}" checked /> <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>{% if ch.data.suggested %} <span class="badge">proposé par Noyaru</span>{% endif %}</label>
+          <p class="muted small">Avant : {{ ch.data.before[f] if ch.data.before[f] is not none else (ch.data.rendered_before or 'Non renseigné') }}</p>
+          <input type="hidden" name="ids" value="{{ ch.id }}" />
+          <label>{{ field_label }}{% if f == 'seo_title' %}<input name="values" value="{{ ch.data.after[f] }}" maxlength="400" />{% else %}<textarea name="values" rows="3" maxlength="2000">{{ ch.data.after[f] }}</textarea>{% endif %}</label>
+        </div>
+      {% endfor %}
+      <button class="btn primary" type="submit" data-busy-label="Enregistrement dans WordPress…">Enregistrer la sélection dans WordPress</button>
+      <p class="muted small">Ces aperçus restent valables 20 minutes après l’affichage de cette page.</p>
+    </form>
+  {% endif %}
+
+  {% if enregistrees or a_confirmer %}
+    <section class="card" id="batch-verify">
+      <h2>3. Vérifier le résultat</h2>
+      <ul class="cms-history">
+        {% for row in a_confirmer %}
+          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small">À confirmer dans WordPress</span></li>
+        {% endfor %}
+        {% for row in enregistrees %}
+          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small" data-batch-state="{{ row.verification.state }}">{{ etats.get(row.verification.state, 'Enregistrée') }}</span></li>
+        {% endfor %}
+      </ul>
+      {% if poll %}
+        <p role="status">L’analyse de contrôle est en cours. Cette page s’actualise toute seule.</p>
+      {% elif enregistrees | rejectattr('verification.state', 'in', ['verified', 'superseded']) | list %}
+        <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/verify">
+          <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+          <button class="btn {% if not apercus %}primary{% endif %}" type="submit" data-busy-label="Lancement de la vérification…">Lancer une analyse de contrôle</button>
+        </form>
+        <p class="muted small">Une seule analyse vérifie toutes les pages enregistrées. Elle est décomptée du quota habituel de pages. Si votre site utilise un cache, videz-le avant.</p>
+      {% endif %}
+      <p class="muted small">Chaque page garde son suivi détaillé, où l’on peut aussi rétablir sa valeur précédente.</p>
+    </section>
+  {% endif %}
+
+  {% if beyond %}<p class="muted small">{{ beyond }} autre(s) page(s) sont signalées pour cette anomalie : elles apparaîtront ici une fois celles-ci traitées.</p>{% endif %}
+  <a href="/projects/{{ slug }}/issues/{{ issue_key }}">Revenir à l’anomalie</a>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var button = document.getElementById('batch-propose-all');
+  if (!button) { return; }
+  button.addEventListener('click', async function () {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('[data-batch-url]'));
+    var limit = parseInt(button.dataset.limit || '', 10);
+    if (!isNaN(limit)) { rows = rows.slice(0, limit); }
+    var progress = document.getElementById('batch-progress');
+    var csrf = document.querySelector('#batch-prepare input[name="_csrf"]').value;
+    var done = 0, errors = [];
+    button.disabled = true;
+    for (var i = 0; i < rows.length; i++) {
+      progress.textContent = 'Rédaction ' + (i + 1) + ' sur ' + rows.length + '…';
+      var body = new URLSearchParams({_csrf: csrf, url: rows[i].dataset.batchUrl});
+      try {
+        var response = await fetch(button.dataset.action, {method: 'POST', body: body, credentials: 'same-origin',
+                                                           headers: {'Accept': 'application/json'}});
+        var data = await response.json();
+        if (data.ok) { done++; } else { errors.push(data.error); if (data.stop) { break; } }
+      } catch (e) { errors.push('La rédaction a été interrompue.'); break; }
+    }
+    var query = new URLSearchParams();
+    if (done) { query.set('msg', done + ' texte(s) proposé(s) : relisez-les avant de les enregistrer.'); }
+    if (errors.length) { query.set('err', errors.length + ' page(s) sans proposition : ' + errors[0]); }
+    window.location.href = window.location.pathname + '?' + query.toString();
+  });
+});
+</script>
+{% endblock %}

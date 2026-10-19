@@ -19007,6 +19007,7 @@ def project_issue_detail(
             "gh_tasks": gh_tasks,
             "correction_controls": correction_controls,
             "platform_guide": cms_guidance.for_issue(getattr(proj_row, "settings", None), issue_key),
+            "wordpress_batch_href": cms_batch_href(proj_row, issue_key),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -37877,9 +37878,9 @@ def cron_verify_pull_requests(request: Request) -> JSONResponse:
 
 
 try:
-    from .cms_routes import connection_report as cms_connection_report, router as cms_router
+    from .cms_routes import batch_href as cms_batch_href, connection_report as cms_connection_report, router as cms_router
 except ImportError:
-    from cms_routes import connection_report as cms_connection_report, router as cms_router
+    from cms_routes import batch_href as cms_batch_href, connection_report as cms_connection_report, router as cms_router
 app.include_router(cms_router)
 
 
