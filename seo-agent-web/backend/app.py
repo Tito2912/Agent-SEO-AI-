@@ -8275,6 +8275,41 @@ def _resume_de_job(job_id: str) -> str:
     return "%s %s" % (kind, slug) if slug else kind
 
 
+def _battre_pour_le_job(job_id: str, arret: threading.Event) -> None:
+    """Le signe de vie d'un job, tant que le worker l'execute.
+
+    `updated_at` n'avancait que lorsque le crawler IMPRIMAIT une ligne : une phase muette et un
+    worker mort se ressemblaient. 19/10/2026, creativeai-tools : un deploiement a tue le worker
+    a 50 pages sur 300, et le job est reste « en cours » — le seul rattrapage etait un filet de
+    12 h. Ce fil ne touche QUE `updated_at`, et seulement si le job tourne encore ; il meurt
+    avec le job, ou avec le worker — c'est tout l'interet.
+    """
+    intervalle = max(0.01, float(os.getenv("SEO_AGENT_JOB_HEARTBEAT_SECONDS", "30")))
+    while not arret.wait(intervalle):
+        try:
+            with DB.session() as db:
+                db.execute(update(JobRecord)
+                           .where(JobRecord.id == str(job_id), JobRecord.status == "running")
+                           .values(updated_at=time.time()))
+                db.commit()
+        except Exception as e:
+            logger.warning("[WORKER] battement de %s impossible : %s: %s", str(job_id)[:8], type(e).__name__, e)
+
+
+def _executer_avec_battement(job_id: str) -> None:
+    """Executer un job en battant pour lui du debut a la fin, phases muettes comprises."""
+    arret = threading.Event()
+    fil = threading.Thread(target=_battre_pour_le_job, args=(job_id, arret), daemon=True)
+    fil.start()
+    try:
+        _execute_queued_job(job_id)
+    finally:
+        arret.set()
+        # Attendre le fil : sinon un battement en vol peut encore ecrire APRES le job. Borne,
+        # pour qu'une base lente ne bloque jamais le worker.
+        fil.join(timeout=5)
+
+
 def _job_worker_loop(worker_id: str) -> None:
     while not _WORKER_STOP.is_set():
         try:
@@ -8301,7 +8336,7 @@ def _job_worker_loop(worker_id: str) -> None:
         _quoi = _resume_de_job(jid)
         logger.info("[WORKER] %s prend %s (%s)", worker_id, str(jid)[:8], _quoi)
         try:
-            _execute_queued_job(jid)
+            _executer_avec_battement(jid)
         except Exception as e:
             _sentry_capture_exception(e, where="worker.execute_job", meta={"worker_id": worker_id, "job_id": jid})
             try:
@@ -8795,6 +8830,7 @@ def _finalize_stale_job(job: Job) -> bool:
         # "[CRAWL] Done" log line and before report.json is written. Without this, a long crawl
         # (e.g. 19 min with a 17-min PageSpeed phase) trips the done_after_s/stale heuristics below
         # and gets wrongly marked "failed" until a manual refresh re-reads it as done.
+        silence_s: float | None = None
         if job.status in {"queued", "running"}:
             _hb_s = float(os.getenv("SEO_AGENT_JOB_ACTIVE_HEARTBEAT_SECONDS", "240"))
             try:
@@ -8802,6 +8838,8 @@ def _finalize_stale_job(job: Job) -> bool:
                 _upd = float((_fresh.updated_at if _fresh else None) or job.updated_at or 0.0)
             except Exception:
                 _upd = float(job.updated_at or 0.0)
+            if _upd > 0:
+                silence_s = time.time() - _upd
             if _hb_s > 0 and _upd > 0 and (time.time() - _upd) < _hb_s:
                 return False
 
@@ -8944,6 +8982,13 @@ def _finalize_stale_job(job: Job) -> bool:
             # if it's still cancel_requested after 30s the worker is dead and we can finalize.
             cancel_after_s = float(os.getenv("SEO_AGENT_STALE_CANCEL_SECONDS", "30"))
 
+            # Un crawl qui TOURNE mais ne bat plus : son worker est mort (redeploiement, memoire).
+            # Le worker bat toutes les 30 s pendant tout le job (`_battre_pour_le_job`) ; 5 min de
+            # silence, c'est dix battements manques. Sans cette regle, seul le filet de 12 h
+            # ci-dessous le rattrapait, et le client voyait « en cours » toute la journee.
+            silencieux = (job.status == "running" and silence_s is not None
+                          and silence_s >= float(os.getenv("SEO_AGENT_STALE_CRAWL_SILENT_SECONDS", "300")))
+
             # Fast-path: empty dir or crawl completed but no report => likely interrupted.
             if job.status == "cancel_requested" and age_s >= cancel_after_s:
                 pass  # fall through to finalize
@@ -8951,7 +8996,8 @@ def _finalize_stale_job(job: Job) -> bool:
                 return False
             elif (progress_done or crawl_done_logged) and age_s < done_after_s:
                 return False
-            elif (not is_empty_dir) and (not (progress_done or crawl_done_logged)) and age_s < stale_after_s:
+            elif ((not is_empty_dir) and (not (progress_done or crawl_done_logged)) and age_s < stale_after_s
+                  and not silencieux):
                 return False
 
             if job.status == "cancel_requested":
@@ -8961,7 +9007,12 @@ def _finalize_stale_job(job: Job) -> bool:
                 job.status = "failed"
                 job.returncode = job.returncode if job.returncode is not None else 1
             job.finished_at = job.finished_at if job.finished_at is not None else time.time()
-            if not (job.stderr or "").strip():
+            if silencieux and job.status == "failed":
+                # Dit meme si la sortie d'erreur contient deja des avertissements du crawler.
+                job.stderr = _trim_log((job.stderr or "") + (
+                    "\n[INTERROMPU] Plus aucun signe du worker depuis %d min : l'analyse a été coupée "
+                    "(redémarrage du service ?). Relance-la.\n" % int((silence_s or 0) // 60)))
+            elif not (job.stderr or "").strip():
                 reason = "aucun report.json trouvé après redémarrage"
                 if is_empty_dir:
                     reason = "dossier de sortie vide (job probablement interrompu)"
