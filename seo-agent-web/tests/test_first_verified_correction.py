@@ -140,7 +140,7 @@ def test_declared_edit_is_pending_until_a_new_crawl_confirms_it(journey):
     assert state["complete"] and state["progress_pct"] == 100 and state["success_kind"] == "verified"
     dashboard = journey["client"].get("/")
     assert "Votre première correction est vérifiée" in dashboard.text
-    assert "Première correction vérifiée" in journey["client"].get(f'/projects/{journey["slug"]}').text
+    assert "Votre première correction est vérifiée" in journey["client"].get(f'/projects/{journey["slug"]}').text
 
 
 def test_choosing_another_page_follows_the_latest_explicit_choice(journey):

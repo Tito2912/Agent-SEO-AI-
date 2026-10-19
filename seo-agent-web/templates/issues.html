@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block title %}Anomalies - {{ project.site_name if project else slug }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/journey.css?v=1" />{% endblock %}
 
 {% block crumbs %}
   <a href="/">Projets</a>
@@ -14,10 +15,10 @@
 {% endblock %}
 
 {% block actions %}
-  {% if project %}
-    <a class="btn" href="/projects/{{ project.slug }}/corrections">Corrections à valider</a>
+  {% if project and project.current %}
+    <a class="btn" href="/projects/{{ project.slug }}/corrections">Suivi des corrections</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouvelle analyse</button>
+      <button type="submit" class="btn" {% if analyse_en_cours %}disabled{% endif %}>{% if analyse_en_cours %}Analyse en cours{% else %}Nouvelle analyse{% endif %}</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -25,6 +26,13 @@
 {% block content %}
   {% if not project %}
     <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+  {% elif not project.current %}
+    <div class="page-header"><h1>Anomalies</h1><p class="muted">{{ project.site_name }}</p></div>
+    <section class="card report-empty">
+      <h2>{% if analyse_en_cours %}Votre analyse est en cours{% else %}Votre bilan n’est pas encore disponible{% endif %}</h2>
+      <p class="muted">Votre site est enregistré. Les problèmes détectés apparaîtront ici lorsqu’un rapport sera disponible.{% if not analyse_en_cours %} Retrouvez le projet pour lancer ou réessayer l’analyse.{% endif %}</p>
+      <a class="btn primary" href="/projects/{{ project.slug }}">{% if analyse_en_cours %}Retrouver mon analyse{% else %}Ouvrir mon projet{% endif %}</a>
+    </section>
   {% else %}
     {% set cur = project.current %}
     {% set cat_labels = {
@@ -52,6 +60,9 @@
       <a href="/docs/anomalies-et-priorites" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </div>
     {% include "_repli_de_rapport.html" %}
+    {% include "_next_step.html" %}
+
+    <p class="muted small issue-guide">Commencez par les erreurs, puis les améliorations recommandées. Une occurrence est un cas détecté : plusieurs problèmes peuvent concerner la même page.</p>
 
     {% set defects = issues | rejectattr('is_delta') | list %}
     {% set changes = issues | selectattr('is_delta') | list %}
@@ -67,17 +78,17 @@
       <div class="stat-strip issue-severity-strip" aria-label="Occurrences par gravité">
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--err);">{{ ns.errors }}</div>
-          <div class="stat-strip-lbl">Erreurs</div>
+          <div class="stat-strip-lbl">Erreurs</div><div class="stat-strip-sub">À traiter en premier</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--warn);">{{ ns.warnings }}</div>
-          <div class="stat-strip-lbl">Avertissements</div>
+          <div class="stat-strip-lbl">Avertissements</div><div class="stat-strip-sub">Améliorations recommandées</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--notice);">{{ ns.notices }}</div>
-          <div class="stat-strip-lbl">Infos</div>
+          <div class="stat-strip-lbl">Infos</div><div class="stat-strip-sub">Points à examiner</div>
         </div>
       </div>
     {% endif %}
@@ -112,7 +123,7 @@
         {% endif %}
 
         <label>
-          Criticité
+          Gravité
           <select name="severity">
             <option value="" {% if not severity %}selected{% endif %}>Toutes</option>
             <option value="error" {% if severity == 'error' %}selected{% endif %}>Erreurs</option>
@@ -133,10 +144,11 @@
 
         <label class="grow">
           Recherche
-          <input name="q" value="{{ q }}" placeholder="titre, canonical, sitemap…" />
+          <input name="q" value="{{ q }}" placeholder="titre, description, image…" />
         </label>
 
         <button type="submit" class="btn primary">Filtrer</button>
+        {% if severity or category or q %}<a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">Effacer les filtres</a>{% endif %}
 
         {% set export_qs = "crawl=" ~ cur.timestamp %}
         {% if project.compare and project.compare.timestamp %}{% set export_qs = export_qs ~ "&compare=" ~ project.compare.timestamp %}{% endif %}
@@ -153,7 +165,21 @@
 
     <section class="card">
       {% if not defects %}
-        <p class="muted">Aucune anomalie pour ces filtres.</p>
+        <div class="report-empty">
+        {% if severity or category or q %}
+          <h2>Aucun problème ne correspond à vos filtres</h2>
+          <p class="muted">Le bilan peut contenir d’autres problèmes. Effacez les filtres pour retrouver la liste complète de cette analyse.</p>
+          <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">Voir tous les problèmes</a>
+        {% elif cur.summary.analysis_complete %}
+          <h2>Aucun problème détecté sur les pages analysées</h2>
+          <p class="muted">Aucune correction à préparer pour ce bilan. Ce résultat concerne les pages visitées lors de cette analyse.</p>
+          <a class="btn" href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}">Voir le périmètre du bilan</a>
+        {% else %}
+          <h2>{% if cur.summary.site_injoignable %}Le site n’a pas pu être analysé{% else %}Ce bilan reste à compléter{% endif %}</h2>
+          <p class="muted">L’absence de problèmes dans cette liste ne suffit pas à conclure que tout va bien.{% if cur.summary.blocked_by_host.count %} Certaines pages ont été refusées par le site.{% elif cur.summary.stopped_on_time_budget %} L’analyse a atteint sa limite de durée.{% endif %} Consultez le bilan avant de relancer.</p>
+          <a class="btn" href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}">Comprendre les limites de l’analyse</a>
+        {% endif %}
+        </div>
       {% else %}
         <div class="table-wrap">
           <table class="table compact">
@@ -161,7 +187,7 @@
               <tr>
                 <th>Anomalie</th>
                 <th>Catégorie</th>
-                <th>Criticité</th>
+                <th>Gravité</th>
                 <th class="num">Occurrences</th>
                 <th class="num">Évolution</th>
               </tr>
@@ -201,9 +227,9 @@
     </section>
 
     {% if changes %}
-      <section class="card">
+      <section class="card" id="analysis-changes">
         <div class="card-title-row">
-          <h2 style="margin:0; font-size:15px;">Changements depuis le crawl précédent</h2>
+          <h2 style="margin:0; font-size:15px;">Changements depuis l’analyse précédente</h2>
         </div>
         <p class="muted small">
           Ce ne sont pas des anomalies : ces lignes indiquent ce qui a bougé sur le site entre les

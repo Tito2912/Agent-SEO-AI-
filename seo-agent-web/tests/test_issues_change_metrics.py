@@ -188,12 +188,12 @@ def test_the_anomaly_table_does_not_list_the_change_metric(
 
     assert response.status_code == 200
     body = response.text
-    assert "Changements depuis le crawl précédent" in body, (
+    assert "Changements depuis l’analyse précédente" in body, (
         "the change metric vanished from the page entirely instead of moving to its own section"
     )
     assert "canonical_url_changed" in body
 
-    anomalies = body.split("Changements depuis le crawl précédent")[0]
+    anomalies = body.split('id="analysis-changes"')[0]
     assert "canonical_url_changed" not in anomalies, (
         "the change metric is still listed among the anomalies"
     )

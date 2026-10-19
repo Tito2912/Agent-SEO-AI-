@@ -58,20 +58,70 @@ def resume(selected, state, live, last_job, has_crawl, clean):
     base = f"/projects/{slug}"
     result = {"site_name": selected.get("site_name") or slug, "href": base, "post": False}
     if live:
-        result.update(label="Retrouver mon analyse", href=f"{base}?job={live['id']}",
+        title = {"queued": "Votre analyse va démarrer", "running": "Votre analyse est en cours",
+                 "cancel_requested": "L’annulation est en cours"}.get(live.get("status"), "Votre analyse est en cours")
+        result.update(title=title, label="Retrouver mon analyse", href=f"{base}?job={live['id']}",
                       detail="L’analyse continue même si vous quittez cette page.")
+        if live.get("status") == "cancel_requested":
+            result["detail"] = "Attendez la confirmation de l’arrêt avant de relancer une analyse."
+    elif has_crawl and selected.get("used_fallback"):
+        result.update(title="Votre dernier rapport est indisponible", label="Comprendre le bilan affiché",
+                      detail="Un bilan précédent reste disponible. Retrouvez le projet pour comprendre pourquoi le dernier rapport manque.")
     elif not has_crawl:
-        retry = last_job.get("status") in {"failed", "canceled"} or selected.get("site_injoignable")
-        result.update(label="Réessayer l’analyse" if retry else "Lancer mon analyse", post=True,
+        retry = last_job.get("status") in {"failed", "canceled", "done"} or selected.get("site_injoignable")
+        result.update(title="Retrouvons un bilan exploitable" if retry else "Votre site est prêt à être analysé",
+                      label="Réessayer l’analyse" if retry else "Lancer mon analyse", post=True,
                       href=base + "/crawl", detail="Votre site est enregistré. Lancez l’analyse pour obtenir votre bilan.")
         if retry:
             result["detail"] = "La dernière analyse n’a pas fourni de bilan exploitable. Votre site est conservé."
     elif state and not state.get("verified"):
-        result.update(label="Reprendre ma correction", href=base + "/first-correction",
+        result.update(title="Poursuivez votre correction", label="Reprendre ma correction", href=base + "/first-correction",
                       detail="Retrouvez la modification choisie et faites vérifier le résultat.")
+        if (state.get("verify") or {}).get("result") == "still_present":
+            result.update(title="La correction reste à ajuster",
+                          detail="Le dernier contrôle retrouve encore ce problème. Reprenez la modification avant de la faire vérifier.")
+        elif state.get("declared"):
+            result.update(title="Votre modification attend son contrôle",
+                          detail="La modification est déclarée. Une nouvelle analyse doit confirmer que le problème a disparu.")
+    elif state.get("verified"):
+        remaining = any(int(v or 0) for v in (selected.get("issues_distribution") or {}).values())
+        result.update(title="Votre première correction est vérifiée", href=base + "/first-correction",
+                      label="Voir le résultat", detail="Le résultat a été confirmé par une nouvelle analyse.")
+        if remaining:
+            result.update(label="Choisir la correction suivante", href=base + "/first-correction?choose=1",
+                          detail="Une correction confirmée, une étape franchie. Choisissez maintenant un autre problème à traiter.")
+    elif clean:
+        result.update(title="Votre premier bilan est prêt", label="Voir mes résultats",
+                      detail="Aucune anomalie détectée sur les pages analysées. Retrouvez le détail et le périmètre de ce bilan.")
+    elif any(int(v or 0) for v in (selected.get("issues_distribution") or {}).values()):
+        result.update(title="Commencez par une seule correction", label="Choisir ma première correction",
+                      href=base + "/first-correction",
+                      detail="Votre bilan est disponible. Choisissez une page, préparez la modification, puis faites vérifier le résultat.")
     else:
-        result.update(label="Voir mes résultats", detail=("Votre bilan est disponible." if clean else
-                      "Consultez votre bilan et choisissez votre première correction."))
+        result.update(title="Votre bilan reste à compléter", label="Comprendre mon bilan",
+                      detail="Aucun problème n’est remonté, mais cette analyse ne permet pas de conclure que tout va bien. Consultez ses limites.")
+    return result
+
+
+def report_resume(project, state, live):
+    """Consultation of an older report must lead back to the current journey."""
+    current = project.get("current") or {}
+    summary = current.get("summary") or {}
+    selected = {**summary, "slug": project["slug"], "site_name": project.get("site_name")}
+    usable = bool(summary.get("pages_crawled") and not summary.get("site_injoignable"))
+    clean = bool(summary.get("analysis_complete") and not summary.get("issues_total"))
+    if not current or not usable:
+        return None  # The existing empty/unreachable report explains how to start again.
+    result = resume(selected, state, live, {}, usable, clean)
+    latest = (project.get("crawls") or [current["timestamp"]])[0]
+    if not live and current.get("used_fallback"):
+        result.update(title="Un bilan précédent est affiché", label="Voir l’historique des analyses",
+                      href=f"/projects/{project['slug']}/crawls", post=False,
+                      detail="Le dernier rapport manque. Consultez les analyses disponibles avant de réessayer depuis le projet.")
+    elif not live and current["timestamp"] != latest:
+        result.update(title="Retrouvez votre parcours actuel", label="Ouvrir le bilan actuel",
+                      href=f"/projects/{project['slug']}", post=False,
+                      detail="Ce rapport reste consultable. Retrouvez l’analyse disponible et la correction en cours avant de poursuivre.")
     return result
 
 

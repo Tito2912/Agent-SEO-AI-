@@ -1022,7 +1022,7 @@ def _select_crawl_timestamp_with_report(
     # Default: latest completed crawl (if any), otherwise latest directory.
     for ts in reversed(crawls):
         if load_report_json(runs_dir, slug, ts):
-            return ts, False
+            return ts, ts != crawls[-1]
     return crawls[-1], False
 
 
@@ -1577,6 +1577,10 @@ def summarize_report(report: dict[str, Any], previous: dict[str, Any] | None = N
     return {
         "base_url": str(meta.get("base_url") or ""),
         "pages_crawled": int(pages_crawled),
+        "analysis_complete": bool(pages_crawled > 0 and report.get("pages") and isinstance(report.get("issues"), dict)
+                                  and not site_injoignable(report) and not blocked_count
+                                  and not meta.get("stopped_on_time_budget")),
+        "stopped_on_time_budget": bool(meta.get("stopped_on_time_budget")),
         "blocked_by_host": {
             "count": int(blocked_count),
             "urls": [str(u) for u in blocked_urls if isinstance(u, str)][:20],
@@ -1637,7 +1641,7 @@ def site_injoignable(report: dict[str, Any] | None) -> dict[str, str] | None:
 
 
 def project_latest_summary(runs_dir: Path, slug: str) -> dict[str, Any] | None:
-    ts, _ = _select_crawl_timestamp_with_report(runs_dir, slug, requested=None)
+    ts, used_fallback = _select_crawl_timestamp_with_report(runs_dir, slug, requested=None)
     if not ts:
         return None
 
@@ -1652,14 +1656,13 @@ def project_latest_summary(runs_dir: Path, slug: str) -> dict[str, Any] | None:
             "site_name": site_name,
             "base_url": base_url,
             "timestamp": ts,
+            "used_fallback": bool(used_fallback),
             "timestamp_label": format_timestamp(ts),
             "pages_crawled": summary["pages_crawled"],
             "urls_crawled": summary.get("urls_crawled", summary["pages_crawled"]),
             "health_score": summary["health_score"],
             "site_injoignable": summary.get("site_injoignable"),
-            "analysis_complete": isinstance(report.get("issues"), dict) and not bool(summary.get("site_injoignable")
-                or (report.get("meta") if isinstance(report.get("meta"), dict) else {}).get("stopped_on_time_budget")
-                or ((report.get("meta") if isinstance(report.get("meta"), dict) else {}).get("blocked_by_host") or {}).get("count")),
+            "analysis_complete": summary["analysis_complete"],
             "urls_with_errors": summary["urls_with_errors"],
             "issues_distribution": summary["issues_distribution"],
         }

@@ -28,6 +28,8 @@ import tempfile
 import uuid
 from pathlib import Path
 
+from bs4 import BeautifulSoup
+
 WEB_ROOT = Path(__file__).resolve().parents[1]
 if str(WEB_ROOT) not in sys.path:
     sys.path.insert(0, str(WEB_ROOT))
@@ -98,9 +100,9 @@ def test_un_projet_NON_RELIE_propose_de_le_relier() -> None:
     slug = _projet(uid)
     page = _client(uid).get("/")
     assert page.status_code == 200
-    assert 'class="gh-lier" data-slug="%s"' % slug in page.text, (
-        "aucun moyen de relier le projet depuis la liste")
-    assert "Connecter GitHub" in page.text
+    button = BeautifulSoup(page.text, "html.parser").select_one(f'button.gh-lier[data-slug="{slug}"]')
+    assert button and button.get("type") == "button", "aucun moyen de relier le projet depuis la liste"
+    assert button.get_text(strip=True) == "Connecter GitHub"
 
 
 def test_l_etat_s_affiche_meme_sur_un_projet_JAMAIS_CRAWLE() -> None:
@@ -114,7 +116,7 @@ def test_l_etat_s_affiche_meme_sur_un_projet_JAMAIS_CRAWLE() -> None:
     _projet(uid, depot="client/tout-neuf")
     page = _client(uid).get("/")
     assert page.status_code == 200
-    assert "Pas encore crawlé" in page.text, "le témoin est faux : ce projet a un crawl"
+    assert "Pas encore analysé" in page.text, "le témoin est faux : ce projet a un crawl"
     assert "client/tout-neuf" in page.text, (
         "le dépôt disparaît sur un projet jamais crawlé — là où on veut justement le lier")
 

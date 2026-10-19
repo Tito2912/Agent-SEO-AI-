@@ -158,8 +158,8 @@ def test_la_liste_d_accueil_montre_les_projets_du_compte_hote_ET_leur_crawl() ->
 
     La fiche projet vient de la BASE, le resume vient du DISQUE. Une liste qui resoudrait encore
     le dossier d'apres le lecteur afficherait quand meme la ligne — en version « jamais crawle ».
-    Le nom porte par le crawl differe donc du nom porte par la fiche : seule la lecture du bon
-    dossier peut faire sortir le premier.
+    Le nom vient de la fiche autorisee ; l'horodatage et le nombre de pages prouvent que le
+    rapport du proprietaire a bien ete lu, meme si son ancien nom differe du nom courant.
     """
     patron, consultant = _utilisateur("agence"), _utilisateur("consultant")
     slug = _projet(patron, nom="Fiche sans crawl")
@@ -168,7 +168,10 @@ def test_la_liste_d_accueil_montre_les_projets_du_compte_hote_ET_leur_crawl() ->
     page = _client(consultant).get("/")
     assert page.status_code == 200
     assert slug in page.text, "le projet du compte hote n'apparait pas dans la liste"
-    assert "Boutique crawlee" in page.text, "la ligne est la, mais son rapport n'a pas ete lu"
+    ligne = next(p for p in page.context["projects"] if p["slug"] == slug)
+    assert ligne["site_name"] == "Fiche sans crawl"
+    assert ligne["timestamp"] == HORODATAGE and ligne["pages_crawled"] == 3, "le rapport du proprietaire n'a pas ete lu"
+    assert f'/projects/{slug}?crawl={HORODATAGE}' in page.text
 
 
 def test_la_liste_ne_montre_pas_les_projets_des_AUTRES() -> None:
