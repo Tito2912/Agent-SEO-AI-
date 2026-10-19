@@ -1,6 +1,38 @@
 {
   "displays": [
     {
+      "scenario": "automation",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
       "scenario": "cms-batch",
       "width": 1440,
       "status": 200,

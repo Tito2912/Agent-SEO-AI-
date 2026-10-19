@@ -80,7 +80,7 @@
         <div class="muted small">Branche : <span class="mono">{{ github_cfg.branch }}</span></div>
       </div>
       <span class="badge {{ 'ok' if github_cfg.mode == 'auto' else 'notice' }}" style="font-size:11px;">
-        {{ 'Automatisation configurée' if github_cfg.mode == 'auto' else 'Relecture sur GitHub' }}
+        {{ 'Full Access · automatisation configurée' if github_cfg.mode == 'auto' else 'Relecture sur GitHub' }}
       </span>
       <span style="flex:1"></span>
       <a class="btn small" href="/projects/{{ slug }}/settings/crawl#github-section">Modifier</a>
