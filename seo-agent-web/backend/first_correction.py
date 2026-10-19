@@ -69,7 +69,8 @@ def progress(tasks, *, prefer_selection=False):
             "task_id": str(task.id), "project_id": str(task.project_id), "issue_key": task.issue_key,
             "label": task.issue_label or task.issue_key, "url": url, "crawl_ts": task.crawl_ts,
             "verified": verified, "verify": verify,
-            "declared": bool(journey.get("declared_at") or task.status in {"in_progress", "done"}),
+            "declared": bool(verified or journey.get("declared_at")
+                             or (task.status in {"in_progress", "done"} and not web_url(note.get("pr_url")))),
             "guided": bool(journey), "selected_at": journey.get("selected_at"), "pr_url": web_url(note.get("pr_url")),
             "cms_change_id": str(note.get("cms_change_id") or ""),
         })

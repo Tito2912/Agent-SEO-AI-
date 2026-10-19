@@ -65,6 +65,22 @@
       "dialogScroll": null
     },
     {
+      "scenario": "github-awaiting-publication",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "resume-awaiting-publication",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
       "scenario": "batch-mixed",
       "width": 360,
       "status": 200,
@@ -83,7 +99,8 @@
   ],
   "checks": [
     "Lot WordPress mixte : une page à préparer, une page à relire ; puis une enregistrée et enfin vérifiée, sans valider le lot entier.",
-    "Case de relecture visible, en-tête de la fenêtre conservé pendant le défilement."
+    "Case de relecture visible, en-tête de la fenêtre conservé pendant le défilement.",
+    "Proposition GitHub : étape Relire et invitation à publier sur le suivi et l’accueil, sans invitation prématurée au contrôle SEO."
   ],
   "jsErrors": []
 }

@@ -1,10 +1,11 @@
 """Manual GitHub proposals wait for review, without changing older receipt identities."""
+import json
 import pytest
 from sqlalchemy import select
 from fastapi.testclient import TestClient
 
 from backend import app as m, auth, correction_journal
-from backend.models import CorrectionOperation
+from backend.models import CorrectionOperation, IssueTask
 from test_corrector_customer_workflow import customer as customer
 from test_corrector_operational import HTML, URL, harness as harness
 
@@ -77,3 +78,34 @@ def test_canceled_review_reopens_the_same_paid_preview_without_another_model_cal
     assert first.json()['patched_content'] == resumed.json()['patched_content']
     assert used() == 1 and state['models'] == 1
     assert not state['writes'] and not state['posts']
+
+
+def test_a_github_proposal_does_not_declare_the_site_modified_before_explicit_publication(customer, monkeypatch, tmp_path):
+    state, send, _, uid, slug = customer
+    preview = send().json()
+    response = send(confirm=True, file_path=preview['file'], patched_content=preview['patched_content'])
+    assert response.status_code == 200
+    with m.DB.session() as db:
+        task = db.scalar(select(IssueTask).where(IssueTask.user_id == uid))
+    progress = m.first_correction.progress([task])
+    assert progress['pr_url'] and not progress['declared'] and not progress['verified']
+    resume = m.first_audit.resume({'slug': slug}, progress, None, {}, True, False)
+    assert resume['title'] == 'Votre proposition attend sa publication'
+    client = state['client']
+    monkeypatch.setattr(m, '_runs_dir_pour_slug', lambda *a: tmp_path)
+    report_dir = tmp_path / slug / '20261002-090000' / 'audit'
+    report_dir.mkdir(parents=True)
+    (report_dir / 'report.json').write_text(json.dumps({'meta': {'base_url': URL},
+        'pages': [{'url': URL, 'status_code': 200, 'content_type': 'text/html', 'indexable': True}],
+        'issues': {'missing_title': {'count': 1, 'examples': [URL]}}}))
+    page = client.get(f'/projects/{slug}/first-correction')
+    assert page.status_code == 200 and 'Relire la proposition GitHub' in page.text
+    assert 'Faites vérifier le résultat' not in page.text
+    declared = client.post(f'/projects/{slug}/first-correction', data={'action': 'ready',
+        'task_id': str(task.id), '_csrf': client.cookies.get(m._CSRF_COOKIE_NAME)}, follow_redirects=False)
+    assert declared.status_code == 303 and 'err=' not in declared.headers['location']
+    with m.DB.session() as db:
+        task = db.get(IssueTask, task.id)
+    progress = m.first_correction.progress([task])
+    assert progress['declared'] and not progress['verified']
+    assert 'Faites vérifier le résultat' in client.get(f'/projects/{slug}/first-correction').text
