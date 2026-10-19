@@ -16,7 +16,6 @@ from backend import app as m
 from backend.models import User
 from test_first_verified_correction import journey as journey
 
-LISTE_GLOBALE = m._list_jobs  # la fixture `journey` la remplace par une liste vide
 TS = "20261002-090000"
 
 
@@ -28,11 +27,10 @@ def _travail(compte, slug, *, statut="queued", cree, debut=None, fin=None):
 
 
 @pytest.fixture()
-def submerge(journey, monkeypatch):
+def submerge(journey):
     """Un crawl en cours du client, puis 520 travaux plus récents d'un autre compte (projet du
     même nom, même horodatage) et 120 du MÊME compte sur ses autres projets — une agence dont
     le cron a tout mis en file."""
-    monkeypatch.setattr(m, "_list_jobs", LISTE_GLOBALE)
     journey["report"]()
     with m.DB.session() as db:
         autre = User(email=f"autre-{uuid.uuid4().hex}@example.invalid", password_hash="test", is_admin=False)

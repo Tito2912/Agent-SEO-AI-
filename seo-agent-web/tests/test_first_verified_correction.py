@@ -36,10 +36,10 @@ def journey(tmp_path, monkeypatch):
         db.add(AccountMember(owner_user_id=owner, member_user_id=member))
         db.commit()
         project_id, slug = str(project.id), project.slug
+    # Ni travaux, ni Search Console, ni GitHub débranchés : les comptes sont neufs, donc le vrai
+    # code répond « rien » de lui-même. Les débrancher a caché que la première correction
+    # cherchait son analyse en cours dans les travaux de TOUS les comptes (19/10/2026).
     monkeypatch.setattr(m, "_runs_dir_for_user", lambda uid: tmp_path / uid)
-    monkeypatch.setattr(m, "_list_jobs", lambda **kw: [])
-    monkeypatch.setattr(m, "_gsc_oauth_connected", lambda *args: False)
-    monkeypatch.setattr(m, "_build_github_connection_state", lambda **kw: {})
 
     def client(uid):
         result = TestClient(m.app)
@@ -96,11 +96,11 @@ def _verify(data, *, issues=None, urls=(URL,), blocked=False, ts=None):
 
 
 @pytest.mark.parametrize("status", ["queued", "running", "failed", "canceled"])
-def test_attempted_analysis_does_not_complete_the_audit_step(journey, monkeypatch, status):
+def test_attempted_analysis_does_not_complete_the_audit_step(journey, status):
     slug = journey["slug"]
-    job = m.Job(id=uuid.uuid4().hex, status=status, created_at=1, config_path="test")
-    job.result = {"type": "crawl", "slug": slug, "user_id": journey["owner"]}
-    monkeypatch.setattr(m, "_list_jobs", lambda **kw: [job])
+    job = m.Job(id=str(uuid.uuid4()), status=status, created_at=datetime.now(timezone.utc).timestamp(),
+                config_path="test", result={"type": "crawl", "slug": slug, "user_id": journey["owner"]})
+    m._save_job(job)
     state = _state(journey)
     assert state["required_done"] == 1 and state["progress_pct"] == 25 and not state["complete"]
     step = next(step for step in state["steps"] if step["key"] == "crawl")

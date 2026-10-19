@@ -27,7 +27,6 @@ def lab(tmp_path, monkeypatch):
     database.create_tables()
     monkeypatch.setattr(m, 'DB', database)
     monkeypatch.setattr(m, '_runs_dir_for_user', lambda uid: tmp_path / 'runs' / uid)
-    monkeypatch.setattr(m, '_list_jobs', lambda **kwargs: [])
     monkeypatch.setattr(m, '_email_verification_enabled', lambda: False)
     monkeypatch.setattr(m, '_validate_public_crawl_target', lambda value: '')
     for key in ['SIGNUP_INVITE_CODE', 'SIGNUP_DISABLED', 'SIGNUP_ALLOWLIST_EMAILS', 'SIGNUP_ALLOWLIST_DOMAINS', 'BOOTSTRAP_ADMIN_EMAIL']:

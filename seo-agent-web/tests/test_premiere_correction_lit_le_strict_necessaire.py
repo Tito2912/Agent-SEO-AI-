@@ -42,8 +42,9 @@ def test_le_rapport_de_reference_n_est_pas_relu(journey, monkeypatch):
     assert lectures.count(BASELINE) == 1
 
 
-def test_l_analyse_en_cours_est_trouvee_sans_la_liste_globale(journey):
-    # La fixture remplace _list_jobs par une liste vide : seule la requête ciblée peut la voir.
+def test_l_analyse_en_cours_est_trouvee_sans_la_liste_globale(journey, monkeypatch):
+    # La liste globale rendue vide : seule la requête ciblée peut encore la voir.
+    monkeypatch.setattr(m, "_list_jobs", lambda **kw: [])
     journey["report"]()
     job = _travail(journey)
     assert _page(journey).context["live_job"] == {"id": job.id, "status": "queued"}

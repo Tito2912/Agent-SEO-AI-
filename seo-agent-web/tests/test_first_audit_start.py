@@ -27,8 +27,6 @@ def first(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "_crawl_defaults_from_config", lambda *args: {})
     monkeypatch.setattr(m, "_runs_dir_for_user", lambda owner: tmp_path / owner)
     monkeypatch.setattr(m, "_email_verification_enabled", lambda: False)
-    monkeypatch.setattr(m, "_gsc_oauth_connected", lambda *args: False)
-    monkeypatch.setattr(m, "_build_github_connection_state", lambda **kwargs: {})
     monkeypatch.setattr(m.socket, "getaddrinfo", lambda *args, **kwargs: [
         (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))])
     client = TestClient(m.app)
