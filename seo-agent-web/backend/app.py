@@ -27783,10 +27783,14 @@ def _fix_premise_note(issue_key: str, pairs: list[dict[str, str]] | None = None)
     return ""
 
 
+# La note ne connait que des chemins de fichiers, pas le contenu des pages : elle ne doit pas
+# AFFIRMER « page mince ». Elle l'a fait pour /fr/tools/ de creativeai-tools (PR #3, 19/10/2026),
+# une page qui n'en etait pas une.
 _SKIPPED_REASONS: dict[str, str] = {
-    "length": ("le modèle n'a pas produit de valeur DANS la fenêtre demandée en deux essais. "
-               "C'est le refus attendu sur une page mince (contact, à-propos) : atteindre la "
-               "longueur cible y demanderait d'inventer du contenu."),
+    "length": ("le modèle n'a pas produit de valeur DANS la fenêtre demandée en deux essais, et le "
+               "correctif n'écrit rien plutôt qu'une valeur hors limites. Sur une page mince "
+               "(contact, à-propos), c'est attendu : atteindre la longueur cible y demanderait "
+               "d'inventer du contenu. Sinon, cette valeur reste à rédiger à la main."),
 }
 
 
