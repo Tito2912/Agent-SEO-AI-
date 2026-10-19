@@ -47,8 +47,9 @@
           {% if project and project.slug %}
             {% set project_path = '/projects/' ~ project.slug %}
             {% set correction_path = request.url.path == project_path ~ '/first-correction' or request.url.path.startswith(project_path ~ '/corrections') or request.url.path.startswith(project_path ~ '/cms/wordpress/') %}
-            {% set report_query = '?crawl=' ~ (request.query_params.get('crawl') | urlencode) if request.query_params.get('crawl') else '' %}
-            {% if request.query_params.get('compare') %}{% set report_query = report_query ~ ('&compare=' if report_query else '?compare=') ~ (request.query_params.get('compare') | urlencode) %}{% endif %}
+            {% set report_params = request.query_params if request.url.query else {} %}
+            {% set report_query = '?crawl=' ~ (report_params.get('crawl') | urlencode) if report_params.get('crawl') else '' %}
+            {% if report_params.get('compare') %}{% set report_query = report_query ~ ('&compare=' if report_query else '?compare=') ~ (report_params.get('compare') | urlencode) %}{% endif %}
             <div class="nav-section">{{ project.site_name }}</div>
             <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}"{% if request.url.path == '/projects/' ~ project.slug %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}{{ report_query }}">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>

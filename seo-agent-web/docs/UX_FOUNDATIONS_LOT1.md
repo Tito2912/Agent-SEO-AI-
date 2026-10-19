@@ -22,6 +22,8 @@ Contrôles supplémentaires au navigateur : premier Tab vers le lien d’évitem
 
 **139 tests existants passent** après modification, sur une nouvelle base temporaire : premier audit, première correction vérifiée, CMS, comptage et droits, navigation mobile, bilan vide et connexions de recherche. Même sélection que celle documentée dans l’audit. Un avertissement de dépréciation Starlette/httpx préexistant.
 
+Le gabarit accepte aussi les requêtes de rendu minimales sans `query_string` : il ne lit les paramètres que lorsque l’URL contient une query. Les **1 178 tests de politique de correction** passent après ce contrôle de compatibilité ; les 25 rendus initialement signalés par la CI sont couverts par cette suite existante. La navigation historique et le clavier ont été revérifiés au navigateur après ce correctif.
+
 Les 69 templates sont analysés par Jinja ; compilation Python et Ruff F/E9 sur les cibles complètes de la CI passent. Bandit sur backend et scripts ne relève aucun problème moyen/élevé ; avertissements `nosec` préexistants. `git diff --check` passe. La CI GitHub complète est distincte de ces contrôles locaux ; son résultat est indiqué dans la PR lorsqu’il est disponible.
 
 Les écrans publics ont été examinés en production pendant l’audit, avant ces modifications. Ce lot n’a pas été déployé ; les écrans authentifiés et les connexions réelles de production ne sont pas revendiqués comme vérifiés. Recette lecteur d’écran et tests avec des utilisateurs débutants restent à effectuer.
