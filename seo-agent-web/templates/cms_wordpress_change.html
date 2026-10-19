@@ -1,28 +1,64 @@
 {% extends "layout.html" %}
+{% from "_cms_workflow.html" import steps %}
 {% block title %}Votre correction WordPress{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=1" defer></script>{% endblock %}
 {% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Votre correction</span>{% endblock %}
-{% macro action_button(action, label, primary=false) %}<form method="post" action="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}/{{ action }}"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn {% if primary %}primary{% endif %}" type="submit">{{ label }}</button></form>{% endmacro %}
-{% block content %}<div class="cms-page">
-  <div class="page-header"><h1>{% if change.state == 'preview' %}Relisez avant d’appliquer{% elif change.state == 'applied' %}Correction enregistrée dans WordPress{% elif change.state == 'restored' %}Valeur précédente rétablie{% else %}Le résultat reste à confirmer{% endif %}</h1><p class="cms-url"><a href="{{ change.data.url }}" target="_blank" rel="noreferrer">{{ change.data.url }}</a></p></div>
+{% macro action_button(action, label, primary=false, busy='Traitement en cours…') %}
+<form method="post" action="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}/{{ action }}"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn {% if primary %}primary{% endif %}" type="submit" data-busy-label="{{ busy }}">{{ label }}</button></form>
+{% endmacro %}
+{% macro comparison() %}
+<div class="cms-comparison"><div><h3>Avant l’application</h3><p>{{ change.data.before[change.data.field] if change.data.before[change.data.field] is not none else 'Valeur héritée du modèle Yoast' }}</p>{% if change.data.before[change.data.field] is none %}<p class="muted small">Affichage : {{ change.data.rendered_before or 'Non renseigné' }}</p>{% endif %}</div><div><h3>Valeur proposée</h3><p>{{ change.data.after[change.data.field] }}</p></div></div>
+{% endmacro %}
+{% block content %}
+<div class="cms-page"{% if verification.poll %} data-workflow-status-url="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}/status" data-workflow-state="{{ verification.state }}"{% endif %}>
+  <div class="page-header"><h1>{% if change.state == 'preview' %}Relisez avant d’appliquer{% elif change.state == 'applied' %}Suivre votre correction{% elif change.state == 'restored' %}Valeur précédente rétablie{% else %}Le résultat reste à confirmer{% endif %}</h1><p class="cms-url"><a href="{{ change.data.url }}" target="_blank" rel="noreferrer">{{ change.data.url }}</a></p><p class="muted">{{ field_label }} · WordPress + Yoast SEO</p></div>
+  {% if change.state != 'restored' %}{{ steps(2 if change.state == 'preview' else 4 if change.state == 'applied' else 3, verification.state == 'verified') }}{% endif %}
   {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
-  <section class="card">
-    <h2>{{ field_label }}</h2>
-    <div class="cms-comparison"><div><h3>Avant</h3><p>{{ change.data.before[change.data.field] if change.data.before[change.data.field] is not none else 'Valeur héritée du modèle Yoast' }}</p>{% if change.data.before[change.data.field] is none %}<p class="muted small">Affichage : {{ change.data.rendered_before or 'Non renseigné' }}</p>{% endif %}</div><div><h3>Après</h3><p>{{ change.data.after[change.data.field] }}</p></div></div>
-    {% if change.state == 'preview' %}
+  {% if change.state == 'preview' %}
+    <section class="card">
+      <h2>{{ field_label }}</h2>
+      {{ comparison() }}
       <p class="muted">Votre validation enregistrera cette valeur sur la page publiée. Cet aperçu reste valable 20 minutes.</p>
-      {{ action_button('apply', 'Appliquer sur mon site', true) }}
-    {% elif change.state == 'applied' %}
-      <p role="status">WordPress a confirmé l’enregistrement. Lancez une vérification pour contrôler la page publique et la résolution du problème. Si votre site utilise un cache, actualisez-le auparavant.</p>
-      <div class="cms-actions"><form method="post" action="/projects/{{ slug }}/crawl"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">Vérifier la page publiée</button></form>{{ action_button('restore', 'Rétablir la valeur précédente') }}</div>
-      <p class="muted small">Le contrôle lance une nouvelle analyse, décomptée du quota habituel de pages. Le rétablissement vérifie que les métadonnées correspondent encore à cette correction.</p>
-    {% elif change.state == 'restored' %}
-      <p role="status">WordPress a confirmé le retour à la valeur précédente. Une nouvelle analyse permettra de contrôler la page publique.</p><a class="btn primary" href="/projects/{{ slug }}/first-correction">Reprendre ma correction</a>
-    {% else %}
-      <p role="status">La réponse finale n’a pas pu être confirmée. Vérifiez l’état avant toute nouvelle correction.</p>
-      {{ action_button('check', 'Vérifier l’état dans WordPress', true) }}
-      <p class="muted small">Cette vérification lit les valeurs actuelles de la page.</p>
-    {% endif %}
-  </section>
-  {% if change.state == 'preview' %}<a href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Préparer un autre aperçu</a>{% endif %}
-</div>{% endblock %}
+      {{ action_button('apply', 'Appliquer sur mon site', true, 'Enregistrement dans WordPress…') }}
+      <p class="muted small">Étape suivante : vérifier le résultat sur cette page de suivi.</p>
+    </section>
+    <a href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Modifier mon texte</a>
+  {% elif change.state == 'applied' %}
+    <section class="card cms-next-step" id="verification" aria-labelledby="verification-title">
+      {% if verification.state == 'verified' %}
+        <span class="badge ok">Résultat confirmé</span>
+        <h2 id="verification-title">Correction vérifiée</h2>
+        <p role="status">La nouvelle analyse a revisité cette page et confirmé la résolution du problème suivi.</p>
+        <p class="muted small">Analyse de contrôle : <span data-ts-datetime="{{ verification.receipt.crawl_ts }}">{{ verification.receipt.crawl_ts }}</span>.</p>
+        {% if verification.receipt.introduced %}<p class="muted">D’autres anomalies sont en hausse. Consultez le bilan du contrôle avant de poursuivre.</p>{% endif %}
+        <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/corrections">Continuer les corrections</a><a class="btn" href="/projects/{{ slug }}?crawl={{ verification.receipt.crawl_ts }}">Voir le bilan du contrôle</a></div>
+      {% elif verification.poll %}
+        <span class="badge">Application confirmée</span>
+        <h2 id="verification-title">Vérification en cours</h2>
+        <p role="status">{% if verification.state == 'finishing' %}L’analyse est terminée. Noyaru prépare le résultat de cette correction.{% else %}La correction est enregistrée dans WordPress. Noyaru va revisiter le site et contrôler le problème sur cette page.{% endif %}</p>
+        <p class="muted">Le résultat apparaîtra automatiquement ici. Vous pouvez quitter cet écran et reprendre le suivi plus tard.</p>
+        <p class="muted small" data-workflow-poll-message aria-live="polite">Suivi actualisé automatiquement.</p>
+        <a class="btn" href="/projects/{{ slug }}/cms/wordpress/changes/{{ change.id }}">Actualiser le suivi</a>
+      {% elif verification.state == 'superseded' %}
+        <h2 id="verification-title">Ce suivi a été remplacé</h2>
+        <p>Une autre opération a modifié le suivi de cette page. Retrouvez la correction actuelle pour poursuivre.</p>
+        <a class="btn primary" href="/projects/{{ slug }}/first-correction">Reprendre ma correction</a>
+      {% else %}
+        <span class="badge ok">Application confirmée</span>
+        <h2 id="verification-title">{% if verification.state == 'still_present' %}Le problème est encore présent{% elif verification.state == 'failed' %}La vérification s’est interrompue{% elif verification.state == 'unverified' %}Le résultat n’a pas pu être confirmé{% else %}Correction appliquée, résultat à vérifier{% endif %}</h2>
+        <p role="status">{% if verification.state == 'still_present' %}La nouvelle analyse détecte encore le problème sur cette page. Vérifiez le texte publié et, si votre site utilise un cache, actualisez-le avant de relancer le contrôle.{% elif verification.state in ['failed', 'unverified'] %}La correction reste enregistrée dans WordPress, mais ce contrôle ne permet pas de confirmer la résolution du problème.{% else %}WordPress a confirmé l’enregistrement. Il reste à faire revisiter le site par Noyaru pour confirmer que le problème a disparu.{% endif %}</p>
+        {% if verification.receipt.reason %}<p class="muted">{{ verification.receipt.reason }}</p>{% endif %}
+        <div class="cms-actions">{% if verification.state == 'still_present' %}<a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Revoir mon texte</a>{% endif %}{{ action_button('verify', 'Vérifier le résultat' if verification.state == 'pending' else 'Relancer la vérification', verification.state != 'still_present', 'Lancement de la vérification…') }}</div>
+        <p class="muted small">Ce contrôle lance une nouvelle analyse, décomptée du quota habituel de pages. Le résultat s’affichera ici.</p>
+        <p class="muted small">Si votre site utilise un cache, actualisez-le avant le contrôle. <a href="/billing">Voir mon quota</a></p>
+      {% endif %}
+    </section>
+    <section class="card"><details><summary>Voir la modification appliquée</summary>{{ comparison() }}</details></section>
+    <details class="cms-help"><summary>Rétablir la valeur précédente</summary><p>Vous pouvez annuler cette modification si les métadonnées de la page n’ont pas changé depuis son application.</p>{{ action_button('restore', 'Confirmer le rétablissement', false, 'Rétablissement dans WordPress…') }}</details>
+  {% elif change.state == 'restored' %}
+    <section class="card"><h2>Modification annulée</h2><p role="status">WordPress a confirmé le retour à la valeur précédente. Pour corriger le problème, préparez un nouvel aperçu.</p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Préparer une nouvelle correction</a></section>
+  {% else %}
+    <section class="card"><h2>Confirmer l’état dans WordPress</h2><p role="status">La réponse finale n’a pas pu être confirmée. Noyaru doit lire les valeurs actuelles avant de poursuivre.</p>{{ action_button('check', 'Vérifier l’état dans WordPress', true, 'Lecture des valeurs actuelles…') }}<p class="muted small">Cette action ne relance aucune écriture. La vérification SEO viendra ensuite, une fois l’enregistrement confirmé.</p></section>
+  {% endif %}
+</div>
+{% endblock %}

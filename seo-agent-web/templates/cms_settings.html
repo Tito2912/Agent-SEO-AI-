@@ -22,7 +22,7 @@
     <p>Appliquez un titre SEO ou une méta-description sur une page ou un article publié, après avoir validé l’aperçu.</p>
     {% if wordpress.connected %}
       <p class="muted">Compte : {{ wordpress.label }}. Noyaru revérifie l’accès lors de chaque opération.</p>
-      <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/corrections">Choisir une correction</a>
+      <div class="cms-actions"><a class="btn primary" href="/projects/{{ slug }}/first-correction">Choisir une correction</a>
       <form method="post" action="/projects/{{ slug }}/cms/wordpress/disconnect"><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn" type="submit">Déconnecter WordPress</button></form></div>
     {% else %}
       <p class="muted small">WordPress 6.9 minimum, Yoast SEO 28.7 minimum, données SEO optimisées et compte autorisé à modifier les métadonnées Yoast. La disponibilité est vérifiée à la connexion.</p>

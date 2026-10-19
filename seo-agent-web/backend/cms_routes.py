@@ -3,20 +3,21 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qs, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 
 try:
     from . import cms_guidance, correction_guard, first_correction, wordpress_cms as wp
-    from .models import CmsChange, IssueTask, Project
+    from .models import CmsChange, IssueTask, JobRecord, Project
 except ImportError:
     import cms_guidance
     import correction_guard
     import first_correction
     import wordpress_cms as wp
-    from models import CmsChange, IssueTask, Project
+    from models import CmsChange, IssueTask, JobRecord, Project
 
 router = APIRouter()
 
@@ -219,9 +220,106 @@ def wordpress_change(request: Request, slug: str, change_id: str, err: str = "")
     response = m.templates.TemplateResponse("cms_wordpress_change.html", {
         "request": request, "project": project, "slug": slug, "change": change, "err": err,
         "field_label": "Titre SEO" if change.data["field"] == "seo_title" else "Méta-description",
+        "verification": verification_state(project, change),
     })
     response.headers["Cache-Control"] = "no-store"
     return response
+
+
+def project_crawl_job(project, job_id):
+    m = app_module()
+    job = m._load_job(str(job_id)) if job_id else None
+    result = job.result if job and isinstance(job.result, dict) else {}
+    if (result.get("type") != "crawl" or result.get("slug") != project.slug
+            or str(result.get("user_id") or "") != str(project.owner_user_id)):
+        return None
+    m._finalize_stale_job(job)
+    return job
+
+
+def verification_state(project, change):
+    """A successful WordPress write or finished job cannot stand in for a crawl receipt."""
+    state = {"state": "pending", "poll": False, "job_id": "", "receipt": {}}
+    if change.state != "applied":
+        return state
+    m = app_module()
+    with m.DB.session() as db:
+        task = db.get(IssueTask, change.task_id)
+    note = first_correction.note_data(task.note) if task and str(task.project_id) == str(project.id) else {}
+    if note.get("cms_change_id") != str(change.id):
+        return {**state, "state": "superseded"}
+    journey = note.get("first_correction") if isinstance(note.get("first_correction"), dict) else {}
+    declared = first_correction.timestamp(journey.get("declared_at"))
+    with m.DB.session() as db:
+        scoped = select(JobRecord).where(JobRecord.owner_user_id == str(project.owner_user_id),
+                                         JobRecord.slug == project.slug, JobRecord.kind == "crawl")
+        active = db.scalar(scoped.where(JobRecord.status.in_(["queued", "running", "cancel_requested"]))
+                           .order_by(JobRecord.created_at.desc()).limit(1))
+        recent = db.scalar(scoped.where(JobRecord.created_at >= declared.timestamp())
+                           .order_by(JobRecord.created_at.desc()).limit(1)) if declared else None
+    bound_job = project_crawl_job(project, change.data.get("verification_job_id"))
+    job = project_crawl_job(project, active.id if active else None) or bound_job or project_crawl_job(project, recent.id if recent else None)
+    if job:
+        state["job_id"] = str(job.id)
+    receipt = note.get("verify") if isinstance(note.get("verify"), dict) else {}
+    crawled = first_correction.timestamp(receipt.get("crawl_ts"))
+    received = first_correction.timestamp(receipt.get("verified_at"))
+    fresh = bool(declared and received and received >= declared
+                 and (not bound_job or received.timestamp() >= bound_job.created_at))
+    if (fresh and crawled and crawled > declared and receipt.get("result") == "resolved"
+            and first_correction.progress([task]).get("verified")):
+        return {**state, "state": "verified", "receipt": receipt}
+    if job and job.status in {"queued", "running", "cancel_requested"}:
+        return {**state, "state": "running", "poll": True}
+    if fresh and receipt.get("result") in {"still_present", "unverified"}:
+        return {**state, "state": receipt["result"], "receipt": receipt}
+    if job and job.status in {"failed", "canceled"}:
+        return {**state, "state": "failed"}
+    if job and job.status == "done":
+        # The worker closes the crawl before writing correction receipts. Keep following
+        # that short interval, then expose a retry instead of spinning indefinitely.
+        finished = job.finished_at or job.updated_at or job.created_at
+        if datetime.now(timezone.utc).timestamp() - finished < 90:
+            return {**state, "state": "finishing", "poll": True}
+        return {**state, "state": "unverified"}
+    return state
+
+
+@router.get("/projects/{slug}/cms/wordpress/changes/{change_id}/status")
+def wordpress_change_status(request: Request, slug: str, change_id: str):
+    m = app_module()
+    project = m._db_project_or_404(request, slug)
+    state = verification_state(project, load_change(project, change_id))
+    return JSONResponse({"state": state["state"], "poll": state["poll"]}, headers={"Cache-Control": "no-store"})
+
+
+def start_verification(request, project, change):
+    m = app_module()
+    path = f"cms/wordpress/changes/{change.id}"
+    if change.state != "applied":
+        raise wp.CmsError("Appliquez la correction avant de vérifier son résultat.")
+    state = verification_state(project, change)
+    if state["poll"] or state["state"] == "verified":
+        return redirect(project.slug, path=path)
+    if state["state"] == "superseded":
+        raise wp.CmsError("Une autre opération a remplacé le suivi de cette correction. Reprenez votre correction actuelle.")
+    # Reuse the actual crawl entry point: owner billing, quota, rate limit and worker
+    # settings remain identical to a normal analysis. No WordPress write is performed.
+    response = m.crawl_project(request, project.slug, config_path=str(m.DEFAULT_CONFIG))
+    if isinstance(response, RedirectResponse):
+        params = parse_qs(urlsplit(response.headers["location"]).query)
+        job_id = (params.get("job") or [""])[0]
+        error = (params.get("err") or [""])[0]
+    else:
+        payload = json.loads(response.body)
+        job_id, error = payload.get("job_id", ""), payload.get("error", "")
+    if not project_crawl_job(project, job_id):
+        raise wp.CmsError(error or "La vérification n’a pas pu démarrer. Réessayez dans un instant.")
+    with m.DB.session() as db:
+        row = db.get(CmsChange, change.id)
+        row.data = {**row.data, "verification_job_id": job_id}
+        db.commit()
+    return redirect(project.slug, path=path)
 
 
 def save_state(change_id, state, **data):
@@ -238,6 +336,7 @@ def confirmed(change, state):
     with m.DB.session() as db:
         row = db.get(CmsChange, change.id)
         row.state = state
+        row.data = {key: value for key, value in row.data.items() if key != "verification_job_id"}
         task = db.get(IssueTask, row.task_id)
         note = first_correction.note_data(task.note)
         if task.note and not note:
@@ -255,13 +354,15 @@ def confirmed(change, state):
 def wordpress_change_action(request: Request, slug: str, change_id: str, action: str):
     m = app_module()
     project = m._db_project_or_404(request, slug)
-    if action not in {"apply", "restore", "check"}:
+    if action not in {"apply", "restore", "check", "verify"}:
         raise HTTPException(400, "unknown_cms_action")
     path = f"cms/wordpress/changes/{change_id}"
     sending = False
     try:
         with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
             change = load_change(project, change_id)
+            if action == "verify":
+                return start_verification(request, project, change)
             c = credentials(project)
             if wp.fingerprint(c) != change.data["connection"]:
                 raise wp.CmsError("La connexion WordPress a changé. Préparez un nouvel aperçu avec la connexion actuelle.")
