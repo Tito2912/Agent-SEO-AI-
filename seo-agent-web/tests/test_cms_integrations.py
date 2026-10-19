@@ -269,7 +269,10 @@ def test_pinned_transport_keeps_tls_hostname_validation(monkeypatch):
     assert calls == [("93.184.216.34", 443), "atelier.example"]
 
 
-@pytest.mark.parametrize("status,body,content_type", [(302, b'{}', 'application/json'), (401, b'password secret', 'text/html'), (200, b'x' * 262145, 'application/json'), (200, b'invalid json', 'application/json'), (200, b'<html/>', 'text/html')])
+# Named ids: pytest otherwise copies the 262145-byte body into the test id, then into the
+# PYTEST_CURRENT_TEST environment variable, which Windows caps at 32767 characters.
+@pytest.mark.parametrize("status,body,content_type", [(302, b'{}', 'application/json'), (401, b'password secret', 'text/html'), (200, b'x' * 262145, 'application/json'), (200, b'invalid json', 'application/json'), (200, b'<html/>', 'text/html')],
+                         ids=["redirect", "secret-401", "oversized-body", "invalid-json", "html-200"])
 def test_transport_never_follows_redirects_or_echoes_secrets(monkeypatch, status, body, content_type):
     calls = []
     monkeypatch.setattr(wp, "public_address", lambda host: "93.184.216.34")
