@@ -18,11 +18,18 @@ export async function startContainer(image, key) {
       '--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,noexec,size=64m',
       '--env-file', envFile, '--publish', '127.0.0.1::10000', image]));
     id = id.trim();
-    const { stdout } = await exec('docker', ['port', id, '10000/tcp']);
-    assert.match(stdout.trim(), /^127\.0\.0\.1:\d+$/);
+    async function publishedBase() {
+      const { stdout } = await exec('docker', ['port', id, '10000/tcp']);
+      assert.match(stdout.trim(), /^127\.0\.0\.1:\d+$/);
+      return 'http://' + stdout.trim();
+    }
     return {
-      base: 'http://' + stdout.trim(),
-      restart: () => exec('docker', ['restart', id]),
+      base: await publishedBase(),
+      async restart() {
+        await exec('docker', ['restart', id]);
+        // Docker may assign a new ephemeral host port when restarting the container.
+        return publishedBase();
+      },
       async metrics() {
         const { stdout: limits } = await exec('docker', ['inspect', '--format',
           '{{.HostConfig.Memory}} {{.HostConfig.MemorySwap}} {{.HostConfig.NanoCpus}} {{.State.OOMKilled}}', id]);
@@ -38,7 +45,10 @@ export async function startContainer(image, key) {
       },
       async stop() {
         // This image logs phase names only; PHP output and credentials are never logged.
-        try { console.log((await exec('docker', ['logs', id])).stdout); } catch { /* preserve the test failure */ }
+        try {
+          const logs = await exec('docker', ['logs', id]);
+          console.log(logs.stdout + logs.stderr);
+        } catch { /* preserve the test failure */ }
         try { await exec('docker', ['rm', '--force', id]); } finally { await rm(work, { recursive: true, force: true }); }
       },
     };

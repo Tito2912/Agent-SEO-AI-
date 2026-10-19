@@ -25,7 +25,7 @@ child?.stderr.resume();
 const exited = child ? new Promise(resolve => child.once('exit', resolve)) : null;
 let exitCode;
 exited?.then(code => { exitCode = code ?? -1; });
-const base = container?.base || `http://127.0.0.1:${port}`;
+let base = container?.base || `http://127.0.0.1:${port}`;
 const checks = [];
 let sawInitialization = false;
 async function waitReady() {
@@ -129,7 +129,7 @@ try {
   assert.equal((await fetch(base + '/noyaru-demo.json')).status, 404);
   if (container) {
     await container.metrics();
-    await container.restart();
+    base = await container.restart();
     await waitReady();
     const next = await (await fetch(base + '/_noyaru-demo/credentials', { headers: { authorization: 'Bearer ' + key } })).json();
     assert.notEqual(next.boot_id, manifest.boot_id);
