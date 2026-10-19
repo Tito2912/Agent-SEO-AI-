@@ -21,8 +21,21 @@ def cell(value: object) -> str:
 
 def inventory() -> str:
     rows = []
+    framework_routes = []
     for source in sorted((WEB / "backend").glob("*.py")):
         tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "FastAPI":
+                options = {kw.arg: ast.literal_eval(kw.value) for kw in node.keywords
+                           if kw.arg in {"docs_url", "openapi_url", "swagger_ui_oauth2_redirect_url"}}
+                for name in ("docs_url", "openapi_url"):
+                    if options.get(name):
+                        framework_routes.append((options[name], name, source.relative_to(WEB), node.lineno))
+                if options.get("docs_url"):
+                    redirect = options.get("swagger_ui_oauth2_redirect_url", "/docs/oauth2-redirect")
+                    if redirect:
+                        framework_routes.append((redirect, "swagger_ui_oauth2_redirect_url (défaut FastAPI)",
+                                                 source.relative_to(WEB), node.lineno))
         for function in ast.walk(tree):
             if not isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
@@ -49,18 +62,32 @@ def inventory() -> str:
     parts = ["# Inventaire des écrans et interactions Noyaru", "",
              "Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `41ad1b7` (main, 19 octobre 2026 ; preuves navigateur initiales sur `44f575c`).",
              "", f"{len(rows)} déclarations de routes ; {len(rendered)} templates directement référencés par les routes ; "
-             f"{len(templates)} templates HTML au total (inclusions et anciens templates compris).", "",
+             f"{len(templates)} templates HTML au total (inclusions et anciens templates compris). "
+             f"{len(framework_routes)} routes automatiques FastAPI complètent les déclarations, "
+             f"soit {len(rows) + len(framework_routes)} routes HTTP sur la base auditée, hors montage statique.", "",
              "Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. "
              "Les droits sont déterminés par les middlewares et les contrôles de projet/compte, pas par cette extraction. "
              "Voir [l’audit](UX_AUDIT_2026-10-19.md) pour les accès, constats et preuves navigateur.", "",
              "## Routes, écrans, actions et sorties", "",
              "Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. "
-             "Les fichiers statiques montés et les routes implicites du framework ne sont pas des écrans.", "",
+             "Le montage des fichiers statiques est distingué des écrans. Les routes automatiques du framework "
+             "sont recensées séparément ci-dessous.", "",
              "| Route | Méthode | Template(s) | Source et fonction |",
              "| --- | --- | --- | --- |"]
     for path, methods, names, source, line, function in sorted(rows):
         parts.append(f"| `{cell(path)}` | {methods} | {cell(names)} | "
                      f"[{cell(source)}:{line}](../{source.as_posix()}#L{line}) · `{function}` |")
+    parts += ["", "## Routes automatiques de FastAPI", "",
+              "Ces chemins ont aussi été comparés au registre `app.routes` : 196 routes HTTP, "
+              "plus le montage `/static`. Ils ne passent pas par un template du dépôt. "
+              "L’explorateur et son schéma exigent une session via le middleware ; le callback Swagger "
+              "reste sous le préfixe public `/docs`. Aucun accès administrateur supplémentaire n’est "
+              "déclaré pour l’explorateur. Le chemin de retour OAuth2 ci-dessous est le défaut "
+              "de la version FastAPI utilisée par cette application.", "",
+              "| Route | Méthodes | Configuration source |", "| --- | --- | --- |"]
+    for path, option, source, line in framework_routes:
+        parts.append(f"| `{cell(path)}` | GET, HEAD | `{option}` · "
+                     f"[{source}:{line}](../{source.as_posix()}#L{line}) |")
     parts += ["", "## Fenêtres, formulaires et panneaux par template", "",
               "Extraction statique des balises `form`, `dialog`, `details` et des régions `role=dialog`. "
               "Les expressions Jinja sont conservées. Les boutons pilotés par JavaScript sont examinés dans le bilan ; "

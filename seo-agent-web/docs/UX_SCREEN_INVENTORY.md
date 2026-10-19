@@ -2,13 +2,13 @@
 
 Généré par `python seo-agent-web/ops/ux_inventory.py`. Base de l’audit : `41ad1b7` (main, 19 octobre 2026 ; preuves navigateur initiales sur `44f575c`).
 
-193 déclarations de routes ; 50 templates directement référencés par les routes ; 69 templates HTML au total (inclusions et anciens templates compris).
+193 déclarations de routes ; 50 templates directement référencés par les routes ; 69 templates HTML au total (inclusions et anciens templates compris). 3 routes automatiques FastAPI complètent les déclarations, soit 196 routes HTTP sur la base auditée, hors montage statique.
 
 Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs états ou rediriger. Les droits sont déterminés par les middlewares et les contrôles de projet/compte, pas par cette extraction. Voir [l’audit](UX_AUDIT_2026-10-19.md) pour les accès, constats et preuves navigateur.
 
 ## Routes, écrans, actions et sorties
 
-Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. Les fichiers statiques montés et les routes implicites du framework ne sont pas des écrans.
+Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. Le montage des fichiers statiques est distingué des écrans. Les routes automatiques du framework sont recensées séparément ci-dessous.
 
 | Route | Méthode | Template(s) | Source et fonction |
 | --- | --- | --- | --- |
@@ -205,6 +205,16 @@ Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les
 | `/support` | GET, HEAD | support_public.html | [backend/app.py:14014](../backend/app.py#L14014) · `support_public` |
 | `/team/accept` | GET | — | [backend/app.py:37594](../backend/app.py#L37594) · `team_accept` |
 | `/terms` | GET, HEAD | terms_public.html | [backend/app.py:13919](../backend/app.py#L13919) · `terms_public` |
+
+## Routes automatiques de FastAPI
+
+Ces chemins ont aussi été comparés au registre `app.routes` : 196 routes HTTP, plus le montage `/static`. Ils ne passent pas par un template du dépôt. L’explorateur et son schéma exigent une session via le middleware ; le callback Swagger reste sous le préfixe public `/docs`. Aucun accès administrateur supplémentaire n’est déclaré pour l’explorateur. Le chemin de retour OAuth2 ci-dessous est le défaut de la version FastAPI utilisée par cette application.
+
+| Route | Méthodes | Configuration source |
+| --- | --- | --- |
+| `/internal/api-explorer` | GET, HEAD | `docs_url` · [backend/app.py:10299](../backend/app.py#L10299) |
+| `/internal/openapi.json` | GET, HEAD | `openapi_url` · [backend/app.py:10299](../backend/app.py#L10299) |
+| `/docs/oauth2-redirect` | GET, HEAD | `swagger_ui_oauth2_redirect_url (défaut FastAPI)` · [backend/app.py:10299](../backend/app.py#L10299) |
 
 ## Fenêtres, formulaires et panneaux par template
 

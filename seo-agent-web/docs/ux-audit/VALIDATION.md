@@ -38,6 +38,8 @@ Ce n’est pas l’exécution de la CI complète (audit de dépendances, Bandit 
 
 `python seo-agent-web/ops/ux_inventory.py` reconstruit l’inventaire depuis l’AST Python et les templates, sans démarrer l’application. Les API et transitions sont recensées, les balises de formulaires et fenêtres conservent les expressions Jinja. Les boutons JavaScript et les règles d’accès demandent une lecture complémentaire, effectuée sur les parcours cités dans le bilan. Ruff F/E9 et `git diff --check` passent pour ce livrable.
 
+Comparaison complémentaire avec le registre d’exécution `app.routes` : **196 routes HTTP**, dont les 193 déclarations extraites et 3 routes automatiques FastAPI (`/internal/openapi.json`, `/internal/api-explorer`, `/docs/oauth2-redirect`), plus le montage `/static`. Les écrans automatiques sont recensés avec une preuve de code/registre, sans être ajoutés artificiellement aux 200 affichages Chromium.
+
 ## Captures retenues
 
 | Capture | Observation |
