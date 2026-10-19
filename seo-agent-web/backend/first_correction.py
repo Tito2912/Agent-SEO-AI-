@@ -71,6 +71,7 @@ def progress(tasks):
             "verified": verified, "verify": verify,
             "declared": bool(journey.get("declared_at") or task.status in {"in_progress", "done"}),
             "guided": bool(journey), "selected_at": journey.get("selected_at"), "pr_url": web_url(note.get("pr_url")),
+            "cms_change_id": str(note.get("cms_change_id") or ""),
         })
     if not states:
         return {}

@@ -5,7 +5,7 @@ description: "Comment {{app_name}} confirme au crawl suivant qu'une anomalie cor
 kind: "Documentation"
 section: "Corriger"
 order: 23
-updated_at: "2026-09-03"
+updated_at: "2026-10-19"
 audience: "Solo, Pro et Business"
 keywords: ["vérification", "régression SEO", "suivi des corrections", "crawl de contrôle"]
 app_href: "/"
@@ -23,6 +23,23 @@ Une pull request fusionnée n'est pas une anomalie corrigée. Entre les deux il 
 déploiement, un cache, parfois un CDN, et l'hypothèse que le correctif était le bon.
 
 {{app_name}} ne coche donc rien à la fusion. Il attend le crawl suivant et regarde.
+
+## Avec WordPress et Yoast SEO
+
+Le suivi conserve quatre étapes : **Préparer → Relire → Appliquer → Vérifier**.
+
+1. Saisissez le titre SEO ou la méta-description, puis choisissez **Voir l’avant/après**.
+2. Relisez l’aperçu et choisissez **Appliquer sur mon site** pour enregistrer la valeur.
+3. Sur le même écran, choisissez **Vérifier le résultat**. Si votre site utilise un cache,
+   actualisez-le auparavant. Ce contrôle lance une nouvelle analyse et utilise votre quota
+   habituel de pages ; une analyse déjà en cours est suivie sans en lancer une seconde.
+4. Le résultat apparaît automatiquement sur cet écran : **Correction vérifiée**, **Le problème
+   est encore présent**, ou un motif expliquant pourquoi le contrôle n’a pas pu conclure.
+
+Vous pouvez quitter le suivi et le retrouver depuis **Première correction → Suivre ma
+correction**, ou dans **CMS et intégrations → Vos dernières opérations WordPress**.
+La section **Rétablir la valeur précédente** permet d’annuler la modification si les
+métadonnées n’ont pas changé depuis son application.
 
 ## Comment ça marche
 

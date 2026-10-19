@@ -4,14 +4,17 @@ from __future__ import annotations
 import copy
 import json
 import socket
+import time
+import uuid
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+from sqlalchemy import select
 
 from backend import app as m, cms_guidance, cms_routes, first_correction, wordpress_cms as wp
-from backend.models import CmsChange, IssueTask, Project
+from backend.models import CmsChange, IssueTask, JobRecord, Project, UsageEvent
 from test_first_verified_correction import URL, _choose, _verify, journey as journey
 
 
@@ -74,6 +77,170 @@ def row(change):
 
 def writes(data):
     return [call for call in data["remote"]["calls"] if call[0] == "POST"]
+
+
+def change_page(data, change):
+    return data["client"].get(data["base"] + "/wordpress/changes/" + change)
+
+
+def workflow_status(data, change):
+    return data["client"].get(data["base"] + "/wordpress/changes/" + change + "/status")
+
+
+def crawl_job(data, status="queued", **extra):
+    job = m.Job(id=str(uuid.uuid4()), status=status, created_at=time.time(),
+                result={"type": "crawl", "slug": data["slug"], "user_id": data["owner"]}, **extra)
+    m._save_job(job)
+    return job
+
+
+def test_workflow_keeps_application_followup_and_verified_result_on_the_change(cms):
+    connect(cms)
+    change = preview(cms)
+    page = change_page(cms, change)
+    assert 'aria-current="step"' in page.text and "Relisez avant d’appliquer" in page.text
+    assert not writes(cms)
+    action(cms, change, "apply")
+    assert workflow_status(cms, change).json() == {"state": "pending", "poll": False}
+    page = change_page(cms, change)
+    assert "Correction appliquée, résultat à vérifier" in page.text
+    assert "Vérifier le résultat" in page.text and "Correction vérifiée" not in page.text
+    followup = cms["client"].get(f'/projects/{cms["slug"]}/first-correction')
+    assert "Suivre ma correction" in followup.text and f"/changes/{change}" in followup.text
+    assert "J’ai modifié cette page" not in followup.text
+    _verify(cms)
+    assert workflow_status(cms, change).json() == {"state": "verified", "poll": False}
+    page = change_page(cms, change)
+    assert "Correction vérifiée" in page.text and "Continuer les corrections" in page.text
+    assert len(writes(cms)) == 1
+
+
+def test_verification_enqueues_real_owner_billed_crawl_once_and_keeps_the_same_screen(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    response = action(cms, change, "verify")
+    assert response.headers["location"].endswith("/changes/" + change)
+    job_id = row(change).data["verification_job_id"]
+    with m.DB.session() as db:
+        job = db.get(JobRecord, job_id)
+        charges = list(db.scalars(select(UsageEvent).where(UsageEvent.user_id == cms["owner"])))
+        assert job.status == "queued" and job.owner_user_id == cms["owner"]
+        assert job.result["started_by"] == cms["member"]
+        assert any(event.meta.get("kind") == "crawl_reserve" and event.meta.get("job_id") == job_id for event in charges)
+    assert workflow_status(cms, change).json() == {"state": "running", "poll": True}
+    assert "Vérification en cours" in change_page(cms, change).text
+    action(cms, change, "verify")
+    assert row(change).data["verification_job_id"] == job_id
+    with m.DB.session() as db:
+        assert len(list(db.scalars(select(JobRecord).where(JobRecord.slug == cms["slug"])))) == 1
+    assert len(writes(cms)) == 1
+
+
+def test_existing_analysis_is_followed_without_another_quota_reservation(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    job = crawl_job(cms)
+    response = action(cms, change, "verify")
+    assert response.headers["location"].endswith("/changes/" + change)
+    assert not row(change).data.get("verification_job_id")
+    with m.DB.session() as db:
+        assert len(list(db.scalars(select(JobRecord).where(JobRecord.slug == cms["slug"])))) == 1
+        assert not list(db.scalars(select(UsageEvent).where(UsageEvent.user_id == cms["owner"])))
+    assert m._load_job(job.id).status == "queued"
+    job.status, job.finished_at = "failed", time.time()
+    m._save_job(job)
+    assert workflow_status(cms, change).json() == {"state": "failed", "poll": False}
+
+
+@pytest.mark.parametrize("format", ["redirect", "json"])
+def test_quota_refusal_stays_on_followup_without_claiming_analysis_started(cms, monkeypatch, format):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    monkeypatch.setattr(m.billing, "ensure_within_quota", lambda *args, **kwargs: (False, 0))
+    cms["client"].headers["accept"] = "application/json" if format == "json" else "text/html"
+    response = action(cms, change, "verify")
+    assert response.status_code == 303 and "/changes/" + change + "?err=" in response.headers["location"]
+    assert not row(change).data.get("verification_job_id")
+    page = cms["client"].get(response.headers["location"])
+    assert "Quota crawl mensuel atteint" in page.text
+    assert workflow_status(cms, change).json() == {"state": "pending", "poll": False}
+
+
+def test_finished_crawl_waits_for_receipt_then_updates_without_wordpress_read_or_write(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    action(cms, change, "verify")
+    job = m._load_job(row(change).data["verification_job_id"])
+    job.status, job.finished_at = "done", time.time()
+    m._save_job(job)
+    calls_before = len(cms["remote"]["calls"])
+    assert workflow_status(cms, change).json() == {"state": "finishing", "poll": True}
+    assert "Correction vérifiée" not in change_page(cms, change).text
+    _verify(cms)
+    assert workflow_status(cms, change).json() == {"state": "verified", "poll": False}
+    assert len(cms["remote"]["calls"]) == calls_before
+
+
+@pytest.mark.parametrize("outcome", ["still_present", "unverified", "failed", "missing_receipt"])
+def test_unsuccessful_control_offers_clear_recovery_without_false_success(cms, outcome):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    if outcome == "still_present":
+        _verify(cms, issues={"missing_title": {"count": 1, "examples": [URL]}})
+    elif outcome == "unverified":
+        _verify(cms, urls=())
+    else:
+        job = crawl_job(cms, "failed" if outcome == "failed" else "done", finished_at=time.time() - 100)
+        with m.DB.session() as db:
+            item = db.get(CmsChange, change)
+            item.data = {**item.data, "verification_job_id": job.id}
+            db.commit()
+    state = workflow_status(cms, change).json()
+    assert state == {"state": "unverified" if outcome == "missing_receipt" else outcome, "poll": False}
+    page = change_page(cms, change)
+    assert "Relancer la vérification" in page.text and "Correction vérifiée" not in page.text
+    assert len(writes(cms)) == 1
+
+
+def test_old_receipt_cannot_confirm_a_new_control_or_a_replacement_change(cms):
+    connect(cms)
+    change = preview(cms)
+    action(cms, change, "apply")
+    _verify(cms)
+    job = crawl_job(cms, "running")
+    with m.DB.session() as db:
+        item = db.get(CmsChange, change)
+        item.data = {**item.data, "verification_job_id": job.id}
+        db.commit()
+    assert workflow_status(cms, change).json() == {"state": "running", "poll": True}
+    with m.DB.session() as db:
+        task = db.get(IssueTask, cms["task"].id)
+        note = json.loads(task.note)
+        note["cms_change_id"] = str(uuid.uuid4())
+        task.note = json.dumps(note)
+        db.commit()
+    assert workflow_status(cms, change).json() == {"state": "superseded", "poll": False}
+    assert "Ce suivi a été remplacé" in change_page(cms, change).text
+
+
+def test_verification_and_status_are_project_scoped_csrf_protected_and_apply_only(cms):
+    connect(cms)
+    change = preview(cms)
+    assert "err=" in action(cms, change, "verify").headers["location"]
+    url = cms["base"] + "/wordpress/changes/" + change
+    assert cms["stranger"].get(url + "/status").status_code == 404
+    assert cms["client"].get(cms["base"] + "/wordpress/changes/unrelated/status").status_code == 404
+    assert cms["client"].post(url + "/verify").status_code == 403
+    action(cms, change, "apply")
+    action(cms, change, "restore")
+    assert "err=" in action(cms, change, "verify").headers["location"]
+    assert workflow_status(cms, change).json() == {"state": "pending", "poll": False}
+    assert "Modification annulée" in change_page(cms, change).text
 
 
 def test_selection_adapts_guidance_without_connecting_or_losing_project_settings(cms):
