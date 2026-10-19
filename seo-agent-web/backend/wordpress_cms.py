@@ -17,9 +17,28 @@ FIELDS = {"seo_title", "meta_description"}
 
 
 class CmsError(Exception):
-    def __init__(self, message, *, uncertain=False):
+    def __init__(self, message, *, uncertain=False, code=""):
         super().__init__(message)
         self.uncertain = uncertain
+        # A stable reason for the operations journal; the message stays the customer's.
+        self.code = code
+
+
+# Why a connection was declined, as read on /settings/operations.
+REASONS = {
+    "version": "WordPress < 6.9 ou Yoast < 28.7 (fonctions absentes)",
+    "yoast_ancien": "Yoast sans écriture des titres et descriptions",
+    "droits": "Compte sans droit de modifier Yoast",
+    "acces_refuse": "Mot de passe d’application refusé",
+    "compte_inconnu": "Compte WordPress non identifié",
+    "adresse": "Adresse hors du domaine du projet ou invalide",
+    "adresse_privee": "Adresse non publique",
+    "redirection": "WordPress redirige l’adresse",
+    "reponse_illisible": "Réponse WordPress inexploitable",
+    "injoignable": "WordPress injoignable ou réponse interrompue",
+    "saisie": "Identifiant ou mot de passe mal saisi",
+    "enregistrement": "Erreur Noyaru à l’enregistrement",
+}
 
 
 def site_url(value, project_url):
@@ -33,7 +52,7 @@ def site_url(value, project_url):
         host = parts.hostname.encode("idna").decode("ascii").lower()
         return urlunsplit(("https", host, parts.path.rstrip("/"), "", ""))
     except (ValueError, UnicodeError, AttributeError):
-        raise CmsError("Utilisez l’adresse HTTPS de WordPress, sur le même domaine que ce projet.") from None
+        raise CmsError("Utilisez l’adresse HTTPS de WordPress, sur le même domaine que ce projet.", code="adresse") from None
 
 
 def same_page(left, right):
@@ -54,7 +73,7 @@ def public_address(host):
             raise ValueError()
         return addresses[0]
     except (OSError, ValueError):
-        raise CmsError("L’adresse WordPress doit être accessible sur Internet et résoudre vers une adresse publique.") from None
+        raise CmsError("L’adresse WordPress doit être accessible sur Internet et résoudre vers une adresse publique.", code="adresse_privee") from None
 
 
 class _PinnedHTTPS(http.client.HTTPSConnection):
@@ -85,18 +104,18 @@ def exchange(base_url, username, password, method, path, payload=None):
         response = connection.getresponse()
         data = response.read(262145)
         if 300 <= response.status < 400:
-            raise CmsError("WordPress redirige cette adresse. Utilisez son adresse HTTPS finale.", uncertain=write)
+            raise CmsError("WordPress redirige cette adresse. Utilisez son adresse HTTPS finale.", uncertain=write, code="redirection")
         if response.status in {401, 403}:
-            raise CmsError("WordPress refuse l’accès. Vérifiez le mot de passe d’application et les droits de modification Yoast.", uncertain=write)
+            raise CmsError("WordPress refuse l’accès. Vérifiez le mot de passe d’application et les droits de modification Yoast.", uncertain=write, code="acces_refuse")
         if response.status == 404:
-            raise CmsError("Cette fonction n’est pas disponible. Vérifiez WordPress 6.9 ou supérieur, Yoast SEO 28.7 ou supérieur et l’accès aux fonctions Yoast.", uncertain=write)
+            raise CmsError("Cette fonction n’est pas disponible. Vérifiez WordPress 6.9 ou supérieur, Yoast SEO 28.7 ou supérieur et l’accès aux fonctions Yoast.", uncertain=write, code="version")
         if response.status >= 400 or len(data) > 262144 or "json" not in response.getheader("Content-Type", "").lower():
-            raise CmsError("WordPress n’a pas renvoyé une réponse exploitable.", uncertain=write)
+            raise CmsError("WordPress n’a pas renvoyé une réponse exploitable.", uncertain=write, code="reponse_illisible")
         return json.loads(data)
     except CmsError:
         raise
     except Exception:
-        raise CmsError("La réponse de WordPress n’a pas pu être confirmée. Vérifiez la connexion avant de poursuivre.", uncertain=write) from None
+        raise CmsError("La réponse de WordPress n’a pas pu être confirmée. Vérifiez la connexion avant de poursuivre.", uncertain=write, code="injoignable") from None
     finally:
         connection.close()
 
@@ -137,17 +156,17 @@ class WordPressClient:
     def check(self):
         user = self.request("GET", "wp/v2/users/me?context=edit")
         if not isinstance(user, dict) or not user.get("id"):
-            raise CmsError("Le compte WordPress n’a pas pu être identifié.")
+            raise CmsError("Le compte WordPress n’a pas pu être identifié.", code="compte_inconnu")
         capabilities = user.get("capabilities") or {}
         if not isinstance(capabilities, dict) or not capabilities.get("wpseo_edit_advanced_metadata"):
-            raise CmsError("Ce compte WordPress ne peut pas modifier les métadonnées Yoast. Utilisez un compte disposant des droits adaptés.")
+            raise CmsError("Ce compte WordPress ne peut pas modifier les métadonnées Yoast. Utilisez un compte disposant des droits adaptés.", code="droits")
         for name in (READ, WRITE):
             ability = self.request("GET", "wp-abilities/v1/abilities/" + name)
             schema = ability.get("input_schema") if isinstance(ability, dict) else None
             properties = schema.get("properties") if isinstance(schema, dict) else None
             properties = properties if isinstance(properties, dict) else {}
             if not isinstance(ability, dict) or ability.get("name") != name or (name == WRITE and not FIELDS <= properties.keys()):
-                raise CmsError("La version de Yoast ne propose pas encore la modification des titres et descriptions. Mettez Yoast à jour.")
+                raise CmsError("La version de Yoast ne propose pas encore la modification des titres et descriptions. Mettez Yoast à jour.", code="yoast_ancien")
         return str(user.get("name") or user.get("slug") or "Compte WordPress")
 
     def read(self, url):

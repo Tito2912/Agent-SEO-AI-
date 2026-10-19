@@ -11,13 +11,13 @@ from sqlalchemy import select
 
 try:
     from . import cms_guidance, correction_guard, first_correction, wordpress_cms as wp
-    from .models import CmsChange, IssueTask, JobRecord, Project
+    from .models import AuditLog, CmsChange, IssueTask, JobRecord, Project
 except ImportError:
     import cms_guidance
     import correction_guard
     import first_correction
     import wordpress_cms as wp
-    from models import CmsChange, IssueTask, JobRecord, Project
+    from models import AuditLog, CmsChange, IssueTask, JobRecord, Project
 
 router = APIRouter()
 
@@ -131,7 +131,7 @@ def wordpress_connect(request: Request, slug: str, site_url: str = Form(...), us
     project = m._db_project_or_404(request, slug)
     try:
         if not username.strip() or len(username) > 200 or len(password) > 200 or ":" in username or any(c in username + password for c in "\r\n\0") or not password.strip():
-            raise wp.CmsError("Renseignez votre identifiant WordPress et un mot de passe d’application valide.")
+            raise wp.CmsError("Renseignez votre identifiant WordPress et un mot de passe d’application valide.", code="saisie")
         c = {"site_url": wp.site_url(site_url, project.base_url), "username": username.strip(), "password": password.strip()}
         with correction_guard.correction_lock(m.DB, str(project.owner_user_id)):
             label = wp.WordPressClient(c).check()
@@ -144,11 +144,38 @@ def wordpress_connect(request: Request, slug: str, site_url: str = Form(...), us
         m._audit_log(request, action="cms.wordpress.connect", status="ok", target_type="project", target_id=slug)
         return redirect(slug, msg="WordPress est connecté. Vous pouvez préparer une correction de titre ou de description.")
     except wp.CmsError as error:
+        # The pilot needs recent WordPress and Yoast: count who hits which wall.
+        m._audit_log(request, action="cms.wordpress.connect", status="declined", target_type="project",
+                     target_id=slug, meta={"reason": error.code or "autre"})
         return redirect(slug, err=str(error))
     except (correction_guard.CorrectionBusy, correction_guard.CorrectionStoreUnavailable):
         return redirect(slug, err="Une opération est en cours sur ce compte. Réessayez dans un instant.")
     except Exception:
+        m._audit_log(request, action="cms.wordpress.connect", status="error", target_type="project",
+                     target_id=slug, meta={"reason": "enregistrement"})
         return redirect(slug, err="La connexion n’a pas pu être enregistrée. Réessayez dans un instant.")
+
+
+def connection_report(days=30):
+    """Connection attempts for the operations page: outcome, and why WordPress declined."""
+    m = app_module()
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    with m.DB.session() as db:
+        rows = list(db.scalars(select(AuditLog).where(AuditLog.action == "cms.wordpress.connect",
+                                                      AuditLog.created_at >= since)))
+    reasons = {}
+    for row in rows:
+        if row.status != "ok":
+            code = str((row.meta or {}).get("reason") or "autre")
+            reasons[code] = reasons.get(code, 0) + 1
+    return {
+        "days": days,
+        "connected": sum(1 for row in rows if row.status == "ok"),
+        "declined": sum(reasons.values()),
+        "projects": len({row.target_id for row in rows if row.target_id}),
+        "reasons": [{"code": code, "label": wp.REASONS.get(code, code), "count": count}
+                    for code, count in sorted(reasons.items(), key=lambda item: -item[1])],
+    }
 
 
 @router.post("/projects/{slug}/cms/wordpress/disconnect")

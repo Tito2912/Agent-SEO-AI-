@@ -107,6 +107,32 @@
     {% endif %}
   </section>
 
+  {#- LE PILOTE WORDPRESS (19/10/2026) : qui essaie de connecter, et sur quel mur il bute. Le pilote
+      exige WordPress 6.9 et Yoast 28.7 ; ce tableau dit s'il vaut la peine de l'elargir. -#}
+  <section class="card" id="pilote-wordpress">
+    <h2>Pilote WordPress — {{ pilote_wordpress.days }} derniers jours</h2>
+    {% if not pilote_wordpress.connected and not pilote_wordpress.declined %}
+      <p class="muted small">Aucune tentative de connexion WordPress sur la période. Les refus sont relevés depuis le 19/10/2026.</p>
+    {% else %}
+      <p class="muted small" style="margin-top:0;">
+        <strong>{{ pilote_wordpress.connected }}</strong> connexion(s) réussie(s) ·
+        <strong>{{ pilote_wordpress.declined }}</strong> refusée(s) · {{ pilote_wordpress.projects }} projet(s)
+      </p>
+      {% if pilote_wordpress.reasons %}
+        <div class="table-wrap">
+          <table class="table compact">
+            <thead><tr><th>Raison du refus</th><th>Tentatives</th></tr></thead>
+            <tbody>
+              {% for r in pilote_wordpress.reasons %}
+                <tr><td>{{ r.label }}</td><td>{{ r.count }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    {% endif %}
+  </section>
+
   <section class="card">
     <div class="card-title-row">
       <h2>Readiness ouverture</h2>

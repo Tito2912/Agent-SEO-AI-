@@ -15227,7 +15227,8 @@ def settings_account_preferences_save(
     )
 
 
-_OPS_OK_AUDIT_STATUSES = {"ok", "saved", "cleared", "noop", "requested"}
+# « declined » : un WordPress trop ancien chez un client n'est pas une panne de production.
+_OPS_OK_AUDIT_STATUSES = {"ok", "saved", "cleared", "noop", "requested", "declined"}
 
 
 def _ops_check(*, group: str, label: str, ok: bool, detail: str = "", severity: str = "error") -> dict[str, Any]:
@@ -15773,6 +15774,7 @@ def settings_operations(request: Request, mois: str | None = None) -> HTMLRespon
             "project": None,
             "snapshot": snapshot,
             "couts_ia": _couts_ia_du_mois(periode),
+            "pilote_wordpress": cms_connection_report(),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -37869,9 +37871,9 @@ def cron_verify_pull_requests(request: Request) -> JSONResponse:
 
 
 try:
-    from .cms_routes import router as cms_router
+    from .cms_routes import connection_report as cms_connection_report, router as cms_router
 except ImportError:
-    from cms_routes import router as cms_router
+    from cms_routes import connection_report as cms_connection_report, router as cms_router
 app.include_router(cms_router)
 
 
