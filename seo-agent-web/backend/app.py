@@ -31019,12 +31019,13 @@ def _first_correction_context(request: Request, project: Project) -> dict[str, A
 
 
 @app.get("/projects/{slug}/first-correction", response_class=HTMLResponse)
-def project_first_correction(request: Request, slug: str, msg: str = "", err: str = "") -> HTMLResponse:
+def project_first_correction(request: Request, slug: str, msg: str = "", err: str = "", choose: bool = False) -> HTMLResponse:
     project = _db_project_or_404(request, slug)
     context = _first_correction_context(request, project)
     response = templates.TemplateResponse("first_correction.html", {
         "request": request, "project": {"slug": slug, "site_name": project.site_name or slug},
         "slug": slug, "msg": msg.strip(), "err": err.strip(), **context,
+        "choosing": bool(choose and context["state"] and not context["state"].get("verified")),
     })
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -31047,7 +31048,7 @@ def project_first_correction_update(
             context = _first_correction_context(request, project)
             choice = next((item for item in context["candidates"] if item["issue_key"] == issue_key and url in item["urls"]), None)
             if not choice or crawl_ts != context["crawl_ts"]:
-                return RedirectResponse(url=_path_with_flash(target, err="L’analyse a changé ou cette page n’est pas proposée. Choisissez une correction dans le dernier rapport."), status_code=303)
+                return RedirectResponse(url=_path_with_flash(target + "?choose=1", err="L’analyse a changé ou cette page n’est pas proposée. Choisissez une correction dans le dernier rapport."), status_code=303)
             query = select(IssueTask).where(IssueTask.project_id == str(project.id),
                                             IssueTask.issue_key == issue_key, IssueTask.url == url)
             task = db.scalar(query)
