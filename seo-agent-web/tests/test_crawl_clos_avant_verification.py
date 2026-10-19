@@ -57,24 +57,28 @@ def _lancer(monkeypatch, *, verification_plante: bool = False) -> tuple[list, ob
     monkeypatch.setattr(m, "_validate_public_crawl_target", lambda url: None)
     monkeypatch.setattr(m, "_ramener_les_crawls_precedents", lambda *a, **k: [])
     monkeypatch.setattr(m, "_run_subprocess_streaming", crawler)
-    monkeypatch.setattr(m, "_sync_runs_path_to_object_store",
+    monkeypatch.setattr(m, "_envoyer_le_crawl",
                         lambda chemin: journal.append(("envoyer", m._load_job(job_id).status)))
+    monkeypatch.setattr(m, "_sync_runs_path_to_object_store",
+                        lambda chemin: journal.append(("renvoyer", m._load_job(job_id).status)))
     monkeypatch.setattr(m, "_verify_corrections_after_crawl", verifier)
     m._run_crawl_job(job_id, user_id, slug, None)
     return journal, m._load_job(job_id)
 
 
-def test_le_job_est_clos_et_le_rapport_envoye_avant_la_verification(monkeypatch) -> None:
+def test_le_rapport_est_envoye_puis_le_job_clos_puis_la_verification(monkeypatch) -> None:
     journal, job = _lancer(monkeypatch)
 
-    assert journal == [("envoyer", "done"), ("verifier", "done")]   # une seule fois chacun, dans cet ordre
+    # Une seule fois chacun, dans cet ordre. 19/10/2026 : l'envoi passe AVANT la cloture — un
+    # redeploiement entre les deux avait laisse un crawl « termine » sans rapport lisible.
+    assert journal == [("envoyer", "running"), ("verifier", "done")]
     assert job.status == "done"
 
 
 def test_une_verification_qui_plante_ne_fait_plus_echouer_le_crawl(monkeypatch) -> None:
     journal, job = _lancer(monkeypatch, verification_plante=True)
 
-    assert job.status == "done" and ("envoyer", "done") in journal
+    assert job.status == "done" and ("envoyer", "running") in journal
 
 
 def test_un_fichier_de_crawl_absent_ne_fait_pas_telecharger_tout_le_projet() -> None:

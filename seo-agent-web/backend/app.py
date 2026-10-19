@@ -706,6 +706,20 @@ def _sync_runs_path_to_object_store(path: Path) -> None:
         logger.error("[S3] upload error for %s: %s: %s", path, type(e).__name__, e)
 
 
+def _envoyer_le_crawl(site_dir: Path) -> None:
+    """Envoie le dossier d'un crawl au stockage objet. Une erreur REMONTE : la fin du crawl en
+    depend pour dire « termine » (le rapport est lisible) ou « echec » (il ne l'est pas)."""
+    object_store.upload_runs_path(DEFAULT_RUNS_DIR, site_dir.resolve())
+
+
+def _analyse_en_cours(project: Any) -> bool:
+    """Une analyse de ce projet attend ou tourne : un rapport absent est alors ATTENDU, pas perdu.
+    Passe par `_list_jobs`, qui cloture d'abord les travaux morts en silence."""
+    actifs = ("queued", "running", "cancel_requested")
+    return any(j.status in actifs for j in _list_jobs(limit=5, comptes=[str(project.owner_user_id)],
+                                                      slug=str(project.slug), statuts=actifs))
+
+
 def _delete_runs_path_from_object_store(path: Path, *, recursive: bool = False) -> None:
     try:
         object_store.delete_runs_path(DEFAULT_RUNS_DIR, path.resolve(), recursive=recursive)
@@ -10140,18 +10154,27 @@ def _run_crawl_job(job_id: str, user_id: str, slug: str, config_path: Path | Non
         job.finished_at = time.time()
         if job.status != "canceled":
             job.status = "done" if returncode == 0 else "failed"
-        _save_job(job)
         # ORDRE, 14/10/2026 (avis-invest) : le crawl est CLOS et son rapport ENVOYE avant la
         # verification des anciennes corrections. Elle tournait avant les deux : deux crawls de
         # 84 pages reussis, rapport ecrit, puis job jamais clos et rapport jamais envoye — le
         # controle des jobs perimes les a declares en echec quinze minutes plus tard.
+        # ET LE RAPPORT AVANT LA CLOTURE (19/10/2026, creativeai-tools) : une fusion a redeploye
+        # le worker entre « termine » et l'envoi. Le rapport, ecrit sur un disque ephemere, a
+        # disparu ; l'ecran est retombe en silence sur le crawl precedent, memes chiffres. Coupe
+        # avant l'envoi, le job reste `running` et le battement le declare interrompu ; un envoi
+        # qui echoue le met en echec. « Termine » veut dire « lisible ».
         if isinstance(report, dict) and job.status == "done":
             try:
                 if site_dir.exists() and site_dir.is_dir():
-                    _sync_runs_path_to_object_store(site_dir)
-                    _rapport_envoye = True
+                    _envoyer_le_crawl(site_dir)
+                _rapport_envoye = True
             except Exception as e:
                 logger.error("[S3] crawl sync error: %s: %s", type(e).__name__, e)
+                job.status = "failed"
+                job.stderr = ((job.stderr or "") + "\n[RAPPORT] L'analyse est terminée mais son rapport n'a pas pu "
+                              "être enregistré (%s). Relance-la." % type(e).__name__).strip()
+        _save_job(job)
+        if isinstance(report, dict) and job.status == "done":
             try:
                 # #5 — verify previously applied corrections against this fresh crawl.
                 _verify_corrections_after_crawl(slug, report, runs_dir=_runs_dir_for_user(str(user_id)),
@@ -18626,6 +18649,7 @@ def project_overview(
             "project": data,
             "slug": slug,
             "live_job": live_job,
+            "analyse_en_cours": bool((data.get("current") or {}).get("used_fallback")) and _analyse_en_cours(proj_row),
             "top_actions": top_actions,
             "fix_pack_unlocked": bool(fix_pack_unlocked),
             "plan_key": plan_key,
@@ -18849,7 +18873,7 @@ def project_issues(
     category: str | None = None,
     q: str | None = None,
 ) -> HTMLResponse:
-    _ = _db_project_or_404(request, slug)
+    proj = _db_project_or_404(request, slug)
     runs_dir = _runs_dir_pour_slug(request, slug)
     data = dash.project_overview(runs_dir, slug, timestamp=crawl, compare_to=compare)
     if not data:
@@ -18882,6 +18906,7 @@ def project_issues(
             "categories": categories,
             "fix_suggestions_meta": fix_meta,
             "fix_suggestions_path": fix_path,
+            "analyse_en_cours": bool(cur_node.get("used_fallback")) and _analyse_en_cours(proj),
         },
     )
     resp.headers["Cache-Control"] = "no-store"

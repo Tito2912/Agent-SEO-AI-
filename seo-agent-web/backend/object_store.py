@@ -161,7 +161,9 @@ def upload_runs_path(runs_dir: Path, path: Path) -> int:
         return 1
     if not path.exists() or not path.is_dir():
         return 0
-    for file_path in path.rglob("*"):
+    # report.json LAST: readers take its presence as proof that the crawl is complete, so an
+    # upload cut halfway must leave it absent, not present beside missing siblings.
+    for file_path in sorted(path.rglob("*"), key=lambda p: p.name == "report.json"):
         if not file_path.is_file():
             continue
         rel = _relative_under_runs(runs_dir, file_path)

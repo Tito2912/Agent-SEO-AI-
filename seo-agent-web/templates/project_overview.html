@@ -250,11 +250,7 @@
   {# Old crawl notice #}
   {% set latest_ts = project.crawls[0] if project.crawls else cur.timestamp %}
   {% if cur.used_fallback %}
-    <div class="alert notice" style="margin-bottom:20px;">
-      Le crawl <span class="mono">{{ cur.requested_timestamp }}</span> n'a pas encore de rapport.
-      Affichage du dernier terminé : <a href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}"><span class="mono">{{ cur.timestamp }}</span></a>.
-      <a href="/jobs">Voir les jobs</a>.
-    </div>
+    {% include "_repli_de_rapport.html" %}
   {% elif cur.timestamp != latest_ts %}
     <div class="alert notice" style="margin-bottom:20px;">
       Vous consultez le crawl <span class="mono">{{ cur.timestamp }}</span>. Dernier disponible :

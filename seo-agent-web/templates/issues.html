@@ -51,6 +51,7 @@
       <p class="muted">{{ project.site_name }} · <span data-ts-datetime="{{ cur.timestamp }}">{{ cur.label }}</span></p>
       <a href="/docs/anomalies-et-priorites" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
     </div>
+    {% include "_repli_de_rapport.html" %}
 
     {% set defects = issues | rejectattr('is_delta') | list %}
     {% set changes = issues | selectattr('is_delta') | list %}
