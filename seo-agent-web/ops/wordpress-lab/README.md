@@ -40,3 +40,7 @@ Pour conserver un rapport sans identifiants, définir `NOYARU_LAB_REPORT` avec l
 - Les rapports d’analyse sont construits à partir du HTML réellement renvoyé par cette page, puis soumis au vérificateur Noyaru existant. Ce laboratoire ne lance pas le crawler complet ni une connexion entre `noyaru.com` et un hébergeur externe. Le transport DNS/TLS est vérifié séparément par les tests habituels du connecteur.
 
 Références : [API Yoast](https://developer.yoast.com/features/yoast-seo-abilities/posts-seo-data/), [Playground CLI](https://developer.wordpress.org/playground/handbook/guides/programmatic-playground-cli/).
+
+## Recette depuis Noyaru en ligne
+
+Un [paquet de démonstration hébergée et son scénario](HOSTED.md) préparent l'essai HTTPS public, avec un Blueprint Render distinct et facultatif. Les contrôles de sa passerelle utilisent `npm run test:gateway` et `npm run test:hosted`. Leur succès local ne déclare pas la liaison entre Noyaru en ligne et l'hébergeur validée.

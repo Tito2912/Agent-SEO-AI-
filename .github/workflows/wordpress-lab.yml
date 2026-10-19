@@ -10,6 +10,7 @@ on:
       - 'seo-agent-web/backend/wordpress_cms.py'
       - 'seo-agent-web/backend/cms_guidance.py'
       - 'seo-agent-web/backend/first_correction.py'
+      - 'render.wordpress-demo.yaml'
 
 permissions:
   contents: read
@@ -43,6 +44,10 @@ jobs:
           python -m ruff check --select=F,E9 seo-agent-web/ops/wordpress-lab
       - name: Exercise native WordPress and Yoast
         run: npm test --prefix seo-agent-web/ops/wordpress-lab
+      - name: Check disposable hosted gateway
+        run: |
+          npm run test:gateway --prefix seo-agent-web/ops/wordpress-lab
+          npm run test:hosted --prefix seo-agent-web/ops/wordpress-lab
       - name: Save report without credentials
         uses: actions/upload-artifact@v4
         with:
