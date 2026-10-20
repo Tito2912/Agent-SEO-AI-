@@ -5,7 +5,7 @@ description: "Créer un projet dans {{app_name}} : URL de départ, sous-domaines
 kind: "Documentation"
 section: "Prise en main"
 order: 11
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["projet", "ajouter un site", "domaine", "sous-domaine"]
 app_href: "/"
@@ -14,12 +14,12 @@ faq:
   - question: "Puis-je auditer un site en préproduction protégé par mot de passe ?"
     answer: "Pas via une authentification HTTP interactive. Une préproduction accessible par une URL secrète non protégée fonctionne, à condition qu'elle réponde en 200 et ne bloque pas le crawler dans robots.txt."
   - question: "Un sous-domaine compte-t-il comme un projet séparé ?"
-    answer: "Par défaut oui : le crawl reste sur l'hôte de l'URL de départ. Vous pouvez activer « Autoriser les sous-domaines » dans les paramètres de crawl pour couvrir blog.example.com depuis le projet example.com."
+    answer: "Par défaut oui : le crawl reste sur l'hôte de l'URL de départ. Vous pouvez activer « Inclure les sous-domaines » dans les réglages de l’analyse pour couvrir blog.example.com depuis le projet example.com."
   - question: "Que se passe-t-il si je supprime un projet ?"
     answer: "Le projet, ses crawls, ses anomalies et ses tâches de correction sont supprimés. Les pull requests déjà ouvertes sur votre dépôt GitHub ne le sont pas : elles vous appartiennent."
 ---
 
-Un projet représente **un site**. Il porte l'URL de départ, les réglages de crawl, l'historique
+Un projet représente **un site**. Il porte l'URL de départ, les réglages de l’analyse, l'historique
 des audits, les anomalies, les tâches de correction et les connexions (Search Console, dépôt
 Git) qui lui sont propres.
 
@@ -54,8 +54,8 @@ En revanche, `example.fr` et `example.com` sont deux hôtes, donc deux projets.
 Par défaut, le crawl ne sort pas de l'hôte de départ : un lien vers `blog.example.com` depuis
 `example.com` est traité comme un lien externe (vérifié, mais pas exploré).
 
-Pour couvrir les sous-domaines dans le même audit, activez **Autoriser les sous-domaines**
-dans les [paramètres de crawl](/docs/lancer-un-crawl) du projet. Attention au volume : un blog
+Pour couvrir les sous-domaines dans le même audit, activez **Inclure les sous-domaines**
+dans les [réglages de l’analyse](/docs/lancer-un-crawl) du projet. Attention au volume : un blog
 sur sous-domaine peut doubler le nombre de pages, et donc la consommation de votre quota
 mensuel.
 
@@ -71,7 +71,7 @@ s'audite normalement. Vérifiez simplement deux choses :
 1. Elle ne renvoie pas un `X-Robots-Tag: noindex` global, sans quoi le rapport vous signalera
    à juste titre que toutes les pages sont non indexables.
 2. Son `robots.txt` n'interdit pas tout. Si c'est le cas et que vous voulez quand même
-   l'auditer, l'option **Ignorer robots.txt** existe dans les paramètres de crawl — à
+   l'auditer, l'option **Ignorer robots.txt** existe dans les réglages de l’analyse — à
    n'utiliser que sur un site dont vous êtes responsable.
 
 ## Supprimer un projet
@@ -84,8 +84,8 @@ correctifs déjà fusionnés, et les exports que vous avez téléchargés.
 
 ## Après la création
 
-Le projet apparaît dans la barre latérale avec ses propres pages : vue d'ensemble, paramètres
-de crawl, performance, mots-clés, concurrents, backlinks, anomalies, corrections, automatisation
-et historique. Toutes sont vides tant que le premier crawl n'a pas tourné.
+Le projet apparaît dans la barre latérale avec ses propres pages : vue d'ensemble, anomalies,
+corrections, contenu, performance, mots-clés, concurrents, liens entrants, Google et Bing,
+CMS et intégrations, réglages de l’analyse, automatisation et historique des analyses. Toutes sont vides tant que le premier crawl n'a pas tourné.
 
 → [Lancer un crawl](/docs/lancer-un-crawl)

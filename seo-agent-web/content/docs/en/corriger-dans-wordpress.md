@@ -5,7 +5,7 @@ description: "Connect WordPress and Yoast SEO, have titles and meta descriptions
 kind: "Documentation"
 section: "Fixing"
 order: 25
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["WordPress", "Yoast SEO", "SEO title", "meta description", "application password"]
 app_href: "/"

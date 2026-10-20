@@ -3319,6 +3319,17 @@ def _assistant_model(provider: str) -> str:
 # La langue des reponses de l'assistant, d'apres la langue de l'interface du client.
 _LANGUE_DES_REPONSES = {"fr": "en français", "en": "en anglais"}
 
+# Les ecrans tels que la barre laterale les nomme (templates/layout.html), traduits comme
+# l'interface du client : l'assistant cite ce que la personne voit. « Exécutions » n'est pas
+# encore traduit dans la barre laterale (refonte en cours, qui le renomme « Activité ») : le
+# catalogue ne le connait pas, il reste donc ecrit comme a l'ecran.
+_ECRANS_DU_COMPTE = ("Projets", "Exécutions", "Abonnement", "Documentation", "Mon compte", "Équipe")
+_ECRANS_DU_PROJET = (
+    "Vue d'ensemble", "Anomalies", "Corrections", "Contenu", "Performance", "Mots-clés",
+    "Concurrents", "Liens entrants", "Faire connaître mon site", "Google et Bing",
+    "CMS et intégrations", "Réglages de l’analyse", "Automatisation", "Historique des analyses",
+)
+
 
 def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     ctx = context if isinstance(context, dict) else {}
@@ -3339,16 +3350,27 @@ def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     if base_url:
         extra.append(f"base_url={base_url}")
     extra_s = (" | ".join(extra)) if extra else "—"
+    ecrans_compte = ", ".join(i18n.tr_current(nom) for nom in _ECRANS_DU_COMPTE)
+    ecrans_projet = ", ".join(i18n.tr_current(nom) for nom in _ECRANS_DU_PROJET)
+    connexions = " > ".join(i18n.tr_current(nom) for nom in ("Mon compte", "Connexions"))
+    docs = i18n.localized_path("/docs", i18n.current_lang())
 
     return (
         "Tu es l’assistant IA principal de l’app Noyaru. "
-        "Tu aides l’utilisateur sur l’utilisation du produit (projets, audits, jobs, automation, réglages, exports), "
-        "sur le SEO (technique, contenu, netlinking, analytics), ET sur des questions générales si besoin. "
-        "Tu n’es pas limité au SEO.\n"
-        "Connaissance produit (si pertinent):\n"
-        "- Navigation: Projets, Jobs, Automation, Paramètres > Comptes & connexions.\n"
-        "- Par projet: Overview, Paramètres crawl, Performance, Backlinks, All issues, Crawl log.\n"
-        "- Intégrations possibles: Google Search Console (API), Bing, PageSpeed Insights, Ahrefs.\n"
+        "Tu aides l’utilisateur sur l’utilisation du produit (projets, analyses, corrections, contenu, "
+        "réglages, exports), sur le SEO (technique, contenu, netlinking, analytics), ET sur des questions "
+        "générales si besoin. Tu n’es pas limité au SEO.\n"
+        "Connaissance produit (si pertinent) — cite les écrans exactement sous ces noms, ceux que "
+        "l’utilisateur voit dans la barre latérale :\n"
+        f"- Navigation du compte : {ecrans_compte}.\n"
+        f"- Par projet (site) : {ecrans_projet}.\n"
+        "- Corriger : depuis une anomalie, une pull request sur le dépôt GitHub du site, une correction "
+        "dans WordPress avec Yoast SEO, ou le Fix Pack ZIP à appliquer à la main ; la vérification se fait "
+        "à l’analyse suivante.\n"
+        f"- Connexions personnelles (Google Search Console, Bing, GitHub, Netlify) : {connexions}.\n"
+        "- Intégrations : Google Search Console, Bing Webmaster Tools, PageSpeed Insights, Ahrefs, GitHub, "
+        "WordPress (Yoast SEO), Netlify.\n"
+        f"- Documentation du produit : {docs}.\n"
         "Règles:\n"
         f"- Réponds {langue}, la langue de l’interface de l’utilisateur ; s’il t’écrit dans une autre "
         "langue, réponds dans la sienne.\n"

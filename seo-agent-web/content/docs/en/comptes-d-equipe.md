@@ -26,7 +26,7 @@ work on **your** projects, without giving them your credentials.
 
 ## Invite someone
 
-From **Settings → Team**. You enter an email address, the person receives an
+From **Your account → Team**. You enter an email address, the person receives an
 invitation, and they join your account whether or not they already have a {{app_name}} account.
 
 | plan | included seats |

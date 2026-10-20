@@ -5,7 +5,7 @@ description: "What the scores, the page counters, the comparison between two cra
 kind: "Documentation"
 section: "Getting started"
 order: 13
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["SEO report", "score", "overview", "crawl comparison"]
 app_href: "/"
@@ -16,7 +16,7 @@ faq:
   - question: "What is the comparison between two crawls for?"
     answer: "To see the movements rather than the states: new issues, resolved issues, pages added or removed. It is the only view that proves a fix worked."
   - question: "How long are crawls kept?"
-    answer: "The project history keeps successive crawls, which you can view and compare from the Crawls page. Deleting the project deletes them."
+    answer: "The project history keeps successive crawls, which you can view and compare from the Analysis history page. Deleting the project deletes them."
 ---
 
 When a crawl finishes, the project page becomes the overview: what the site contains, what
