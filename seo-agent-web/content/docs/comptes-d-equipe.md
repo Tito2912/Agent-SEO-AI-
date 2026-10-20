@@ -5,7 +5,7 @@ description: "Inviter un collaborateur, ce qu'il voit et ce qu'il peut faire, qu
 kind: "Documentation"
 section: "Compte et facturation"
 order: 51
-updated_at: "2026-09-21"
+updated_at: "2026-10-20"
 audience: "Pro et Business"
 keywords: ["comptes d'équipe", "collaborateur", "agence", "invitation", "places"]
 app_href: "/settings/team"
@@ -92,3 +92,10 @@ personne.
 - Les places ne s'achètent pas à l'unité. Pour en avoir plus, il faut changer de plan.
 - Retirer un membre lui retire l'accès aux projets du compte, mais **ne supprime pas** les
   travaux qu'il a lancés ni les pull requests qu'il a ouvertes.
+
+
+## Si le lien s’ouvre avec le mauvais compte
+
+La page indique l’adresse invitée sous une forme masquée et le compte actuellement connecté. Cliquez sur **Me connecter avec le compte invité** : vous serez déconnecté, puis la connexion vous ramènera au même lien. Utilisez l’adresse qui a reçu l’invitation. Un lien expiré ou déjà utilisé ne crée pas d’accès ; demandez un nouveau lien au propriétaire si nécessaire.
+
+Dans **Équipe**, le compte que vous avez rejoint et les membres de votre propre compte sont présentés séparément. Quitter une équipe retire votre accès à ses sites ; les sites restent chez leur propriétaire.

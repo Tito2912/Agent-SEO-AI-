@@ -136,8 +136,8 @@ def test_operations_page_renders_for_system_owner() -> None:
         response = client.get("/settings/operations")
 
     assert response.status_code == 200
-    assert "Exploitation prod" in response.text
-    assert "Readiness ouverture" in response.text
+    assert "Exploitation de la plateforme" in response.text
+    assert "État des services et de la configuration" in response.text
 
 
 def test_dashboard_onboarding_renders_for_authenticated_user() -> None:

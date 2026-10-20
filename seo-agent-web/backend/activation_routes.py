@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import io
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -97,6 +98,10 @@ def accounts(request, plan, q, usage, page=1, export=False, attention=''):
 @router.get('/settings/activation/accounts')
 def accounts_page(request: Request, plan: str = '', q: str = '', usage: str = 'all', page: int = 1, attention: str = ''):
     data = accounts(request, plan, q, usage, page, attention=attention)
+    return_url = '/settings/activation/accounts?' + urlencode({
+        key: data[key] for key in ('plan', 'q', 'usage', 'page', 'attention')})
+    for row in data['rows']:
+        row['profile_url'] += '?' + urlencode({'return_to': return_url})
     return module().templates.TemplateResponse('settings_customer_accounts.html', {
         'request': request, 'project': None, 'inventory': data, 'plan_catalog': module().billing.plan_catalog(),
         'usage_filters': customer_accounts.USAGE_FILTERS,
@@ -155,10 +160,20 @@ def account_profile_csv(request: Request, account_id: str):
 
 
 @router.get('/settings/activation/accounts/{account_id}')
-def account_profile_page(request: Request, account_id: str):
+def account_profile_page(request: Request, account_id: str, return_to: str = ''):
     data = account_profile(request, account_id)
+    return_url = '/settings/activation/accounts'
+    if return_to and len(return_to) <= 2000:
+        try:
+            parsed = urlsplit(return_to)
+            if not parsed.scheme and not parsed.netloc and parsed.path == return_url:
+                filters = [(key, value) for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+                           if key in {'plan', 'q', 'usage', 'page', 'attention'}]
+                return_url += ('?' + urlencode(filters)) if filters else ''
+        except ValueError:
+            pass
     return module().templates.TemplateResponse('settings_customer_account_profile.html', {
-        'request': request, 'project': None, 'dossier': data,
+        'request': request, 'project': None, 'dossier': data, 'return_url': return_url,
     }, headers={'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer'})
 
 

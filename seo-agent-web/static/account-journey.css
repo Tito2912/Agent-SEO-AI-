@@ -1,0 +1,54 @@
+/* Account and platform screens use the existing Noyaru palette and components. */
+.account-identity, .account-team, .billing-scope, .admin-scope { overflow-wrap: anywhere; }
+.account-connections-page section[id], .section-nav ~ section[id] { scroll-margin-top: 90px; }
+.account-connections-page #mon-compte { margin: 24px 0 32px; }
+.account-connections-page #mon-compte > h2 { font-size: 18px; }
+.account-connections-page .btn, .account-team .btn, .section-nav a, .admin-scope a { min-height: 44px; }
+.account-connections-page .setting-head > div, .account-connections-page .card-title-row > div { min-width: 0; }
+.account-connections-page .setting-card .card-title-row > div { display: flex; flex-wrap: wrap; }
+.account-connections-page .setting-actions, .account-connections-page .card-title-row { flex-wrap: wrap; }
+.account-team .team-invite { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.team-invite label { flex-basis: 100%; font-size: 14px; }
+.team-invite input[type="email"] { flex: 1 1 240px; min-width: 0; min-height: 44px; }
+.account-team .table { table-layout: fixed; min-width: 0; }
+.account-team .table th:first-child { width: 50%; }
+.account-team .table th:last-child { width: 110px; }
+.account-team .table td { overflow-wrap: anywhere; }
+.account-team .table-wrap { overflow: auto; }
+.billing-scope { border-left: 3px solid var(--accent); }
+.billing-scope p { line-height: 1.6; }
+.section-nav, .admin-scope nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px; }
+.section-nav a, .admin-scope a { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.admin-scope { padding: 16px; margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--panel); }
+.admin-scope > span { display: block; margin-top: 4px; }
+.admin-scope nav { margin-bottom: 0; }
+.admin-scope [aria-current] { color: var(--accent); border-color: var(--accent); }
+.ops-incidents { margin-bottom: 24px; }
+.ops-incidents li { margin: 10px 0; overflow-wrap: anywhere; }
+.feedback-dismiss { margin: 8px 0 0 auto; display: block; min-height: 44px; flex-shrink: 0; }
+.alert.ok { flex-wrap: wrap; }
+.account-filter-summary { line-height: 1.6; overflow-wrap: anywhere; }
+@media(max-width: 640px) {
+  .account-team .table th:first-child { width: 45%; }
+  .account-team .table th:last-child { width: 90px; }
+  .account-team .table td, .account-team .table th { padding: 10px 6px; }
+  .account-team .table .btn { padding: 8px; font-size: 13px; }
+  .billing-invoices { overflow: auto; }
+  .billing-invoices table { min-width: 580px; }
+}
+
+:is(#ops-incidents, #ops-checks, #ops-jobs, #ops-logs, #first-results) { scroll-margin-top: 90px; }
+.account-connections-page .setting-head { flex-wrap: wrap; }
+.account-connections-page .setting-head > div:first-child { flex: 1 1 220px; }
+.account-connections-page .badge { white-space: normal; max-width: 100%; }
+.account-connections-page .oauth-project-item { flex-wrap: wrap; min-width: 0; }
+.billing-invoices { max-width: 100%; overflow: auto; }
+
+@media(max-width: 640px) {
+  .account-team .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .account-team .table, .account-team .table tbody { display: block; }
+  .account-team .table tr { display: flex; flex-wrap: wrap; margin: 8px 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .account-team .table td { display: block; border: 0; flex: 1 1 auto; padding: 6px 0; min-width: 0; }
+  .account-team .table td:first-child { flex-basis: 100%; }
+  .account-team .table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+}

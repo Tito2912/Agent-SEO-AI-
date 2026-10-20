@@ -1,0 +1,17 @@
+{% if request.url.path == '/automation' or request.url.path.startswith('/settings/operations') or request.url.path.startswith('/settings/system') or request.url.path.startswith('/settings/activation') %}
+  {% if request.state.user and request.state.user.is_admin or request.state.can_access_system_settings %}
+  <aside class="admin-scope" aria-label="Administration Noyaru">
+    <strong>Administration Noyaru</strong>
+    <span class="muted small">Suivi et configuration de la plateforme.</span>
+    <nav aria-label="Écrans d’administration">
+      {% if request.state.can_access_system_settings %}
+        <a href="/settings/operations"{% if request.url.path.startswith('/settings/operations') %} aria-current="page"{% endif %}>Exploitation</a>
+        <a href="/settings/activation"{% if request.url.path == '/settings/activation' %} aria-current="page"{% endif %}>Parcours clients</a>
+        <a href="/settings/activation/accounts"{% if request.url.path.startswith('/settings/activation/accounts') %} aria-current="page"{% endif %}>Comptes clients</a>
+        <a href="/settings/system"{% if request.url.path.startswith('/settings/system') %} aria-current="page"{% endif %}>Système</a>
+      {% endif %}
+      {% if request.state.user and request.state.user.is_admin %}<a href="/automation"{% if request.url.path == '/automation' %} aria-current="page"{% endif %}>Automatisation plateforme</a>{% endif %}
+    </nav>
+  </aside>
+  {% endif %}
+{% endif %}

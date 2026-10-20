@@ -23,6 +23,7 @@
   </form>
   <section class="card account-results">
     <div class="account-results-heading"><h2>{{ inventory.matched }} résultat{% if inventory.matched != 1 %}s{% endif %}</h2><span class="muted small">Lecture : {{ inventory.generated_at }} (Paris)</span></div>
+    <p class="account-filter-summary">Critères : {{ plan_catalog[inventory.plan].label if inventory.plan else 'toutes les formules' }} · {{ usage_filters[inventory.usage] }}{% if inventory.q %} · recherche « {{ inventory.q }} »{% endif %}{% if inventory.attention %} · {{ attention_filters[inventory.attention].label if inventory.attention != 'any' else 'toutes les situations à accompagner' }}{% endif %} · page {{ inventory.page }} sur {{ inventory.pages }}.</p>
     <p class="muted small">Le CSV contient tous les résultats correspondant aux filtres, sur toutes les pages. Actualisez la page pour relire les comptes.</p>
     <div class="account-table-wrap" tabindex="0" role="region" aria-label="Détails des comptes clients, tableau à défilement horizontal">
       <table class="table compact">

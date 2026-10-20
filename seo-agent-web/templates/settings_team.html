@@ -2,31 +2,45 @@
 {% block title %}Paramètres - Équipe{% endblock %}
 
 {% block content %}
+<div class="account-team">
   <div class="page-header">
     <h1>Équipe</h1>
     <p class="muted">
-      Les membres travaillent sur <strong>tes</strong> projets : ils voient les rapports, lancent
-      des crawls et ouvrent des corrections. Tout est facturé sur ton forfait, et tes connexions
-      (Search Console, Bing, GitHub) leur servent sur tes projets.
+      Les membres travaillent sur <strong>vos</strong> projets : ils voient les rapports, lancent
+      des analyses et ouvrent des corrections. Tout est facturé sur votre forfait, et vos connexions
+      (Search Console, Bing, GitHub) leur servent sur vos projets.
     </p>
+    <p class="muted small">Chaque membre peut accéder aux rapports et aux réglages de vos sites, préparer et appliquer des corrections selon les garde-fous de la plateforme. Invitez uniquement les personnes auxquelles vous souhaitez confier ces accès. Votre abonnement et vos connexions servent à vos sites.</p>
   </div>
 
-  {% if msg %}<div class="alert ok">{{ msg }}</div>{% endif %}
-  {% if err %}<div class="alert error">{{ err }}</div>{% endif %}
+  {% if msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
+
+  {% if invitation_retry %}
+    <section class="card" aria-labelledby="invitation-retry-title">
+      <h2 id="invitation-retry-title">Reprendre votre invitation</h2>
+      <p>Ce lien attend le compte associé à <strong>{{ invitation_retry.email }}</strong>. Vous êtes connecté avec <strong>{{ request.state.user.email }}</strong>.</p>
+      <form method="post" action="/auth/logout">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <input type="hidden" name="next" value="{{ invitation_retry.path }}" />
+        <button class="btn primary" type="submit">Me connecter avec le compte invité</button>
+      </form>
+    </section>
+  {% endif %}
 
   {% if appartenance %}
     <section class="card">
-      <div class="card-title-row"><h2>Ton rattachement</h2></div>
+      <div class="card-title-row"><h2>Le compte que vous avez rejoint</h2></div>
       <p>
-        Tu fais partie du compte de <strong>{{ appartenance.owner_email }}</strong>.
-        Ses projets apparaissent dans ta liste à côté des tiens.
+        Vous faites partie du compte de <strong>{{ appartenance.owner_email }}</strong>.
+        Ses projets apparaissent dans votre liste à côté de vos propres sites.
       </p>
       <p class="muted small">
-        Tes propres projets restent à toi et sont facturés sur ton propre forfait. En quittant ce
-        compte tu perds l'accès à ses projets ; rien n'y est supprimé.
+        Vos propres sites restent à vous et utilisent votre formule personnelle. En quittant ce
+        compte, vous perdez l'accès à ses projets ; rien n'y est supprimé.
       </p>
       <form method="post" action="/settings/team/leave"
-            onsubmit="return confirm('Quitter le compte de {{ appartenance.owner_email }} ?');">
+            onsubmit="return confirm('Quitter ce compte partagé ? Vous perdrez l’accès à ses sites.');">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
         <button class="btn danger" type="submit">Quitter ce compte</button>
       </form>
@@ -35,7 +49,7 @@
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Membres de ton compte</h2>
+      <h2>Les membres de votre compte personnel</h2>
       <span class="muted small">{{ occupes }} / {{ sieges }} place{{ 's' if sieges > 1 else '' }}</span>
     </div>
 
@@ -47,7 +61,7 @@
       <p><a class="btn" href="/billing">Voir les forfaits</a></p>
     {% else %}
       {% if not membres and not invitations %}
-        <p class="muted">Personne pour l'instant. Invite un collaborateur ci-dessous.</p>
+        <p class="muted">Personne pour l'instant. Invitez un collaborateur ci-dessous.</p>
       {% endif %}
 
       {% if membres %}
@@ -57,11 +71,11 @@
             <tbody>
               {% for m in membres %}
                 <tr>
-                  <td>{{ m.email }}</td>
-                  <td class="muted small">{{ m.depuis }}</td>
+                  <td data-label="Membre">{{ m.email }}</td>
+                  <td class="muted small" data-label="Depuis">{{ m.depuis }}</td>
                   <td class="right">
                     <form method="post" action="/settings/team/member/{{ m.user_id }}/remove"
-                          onsubmit="return confirm('Retirer {{ m.email }} de ton compte ?');">
+                          onsubmit="return confirm('Retirer cette personne ? Elle perdra l’accès à vos sites.');">
                       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                       <button class="btn small danger" type="submit">Retirer</button>
                     </form>
@@ -76,7 +90,7 @@
       {% if invitations %}
         <div class="card-title-row" style="margin-top:20px;"><h3>Invitations en attente</h3></div>
         <p class="muted small">
-          Une invitation en attente occupe une place tant qu'elle n'a pas expiré. Annule-la pour
+          Une invitation en attente occupe une place tant qu'elle n'a pas expiré. Annulez-la pour
           la libérer tout de suite.
         </p>
         <div class="table-wrap">
@@ -85,8 +99,8 @@
             <tbody>
               {% for i in invitations %}
                 <tr>
-                  <td>{{ i.email }}</td>
-                  <td class="muted small">{{ i.expire }}</td>
+                  <td data-label="Invitation pour">{{ i.email }}</td>
+                  <td class="muted small" data-label="Expire le">{{ i.expire }}</td>
                   <td class="right">
                     <form method="post" action="/settings/team/invite/{{ i.id }}/revoke">
                       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
@@ -101,24 +115,26 @@
       {% endif %}
 
       <div class="card-title-row" style="margin-top:20px;"><h3>Inviter quelqu'un</h3></div>
-      <p class="muted small">
+      <p class="muted small" id="team-invite-help">
         Le lien envoyé ne fonctionne qu'avec l'adresse saisie : le transférer ne donne accès à
         personne d'autre.
       </p>
-      <form method="post" action="/settings/team/invite" class="row">
+      <form method="post" action="/settings/team/invite" class="team-invite">
+        <label for="team-invite-email">Adresse email de la personne à inviter</label>
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-        <input type="email" name="email" placeholder="consultant@agence.fr" required
-               style="min-width:280px;" {% if occupes >= sieges %}disabled{% endif %} />
+        <input id="team-invite-email" type="email" name="email" autocomplete="email" aria-describedby="team-invite-help" placeholder="consultant@agence.fr" required
+               {% if occupes >= sieges %}disabled{% endif %} />
         <button class="btn primary" type="submit" {% if occupes >= sieges %}disabled{% endif %}>
           Envoyer l'invitation
         </button>
       </form>
       {% if occupes >= sieges %}
         <p class="muted small">
-          Toutes les places de ton forfait sont prises. Retire un membre, annule une invitation,
-          ou <a href="/billing">passe à un forfait supérieur</a>.
+          Toutes les places de votre forfait sont prises. Retire un membre, annule une invitation,
+          ou <a href="/billing">changez de formule</a>.
         </p>
       {% endif %}
     {% endif %}
   </section>
+</div>
 {% endblock %}

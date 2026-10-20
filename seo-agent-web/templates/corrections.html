@@ -474,7 +474,7 @@
         {% if fix_pack_unlocked %}
           <a class="btn" href="/projects/{{ slug }}/export/fix-pack.zip?crawl={{ current_crawl_ts }}">Archive de corrections ZIP</a>
         {% else %}
-          <a class="btn" href="/billing">Archive de corrections · Solo+</a>
+          <a class="btn" href="{{ billing_url or '/billing' }}">Archive de corrections · Solo+</a>
         {% endif %}
         <a class="btn" href="/projects/{{ slug }}/export/report.pdf?crawl={{ current_crawl_ts }}">Rapport à transmettre (PDF)</a>
       {% endif %}

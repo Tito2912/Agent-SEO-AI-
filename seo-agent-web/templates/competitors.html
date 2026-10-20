@@ -20,7 +20,7 @@
       <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
       <p class="muted">Repérez les sujets abordés par vos concurrents et absents de votre site, puis préparez une nouvelle page ou améliorez une page existante. Disponible à partir du plan Pro.</p>
       <div class="feature-example"><p class="muted small">Exemple de résultat · démonstration</p><p><strong>Comment entretenir un vélo électrique ?</strong></p><p class="muted">Sujet traité par un concurrent, absent des pages analysées de votre site. Action possible : préparer un article sur ce sujet.</p></div>
-      <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
+      <a class="btn primary" href="{{ billing_url or '/billing' }}" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
     </section>
   {% else %}
 

@@ -8,6 +8,7 @@
 {% block content %}
 <div class="activation-page">
   <div class="page-header"><h1>Des inscriptions aux premiers résultats</h1><p class="muted">Voyez jusqu’où avancent vos nouveaux clients et quelles étapes restent à atteindre.</p></div>
+  <nav class="section-nav" aria-label="Sections du suivi client"><a href="#active-plans">Aujourd’hui</a><a href="#first-results">Premiers résultats</a><a href="#campaign-results">Campagnes</a></nav>
   {% if msg %}<div class="alert ok"><p>{{ msg }}</p></div>{% endif %}
   {% if err %}<div class="alert error" role="alert"><p>{{ err }}</p></div>{% endif %}
   <section class="card live-plans" id="active-plans" data-plan-counts data-endpoint="/api/settings/activation/plans">
@@ -35,7 +36,7 @@
     <details class="live-plans-method"><summary>Quels comptes sont comptés ?</summary><p class="muted small">Un compte est compté une seule fois, selon les droits actuellement accordés par Noyaru. Les essais sont inclus et indiqués séparément. Les administrateurs et les collaborateurs utilisant uniquement le compte d’un hôte sont exclus. Un collaborateur ayant aussi son propre projet ou sa propre facturation reste compté pour son compte personnel.</p><p class="muted small">Les valeurs suivent l’état de facturation synchronisé dans Noyaru. Un abonnement terminé ou impayé revient dans Free si ses droits payants ont cessé ; une résiliation prévue conserve le plan tant que les droits restent ouverts. Le compteur se met à jour après réception de ces changements par Noyaru.</p></details>
   </section>
   {% include "_customer_follow_up.html" %}
-  <form class="activation-period card" method="get" action="/settings/activation">
+  <form id="first-results" class="activation-period card" method="get" action="/settings/activation">
     <div><h2>Période d’inscription</h2><p class="muted small">Les étapes atteintes depuis l’inscription sont observées jusqu’à aujourd’hui.</p></div>
     <label>Du<input type="date" name="date_from" value="{{ metrics.date_from }}" max="{{ metrics.today }}" required /></label>
     <label>Au<input type="date" name="date_to" value="{{ metrics.date_to }}" max="{{ metrics.today }}" required /></label>

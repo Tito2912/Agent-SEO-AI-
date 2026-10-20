@@ -1,0 +1,600 @@
+{
+  "checks": [
+    {
+      "screen": "account-member",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-password",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-privacy",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-delete-confirmation",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-help",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-empty",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-expired",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-error",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "team-member-free",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "billing-shared-site",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-wrong-account",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-expired",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "error-401",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "error-403",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "error-404",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "error-429",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "error-500",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "error-503",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-full",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "billing-owner-active",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "billing-scheduled-downgrade",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "billing-cancellation",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-available",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "admin-automation",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "admin-operations",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "admin-system",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "admin-activation",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "admin-accounts",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "admin-profile-filtered",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "account-member",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-password",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-privacy",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-delete-confirmation",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-help",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-empty",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-expired",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-error",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "team-member-free",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "billing-shared-site",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-wrong-account",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-expired",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "error-401",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "error-403",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "error-404",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "error-429",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "error-500",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "error-503",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-full",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "billing-owner-active",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "billing-scheduled-downgrade",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "billing-cancellation",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-available",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "admin-automation",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "admin-operations",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "admin-system",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "admin-activation",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "admin-accounts",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "admin-profile-filtered",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "account-member",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-password",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-privacy",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-delete-confirmation",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-help",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-empty",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-expired",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-error",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "team-member-free",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "billing-shared-site",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-wrong-account",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-expired",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "error-401",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "error-403",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "error-404",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "error-429",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "error-500",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "error-503",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-full",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "billing-owner-active",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "billing-scheduled-downgrade",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "billing-cancellation",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-available",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "admin-automation",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "admin-operations",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "admin-system",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "admin-activation",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "admin-accounts",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "admin-profile-filtered",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "account-member",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-password",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-privacy",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-delete-confirmation",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-help",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-empty",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-expired",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "account-provider-error",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "team-member-free",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "billing-shared-site",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-wrong-account",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-expired",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "error-401",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "error-403",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "error-404",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "error-429",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "error-500",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "error-503",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-full",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "billing-owner-active",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "billing-scheduled-downgrade",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "billing-cancellation",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "team-owner-available",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "admin-automation",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "admin-operations",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "admin-system",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "admin-activation",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "admin-accounts",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "admin-profile-filtered",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "preferences-saved-persistent",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "invitation-login-return",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "post_requests": [
+    "/settings/account/preferences",
+    "/auth/logout"
+  ],
+  "external_services": "simulated; no emails, Stripe changes or system writes"
+}

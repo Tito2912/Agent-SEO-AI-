@@ -1,0 +1,4783 @@
+[
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 1440,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 1440,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 1440,
+    "selector": "P",
+    "text": "Atelier appartient à responsable.des.sit",
+    "ratio": 15.89
+  },
+  {
+    "screen": "error-401",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "Votre session n’est plus disponible. Rec",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-403",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "Vous n'avez pas les droits nécessaires p",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-404",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "La page que vous cherchez n'existe pas o",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "Vous avez effectué trop de requêtes. Veu",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "Détail de la demandeDétail de démonstrat",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-500",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "Une erreur inattendue s’est produite. Re",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-503",
+    "width": 1440,
+    "selector": "error-desc",
+    "text": "Nous ne pouvons pas afficher cette étape",
+    "ratio": 4.68
+  },
+  {
+    "screen": "team-owner-full",
+    "width": 1440,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 1440,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 1440,
+    "selector": "P",
+    "text": "Atelier utilise votre formule. Les quota",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 1440,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 1440,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 1440,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "team-owner-available",
+    "width": 1440,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "admin-automation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 1440,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 1440,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 1440,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 1440,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 1440,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 1440,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 1440,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 1440,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 1440,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-system",
+    "width": 1440,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-activation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 1440,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 1440,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 1440,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 1440,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 1440,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 1440,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 1440,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 1440,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 1440,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 1440,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 1440,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 768,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 768,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 768,
+    "selector": "P",
+    "text": "Atelier appartient à responsable.des.sit",
+    "ratio": 15.89
+  },
+  {
+    "screen": "error-401",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "Votre session n’est plus disponible. Rec",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-403",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "Vous n'avez pas les droits nécessaires p",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-404",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "La page que vous cherchez n'existe pas o",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "Vous avez effectué trop de requêtes. Veu",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "Détail de la demandeDétail de démonstrat",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-500",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "Une erreur inattendue s’est produite. Re",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-503",
+    "width": 768,
+    "selector": "error-desc",
+    "text": "Nous ne pouvons pas afficher cette étape",
+    "ratio": 4.68
+  },
+  {
+    "screen": "team-owner-full",
+    "width": 768,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 768,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 768,
+    "selector": "P",
+    "text": "Atelier utilise votre formule. Les quota",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 768,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 768,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 768,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "team-owner-available",
+    "width": 768,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "admin-automation",
+    "width": 768,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 768,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 768,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 768,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 768,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 768,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 768,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 768,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 768,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 768,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 768,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 768,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 768,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 768,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-system",
+    "width": 768,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 768,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 768,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-activation",
+    "width": 768,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 768,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 768,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 768,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 768,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 768,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 768,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 768,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 768,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 768,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 768,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 768,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 768,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 390,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 390,
+    "selector": "P",
+    "text": "Atelier appartient à responsable.des.sit",
+    "ratio": 15.89
+  },
+  {
+    "screen": "error-401",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "Votre session n’est plus disponible. Rec",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-403",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "Vous n'avez pas les droits nécessaires p",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-404",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "La page que vous cherchez n'existe pas o",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "Vous avez effectué trop de requêtes. Veu",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "Détail de la demandeDétail de démonstrat",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-500",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "Une erreur inattendue s’est produite. Re",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-503",
+    "width": 390,
+    "selector": "error-desc",
+    "text": "Nous ne pouvons pas afficher cette étape",
+    "ratio": 4.68
+  },
+  {
+    "screen": "team-owner-full",
+    "width": 390,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 390,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 390,
+    "selector": "P",
+    "text": "Atelier utilise votre formule. Les quota",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 390,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 390,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "team-owner-available",
+    "width": 390,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "admin-automation",
+    "width": 390,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 390,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 390,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 390,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 390,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 390,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 390,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 390,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 390,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 390,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 390,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 390,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 390,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 390,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-system",
+    "width": 390,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 390,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 390,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-activation",
+    "width": 390,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 390,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 390,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 390,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 390,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 390,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 390,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 390,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 390,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 390,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 390,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 390,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 390,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-member",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-password",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-privacy",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-delete-confirmation",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-help",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-empty",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-expired",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "account-provider-error",
+    "width": 360,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 360,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-shared-site",
+    "width": 360,
+    "selector": "P",
+    "text": "Atelier appartient à responsable.des.sit",
+    "ratio": 15.89
+  },
+  {
+    "screen": "error-401",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "Votre session n’est plus disponible. Rec",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-403",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "Vous n'avez pas les droits nécessaires p",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-404",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "La page que vous cherchez n'existe pas o",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "Vous avez effectué trop de requêtes. Veu",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-429",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "Détail de la demandeDétail de démonstrat",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-500",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "Une erreur inattendue s’est produite. Re",
+    "ratio": 4.68
+  },
+  {
+    "screen": "error-503",
+    "width": 360,
+    "selector": "error-desc",
+    "text": "Nous ne pouvons pas afficher cette étape",
+    "ratio": 4.68
+  },
+  {
+    "screen": "team-owner-full",
+    "width": 360,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 360,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-owner-active",
+    "width": 360,
+    "selector": "P",
+    "text": "Atelier utilise votre formule. Les quota",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 360,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-scheduled-downgrade",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 360,
+    "selector": "P",
+    "text": "Un achat ici modifie votre abonnement et",
+    "ratio": 15.89
+  },
+  {
+    "screen": "billing-cancellation",
+    "width": 360,
+    "selector": "muted small",
+    "text": "Les quotas mensuels sont partagés entre ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "team-owner-available",
+    "width": 360,
+    "selector": "LABEL",
+    "text": "Adresse email de la personne à inviter",
+    "ratio": 4.66
+  },
+  {
+    "screen": "admin-automation",
+    "width": 360,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 360,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 360,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 360,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-automation",
+    "width": 360,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 360,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-operations",
+    "width": 360,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 360,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 360,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-operations",
+    "width": 360,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 360,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 360,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 360,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-system",
+    "width": 360,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-system",
+    "width": 360,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 360,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 360,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-activation",
+    "width": 360,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 360,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-activation",
+    "width": 360,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 360,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 360,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 360,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 360,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-accounts",
+    "width": 360,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 360,
+    "selector": "A",
+    "text": "Exploitation",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 360,
+    "selector": "A",
+    "text": "Parcours clients",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 360,
+    "selector": "A",
+    "text": "Comptes clients",
+    "ratio": 4.6
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 360,
+    "selector": "A",
+    "text": "Système",
+    "ratio": 7.34
+  },
+  {
+    "screen": "admin-profile-filtered",
+    "width": 360,
+    "selector": "A",
+    "text": "Automatisation plateforme",
+    "ratio": 7.34
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "btn",
+    "text": "Préférences",
+    "ratio": 15.03
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "btn",
+    "text": "Sécurité",
+    "ratio": 15.03
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "btn",
+    "text": "Vie privée",
+    "ratio": 15.03
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "btn",
+    "text": "Connexions",
+    "ratio": 15.03
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "btn",
+    "text": "Équipe",
+    "ratio": 15.03
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "btn",
+    "text": "Abonnement",
+    "ratio": 15.03
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted",
+    "text": "Vous travaillez aussi sur les sites de r",
+    "ratio": 4.68
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Fuseau horaire, pays et langue d'afficha",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Pays déclaré par vous, affiché dans les ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted",
+    "text": "Aucune campagne d’origine n’est conservé",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Saisir l'ancien mot de passe pour confir",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted small",
+    "text": "(10 caractères min.)",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted small",
+    "text": "Suppression définitive du compte et des ",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "muted small setting-note",
+    "text": "Cette action supprime le compte, ses pro",
+    "ratio": 4.66
+  },
+  {
+    "screen": "preferences-saved-persistent",
+    "width": 390,
+    "selector": "examples muted small",
+    "text": "Les connexions utilisateur sont stockées",
+    "ratio": 4.66
+  }
+]

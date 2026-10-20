@@ -790,3 +790,8 @@ Une ligne par contenu versionné. La preuve navigateur de chaque variante est in
 | `/ressources-seo/frequence-crawl-seo-site-vitrine-ecommerce-blog` | [frequence-crawl-seo-site-vitrine-ecommerce-blog.md](../content/blog/frequence-crawl-seo-site-vitrine-ecommerce-blog.md) |
 | `/ressources-seo/netlinking-opportunites-backlinks-sans-spam` | [netlinking-opportunites-backlinks-sans-spam.md](../content/blog/netlinking-opportunites-backlinks-sans-spam.md) |
 | `/ressources-seo/regression-seo-apres-mise-en-production` | [regression-seo-apres-mise-en-production.md](../content/blog/regression-seo-apres-mise-en-production.md) |
+
+
+## Complément du lot 6 — 20 octobre 2026
+
+Les routes existantes sont conservées. Le partiel `_admin_scope.html` porte le total courant à 77 templates ; le tableau initial reste le relevé de la version auditée. Compte, équipe, abonnement, erreurs et administration : [bilan et preuves du lot 6](UX_ACCOUNT_TEAM_LOT6.md).

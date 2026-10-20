@@ -18,7 +18,7 @@
       <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
       <p class="muted">Transformez un sujet en article avec un titre, une meta description et un texte en HTML et Markdown. Vous pouvez le publier vous-même ou préparer une proposition sur GitHub. Disponible à partir du plan Pro.</p>
       <div class="feature-example"><p class="muted small">Exemple de livrable · démonstration</p><p><strong>Entretenir son vélo électrique au quotidien</strong></p><p class="muted">Un article structuré, une adresse suggérée et des liens vers les pages de votre site, à relire avant publication.</p></div>
-      <a class="btn primary" href="/billing" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
+      <a class="btn primary" href="{{ billing_url or '/billing' }}" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
     </section>
   {% else %}
     {% set a_depot = github_cfg and github_cfg.repo %}
@@ -449,7 +449,7 @@
         return response.json();
       }
       function failure(data, fallback) {
-        var link = data.session_expired ? ' <a href="/auth/login?next=' + encodeURIComponent(location.pathname + location.search) + '">Me reconnecter</a>' : data.billing_url ? ' <a href="/billing">Voir l’abonnement</a>' : '';
+        var link = data.session_expired ? ' <a href="/auth/login?next=' + encodeURIComponent(location.pathname + location.search) + '">Me reconnecter</a>' : data.billing_url ? ' <a href="{{ billing_url or '/billing' }}">Voir l’abonnement</a>' : '';
         say(esc(data.error || fallback) + link, 'error'); contentStage(1);
       }
       function say(html, cls) { box.className = cls || 'muted'; box.innerHTML = html; }

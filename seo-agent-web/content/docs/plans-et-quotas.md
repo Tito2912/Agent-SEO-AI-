@@ -5,7 +5,7 @@ description: "Ce que chaque plan {{app_name}} inclut : projets, pages crawlées,
 kind: "Référence"
 section: "Compte et facturation"
 order: 50
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["tarifs", "quotas", "limites", "abonnement"]
 app_href: "/billing"
@@ -146,6 +146,12 @@ page **Abonnement**. Le reste continue de fonctionner : un quota de corrections 
 n'empêche ni les crawls, ni les rapports, ni les exports.
 
 Les quotas sont mensuels et ne se reportent pas.
+
+## Quel compte est concerné ?
+
+La page **Abonnement** présente la formule, les compteurs et les factures de votre compte personnel. Si vous venez d’un site partagé, le nom du propriétaire et sa formule sont indiqués séparément : acheter une formule pour vous ne change pas les limites de son site. Contactez ce propriétaire pour faire évoluer son abonnement ; le bouton de retour conserve le site concerné.
+
+Vos préférences, votre pays, votre mot de passe et votre choix concernant l’origine de l’inscription se trouvent dans **Mon compte**. Les connexions Google, Bing, GitHub et Netlify restent accessibles plus bas, par les raccourcis de cette page. Pour les réglages d’un site précis, ouvrez son menu.
 
 ## Changer de plan
 
