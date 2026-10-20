@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Corrections - {{ project.site_name }}{% endblock %}
+{% block title %}{{ tr("Corrections") }} - {{ project.site_name }}{% endblock %}
 
 {% block head_extra %}
   <link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=3" defer></script>
@@ -203,14 +203,14 @@
   /* ── AI preview (diagnostic + code) — side-effect free, works without GitHub ── */
   function renderUrlFix(panel, d) {
     if (!d || d.error) {
-      panel.innerHTML = '<p class="muted small" style="color:var(--err,#f87171);margin:0;">&#x2717; ' + esc((d && d.error) || 'Aperçu indisponible.') + '</p>';
+      panel.innerHTML = '<p class="muted small" style="color:var(--err,#f87171);margin:0;">&#x2717; ' + esc((d && d.error) || {{ tr("Aperçu indisponible.")|tojson }}) + '</p>';
       return;
     }
     var h = '';
-    if (d.fix) h += '<div style="margin-bottom:7px;"><strong>Diagnostic :</strong> ' + esc(d.fix) + '</div>';
-    if (d.code) h += '<div style="margin-bottom:7px;"><strong>Code :</strong><pre class="corr-code">' + esc(d.code) + '</pre></div>';
-    if (d.action) h += '<div><strong>Action :</strong> ' + esc(d.action) + '</div>';
-    panel.innerHTML = h || '<p class="muted small" style="margin:0;">Aucune suggestion.</p>';
+    if (d.fix) h += '<div style="margin-bottom:7px;"><strong>' + {{ tr("Diagnostic :")|tojson }} + '</strong> ' + esc(d.fix) + '</div>';
+    if (d.code) h += '<div style="margin-bottom:7px;"><strong>' + {{ tr("Code :")|tojson }} + '</strong><pre class="corr-code">' + esc(d.code) + '</pre></div>';
+    if (d.action) h += '<div><strong>' + {{ tr("Action :")|tojson }} + '</strong> ' + esc(d.action) + '</div>';
+    panel.innerHTML = h || '<p class="muted small" style="margin:0;">' + {{ tr("Aucune suggestion.")|tojson }} + '</p>';
   }
 
   document.addEventListener('click', function (e) {
@@ -225,7 +225,7 @@
     }
     var issue = btn.dataset.issue || '', url = btn.dataset.url || '', crawl = btn.dataset.crawl || _crawl || '';
     var orig = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Analyse…';
+    btn.disabled = true; btn.textContent = {{ tr("Analyse…")|tojson }};
     fetch('/api/projects/' + encodeURIComponent(_slug) + '/issues/' + encodeURIComponent(issue) + '/url-fix?url=' + encodeURIComponent(url) + '&crawl=' + encodeURIComponent(crawl))
       .then(function (r) { return r.json(); })
       .then(function (d) {
@@ -234,7 +234,7 @@
       })
       .catch(function () {
         btn.disabled = false; btn.textContent = orig;
-        renderUrlFix(panel, { error: 'Erreur réseau.' }); panel.style.display = 'block';
+        renderUrlFix(panel, { error: {{ tr("Erreur réseau.")|tojson }} }); panel.style.display = 'block';
       });
   });
 
@@ -267,7 +267,7 @@
       body: JSON.stringify({ status: card.dataset.status, url: card.dataset.url || null, note: ta ? ta.value : '' })
     })
       .then(function(r) { return r.json(); })
-      .then(function() { btn.textContent = '✓'; setTimeout(function() { btn.textContent = 'Sauvegarder'; }, 1500); })
+      .then(function() { btn.textContent = '✓'; setTimeout(function() { btn.textContent = {{ tr("Sauvegarder")|tojson }}; }, 1500); })
       .catch(function() {});
   });
 
@@ -362,27 +362,27 @@
   function loadGhConnect() {
     var body = document.getElementById('gh-connect-body');
     if (!body) return;
-    body.innerHTML = 'Chargement des dépôts…';
+    body.innerHTML = esc({{ tr("Chargement des dépôts…")|tojson }});
     fetch('/api/github/repos', { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (!d.ok) {
-          body.innerHTML = '<p style="margin:0 0 10px;">Votre compte GitHub n\'est pas encore connecté.</p>'
-            + '<a class="btn primary" href="/oauth/github/connect?next=' + encodeURIComponent(_ghNext) + '">Connecter mon compte GitHub</a>';
+          body.innerHTML = '<p style="margin:0 0 10px;">' + esc({{ tr("Votre compte GitHub n'est pas encore connecté.")|tojson }}) + '</p>'
+            + '<a class="btn primary" href="/oauth/github/connect?next=' + encodeURIComponent(_ghNext) + '">' + esc({{ tr("Connecter mon compte GitHub")|tojson }}) + '</a>';
           return;
         }
-        var opts = '<option value="">— Choisir un dépôt —</option>';
+        var opts = '<option value="">' + esc({{ tr("— Choisir un dépôt —")|tojson }}) + '</option>';
         (d.repos || []).forEach(function (repo) {
           opts += '<option value="' + esc(repo.full_name) + '|' + esc(repo.default_branch || 'main') + '">'
-            + esc(repo.full_name) + (repo.private ? ' [privé]' : '') + '</option>';
+            + esc(repo.full_name) + (repo.private ? ' [' + esc({{ tr("privé")|tojson }}) + ']' : '') + '</option>';
         });
         var fld = 'flex-shrink:0;font-size:12px;padding:6px 9px;background:var(--bg-2,#18181b);border:1px solid var(--border);border-radius:5px;color:inherit;';
         body.innerHTML = [
           '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">',
           '<select id="gh-c-repo" style="flex:1;min-width:200px;' + fld + '">' + opts + '</select>',
-          '<input id="gh-c-branch" type="text" value="main" placeholder="branche" style="width:90px;' + fld + '">',
-          '<select id="gh-c-mode" style="' + fld + '"><option value="review">PR à vérifier</option><option value="auto">Auto-merge</option></select>',
-          '<button type="button" id="gh-c-connect" class="btn primary" style="font-size:12px;">Connecter</button>',
+          '<input id="gh-c-branch" type="text" value="main" placeholder="' + esc({{ tr("branche")|tojson }}) + '" style="width:90px;' + fld + '">',
+          '<select id="gh-c-mode" style="' + fld + '"><option value="review">' + esc({{ tr("PR à vérifier")|tojson }}) + '</option><option value="auto">Auto-merge</option></select>',
+          '<button type="button" id="gh-c-connect" class="btn primary" style="font-size:12px;">' + esc({{ tr("Connecter")|tojson }}) + '</button>',
           '</div>',
           '<p id="gh-c-msg" style="margin:8px 0 0;font-size:11px;color:var(--muted);"></p>'
         ].join('');
@@ -397,114 +397,114 @@
           var branch = (document.getElementById('gh-c-branch').value || '').trim() || 'main';
           var mode = document.getElementById('gh-c-mode').value || 'review';
           var msg = document.getElementById('gh-c-msg');
-          if (!repo || repo.indexOf('/') < 0) { msg.textContent = 'Sélectionne un dépôt.'; msg.style.color = 'var(--err,#f87171)'; return; }
-          var b = document.getElementById('gh-c-connect'); b.textContent = 'Connexion…'; b.disabled = true;
+          if (!repo || repo.indexOf('/') < 0) { msg.textContent = {{ tr("Sélectionne un dépôt.")|tojson }}; msg.style.color = 'var(--err,#f87171)'; return; }
+          var b = document.getElementById('gh-c-connect'); b.textContent = {{ tr("Connexion…")|tojson }}; b.disabled = true;
           fetch('/api/projects/' + encodeURIComponent(_slug) + '/github/connect', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ repo: repo, branch: branch, mode: mode })
           }).then(function (r) { return r.json(); }).then(function (d2) {
             if (d2.ok) {
-              msg.textContent = '✓ Dépôt connecté !'; msg.style.color = 'var(--ok-2)';
+              msg.textContent = '✓ ' + {{ tr("Dépôt connecté !")|tojson }}; msg.style.color = 'var(--ok-2)';
               setTimeout(function () { window.location.reload(); }, 800);
             } else {
-              msg.textContent = '✗ ' + (d2.error || 'Erreur'); msg.style.color = 'var(--err,#f87171)';
-              b.textContent = 'Connecter'; b.disabled = false;
+              msg.textContent = '✗ ' + (d2.error || {{ tr("Erreur")|tojson }}); msg.style.color = 'var(--err,#f87171)';
+              b.textContent = {{ tr("Connecter")|tojson }}; b.disabled = false;
             }
-          }).catch(function (e) { msg.textContent = String(e); msg.style.color = 'var(--err,#f87171)'; b.textContent = 'Connecter'; b.disabled = false; });
+          }).catch(function (e) { msg.textContent = String(e); msg.style.color = 'var(--err,#f87171)'; b.textContent = {{ tr("Connecter")|tojson }}; b.disabled = false; });
         });
       })
-      .catch(function () { body.innerHTML = '<p style="color:var(--err,#f87171);margin:0;">Erreur de chargement.</p>'; });
+      .catch(function () { body.innerHTML = '<p style="color:var(--err,#f87171);margin:0;">' + esc({{ tr("Erreur de chargement.")|tojson }}) + '</p>'; });
   }
 })();
 </script>
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Corrections</span>
+  <span class="crumb-current">{{ tr("Corrections") }}</span>
 {% endblock %}
 
 {% block actions %}
-  <a class="btn" href="/projects/{{ slug }}/issues">Voir les anomalies</a>
+  <a class="btn" href="/projects/{{ slug }}/issues">{{ tr("Voir les anomalies") }}</a>
   <form method="post" action="/projects/{{ slug }}/crawl" class="inline">
-    <button type="submit" class="btn primary">Nouvelle analyse</button>
+    <button type="submit" class="btn primary">{{ tr("Nouvelle analyse") }}</button>
   </form>
 {% endblock %}
 
 {% block content %}
 {% set sev_color = {'error': '#ef4444', 'warning': '#f59e0b', 'notice': '#818cf8'} %}
 <div class="page-header">
-  <h1>Corrections</h1>
-  <p class="muted">{{ stats.total }} correction{{ 's' if stats.total > 1 else '' }} suivie{{ 's' if stats.total > 1 else '' }} · {{ project.site_name }}</p>
-  <a href="/docs/corrections-automatiques" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
+  <h1>{{ tr("Corrections") }}</h1>
+  <p class="muted">{% if stats.total > 1 %}{{ tr("{n} corrections suivies", n=stats.total) }}{% else %}{{ tr("{n} correction suivie", n=stats.total) }}{% endif %} · {{ project.site_name }}</p>
+  <a href="/docs/corrections-automatiques" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
 </div>
 
 {% if stats.total > 0 %}
 <div class="corr-stats">
-  <div class="corr-stat"><span class="num">{{ stats.total }}</span><span class="lbl">Suivies</span></div>
-  <div class="corr-stat accent"><span class="num">{{ stats.todo }}</span><span class="lbl">À traiter</span></div>
-  <div class="corr-stat"><span class="num">{{ stats.in_progress }}</span><span class="lbl">En cours</span></div>
-  <div class="corr-stat"><span class="num">{{ stats.done }}</span><span class="lbl">Déclarées modifiées</span></div>
-  {% if stats.with_pr %}<div class="corr-stat"><span class="num">{{ stats.with_pr }}</span><span class="lbl">PR ouvertes</span></div>{% endif %}
-  <div class="corr-stat ok"><span class="num">{{ stats.verified_resolved }}</span><span class="lbl">✓ Vérifiées résolues</span></div>
-  {% if stats.still_present %}<div class="corr-stat err"><span class="num">{{ stats.still_present }}</span><span class="lbl">⚠ Encore présentes</span></div>{% endif %}
+  <div class="corr-stat"><span class="num">{{ stats.total }}</span><span class="lbl">{{ tr("Suivies") }}</span></div>
+  <div class="corr-stat accent"><span class="num">{{ stats.todo }}</span><span class="lbl">{{ tr("À traiter") }}</span></div>
+  <div class="corr-stat"><span class="num">{{ stats.in_progress }}</span><span class="lbl">{{ tr("En cours") }}</span></div>
+  <div class="corr-stat"><span class="num">{{ stats.done }}</span><span class="lbl">{{ tr("Déclarées modifiées") }}</span></div>
+  {% if stats.with_pr %}<div class="corr-stat"><span class="num">{{ stats.with_pr }}</span><span class="lbl">{{ tr("PR ouvertes") }}</span></div>{% endif %}
+  <div class="corr-stat ok"><span class="num">{{ stats.verified_resolved }}</span><span class="lbl">{{ tr("✓ Vérifiées résolues") }}</span></div>
+  {% if stats.still_present %}<div class="corr-stat err"><span class="num">{{ stats.still_present }}</span><span class="lbl">{{ tr("⚠ Encore présentes") }}</span></div>{% endif %}
 </div>
 {% endif %}
 
 <section class="card">
   <div class="card-title-row corr-candidates-heading">
     <div>
-      <h2>Anomalies encore détectées</h2>
-      {% if not first_correction_complete %}<p><a href="/projects/{{ slug }}/first-correction">Être guidé pour ma première correction →</a></p>{% endif %}
-      <p class="muted small">Chaque anomalie concerne les URL de la dernière analyse. Une correction vérifiée sur une page peut encore être nécessaire sur une autre.</p>
+      <h2>{{ tr("Anomalies encore détectées") }}</h2>
+      {% if not first_correction_complete %}<p><a href="/projects/{{ slug }}/first-correction">{{ tr("Être guidé pour ma première correction →") }}</a></p>{% endif %}
+      <p class="muted small">{{ tr("Chaque anomalie concerne les URL de la dernière analyse. Une correction vérifiée sur une page peut encore être nécessaire sur une autre.") }}</p>
       <p class="muted small" style="margin:4px 0 0;">
         {% if current_crawl_ts %}
-          Analyse du <span data-ts-datetime="{{ current_crawl_ts }}">{{ current_crawl_ts[6:8] }}/{{ current_crawl_ts[4:6] }}/{{ current_crawl_ts[:4] }}</span> · {{ fix_candidates|length }} anomalie{{ 's' if fix_candidates|length > 1 else '' }} candidate{{ 's' if fix_candidates|length > 1 else '' }}.
+          {{ tr("Analyse du") }} <span data-ts-datetime="{{ current_crawl_ts }}">{{ current_crawl_ts[6:8] }}/{{ current_crawl_ts[4:6] }}/{{ current_crawl_ts[:4] }}</span> · {% if fix_candidates|length > 1 %}{{ tr("{n} anomalies candidates.", n=fix_candidates|length) }}{% else %}{{ tr("{n} anomalie candidate.", n=fix_candidates|length) }}{% endif %}
         {% else %}
-          Aucune analyse exploitable pour générer des corrections.
+          {{ tr("Aucune analyse exploitable pour générer des corrections.") }}
         {% endif %}
       </p>
     </div>
     <div class="card-title-actions">
-      <a class="btn" href="/projects/{{ slug }}/issues{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Anomalies</a>
+      <a class="btn" href="/projects/{{ slug }}/issues{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">{{ tr("Anomalies") }}</a>
       {% if current_crawl_ts %}
         {% if fix_pack_unlocked %}
-          <a class="btn" href="/projects/{{ slug }}/export/fix-pack.zip?crawl={{ current_crawl_ts }}">Archive de corrections ZIP</a>
+          <a class="btn" href="/projects/{{ slug }}/export/fix-pack.zip?crawl={{ current_crawl_ts }}">{{ tr("Archive de corrections ZIP") }}</a>
         {% else %}
-          <a class="btn" href="{{ billing_url or '/billing' }}">Archive de corrections · Solo+</a>
+          <a class="btn" href="{{ billing_url or '/billing' }}">{{ tr("Archive de corrections · Solo+") }}</a>
         {% endif %}
-        <a class="btn" href="/projects/{{ slug }}/export/report.pdf?crawl={{ current_crawl_ts }}">Rapport à transmettre (PDF)</a>
+        <a class="btn" href="/projects/{{ slug }}/export/report.pdf?crawl={{ current_crawl_ts }}">{{ tr("Rapport à transmettre (PDF)") }}</a>
       {% endif %}
       {% if github_cfg and github_cfg.repo and fix_candidates %}
-        <button type="button" class="btn primary" data-correction-bulk-fix>Préparer un brouillon GitHub</button>
+        <button type="button" class="btn primary" data-correction-bulk-fix>{{ tr("Préparer un brouillon GitHub") }}</button>
       {% elif not (github_cfg and github_cfg.repo) %}
-        <button type="button" class="btn" id="gh-connect-toggle">Connecter GitHub (facultatif)</button>
+        <button type="button" class="btn" id="gh-connect-toggle">{{ tr("Connecter GitHub (facultatif)") }}</button>
       {% endif %}
     </div>
   </div>
 
   {% if not (github_cfg and github_cfg.repo) %}
-  {% if wordpress_connected %}<p class="muted">WordPress est connecté. Utilisez le parcours guidé pour appliquer un titre SEO ou une méta-description, puis vérifier le résultat. Pour les autres anomalies, consultez les instructions.</p>
-  {% else %}<p class="muted">Votre site est géré dans un CMS ou par un prestataire ? Ouvrez les instructions de chaque problème pour modifier la page, ou transmettez le rapport PDF. Après modification, lancez une nouvelle analyse pour vérifier le résultat.</p>{% endif %}
+  {% if wordpress_connected %}<p class="muted">{{ tr("WordPress est connecté. Utilisez le parcours guidé pour appliquer un titre SEO ou une méta-description, puis vérifier le résultat. Pour les autres anomalies, consultez les instructions.") }}</p>
+  {% else %}<p class="muted">{{ tr("Votre site est géré dans un CMS ou par un prestataire ? Ouvrez les instructions de chaque problème pour modifier la page, ou transmettez le rapport PDF. Après modification, lancez une nouvelle analyse pour vérifier le résultat.") }}</p>{% endif %}
   <div id="gh-connect-panel" style="display:none;margin-top:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;">
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Connecter un dépôt GitHub à ce projet</div>
-    <div id="gh-connect-body" style="font-size:12px;color:var(--muted);">Chargement…</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">{{ tr("Connecter un dépôt GitHub à ce projet") }}</div>
+    <div id="gh-connect-body" style="font-size:12px;color:var(--muted);">{{ tr("Chargement…") }}</div>
   </div>
   {% endif %}
 
   {% if github_cfg and github_cfg.repo %}
     <p class="muted small" style="margin:8px 0 0;">
-      Dépôt connecté : <span class="mono">{{ github_cfg.repo }}</span> · branche <span class="mono">{{ github_cfg.branch }}</span>. Les propositions préparées ici attendent votre relecture et votre fusion sur GitHub.
+      {{ tr_html('Dépôt connecté : <span class="mono">{repo}</span> · branche <span class="mono">{branch}</span>. Les propositions préparées ici attendent votre relecture et votre fusion sur GitHub.', repo=github_cfg.repo, branch=github_cfg.branch) }}
     </p>
     {# Le lien de la PR survit au rechargement : le message « PR créée » disparait avec lui. #}
     {% if prs_ouvertes %}
     <p class="small" style="margin:6px 0 0;" data-prs-ouvertes>
-      {{ 'PR ouvertes' if prs_ouvertes|length > 1 else 'PR ouverte' }} :
+      {{ tr('PR ouvertes' if prs_ouvertes|length > 1 else 'PR ouverte') }} :
       {% for p in prs_ouvertes %}<a href="{{ p.url }}" target="_blank" rel="noreferrer">#{{ p.number }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
-      — à relire puis fusionner sur GitHub.
+      — {{ tr("à relire puis fusionner sur GitHub.") }}
     </p>
     {% endif %}
   {% endif %}
@@ -513,48 +513,48 @@
   {% if fix_candidates %}
     <div class="corr-flow-grid">
       {% for candidate in fix_candidates %}
-        {% set p_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(candidate.priority, candidate.priority) %}
-        {% set sev_lbl = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(candidate.severity, candidate.severity) %}
+        {% set p_label = tr({'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(candidate.priority, candidate.priority)) %}
+        {% set sev_lbl = tr({'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(candidate.severity, candidate.severity)) %}
         <div class="corr-flow-item">
           <div class="corr-row-main">
             <div class="corr-row-info">
               <div class="corr-row-title">
                 <span class="corr-dot" style="background:{{ sev_color.get(candidate.severity, 'var(--border)') }};" title="{{ candidate.severity }}"></span>
-                <span class="corr-row-name">{{ candidate.label }}</span>
+                <span class="corr-row-name">{{ tr(candidate.label) }}</span>
                 <span class="badge {{ candidate.severity }}" style="font-size:10px;">{{ sev_lbl }}</span>
-                <span class="badge {{ 'error' if candidate.priority == 'high' else ('warning' if candidate.priority == 'medium' else 'notice') }}" style="font-size:10px;">priorité {{ p_label }}</span>
-                {% if candidate.verify and candidate.verify.result == 'resolved' %}<span class="corr-verify-text ok">✓ résolu</span>
-                {% elif candidate.verify and candidate.verify.result == 'still_present' %}<span class="corr-verify-text err">⚠ présent</span>{% endif %}
+                <span class="badge {{ 'error' if candidate.priority == 'high' else ('warning' if candidate.priority == 'medium' else 'notice') }}" style="font-size:10px;">{{ tr("priorité {priority}", priority=p_label) }}</span>
+                {% if candidate.verify and candidate.verify.result == 'resolved' %}<span class="corr-verify-text ok">✓ {{ tr("résolu") }}</span>
+                {% elif candidate.verify and candidate.verify.result == 'still_present' %}<span class="corr-verify-text err">⚠ {{ tr("présent") }}</span>{% endif %}
                 {% set _intro = (candidate.verify or {}).get('introduced') or [] %}
                 {% if _intro %}
                   {# A fix that resolves its own issue but creates others is only half a success. #}
                   <span class="corr-verify-text warn"
-                        title="Anomalies en hausse depuis le crawl de référence{% if (candidate.verify or {}).get('fixes_in_window', 1) > 1 %} — {{ candidate.verify.fixes_in_window }} corrections partagent cette fenêtre, la hausse ne peut pas être attribuée à une seule{% endif %} : {% for i in _intro %}{{ i.key }} +{{ i.delta }}{% if not loop.last %}, {% endif %}{% endfor %}">
-                    ↑ {{ _intro | sum(attribute='delta') }} introduite{{ 's' if (_intro | sum(attribute='delta')) > 1 else '' }}
+                        title="{{ tr('Anomalies en hausse depuis le crawl de référence') }}{% if (candidate.verify or {}).get('fixes_in_window', 1) > 1 %} — {{ tr('{n} corrections partagent cette fenêtre, la hausse ne peut pas être attribuée à une seule', n=candidate.verify.fixes_in_window) }}{% endif %} : {% for i in _intro %}{{ i.key }} +{{ i.delta }}{% if not loop.last %}, {% endif %}{% endfor %}">
+                    ↑ {% if (_intro | sum(attribute='delta')) > 1 %}{{ tr("{n} introduites", n=_intro | sum(attribute='delta')) }}{% else %}{{ tr("{n} introduite", n=_intro | sum(attribute='delta')) }}{% endif %}
                   </span>
                 {% elif candidate.verify and candidate.verify.get('baseline_ts') %}
-                  <span class="corr-verify-text ok" title="Aucune anomalie en hausse depuis le crawl de référence">± 0</span>
+                  <span class="corr-verify-text ok" title="{{ tr("Aucune anomalie en hausse depuis le crawl de référence") }}">± 0</span>
                 {% endif %}
               </div>
               <div class="corr-row-sub">
-                {{ candidate.count }} occurrence{{ 's' if candidate.count > 1 else '' }} dans la dernière analyse.<br>
-                {% if candidate.url %}{{ 'Page à traiter' if candidate.count == 1 else 'Exemple de page à traiter' }} : <a href="{{ candidate.url }}" target="_blank" rel="noreferrer">{{ candidate.url }}</a>{% else %}URL non détectée.{% endif %}
+                {% if candidate.count > 1 %}{{ tr("{n} occurrences dans la dernière analyse.", n=candidate.count) }}{% else %}{{ tr("{n} occurrence dans la dernière analyse.", n=candidate.count) }}{% endif %}<br>
+                {% if candidate.url %}{{ tr('Page à traiter' if candidate.count == 1 else 'Exemple de page à traiter') }} : <a href="{{ candidate.url }}" target="_blank" rel="noreferrer">{{ candidate.url }}</a>{% else %}{{ tr("URL non détectée.") }}{% endif %}
               </div>
             </div>
             <div class="corr-flow-actions">
-              <a class="btn" style="font-size:11px;padding:3px 10px;" href="/projects/{{ slug }}/issues/{{ candidate.key }}{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">Voir les instructions</a>
+              <a class="btn" style="font-size:11px;padding:3px 10px;" href="/projects/{{ slug }}/issues/{{ candidate.key }}{% if current_crawl_ts %}?crawl={{ current_crawl_ts }}{% endif %}">{{ tr("Voir les instructions") }}</a>
               {% if candidate.url %}
                 <button type="button" class="btn" style="font-size:11px;padding:3px 10px;"
-                  data-correction-preview data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}">Aperçu IA</button>
+                  data-correction-preview data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}">{{ tr("Aperçu IA") }}</button>
               {% endif %}
               {% if github_cfg and github_cfg.repo and candidate.url %}
                 <button type="button" class="btn primary" style="font-size:11px;padding:3px 10px;"
                   data-correction-deep-fix data-issue="{{ candidate.key }}" data-url="{{ candidate.url }}" data-crawl="{{ current_crawl_ts }}"
-                  title="Corrige toutes les occurrences de cette anomalie dans le dépôt, en une seule PR">Créer une proposition GitHub</button>
+                  title="{{ tr("Corrige toutes les occurrences de cette anomalie dans le dépôt, en une seule PR") }}">{{ tr("Créer une proposition GitHub") }}</button>
 
               {% endif %}
               {% if candidate.pr and candidate.pr.pr_url %}
-                <a href="{{ candidate.pr.pr_url }}" target="_blank" rel="noreferrer" class="muted small">PR existante</a>
+                <a href="{{ candidate.pr.pr_url }}" target="_blank" rel="noreferrer" class="muted small">{{ tr("PR existante") }}</a>
               {% endif %}
             </div>
           </div>
@@ -563,15 +563,15 @@
       {% endfor %}
     </div>
   {% else %}
-    <p class="muted small" style="margin-top:12px;">Aucune anomalie corrigeable automatiquement trouvée sur la dernière analyse.</p>
+    <p class="muted small" style="margin-top:12px;">{{ tr("Aucune anomalie corrigeable automatiquement trouvée sur la dernière analyse.") }}</p>
   {% endif %}
 </section>
 
 {% if stats.total == 0 %}
   <section class="card">
-    <p class="muted">Aucune correction suivie pour l'instant.</p>
-    <p class="muted small" style="margin-top:6px;">Ouvrez les instructions d’une anomalie et indiquez son avancement avec les boutons de statut. Si un dépôt est connecté, vous pouvez aussi examiner une proposition de modification avant de la créer sur GitHub.</p>
-    <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">Voir les anomalies</a>
+    <p class="muted">{{ tr("Aucune correction suivie pour l'instant.") }}</p>
+    <p class="muted small" style="margin-top:6px;">{{ tr("Ouvrez les instructions d’une anomalie et indiquez son avancement avec les boutons de statut. Si un dépôt est connecté, vous pouvez aussi examiner une proposition de modification avant de la créer sur GitHub.") }}</p>
+    <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">{{ tr("Voir les anomalies") }}</a>
   </section>
 {% else %}
 
@@ -585,26 +585,26 @@
 <div class="corr-filterbar">
   <div class="corr-search-wrap">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="search" id="corr-search" aria-label="Rechercher une anomalie ou une URL" placeholder="Rechercher une anomalie ou une URL…" autocomplete="off">
+    <input type="search" id="corr-search" aria-label="{{ tr("Rechercher une anomalie ou une URL") }}" placeholder="{{ tr("Rechercher une anomalie ou une URL…") }}" autocomplete="off">
   </div>
   <div class="corr-filter-sep"></div>
   <div class="corr-filter-selects">
-    <select id="corr-filter-sev" aria-label="Filtrer par sévérité" title="Filtrer par sévérité">
-      <option value="all">Sévérité</option>
-      <option value="error">Erreur</option>
-      <option value="warning">Avertissement</option>
-      <option value="notice">Info</option>
+    <select id="corr-filter-sev" aria-label="{{ tr("Filtrer par sévérité") }}" title="{{ tr("Filtrer par sévérité") }}">
+      <option value="all">{{ tr("Sévérité") }}</option>
+      <option value="error">{{ tr("Erreur") }}</option>
+      <option value="warning">{{ tr("Avertissement") }}</option>
+      <option value="notice">{{ tr("Info") }}</option>
     </select>
-    <select id="corr-filter-verify" aria-label="Filtrer par vérification" title="Filtrer par vérification">
-      <option value="all">Vérification</option>
-      <option value="resolved">✓ Résolues</option>
-      <option value="still_present">⚠ Encore présentes</option>
-      <option value="unverified">Non vérifiables</option>
-      <option value="none">Non vérifiées</option>
+    <select id="corr-filter-verify" aria-label="{{ tr("Filtrer par vérification") }}" title="{{ tr("Filtrer par vérification") }}">
+      <option value="all">{{ tr("Vérification") }}</option>
+      <option value="resolved">{{ tr("✓ Résolues") }}</option>
+      <option value="still_present">{{ tr("⚠ Encore présentes") }}</option>
+      <option value="unverified">{{ tr("Non vérifiables") }}</option>
+      <option value="none">{{ tr("Non vérifiées") }}</option>
     </select>
-    <select id="corr-sort" aria-label="Trier les corrections" title="Trier">
-      <option value="recent">Plus récentes</option>
-      <option value="severity">Par sévérité</option>
+    <select id="corr-sort" aria-label="{{ tr("Trier les corrections") }}" title="{{ tr("Trier") }}">
+      <option value="recent">{{ tr("Plus récentes") }}</option>
+      <option value="severity">{{ tr("Par sévérité") }}</option>
     </select>
   </div>
 </div>
@@ -617,24 +617,24 @@
 <div class="corr-group{% if collapsed %} collapsed{% endif %}" data-col="{{ col }}">
   <button class="corr-group-hd" type="button" aria-expanded="{{ 'false' if collapsed else 'true' }}"{% if groups[col] %} aria-controls="correction-group-{{ col }}"{% else %} disabled{% endif %}>
     <span class="corr-dot" style="background:{{ meta.color }};"></span>
-    <span class="corr-group-name">{{ 'Historique des corrections vérifiées' if verified_history else meta.label }}</span>
+    <span class="corr-group-name">{{ tr('Historique des corrections vérifiées' if verified_history else meta.label) }}</span>
     {% if groups[col] %}
       <span class="badge {{ meta.badge }}" style="font-size:10px;">{{ groups[col]|length }}</span>
     {% else %}
-      <span class="muted small">Aucune tâche</span>
+      <span class="muted small">{{ tr("Aucune tâche") }}</span>
     {% endif %}
     <svg class="corr-group-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
   </button>
 
   {% if groups[col] %}
-    <p class="corr-col-empty" style="display:none;padding:6px 6px 8px;">Aucun résultat pour ce filtre.</p>
+    <p class="corr-col-empty" style="display:none;padding:6px 6px 8px;">{{ tr("Aucun résultat pour ce filtre.") }}</p>
     <div class="corr-col-cards" id="correction-group-{{ col }}">
     {% for task in groups[col] %}
     <div class="corr-card"
          data-issue-key="{{ task.issue_key }}"
          data-url="{{ task.url or '' }}"
          data-status="{{ task.status }}"
-         data-label="{{ task.issue_label|lower }}"
+         data-label="{{ tr(task.issue_label)|lower }}"
          data-severity="{{ task.severity }}"
          data-date="{{ task.updated_at }}"
          data-verify="{{ task.verify.result if task.verify else '' }}">
@@ -645,12 +645,12 @@
           {# A keyword rewrite has no anomaly page: no crawl produced it. Linking to one would
              be a 404 on the row that describes the correction. #}
           {% if task.cms_change_id %}
-            <a href="/projects/{{ slug }}/cms/wordpress/changes/{{ task.cms_change_id }}" class="corr-item-label">{{ task.issue_label }}</a>
+            <a href="/projects/{{ slug }}/cms/wordpress/changes/{{ task.cms_change_id }}" class="corr-item-label">{{ tr(task.issue_label) }}</a>
           {% elif task.issue_key == 'keyword_snippet_rewrite' %}
-            <a href="/projects/{{ slug }}/keywords/opportunities" class="corr-item-label">{{ task.issue_label }}</a>
+            <a href="/projects/{{ slug }}/keywords/opportunities" class="corr-item-label">{{ tr(task.issue_label) }}</a>
           {% else %}
             <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}"
-               class="corr-item-label">{{ task.issue_label }}</a>
+               class="corr-item-label">{{ tr(task.issue_label) }}</a>
           {% endif %}
           {% if task.url %}
             <span class="corr-item-url" title="{{ task.url }}">{{ task.url }}</span>
@@ -663,25 +663,25 @@
             </a>
           {% endif %}
           {% if task.verified %}
-            <span class="corr-verify-text ok" title="Confirmé résolu">✓ Vérifiée</span>
+            <span class="corr-verify-text ok" title="{{ tr("Confirmé résolu") }}">{{ tr("✓ Vérifiée") }}</span>
           {% elif task.verify and task.verify.result == 'still_present' %}
-            <span class="corr-verify-text err" title="Toujours présent">⚠</span>
+            <span class="corr-verify-text err" title="{{ tr("Toujours présent") }}">⚠</span>
           {% elif task.verify and task.verify.result == 'unverified' %}
-            <span class="corr-verify-text warn" aria-label="Non vérifiable" title="Non vérifiable : {{ task.verify.reason or 'Le crawl ne permet pas de conclure.' }}">?</span>
+            <span class="corr-verify-text warn" aria-label="{{ tr('Non vérifiable') }}" title="{{ tr('Non vérifiable :') }} {{ tr(task.verify.reason or 'Le crawl ne permet pas de conclure.') }}">?</span>
           {% endif %}
           {# Collateral damage: a fix that resolves its own issue while creating others is only
              half a success, and that used to be invisible. #}
           {% set _intro = (task.verify or {}).get('introduced') or [] %}
           {% if _intro %}
             <span class="corr-verify-text warn"
-                  title="Anomalies en hausse depuis le crawl de référence{% if (task.verify or {}).get('fixes_in_window', 1) > 1 %} — {{ task.verify.fixes_in_window }} corrections partagent cette fenêtre, la hausse ne peut pas être attribuée à une seule{% endif %} : {% for i in _intro %}{{ i.key }} +{{ i.delta }}{% if not loop.last %}, {% endif %}{% endfor %}">
+                  title="{{ tr('Anomalies en hausse depuis le crawl de référence') }}{% if (task.verify or {}).get('fixes_in_window', 1) > 1 %} — {{ tr('{n} corrections partagent cette fenêtre, la hausse ne peut pas être attribuée à une seule', n=task.verify.fixes_in_window) }}{% endif %} : {% for i in _intro %}{{ i.key }} +{{ i.delta }}{% if not loop.last %}, {% endif %}{% endfor %}">
               ↑ {{ _intro | sum(attribute='delta') }}
             </span>
           {% elif task.verify and task.verify.get('baseline_ts') %}
-            <span class="corr-verify-text ok" title="Aucune anomalie en hausse depuis le crawl de référence">± 0</span>
+            <span class="corr-verify-text ok" title="{{ tr("Aucune anomalie en hausse depuis le crawl de référence") }}">± 0</span>
           {% endif %}
           <span class="corr-date">{% if task.updated_at %}{{ task.updated_at[:10] }}{% endif %}</span>
-          <button type="button" class="corr-expand-btn" title="Modifier">
+          <button type="button" class="corr-expand-btn" title="{{ tr("Modifier") }}">
             <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
         </div>
@@ -689,19 +689,19 @@
 
       <div class="corr-item-detail" style="display:none;">
         {% if wordpress_connected and task.cms_supported and task.status not in ['done', 'ignored'] %}
-          <p><a class="btn" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ task.id }}">Préparer dans WordPress</a></p>
+          <p><a class="btn" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ task.id }}">{{ tr("Préparer dans WordPress") }}</a></p>
         {% endif %}
-        <textarea class="corr-note" rows="2" placeholder="Note (optionnel)…">{{ task.user_note or '' }}</textarea>
+        <textarea class="corr-note" rows="2" placeholder="{{ tr("Note (optionnel)…") }}">{{ task.user_note or '' }}</textarea>
         <div class="corr-segmented">
           {% for st, lbl in [('todo','À traiter'),('in_progress','En cours'),('done','Modifié · à vérifier'),('ignored','Ignoré')] %}
           <button type="button"
             class="corr-seg-btn{% if task.status == st %} active{% endif %}"
             data-set-status="{{ st }}"
-            {% if task.status == st %}disabled{% endif %}>{{ lbl }}</button>
+            {% if task.status == st %}disabled{% endif %}>{{ tr(lbl) }}</button>
           {% endfor %}
         </div>
         <div class="corr-footer">
-          <button type="button" class="corr-save-btn" data-note-save>Sauvegarder</button>
+          <button type="button" class="corr-save-btn" data-note-save>{{ tr("Sauvegarder") }}</button>
         </div>
       </div>
 

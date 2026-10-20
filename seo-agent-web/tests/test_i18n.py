@@ -248,3 +248,21 @@ def test_issue_detail_in_english(lab, tmp_path) -> None:
     assert "Recommended fix" in page and "Actions to take" in page
     assert "Some pages have no &lt;title&gt; tag." in page
     assert "Correction recommandée" not in page and "Certaines pages n’ont pas de balise" not in page
+
+
+def test_corrections_tracker_in_english(lab, tmp_path) -> None:
+    owner = user(lab["db"])
+    project(lab["db"], owner, slug="atelier")
+    url = "https://atelier.example/"
+    report_dir = tmp_path / "runs" / str(owner.id) / "atelier" / "20261018-120000" / "audit"
+    report_dir.mkdir(parents=True)
+    (report_dir / "report.json").write_text(json.dumps({
+        "meta": {"base_url": url},
+        "pages": [{"url": url, "status_code": 200, "content_type": "text/html", "indexable": True}],
+        "issues": {"missing_title": {"count": 2, "examples": [url]}},
+    }))
+    page = session_client(owner).get("/projects/atelier/corrections", params={"lang": "en"}).text
+    assert "Issues still detected" in page and "View instructions" in page
+    assert "2 occurrences in the latest analysis." in page
+    assert "Anomalies encore détectées" not in page
+    assert i18n.translate("Page rédigée : /blog/article", "en") == "Page written: /blog/article"
