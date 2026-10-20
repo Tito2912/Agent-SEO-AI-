@@ -14940,11 +14940,8 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
             "issues_distribution": {"error": 0, "warning": 0, "notice": 0},
             "is_registry_only": True,
         }
-        # Le depot lie, sur CHAQUE ligne — qu'elle vienne du rapport de crawl ou du repli.
-        # C'est sur cet ecran qu'on decide quoi corriger, et une correction sans depot n'existe
-        # pas : afficher l'etat ailleurs obligeait a ouvrir chaque projet pour le decouvrir.
-        # La valeur est lue sur le PROJET, pas sur le rapport : elle n'a rien a voir avec un
-        # crawl et doit s'afficher meme sur un projet jamais crawle.
+        # Repository metadata belongs to the project, even before its first analysis.
+        # It is optional for audits, manual instructions and supported WordPress fixes.
         reglages_p = p.settings if isinstance(p.settings, dict) else {}
         ligne["project_id"] = str(p.id)
         ligne["owner_user_id"] = proprietaire
@@ -15004,6 +15001,20 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
         live_crawls=live_crawls,
     )
 
+    owned_count = sum(str(p.owner_user_id) == str(user.id) for p in db_projects)
+    with DB.session() as db:
+        site_limit = billing.plan_limits(db, user_id=str(user.id)).get("projects") if not is_admin else None
+    site_limit = int(site_limit) if isinstance(site_limit, int) and site_limit > 0 else None
+    add_form = getattr(request.state, "site_add_form", {}) or {}
+    site_add = {
+        "count": owned_count, "limit": site_limit, "admin": is_admin,
+        "can_add": site_limit is None or owned_count < site_limit,
+        "address": str(add_form.get("address") or "")[:2048],
+        "name": str(add_form.get("name") or "")[:200],
+        "error": str(add_form.get("error") or ""),
+        "open": bool(add_form) or request.query_params.get("add_site") == "1",
+    }
+
     resp = templates.TemplateResponse(
         "projects.html",
         {
@@ -15014,6 +15025,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
             "live_crawls": live_crawls,
             "recent_crawl_jobs": recent_crawl_jobs,
             "onboarding": onboarding,
+            "site_add": site_add,
             "first_audit": first_audit.allowance(sys.modules[__name__], user) if not projects else None,
             "first_audit_url": first_audit_url[:2048],
             "msg": (msg or "").strip(),
@@ -16306,6 +16318,15 @@ def settings_system_save(
     )
 
 
+@app.get("/projects/add", response_class=RedirectResponse)
+def add_project_entry() -> Response:
+    # An error page may be rendered at the POST URL; language links remain navigable.
+    response = RedirectResponse(url="/?add_site=1#add-site-fallback", status_code=303)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 @app.post("/projects/add")
 def add_project(
     request: Request,
@@ -16316,7 +16337,8 @@ def add_project(
     gsc_urls: list[str] = Form(default=[]),
     bulk_urls: list[str] = Form(default=[]),
     next: str = Form(default="/"),
-) -> RedirectResponse:
+    source: str = Form(default=""),
+) -> Response:
     mode = (mode or "").strip().lower()
     next_path = _safe_next_path(next)
     created: list[str] = []
@@ -16324,18 +16346,36 @@ def add_project(
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
 
-    projects_limit: int | None = None
+    def add_error(message: str, status_code: int = 400) -> Response:
+        if source != "site-list":
+            return RedirectResponse(url=_path_with_flash(next_path, err=message), status_code=303)
+        request.state.site_add_form = {"address": domain if mode == "domain" else url,
+                                       "name": site_name, "error": message}
+        response = projects(request)
+        response.status_code = status_code
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
     remaining_new: int | None = None
-    if not bool(getattr(user, "is_admin", False)):
-        with DB.session() as db:
+    with DB.session() as db:
+        owned_slugs = set(db.scalars(select(Project.slug).where(Project.owner_user_id == str(user.id))))
+        if not bool(getattr(user, "is_admin", False)):
             limits = billing.plan_limits(db, user_id=str(user.id))
-            v = limits.get("projects")
-            if isinstance(v, int) and v > 0:
-                projects_limit = int(v)
-                projects_count = int(
-                    db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
-                )
-                remaining_new = max(0, projects_limit - projects_count)
+            limit = limits.get("projects")
+            if isinstance(limit, int) and limit > 0:
+                remaining_new = max(0, int(limit) - len(owned_slugs))
+
+    def normalized_address(raw: str) -> str | None:
+        value = str(raw or "").strip()
+        try:
+            parsed = urlsplit(value if "://" in value else "https://" + value)
+            if (not value or len(value) > 2048 or any(c.isspace() for c in value)
+                    or parsed.scheme.lower() not in {"http", "https"}
+                    or not parsed.hostname or parsed.username is not None or parsed.password is not None):
+                return None
+            return _normalize_base_url(value)
+        except ValueError:
+            return None
 
     if mode in {"gsc", "bing", "bulk"}:
         skipped = 0
@@ -16347,9 +16387,9 @@ def add_project(
                 continue
             if v.startswith("sc-domain:"):
                 host = v.split(":", 1)[1].strip()
-                base = _normalize_base_url(host)
+                base = normalized_address(host)
             else:
-                base = _normalize_base_url(v)
+                base = normalized_address(v)
             if not base:
                 skipped += 1
                 continue
@@ -16359,20 +16399,21 @@ def add_project(
                 continue
             if remaining_new is not None:
                 slug_guess = _slug_from_base_url(base) or ""
-                exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
+                exists = slug_guess in owned_slugs
                 if (not exists) and remaining_new <= 0:
                     capped = True
                     skipped += 1
                     continue
-                if not exists:
-                    remaining_new -= 1
             slug = _db_upsert_project(user_id=user.id, base_url=base, site_name="")
             if slug:
+                if slug not in owned_slugs and remaining_new is not None:
+                    remaining_new -= 1
+                owned_slugs.add(slug)
                 created.append(slug)
         msg = f"{len(created)} projet(s) ajouté(s)." if created else "Aucun projet ajouté."
         if capped:
-            msg = "Limite de sites atteinte pour ton plan. Va sur Abonnement pour upgrade."
-        if skipped and not created:
+            msg = "Une limite de votre formule est atteinte"
+        if skipped and not created and not capped:
             msg = "Aucun projet ajouté (certains hôtes sont refusés)."
         _audit_log(
             request,
@@ -16385,25 +16426,23 @@ def add_project(
         return RedirectResponse(url=_path_with_flash(next_path, msg=msg), status_code=303)
 
     raw = domain if mode == "domain" else url
-    base = _normalize_base_url(raw)
+    base = normalized_address(raw)
     if not base:
-        return RedirectResponse(url=_path_with_flash(next_path, err="URL invalide."), status_code=303)
+        return add_error("Domaine cible invalide")
 
     validation_err = _validate_public_crawl_target(base)
     if validation_err:
-        return RedirectResponse(url=_path_with_flash(next_path, err=validation_err), status_code=303)
+        return add_error(validation_err)
 
-    if remaining_new is not None:
-        slug_guess = _slug_from_base_url(base) or ""
-        exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
-        if (not exists) and remaining_new <= 0:
-            return RedirectResponse(
-                url=_path_with_flash(next_path, err="Limite de sites atteinte pour ton plan. Upgrade: Abonnement."),
-                status_code=303,
-            )
+    slug_guess = _slug_from_base_url(base) or ""
+    if source == "site-list" and slug_guess in owned_slugs:
+        return RedirectResponse(url=f"/projects/{quote(slug_guess, safe='')}", status_code=303)
+    if remaining_new is not None and slug_guess not in owned_slugs and remaining_new <= 0:
+        return add_error("Une limite de votre formule est atteinte", 409)
     slug = _db_upsert_project(user_id=user.id, base_url=base, site_name=site_name)
-    if slug:
-        created.append(slug)
+    if not slug:
+        return add_error("Enregistrement impossible.", 503)
+    created.append(slug)
     _audit_log(
         request,
         action="project.create",
@@ -16413,6 +16452,8 @@ def add_project(
         target_id=(created[0] if created else ""),
         meta={"mode": mode, "base_url": base},
     )
+    if source == "site-list":
+        return RedirectResponse(url=_path_with_flash(f"/projects/{quote(slug, safe='')}", msg="Votre site est ajouté"), status_code=303)
     return RedirectResponse(url=_path_with_flash(next_path, msg="Projet ajouté."), status_code=303)
 
 
