@@ -1,0 +1,69 @@
+{
+  "checks": [
+    {
+      "width": 1440,
+      "lang": "fr",
+      "screen": "support",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "Support"
+    },
+    {
+      "width": 1440,
+      "lang": "fr",
+      "screen": "docs",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "Comment Noyaru fonctionne, écran par écran"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "screen": "support",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "Support"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "screen": "docs",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "How Noyaru works, screen by screen"
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "screen": "support",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "Support"
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "screen": "docs",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "Comment Noyaru fonctionne, écran par écran"
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "screen": "support",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "Support"
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "screen": "docs",
+      "status": 200,
+      "horizontal_overflow": false,
+      "heading": "How Noyaru works, screen by screen"
+    }
+  ],
+  "javascript_errors": []
+}

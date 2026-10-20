@@ -12,6 +12,8 @@ Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs é
 
 ## Routes, écrans, actions et sorties
 
+Mise à jour du lot 9 : Support et accueil de la documentation, en français/anglais, leurs liens et leurs états de recherche sont décrits dans [le bilan dédié](UX_HELP_NAVIGATION_LOT9.md). Aucune nouvelle route ni aucun nouveau template dans ce lot ; les 79 templates actuels comprennent les inclusions d’internationalisation. Les décomptes initiaux ci-dessus restent ceux de l’audit du 19 octobre.
+
 Mise à jour du lot 7 : les écrans existants `/projects/{slug}/settings/crawl`, `/jobs` et `/jobs/{job_id}` et leurs états intermédiaires sont revus dans [le bilan dédié](UX_ANALYSIS_ACTIVITY_LOT7.md). Aucune nouvelle route ni aucun nouveau template dans ce lot ; 77 templates HTML sont présents après les lots précédents. Les décomptes initiaux et les références de lignes ci-dessous restent ceux de l’extraction du 19 octobre.
 
 Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. Le montage des fichiers statiques est distingué des écrans. Les routes automatiques du framework sont recensées séparément ci-dessous.
