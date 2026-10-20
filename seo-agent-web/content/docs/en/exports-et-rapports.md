@@ -5,7 +5,7 @@ description: "Every export available in {{app_name}}: summary report, issues, UR
 kind: "Documentation"
 section: "Going further"
 order: 43
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["CSV export", "PDF report", "client audit", "SEO reporting"]
 app_href: "/"
@@ -71,7 +71,7 @@ main route when the site has no connected Git repository.
 | Client, executive | Summary report **PDF** | Read it, understand the state of the site, decide on a budget |
 | Developer | URLs per issue **CSV** | Fix things, row by row |
 | You, for planning | Issue list **CSV** | Sort, filter, prioritize |
-| A site without a repository | **Fix pack ZIP** | Apply the fixes by hand |
+| A site without a repository | **Fix Pack ZIP** | Apply the fixes by hand |
 | An external analysis | All URLs **CSV** | Cross-reference with other data |
 
 ## What a report you hand over should contain

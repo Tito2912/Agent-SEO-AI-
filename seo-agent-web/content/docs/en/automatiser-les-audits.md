@@ -5,7 +5,7 @@ description: "Run crawls without having to think about them, fix every error in 
 kind: "Documentation"
 section: "Going further"
 order: 42
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["automation", "SEO monitoring", "scheduled crawl", "jobs"]
 app_href: "/jobs"
@@ -61,7 +61,7 @@ The schedules that work, by type of site:
 
 ## Fix in bulk
 
-A project's **Automation** page: the **Fix all in one PR** button.
+A project's **Automation** page, **Bulk fix** block: the **Prepare a GitHub draft** button.
 
 ![Automation screen: connected GitHub repository, bulk fix in a single pull request, past fixes](/static/captures/automatisation.webp "The bulk fix: every fixable issue in a single pull request.")
 
@@ -73,7 +73,7 @@ are merged automatically, and the others stay open — see
 [Connect GitHub](/docs/connecter-github).
 
 The same page shows the project's fix task board, split into four
-columns: to do, in progress, done, ignored. Each task comes with its associated pull request and the
+groups: in progress, to fix, reported as changed, ignored. Each task comes with its associated pull request and the
 result of the post-crawl verification.
 
 Two limits to be aware of: the bulk fix is capped at five runs per

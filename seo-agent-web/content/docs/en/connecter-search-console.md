@@ -5,7 +5,7 @@ description: "Link Search Console to a {{app_name}} project: Google authorizatio
 kind: "Documentation"
 section: "Search Console and keywords"
 order: 30
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["Google Search Console", "GSC", "impressions", "URL inspection"]
 app_href: "/settings/accounts#gsc-oauth-card"
@@ -29,7 +29,7 @@ with zero impressions stop being the same problem.
 
 ## Authorize Google
 
-**Settings → Accounts → Google Search Console → Connect**. You are redirected to Google,
+**My account → Connections → Google Search Console → Connect**. You are redirected to Google,
 you choose the account that has access to the property, and you come back.
 
 The authorization is **read-only**. {{app_name}} cannot modify, submit or
@@ -37,7 +37,7 @@ delete anything in your Search Console.
 
 ## Choose the property
 
-The link is made project by project, in the crawl settings, in the **Search Console
+The link is made project by project, in the analysis settings, in the **GSC
 property** field.
 
 This is where almost every connection fails, for a single reason: the
@@ -57,7 +57,7 @@ table. Read that message: it names the cause in nearly every case.
 
 ## Settings
 
-In the project's crawl settings, Search Console section:
+In the project's analysis settings, Search Console section:
 
 - **Enable** — joins search data to the crawl.
 - **Period** — the number of days of history to fetch. 28 days by default, which smooths out

@@ -5,7 +5,7 @@ description: "The full path from your first account to your first fix: create a 
 kind: "Getting started"
 section: "Getting started"
 order: 10
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "New account"
 keywords: ["getting started", "get started", "first crawl", "onboarding"]
 app_href: "/"
@@ -16,7 +16,7 @@ faq:
   - question: "How long does a first crawl take?"
     answer: "From a few minutes for a brochure site to several hours for a large catalog. The crawl runs in the background: you can close the tab, the job keeps going, and the Jobs page shows its progress."
   - question: "Can the crawl slow down my site?"
-    answer: "The crawler respects robots.txt and the crawl-delay directive, and limits the number of simultaneous requests per host. You can lower the pace even further in the project's crawl settings if your hosting is fragile."
+    answer: "The crawler respects robots.txt and the crawl-delay directive, and limits the number of simultaneous requests per host. You can lower the pace even further in the project's analysis settings if your hosting is fragile."
 ---
 
 This page follows the actual order of things: each step unlocks the next one. Allow a
@@ -42,7 +42,7 @@ Details and special cases: [Add a project](/docs/ajouter-un-projet).
 
 ### 2. Run the first crawl
 
-On the project page, click the **Run a crawl** button. You have nothing to configure for the first
+On the project page, click the **Run the first analysis** button. You have nothing to configure for the first
 pass: the default values suit almost every site.
 
 The crawl runs as a background task. Follow it on **Jobs**, or come back later: you receive

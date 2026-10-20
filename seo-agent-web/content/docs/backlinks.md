@@ -5,7 +5,7 @@ description: "Importer son profil de liens, faire remonter des opportunités de 
 kind: "Documentation"
 section: "Aller plus loin"
 order: 41
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Solo, Pro et Business pour les opportunités"
 keywords: ["backlinks", "netlinking", "liens entrants", "Ahrefs"]
 app_href: "/"
@@ -53,10 +53,10 @@ Chaque opportunité porte un statut que vous faites évoluer à la main :
 
 | Statut | Sens |
 | --- | --- |
-| **Nouvelle** | Détectée, pas encore traitée |
-| **Contactée** | Vous avez envoyé un message |
-| **Obtenue** | Le lien existe |
-| **Perdue** | Refus, ou lien retiré |
+| **Nouveau** | Détectée, pas encore traitée |
+| **Contacté** | Vous avez envoyé un message |
+| **Obtenu** | Le lien existe |
+| **Perdu** | Refus, ou lien retiré |
 
 Ce n'est pas décoratif : c'est ce qui vous évite de recontacter trois fois le même site, et ce
 qui alimente la surveillance décrite plus bas.

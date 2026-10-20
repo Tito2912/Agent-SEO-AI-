@@ -5,7 +5,7 @@ description: "Import your link profile, surface backlink opportunities, prepare 
 kind: "Documentation"
 section: "Going further"
 order: 41
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Solo, Pro and Business for opportunities"
 keywords: ["backlinks", "link building", "inbound links", "Ahrefs"]
 app_href: "/"

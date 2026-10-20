@@ -5,7 +5,7 @@ description: "Faire tourner les crawls sans y penser, corriger toutes les erreur
 kind: "Documentation"
 section: "Aller plus loin"
 order: 42
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["automatisation", "monitoring SEO", "crawl planifié", "jobs"]
 app_href: "/jobs"
@@ -61,7 +61,7 @@ Les rythmes qui marchent, par type de site :
 
 ## Corriger en lot
 
-Page **Automatisation** d'un projet : le bouton **Tout corriger en une PR**.
+Page **Automatisation** d'un projet, bloc **Correction globale** : le bouton **Préparer un brouillon GitHub**.
 
 ![Écran Automatisation : dépôt GitHub connecté, correction globale en une pull request, corrections passées](/static/captures/automatisation.webp "La correction globale : toutes les anomalies corrigeables en une seule pull request.")
 
@@ -73,7 +73,7 @@ sont fusionnées automatiquement, les autres restent ouvertes — voir
 [Connecter GitHub](/docs/connecter-github).
 
 La même page affiche le tableau des tâches de correction du projet, réparties en quatre
-colonnes : à faire, en cours, fait, ignoré. Avec pour chacune la pull request associée et le
+groupes : en cours, à corriger, déclarées modifiées, ignorées. Avec pour chacune la pull request associée et le
 résultat de la vérification post-crawl.
 
 Deux limites à connaître : la correction globale est plafonnée à cinq déclenchements par
