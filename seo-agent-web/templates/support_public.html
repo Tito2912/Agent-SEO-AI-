@@ -2,7 +2,6 @@
 
 {% block title %}{{ tr("Support") }} - {{ app_name }}{% endblock %}
 
-{# 12/10/2026 : meme manque que /status — ni description, ni canonical, ni Open Graph. #}
 {% block head_extra %}
 <meta name="description" content="{{ tr("Un problème de connexion, d'intégration GitHub ou de facturation ? Écrivez au support de {app_name} avec les informations utiles.", app_name=app_name) }}" />
 <link rel="canonical" href="{{ public_url(request, localized_path('/support', current_lang())) }}" />
@@ -10,37 +9,49 @@
 <meta property="og:description" content="{{ tr('Connexion, intégration GitHub ou facturation : comment joindre le support de {app_name}.', app_name=app_name) }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ public_url(request, localized_path('/support', current_lang())) }}" />
+<link rel="stylesheet" href="/static/public-help.css?v=1" />
 {% endblock %}
 
 {% block content %}
-  <div class="page-header">
-    <h1>{{ tr("Support") }}</h1>
-    <p class="muted">{{ tr("Un problème de connexion, d'intégration ou de facturation ?") }}</p>
+<div class="public-help">
+  <header class="help-header">
+    <div><h1>{{ tr("Obtenir de l’aide") }}</h1><p class="help-intro">{{ tr("Un problème de connexion, d'intégration ou de facturation ?") }}</p></div>
+    <nav class="help-actions" aria-label="{{ tr('Aide') }}">
+      <a class="btn primary" href="#contact">{{ tr("Contact") }}</a>
+      <a class="btn" href="{{ campaign_link(request, '/status') }}">{{ tr("État du service") }}</a>
+    </nav>
+  </header>
+
+  <div class="help-grid help-support-grid">
+    <section class="card help-card">
+      <h2>{{ tr("Connexion") }}</h2>
+      <div class="help-actions">
+        <a class="btn" href="{{ campaign_link(request, '/auth/forgot') }}">{{ tr("Mot de passe oublié ?") }}</a>
+        <a class="btn" href="{{ campaign_link(request, '/auth/login') }}">{{ tr("Aller à la connexion") }}</a>
+      </div>
+    </section>
+    {% for item in help_pages %}
+      <article class="card help-card">
+        <h2><a href="{{ campaign_link(request, item.path) }}">{{ item.title }}</a></h2>
+        <p>{{ item.description }}</p>
+      </article>
+    {% endfor %}
   </div>
 
-  <section class="card">
-    <div class="card-title-row">
-      <h2>{{ tr("Contact") }}</h2>
-      <span class="badge notice">email</span>
-    </div>
-    <p class="muted small">
-      {{ tr_html('Écris à <a href="mailto:{email}">{email}</a> en précisant :', email=support_email) }}
-    </p>
-    <ul class="examples">
-      <li>{{ tr("Ton email de compte") }}</li>
+  <section class="card help-contact" id="contact" aria-labelledby="contact-heading">
+    <h2 id="contact-heading">{{ tr("Contact") }}</h2>
+    <a href="mailto:{{ support_email }}">{{ support_email }}</a>
+    <h3>{{ tr("À préparer") }}</h3>
+    <ul>
+      <li>{{ tr("Email") }}</li>
       <li>{{ tr("Le nom du projet concerné") }}</li>
       <li>{{ tr("Une capture d'écran + l'heure approximative") }}</li>
     </ul>
   </section>
 
-  <section class="card">
-    <div class="card-title-row">
-      <h2>{{ tr("Statut") }}</h2>
-      <span class="muted small">live</span>
-    </div>
-    <p class="muted small">
-      {{ tr_html("Consulte la page <a href=\"/status\">Statut</a> pour vérifier l'état des services.") }}
-    </p>
-  </section>
+  <nav class="help-actions" aria-label="{{ tr('Documentation') }}">
+    <a class="btn" href="{{ campaign_link(request, '/docs') }}">{{ tr("Voir la documentation") }}</a>
+    <a class="btn" href="{{ campaign_link(request, '/') }}">{{ tr("Retour à l’accueil") }}</a>
+  </nav>
+</div>
 {% endblock %}
-

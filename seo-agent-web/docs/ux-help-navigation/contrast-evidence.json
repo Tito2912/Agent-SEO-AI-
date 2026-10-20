@@ -1,0 +1,2055 @@
+{
+  "samples": 4084,
+  "minimum_ratio": 7.08,
+  "observations": [
+    {
+      "lang": "en",
+      "text": "0 pages",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "1 page",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 9.16,
+      "occurrences": 16,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "21 pages",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "3 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "4 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "5 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "6 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "A login, integration or billing issue?",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "A project's Performance page: Search Console data, PageSpeed meas",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Account and billing",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 24,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Add a project",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Add your site",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Analyze competitors",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Authorize Noyaru on GitHub, link a repository and a branch to a p",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Automate audits and fixes",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Automatic fixes: from issue to pull request",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Back to home",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Backlinks: inventory, opportunities and monitoring",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Choisir les pages et sous-domaines à analyser, adapter les paramè",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Connect GitHub to a project",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Connect Google Search Console",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Connect WordPress and Yoast SEO, have titles and meta description",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 44,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Contact",
+      "minimum_ratio": 7.08,
+      "maximum_ratio": 7.08,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Crawl a rival site, compare the topics it covers with yours, and ",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Create a project in Noyaru: start URL, subdomains, multilingual s",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Documentation · 3 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 160,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Documentation · 4 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 144,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Documentation · 5 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Documentation · 6 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Empty or incomplete crawl, Search Console returning nothing, miss",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 29,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Every export available in Noyaru: summary report, issues, URLs pe",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Exports and reports",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Fix in WordPress with Yoast SEO",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 44,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Fix without a Git repository: the fix pack",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Fixing",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 24,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Forgot your password?",
+      "minimum_ratio": 14.45,
+      "maximum_ratio": 14.45,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Get help",
+      "minimum_ratio": 13.87,
+      "maximum_ratio": 15.03,
+      "occurrences": 36,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Get started with Noyaru in 15 minutes",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Getting started",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Getting started · 4 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Go to log in",
+      "minimum_ratio": 14.45,
+      "maximum_ratio": 14.45,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Going further",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "How Noyaru classifies the issues it detects, what an issue's deta",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "How Noyaru confirms at the next crawl that a fixed issue is gone,",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 45,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Import your link profile, surface backlink opportunities, prepare",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Invite a collaborator, what they see and can do, who pays for the",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Issues: read them, sort them, decide",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Keyword opportunities",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Lancer une analyse et choisir son périmètre",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Link Search Console to a Noyaru project: Google authorization, ch",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Plans and quotas",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 25,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Read the crawl report",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Reference · 5 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Reset",
+      "minimum_ratio": 14.45,
+      "maximum_ratio": 14.45,
+      "occurrences": 36,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Run crawls without having to think about them, fix every error in",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Search",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Search Console and keywords",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Service status",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Team accounts: invite someone to your projects",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "The archive of fixes to apply on WordPress, Shopify, Webflow or a",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "The full path from your first account to your first fix: create a",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "The three fix scopes, what Noyaru actually writes to your reposit",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "The three types of opportunities detected in your Search Console ",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "This documentation describes the product. For the method — priori",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Track performance and Core Web Vitals",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Troubleshooting · 5 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 24,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Troubleshooting: common problems",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 29,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Understand my report",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Verify that a fix actually worked",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 25,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Verify the result",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "View the SEO guides",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "View the documentation",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "What each Noyaru plan includes: projects, crawled pages, AI fixes",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 25,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "What the scores, the page counters, the comparison between two cr",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Write an article and prepare it for publishing",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Write an article to review in HTML and Markdown or prepare a GitH",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Your first audit, then fixes tailored to your website.",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "contact@noyaru.com",
+      "minimum_ratio": 7.41,
+      "maximum_ratio": 7.41,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "help-long-name-long-name-long-name-long-name-long-name-long-name-",
+      "minimum_ratio": 7.41,
+      "maximum_ratio": 7.41,
+      "occurrences": 1,
+      "widths": [
+        360
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "0 pages",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "1 page",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 9.16,
+      "occurrences": 16,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "21 pages",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "3 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "4 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "5 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "6 pages",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Ajouter un projet",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Ajouter votre site",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Aller plus loin",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Aller à la connexion",
+      "minimum_ratio": 13.27,
+      "maximum_ratio": 14.45,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Analyser les concurrents",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Anomalies : les lire, les trier, décider",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Automatiser les audits et les corrections",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Autoriser Noyaru sur GitHub, rattacher un dépôt et une branche à ",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Backlinks : inventaire, opportunités et suivi",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Ce que chaque plan Noyaru inclut : projets, pages crawlées, corre",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 25,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Ce que signifient les scores, les compteurs de pages, la comparai",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Cette documentation décrit le produit. Pour la méthode — priorise",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Choisir les pages et sous-domaines à analyser, adapter les paramè",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Comment Noyaru classe les anomalies détectées, ce que contient la",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Comment Noyaru confirme au crawl suivant qu'une anomalie corrigée",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 45,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Comprendre mon bilan",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Compte et facturation",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 24,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Comptes d'équipe : inviter quelqu'un sur vos projets",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Connecter GitHub à un projet",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Connecter Google Search Console",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Connecter WordPress et Yoast SEO, faire rédiger les titres et mét",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 44,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Contact",
+      "minimum_ratio": 7.08,
+      "maximum_ratio": 7.08,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Corrections automatiques : de l'anomalie à la pull request",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Corriger",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 24,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Corriger dans WordPress avec Yoast SEO",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 44,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Corriger sans dépôt Git : le fix-pack",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Crawl vide ou incomplet, Search Console qui ne remonte rien, bout",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 29,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Crawler un site rival, comparer les sujets qu'il traite aux vôtre",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Créer un projet dans Noyaru : URL de départ, sous-domaines, sites",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Documentation · 3 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 140,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Documentation · 4 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 144,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Documentation · 5 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 60,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Documentation · 6 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Démarrer avec Noyaru en 15 minutes",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Dépannage : les problèmes fréquents",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 29,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Dépannage · 5 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 24,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Exports et rapports",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Faire tourner les crawls sans y penser, corriger toutes les erreu",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Importer son profil de liens, faire remonter des opportunités de ",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Inviter un collaborateur, ce qu'il voit et ce qu'il peut faire, q",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "L'archive de correctifs à appliquer sur WordPress, Shopify, Webfl",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "La page Performance d'un projet : données Search Console, mesures",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Lancer une analyse et choisir son périmètre",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Le parcours complet du premier compte au premier correctif : crée",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Les trois portées de correction, ce que Noyaru écrit réellement d",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Les trois types d'opportunités détectées dans vos données Search ",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Lire le rapport de crawl",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Mot de passe oublié ?",
+      "minimum_ratio": 14.45,
+      "maximum_ratio": 14.45,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "minimum_ratio": 13.87,
+      "maximum_ratio": 15.03,
+      "occurrences": 36,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Opportunités de mots-clés",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Plans et quotas",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 25,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Prise en main",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Prise en main · 4 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Rechercher",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Relier Search Console à un projet Noyaru : autorisation Google, c",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Retour à l’accueil",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Rédiger un article et préparer sa publication",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Rédiger un article à relire en HTML et Markdown ou préparer une p",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Référence · 5 min",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Réinitialiser",
+      "minimum_ratio": 14.45,
+      "maximum_ratio": 14.45,
+      "occurrences": 36,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Search Console et mots-clés",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Suivre la performance et les Core Web Vitals",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Tous les exports disponibles dans Noyaru : rapport de synthèse, a",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Un problème de connexion, d'intégration ou de facturation ?",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Voir la documentation",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Voir les guides SEO",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 32,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Vérifier le résultat",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Vérifier qu'une correction a vraiment fonctionné",
+      "minimum_ratio": 15.89,
+      "maximum_ratio": 15.89,
+      "occurrences": 25,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "contact@noyaru.com",
+      "minimum_ratio": 7.41,
+      "maximum_ratio": 7.41,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "help-long-name-long-name-long-name-long-name-long-name-long-name-",
+      "minimum_ratio": 7.41,
+      "maximum_ratio": 7.41,
+      "occurrences": 1,
+      "widths": [
+        360
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "État du service",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ]
+    }
+  ],
+  "method": "Couleurs de texte calculées dans Chromium, fonds RGBA composités sur les ancêtres ; échantillons du composant, sans certification globale. Mesures regroupées par langue et extrait, avec minimum, maximum et nombre d’occurrences conservés."
+}
