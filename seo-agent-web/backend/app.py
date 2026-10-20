@@ -10661,7 +10661,7 @@ def _public_url(request: Request, path: str) -> str:
 # Toutes les routes publiques ne passent pas par `_public_template_context` : une fonction globale
 # sert donc toutes les pages, y compris /status et /support.
 templates.env.globals["public_url"] = _public_url
-templates.env.globals["campaign_link"] = signup_attribution.carry
+templates.env.globals["campaign_link"] = i18n.localized_links(signup_attribution.carry)
 templates.env.globals["country_options"] = customer_country.OPTIONS
 # Langue de l'interface (francais par defaut, anglais en traduction) : voir backend/i18n.py.
 i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request), link_builder=signup_attribution.carry)
@@ -11850,6 +11850,11 @@ async def noindex_middleware(request: Request, call_next):  # type: ignore[no-un
     if _env_bool("SEO_AGENT_NOINDEX"):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
+
+
+# Les pages publiques en anglais (/en/pricing) sont servies par leur route francaise. Declare
+# en DERNIER, donc execute en PREMIER : les controles d'acces ci-dessus ne voient que /pricing.
+app.add_middleware(i18n.LocalizedPaths)
 
 
 @app.get("/healthz")
@@ -13981,7 +13986,7 @@ def pricing_public(request: Request) -> HTMLResponse:
             "nav_items": _public_nav_items(),
             "catalog": billing.plan_catalog(),
             "comparatif": _comparatif_des_plans(),
-            "canonical_url": _public_url(request, "/pricing"),
+            "canonical_url": _public_url(request, i18n.localized_path("/pricing", i18n.current_lang())),
             "stripe_ok": billing.stripe_enabled(),
         },
     )
@@ -14298,6 +14303,11 @@ def sitemap_xml(request: Request) -> PlainTextResponse:
         {"path": "/ressources-seo", "lastmod": now, "changefreq": "weekly"},
         {"path": "/docs", "lastmod": now, "changefreq": "weekly"},
     ]
+    # Les versions anglaises des pages publiques (/en/, /en/pricing...), voir backend/i18n.py.
+    localized = [item for item in urls if item["path"] in i18n.LOCALIZED_PAGES]
+    for lang in i18n.LANGUAGES:
+        if lang != i18n.DEFAULT_LANG:
+            urls.extend({**item, "path": i18n.localized_path(str(item["path"]), lang)} for item in localized)
     urls.extend(content_library.sitemap_entries())
     url_blocks = "\n".join(
         (
@@ -14768,7 +14778,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
                 featured_resources=content_library.resolve_all(
                     content_library.featured_articles(3), _content_tokens()
                 ),
-                canonical_url=_public_url(request, "/"),
+                canonical_url=_public_url(request, i18n.localized_path("/", i18n.current_lang())),
             ),
         )
     # L'ordre des comptes EST la regle de priorite : le sien d'abord, puis celui qui l'accueille.

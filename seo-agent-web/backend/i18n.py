@@ -6,13 +6,14 @@ catalogue s'affiche en francais : un ecran pas encore traduit reste utilisable, 
 jamais une cle technique.
 
 Choix de la langue, du plus explicite au plus implicite :
-  1. `?lang=en` dans l'adresse (le selecteur de langue) — memorise ensuite dans un cookie ;
+  1. l'adresse d'une page publique (`/en/pricing`), ou `?lang=en` (le selecteur de langue) —
+     memorisee ensuite dans un cookie ;
   2. le cookie `noyaru_lang` ;
   3. la langue d'affichage choisie dans « Mon compte » ;
   4. l'en-tete `Accept-Language` du navigateur ;
   5. le francais.
 Un robot d'indexation n'envoie en general ni cookie ni `Accept-Language` : il voit le
-francais, la version de reference des pages publiques.
+francais a l'adresse francaise, l'anglais a l'adresse anglaise (`LOCALIZED_PAGES`).
 """
 from __future__ import annotations
 
@@ -22,17 +23,22 @@ from contextvars import ContextVar
 import unicodedata
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from jinja2 import pass_context
 from markupsafe import Markup, escape
-from starlette.responses import JSONResponse as _JSONResponse
+from starlette.responses import JSONResponse as _JSONResponse, RedirectResponse
 
 DEFAULT_LANG = "fr"
 # L'ordre est celui du selecteur.
 LANGUAGES: dict[str, str] = {"fr": "Français", "en": "English"}
 COOKIE_NAME = "noyaru_lang"
 _COOKIE_MAX_AGE = 365 * 24 * 3600
+
+# Les pages publiques qui ont une adresse par langue : `/pricing` en francais, `/en/pricing` en
+# anglais. Google indexe chaque version, et chacune annonce l'autre (balises hreflang). Les
+# ecrans de l'application gardent une seule adresse et suivent la langue du client.
+LOCALIZED_PAGES = frozenset({"/", "/pricing", "/support", "/status"})
 
 # La langue de la requete en cours, pour les macros importees sans contexte (`{% from ... import
 # ... %}`) : elles ne voient pas `request`, seulement les variables globales.
@@ -59,6 +65,29 @@ def normalize(value: Any) -> str:
     """`en-US` -> `en` ; une langue inconnue -> chaine vide."""
     code = str(value or "").strip().lower().replace("_", "-").split("-", 1)[0]
     return code if code in LANGUAGES else ""
+
+
+def localized_path(path: str, lang: str) -> str:
+    """L'adresse d'une page publique dans une langue : `/pricing` -> `/en/pricing`, `/` -> `/en/`.
+    En francais, ou pour une page sans adresse par langue, l'adresse ne change pas."""
+    if lang == DEFAULT_LANG or lang not in LANGUAGES or path not in LOCALIZED_PAGES:
+        return path
+    return f"/{lang}/" if path == "/" else f"/{lang}{path}"
+
+
+def localized_links(builder: Any) -> Any:
+    """Les liens des pages publiques (`campaign_link`) menent a la version de la langue de la
+    page : `/pricing#comparatif` devient `/en/pricing#comparatif` sur une page en anglais. Une
+    personne connectee garde des adresses simples : sa langue suit son compte."""
+
+    def link(request: Any, path: str) -> str:
+        parts = urlsplit(str(path))
+        if not parts.scheme and not parts.netloc and getattr(request.state, "user", None) is None:
+            local = localized_path(parts.path, request_lang(request))
+            path = urlunsplit(("", "", local, parts.query, parts.fragment))
+        return builder(request, path)
+
+    return link
 
 
 def _from_accept_language(header: str) -> str:
@@ -96,7 +125,9 @@ def request_lang(request: Any) -> str:
         return cached
     try:
         lang = (
-            normalize(request.query_params.get("lang"))
+            # `/en/pricing` : l'adresse elle-meme dit la langue (voir LocalizedPaths).
+            normalize(getattr(state, "url_lang", None))
+            or normalize(request.query_params.get("lang"))
             or normalize(request.cookies.get(COOKIE_NAME))
             # La langue choisie dans « Mon compte » suit le client d'un appareil a l'autre.
             or normalize(getattr(getattr(state, "user", None), "language", None))
@@ -257,17 +288,29 @@ _link_builder: Any = None
 
 @pass_context
 def _lang_url(context: Any, code: str) -> str:
-    """L'adresse de la page courante dans une autre langue."""
+    """L'adresse de la page courante dans une autre langue.
+
+    Une page publique a sa propre adresse dans chaque langue (`/en/pricing`) ; son retour en
+    francais garde `?lang=fr`, qui remplace un choix anglais deja memorise. Les autres pages,
+    et les pages vues par une personne connectee, gardent leur adresse avec `?lang=`."""
     request = context.get("request")
     if request is None:
         return f"/?lang={code}"
+    own_address = False
     try:
         params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
-        path = f"{request.url.path}?{urlencode(params)}" if params else request.url.path
+        path = request.url.path
+        if path in LOCALIZED_PAGES and getattr(request.state, "user", None) is None:
+            own_address = code != DEFAULT_LANG
+            path = localized_path(path, code)
+        path = f"{path}?{urlencode(params)}" if params else path
         if _link_builder is not None:
             path = _link_builder(request, path)
     except Exception:
         path = "/"  # Requete incomplete (rendu hors HTTP) : le lien reste valide.
+        own_address = False
+    if own_address:
+        return path
     return f"{path}{'&' if '?' in path else '?'}{urlencode([('lang', code)])}"
 
 
@@ -348,6 +391,8 @@ def add_template_globals(env: Any) -> None:
     env.globals["tr_html"] = _tr_html
     env.globals["current_lang"] = _current_lang
     env.globals["lang_url"] = _lang_url
+    env.globals["localized_path"] = localized_path
+    env.globals["localized_pages"] = LOCALIZED_PAGES
     env.globals["languages"] = LANGUAGES
     env.globals["localized_country_options"] = _country_options
     env.globals["js_catalog"] = _js_catalog
@@ -362,7 +407,7 @@ def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: An
 
     @app.middleware("http")
     async def remember_lang(request, call_next):  # type: ignore[no-untyped-def]
-        chosen = normalize(request.query_params.get("lang"))
+        chosen = normalize(getattr(request.state, "url_lang", None)) or normalize(request.query_params.get("lang"))
         token = _current_lang_var.set(request_lang(request))
         try:
             response = await call_next(request)
@@ -385,3 +430,35 @@ def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: An
                 secure=bool(is_secure(request)) if is_secure else request.url.scheme == "https",
             )
         return response
+
+
+class LocalizedPaths:
+    """Sert `/en/pricing` par la route de `/pricing`, l'anglais fixe par l'adresse.
+
+    A declarer en DERNIER dans app.py, donc a executer en PREMIER : les controles d'acces et
+    les routes ne voient que l'adresse francaise, qu'ils connaissent deja. `/en` renvoie vers
+    `/en/` (l'accueil). Une adresse `/en/...` qui n'est pas dans LOCALIZED_PAGES n'est pas
+    touchee : elle n'existe pas.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") == "http":
+            path = str(scope.get("path") or "")
+            for lang in LANGUAGES:
+                prefix = f"/{lang}"
+                if lang == DEFAULT_LANG or not (path == prefix or path.startswith(prefix + "/")):
+                    continue
+                if path == prefix:
+                    query = scope.get("query_string", b"").decode("latin-1")
+                    response = RedirectResponse(prefix + "/" + (f"?{query}" if query else ""), status_code=308)
+                    await response(scope, receive, send)
+                    return
+                page = path[len(prefix):]
+                if page in LOCALIZED_PAGES:
+                    state = {**(scope.get("state") or {}), "url_lang": lang}
+                    scope = {**scope, "path": page, "raw_path": page.encode(), "state": state}
+                break
+        await self.app(scope, receive, send)

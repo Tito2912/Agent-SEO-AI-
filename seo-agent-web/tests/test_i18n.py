@@ -393,3 +393,43 @@ def test_backlinks_outreach_and_automation_in_english(lab, tmp_path) -> None:
     automation = browser.get("/projects/atelier/automation").text
     assert "No fix recorded for this project." in automation
     assert "Aucune correction enregistrée" not in automation
+
+
+def test_public_pages_have_an_english_address_announced_to_google() -> None:
+    fresh = TestClient(app_module.app)
+    english = fresh.get("/en/pricing")
+    assert english.status_code == 200
+    assert '<html lang="en">' in english.text and "Real quotas, feature by feature." in english.text
+    assert '<link rel="canonical" href="http://testserver/en/pricing" />' in english.text
+    assert '<link rel="alternate" hreflang="fr" href="http://testserver/pricing" />' in english.text
+    assert '<link rel="alternate" hreflang="en" href="http://testserver/en/pricing" />' in english.text
+    assert '<link rel="alternate" hreflang="x-default" href="http://testserver/pricing" />' in english.text
+    assert 'href="/en/support"' in english.text  # les liens restent dans la version anglaise
+    assert 'href="/pricing?lang=fr"' in english.text  # retour au francais
+    assert fresh.cookies.get(i18n.COOKIE_NAME) == "en"  # l'inscription suivra en anglais
+
+    # Un robot (ni cookie ni langue) voit le francais a l'adresse francaise.
+    french = TestClient(app_module.app).get("/pricing")
+    assert '<html lang="fr">' in french.text
+    assert '<link rel="canonical" href="http://testserver/pricing" />' in french.text
+    assert '<link rel="alternate" hreflang="en" href="http://testserver/en/pricing" />' in french.text
+    assert 'href="/en/pricing" hreflang="en"' in french.text
+
+    home = TestClient(app_module.app).get("/en", follow_redirects=False)
+    assert (home.status_code, home.headers["location"]) == (308, "/en/")
+    assert '<link rel="canonical" href="http://testserver/en/" />' in TestClient(app_module.app).get("/en/").text
+    for page in ("/en/support", "/en/status"):
+        assert '<html lang="en">' in TestClient(app_module.app).get(page).text
+    # Seules les pages publiques ont une adresse anglaise.
+    assert TestClient(app_module.app).get("/en/projects", follow_redirects=False).status_code != 200
+    sitemap = TestClient(app_module.app).get("/sitemap.xml").text
+    assert "<loc>http://testserver/en/pricing</loc>" in sitemap and "<loc>http://testserver/pricing</loc>" in sitemap
+
+
+def test_english_public_pages_pass_the_beta_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BETA_BASIC_AUTH_USER", "beta")
+    monkeypatch.setenv("BETA_BASIC_AUTH_PASS", "secret")
+    fresh = TestClient(app_module.app)
+    assert fresh.get("/pricing").status_code == 200
+    assert fresh.get("/en/pricing").status_code == 200
+    assert fresh.get("/auth/login").status_code == 401  # la porte beta est bien fermee ailleurs

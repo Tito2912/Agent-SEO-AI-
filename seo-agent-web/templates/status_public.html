@@ -6,11 +6,11 @@
    description tag missing », « Open Graph tags missing », « X card missing »). #}
 {% block head_extra %}
 <meta name="description" content="{{ tr("L'état en direct des services de {app_name} : l'application web, la base de données, l'envoi des e-mails et le stockage des rapports.", app_name=app_name) }}" />
-<link rel="canonical" href="{{ public_url(request, '/status') }}" />
+<link rel="canonical" href="{{ public_url(request, localized_path('/status', current_lang())) }}" />
 <meta property="og:title" content="{{ tr('Statut') }} - {{ app_name }}" />
 <meta property="og:description" content="{{ tr("L'état en direct des services de {app_name}.", app_name=app_name) }}" />
 <meta property="og:type" content="website" />
-<meta property="og:url" content="{{ public_url(request, '/status') }}" />
+<meta property="og:url" content="{{ public_url(request, localized_path('/status', current_lang())) }}" />
 {% endblock %}
 
 {% block content %}
