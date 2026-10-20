@@ -1,0 +1,45 @@
+/* Support and documentation hub only; legal pages and common layouts stay unchanged. */
+.public-help { max-width: 1080px; margin: 0 auto; }
+.public-help [hidden] { display: none !important; }
+.public-help h1 { font-size: clamp(26px, 4vw, 34px); line-height: 1.2; margin: 0 0 12px; }
+.public-help h2 { font-size: 20px; line-height: 1.4; margin: 0 0 12px; }
+.public-help h3 { font-size: 17px; line-height: 1.5; margin: 0 0 8px; }
+.public-help p, .public-help li { line-height: 1.6; }
+.public-help .help-intro { max-width: 760px; color: #b4b4bd; font-size: 16px; margin: 0; }
+.public-help .help-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 20px; margin: 28px 0; }
+.public-help .help-header > div { flex: 1 1 440px; min-width: 0; }
+.public-help .help-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.public-help a { overflow-wrap: anywhere; max-width: 100%; }
+.public-help a:focus-visible, .public-help button:focus-visible, .public-help input:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.public-help .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; white-space: normal; text-align: center; line-height: 1.5; }
+.public-help .help-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 16px 0 28px; }
+.public-help .help-support-grid, .public-help .help-docs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.public-help .help-card { padding: 20px; min-width: 0; margin: 0; }
+.public-help .help-card h2, .public-help .help-card h3 { margin-bottom: 10px; }
+.public-help .help-card h2 { font-size: 18px; }
+.public-help .help-card h3 a, .public-help .help-card h2 a { color: var(--text); display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: 4px; }
+.public-help .help-card p { color: #b4b4bd; font-size: 14px; margin: 8px 0; }
+.public-help .help-meta { color: #b4b4bd; font-size: 13px; line-height: 1.6; }
+.public-help .help-step { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 50%; color: var(--accent-2); }
+.public-help .help-section { margin: 30px 0; scroll-margin-top: 150px; }
+.public-help .help-section-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.public-help .help-section-head h2 { margin: 0; }
+.public-help .help-section-head span { color: #b4b4bd; font-size: 13px; }
+.public-help .help-search { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; padding: 18px; margin: 24px 0; }
+.public-help .help-search label { flex: 1 1 240px; color: var(--text); font-size: 15px; gap: 8px; }
+.public-help .help-search input { min-height: 44px; font-size: 16px; }
+.public-help .help-search p { flex-basis: 100%; margin: 0; color: #b4b4bd; font-size: 14px; }
+.public-help .help-contents { margin: 24px 0; }
+.public-help .help-contents h2 { font-size: 17px; }
+.public-help .help-contents-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.public-help .help-empty { padding: 24px; margin: 20px 0; }
+.public-help .help-contact { scroll-margin-top: 150px; padding: 24px; margin: 24px 0; }
+.public-help .help-contact > a { display: inline-flex; align-items: center; min-height: 44px; font-size: 17px; }
+.public-help .help-contact ul { padding-left: 22px; }
+.public-help .help-contact li { margin: 8px 0; font-size: 15px; }
+.public-help .help-note { padding: 22px; border: 1px solid var(--border); border-radius: 12px; margin: 24px 0; }
+.public-help .help-note p { color: #b4b4bd; font-size: 14px; }
+@media (max-width: 760px) {
+  .public-help .help-grid { grid-template-columns: 1fr; }
+  .public-help .help-header { margin-top: 16px; }
+}

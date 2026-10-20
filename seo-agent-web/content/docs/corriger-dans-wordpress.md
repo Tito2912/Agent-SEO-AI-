@@ -5,7 +5,7 @@ description: "Connecter WordPress et Yoast SEO, faire rédiger les titres et mé
 kind: "Documentation"
 section: "Corriger"
 order: 25
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["WordPress", "Yoast SEO", "titre SEO", "méta-description", "mot de passe d'application"]
 app_href: "/"
@@ -53,12 +53,12 @@ passe d'application dans WordPress si vous ne comptez plus l'utiliser.
 
 ## Corriger une page
 
-Depuis **Première correction** ou **Corrections**, choisissez **Préparer dans WordPress**.
+Depuis **Correction guidée** ou **Corrections**, choisissez **Préparer dans WordPress**.
 
 1. **Proposer un texte** : {{app_name}} rédige une valeur à partir de ce que l'analyse a lu sur
    la page (titres, intertitres), dans la langue de la page et dans la bonne longueur. Vous
    pouvez aussi écrire le texte vous-même.
-2. **Voir l'avant/après** : l'aperçu montre la valeur actuelle et la valeur proposée. Il reste
+2. **Voir l’avant/après** : l'aperçu montre la valeur actuelle et la valeur proposée. Il reste
    valable 20 minutes.
 3. **Appliquer sur mon site** : la page est relue dans WordPress juste avant l'écriture, puis
    relue après pour confirmer l'enregistrement.

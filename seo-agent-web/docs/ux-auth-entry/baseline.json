@@ -1,0 +1,94 @@
+{
+  "base": "79b50f2",
+  "checks": [
+    {
+      "width": 1440,
+      "lang": "fr",
+      "screen": "login",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": null,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 1440,
+      "lang": "fr",
+      "screen": "signup",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": true,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "screen": "login",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": null,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "screen": "signup",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": true,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "screen": "login",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": null,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "screen": "signup",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": true,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "screen": "login",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": null,
+      "smallest_text_px": 12
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "screen": "signup",
+      "google_configured": false,
+      "status": 200,
+      "horizontal_overflow": false,
+      "google_action_visible": true,
+      "google_before_invitation": true,
+      "smallest_text_px": 12
+    }
+  ],
+  "javascript_errors": []
+}

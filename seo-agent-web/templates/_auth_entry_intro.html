@@ -1,0 +1,18 @@
+<div class="auth-entry-brand">
+  <a href="{{ campaign_link(request, '/') }}" aria-label="Noyaru - {{ tr('Accueil') }}"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" /></picture></a>
+  {% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}
+</div>
+<div class="page-header">
+  <h1>{{ heading }}</h1>
+  <p class="muted">{{ description }}</p>
+</div>
+{% if msg %}
+  <div class="alert ok" role="status">
+    <p>{{ tr(msg) }}</p>
+  </div>
+{% endif %}
+{% if err %}
+  <div class="alert error" role="alert">
+    <p><strong>{{ tr("Erreur") }}</strong> · {{ tr(err) }}</p>
+  </div>
+{% endif %}

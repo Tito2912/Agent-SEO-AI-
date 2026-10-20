@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
+{% from "_report_exports.html" import report_exports with context %}
 {% block title %}{{ tr("Anomalies") }} - {{ project.site_name if project else slug }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/journey.css?v=1" />{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/journey.css?v=1" /><link rel="stylesheet" href="/static/report-exports.css?v=1" />{% endblock %}
 
 {% block crumbs %}
   <a href="/">{{ tr("Projets") }}</a>
@@ -108,13 +109,13 @@
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
         <button type="submit" class="btn">{{ tr("Générer / mettre à jour") }}</button>
         {% if fix_suggestions_path %}
-          <a class="btn" href="/file?path={{ fix_suggestions_path }}">{{ tr("Ouvrir le JSON") }}</a>
+          <a class="btn" href="{{ file_preview_link(request, fix_suggestions_path, cur.timestamp) }}">{{ tr("Ouvrir le JSON") }}</a>
         {% endif %}
       </form>
     </details>
 
     <details class="screen-options" {% if severity or category or q %}open{% endif %}>
-      <summary>{{ tr("Filtres et exports") }}{% if severity or category or q %} · {{ tr("filtres actifs") }}{% endif %}</summary>
+      <summary>{{ tr("Filtrer") }}{% if severity or category or q %} · {{ tr("filtres actifs") }}{% endif %}</summary>
     <div class="data-toolbar">
       <form method="get" class="filters" style="width:100%;">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
@@ -150,18 +151,12 @@
         <button type="submit" class="btn primary">{{ tr("Filtrer") }}</button>
         {% if severity or category or q %}<a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">{{ tr("Effacer les filtres") }}</a>{% endif %}
 
-        {% set export_qs = "crawl=" ~ cur.timestamp %}
-        {% if project.compare and project.compare.timestamp %}{% set export_qs = export_qs ~ "&compare=" ~ project.compare.timestamp %}{% endif %}
-        {% if severity %}{% set export_qs = export_qs ~ "&severity=" ~ severity %}{% endif %}
-        {% if category %}{% set export_qs = export_qs ~ "&category=" ~ category %}{% endif %}
-        {% if q %}{% set export_qs = export_qs ~ "&q=" ~ (q | urlencode) %}{% endif %}
 
-        <a class="btn" href="/projects/{{ project.slug }}/export/issues.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">CSV</a>
-        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;" title="{{ tr("CSV complet — une ligne par URL affectée") }}">CSV (URLs)</a>
-        <a class="btn" href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">PDF</a>
       </form>
     </div>
     </details>
+
+    {{ report_exports(project.slug, cur.timestamp, scope="issues", compare=project.compare.timestamp if project.compare else "", severity=severity, category=category, q=q) }}
 
     <section class="card">
       {% if not defects %}

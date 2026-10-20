@@ -1,0 +1,44 @@
+{
+  "base": "83af462140badc3b47c802d072855a3efaa7ae37",
+  "our_commit": "3f4d607037f2ddd601d92030141c0bef3b0abc3e",
+  "claude_pr": 32,
+  "claude_branch": "claude/noyaru-doc-a-jour",
+  "claude_commit": "560fb1d4ef35cfbd9deaa1f9dd36c131d660ad70",
+  "simulation": "git merge-tree --write-tree HEAD origin/claude/noyaru-doc-a-jour",
+  "combined_tree": "341af6127d4b83b687304d02d937be381e22774e",
+  "conflicts": [],
+  "existing_shared_files": {
+    "seo-agent-web/backend/app.py": {
+      "our_scope": "status_public",
+      "claude_scope": "_assistant_system_prompt, _ECRANS_DU_COMPTE, _ECRANS_DU_PROJET"
+    }
+  },
+  "combined_checks": {
+    "command": "python -m pytest -q tests/test_public_service_status.py tests/test_i18n.py",
+    "passed": 42,
+    "failed": 0,
+    "warnings": 1,
+    "duration_seconds": 6.67
+  },
+  "branches_modified_by_simulation": false,
+  "scope": "Arbre combiné exporté dans /tmp, base SQLite de test isolée ; seuls les commits publiés sont couverts.",
+  "after_pr32_merge": {
+    "main_commit": "076046e37875781560cc6fb2095c9b1eb7bf3ac3",
+    "claude_commit": "2d5f3d256935aa4b3b6c9f5a3fd11f0aa56c9e60",
+    "integration_commit": "45a6841",
+    "conflicts": [],
+    "targeted_tests": {
+      "passed": 112,
+      "failed": 0,
+      "duration_seconds": 26.05
+    },
+    "browser": {
+      "cases": 24,
+      "javascript_errors": [],
+      "provider_calls": 0,
+      "contrast_samples": 360,
+      "minimum_ratio": 6.84
+    },
+    "previous_doc_failures": "Both resolved by PR #32 and rechecked without modifying their tests."
+  }
+}

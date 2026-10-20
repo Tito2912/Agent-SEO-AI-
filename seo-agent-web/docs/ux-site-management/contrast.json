@@ -1,0 +1,6582 @@
+{
+  "sample_count": 1096,
+  "minimum_ratio": 4.6,
+  "samples": [
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "2 sélectionnés",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub (facultatif)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Aucune connexion GitHub nécessaire pour l'audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub",
+      "ratio": 12.39
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Lier",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Service indisponible",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Domaine cible invalide",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Connexion à Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible avec ce compte Google.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "2 propriétés",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouté",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:new.example",
+      "ratio": 9.38
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter la sélection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "1 site inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Une limite de votre formule est atteinte",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "2 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub (optional)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "No GitHub connection needed for the audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub",
+      "ratio": 12.39
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Link",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Service unavailable",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Invalid target domain",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Connecting to Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No accessible property.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No property accessible with this Google account.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "2 properties",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Added",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:new.example",
+      "ratio": 9.38
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add selection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your personal account · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "1 site included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You have reached a limit of your plan",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "2 sélectionnés",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub (facultatif)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Aucune connexion GitHub nécessaire pour l'audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub",
+      "ratio": 12.5
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Lier",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Service indisponible",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Domaine cible invalide",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Connexion à Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible avec ce compte Google.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "2 propriétés",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouté",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:new.example",
+      "ratio": 9.38
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter la sélection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "1 site inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Une limite de votre formule est atteinte",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "2 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub (optional)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "No GitHub connection needed for the audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub",
+      "ratio": 12.39
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Link",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Service unavailable",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Invalid target domain",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Connecting to Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No accessible property.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No property accessible with this Google account.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "2 properties",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Added",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:new.example",
+      "ratio": 9.38
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add selection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your personal account · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "1 site included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You have reached a limit of your plan",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "2 sélectionnés",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub (facultatif)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Aucune connexion GitHub nécessaire pour l'audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub",
+      "ratio": 12.5
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Lier",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Service indisponible",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Domaine cible invalide",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Connexion à Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible avec ce compte Google.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.97
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "2 propriétés",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouté",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:new.example",
+      "ratio": 9.46
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter la sélection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "1 site inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Une limite de votre formule est atteinte",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "2 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub (optional)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "No GitHub connection needed for the audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub",
+      "ratio": 12.5
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Link",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Service unavailable",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Invalid target domain",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Connecting to Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No accessible property.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No property accessible with this Google account.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "2 properties",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Added",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example",
+      "ratio": 14.89
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:new.example",
+      "ratio": 9.38
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add selection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your personal account · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "1 site included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You have reached a limit of your plan",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Vos sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "2 sélectionnés",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Auditer la sélection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Supprimer · Votre compte personnel",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub (facultatif)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Aucune connexion GitHub nécessaire pour l'audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Connecter GitHub",
+      "ratio": 12.39
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "text": "Lier",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Service indisponible",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Domaine cible invalide",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Chargement…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "Connexion à Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "Aucune propriété accessible avec ce compte Google.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 15.97
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "2 propriétés",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Tout sélectionner",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouté",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "new.example",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "sc-domain:new.example",
+      "ratio": 9.46
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "1 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "text": "Ajouter la sélection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Accès administrateur",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Les limites des formules clients ne s’appliquent pas à ce compte.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Importer · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Charger depuis Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Votre session a expiré. Reconnectez-vous pour reprendre cet écran",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "Connexion",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "text": "0 sélectionné",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "1 site inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Une limite de votre formule est atteinte",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Your sites",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.89
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "2 selected",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Audit selection",
+      "ratio": 6.82
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Delete · Your personal account",
+      "ratio": 10.02
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 14.45
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub (optional)",
+      "ratio": 4.6
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "No GitHub connection needed for the audit.",
+      "ratio": 9.49
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Connect GitHub",
+      "ratio": 12.5
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "text": "Link",
+      "ratio": 6.42
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 6.97
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Service unavailable",
+      "ratio": 14.95
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.97
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Invalid target domain",
+      "ratio": 15.06
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Loading…",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "Connecting to Google Search Console…",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.4
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No accessible property.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "No property accessible with this Google account.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 15.97
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "2 properties",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Select all",
+      "ratio": 15.14
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example\n\t                  sc-domain:already.example\n\t   ",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "already.example",
+      "ratio": 15.58
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:already.example",
+      "ratio": 9.82
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Added",
+      "ratio": 8.42
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example\n\t                  sc-domain:new.example",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "new.example",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "sc-domain:new.example",
+      "ratio": 9.46
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "1 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "text": "Add selection",
+      "ratio": 6.87
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Administrator access",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Customer plan limits do not apply to this account.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Import · Search Console",
+      "ratio": 15.99
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Load from Google",
+      "ratio": 16.1
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 9.65
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Your session has expired. Log in again to resume this screen.",
+      "ratio": 10.32
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "Log in",
+      "ratio": 15
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "text": "0 selected",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "Your personal account · 1 / 1 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "1 site included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You have reached a limit of your plan",
+      "ratio": 15.99
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter le site sans lancer d’analyse",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Fermer",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Le domaine du site sera analysé. Aucune connexion Google ou insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Adresse de votre site",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Nom (optionnel)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Votre compte personnel · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "3 sites inclus dans votre formule.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Consulter mon abonnement",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Vous pourrez choisir les réglages et démarrer l’analyse plus tard",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "text": "Ajouter un site uniquement",
+      "ratio": 6.81
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add a site",
+      "ratio": 15.16
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Add the site without running an analysis",
+      "ratio": 9.56
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Close",
+      "ratio": 13.67
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "The site's domain will be analyzed. No Google connection or insta",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your website's address",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Name (optional)",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Your personal account · 1 / 3 Sites",
+      "ratio": 15.99
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "3 sites included in your plan.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "View my subscription",
+      "ratio": 7.46
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "You can choose the settings and start the analysis later.",
+      "ratio": 10.08
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "text": "Only add a site",
+      "ratio": 6.81
+    }
+  ]
+}

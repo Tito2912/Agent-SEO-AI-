@@ -1,55 +1,58 @@
 {% extends "public_layout.html" %}
 
-{% block title %}{{ tr("Statut") }} - {{ app_name }}{% endblock %}
+{% block title %}{{ tr("État du service") }} - {{ app_name }}{% endblock %}
 
-{# 12/10/2026 : la page n'avait ni description, ni canonical, ni Open Graph (Ahrefs : « Meta
-   description tag missing », « Open Graph tags missing », « X card missing »). #}
 {% block head_extra %}
-<meta name="description" content="{{ tr("L'état en direct des services de {app_name} : l'application web, la base de données, l'envoi des e-mails et le stockage des rapports.", app_name=app_name) }}" />
+{% set status_description %}{{ tr('État du service') }} — {{ app_name }}. {{ tr('Application web') }}, {{ tr('Base de données') }}. {{ tr('Connexions') }} — {{ tr('Email') }}, {{ tr('Stockage (S3)') }}, {{ tr('Paiement (Stripe)') }}. {{ tr('Obtenir de l’aide') }}.{% endset %}
+<meta name="description" content="{{ status_description }}" />
 <link rel="canonical" href="{{ public_url(request, localized_path('/status', current_lang())) }}" />
-<meta property="og:title" content="{{ tr('Statut') }} - {{ app_name }}" />
-<meta property="og:description" content="{{ tr("L'état en direct des services de {app_name}.", app_name=app_name) }}" />
+<meta property="og:title" content="{{ tr('État du service') }} - {{ app_name }}" />
+<meta property="og:description" content="{{ status_description }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ public_url(request, localized_path('/status', current_lang())) }}" />
+<link rel="stylesheet" href="/static/public-service-status.css?v=1" />
 {% endblock %}
 
 {% block content %}
-  <div class="page-header">
-    <h1>{{ tr("Statut") }}</h1>
-    <p class="muted">{{ tr("État des services (best-effort).") }}</p>
-  </div>
-
-  <section class="card">
-    <div class="card-title-row">
-      <h2>{{ tr("Services") }}</h2>
-      <span class="muted small">{{ now }}</span>
+<div class="service-status-page">
+  <header class="service-status-header">
+    <div>
+      <h1>{{ tr("État du service") }}</h1>
+      <p class="service-status-time">{{ tr("Statut mis à jour :") }} <time datetime="{{ now_iso }}">{{ now }}</time></p>
     </div>
+    <a class="btn" href="{{ campaign_link(request, '/status') }}">{{ tr("Actualiser") }}</a>
+  </header>
 
-    <div style="display:grid; gap:10px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">{{ tr("Application web") }}</span>
-        <span class="badge {% if web_ok %}ok{% else %}error{% endif %}">{% if web_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("hors service") }}{% endif %}</span>
+  <section class="card" aria-labelledby="service-readings-heading">
+    <h2 id="service-readings-heading">{{ tr("Services") }}</h2>
+    <dl class="service-status-readings">
+      <div class="service-status-row" data-service="web">
+        <dt>{{ tr("Application web") }}</dt>
+        <dd><span class="badge {{ 'ok' if web_ok else 'error' }}">{{ tr("opérationnel") if web_ok else tr("hors service") }}</span></dd>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <div>
-          <span class="muted small">{{ tr("Base de données") }}</span>
-          {% if db_error %}<div class="muted small mono" style="font-size:11px;">{{ db_error }}</div>{% endif %}
-        </div>
-        <span class="badge {% if db_ok %}ok{% else %}error{% endif %}">{% if db_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("hors service") }}{% endif %}</span>
+      <div class="service-status-row" data-service="database">
+        <dt>{{ tr("Base de données") }}</dt>
+        <dd><span class="badge {{ 'ok' if db_ok else 'error' }}">{{ tr("opérationnel") if db_ok else tr("hors service") }}</span></dd>
       </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">{{ tr("Emails (SMTP)") }}</span>
-        <span class="badge {% if smtp_ok %}ok{% else %}notice{% endif %}">{% if smtp_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("non configuré") }}{% endif %}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">{{ tr("Stockage (S3)") }}</span>
-        <span class="badge {% if s3_ok %}ok{% else %}notice{% endif %}">{% if s3_ok %}{{ tr("opérationnel") }}{% else %}{{ tr(s3_reason) }}{% endif %}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">{{ tr("Paiement (Stripe)") }}</span>
-        <span class="badge {% if stripe_ok %}ok{% else %}notice{% endif %}">{% if stripe_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("non configuré") }}{% endif %}</span>
-      </div>
-    </div>
+    </dl>
   </section>
-{% endblock %}
 
+  <section class="card" aria-labelledby="service-connections-heading" aria-describedby="service-connections-note">
+    <h2 id="service-connections-heading">{{ tr("Connexions") }}</h2>
+    <p class="service-status-note" id="service-connections-note">{{ tr("Aucune donnée disponible.") }}</p>
+    <dl class="service-status-readings">
+      {% for service, label in [('email', 'Email'), ('storage', 'Stockage (S3)'), ('payment', 'Paiement (Stripe)')] %}
+      <div class="service-status-row" data-service="{{ service }}">
+        <dt>{{ tr(label) }}</dt>
+        <dd><span class="badge notice">{{ tr("Non vérifiable") }}</span></dd>
+      </div>
+      {% endfor %}
+    </dl>
+  </section>
+
+  <nav class="service-status-actions" aria-label="{{ tr('Aide') }}">
+    <a class="btn primary" href="{{ campaign_link(request, '/support') }}">{{ tr("Obtenir de l’aide") }}</a>
+    <a class="btn" href="{{ campaign_link(request, '/') }}">{{ tr("Retour à l’accueil") }}</a>
+  </nav>
+</div>
+{% endblock %}

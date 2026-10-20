@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """La liste des projets dit lesquels sont relies a un depot, et laisse les relier sur place.
 
-C'est l'ecran ou l'on decide quoi corriger. Or une correction SANS DEPOT n'existe pas : elle
-n'a nulle part ou aller. L'information etait pourtant invisible ici — il fallait ouvrir chaque
-projet un par un pour decouvrir lequel etait relie, sur un compte qui en compte vingt-deux.
+Pour les corrections proposees dans le code, la liste indique le depot lie et laisse le choisir
+sur place. Cela ne constitue pas un prerequis pour l'audit, les instructions manuelles ou les
+corrections WordPress prises en charge. Le depot lie reste visible meme avant une analyse.
 
 L'ETAT VIT DANS LA CELLULE DU PROJET, sous l'URL, et pas dans une septieme colonne. Un depot
 lie fait partie de l'identite du projet, pas de ses mesures.

@@ -5,7 +5,7 @@ description: "How {{app_name}} confirms at the next crawl that a fixed issue is 
 kind: "Documentation"
 section: "Fixing"
 order: 23
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Solo, Pro and Business"
 keywords: ["verification", "SEO regression", "fix tracking", "check crawl"]
 app_href: "/"
@@ -80,7 +80,7 @@ A task confirmed as resolved automatically moves to **Done**. You have nothing t
 | --- | --- |
 | **Resolved** | The later crawl no longer sees the issue on this URL. That's the only proof that counts. |
 | **Still present** | The fix is in the repository, the issue is still live. See below. |
-| **Not yet verified** | No crawl has run since the fix. Start one. |
+| **Not verified** | No crawl has run since the fix. Start one. |
 | **Not verifiable** | The crawl doesn't cover the fix well enough to conclude. Check the reason on the task and run a full crawl again. |
 
 The project's **Fixes** page shows these counters at the top: how many verified

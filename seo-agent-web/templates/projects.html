@@ -4,6 +4,7 @@
 {% block head_extra %}
   <link rel="stylesheet" href="/static/journey.css?v=1" />
   <link rel="stylesheet" href="/static/first-audit.css?v=1" />
+  <link rel="stylesheet" href="/static/site-management.css?v=1" />
   <script src="/static/first-audit.js?v=2" defer></script>
   {% if jobs %}
     {% set ns = namespace(live=false) %}
@@ -32,12 +33,12 @@
   </div>
 
   {% if err %}
-    <div class="alert error">
+    <div class="alert error" role="alert">
       <span class="badge error">{{ tr("erreur") }}</span>
       <p class="muted small">{{ tr(err) }}</p>
     </div>
   {% elif msg %}
-    <div class="alert ok">
+    <div class="alert ok" role="status">
       <span class="badge ok">ok</span>
       <p class="muted small">{{ tr(msg) }}</p>
     </div>
@@ -88,7 +89,7 @@
     {% include "_first_audit_start.html" %}
   {% else %}
   <section class="card">
-      <div class="card-title-row">
+      <div class="card-title-row site-management-toolbar">
 	        <h2>{{ tr("Vos sites") }}</h2>
 	        <div class="topbar-actions">
               <label class="checkbox small"><input type="checkbox" id="select-all-projects" />{{ tr("Tout sélectionner") }}</label>
@@ -100,10 +101,12 @@
 	          <button type="submit" form="delete-projects-form" class="btn danger" id="delete-projects-btn" disabled>
 	            {{ tr("Supprimer") }}
 	          </button>
+              <span class="muted site-delete-scope">{{ tr("Supprimer") }} · {{ tr("Votre compte personnel") }}</span>
 	          </div>
-              <button type="button" class="btn" id="add-project-open" data-open-add-project>{{ tr("Ajouter un site") }}</button>
+              <a class="btn" href="/?add_site=1#add-site-fallback" id="add-project-open" data-open-add-project>{{ tr("Ajouter un site") }}</a>
 	        </div>
 	      </div>
+      <div id="site-selection-feedback" class="alert error site-selection-feedback" role="alert" hidden></div>
 	      <div class="table-wrap">
 	        <table class="table projects-table" role="table" aria-label="{{ tr("Vos sites") }}">
           <thead>
@@ -130,6 +133,8 @@
 	                      class="project-select"
                         aria-label="{{ tr('Sélectionner {name}', name=p.site_name) }}"
 	                      value="{{ p.slug }}"
+                        data-name="{{ p.site_name }}"
+                        data-owned="{{ '1' if p.owner_user_id == request.state.user.id|string else '0' }}"
 	                    />
 	                  </label>
 	                </td>
@@ -148,6 +153,7 @@
 	                      {% endif %}
 	                      </div>
 	                      <div class="muted small">{{ p.base_url }}</div>
+                      <span class="muted site-account-label">{% if p.owner_user_id == request.state.user.id|string %}{{ tr("Votre compte personnel") }}{% else %}{{ tr("Le compte que vous avez rejoint") }}{% endif %}</span>
                       {# L'etat du depot vit ICI, sous l'URL, et pas dans une colonne : c'est
                          l'identite du projet, pas une mesure. Une colonne de plus aurait
                          elargi un tableau qui en compte deja six. #}
@@ -156,13 +162,14 @@
                           <a href="https://github.com/{{ p.github_repo }}" target="_blank"
                              rel="noreferrer noopener" title="{{ tr("Dépôt lié à ce projet") }}">⎇ {{ p.github_repo }}</a>{% if p.github_branch %}<span class="muted"> · {{ p.github_branch }}</span>{% endif %}
                         {% else %}
-                          <button type="button" class="btn gh-lier" data-slug="{{ p.slug }}"
-                                  title="{{ tr("Lier un dépôt GitHub pour pouvoir corriger ce projet") }}">
-                            {{ tr("Connecter GitHub") }}
-                          </button>
+                          <details class="site-github-choice">
+                            <summary>{{ tr("Connecter GitHub (facultatif)") }}</summary>
+                            <p class="muted small">{{ tr("Aucune connexion GitHub nécessaire pour l'audit.") }}</p>
+                            <button type="button" class="btn gh-lier" data-slug="{{ p.slug }}" title="{{ tr('Connecter GitHub (facultatif)') }}">{{ tr("Connecter GitHub") }}</button>
+                            <div class="gh-panneau" data-project-slug="{{ p.slug }}" role="status" aria-live="polite" hidden></div>
+                          </details>
                         {% endif %}
                       </div>
-                      <div class="gh-panneau" data-project-slug="{{ p.slug }}" hidden></div>
 	                    </div>
 	                  </td>
                 <td>
@@ -308,6 +315,19 @@
 		        const deleteForm = document.getElementById("delete-projects-form");
 		        const startForms = Array.from(document.querySelectorAll("form.crawl-start-form"));
 
+            const feedback = document.getElementById("site-selection-feedback");
+            function showStartError(response, data) {
+              const expired = response && (response.status === 401 || (response.redirected && new URL(response.url).pathname === "/auth/login"));
+              feedback.replaceChildren();
+              const message = document.createElement("p");
+              message.textContent = expired ? {{ tr("Votre session a expiré. Reconnectez-vous pour reprendre cet écran.")|tojson }} : (data && data.error) || {{ tr("Le chargement a échoué. Réessayez.")|tojson }};
+              feedback.appendChild(message);
+              const link = document.createElement("a");
+              link.href = expired ? "/auth/login?next=%2F" : {{ localized_path('/support', current_lang())|tojson }};
+              link.textContent = expired ? {{ tr("Connexion")|tojson }} : {{ tr("Obtenir de l’aide")|tojson }};
+              feedback.appendChild(link); feedback.hidden = false;
+            }
+
 		        function selectedValues() {
 		          return boxes.filter((b) => b.checked).map((b) => b.value).filter(Boolean);
 		        }
@@ -386,7 +406,7 @@
                   document.getElementById("batch-project-actions").hidden = checked === 0;
 		          if (countEl) countEl.textContent = checked === 1 ? {{ tr("1 sélectionné")|tojson }} : {{ tr("{n} sélectionnés")|tojson }}.replace("{n}", checked);
 		          if (btn) btn.disabled = checked === 0;
-	          if (delBtn) delBtn.disabled = checked === 0;
+	          if (delBtn) delBtn.disabled = checked === 0 || boxes.some(b => b.checked && b.dataset.owned !== "1");
 	          if (selectAll) {
 	            selectAll.checked = checked > 0 && checked === boxes.length;
 	            selectAll.indeterminate = checked > 0 && checked < boxes.length;
@@ -410,7 +430,8 @@
 	              render();
 	              return;
 	            }
-	            setFormSlugs(batchForm);
+	            feedback.hidden = true;
+            setFormSlugs(batchForm);
 
 	            const prevText = btn ? btn.textContent : "";
 	            if (btn) {
@@ -425,8 +446,7 @@
 	              });
 	              const data = await res.json().catch(() => null);
 	              if (!res.ok || !data || !data.ok) {
-	                const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
-	                throw new Error(msg);
+                    throw { response: res, data };
 	              }
 	              const jobs = Array.isArray(data.jobs) ? data.jobs : [];
 	              jobs.forEach((j) => {
@@ -437,7 +457,7 @@
 	              });
 	              boxes.forEach((b) => { if (slugs.includes(b.value)) b.checked = false; });
 	            } catch (err) {
-	              alert({{ tr("Erreur : ")|tojson }} + String(err && err.message ? err.message : err));
+                  showStartError(err.response, err.data);
 	            } finally {
 	              if (btn) btn.textContent = prevText || {{ tr("Auditer la sélection")|tojson }};
 	              render();
@@ -450,6 +470,7 @@
 	            const slug = String(form.dataset.slug || "").trim();
 	            if (!slug) return;
 
+                feedback.hidden = true;
 	            const startBtn = form.querySelector('[data-role="start-btn"]');
 	            const prevText = startBtn ? startBtn.textContent : "";
 	            if (startBtn) {
@@ -464,8 +485,7 @@
 	              });
 	              const data = await res.json().catch(() => null);
 	              if (!res.ok || !data || !data.ok) {
-	                const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
-	                throw new Error(msg);
+                    throw { response: res, data };
 	              }
 	              upsertRowCrawl(slug, String(data.job_id || ""), String(data.status || "queued"));
 	            } catch (err) {
@@ -473,7 +493,7 @@
 	                startBtn.disabled = false;
 	                startBtn.textContent = prevText || {{ tr("Démarrer")|tojson }};
 	              }
-	              alert({{ tr("Erreur : ")|tojson }} + String(err && err.message ? err.message : err));
+                  showStartError(err.response, err.data);
 	            }
 	          });
 	        });
@@ -484,13 +504,9 @@
 	              e.preventDefault();
 	              return;
 	            }
-	            const msg = slugs.length === 1
-	              ? {{ tr("Supprimer le projet « {name} » ?
-
-Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{name}", slugs[0])
-	              : {{ tr("Supprimer {n} projets ?
-
-Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}", slugs.length);
+            if (boxes.some(b => b.checked && b.dataset.owned !== "1")) { e.preventDefault(); return; }
+            const names = boxes.filter(b => b.checked).map(b => b.dataset.name || b.value);
+            const msg = {{ tr("Supprimer ?")|tojson }} + "\n\n" + names.join("\n");
 	            if (!confirm(msg)) {
 	              e.preventDefault();
 	              return;
@@ -503,81 +519,24 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	    </script>
 	  {% endif %}
 
-	  <dialog id="add-project-dialog" class="modal">
-	    <div class="modal-head">
-	      <div class="modal-title">
-	        <span class="modal-title-icon" aria-hidden="true">
-	          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-	            <circle cx="11" cy="11" r="7" />
-	            <path d="m20 20-4.4-4.4" />
-	            <path d="M11 8v6M8 11h6" />
-	          </svg>
-	        </span>
-	        <div class="modal-title-copy">
-	          <h2>{{ tr("Ajouter un projet") }}</h2>
-	          <div class="modal-subtitle">{{ tr("Ajoutez un domaine, une URL précise ou importez vos propriétés Search Console.") }}</div>
-	        </div>
-	      </div>
-	      <form method="dialog">
-	        <button class="btn">{{ tr("Fermer") }}</button>
-	      </form>
-	    </div>
-	    <div class="modal-body">
-	      <div class="tab-buttons" id="add-project-tabs">
-	        <button type="button" class="tab-btn active" data-tab="domain">{{ tr("Domaine") }}</button>
-	        <button type="button" class="tab-btn" data-tab="url">URL</button>
-	        {% if request.state.user and request.state.user.is_admin %}
-	          <button type="button" class="tab-btn google-tab" data-tab="gsc">
-	            <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-	            Search Console
-	          </button>
-	        {% endif %}
-	      </div>
-
-	      <div class="tab-panel active" data-panel="domain">
-	        <form method="post" action="/projects/add">
-	          <input type="hidden" name="mode" value="domain" />
-	          <label>
-	            {{ tr("Nom de domaine") }}
-	            <input name="domain" placeholder="example.com" required />
-	          </label>
-	          <label>
-	            {{ tr("Nom (optionnel)") }}
-	            <input name="site_name" placeholder="{{ tr("Nom affiché") }}" />
-	          </label>
-	          <div class="modal-actions">
-	            <button type="submit" class="btn primary">{{ tr("Ajouter") }}</button>
-	          </div>
-	        </form>
-	      </div>
-
-	      <div class="tab-panel" data-panel="url">
-	        <form method="post" action="/projects/add">
-	          <input type="hidden" name="mode" value="url" />
-	          <label>
-	            URL
-	            <input name="url" placeholder="https://example.com/" required />
-	          </label>
-	          <label>
-	            {{ tr("Nom (optionnel)") }}
-	            <input name="site_name" placeholder="{{ tr("Nom affiché") }}" />
-	          </label>
-	          <div class="modal-actions">
-	            <button type="submit" class="btn primary">{{ tr("Ajouter") }}</button>
-	          </div>
-	        </form>
-	      </div>
-
-	      {% if request.state.user and request.state.user.is_admin %}
-	        <div class="tab-panel" data-panel="gsc">
+  <dialog id="add-project-dialog" class="modal" aria-labelledby="site-add-title" aria-describedby="site-add-description" data-auto-open="{{ '1' if site_add.open else '0' }}">
+    <div class="modal-head">
+      <div class="modal-title-copy"><h2 id="site-add-title">{{ tr("Ajouter un site") }}</h2><p id="site-add-description" class="modal-subtitle">{{ tr("Ajouter le site sans lancer d’analyse") }}</p></div>
+      <form method="dialog"><button class="btn">{{ tr("Fermer") }}</button></form>
+    </div>
+    <div class="modal-body">
+      {% with field_prefix = "site-add" %}{% include "_site_add_form.html" %}{% endwith %}
+      {% if request.state.user and request.state.user.is_admin %}
+        <details class="site-add-import"><summary>{{ tr("Importer") }} · Search Console</summary>
 	          <form method="post" action="/projects/add" id="gsc-add-form">
 	            <input type="hidden" name="mode" value="gsc" />
+              <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
 	            <div class="gsc-toolbar">
 	              <button type="button" class="btn google-btn" id="gsc-load">
 	                <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
 	                {{ tr("Charger depuis Google") }}
 	              </button>
-	              <span class="muted small" id="gsc-status"></span>
+	              <span class="muted small" id="gsc-status" role="status"></span>
 	            </div>
 	            <div class="gsc-list is-empty" id="gsc-list">
 	              <div class="gsc-empty-state">
@@ -590,10 +549,16 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	              <button type="submit" class="btn primary" id="gsc-submit" disabled>{{ tr("Ajouter la sélection") }}</button>
 	            </div>
 	          </form>
-	        </div>
-	      {% endif %}
-	    </div>
-	  </dialog>
+        </details>
+      {% endif %}
+    </div>
+  </dialog>
+  <noscript>
+    <p><a class="btn" href="/?add_site=1#add-site-fallback">{{ tr("Ajouter un site") }}</a></p>
+    {% if site_add.open %}
+      <section class="card" id="add-site-fallback" aria-labelledby="site-add-fallback-title"><h2 id="site-add-fallback-title">{{ tr("Ajouter le site sans lancer d’analyse") }}</h2>{% with field_prefix = "site-add-fallback" %}{% include "_site_add_form.html" %}{% endwith %}</section>
+    {% endif %}
+  </noscript>
 
 	  <script>
 	    (() => {
@@ -601,16 +566,13 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	      if (!dialog || typeof dialog.showModal !== "function") return;
 
 	      document.querySelectorAll("[data-open-add-project]").forEach((button) => {
-	        button.addEventListener("click", () => dialog.showModal());
-	      });
-
-	      const tabs = dialog.querySelectorAll(".tab-btn");
-	      const panels = dialog.querySelectorAll(".tab-panel");
-	      function activate(tab) {
-	        tabs.forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-	        panels.forEach((p) => p.classList.toggle("active", p.dataset.panel === tab));
-	      }
-	      tabs.forEach((b) => b.addEventListener("click", () => activate(b.dataset.tab)));
+        button.addEventListener("click", (event) => { event.preventDefault(); dialog.showModal(); dialog.querySelector('input[name="domain"]').focus(); });
+      });
+      if (dialog.dataset.autoOpen === "1") {
+        dialog.showModal();
+        const target = dialog.querySelector('[role="alert"]') || dialog.querySelector('input[name="domain"]');
+        target.focus();
+      }
 
 	      // GSC import (admin only)
 	      const gscLoad = document.getElementById("gsc-load");
@@ -649,6 +611,9 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	        }
 
 	        async function loadGsc() {
+              gscLoad.disabled = true;
+              gscList.setAttribute("aria-busy", "true");
+              gscCount.textContent = {{ tr("0 sélectionné")|tojson }};
 	          gscStatus.textContent = {{ tr("Chargement…")|tojson }};
 	          setGscEmpty({{ tr("Connexion à Google Search Console…")|tojson }}, true);
 	          gscSubmit.disabled = true;
@@ -657,11 +622,13 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	            let data = null;
 	            try {
 	              const r1 = await fetch("/api/gsc/properties/via-oauth", { headers: { "Accept": "application/json" } });
+                  if (r1.status === 401) throw { expired: true };
 	              const d1 = await r1.json();
 	              if (d1 && d1.ok) data = d1;
-	            } catch (_) {}
+	            } catch (error) { if (error.expired) throw error; }
 	            if (!data) {
 	              const r2 = await fetch("/api/gsc/properties", { headers: { "Accept": "application/json" } });
+                  if (r2.status === 401) throw { expired: true };
 	              data = await r2.json();
 	            }
 	            if (!data || !data.ok) {
@@ -736,11 +703,18 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	              });
 	            }
 	            syncSelectAll();
-	          } catch (e) {
-	            const message = String(e);
-	            gscStatus.textContent = message;
-	            setGscEmpty(message);
-	          }
+              } catch (error) {
+                const message = error.expired ? {{ tr("Votre session a expiré. Reconnectez-vous pour reprendre cet écran.")|tojson }} : {{ tr("Le service ne répond pas comme prévu. Réessayez dans quelques instants.")|tojson }};
+                gscStatus.textContent = message;
+                setGscEmpty(message);
+                if (error.expired) {
+                  const link = document.createElement("a"); link.className = "btn";
+                  link.href = "/auth/login?next=%2F%3Fadd_site%3D1"; link.textContent = {{ tr("Connexion")|tojson }};
+                  gscList.appendChild(link);
+                }
+              } finally {
+                gscLoad.disabled = false; gscList.setAttribute("aria-busy", "false");
+              }
 	        }
 
 	        gscLoad.addEventListener("click", loadGsc);
@@ -913,8 +887,8 @@ Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}"
 	            });
 	            panneau.innerHTML = [
 	              '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;">',
-	              '<select class="gh-depot" style="flex:1;min-width:190px;' + champ + '">' + opts + '</select>',
-	              '<input class="gh-branche" type="text" value="main" placeholder="' + {{ tr("branche")|tojson }} + '" style="width:88px;' + champ + '">',
+	              '<select class="gh-depot" aria-label="' + esc({{ tr("— Choisir un dépôt —")|tojson }}) + '" style="flex:1;min-width:190px;' + champ + '">' + opts + '</select>',
+	              '<input class="gh-branche" aria-label="' + esc({{ tr("branche")|tojson }}) + '" type="text" value="main" placeholder="' + {{ tr("branche")|tojson }} + '" style="width:88px;' + champ + '">',
 	              '<button type="button" class="btn small primary gh-valider">' + {{ tr("Lier")|tojson }} + '</button>',
 	              '</div>',
 	              /* Le mode n'est pas demande ici : le serveur retient « PR a verifier », le seul

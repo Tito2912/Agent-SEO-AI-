@@ -1,0 +1,2134 @@
+{
+  "sample_count": 1208,
+  "minimum_ratio": 6.54,
+  "distinct_samples": [
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Accédez à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Se connecter",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe oublié ?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Renvoyer la vérification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays de résidence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays déclaré par vous, modifiable dans vos préférences.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer le compte",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Accédez à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Se connecter",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe oublié ?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Renvoyer la vérification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays de résidence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays déclaré par vous, modifiable dans vos préférences.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer le compte",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays de résidence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays déclaré par vous, modifiable dans vos préférences.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Code d'invitation",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Origine de mon inscription (facultatif)",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "En savoir plus",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer le compte",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays de résidence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays déclaré par vous, modifiable dans vos préférences.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Code d'invitation",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Origine de mon inscription (facultatif)",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "J’accepte que Noyaru relie la campagne qui m’a amené ici à mes pr",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "En savoir plus",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer le compte",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays de résidence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays déclaré par vous, modifiable dans vos préférences.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer le compte",
+      "ratio": 6.54
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Inscriptions fermées.",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Accédez à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Erreur · Identifiants invalides.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Se connecter",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe oublié ?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Renvoyer la vérification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Votre premier audit, puis les corrections adaptées à votre site.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Erreur · Code d’invitation invalide.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays de résidence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Pays déclaré par vous, modifiable dans vos préférences.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Code d'invitation",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 390,
+      "text": "Créer le compte",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "J'ai déjà un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "En créant un compte, vous acceptez les CGU et la politique de con",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "CGU",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "politique de confidentialité",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Accédez à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email vérifié.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Se connecter",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Continuer avec Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Mot de passe oublié ?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Renvoyer la vérification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer un compte",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Log in",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Forgot your password?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Resend verification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Create an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Country of residence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Country you declare yourself; you can change it in your preferenc",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Create account",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Log in",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Forgot your password?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Resend verification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Create an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Country of residence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Country you declare yourself; you can change it in your preferenc",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Create account",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Country of residence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Country you declare yourself; you can change it in your preferenc",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Invitation code",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "How I signed up (optional)",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Learn more",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Create account",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 13.27
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Country of residence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Country you declare yourself; you can change it in your preferenc",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Invitation code",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "How I signed up (optional)",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "I agree that Noyaru may link the campaign that brought me here to",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Learn more",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Create account",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Country of residence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Country you declare yourself; you can change it in your preferenc",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Create account",
+      "ratio": 6.54
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 768,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "Sign-ups are closed.",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Error · Invalid credentials.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Log in",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Forgot your password?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Resend verification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Create an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Your first audit, then fixes tailored to your website.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Error · Invalid invitation code.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Country of residence",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Country you declare yourself; you can change it in your preferenc",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Invitation code",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Create account",
+      "ratio": 6.54
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "By creating an account, you accept the Terms of Service and the P",
+      "ratio": 10.02
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Terms of Service",
+      "ratio": 7.41
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "text": "Privacy Policy",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Email verified.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Log in",
+      "ratio": 6.54
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Continue with Google",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Forgot your password?",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Resend verification",
+      "ratio": 7.41
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Create an account",
+      "ratio": 14.45
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "text": "I already have an account",
+      "ratio": 13.27
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "text": "Créer le compte",
+      "ratio": 8.08
+    }
+  ]
+}

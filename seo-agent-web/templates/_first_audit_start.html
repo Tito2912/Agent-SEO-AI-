@@ -21,7 +21,7 @@
         {% endif %}
       </div>
     </form>
-    <details class="first-audit-options"><summary>{{ tr("Ajouter le site sans lancer d’analyse") }}</summary><p class="muted small">{{ tr("Vous pourrez choisir les réglages et démarrer l’analyse plus tard.") }}</p><button class="btn" type="button" id="add-project-open" data-open-add-project>{{ tr("Ajouter un site uniquement") }}</button></details>
+    <details class="first-audit-options"><summary>{{ tr("Ajouter le site sans lancer d’analyse") }}</summary><p class="muted small">{{ tr("Vous pourrez choisir les réglages et démarrer l’analyse plus tard.") }}</p><a class="btn" href="/?add_site=1#add-site-fallback" id="add-project-open" data-open-add-project>{{ tr("Ajouter un site uniquement") }}</a></details>
   </div>
   <ol class="first-audit-expectations" aria-label="{{ tr("Ce qui vous attend") }}">
     <li><span aria-hidden="true">1</span><div><h3>{{ tr("Votre site est ajouté") }}</h3><p class="muted small">{{ tr("Un domaine suffit pour démarrer.") }}</p></div></li>

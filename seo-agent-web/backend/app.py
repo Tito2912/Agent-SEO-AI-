@@ -3321,6 +3321,17 @@ def _assistant_model(provider: str) -> str:
 # La langue des reponses de l'assistant, d'apres la langue de l'interface du client.
 _LANGUE_DES_REPONSES = {"fr": "en français", "en": "en anglais"}
 
+# Les ecrans tels que la barre laterale les nomme (templates/layout.html), traduits comme
+# l'interface du client : l'assistant cite ce que la personne voit. « Activité » n'est pas
+# encore traduit dans la barre laterale : le catalogue ne le connait pas, il reste donc ecrit
+# comme a l'ecran.
+_ECRANS_DU_COMPTE = ("Projets", "Activité", "Abonnement", "Documentation", "Mon compte", "Équipe")
+_ECRANS_DU_PROJET = (
+    "Vue d'ensemble", "Anomalies", "Corrections", "Contenu", "Performance", "Mots-clés",
+    "Concurrents", "Liens entrants", "Faire connaître mon site", "Google et Bing",
+    "CMS et intégrations", "Réglages de l’analyse", "Automatisation", "Historique des analyses",
+)
+
 
 def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     ctx = context if isinstance(context, dict) else {}
@@ -3341,16 +3352,27 @@ def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     if base_url:
         extra.append(f"base_url={base_url}")
     extra_s = (" | ".join(extra)) if extra else "—"
+    ecrans_compte = ", ".join(i18n.tr_current(nom) for nom in _ECRANS_DU_COMPTE)
+    ecrans_projet = ", ".join(i18n.tr_current(nom) for nom in _ECRANS_DU_PROJET)
+    connexions = " > ".join(i18n.tr_current(nom) for nom in ("Mon compte", "Connexions"))
+    docs = i18n.localized_path("/docs", i18n.current_lang())
 
     return (
         "Tu es l’assistant IA principal de l’app Noyaru. "
-        "Tu aides l’utilisateur sur l’utilisation du produit (projets, audits, jobs, automation, réglages, exports), "
-        "sur le SEO (technique, contenu, netlinking, analytics), ET sur des questions générales si besoin. "
-        "Tu n’es pas limité au SEO.\n"
-        "Connaissance produit (si pertinent):\n"
-        "- Navigation: Projets, Jobs, Automation, Paramètres > Comptes & connexions.\n"
-        "- Par projet: Overview, Paramètres crawl, Performance, Backlinks, All issues, Crawl log.\n"
-        "- Intégrations possibles: Google Search Console (API), Bing, PageSpeed Insights, Ahrefs.\n"
+        "Tu aides l’utilisateur sur l’utilisation du produit (projets, analyses, corrections, contenu, "
+        "réglages, exports), sur le SEO (technique, contenu, netlinking, analytics), ET sur des questions "
+        "générales si besoin. Tu n’es pas limité au SEO.\n"
+        "Connaissance produit (si pertinent) — cite les écrans exactement sous ces noms, ceux que "
+        "l’utilisateur voit dans la barre latérale :\n"
+        f"- Navigation du compte : {ecrans_compte}.\n"
+        f"- Par projet (site) : {ecrans_projet}.\n"
+        "- Corriger : depuis une anomalie, une pull request sur le dépôt GitHub du site, une correction "
+        "dans WordPress avec Yoast SEO, ou le Fix Pack ZIP à appliquer à la main ; la vérification se fait "
+        "à l’analyse suivante.\n"
+        f"- Connexions personnelles (Google Search Console, Bing, GitHub, Netlify) : {connexions}.\n"
+        "- Intégrations : Google Search Console, Bing Webmaster Tools, PageSpeed Insights, Ahrefs, GitHub, "
+        "WordPress (Yoast SEO), Netlify.\n"
+        f"- Documentation du produit : {docs}.\n"
         "Règles:\n"
         f"- Réponds {langue}, la langue de l’interface de l’utilisateur ; s’il t’écrit dans une autre "
         "langue, réponds dans la sienne.\n"
@@ -12514,13 +12536,27 @@ def _validate_settings_env_value(key: str, value: str) -> str | None:
     return None
 
 
+def _auth_recovery_response(response: Response) -> Response:
+    """Recovery URLs may contain email addresses, invite context or single-use tokens."""
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 @app.get("/auth/forgot", response_class=HTMLResponse)
-def auth_forgot(request: Request, next: str | None = None, msg: str | None = None, err: str | None = None) -> Response:
+def auth_forgot(
+    request: Request,
+    next: str | None = None,
+    email: str | None = None,
+    msg: str | None = None,
+    err: str | None = None,
+) -> Response:
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
+    e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
         "auth_forgot.html",
         {
@@ -12529,11 +12565,13 @@ def auth_forgot(request: Request, next: str | None = None, msg: str | None = Non
             "next_q": quote(n),
             "msg": str(msg or "").strip(),
             "err": str(err or "").strip(),
-            "email": "",
+            "email": e,
+            "email_q": quote(e),
+            "recovery_sent": str(msg or "").strip() == "Si un compte existe, un email de réinitialisation a été envoyé.",
         },
     )
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/forgot")
@@ -12545,7 +12583,7 @@ def auth_forgot_submit(
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
     e = _normalize_email(email)
 
@@ -12558,12 +12596,14 @@ def auth_forgot_submit(
                 "next_q": quote(n),
                 "msg": "",
                 "err": message,
+                "recovery_unavailable": status_code >= 500,
                 "email": e,
+                "email_q": quote(e),
             },
             status_code=status_code,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     ip = _request_client_ip(request) or "unknown"
     retry_ip = _rate_limit_retry_after(bucket="auth_forgot_ip", subject=ip, limit=20, window_s=60 * 60)
@@ -12634,7 +12674,7 @@ def auth_forgot_submit(
                     target_id=str(getattr(row, "id", "") or ""),
                     meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
                 )
-                return _forgot_error("Email non envoyé (erreur serveur). Vérifie la config SendGrid/SMTP.", 503)
+                return _forgot_error("Email non envoyé (erreur serveur). Réessaie plus tard.", 503)
             _audit_log(
                 request,
                 action="auth.forgot",
@@ -12647,7 +12687,9 @@ def auth_forgot_submit(
             logger.info("[MAIL] forgot user_found=0 email=%s", _mask_email(e))
             _audit_log(request, action="auth.forgot", status="ok")
 
-    return RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
+    return _auth_recovery_response(RedirectResponse(
+        url=_path_with_flash(f"/auth/forgot?next={quote(n)}&email={quote(e)}", msg=public_msg), status_code=303,
+    ))
 
 
 @app.get("/auth/reset", response_class=HTMLResponse)
@@ -12677,9 +12719,8 @@ def auth_reset(request: Request, token: str | None = None, next: str | None = No
         },
         status_code=(200 if ok else 400),
     )
-    resp.headers["Cache-Control"] = "no-store"
-    resp.headers["Referrer-Policy"] = "no-referrer"
-    return resp
+
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/reset")
@@ -12707,12 +12748,12 @@ def auth_reset_submit(
                 "token": t,
                 "ok": ok,
                 "err": message,
+                "recovery_unavailable": status_code >= 500,
             },
             status_code=status_code,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     if not t:
         return _reset_error("Lien invalide.", 400, ok=False)
@@ -12724,6 +12765,7 @@ def auth_reset_submit(
     now = datetime.now(timezone.utc)
     uid = ""
     email_out = ""
+    needs_verification = False
     with DB.session() as db:
         row = _valid_password_reset_row(db, token=t)
         if not row:
@@ -12734,6 +12776,7 @@ def auth_reset_submit(
             _audit_log(request, action="auth.reset_password", status="user_missing")
             return _reset_error("Compte introuvable.", 400, ok=False)
 
+        needs_verification = _email_verification_enabled() and not _user_email_verified(db, user_id=str(user.id))
         user.password_hash = auth.hash_password(password)
         row.used_at = now
         db.add(user)
@@ -12744,6 +12787,17 @@ def auth_reset_submit(
 
     if not uid:
         return _reset_error("Erreur serveur.", 500, ok=False)
+
+    _audit_log(request, action="auth.reset_password", status="ok", actor_email=email_out, target_type="user", target_id=uid)
+    if needs_verification:
+        # Password ownership does not override the existing email-verification gate.
+        # Clear any previous account's cookie before resuming confirmation for this account.
+        resp = RedirectResponse(url=_path_with_flash(
+            f"/auth/verify/resend?{urlencode({'next': n, 'email': email_out})}",
+            msg="Mot de passe mis à jour.",
+        ), status_code=303)
+        resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
+        return _auth_recovery_response(resp)
 
     token_out = auth.make_session_token(user_id=uid, secret=secret)
     resp = RedirectResponse(url=n, status_code=303)
@@ -12758,8 +12812,7 @@ def auth_reset_submit(
         secure=secure_cookie,
         path="/",
     )
-    _audit_log(request, action="auth.reset_password", status="ok", actor_email=email_out, target_type="user", target_id=uid)
-    return resp
+    return _auth_recovery_response(resp)
 
 
 @app.get("/auth/verify/resend", response_class=HTMLResponse)
@@ -12773,7 +12826,7 @@ def auth_verify_resend(
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
     e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
@@ -12785,10 +12838,12 @@ def auth_verify_resend(
             "msg": str(msg or "").strip(),
             "err": str(err or "").strip(),
             "email": e,
+            "email_q": quote(e),
+            "recovery_sent": str(msg or "").strip() == "Si un compte existe, un email de vérification a été envoyé.",
         },
     )
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/verify/resend")
@@ -12800,7 +12855,7 @@ def auth_verify_resend_submit(
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
     e = _normalize_email(email)
 
@@ -12813,12 +12868,14 @@ def auth_verify_resend_submit(
                 "next_q": quote(n),
                 "msg": "",
                 "err": message,
+                "recovery_unavailable": status_code >= 500,
                 "email": e,
+                "email_q": quote(e),
             },
             status_code=status_code,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     if not e or "@" not in e or len(e) > 320:
         return _resend_error("Email invalide.", 400)
@@ -12879,10 +12936,10 @@ def auth_verify_resend_submit(
         else:
             _audit_log(request, action="auth.verify_send", status="ok", actor_email=e, meta={"note": "noop"})
 
-    return RedirectResponse(
+    return _auth_recovery_response(RedirectResponse(
         url=_path_with_flash(f"/auth/verify/resend?next={quote(n)}&email={quote(e)}", msg=public_msg),
         status_code=303,
-    )
+    ))
 
 
 @app.get("/auth/verify", response_class=HTMLResponse)
@@ -12899,9 +12956,8 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
             {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Lien invalide."},
             status_code=400,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     if not _email_verification_enabled():
         resp = templates.TemplateResponse(
@@ -12912,12 +12968,12 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
                 "next_q": quote(n),
                 "ok": False,
                 "err": "Vérification email non configurée.",
+                "recovery_unavailable": True,
             },
             status_code=503,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     now = datetime.now(timezone.utc)
     uid = ""
@@ -12931,9 +12987,8 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
                 {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Lien invalide ou expiré."},
                 status_code=400,
             )
-            resp.headers["Cache-Control"] = "no-store"
-            resp.headers["Referrer-Policy"] = "no-referrer"
-            return resp
+
+            return _auth_recovery_response(resp)
 
         user = db.get(User, str(getattr(row, "user_id", "") or ""))
         if not user:
@@ -12943,9 +12998,8 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
                 {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Compte introuvable."},
                 status_code=400,
             )
-            resp.headers["Cache-Control"] = "no-store"
-            resp.headers["Referrer-Policy"] = "no-referrer"
-            return resp
+
+            return _auth_recovery_response(resp)
 
         row.used_at = now
         db.add(row)
@@ -12959,12 +13013,11 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
     if not uid:
         resp = templates.TemplateResponse(
             "auth_verify.html",
-            {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Erreur serveur."},
+            {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Erreur serveur.", "recovery_unavailable": True},
             status_code=500,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     token_out = auth.make_session_token(user_id=uid, secret=secret)
     # `next` is wherever the visitor happened to be when they signed up — often a page owned by
@@ -12986,7 +13039,7 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
         path="/",
     )
     _audit_log(request, action="auth.verify_email", status="ok", actor_email=email_out, target_type="user", target_id=uid)
-    return resp
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/google/start")
@@ -13410,6 +13463,7 @@ def auth_login(
             "err": str(err or "").strip(),
             "email": e,
             "email_q": quote(e),
+            "google_auth_available": all(_google_oauth_client()),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -13441,6 +13495,7 @@ def auth_login_submit(
                 "err": message,
                 "email": e,
                 "email_q": quote(e),
+                "google_auth_available": all(_google_oauth_client()),
             },
             status_code=status_code,
         )
@@ -13574,9 +13629,15 @@ def auth_signup(
             "err": str(err or "").strip(),
             "email": e,
             "signup_country": customer_country.normalize(country) or "",
+            "email_q": quote(e),
             "invite_required": invite_required,
             "invite_code": "",
             "signup_disabled": signup_disabled,
+            # Team invitations can authorize email signup without the global code.
+            # Google start still requires that code; do not offer a blocked method.
+            "google_auth_available": all(_google_oauth_client()) and not (
+                bool(_safe_env("SIGNUP_INVITE_CODE")) and not invite_required
+            ),
             "acquisition_campaign": signup_attribution.find(DB, query=request.query_params),
         },
     )
@@ -14086,51 +14147,37 @@ def support_public(request: Request) -> HTMLResponse:
             "support_email": _support_email(),
             "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
+            "help_pages": _public_help_pages(("depannage", "verifier-une-correction", "plans-et-quotas")),
         },
     )
 
 
 @app.api_route("/status", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def status_public(request: Request) -> HTMLResponse:
-    db_ok = False
-    db_error = ""
     try:
-        with DB.session() as db:
-            db.execute(select(1))
-        db_ok = True
-    except Exception as e:
-        db_ok = False
-        db_error = f"{type(e).__name__}: {str(e)[:180]}"
+        from .public_service_status import database_read_available
+    except ImportError:
+        from public_service_status import database_read_available
 
-    smtp_ok = bool(_smtp_config())
-    s3_ok = bool(object_store.s3_enabled())
-    s3_reason = ""
-    if not s3_ok:
-        reason = str(object_store.s3_available_reason() or "disabled")
-        s3_reason = {
-            "missing_bucket": "Non configuré",
-            "missing_boto3": "Dépendance manquante",
-            "disabled": "Désactivé",
-        }.get(reason, reason)
-
-    return templates.TemplateResponse(
+    db_ok = database_read_available(DB)
+    checked_at = datetime.now(timezone.utc)
+    response = templates.TemplateResponse(
         "status_public.html",
         {
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.now(timezone.utc).year,
+            "year": checked_at.year,
             "nav_items": _public_nav_items(),
-            "now": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "now": checked_at.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "now_iso": checked_at.isoformat(),
             "web_ok": True,
             "db_ok": db_ok,
-            "db_error": db_error,
-            "smtp_ok": smtp_ok,
-            "s3_ok": s3_ok,
-            "s3_reason": s3_reason,
-            "stripe_ok": billing.stripe_enabled(),
         },
     )
+    # This is a fresh local read, not a monitor of email, payment or object storage.
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> dict[str, Any]:
@@ -14179,6 +14226,22 @@ def _doc_path(slug: str) -> str:
 templates.env.globals["doc_path"] = _doc_path
 
 
+def _public_help_pages(slugs: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Use the actual translated page, including its tokens, or the existing French fallback."""
+    language = i18n.current_lang()
+    tokens_by_language: dict[str, dict[str, str]] = {}
+    pages = []
+    for slug in slugs:
+        raw = content_library.get_doc(slug, language) or content_library.get_doc(slug)
+        if raw is None:
+            continue
+        page_language = str(raw.get("lang") or i18n.DEFAULT_LANG)
+        if page_language not in tokens_by_language:
+            tokens_by_language[page_language] = _content_tokens(page_language)
+        pages.append(content_library.resolve(raw, tokens_by_language[page_language]))
+    return pages
+
+
 def _content_versions(collection: str, slug: str, french: dict[str, Any]) -> dict[str, str]:
     """Les adresses d'une page de contenu dans chaque langue ou elle existe : chaque version
     d'une page traduite annonce toutes les autres ; une page seulement francaise, aucune."""
@@ -14201,6 +14264,9 @@ def docs_index_public(request: Request) -> HTMLResponse:
         _public_template_context(
             request,
             sections=sections,
+            first_steps=_public_help_pages(("ajouter-un-projet", "lire-le-rapport", "verifier-une-correction")),
+            correction_guides=_public_help_pages(("corriger-dans-wordpress", "fix-pack-sans-depot", "corrections-automatiques")),
+            total_docs=sum(len(section["pages"]) for section in sections),
             canonical_url=_public_url(request, i18n.localized_path("/docs", lang)),
             meta_description=i18n.tr_current(
                 "Documentation {app_name} : prise en main, crawl, anomalies, corrections "
@@ -14854,11 +14920,8 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
             "issues_distribution": {"error": 0, "warning": 0, "notice": 0},
             "is_registry_only": True,
         }
-        # Le depot lie, sur CHAQUE ligne — qu'elle vienne du rapport de crawl ou du repli.
-        # C'est sur cet ecran qu'on decide quoi corriger, et une correction sans depot n'existe
-        # pas : afficher l'etat ailleurs obligeait a ouvrir chaque projet pour le decouvrir.
-        # La valeur est lue sur le PROJET, pas sur le rapport : elle n'a rien a voir avec un
-        # crawl et doit s'afficher meme sur un projet jamais crawle.
+        # Repository metadata belongs to the project, even before its first analysis.
+        # It is optional for audits, manual instructions and supported WordPress fixes.
         reglages_p = p.settings if isinstance(p.settings, dict) else {}
         ligne["project_id"] = str(p.id)
         ligne["owner_user_id"] = proprietaire
@@ -14918,6 +14981,20 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
         live_crawls=live_crawls,
     )
 
+    owned_count = sum(str(p.owner_user_id) == str(user.id) for p in db_projects)
+    with DB.session() as db:
+        site_limit = billing.plan_limits(db, user_id=str(user.id)).get("projects") if not is_admin else None
+    site_limit = int(site_limit) if isinstance(site_limit, int) and site_limit > 0 else None
+    add_form = getattr(request.state, "site_add_form", {}) or {}
+    site_add = {
+        "count": owned_count, "limit": site_limit, "admin": is_admin,
+        "can_add": site_limit is None or owned_count < site_limit,
+        "address": str(add_form.get("address") or "")[:2048],
+        "name": str(add_form.get("name") or "")[:200],
+        "error": str(add_form.get("error") or ""),
+        "open": bool(add_form) or request.query_params.get("add_site") == "1",
+    }
+
     resp = templates.TemplateResponse(
         "projects.html",
         {
@@ -14928,6 +15005,7 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
             "live_crawls": live_crawls,
             "recent_crawl_jobs": recent_crawl_jobs,
             "onboarding": onboarding,
+            "site_add": site_add,
             "first_audit": first_audit.allowance(sys.modules[__name__], user) if not projects else None,
             "first_audit_url": first_audit_url[:2048],
             "msg": (msg or "").strip(),
@@ -16220,6 +16298,15 @@ def settings_system_save(
     )
 
 
+@app.get("/projects/add", response_class=RedirectResponse)
+def add_project_entry() -> Response:
+    # An error page may be rendered at the POST URL; language links remain navigable.
+    response = RedirectResponse(url="/?add_site=1#add-site-fallback", status_code=303)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 @app.post("/projects/add")
 def add_project(
     request: Request,
@@ -16230,7 +16317,8 @@ def add_project(
     gsc_urls: list[str] = Form(default=[]),
     bulk_urls: list[str] = Form(default=[]),
     next: str = Form(default="/"),
-) -> RedirectResponse:
+    source: str = Form(default=""),
+) -> Response:
     mode = (mode or "").strip().lower()
     next_path = _safe_next_path(next)
     created: list[str] = []
@@ -16238,18 +16326,36 @@ def add_project(
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)
 
-    projects_limit: int | None = None
+    def add_error(message: str, status_code: int = 400) -> Response:
+        if source != "site-list":
+            return RedirectResponse(url=_path_with_flash(next_path, err=message), status_code=303)
+        request.state.site_add_form = {"address": domain if mode == "domain" else url,
+                                       "name": site_name, "error": message}
+        response = projects(request)
+        response.status_code = status_code
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
     remaining_new: int | None = None
-    if not bool(getattr(user, "is_admin", False)):
-        with DB.session() as db:
+    with DB.session() as db:
+        owned_slugs = set(db.scalars(select(Project.slug).where(Project.owner_user_id == str(user.id))))
+        if not bool(getattr(user, "is_admin", False)):
             limits = billing.plan_limits(db, user_id=str(user.id))
-            v = limits.get("projects")
-            if isinstance(v, int) and v > 0:
-                projects_limit = int(v)
-                projects_count = int(
-                    db.scalar(select(func.count()).select_from(Project).where(Project.owner_user_id == str(user.id))) or 0
-                )
-                remaining_new = max(0, projects_limit - projects_count)
+            limit = limits.get("projects")
+            if isinstance(limit, int) and limit > 0:
+                remaining_new = max(0, int(limit) - len(owned_slugs))
+
+    def normalized_address(raw: str) -> str | None:
+        value = str(raw or "").strip()
+        try:
+            parsed = urlsplit(value if "://" in value else "https://" + value)
+            if (not value or len(value) > 2048 or any(c.isspace() for c in value)
+                    or parsed.scheme.lower() not in {"http", "https"}
+                    or not parsed.hostname or parsed.username is not None or parsed.password is not None):
+                return None
+            return _normalize_base_url(value)
+        except ValueError:
+            return None
 
     if mode in {"gsc", "bing", "bulk"}:
         skipped = 0
@@ -16261,9 +16367,9 @@ def add_project(
                 continue
             if v.startswith("sc-domain:"):
                 host = v.split(":", 1)[1].strip()
-                base = _normalize_base_url(host)
+                base = normalized_address(host)
             else:
-                base = _normalize_base_url(v)
+                base = normalized_address(v)
             if not base:
                 skipped += 1
                 continue
@@ -16273,20 +16379,21 @@ def add_project(
                 continue
             if remaining_new is not None:
                 slug_guess = _slug_from_base_url(base) or ""
-                exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
+                exists = slug_guess in owned_slugs
                 if (not exists) and remaining_new <= 0:
                     capped = True
                     skipped += 1
                     continue
-                if not exists:
-                    remaining_new -= 1
             slug = _db_upsert_project(user_id=user.id, base_url=base, site_name="")
             if slug:
+                if slug not in owned_slugs and remaining_new is not None:
+                    remaining_new -= 1
+                owned_slugs.add(slug)
                 created.append(slug)
         msg = f"{len(created)} projet(s) ajouté(s)." if created else "Aucun projet ajouté."
         if capped:
-            msg = "Limite de sites atteinte pour ton plan. Va sur Abonnement pour upgrade."
-        if skipped and not created:
+            msg = "Une limite de votre formule est atteinte"
+        if skipped and not created and not capped:
             msg = "Aucun projet ajouté (certains hôtes sont refusés)."
         _audit_log(
             request,
@@ -16299,25 +16406,23 @@ def add_project(
         return RedirectResponse(url=_path_with_flash(next_path, msg=msg), status_code=303)
 
     raw = domain if mode == "domain" else url
-    base = _normalize_base_url(raw)
+    base = normalized_address(raw)
     if not base:
-        return RedirectResponse(url=_path_with_flash(next_path, err="URL invalide."), status_code=303)
+        return add_error("Domaine cible invalide")
 
     validation_err = _validate_public_crawl_target(base)
     if validation_err:
-        return RedirectResponse(url=_path_with_flash(next_path, err=validation_err), status_code=303)
+        return add_error(validation_err)
 
-    if remaining_new is not None:
-        slug_guess = _slug_from_base_url(base) or ""
-        exists = bool(slug_guess and _db_project(str(user.id), slug_guess))
-        if (not exists) and remaining_new <= 0:
-            return RedirectResponse(
-                url=_path_with_flash(next_path, err="Limite de sites atteinte pour ton plan. Upgrade: Abonnement."),
-                status_code=303,
-            )
+    slug_guess = _slug_from_base_url(base) or ""
+    if source == "site-list" and slug_guess in owned_slugs:
+        return RedirectResponse(url=f"/projects/{quote(slug_guess, safe='')}", status_code=303)
+    if remaining_new is not None and slug_guess not in owned_slugs and remaining_new <= 0:
+        return add_error("Une limite de votre formule est atteinte", 409)
     slug = _db_upsert_project(user_id=user.id, base_url=base, site_name=site_name)
-    if slug:
-        created.append(slug)
+    if not slug:
+        return add_error("Enregistrement impossible.", 503)
+    created.append(slug)
     _audit_log(
         request,
         action="project.create",
@@ -16327,6 +16432,8 @@ def add_project(
         target_id=(created[0] if created else ""),
         meta={"mode": mode, "base_url": base},
     )
+    if source == "site-list":
+        return RedirectResponse(url=_path_with_flash(f"/projects/{quote(slug, safe='')}", msg="Votre site est ajouté"), status_code=303)
     return RedirectResponse(url=_path_with_flash(next_path, msg="Projet ajouté."), status_code=303)
 
 
@@ -18163,47 +18270,104 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
+_FILE_RETURN_QUERY = {"crawl", "compare", "severity", "category", "q", "page", "per_page"}
+_FILE_PROJECT_RETURN = re.compile(r"^/projects/([^/]+)(?:/issues(?:/([^/]+))?)?$")
+
+
+def _file_preview_link(request: Request, path: str, crawl: str = "") -> str:
+    """Encode the complete file path and keep only the source screen's useful state."""
+    query = {key: value for key, value in request.query_params.items() if key in _FILE_RETURN_QUERY}
+    if crawl:
+        query["crawl"] = crawl
+    source = urlunsplit(("", "", request.url.path, urlencode(query), ""))
+    return "/file?" + urlencode({"path": str(path), "next": source})
+
+
+templates.env.globals["file_preview_link"] = _file_preview_link
+
+
+def _file_preview_context(request: Request, path: Path, next_path: str) -> dict[str, Any]:
+    """A return parameter never establishes either file or project access."""
+    fallback = {"back_href": "/", "back_label": "Retrouver mes sites"}
+    parts = urlsplit(_safe_next_path(next_path))
+    match = _FILE_PROJECT_RETURN.fullmatch(parts.path)
+    user = getattr(request.state, "user", None)
+    if not match or not user:
+        return fallback
+    project = _db_project(str(user.id), match.group(1))
+    if not project:
+        return fallback
+    runs_dir = _runs_dir_for_user(str(project.owner_user_id)).resolve()
+    try:
+        relative = path.relative_to((runs_dir / project.slug).resolve())
+    except ValueError:
+        return fallback
+    if len(relative.parts) < 2 or not re.fullmatch(r"\d{8}-\d{6}", relative.parts[0]):
+        return fallback
+    ts = relative.parts[0]
+    query = {key: value for key, value in parse_qsl(parts.query) if key in _FILE_RETURN_QUERY}
+    query["crawl"] = ts  # The file's actual analysis, even if a caller supplied another date.
+    back_label = "Revenir à l’anomalie" if match.group(2) else (
+        "Revenir aux résultats" if parts.path.endswith("/issues") else "Revenir au bilan du site"
+    )
+    overview = f"/projects/{project.slug}?" + urlencode({"crawl": ts})
+    return {
+        "back_href": urlunsplit(("", "", parts.path, urlencode(query), "")),
+        "back_label": back_label, "slug": project.slug, "site_name": project.site_name or project.slug,
+        "timestamp": ts, "overview_href": overview,
+        "pdf_href": (f"/projects/{project.slug}/export/report.pdf?" + urlencode({"crawl": ts}))
+        if dash.load_report_json(runs_dir, project.slug, ts) else "",
+    }
+
+
 @app.get("/file", response_class=HTMLResponse)
-def view_file(request: Request, path: str) -> HTMLResponse:
+def view_file(request: Request, path: str, next: str = "") -> HTMLResponse:
     raw_path = Path(path).expanduser()
     if not raw_path.is_absolute():
         raw_path = (REPO_ROOT / raw_path).resolve()
     else:
         raw_path = raw_path.resolve()
 
+    def render(*, status: int = 200, content: str = "", context: dict[str, Any] | None = None,
+               name: str = "", size: int = 0, limit: int = 0) -> HTMLResponse:
+        resp = templates.TemplateResponse("file.html", {
+            "request": request, "file_status": status, "content": content,
+            "file_context": context or {"back_href": "/", "back_label": "Retrouver mes sites"},
+            "file_name": name, "path": str(raw_path) if name else "",
+            "file_size": size, "file_limit": limit,
+        }, status_code=status)
+        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Referrer-Policy"] = "no-referrer"
+        return resp
+
     user = getattr(request.state, "user", None)
     is_admin = bool(getattr(user, "is_admin", False))
     if is_admin:
         allowed_roots = [DEFAULT_RUNS_DIR.resolve(), DATA_DIR.resolve()]
     else:
-        # Cette liste EST la barriere : tout fichier hors de ces racines est refuse. Elle vaut
-        # donc exactement les comptes que cette personne a le droit de lire — le sien, plus celui
-        # qui l'accueille comme membre. Sans utilisateur elle est vide, donc tout est refuse :
-        # l'ancien repli rendait `DEFAULT_RUNS_DIR`, c'est-a-dire la racine de TOUS les clients.
-        # La route n'est pas atteignable sans session aujourd'hui, mais la barriere ne doit pas
-        # dependre d'une liste blanche ecrite ailleurs.
+        # Keep the existing boundary: one's own account and accounts that admit this member.
         allowed_roots = [_runs_dir_for_user(c).resolve()
                          for c in _comptes_accessibles(str(getattr(user, "id", "") or ""))]
     if not any(raw_path.is_relative_to(root) for root in allowed_roots):
-        return HTMLResponse("Path not allowed", status_code=403)
-    if not raw_path.exists():
-        _ensure_runs_artifact_local(raw_path)
-    if not raw_path.exists() or not raw_path.is_file():
-        return HTMLResponse("File not found", status_code=404)
-    max_bytes = _file_view_max_bytes()
+        return render(status=403)
+    context = _file_preview_context(request, raw_path, next)
     try:
+        if not raw_path.exists():
+            _ensure_runs_artifact_local(raw_path)
+        if not raw_path.is_file():
+            return render(status=404, context=context, name=raw_path.name)
+        max_bytes = _file_view_max_bytes()
         size = raw_path.stat().st_size
-    except Exception:
-        size = 0
-    if size > max_bytes:
-        return HTMLResponse(f"File too large to preview ({size} bytes, max {max_bytes})", status_code=413)
-
-    content = raw_path.read_text(encoding="utf-8", errors="replace")
-    return templates.TemplateResponse(
-        "file.html",
-        {"request": request, "path": str(raw_path), "content": content},
-    )
-
+        if size > max_bytes:
+            return render(status=413, context=context, name=raw_path.name, size=size, limit=max_bytes)
+        # Bound the read as well as the stat: a growing file must not bypass the preview cap.
+        with raw_path.open("rb") as source:
+            raw = source.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            return render(status=413, context=context, name=raw_path.name, size=len(raw), limit=max_bytes)
+        return render(content=raw.decode("utf-8", errors="replace"), context=context, name=raw_path.name)
+    except OSError:
+        return render(status=503, context=context, name=raw_path.name)
 
 @app.post("/run")
 def run(

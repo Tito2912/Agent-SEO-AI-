@@ -1,19 +1,38 @@
 {% extends "layout.html" %}
-{% block title %}Fichier - Noyaru{% endblock %}
-
+{% block title %}{{ tr("Détails techniques") }} - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/report-exports.css?v=1" />{% endblock %}
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Fichier</span>
+  {% if file_context.overview_href %}<a href="{{ file_context.overview_href }}">{{ file_context.site_name }}</a><span class="crumb-sep">/</span>{% endif %}
+  <span class="crumb-current">{{ tr("Détails techniques") }}</span>
 {% endblock %}
-
 {% block content %}
+<div class="file-preview">
   <div class="page-header">
-    <h1>Fichier</h1>
-    <p class="muted mono">{{ path }}</p>
+    <h1>{{ tr("Détails techniques") }}</h1>
+    {% if file_name %}<p class="muted">{{ tr("Source :") }} <code>{{ file_name }}</code></p>{% endif %}
+    {% if file_context.timestamp %}<p class="muted">{{ file_context.site_name }} · {{ tr("Analyse du") }} <span data-ts-datetime="{{ file_context.timestamp }}">{{ file_context.timestamp }}</span></p>{% endif %}
   </div>
-
-  <section class="card">
-    <pre>{{ content }}</pre>
-  </section>
+  <div class="file-preview-actions">
+    <a class="btn primary" href="{{ file_context.back_href }}">{{ tr(file_context.back_label) }}</a>
+    {% if file_context.pdf_href %}<a class="btn" href="{{ file_context.pdf_href }}">{{ tr("Rapport à transmettre (PDF)") }}</a>{% endif %}
+  </div>
+  {% if file_context.pdf_href %}<p class="muted">{{ tr("Exportez l'audit en PDF ou en CSV pour travailler avec la personne qui s'occupe de votre site.") }}</p>{% endif %}
+  {% if file_status != 200 %}
+    <section class="card file-preview-state" role="alert">
+      <h2>{% if file_status == 403 %}{{ tr("Accès refusé") }}{% elif file_status == 404 %}{{ tr("Introuvable") }}{% else %}{{ tr("Aperçu indisponible.") }}{% endif %}</h2>
+      {% if file_status == 413 %}<p><code>{{ file_size }} B &gt; {{ file_limit }} B</code></p>{% endif %}
+      <p class="muted">HTTP {{ file_status }} · <a href="{{ localized_path('/support', current_lang()) }}">{{ tr("Obtenir de l’aide") }}</a></p>
+    </section>
+  {% elif not content %}
+    <section class="card file-preview-state" role="status"><h2>{{ tr("Fichier vide") }}</h2></section>
+  {% else %}
+    <section class="card file-preview-content" aria-labelledby="file-content-heading">
+      <h2 id="file-content-heading">{{ tr("Source") }}</h2>
+      <pre tabindex="0" role="region" aria-label="{{ tr('Détails techniques') }}"><code>{{ content }}</code></pre>
+    </section>
+  {% endif %}
+  {% if path %}<details class="file-preview-path"><summary>{{ tr("Détails techniques") }}</summary><code>{{ path }}</code></details>{% endif %}
+</div>
 {% endblock %}

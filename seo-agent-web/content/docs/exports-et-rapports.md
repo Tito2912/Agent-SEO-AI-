@@ -5,7 +5,7 @@ description: "Tous les exports disponibles dans {{app_name}} : rapport de synth�
 kind: "Documentation"
 section: "Aller plus loin"
 order: 43
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["export CSV", "rapport PDF", "audit client", "reporting SEO"]
 app_href: "/"
@@ -71,7 +71,7 @@ voie principale quand le site n'a pas de dépôt Git connecté.
 | Client, dirigeant | Rapport de synthèse **PDF** | Le lire, comprendre l'état, décider d'un budget |
 | Développeur | URLs par anomalie **CSV** | Corriger, ligne par ligne |
 | Vous, pour planifier | Liste des anomalies **CSV** | Trier, filtrer, prioriser |
-| Un site sans dépôt | **Fix-pack ZIP** | Appliquer les correctifs à la main |
+| Un site sans dépôt | **Fix Pack ZIP** | Appliquer les correctifs à la main |
 | Une analyse externe | Toutes les URLs **CSV** | Croiser avec d'autres données |
 
 ## Ce qu'un rapport transmis devrait contenir

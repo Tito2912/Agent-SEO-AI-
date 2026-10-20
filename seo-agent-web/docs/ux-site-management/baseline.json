@@ -1,0 +1,102 @@
+{
+  "base_commit": "af5fc6d447db3ef70a4b0eb6cc6a2107beb9f4de",
+  "checks": [
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "named_dialog": false,
+      "tabs": 2,
+      "minimum_button_height": 33
+    },
+    {
+      "screen": "url-mode",
+      "lang": "fr",
+      "width": 1440,
+      "path_promise": "Ajoutez un domaine, une URL précise ou importez vos propriétés Search Console."
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "width": 1440,
+      "delete_enabled": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "named_dialog": false,
+      "tabs": 2,
+      "minimum_button_height": 33
+    },
+    {
+      "screen": "url-mode",
+      "lang": "en",
+      "width": 1440,
+      "path_promise": "Add a domain, a specific URL or import your Search Console properties."
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "width": 1440,
+      "delete_enabled": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "named_dialog": false,
+      "tabs": 2,
+      "minimum_button_height": 34
+    },
+    {
+      "screen": "url-mode",
+      "lang": "fr",
+      "width": 360,
+      "path_promise": "Ajoutez un domaine, une URL précise ou importez vos propriétés Search Console."
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "width": 360,
+      "delete_enabled": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "named_dialog": false,
+      "tabs": 2,
+      "minimum_button_height": 34
+    },
+    {
+      "screen": "url-mode",
+      "lang": "en",
+      "width": 360,
+      "path_promise": "Add a domain, a specific URL or import your Search Console properties."
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "width": 360,
+      "delete_enabled": true
+    },
+    {
+      "screen": "delete-confirmation",
+      "message": "Delete the project “mon-atelier”?\n\nIts data will be moved to seo-runs/_trash/."
+    },
+    {
+      "screen": "malformed-port",
+      "status": 500,
+      "retained_input": false
+    }
+  ],
+  "javascript_errors": [],
+  "notes": [
+    "Local synthetic users, public-target validation mocked. The native confirmations were dismissed; no deletion or external request."
+  ]
+}

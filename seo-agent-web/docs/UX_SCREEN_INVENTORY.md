@@ -12,6 +12,16 @@ Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs é
 
 ## Routes, écrans, actions et sorties
 
+Mise à jour du lot 13 : liste des sites, fenêtre d’ajout, secours sans JavaScript, erreurs de saisie/limite/enregistrement, sélection multiple, confirmation de suppression et import administratif sont décrits dans [le bilan dédié](UX_SITE_MANAGEMENT_LOT13.md). `GET /projects/add` est une nouvelle transition vers le formulaire ; le POST existant reste responsable de l’ajout. Aucune nouvelle action de mutation. Le partiel `_site_add_form.html` porte le total à 83 templates ; les décomptes historiques et lignes ci-dessous restent ceux de l’audit initial.
+
+Mise à jour du lot 12 : `/auth/forgot`, `/auth/reset`, `/auth/verify` et `/auth/verify/resend`, leurs erreurs, confirmations et reprises sont décrits dans [le bilan dédié](UX_ACCOUNT_RECOVERY_LOT12.md). Aucune nouvelle route ni action serveur ; le pied de page partagé porte le total à 82 templates. L’en-tête du lot 10 est réutilisé. Un mot de passe changé ne contourne pas la confirmation email ; les accès et destinations restent contrôlés côté serveur.
+
+Mise à jour du lot 11 : les exports du bilan, des problèmes et de leur détail, ainsi que `/file` et ses états vide/403/404/413/503, sont décrits dans [le bilan dédié](UX_EXPORTS_FILES_LOT11.md). Aucune nouvelle route ni nouvelle mutation ; une inclusion de choix d’exports porte le total à 81 templates. Les paramètres de retour ne changent pas les autorisations.
+
+Mise à jour du lot 10 : les écrans `/auth/login` et `/auth/signup`, leurs méthodes, messages, volet d’accord facultatif, fermeture des inscriptions et repli pour invitation d’équipe sont décrits dans [le bilan dédié](UX_AUTH_ENTRY_LOT10.md). Aucune nouvelle route ; une inclusion limitée à ces deux écrans (`_auth_entry_intro.html`) porte le total actuel à 80 templates. Les décomptes initiaux ci-dessus restent ceux de l’audit du 19 octobre.
+
+Mise à jour du lot 9 : Support et accueil de la documentation, en français/anglais, leurs liens et leurs états de recherche sont décrits dans [le bilan dédié](UX_HELP_NAVIGATION_LOT9.md). Aucune nouvelle route ni aucun nouveau template dans ce lot ; les 79 templates actuels comprennent les inclusions d’internationalisation. Les décomptes initiaux ci-dessus restent ceux de l’audit du 19 octobre.
+
 Mise à jour du lot 7 : les écrans existants `/projects/{slug}/settings/crawl`, `/jobs` et `/jobs/{job_id}` et leurs états intermédiaires sont revus dans [le bilan dédié](UX_ANALYSIS_ACTIVITY_LOT7.md). Aucune nouvelle route ni aucun nouveau template dans ce lot ; 77 templates HTML sont présents après les lots précédents. Les décomptes initiaux et les références de lignes ci-dessous restent ceux de l’extraction du 19 octobre.
 
 Les API, exports, callbacks et actions POST sont inclus pour rendre visibles les étapes intermédiaires. Le montage des fichiers statiques est distingué des écrans. Les routes automatiques du framework sont recensées séparément ci-dessous.

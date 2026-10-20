@@ -1,0 +1,53 @@
+{
+  "checks": [
+    {
+      "width": 1440,
+      "lang": "fr",
+      "badges": [
+        "opérationnel",
+        "opérationnel",
+        "opérationnel",
+        "opérationnel",
+        "opérationnel"
+      ],
+      "scope": "Configuration locale simulée ; aucun transport fournisseur."
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "badges": [
+        "operational",
+        "operational",
+        "operational",
+        "operational",
+        "operational"
+      ],
+      "scope": "Configuration locale simulée ; aucun transport fournisseur."
+    },
+    {
+      "width": 360,
+      "lang": "fr",
+      "badges": [
+        "opérationnel",
+        "opérationnel",
+        "opérationnel",
+        "opérationnel",
+        "opérationnel"
+      ],
+      "scope": "Configuration locale simulée ; aucun transport fournisseur."
+    },
+    {
+      "width": 360,
+      "lang": "en",
+      "badges": [
+        "operational",
+        "operational",
+        "operational",
+        "operational",
+        "operational"
+      ],
+      "scope": "Configuration locale simulée ; aucun transport fournisseur."
+    }
+  ],
+  "javascript_errors": []
+}

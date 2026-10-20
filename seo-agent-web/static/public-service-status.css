@@ -1,0 +1,23 @@
+/* Limited to the service page: common layouts and translation assets stay unchanged. */
+.service-status-page { max-width: 840px; margin: 0 auto; }
+.service-status-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.service-status-header h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 30px); line-height: 1.25; }
+.service-status-time, .service-status-note { color: #b4b4bd; font-size: 14px; line-height: 1.6; margin: 0; }
+.service-status-time time { white-space: nowrap; }
+.service-status-page > .card { padding: 20px; margin-bottom: 20px; }
+.service-status-page .card h2 { font-size: 18px; margin: 0 0 16px; }
+.service-status-note { margin: -6px 0 16px; }
+.service-status-readings { display: grid; gap: 10px; margin: 0; }
+.service-status-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px; padding: 14px; min-height: 56px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.02); }
+.service-status-row dt { font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.service-status-row dd { margin: 0; }
+.service-status-page .badge { font-size: 13px; padding: 3px 9px; }
+.service-status-page .badge.notice { color: #c5c5cc; }
+.service-status-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+.service-status-page .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; white-space: normal; text-align: center; line-height: 1.5; }
+.service-status-page a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 480px) {
+  .service-status-header { flex-direction: column; }
+  .service-status-page > .card { padding: 16px; }
+  .service-status-row { padding: 12px; }
+}

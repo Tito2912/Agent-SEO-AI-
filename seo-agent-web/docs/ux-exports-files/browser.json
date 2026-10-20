@@ -1,0 +1,972 @@
+{
+  "checks": [
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "overview-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "issues-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "detail-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "file-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "overview-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "issues-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "detail-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "file-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    }
+  ],
+  "downloads": [
+    {
+      "screen": "overview",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/report.pdf",
+      "status": 200,
+      "content_type": "application/pdf"
+    },
+    {
+      "screen": "overview",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/report.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "overview",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/issues-all-urls.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "overview",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/fix-pack.zip",
+      "status": 200,
+      "content_type": "application/zip"
+    },
+    {
+      "screen": "issues",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/issues.pdf",
+      "status": 200,
+      "content_type": "application/pdf"
+    },
+    {
+      "screen": "issues",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/issues.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "issues",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/issues-all-urls.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "detail",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/issues/missing_title.pdf",
+      "status": 200,
+      "content_type": "application/pdf"
+    },
+    {
+      "screen": "detail",
+      "lang": "fr",
+      "path": "/projects/atelier-test/export/issues/missing_title.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "overview",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/report.pdf",
+      "status": 200,
+      "content_type": "application/pdf"
+    },
+    {
+      "screen": "overview",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/report.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "overview",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/issues-all-urls.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "overview",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/fix-pack.zip",
+      "status": 200,
+      "content_type": "application/zip"
+    },
+    {
+      "screen": "issues",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/issues.pdf",
+      "status": 200,
+      "content_type": "application/pdf"
+    },
+    {
+      "screen": "issues",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/issues.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "issues",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/issues-all-urls.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    },
+    {
+      "screen": "detail",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/issues/missing_title.pdf",
+      "status": 200,
+      "content_type": "application/pdf"
+    },
+    {
+      "screen": "detail",
+      "lang": "en",
+      "path": "/projects/atelier-test/export/issues/missing_title.csv",
+      "status": 200,
+      "content_type": "text/csv; charset=utf-8"
+    }
+  ],
+  "javascript_errors": [],
+  "network": {
+    "mutations": 0,
+    "external": 0
+  },
+  "notes": [
+    "Local synthetic reports, shared project and read-only GET/HEAD requests. PDF contents retain their existing language; UI labels alone are localized."
+  ]
+}

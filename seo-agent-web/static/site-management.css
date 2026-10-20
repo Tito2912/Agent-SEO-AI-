@@ -1,0 +1,50 @@
+/* Scoped to site creation and selection; the report and journey components keep their styles. */
+#add-project-dialog, #add-site-fallback, .site-management-toolbar, .site-github-choice { --muted: #b9c2bd; }
+#add-project-dialog { position: fixed; inset: 0; margin: auto; width: min(600px, calc(100vw - 32px)); max-height: min(90dvh, 860px); }
+#add-project-dialog[open] { display: flex; flex-direction: column; }
+#add-project-dialog .modal-head { align-items: flex-start; flex-shrink: 0; }
+#add-project-dialog .modal-head h2 { font-size: 22px; line-height: 1.3; }
+#add-project-dialog .modal-subtitle { font-size: 14px; line-height: 1.6; }
+#add-project-dialog .modal-body { max-height: none; min-height: 0; overflow: auto; }
+#add-project-dialog .btn, #add-project-dialog summary, #add-project-dialog a,
+#add-site-fallback .btn, #add-site-fallback a, .site-management-toolbar .btn,
+.site-management-toolbar .checkbox, .site-github-choice .btn, .site-github-choice summary { min-height: 44px; }
+.site-add-form { display: grid; gap: 12px; }
+.site-add-form label { margin: 0; font-size: 15px; }
+.site-add-form input:not([type=hidden]) { font-size: 16px; min-height: 46px; width: 100%; }
+.site-add-form p { margin: 0; line-height: 1.6; }
+.site-add-form .alert { margin: 0 0 4px; }
+.site-add-form .alert p { color: var(--text); }
+.site-add-form .modal-actions { margin-top: 4px; }
+.site-add-form .modal-actions .btn { width: 100%; background: #65b588; color: #0f2118; border-color: #65b588; }
+.site-add-form .modal-actions .btn:disabled { cursor: not-allowed; }
+.site-add-allowance { padding: 14px; border: 1px solid var(--border); border-radius: 12px; overflow-wrap: anywhere; }
+.site-add-allowance a { display: inline-flex; align-items: center; font-size: 14px; }
+.site-add-import { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--border); }
+.site-add-import summary, .site-github-choice summary { display: list-item; align-content: center; cursor: pointer; line-height: 1.5; }
+.site-add-import form { padding-top: 12px; }
+.site-add-import .gsc-toolbar { flex-wrap: wrap; }
+.site-add-import .gsc-list { overflow-wrap: anywhere; }
+.site-add-import .gsc-list label.checkbox { min-height: 44px; }
+.site-management-toolbar { flex-wrap: wrap; gap: 12px; }
+.site-management-toolbar .topbar-actions { flex-wrap: wrap; }
+.site-management-toolbar .batch-project-actions { flex-wrap: wrap; }
+.site-delete-scope { flex-basis: 100%; font-size: 14px; }
+.site-selection-feedback { display: block; margin: 14px 0; }
+.site-selection-feedback p { margin: 0; line-height: 1.6; }
+.site-selection-feedback a { display: inline-flex; align-items: center; min-height: 44px; }
+.projects-table .project-select { width: 20px; height: 20px; }
+.projects-table label.checkbox { min-width: 44px; min-height: 44px; }
+.site-account-label { display: block; margin-top: 4px; font-size: 13px; }
+.site-github-choice { margin-top: 4px; font-size: 14px; }
+.site-github-choice select, .site-github-choice input { font-size: 16px !important; min-height: 44px; max-width: 100%; min-width: 0 !important; }
+#add-project-dialog :is(a,button,input,select,summary):focus-visible,
+#add-site-fallback :is(a,button,input):focus-visible,
+.site-management-toolbar :is(a,button,input):focus-visible,
+.site-github-choice :is(a,button,input,select,summary):focus-visible { outline: 3px solid #65b588; outline-offset: 3px; }
+@media (max-width: 600px) {
+  #add-project-dialog .modal-head, #add-project-dialog .modal-body { padding: 18px; }
+  #add-project-dialog .modal-head h2 { font-size: 21px; }
+  .site-management-toolbar .topbar-actions { width: 100%; }
+  .site-management-toolbar .batch-project-actions { width: 100%; }
+}

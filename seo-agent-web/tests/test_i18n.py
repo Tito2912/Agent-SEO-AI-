@@ -177,7 +177,7 @@ def test_project_overview_and_issues_in_english(lab, tmp_path) -> None:
     assert "Title tag missing / empty" in overview
     assert "Score de santé" not in overview
     issues = browser.get("/projects/atelier/issues").text
-    assert "Filters and exports" in issues and "Title tag missing / empty" in issues
+    assert "Filter" in issues and "PDF and CSV exports" in issues and "Title tag missing / empty" in issues
     assert "Balise title manquante / vide" in browser.get("/projects/atelier/issues", params={"lang": "fr"}).text
 
 
@@ -453,11 +453,26 @@ def test_assistant_answers_in_the_customer_language(lab, monkeypatch: pytest.Mon
     browser.post("/api/assistant/chat", json={"message": "Bonjour"}, headers=headers)
     english, french = asked
     assert "Réponds en anglais" in english and "Réponds en français" in french
+    # Les ecrans sont cites sous le nom que la personne voit, dans sa langue.
+    assert "Overview" in english and "Analysis history" in english and "/en/docs" in english
+    assert "Vue d'ensemble" in french and "Historique des analyses" in french
+    for old_name in ("Jobs", "All issues", "Crawl log", "Paramètres crawl"):
+        assert old_name not in english and old_name not in french
 
     monkeypatch.setattr(app_module, "_assistant_effective_provider", lambda: "none")
     browser.get("/", params={"lang": "en"})
     refused = browser.post("/api/assistant/chat", json={"message": "Hello"}, headers=headers).json()
     assert refused["error"] == "Assistant temporarily unavailable."
+
+
+def test_assistant_names_screens_that_exist_in_the_sidebar() -> None:
+    layout = (WEB_ROOT / "templates" / "layout.html").read_text(encoding="utf-8")
+    # « Activité » n'est pas encore traduit dans la barre laterale : present, mais hors tr().
+    assert "Activité" in layout
+    names = [n for n in app_module._ECRANS_DU_COMPTE + app_module._ECRANS_DU_PROJET if n != "Activité"]
+    missing = [n for n in names if f'tr("{n}")' not in layout]
+    assert missing == []
+    assert all(n in CATALOG for n in names)
 
 
 def test_assistant_script_texts_are_translated() -> None:

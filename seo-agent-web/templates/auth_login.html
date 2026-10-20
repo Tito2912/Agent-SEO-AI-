@@ -7,80 +7,45 @@
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
     <link rel="stylesheet" href="/static/lang-switch.css?v=2" />
-    <link rel="stylesheet" href="/static/attribution.css?v=1" />
+    <link rel="stylesheet" href="/static/auth-entry.css?v=1" />
   </head>
-  <body>
+  <body class="auth-entry">
     <main class="auth-shell">
       <section class="card auth-card">
+        {% with heading = tr("Connexion"), description = tr("Accédez à votre espace.") %}
+          {% include "_auth_entry_intro.html" %}
+        {% endwith %}
 
-        <!-- Brand header -->
-        <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="{{ campaign_link(request, '/') }}" aria-label="Noyaru - {{ tr('Accueil') }}" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
-          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">{{ tr("Audit SEO Intelligent") }}</p>
-          <div style="margin-top:8px;">{% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}</div>
-        </div>
-
-        <div class="page-header">
-          <h1>{{ tr("Connexion") }}</h1>
-          <p class="muted">{{ tr("Accédez à votre espace.") }}</p>
-        </div>
-
-        {% if msg %}
-          <div class="alert ok">
-            <span class="badge ok">ok</span>
-            <p class="muted small">{{ tr(msg) }}</p>
-          </div>
-        {% endif %}
-
-        {% if err %}
-          <div class="alert error">
-            <span class="badge error">{{ tr("erreur") }}</span>
-            <p class="muted small">{{ tr(err) }}</p>
-          </div>
-        {% endif %}
-
-        <form method="post" action="/auth/login">
+        <form method="post" action="/auth/login" class="auth-entry-form">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
-
-          <button
-            class="btn block"
-            type="submit"
-            formaction="/auth/google/start"
-            name="mode"
-            value="login"
-            formnovalidate
-          >
-            <img class="oauth-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-            {{ tr("Continuer avec Google") }}
-          </button>
-
-          <div class="auth-divider"><span>{{ tr("ou") }}</span></div>
-
-          <label>
-            {{ tr("Email") }}
-            <input name="email" type="email" autocomplete="email" required value="{{ email }}" />
-          </label>
-
-          <div class="row"></div>
-
-          <label>
-            {{ tr("Mot de passe") }}
-            <input name="password" type="password" autocomplete="current-password" required />
-          </label>
-
-          <p class="muted small" style="margin: 10px 0 0; display:flex; gap:10px; flex-wrap:wrap;">
-            <a href="/auth/forgot?next={{ next_q }}">{{ tr("Mot de passe oublié ?") }}</a>
-            <span class="muted">·</span>
-            <a href="/auth/verify/resend?next={{ next_q }}&email={{ email_q }}">{{ tr("Renvoyer la vérification") }}</a>
-          </p>
-
-          <div class="row-actions">
-            <button class="btn primary" type="submit">{{ tr("Se connecter") }}</button>
-            <a class="btn" href="{{ campaign_link(request, '/auth/signup?next=' ~ next_q) }}">{{ tr("Créer un compte") }}</a>
+          <div class="auth-entry-field">
+            <label for="login-email">{{ tr("Email") }}</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" maxlength="320" required value="{{ email }}" />
           </div>
+          <div class="auth-entry-field">
+            <label for="login-password">{{ tr("Mot de passe") }}</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <button class="btn primary block" type="submit">{{ tr("Se connecter") }}</button>
+
+          {% if google_auth_available %}
+            <div class="auth-divider"><span>{{ tr("ou") }}</span></div>
+            <button class="btn block" type="submit" formaction="/auth/google/start" name="mode" value="login" formnovalidate>
+              <img class="oauth-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+              {{ tr("Continuer avec Google") }}
+            </button>
+          {% endif %}
         </form>
 
+        <nav class="auth-entry-recovery" aria-label="{{ tr('Aide') }}">
+          <a href="/auth/forgot?next={{ next_q }}&amp;email={{ email_q }}">{{ tr("Mot de passe oublié ?") }}</a>
+          <a href="/auth/verify/resend?next={{ next_q }}&email={{ email_q }}">{{ tr("Renvoyer la vérification") }}</a>
+        </nav>
+        <div class="auth-entry-footer">
+          <a class="btn block" href="{{ campaign_link(request, '/auth/signup?next=' ~ next_q ~ '&email=' ~ email_q) }}">{{ tr("Créer un compte") }}</a>
+          <a class="auth-entry-help" href="{{ localized_path('/support', current_lang()) }}">{{ tr("Aide") }}</a>
+        </div>
       </section>
     </main>
   </body>

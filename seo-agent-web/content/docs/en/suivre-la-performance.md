@@ -5,7 +5,7 @@ description: "A project's Performance page: Search Console data, PageSpeed measu
 kind: "Documentation"
 section: "Search Console and keywords"
 order: 32
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["Core Web Vitals", "LCP", "INP", "CLS", "PageSpeed"]
 app_href: "/"
@@ -77,7 +77,7 @@ This sample is yours to choose. Measuring the first twenty URLs in alphabetical 
 teaches you nothing; measuring the home page, a category page, a product page, an article and a
 contact page gives you the state of each of your templates.
 
-You set it in the [crawl settings](/docs/lancer-un-crawl), along with the choice of mobile or
+You set it in the [analysis settings](/docs/lancer-un-crawl), along with the choice of mobile or
 desktop strategy. Choose mobile: it's the index Google uses.
 
 ## What a measurement doesn't tell you

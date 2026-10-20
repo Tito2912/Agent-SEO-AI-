@@ -1,0 +1,176 @@
+{
+  "checks": [
+    {
+      "screen": "ready",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "ready",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "database": "ready"
+    },
+    {
+      "screen": "failed-read",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "database": "failed"
+    },
+    {
+      "screen": "read-recovered",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "database": "ready"
+    }
+  ],
+  "javascript_errors": [],
+  "provider_health_or_config_calls": 0,
+  "mutating_requests": 0,
+  "scope": "Serveur et base SQLite locaux réels ; échec de lecture simulé avec exception privée ; aucun service externe consulté."
+}

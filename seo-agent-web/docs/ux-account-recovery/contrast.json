@@ -1,0 +1,2550 @@
+{
+  "sample_count": 1504,
+  "minimum_ratio": 6.54,
+  "distinct_samples": [
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Recevez un lien de réinitialisation par email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Si un compte existe, un email est envoyé (pensez à vérifier ",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Envoyer le lien",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Recevez un lien de réinitialisation par email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de réinitialisation a été envo",
+      "ratio": 14.43
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Si un compte existe, un email est envoyé (pensez à vérifier ",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-1440-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Recevez un lien de réinitialisation par email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de réinitialisation a été envo",
+      "ratio": 14.43
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Si un compte existe, un email est envoyé (pensez à vérifier ",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-1440-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 8.08
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification a été envoyé.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-1440-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification a été envoyé.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-1440-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Recevez un lien de réinitialisation par email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Erreur · Réinitialisation par email non configurée. Contacte",
+      "ratio": 14.95
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Si un compte existe, un email est envoyé (pensez à vérifier ",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Envoyer le lien",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Recevez un lien de réinitialisation par email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Erreur · Email non envoyé (erreur serveur). Réessaie plus ta",
+      "ratio": 14.95
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Si un compte existe, un email est envoyé (pensez à vérifier ",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Envoyer le lien",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Recevez un lien de réinitialisation par email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Erreur · Trop de tentatives. Réessaie dans 1 min.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Si un compte existe, un email est envoyé (pensez à vérifier ",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Envoyer le lien",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Erreur · Vérification email non configurée. Contacte le supp",
+      "ratio": 14.95
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.54
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Erreur · Email non envoyé (erreur serveur). Réessaie plus ta",
+      "ratio": 14.95
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.54
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Erreur · Trop de tentatives. Réessaie dans 1 min.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Choisissez un nouveau mot de passe pour votre compte.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Nouveau mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Confirmation",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Réinitialiser",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Choisissez un nouveau mot de passe pour votre compte.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Erreur · Les mots de passe ne correspondent pas.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Nouveau mot de passe",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Minimum 10 caractères.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Confirmation",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Réinitialiser",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "Choisissez un nouveau mot de passe pour votre compte.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "Erreur · Lien invalide ou expiré.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "Demander un nouveau lien",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.39
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "Choisissez un nouveau mot de passe pour votre compte.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "Erreur · Lien invalide ou expiré.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "Demander un nouveau lien",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.39
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "Confirmez votre adresse email pour accéder à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "Erreur · Lien invalide ou expiré.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.39
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "Confirmez votre adresse email pour accéder à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "Erreur · Lien invalide ou expiré.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.39
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "Confirmez votre adresse email pour accéder à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "Erreur · Vérification email non configurée.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.55
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Confirmez votre adresse email pour accéder à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Mot de passe mis à jour.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 8.08
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Renvoyez l'email de vérification.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification a été envoyé.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Si un compte existe, un email de vérification est envoyé (pe",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Email : recovery-1440-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "FR",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "EN",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "Confirmez votre adresse email pour accéder à votre espace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "Erreur · Lien invalide ou expiré.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "Renvoyer un email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.39
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "Aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "Get a reset link by email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "If an account exists, an email is sent (remember to check yo",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "Send the link",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Get a reset link by email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "If an account exists, a reset email has been sent.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "If an account exists, an email is sent (remember to check yo",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-1440-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Get a reset link by email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "If an account exists, a reset email has been sent.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "If an account exists, an email is sent (remember to check yo",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-1440-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 8.08
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "If an account exists, a verification email has been sent.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-1440-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "If an account exists, a verification email has been sent.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-1440-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "Get a reset link by email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "Error · Email reset is not configured. Please contact suppor",
+      "ratio": 14.95
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "If an account exists, an email is sent (remember to check yo",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "Send the link",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "Get a reset link by email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "Error · Email not sent (server error). Please try again late",
+      "ratio": 14.95
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "If an account exists, an email is sent (remember to check yo",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "Send the link",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "Get a reset link by email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "Error · Too many attempts. Try again in 1 min.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "If an account exists, an email is sent (remember to check yo",
+      "ratio": 10.02
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "Send the link",
+      "ratio": 6.54
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "Error · Email verification is not configured. Please contact",
+      "ratio": 14.95
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.54
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "Error · Email not sent (server error). Please try again late",
+      "ratio": 14.95
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.54
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "Error · Too many attempts. Try again in 1 min.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "Choose a new password for your account.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "New password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "Confirm password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "Reset",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "Choose a new password for your account.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "Error · Passwords do not match.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "New password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "At least 10 characters.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "Confirm password",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "Reset",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "Choose a new password for your account.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "Error · Invalid or expired link.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "Request a new link",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.39
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "Choose a new password for your account.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "Error · Invalid or expired link.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "Request a new link",
+      "ratio": 6.54
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.39
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "Confirm your email address to access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "Error · Invalid or expired link.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.39
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "Confirm your email address to access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "Error · Invalid or expired link.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.55
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "Confirm your email address to access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "Error · Email verification is not configured.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.39
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Confirm your email address to access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Password updated.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 7.98
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Resend the verification email.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "If an account exists, a verification email has been sent.",
+      "ratio": 14.43
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "If an account exists, a verification email is sent (remember",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Email : recovery-1440-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 14.45
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "FR",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "EN",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "Confirm your email address to access your workspace.",
+      "ratio": 10.02
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "Error · Invalid or expired link.",
+      "ratio": 14.95
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "Resend an email",
+      "ratio": 6.54
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.39
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "Help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-768-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-768-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-768-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-768-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 7.98
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Email : recovery-768-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-768-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-768-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-768-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-768-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.55
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.55
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.55
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.55
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Email : recovery-768-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "text": "Envoyer le lien",
+      "ratio": 8.08
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-390-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-390-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "text": "Renvoyer l'email",
+      "ratio": 7.98
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-390-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-390-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 14.45
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.87
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Email : recovery-390-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "text": "Retour connexion",
+      "ratio": 13.55
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-390-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-390-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-390-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-390-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.87
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Email : recovery-390-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "text": "Back to log in",
+      "ratio": 13.55
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-360-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-360-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "text": "Email : recovery-360-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "text": "Email : recovery-360-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "text": "Email : recovery-360-fr@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "text": "Send the link",
+      "ratio": 7.98
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-360-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-360-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 7.98
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "text": "Email : recovery-360-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "text": "Email : recovery-360-en@example.invalid",
+      "ratio": 15.89
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "text": "Resend email",
+      "ratio": 7.8
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "text": "Email : recovery-360-en@example.invalid",
+      "ratio": 15.89
+    }
+  ]
+}

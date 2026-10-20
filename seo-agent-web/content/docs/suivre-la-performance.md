@@ -5,7 +5,7 @@ description: "La page Performance d'un projet : données Search Console, mesures
 kind: "Documentation"
 section: "Search Console et mots-clés"
 order: 32
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["Core Web Vitals", "LCP", "INP", "CLS", "PageSpeed"]
 app_href: "/"
@@ -77,7 +77,7 @@ Cet échantillon se choisit. Mesurer les vingt premières URLs par ordre alphab�
 n'apprend rien ; mesurer la home, une page de catégorie, une fiche produit, un article et une
 page de contact vous donne l'état de chacun de vos gabarits.
 
-Réglage dans les [paramètres de crawl](/docs/lancer-un-crawl), avec le choix de la stratégie
+À activer dans les [réglages de l’analyse](/docs/lancer-un-crawl), avec le choix de la stratégie
 mobile ou desktop. Prenez mobile : c'est l'index que Google utilise.
 
 ## Ce qu'une mesure ne dit pas

@@ -1,0 +1,1031 @@
+{
+  "checks": [
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "fr",
+      "width": 1440,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "fr",
+      "width": 1440
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "fr",
+      "width": 1440,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "en",
+      "width": 1440,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "en",
+      "width": 1440
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "en",
+      "width": 1440,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "fr",
+      "width": 768,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "fr",
+      "width": 768
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "fr",
+      "width": 768,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "en",
+      "width": 768,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "en",
+      "width": 768
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "en",
+      "width": 768,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "fr",
+      "width": 390,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "fr",
+      "width": 390
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "fr",
+      "width": 390,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "en",
+      "width": 390,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "en",
+      "width": 390
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "en",
+      "width": 390,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "fr",
+      "width": 360,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "fr",
+      "width": 360
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "fr",
+      "width": 360,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "sites-initial",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "shared-selection",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "mixed-selection",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "optional-github",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "expired-start-session",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "batch-unavailable",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "add-dialog",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "invalid-address-retained",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "site-recorded-without-analysis",
+      "lang": "en",
+      "width": 360,
+      "root_scope": true,
+      "no_job_or_charge": true
+    },
+    {
+      "screen": "repeat-add-preserves-name",
+      "lang": "en",
+      "width": 360
+    },
+    {
+      "screen": "explicit-local-delete",
+      "lang": "en",
+      "width": 360,
+      "shared_preserved": true
+    },
+    {
+      "screen": "admin-import-loading",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-empty",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-selection",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "admin-import-session-expired",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "personal-site-limit",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 740
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 740
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 640
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 740
+    },
+    {
+      "screen": "short-mobile-scroll",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "height": 740
+    },
+    {
+      "screen": "without-javascript-invalid-retained",
+      "lang": "fr",
+      "width": 360,
+      "status": 400
+    },
+    {
+      "screen": "without-javascript-site-recorded",
+      "lang": "fr",
+      "width": 360,
+      "status": 200
+    },
+    {
+      "screen": "without-javascript-invalid-retained",
+      "lang": "en",
+      "width": 360,
+      "status": 400
+    },
+    {
+      "screen": "without-javascript-site-recorded",
+      "lang": "en",
+      "width": 360,
+      "status": 200
+    }
+  ],
+  "native_confirmations": [
+    {
+      "lang": "fr",
+      "width": 1440,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 1440,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "fr",
+      "width": 768,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 768,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "fr",
+      "width": 390,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 390,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "fr",
+      "width": 360,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    },
+    {
+      "lang": "en",
+      "width": 360,
+      "cancelled": true,
+      "named_site": true,
+      "no_post": true
+    }
+  ],
+  "javascript_errors": [],
+  "network": {
+    "external": 0,
+    "posts": 52,
+    "simulated_start_posts": 16
+  },
+  "notes": [
+    "Local SQLite and synthetic users only. Public-target validation mocked; provider lists and start failures intercepted locally. Site records are created/deleted only in this fixture. No external email, provider, payment or client-site write."
+  ]
+}

@@ -5,7 +5,7 @@ description: "L'archive de correctifs à appliquer sur WordPress, Shopify, Webfl
 kind: "Documentation"
 section: "Corriger"
 order: 24
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["fix pack", "WordPress", "Shopify", "Webflow", "sans dépôt"]
 app_href: "/"
@@ -29,7 +29,7 @@ qui contient ce qu'il faut appliquer et le mode d'emploi pour le faire.
 
 ## Le télécharger
 
-Page du projet → export **Fix-pack**. L'archive porte sur le dernier crawl disponible ;
+Vue d’ensemble du projet → **Fix Pack ZIP**. L'archive porte sur le dernier crawl disponible ;
 relancez un crawl d'abord si le vôtre date.
 
 Aucun quota de correction n'est consommé : c'est un export, pas un travail de modèle.

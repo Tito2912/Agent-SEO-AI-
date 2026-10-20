@@ -5,7 +5,7 @@ description: "How {{app_name}} classifies the issues it detects, what an issue's
 kind: "Documentation"
 section: "Fixing"
 order: 20
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["SEO issues", "prioritization", "crawl errors", "severity"]
 app_href: "/"
@@ -83,7 +83,7 @@ one occurrence each require three interventions. The return is not the same.
     4. Internal linking: broken links, links to redirects, orphan pages.
     5. The rest, on the next run.
 
-## Tracking: to do, in progress, done, ignored
+## Tracking: to do, in progress, changed, ignored
 
 Each issue can become a **task** with a status. The project's **Fixes** page
 groups them by column, and shows for each one the associated pull request when there is

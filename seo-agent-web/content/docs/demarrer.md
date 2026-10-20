@@ -5,7 +5,7 @@ description: "Le parcours complet du premier compte au premier correctif : crée
 kind: "Prise en main"
 section: "Prise en main"
 order: 10
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Nouveau compte"
 keywords: ["prise en main", "démarrer", "premier crawl", "onboarding"]
 app_href: "/"
@@ -16,7 +16,7 @@ faq:
   - question: "Combien de temps dure un premier crawl ?"
     answer: "De quelques minutes pour un site vitrine à plusieurs heures pour un gros catalogue. Le crawl s'exécute en arrière-plan : vous pouvez fermer l'onglet, le job continue et la page Jobs affiche l'avancement."
   - question: "Le crawl peut-il ralentir mon site ?"
-    answer: "Le crawler respecte robots.txt et la directive crawl-delay, et limite le nombre de requêtes simultanées par hôte. Vous pouvez encore réduire la cadence dans les paramètres de crawl du projet si votre hébergement est fragile."
+    answer: "Le crawler respecte robots.txt et la directive crawl-delay, et limite le nombre de requêtes simultanées par hôte. Vous pouvez encore réduire la cadence dans les réglages de l’analyse du projet si votre hébergement est fragile."
 ---
 
 Cette page suit l'ordre réel des choses : chaque étape débloque la suivante. Comptez un
@@ -42,7 +42,7 @@ Détails et cas particuliers : [Ajouter un projet](/docs/ajouter-un-projet).
 
 ### 2. Lancer le premier crawl
 
-Sur la page du projet, bouton **Lancer un crawl**. Vous n'avez rien à régler pour le premier
+Sur la page du projet, bouton **Lancer la première analyse**. Vous n'avez rien à régler pour le premier
 passage : les valeurs par défaut conviennent à la quasi-totalité des sites.
 
 Le crawl part en tâche de fond. Suivez-le sur **Jobs**, ou revenez plus tard : vous recevez
