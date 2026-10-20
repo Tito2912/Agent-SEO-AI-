@@ -196,3 +196,55 @@ def test_static_scripts_receive_only_their_translations(client: TestClient) -> N
     assert english["Aucune donnée reçue sur cette période."] == "No data received for this period."
     assert set(english) <= set(keys)
     assert page_catalog("fr") == {}
+
+
+def test_every_issue_explanation_has_an_english_translation() -> None:
+    """Chaque explication « Pourquoi agir ? » et chaque étape de correction s'affiche en anglais.
+
+    Modifier un texte de backend/fix_suggestions.py change sa clé : ajouter la nouvelle ligne
+    dans locales/en.json (voir docs/I18N.md).
+    """
+    from backend import audit_dashboard, fix_suggestions
+
+    url = "https://atelier.example/page"
+    missing: dict[str, str] = {}
+    for key, meta in audit_dashboard.ISSUE_CATALOG.items():
+        report = {"meta": {"base_url": "https://atelier.example/"},
+                  "pages": [{"url": url, "status_code": 200}],
+                  "issues": {key: {"count": 2, "examples": [url]}}}
+        advice = fix_suggestions.suggest_issue_fix(
+            issue_key=key, label=meta.label, category=meta.category, severity=meta.severity,
+            count=2, report=report, site_name="Atelier", base_url="https://atelier.example/")
+        texts = [advice.get("why"), advice.get("auto_fix_note"), *(advice.get("fix") or []), *(advice.get("verify") or [])]
+        for text in texts:
+            if text and i18n.translate(text, "en") == text:
+                missing.setdefault(text, key)
+    assert not missing, "Explications sans traduction dans locales/en.json : " + json.dumps(missing, ensure_ascii=False, indent=2)
+
+
+def test_composed_explanations_keep_the_site_values() -> None:
+    assert i18n.translate("Inclure le sujet principal de la page + la marque (atelier42.fr) quand c’est pertinent.", "en") \
+        == "Include the page's main topic + the brand (atelier42.fr) when relevant."
+    assert i18n.translate("Issue détectée: Balise title trop longue. Elle peut impacter SEO/UX selon le contexte.", "en") \
+        == "Issue detected: Title tag too long. It may affect SEO/UX depending on the context."
+    assert i18n.translate("3 de ces redirections forment une boucle : l'URL ne parvient jamais à une page, elle est donc "
+                          "inatteignable pour Google.", "en").startswith("3 of these redirects form a loop")
+    # Un trou de gabarit ({n}, {plan}...) n'est jamais deviné dans une phrase libre.
+    assert i18n.translate("Choisir quelque chose d'inconnu", "en") == "Choisir quelque chose d'inconnu"
+
+
+def test_issue_detail_in_english(lab, tmp_path) -> None:
+    owner = user(lab["db"])
+    project(lab["db"], owner, slug="atelier")
+    url = "https://atelier.example/"
+    report_dir = tmp_path / "runs" / str(owner.id) / "atelier" / "20261018-120000" / "audit"
+    report_dir.mkdir(parents=True)
+    (report_dir / "report.json").write_text(json.dumps({
+        "meta": {"base_url": url},
+        "pages": [{"url": url, "status_code": 200, "content_type": "text/html", "indexable": True}],
+        "issues": {"missing_title": {"count": 1, "examples": [url]}},
+    }))
+    page = session_client(owner).get("/projects/atelier/issues/missing_title", params={"lang": "en"}).text
+    assert "Recommended fix" in page and "Actions to take" in page
+    assert "Some pages have no &lt;title&gt; tag." in page
+    assert "Correction recommandée" not in page and "Certaines pages n’ont pas de balise" not in page

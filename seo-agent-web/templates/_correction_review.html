@@ -2,25 +2,25 @@
 {% set review_cfg = github_cfg|default({}, true) %}
 <script id="correction-review-context" type="application/json">{{ {'slug': slug if slug is defined else project.slug, 'repo': review_cfg.repo|default(''), 'branch': review_cfg.branch|default(''), 'crawl': current_crawl_ts|default('')}|tojson }}</script>
 <dialog class="correction-review" id="correction-review" aria-labelledby="review-title" aria-describedby="review-intro">
-  <div class="review-heading"><h2 id="review-title">Préparer une correction</h2><button type="button" class="btn" data-review-close aria-label="Fermer la préparation">Fermer</button></div>
+  <div class="review-heading"><h2 id="review-title">{{ tr("Préparer une correction") }}</h2><button type="button" class="btn" data-review-close aria-label="{{ tr("Fermer la préparation") }}">{{ tr("Fermer") }}</button></div>
   {{ correction_steps(1, application='Proposer') }}
   <p class="review-target" data-review-target></p>
   <p class="muted" id="review-intro"></p>
   <p class="muted small" data-review-destination></p>
   <p class="review-message" role="status" aria-live="polite" data-review-message></p>
-  <section data-review-preview hidden aria-label="Modification à relire">
-    <h3 data-review-preview-title>Changements proposés</h3><p class="mono small" data-review-file></p>
+  <section data-review-preview hidden aria-label="{{ tr("Modification à relire") }}">
+    <h3 data-review-preview-title>{{ tr("Changements proposés") }}</h3><p class="mono small" data-review-file></p>
     <p data-review-description></p>
-    <pre class="review-diff" tabindex="0" aria-label="Différences entre la version actuelle et la proposition" data-review-diff></pre>
+    <pre class="review-diff" tabindex="0" aria-label="{{ tr("Différences entre la version actuelle et la proposition") }}" data-review-diff></pre>
     <p class="muted small" data-review-diff-help></p>
-    <label class="review-consent"><input type="checkbox" data-review-consent />J’ai relu ces changements et je souhaite créer une proposition sur GitHub.</label>
+    <label class="review-consent"><input type="checkbox" data-review-consent />{{ tr("J’ai relu ces changements et je souhaite créer une proposition sur GitHub.") }}</label>
   </section>
   <div class="review-actions">
-    <button type="button" class="btn primary" data-review-prepare>Préparer l’aperçu</button>
-    <button type="button" class="btn primary" data-review-confirm hidden disabled>Créer la proposition GitHub</button>
-    <a class="btn primary" data-review-result hidden target="_blank" rel="noopener noreferrer">Relire sur GitHub</a>
-    <a class="btn" data-review-followup hidden>Retrouver le suivi</a>
+    <button type="button" class="btn primary" data-review-prepare>{{ tr("Préparer l’aperçu") }}</button>
+    <button type="button" class="btn primary" data-review-confirm hidden disabled>{{ tr("Créer la proposition GitHub") }}</button>
+    <a class="btn primary" data-review-result hidden target="_blank" rel="noopener noreferrer">{{ tr("Relire sur GitHub") }}</a>
+    <a class="btn" data-review-followup hidden>{{ tr("Retrouver le suivi") }}</a>
     <a class="btn" data-review-recovery hidden></a>
-    <button type="button" class="btn" data-review-cancel>Annuler</button>
+    <button type="button" class="btn" data-review-cancel>{{ tr("Annuler") }}</button>
   </div>
 </dialog>

@@ -133,12 +133,59 @@ def _numbered(source: str, lang: str, catalog: dict[str, str]) -> str | None:
         return None
 
 
+# Phrases composees par le code avec une valeur du site (« … la marque (exemple.fr) … ») : le
+# catalogue les connait avec un trou nomme, « … la marque ({domain}) … ». Seuls ces noms-la
+# ouvrent un trou : un trou comme {n} ou {plan} vient d'un gabarit qui passe deja sa valeur.
+_PATTERN_FIELDS = frozenset({"domain", "url", "src", "label", "candidates"})
+_PLACEHOLDER = re.compile(r"\{([a-z_][a-z_0-9]*)\}")
+_pattern_cache: dict[str, list[tuple[re.Pattern[str], str]]] = {}
+
+
+def _patterns(lang: str, catalog: dict[str, str]) -> list[tuple[re.Pattern[str], str]]:
+    if lang not in _pattern_cache:
+        compiled: list[tuple[re.Pattern[str], str]] = []
+        for key, target in catalog.items():
+            names = _PLACEHOLDER.findall(key)
+            if not names or not set(names) <= _PATTERN_FIELDS:
+                continue
+            parts = _PLACEHOLDER.split(key)  # texte, nom, texte, nom, ..., texte
+            seen: set[str] = set()
+            regex = ""
+            for index, part in enumerate(parts):
+                if index % 2 == 0:
+                    regex += re.escape(part)
+                elif part in seen:
+                    regex += f"(?P={part})"
+                else:
+                    seen.add(part)
+                    regex += f"(?P<{part}>.+?)"
+            compiled.append((re.compile(regex, re.S), target))
+        _pattern_cache[lang] = compiled
+    return _pattern_cache[lang]
+
+
+def _patterned(source: str, lang: str, catalog: dict[str, str]) -> str | None:
+    for regex, target in _patterns(lang, catalog):
+        match = regex.fullmatch(source)
+        if match is None:
+            continue
+        # La valeur inseree se traduit elle aussi quand elle est connue (« aucune page identifiée »).
+        values = {name: catalog.get(value, value) for name, value in match.groupdict().items()}
+        try:
+            return target.format(**values)
+        except (IndexError, KeyError, ValueError):
+            return None
+    return None
+
+
 def translate(text: str, lang: str = DEFAULT_LANG, **values: Any) -> str:
     source = str(text or "")
     catalog = _catalog(lang)
     result = catalog.get(source)
+    if result is None and catalog:
+        result = _numbered(source, lang, catalog) or (None if values else _patterned(source, lang, catalog))
     if result is None:
-        result = (_numbered(source, lang, catalog) if catalog else None) or source
+        result = source
     if values:
         values = {
             key: _localize_number(value, lang) if isinstance(value, str) and _NUMBER.fullmatch(value) else value
@@ -147,7 +194,10 @@ def translate(text: str, lang: str = DEFAULT_LANG, **values: Any) -> str:
         try:
             result = result.format(**values)
         except (KeyError, IndexError, ValueError):
-            result = source.format(**values)
+            try:
+                result = source.format(**values)
+            except (KeyError, IndexError, ValueError):
+                result = source
     return result
 
 
