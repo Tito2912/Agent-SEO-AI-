@@ -1,0 +1,781 @@
+{
+  "checks": [
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-email",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-email",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-google",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-google",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-collapsed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-campaign-expanded",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "team-invitation-email",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-closed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-enter-error-preserves-context",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "signup-enter-error-preserves-country",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-success-message-presentation",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "login-without-javascript",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "signup-without-javascript",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "login-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "signup-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "login-without-javascript",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "signup-without-javascript",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "login-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "signup-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "requests": {
+    "posts": [
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup",
+      "/auth/login",
+      "/auth/signup"
+    ],
+    "external_requests": 0
+  },
+  "notes": [
+    "All requests are local. The 16 POSTs are intentional rejected login/signup checks; no account, email, provider or client site created or modified. Success message is presentation only."
+  ]
+}
