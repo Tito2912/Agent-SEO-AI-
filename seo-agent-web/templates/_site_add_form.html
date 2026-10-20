@@ -1,0 +1,23 @@
+<form method="post" action="/projects/add" class="site-add-form">
+  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+  <input type="hidden" name="mode" value="domain" />
+  <input type="hidden" name="source" value="site-list" />
+  {% if site_add.error %}<div class="alert error" role="alert" tabindex="-1"><p>{{ tr(site_add.error) }}</p></div>{% endif %}
+  <p class="muted" id="{{ field_prefix }}-help">{{ tr("Le domaine du site sera analysé. Aucune connexion Google ou installation n’est nécessaire pour commencer.") }}</p>
+  <label for="{{ field_prefix }}-address">{{ tr("Adresse de votre site") }}</label>
+  <input id="{{ field_prefix }}-address" name="domain" type="text" inputmode="url" autocomplete="url" autocapitalize="none" spellcheck="false" placeholder="{{ tr('exemple.fr ou https://exemple.fr') }}" maxlength="2048" value="{{ site_add.address }}" aria-describedby="{{ field_prefix }}-help" required />
+  <label for="{{ field_prefix }}-name">{{ tr("Nom (optionnel)") }}</label>
+  <input id="{{ field_prefix }}-name" name="site_name" type="text" maxlength="200" value="{{ site_add.name }}" placeholder="{{ tr('Nom affiché') }}" />
+  <div class="site-add-allowance">
+    {% if site_add.admin %}
+      <strong>{{ tr("Accès administrateur") }}</strong><p class="muted small">{{ tr("Les limites des formules clients ne s’appliquent pas à ce compte.") }}</p>
+    {% else %}
+      <strong>{{ tr("Votre compte personnel") }} · {{ site_add.count }}{% if site_add.limit %} / {{ site_add.limit }}{% endif %} {{ tr("Sites") }}</strong>
+      {% if site_add.limit %}<p class="muted small">{% if site_add.limit == 1 %}{{ tr("{n} site inclus dans votre formule.", n=site_add.limit) }}{% else %}{{ tr("{n} sites inclus dans votre formule.", n=site_add.limit) }}{% endif %}</p>{% endif %}
+      {% if not site_add.can_add %}<p role="status">{{ tr("Une limite de votre formule est atteinte") }}</p>{% endif %}
+      <a href="/billing">{{ tr("Consulter mon abonnement") }}</a>
+    {% endif %}
+  </div>
+  <p class="muted">{{ tr("Vous pourrez choisir les réglages et démarrer l’analyse plus tard.") }}</p>
+  <div class="modal-actions"><button type="submit" class="btn primary" {% if not site_add.can_add %}disabled{% endif %}>{{ tr("Ajouter un site uniquement") }}</button></div>
+</form>
