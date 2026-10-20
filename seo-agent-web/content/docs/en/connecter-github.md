@@ -5,7 +5,7 @@ description: "Authorize {{app_name}} on GitHub, link a repository and a branch t
 kind: "Documentation"
 section: "Fixing"
 order: 21
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Solo, Pro and Business"
 keywords: ["GitHub", "pull request", "repository", "OAuth"]
 app_href: "/settings/accounts#github-connect-card"
@@ -26,7 +26,7 @@ It is optional — and it is the feature the product exists for.
 
 ## Authorize GitHub on your account
 
-**Settings → Accounts → GitHub → Connect**. You go to GitHub, you authorize, you
+**My account → Connections → GitHub → Connect**. You go to GitHub, you authorize, you
 come back. The card then shows the connected account and the list of accessible repositories.
 
 The permissions requested: read access to your profile and email, and access to repositories. The
@@ -45,7 +45,7 @@ available. It does the same thing and is configured on the same page.
 The GitHub connection is at the **account** level. The link is at the **project** level:
 one project, one repository, one branch.
 
-Three settings:
+Open **Analysis settings → GitHub (optional)** for the site concerned. Three settings:
 
 - **Repository** — in `organization/repository` format. Pick it from the list of accessible
   repositories.
@@ -112,3 +112,10 @@ mode. If it says “No GitHub repository connected”, the fix buttons will not 
 on the issue detail sheets.
 
 → [Automatic fixes](/docs/corrections-automatiques)
+
+
+## Remove the repository from a single site
+
+In the same panel, **Disconnect** removes the link after you confirm. Your personal GitHub connection and the repositories linked to your other sites remain available. Proposals already open on GitHub are not deleted.
+
+The confirmation shown follows the server's response. If a response is lost, **Refresh status** checks the saved link before you try again; this check creates no fix and no proposal.

@@ -3320,10 +3320,10 @@ def _assistant_model(provider: str) -> str:
 _LANGUE_DES_REPONSES = {"fr": "en français", "en": "en anglais"}
 
 # Les ecrans tels que la barre laterale les nomme (templates/layout.html), traduits comme
-# l'interface du client : l'assistant cite ce que la personne voit. « Exécutions » n'est pas
-# encore traduit dans la barre laterale (refonte en cours, qui le renomme « Activité ») : le
-# catalogue ne le connait pas, il reste donc ecrit comme a l'ecran.
-_ECRANS_DU_COMPTE = ("Projets", "Exécutions", "Abonnement", "Documentation", "Mon compte", "Équipe")
+# l'interface du client : l'assistant cite ce que la personne voit. « Activité » n'est pas
+# encore traduit dans la barre laterale : le catalogue ne le connait pas, il reste donc ecrit
+# comme a l'ecran.
+_ECRANS_DU_COMPTE = ("Projets", "Activité", "Abonnement", "Documentation", "Mon compte", "Équipe")
 _ECRANS_DU_PROJET = (
     "Vue d'ensemble", "Anomalies", "Corrections", "Contenu", "Performance", "Mots-clés",
     "Concurrents", "Liens entrants", "Faire connaître mon site", "Google et Bing",

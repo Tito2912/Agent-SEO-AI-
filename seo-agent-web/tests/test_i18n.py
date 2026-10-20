@@ -467,9 +467,9 @@ def test_assistant_answers_in_the_customer_language(lab, monkeypatch: pytest.Mon
 
 def test_assistant_names_screens_that_exist_in_the_sidebar() -> None:
     layout = (WEB_ROOT / "templates" / "layout.html").read_text(encoding="utf-8")
-    # « Exécutions » est renomme par la refonte en cours : il n'est pas verifie ici, pour que sa
-    # fusion ne casse pas ce test (voir docs/I18N.md, « a mettre a jour apres la refonte »).
-    names = [n for n in app_module._ECRANS_DU_COMPTE + app_module._ECRANS_DU_PROJET if n != "Exécutions"]
+    # « Activité » n'est pas encore traduit dans la barre laterale : present, mais hors tr().
+    assert "Activité" in layout
+    names = [n for n in app_module._ECRANS_DU_COMPTE + app_module._ECRANS_DU_PROJET if n != "Activité"]
     missing = [n for n in names if f'tr("{n}")' not in layout]
     assert missing == []
     assert all(n in CATALOG for n in names)

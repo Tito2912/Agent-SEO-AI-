@@ -5,7 +5,7 @@ description: "Empty or incomplete crawl, Search Console returning nothing, missi
 kind: "Troubleshooting"
 section: "Account and billing"
 order: 52
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["troubleshooting", "errors", "empty crawl", "problem"]
 app_href: "/"
@@ -21,24 +21,22 @@ The cases that come up most often, with the first thing to check.
 
 ## The crawl only finds the home page
 
-**Most common cause: the internal linking cannot be read by the crawler.**
+Start by checking the links and the scope actually analyzed.
 
 - Are the links real `<a href="…">` tags? A menu built in JavaScript without
   real links is not followed by anyone.
 - Is `robots.txt` blocking crawling? Open `yoursite.com/robots.txt`.
-- Is the maximum depth too low? A depth of 1 only sees what is linked
-  from the start page.
+- Do the page limit, the subdomains and the include/exclude filters cover the expected addresses? These choices are in the analysis settings.
 - Is the start URL really the canonical version — right protocol, right `www`? Otherwise the
   first hop is a redirect.
 
 ## The crawl stopped before the end
 
-Three causes, and the job page tells you which one:
+Three things to check in the analysis tracking, available from **Activity**:
 
 1. **Page limit reached** — the project's, the plan's, or the monthly quota.
 2. **Maximum job duration exceeded** — a slow site, or a lot of pages.
-3. **The host refused the requests** — 403 or 429. Lower the number of workers and increase the
-   minimum delay between requests.
+3. **The host refused the requests** — 403 or 429. Reduce the simultaneous connections in the crawl options, then review the tracking before running it again.
 
 In the third case, these refusals are **not** counted as errors on your site: they
 appear as a crawl incident.
@@ -47,7 +45,7 @@ appear as a crawl incident.
 
 ## Search Console is connected but no data comes in
 
-Nine times out of ten, **the property does not match the project URL**.
+First check that **the property matches the project URL**.
 
 Check character by character: `https` versus `http`, with `www` versus without, trailing slash.
 If you have a Domain property (`sc-domain:…`), use it: it covers every
@@ -134,3 +132,10 @@ crawler.
 {{support_email}}, with four items: the account email, the project name, the approximate
 time of the problem, and a screenshot. They are almost always enough to trace the problem
 on the server side.
+
+
+## Tracking no longer updates
+
+An interruption message keeps the last state received; it does not prove that the analysis has stopped. Click **Refresh status** before making any new request. If your session has expired, use the sign-in link: it keeps the screen you started from.
+
+A job that finished without a readable report stays flagged as such. An older report available from the site must not be read as the result of the new request.
