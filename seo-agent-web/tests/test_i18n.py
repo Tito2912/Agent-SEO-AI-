@@ -177,7 +177,7 @@ def test_project_overview_and_issues_in_english(lab, tmp_path) -> None:
     assert "Title tag missing / empty" in overview
     assert "Score de santé" not in overview
     issues = browser.get("/projects/atelier/issues").text
-    assert "Filters and exports" in issues and "Title tag missing / empty" in issues
+    assert "Filter" in issues and "PDF and CSV exports" in issues and "Title tag missing / empty" in issues
     assert "Balise title manquante / vide" in browser.get("/projects/atelier/issues", params={"lang": "fr"}).text
 
 

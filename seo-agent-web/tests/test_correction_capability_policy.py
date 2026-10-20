@@ -186,7 +186,7 @@ def test_legacy_supported_alias_receipt_is_recovered_without_rebilling(customer,
 def render_detail(key, examples, suggestion=None, **controls):
     project = {"slug": "fixture", "timestamp": "20261008", "report_json": "unused.json",
         "issue": {"key": key, "label": key, "category": "Other", "severity": "notice", "count": len(examples), "examples": examples}}
-    request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
+    request = Request({"type": "http", "method": "GET", "path": "/", "headers": [], "query_string": b""})
     return m.templates.get_template("issue_detail.html").render(request=request, project=project,
         issue_key=key, fix_suggestion=suggestion or {}, fix_suggestions_path="", gh_tasks={}, q="", **controls)
 

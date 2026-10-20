@@ -82,7 +82,7 @@
         <div class="card-title-row">
           <h2>Résumé</h2>
           {% if gsc_queries_csv %}
-            <a class="muted small" href="/file?path={{ gsc_queries_csv }}">Télécharger CSV</a>
+            <a class="muted small" href="/file?path={{ gsc_queries_csv|urlencode }}">{{ tr("Fichier CSV") }}</a>
           {% endif %}
         </div>
         <div class="metric-band" style="margin-top:4px;">

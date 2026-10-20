@@ -1,0 +1,334 @@
+{
+  "base": "5c551dc",
+  "checks": [
+    {
+      "screen": "overview",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "PDF",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "CSV",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "Fix Pack ZIP",
+          "height": 29.5,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "issues",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 29.5,
+          "font": 13
+        }
+      ],
+      "uncoded_file_link_status": 403
+    },
+    {
+      "screen": "detail",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 37.5,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 37.5,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "file",
+      "lang": "fr",
+      "width": 1440,
+      "status": 200,
+      "heading": "Fichier",
+      "overflow": false,
+      "back_to_report": false
+    },
+    {
+      "screen": "overview",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "PDF",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "CSV",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "Fix Pack ZIP",
+          "height": 29.5,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "issues",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 29.5,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 29.5,
+          "font": 13
+        }
+      ],
+      "uncoded_file_link_status": 403
+    },
+    {
+      "screen": "detail",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 37.5,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 37.5,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "file",
+      "lang": "en",
+      "width": 1440,
+      "status": 200,
+      "heading": "Fichier",
+      "overflow": false,
+      "back_to_report": false
+    },
+    {
+      "screen": "overview",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "PDF",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "CSV",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "Fix Pack ZIP",
+          "height": 36,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "issues",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 36,
+          "font": 13
+        }
+      ],
+      "uncoded_file_link_status": 403
+    },
+    {
+      "screen": "detail",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 37.5,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 37.5,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "file",
+      "lang": "fr",
+      "width": 360,
+      "status": 200,
+      "heading": "Fichier",
+      "overflow": false,
+      "back_to_report": false
+    },
+    {
+      "screen": "overview",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "PDF",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "CSV",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "Fix Pack ZIP",
+          "height": 36,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "issues",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "CSV (URLs)",
+          "height": 36,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 36,
+          "font": 13
+        }
+      ],
+      "uncoded_file_link_status": 403
+    },
+    {
+      "screen": "detail",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "overflow": false,
+      "exports": [
+        {
+          "label": "CSV",
+          "height": 37.5,
+          "font": 13
+        },
+        {
+          "label": "PDF",
+          "height": 37.5,
+          "font": 13
+        }
+      ]
+    },
+    {
+      "screen": "file",
+      "lang": "en",
+      "width": 360,
+      "status": 200,
+      "heading": "Fichier",
+      "overflow": false,
+      "back_to_report": false
+    }
+  ],
+  "javascript_errors": []
+}
