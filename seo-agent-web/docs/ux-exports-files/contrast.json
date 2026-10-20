@@ -1,0 +1,1932 @@
+{
+  "sample_count": 1280,
+  "minimum_ratio": 6.54,
+  "distinct_samples": [
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Exports PDF et CSV",
+      "ratio": 15.76
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Analyse du 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)\n          Analyse affichée",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Analyse affichée",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV · Analyse affichée\n          Détails techniques",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV · Analyse affichée",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV (URLs)\n            Anomalies triées par priorité, avec l",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Anomalies triées par priorité, avec leurs URL",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Les rapports PDF et CSV sont inclus. L'archive de données et",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Archive de corrections ZIP",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Voir les instructions",
+      "ratio": 7.34
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "fr",
+      "text": "Source · Markdown",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Exports PDF et CSV",
+      "ratio": 15.76
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 15.76
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Analyse du 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)\n          Analyse affichée",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Analyse affichée",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "CSV · Analyse affichée\n          Détails techniques",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "CSV · Analyse affichée",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "CSV (URLs)\n            Anomalies triées par priorité, avec l",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Anomalies triées par priorité, avec leurs URL",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Les rapports PDF et CSV sont inclus. L'archive de données et",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Archive de corrections ZIP",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Voir les instructions",
+      "ratio": 7.34
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "fr",
+      "text": "Source · Markdown",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Source : report.md",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Revenir au bilan du site",
+      "ratio": 6.54
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "# Atelier & Réparation\n\nRapport local <script>test</script>\n",
+      "ratio": 15.05
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Exports PDF et CSV",
+      "ratio": 15.73
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Analyse du 01/10/26 12:00 · résultats filtrés",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)\n          Anomalies triées par p",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Anomalies triées par priorité",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV · Anomalies\n          Détails techniques",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV · Anomalies",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV (URLs)\n            Anomalies triées par priorité, avec l",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "fr",
+      "text": "Anomalies triées par priorité, avec leurs URL",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Exports PDF et CSV",
+      "ratio": 15.73
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 15.73
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Analyse du 01/10/26 12:00 · résultats filtrés",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)\n          Anomalies triées par p",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Anomalies triées par priorité",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "CSV · Anomalies\n          Détails techniques",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "CSV · Anomalies",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "CSV (URLs)\n            Anomalies triées par priorité, avec l",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "fr",
+      "text": "Anomalies triées par priorité, avec leurs URL",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Source : fix-suggestions.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Revenir aux résultats",
+      "ratio": 6.54
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "{\"meta\": {\"version\": 1, \"generated_at\": \"2026-10-20T18:55:23",
+      "ratio": 15.05
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Exports PDF et CSV",
+      "ratio": 15.73
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Analyse du 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)\n          Correction recommandée",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Correction recommandée",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV · Anomalies\n          Détails techniques",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "CSV · Anomalies",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "fr",
+      "text": "Source · JSON",
+      "ratio": 14.28
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Exports PDF et CSV",
+      "ratio": 15.73
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 15.73
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Analyse du 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)\n          Correction recommandée",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Correction recommandée",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "CSV · Anomalies\n          Détails techniques",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "CSV · Anomalies",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "fr",
+      "text": "Source · JSON",
+      "ratio": 14.28
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Source : report.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Revenir à l’anomalie",
+      "ratio": 6.54
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "{\"meta\": {\"base_url\": \"https://atelier.example/\", \"site_name",
+      "ratio": 15.05
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Source : empty.txt",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Revenir aux résultats",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Fichier vide",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-empty",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Source : broken.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Revenir aux résultats",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "{not-json <script>alert(1)</script>",
+      "ratio": 15.05
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Source : missing.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Revenir aux résultats",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Introuvable",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "HTTP 404 · Obtenir de l’aide",
+      "ratio": 10.02
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "file-missing",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Source : large.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Atelier & Réparation · Analyse du 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Revenir aux résultats",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Exportez l'audit en PDF ou en CSV pour travailler avec la pe",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Aperçu indisponible.",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "70000 B > 65536 B",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "HTTP 413 · Obtenir de l’aide",
+      "ratio": 10.02
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "text": "Détails techniques",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "text": "Retrouver mes sites",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "text": "Accès refusé",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "text": "HTTP 403 · Obtenir de l’aide",
+      "ratio": 10.02
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "ratio": 7.41
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "PDF and CSV exports",
+      "ratio": 15.76
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Analysis of 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Report to share (PDF)\n          Analysis shown",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Analysis shown",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "CSV · Analysis shown\n          Technical details",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "CSV · Analysis shown",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "CSV (URLs)\n            Issues sorted by priority, with their",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Issues sorted by priority, with their URLs",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "PDF and CSV reports are included. The archive of data and te",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Fix archive ZIP",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "View instructions",
+      "ratio": 7.34
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-collapsed",
+      "lang": "en",
+      "text": "Source · Markdown",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "PDF and CSV exports",
+      "ratio": 15.76
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 15.76
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Analysis of 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Report to share (PDF)\n          Analysis shown",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Analysis shown",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "CSV · Analysis shown\n          Technical details",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "CSV · Analysis shown",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "CSV (URLs)\n            Issues sorted by priority, with their",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Issues sorted by priority, with their URLs",
+      "ratio": 9.38
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "PDF and CSV reports are included. The archive of data and te",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Fix archive ZIP",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "View instructions",
+      "ratio": 7.34
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.92
+    },
+    {
+      "screen": "overview-exports-expanded",
+      "lang": "en",
+      "text": "Source · Markdown",
+      "ratio": 14.28
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Source: report.md",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Back to the site overview",
+      "ratio": 6.54
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "# Atelier & Réparation\n\nRapport local <script>test</script>\n",
+      "ratio": 15.05
+    },
+    {
+      "screen": "overview-source-and-return",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "PDF and CSV exports",
+      "ratio": 15.73
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "Analysis of 01/10/26 12:00 · filtered results",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "Report to share (PDF)\n          Issues sorted by priority",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "Issues sorted by priority",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "CSV · Issues\n          Technical details",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "CSV · Issues",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "CSV (URLs)\n            Issues sorted by priority, with their",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-collapsed",
+      "lang": "en",
+      "text": "Issues sorted by priority, with their URLs",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "PDF and CSV exports",
+      "ratio": 15.73
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 15.73
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Analysis of 01/10/26 12:00 · filtered results",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Report to share (PDF)\n          Issues sorted by priority",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Issues sorted by priority",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "CSV · Issues\n          Technical details",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "CSV · Issues",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "CSV (URLs)\n            Issues sorted by priority, with their",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "CSV (URLs)",
+      "ratio": 14.88
+    },
+    {
+      "screen": "issues-exports-expanded",
+      "lang": "en",
+      "text": "Issues sorted by priority, with their URLs",
+      "ratio": 9.38
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Source: fix-suggestions.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Back to the results",
+      "ratio": 6.54
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "{\"meta\": {\"version\": 1, \"generated_at\": \"2026-10-20T18:55:23",
+      "ratio": 15.05
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "PDF and CSV exports",
+      "ratio": 15.73
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Analysis of 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Report to share (PDF)\n          Recommended fix",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Recommended fix",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "CSV · Issues\n          Technical details",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "CSV · Issues",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-collapsed",
+      "lang": "en",
+      "text": "Source · JSON",
+      "ratio": 14.28
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "PDF and CSV exports",
+      "ratio": 15.73
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 15.73
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Analysis of 01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Report to share (PDF)\n          Recommended fix",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 6.94
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Recommended fix",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "CSV · Issues\n          Technical details",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "CSV · Issues",
+      "ratio": 14.88
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.38
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 9.92
+    },
+    {
+      "screen": "detail-exports-expanded",
+      "lang": "en",
+      "text": "Source · JSON",
+      "ratio": 14.28
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Source: report.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Back to the issue",
+      "ratio": 6.54
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "{\"meta\": {\"base_url\": \"https://atelier.example/\", \"site_name",
+      "ratio": 15.05
+    },
+    {
+      "screen": "detail-source-and-return",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Source: empty.txt",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Back to the results",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Empty file",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-empty",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Source: broken.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Back to the results",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Source",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "{not-json <script>alert(1)</script>",
+      "ratio": 15.05
+    },
+    {
+      "screen": "file-malformed-json",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Source: missing.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Back to the results",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Not found",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "HTTP 404 · Get help",
+      "ratio": 10.02
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "file-missing",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Source: large.json",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Atelier & Réparation · Analysis of 01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "01/10/26 12:00",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Back to the results",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Report to share (PDF)",
+      "ratio": 15.03
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Export the audit as PDF or CSV to work with whoever looks af",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Preview unavailable.",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "70000 B > 65536 B",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "HTTP 413 · Get help",
+      "ratio": 10.02
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "file-too-large",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 10.34
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "text": "Technical details",
+      "ratio": 16.4
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "text": "Go to my sites",
+      "ratio": 6.54
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "text": "Access denied",
+      "ratio": 15.89
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "text": "HTTP 403 · Get help",
+      "ratio": 10.02
+    },
+    {
+      "screen": "file-access-denied",
+      "lang": "en",
+      "text": "Get help",
+      "ratio": 7.41
+    },
+    {
+      "screen": "issues-source-and-return",
+      "lang": "fr",
+      "text": "Rapport à transmettre (PDF)",
+      "ratio": 14.77
+    }
+  ]
+}
