@@ -326,6 +326,7 @@ demandé de commencer tout de suite est dans le journal d'audit : action `billin
 
 ### Médiateur de la consommation (obligatoire en B2C)
 
-Adhérer à un médiateur agréé (liste de la CECMC sur economie.gouv.fr), puis sur Render (service
-web) : `LEGAL_MEDIATOR` = « Nom, adresse, site ». La phrase qui le nomme apparaît alors dans les
-CGU §11 ; tant que la variable est vide, elle n'est pas affichée.
+Adhérer à un médiateur agréé (liste de la CECMC sur economie.gouv.fr). Depuis l'audit juridique
+d'octobre 2026, le médiateur est écrit dans `seo-agent-web/backend/legal.py` (`MEDIATOR`), comme
+l'identité de l'éditeur, et les CGU le nomment en français et en anglais (article 12). Changer de
+médiateur = modifier ce fichier ; la variable `LEGAL_MEDIATOR` n'est plus lue.

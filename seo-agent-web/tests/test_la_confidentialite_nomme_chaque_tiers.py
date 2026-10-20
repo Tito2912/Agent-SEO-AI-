@@ -66,6 +66,8 @@ ECARTES = {
     # Liens affichés ou documentation, pas des appels.
     "github.com", "app.netlify.com", "console.cloud.google.com", "developers.google.com",
     "schema.org", "www.cnil.fr",
+    # Liens des pages juridiques (backend/legal.py) : l'hébergeur et le médiateur, pas des appels.
+    "render.com", "www.cm2c.net",
     # Aides CMS affichées au client : aucune requête serveur ni transmission de données.
     "help.shopify.com", "help.webflow.com", "rankmath.com", "support.wix.com", "wordpress.org", "yoast.com",
     # Le produit lui-même, et les exemples de docstrings et de tests.
@@ -138,19 +140,20 @@ def test_la_region_Sentry_se_LIT_dans_le_DSN(monkeypatch, dsn, attendu) -> None:
     assert m._localisation_sentry() == attendu
 
 
-def test_l_identite_legale_et_les_sauvegardes_sont_DECLAREES(monkeypatch) -> None:
+def test_l_identite_legale_vient_de_LEGAL_PY_et_les_sauvegardes_sont_DECLAREES(monkeypatch) -> None:
+    """Depuis l'audit d'octobre 2026, l'éditeur est écrit dans backend/legal.py : une variable
+    LEGAL_ENTITY vide n'efface plus le responsable du traitement. La localisation des
+    sauvegardes reste une déclaration (LEGAL_BACKUP_LOCATION) : sans elle, la page ne devine pas."""
     monkeypatch.delenv("LEGAL_ENTITY", raising=False)
     monkeypatch.delenv("LEGAL_BACKUP_LOCATION", raising=False)
     page = _page()
-    assert "Précisée sur demande" in page, "sans déclaration, la page ne devine pas"
-    monkeypatch.setenv("LEGAL_ENTITY", "Exemple SAS, 1 rue de Test, 75000 Paris")
+    assert m.legal.identity() in page and "Précisée sur demande" in page
     monkeypatch.setenv("LEGAL_BACKUP_LOCATION", "France")
-    page = _page()
-    assert "Exemple SAS, 1 rue de Test" in page and ">France</td>" in page
+    assert ">France</td>" in _page()
 
 
 def test_la_date_est_celle_du_DOCUMENT_pas_du_jour() -> None:
     """L'ancienne page affichait la date du jour à chaque visite (`_legal_updated_at`)."""
     page = _page()
-    assert "Mise à jour le 18 octobre 2026" in page
+    assert "Mise à jour le %s" % m.legal.updated("privacy", "fr") in page
     assert "modèle de base à compléter" not in page

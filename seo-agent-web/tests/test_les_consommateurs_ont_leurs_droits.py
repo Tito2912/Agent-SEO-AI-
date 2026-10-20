@@ -12,8 +12,9 @@ Décision du propriétaire, 30/09/2026 : B2B et B2C. EComShop est assujettie à 
 - La TVA détaillée par Stripe Tax est un RÉGLAGE (`STRIPE_AUTOMATIC_TAX`) : Stripe refuse un
   paiement qui la demande tant que le tableau de bord n'est pas prêt. Un changement de plan
   programmé reporte le calcul de TVA de l'abonnement sur ses nouvelles phases.
-- Le plafond de responsabilité ne vise que les professionnels ; le médiateur n'est nommé que
-  déclaré (`LEGAL_MEDIATOR`).
+- Le plafond de responsabilité ne vise que les professionnels. Le médiateur est nommé dans les
+  deux langues ; il vient de backend/legal.py depuis l'audit d'octobre 2026 (la variable
+  `LEGAL_MEDIATOR` vide le faisait disparaître, alors que la loi impose de le nommer).
 """
 from __future__ import annotations
 
@@ -106,11 +107,11 @@ def test_la_TVA_n_est_dite_DETAILLEE_que_si_Stripe_la_calcule(monkeypatch) -> No
     assert "autoliquidation" in _cgu()
 
 
-def test_le_mediateur_n_est_nomme_que_DECLARE(monkeypatch) -> None:
+def test_le_mediateur_est_NOMME_dans_les_deux_langues(monkeypatch) -> None:
     monkeypatch.delenv("LEGAL_MEDIATOR", raising=False)
-    assert "médiateur de la consommation" not in _cgu()
-    monkeypatch.setenv("LEGAL_MEDIATOR", "Médiateur Exemple, 1 rue de Test, 75000 Paris, mediateur.example")
-    assert "médiateur de la consommation : Médiateur Exemple, 1 rue de Test" in _cgu()
+    nom = m.legal.MEDIATOR["name"]
+    assert "médiateur de la consommation : %s" % nom in html.unescape(_cgu())
+    assert "consumer mediator: %s" % nom in html.unescape(TestClient(m.app).get("/en/terms").text)
 
 
 def test_la_retractation_de_14_jours_et_son_FORMULAIRE() -> None:

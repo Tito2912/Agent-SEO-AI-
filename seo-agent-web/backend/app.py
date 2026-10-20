@@ -106,6 +106,7 @@ try:
     from . import search_results
     from . import cms_guidance
     from . import i18n
+    from . import legal
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -119,6 +120,7 @@ except ImportError:
     import search_results
     import cms_guidance
     import i18n
+    import legal
 
 # Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
 JSONResponse = i18n.JSONResponse
@@ -14001,25 +14003,33 @@ def pricing_public(request: Request) -> HTMLResponse:
     )
 
 
-@app.api_route("/terms", methods=["GET", "HEAD"], response_class=HTMLResponse)
-def terms_public(request: Request) -> HTMLResponse:
+def _legal_page(request: Request, template: str, path: str, **extra: Any) -> HTMLResponse:
+    """Une page juridique dans la langue de la requete : `terms_public.html` en francais,
+    `terms_public_en.html` en anglais (`/en/terms`). Les deux versions lisent l'editeur, le
+    mediateur, l'hebergeur et la date dans backend/legal.py : elles ne peuvent pas diverger sur
+    une mention obligatoire."""
+    lang = "en" if i18n.current_lang() == "en" else i18n.DEFAULT_LANG
     return templates.TemplateResponse(
-        "terms_public.html",
+        template.replace(".html", "_en.html") if lang == "en" else template,
         {
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
             "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
-            "canonical_url": _public_url(request, "/terms"),
-            "legal_entity": _safe_env("LEGAL_ENTITY"),
-            # Le mediateur de la consommation : une adhesion du proprietaire, declaree sur Render
-            # (nom, adresse, site). Absent, la phrase qui le nomme disparait.
-            "mediateur": _safe_env("LEGAL_MEDIATOR"),
-            # La facture ne detaille la TVA que si Stripe la calcule : la phrase suit le reglage.
-            "tva_detaillee": billing.automatic_tax_enabled(),
+            "canonical_url": _public_url(request, i18n.localized_path(path, lang)),
+            **legal.context(lang),
+            **extra,
         },
     )
+
+
+@app.api_route("/terms", methods=["GET", "HEAD"], response_class=HTMLResponse)
+def terms_public(request: Request) -> HTMLResponse:
+    # La facture ne detaille la TVA que si Stripe la calcule : la phrase sur l'autoliquidation
+    # suit le reglage.
+    return _legal_page(request, "terms_public.html", "/terms",
+                       tva_detaillee=billing.automatic_tax_enabled())
 
 
 def _localisation_sentry() -> str:
@@ -14042,58 +14052,28 @@ def _localisation_sauvegardes() -> str:
 
 @app.api_route("/privacy", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def privacy_public(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        "privacy_public.html",
-        {
-            "request": request,
-            "app_name": _app_name(),
-            "support_email": _support_email(),
-            "year": datetime.now(timezone.utc).year,
-            "nav_items": _public_nav_items(),
-            "canonical_url": _public_url(request, "/privacy"),
-            # L'identite legale de l'editeur (raison sociale, adresse) : une declaration, reglee
-            # sur Render sans deploiement. Absente, la page nomme le produit et son contact.
-            "legal_entity": _safe_env("LEGAL_ENTITY"),
-            "sentry_localisation": _localisation_sentry(),
-            "sauvegarde_localisation": _localisation_sauvegardes(),
-            # Les rapports d'analyse vont aussi dans le bucket quand ce service en a un.
-            "rapports_s3": object_store.s3_enabled(),
-            # Deux services qui ne recoivent rien tant que leur cle n'est pas configuree : la page
-            # ne les nomme que s'ils sont branches.
-            "ahrefs_actif": bool(_ahrefs_env_token()[0]),
-            "gemini_actif": _assistant_gemini_configured(),
-        },
+    return _legal_page(
+        request, "privacy_public.html", "/privacy",
+        # Les localisations sont ecrites en francais ; la page anglaise les traduit par le
+        # catalogue (une declaration LEGAL_BACKUP_LOCATION inconnue du catalogue reste telle quelle).
+        sentry_localisation=i18n.tr_current(_localisation_sentry()),
+        sauvegarde_localisation=i18n.tr_current(_localisation_sauvegardes()),
+        # Les rapports d'analyse vont aussi dans le bucket quand ce service en a un.
+        rapports_s3=object_store.s3_enabled(),
+        # Deux services qui ne recoivent rien tant que leur cle n'est pas configuree : la page
+        # ne les nomme que s'ils sont branches.
+        ahrefs_actif=bool(_ahrefs_env_token()[0]),
+        gemini_actif=_assistant_gemini_configured(),
     )
-
-
-def _lien_telephone(numero: str) -> str:
-    """`06 14 97 64 01` -> `0614976401` : un lien `tel:` ne porte ni espace ni point."""
-    return "".join(c for c in numero if c.isdigit() or c == "+")
 
 
 @app.api_route("/mentions-legales", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def legal_notice_public(request: Request) -> HTMLResponse:
     """Ce qu'un site professionnel doit afficher (LCEN, art. 6 III) : editeur, directeur de la
-    publication, hebergeur. L'identite de l'editeur est une DECLARATION du proprietaire, reglee sur
-    Render sans deploiement (`LEGAL_*`) ; une valeur absente fait disparaitre sa ligne, jamais un
-    libelle vide. L'hebergeur est ecrit dans le gabarit, comme les prestataires de /privacy."""
-    telephone = _safe_env("LEGAL_PHONE")
-    return templates.TemplateResponse(
-        "legal_notice_public.html",
-        {
-            "request": request,
-            "app_name": _app_name(),
-            "support_email": _support_email(),
-            "year": datetime.now(timezone.utc).year,
-            "nav_items": _public_nav_items(),
-            "canonical_url": _public_url(request, "/mentions-legales"),
-            "legal_entity": _safe_env("LEGAL_ENTITY"),
-            "tva": _safe_env("LEGAL_VAT_NUMBER"),
-            "directeur": _safe_env("LEGAL_PUBLICATION_DIRECTOR"),
-            "telephone": telephone,
-            "telephone_lien": _lien_telephone(telephone),
-        },
-    )
+    publication, hebergeur. Depuis l'audit juridique d'octobre 2026, l'editeur vient de
+    backend/legal.py et non plus des variables LEGAL_* : une variable vide effacait une mention
+    obligatoire sans que personne le voie."""
+    return _legal_page(request, "legal_notice_public.html", "/mentions-legales")
 
 
 @app.api_route("/support", methods=["GET", "HEAD"], response_class=HTMLResponse)

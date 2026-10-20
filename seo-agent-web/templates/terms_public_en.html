@@ -1,0 +1,154 @@
+{% extends "public_layout.html" %}
+
+{% block title %}Terms and Conditions - {{ app_name }}{% endblock %}
+
+{% block head_extra %}
+<meta name="description" content="{{ app_name }} Terms and Conditions: the service, prices and quotas, subscription cancellation, the right of withdrawal and pull requests on your repository." />
+<link rel="canonical" href="{{ canonical_url }}" />
+<meta property="og:title" content="Terms and Conditions - {{ app_name }}" />
+<meta property="og:description" content="The service, prices and quotas, subscription cancellation, the right of withdrawal and pull requests on your repository." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ canonical_url }}" />
+{# Version anglaise de terms_public.html : memes articles, memes droits, memes delais. Toute
+   modification de l'une se reporte dans l'autre dans le meme changement. #}
+{% include "_legal_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<article class="cgu">
+  <h1>Terms and Conditions</h1>
+  <p class="cgu-date">Last updated: {{ updated.terms }}</p>
+
+  <h2>1. Publisher and purpose</h2>
+  <p>
+    {{ app_name }} is published by {{ publisher_identity }}{% if publisher.share_capital %}, with a share capital of {{ publisher.share_capital }}{% endif %}.
+    See also the <a href="{{ campaign_link(request, '/mentions-legales') }}">Legal Notice</a>.
+    These Terms govern the use of the service: the technical analysis of the sites you add, the
+    fixing of their code through pull requests on your repository or in your WordPress site, the
+    writing of pages, the analysis of your competitors, the search for link opportunities, the
+    assistant and the exports. By creating an account, you accept them.
+  </p>
+  <p>
+    The service is intended for businesses and individuals alike. When a rule applies only to
+    <strong>consumers</strong> or only to <strong>business customers</strong>, it says so.
+  </p>
+
+  <h2>2. Your account</h2>
+  <ul>
+    <li>You are responsible for keeping your login credentials confidential and for everything done from your account.</li>
+    <li>You may be asked to verify your email address before accessing the service.</li>
+    <li>The collaborators you invite act on your projects; what they use is counted against your quotas, and every action keeps a record of its author.</li>
+  </ul>
+
+  <h2>3. Plans, prices, quotas and payment</h2>
+  <ul>
+    <li>The plans, their prices and their quotas are those shown on the <a href="{{ campaign_link(request, '/pricing') }}">Pricing</a> page at the time you subscribe. The Free plan requires no means of payment.</li>
+    <li>Prices are stated in euros. For consumers, they include <strong>all taxes</strong>.</li>
+    <li>The applicable prices are those displayed during checkout. Taxes are determined in accordance with applicable tax rules, taking into account, in particular, the customer's country, business or consumer status, and the tax information provided.{% if tva_detaillee %} Where a transaction is subject to the VAT reverse-charge mechanism, the invoice is issued in accordance with the applicable rules.{% endif %} The total amount payable is displayed before the order is finally confirmed.</li>
+    <li>Quotas are <strong>monthly and renew on the 1st of each month</strong> (UTC time). Unused quota is not carried over.</li>
+    <li>A counted fix is a file in your repository, or a text on your WordPress site, written by an artificial intelligence model; mechanical rewrites, which call no model, are not counted. A written article is counted once per language.</li>
+    <li>Payment is processed by Stripe. Subscriptions are monthly, with no minimum commitment.</li>
+    <li>An upgrade to a higher plan takes effect immediately: the difference for the current period is charged the same day. A downgrade to a lower plan takes effect at the end of the period already paid.</li>
+  </ul>
+
+  <h2 id="resiliation">4. Subscription Cancellation</h2>
+  <ul>
+    <li>You can cancel at any time from the Subscription page, with the <strong>“Cancel my subscription”</strong> button, or by writing to us at <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+    <li>Cancellation takes effect at the end of the period already paid: until then, you keep your plan and its quotas; after that, nothing more is charged and your account moves to the Free plan.</li>
+    <li>We confirm the cancellation by email, with its end date. Until that date, you can reverse your decision from the Subscription page.</li>
+    <li>Deleting your account cancels the subscription.</li>
+  </ul>
+
+  <h2 id="retractation">5. Right of Withdrawal (consumers)</h2>
+  <p>
+    If you are a consumer, you have <strong>14 days</strong> from the subscription to a paid plan to
+    withdraw, without having to give any reason.
+  </p>
+  <p>
+    When you subscribe, you expressly request that the subscription start immediately, by ticking
+    the box provided before payment. This request does not take away your right of withdrawal: it
+    only allows the service to start during the withdrawal period. If you then withdraw, we refund
+    the amount paid, less the portion corresponding to the service provided up to your withdrawal,
+    calculated pro rata to the days elapsed. The refund is made no later than 14 days after we
+    receive your withdrawal, using the means of payment you used.
+  </p>
+  <p>
+    Withdrawal and cancellation are two separate steps. Withdrawal, open to consumers for 14 days,
+    ends the contract and gives rise to the refund described above. Cancellation (section 4), open
+    to everyone at any time, ends the subscription at the end of the period already paid.
+  </p>
+  <p>
+    To withdraw, send us an unambiguous statement at
+    <a href="mailto:{{ support_email }}">{{ support_email }}</a>, or the form below.
+  </p>
+  <div class="cgu-formulaire">
+    <p><strong>Withdrawal form</strong> (complete and return this form only if you wish to withdraw)</p>
+    <p>To {{ publisher.name }} — <a href="mailto:{{ support_email }}">{{ support_email }}</a>:</p>
+    <p>I hereby give notice that I withdraw from my contract for the provision of the following service:</p>
+    <p>— Subscription taken out (plan):<br />— Subscribed on:<br />— Name of consumer:<br />— Address of consumer:<br />— Email address of the account:<br />— Signature of consumer (only if this form is notified on paper):<br />— Date:</p>
+  </div>
+
+  <h2>6. Your repository, your site and changes</h2>
+  <ul>
+    <li>To fix your code or publish a page, you give us access to your GitHub repository; to fix a WordPress site, you entrust us with an application password. You can withdraw this access at any time, from My account and your site's settings, or from GitHub and WordPress.</li>
+    <li>When a change goes through GitHub, it arrives in a <strong>pull request</strong>, on a dedicated branch. By default, <strong>nothing is merged without your approval</strong>.</li>
+    <li>In WordPress, a change is only saved after you ask for it to be applied, page by page or for the pages you selected; it can then be restored from its tracking page.</li>
+    <li>If you enable automatic merging — the “Full Access” mode for fixes, or automatic publishing in the writing mode —, the pull requests concerned are merged as soon as your repository's checks pass, without prior human review. This choice is yours, and you can withdraw it.</li>
+    <li>Automated checks performed before a correction is proposed or applied may reduce certain technical risks but do not guarantee the absence of errors, functional regressions, compatibility issues, or effects on search engine rankings. Customers are informed of these limitations when they choose to enable automatic merging or publishing. This provision does not limit any mandatory statutory rights or remedies.</li>
+  </ul>
+
+  <h2>7. Content and fixes produced by artificial intelligence</h2>
+  <ul>
+    <li>The fixes, texts and answers produced by an artificial intelligence model are plausible, not verified: they may contain factual errors, inaccurate or incomplete information, or wording unsuited to your business.</li>
+    <li>Check important information before any publication — figures, names, prices, promises, regulatory statements. <strong>You remain responsible for what is published on your site.</strong></li>
+    <li>You are free to use, modify or reject the fixes and content produced for your sites. Content produced by a model may resemble existing texts: we cannot guarantee that it is original or that it contains no protected material. Before publishing it, make sure it does not infringe the rights of third parties, in particular copyright and trademarks.</li>
+    <li>No content and no fix guarantees a ranking on Google or any other search engine (section 9).</li>
+    <li>When automatic merging or publishing is enabled, this content may go live without prior human review (section 6).</li>
+  </ul>
+
+  <h2>8. Acceptable use</h2>
+  <ul>
+    <li>Only analyze and modify sites and repositories that you own or are authorized to manage.</li>
+    <li>The competitor analysis reads only their public pages, and always respects their crawling rules (robots.txt).</li>
+    <li>The following are prohibited: circumventing quotas, automated access to the service outside its features, attempted attacks, and any unlawful use.</li>
+    <li>In the event of a breach, we may suspend or close the account concerned, after informing you except in an emergency.</li>
+  </ul>
+
+  <h2>9. What we do, and what we do not promise</h2>
+  <ul>
+    <li>We use reasonable means to keep the service working and available, without guaranteeing uninterrupted availability; the service may change.</li>
+    <li>No position in search engines, no traffic and no commercial result is guaranteed.</li>
+    <li>A fix is only proposed after its own checks; it may nevertheless be unsuitable for your site. Reviewing it and deciding to merge it are up to you, unless you have enabled automatic merging.</li>
+  </ul>
+
+  <h2>10. Liability and warranties</h2>
+  <ul>
+    <li><strong>If you are a business customer</strong>: our liability is limited to direct and foreseeable damage, up to the amounts you paid us during the <strong>12 months</strong> preceding the event giving rise to liability. Indirect damage — loss of revenue, traffic, customers, data or reputation — is excluded. These limitations apply to the extent permitted by law: they do not apply in the event of gross negligence or wilful misconduct, nor to any liability that a mandatory rule prohibits from being excluded or limited.</li>
+    <li><strong>If you are a consumer</strong>: our liability is assessed under general law, without limitation by these Terms. You benefit from the <strong>legal guarantee of conformity</strong> for digital content and services (Articles L224-25-12 et seq. of the French Consumer Code) for the entire duration of your subscription: in the event of a lack of conformity, you can have the service brought into conformity or, failing that, obtain a price reduction or the termination of the contract. Nothing in these Terms limits the rights the law grants you.</li>
+  </ul>
+
+  <h2>11. Personal Data</h2>
+  <p>Their processing is described in the <a href="{{ campaign_link(request, '/privacy') }}">Privacy Policy</a>, which also explains when we act as a data processor for a business customer.</p>
+
+  <h2>12. Disputes and Governing Law</h2>
+  <ul>
+    <li>These Terms are governed by French law, without prejudice to any mandatory consumer protection provisions applicable under the law of the consumer's country of habitual residence. Disputes shall be brought before the courts having jurisdiction under the applicable rules. Any specific jurisdiction provisions concerning business customers apply only to the extent that they are legally valid and enforceable.</li>
+    <li><strong>If you are a consumer</strong>: first send your complaint in writing to <a href="mailto:{{ support_email }}">{{ support_email }}</a>. If it is not resolved, you may refer the matter free of charge to the consumer mediator: {{ mediator.name }}, {{ mediator.address }}, <a href="{{ mediator.url }}" rel="noopener">{{ mediator.url }}</a>. You may also bring proceedings before the court of your place of residence or any other court with jurisdiction under the law.</li>
+    <li><strong>If you are a business customer</strong>: any dispute falls within the jurisdiction of the courts of Paris.</li>
+  </ul>
+
+  <h2>13. Changes to these Terms</h2>
+  <ul>
+    <li>Each version of these Terms is dated at the top of this page.</li>
+    <li>In the event of a substantial change, we inform the customers concerned by email, at the address of their account, before it takes effect.</li>
+    <li>A change applies from the date it takes effect: it does not affect orders already placed or subscription periods already paid.</li>
+    <li>If you do not accept a change, you may cancel your subscription at any time (section 4), without prejudice to the rights the law grants you.</li>
+  </ul>
+
+  <h2>14. Language</h2>
+  <p>These Terms are available in French and English. In the event of any discrepancy in interpretation, the French version shall serve as the reference version, subject to any mandatory provisions of applicable law. No language-related provision shall deprive consumers of rights to which they are legally entitled.</p>
+
+  <h2>15. Contact</h2>
+  <p>For any question: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+</article>
+{% endblock %}
