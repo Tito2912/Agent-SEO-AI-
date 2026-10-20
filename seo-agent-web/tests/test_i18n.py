@@ -11,6 +11,7 @@ from jinja2 import Environment, nodes
 
 from backend import app as app_module
 from backend import i18n
+from test_customer_activation import client as session_client, lab as lab, project, user
 
 WEB_ROOT = Path(__file__).resolve().parents[1]
 CATALOG = json.loads((WEB_ROOT / "locales" / "en.json").read_text(encoding="utf-8"))
@@ -140,3 +141,19 @@ def test_account_emails_follow_the_request_language(monkeypatch: pytest.MonkeyPa
     assert '<html lang="en">' in english["html_body"]
     assert french["subject"].startswith("Bienvenue sur ")
     assert '<html lang="fr">' in french["html_body"]
+
+
+
+def test_connected_app_shell_projects_and_billing_in_english(lab) -> None:
+    owner = user(lab["db"])
+    project(lab["db"], owner, slug="atelier")
+    browser = session_client(owner)
+
+    projects = browser.get("/", params={"lang": "en"}).text
+    assert "Your sites" in projects
+    assert "Analysis settings" in projects  # barre laterale
+    assert "Vos sites" not in projects
+    billing_page = browser.get("/billing").text
+    assert "Current plan" in billing_page
+    assert "Plan actuel" not in billing_page
+    assert "Plan actuel" in browser.get("/billing", params={"lang": "fr"}).text

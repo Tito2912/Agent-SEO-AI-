@@ -10,7 +10,8 @@
       form.dataset.submitting = 'yes';
       form.setAttribute('aria-busy', 'true');
       button.disabled = true;
-      button.textContent = 'Démarrage de l’analyse…';
+      // Le texte traduit vient du gabarit (data-audit-submit) ; le francais reste le repli.
+      button.textContent = form.dataset.auditSubmit || 'Démarrage de l’analyse…';
     });
     window.addEventListener('pageshow', () => {
       delete form.dataset.submitting;

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ current_lang() }}">
 {% set billing_filters = {} %}
 {% if project and project.slug and request.url.query %}
   {% for field in ('range', 'start', 'end', 'q', 'crawl', 'compare') %}
@@ -17,10 +17,11 @@
     <link rel="stylesheet" href="/static/styles.css?v=26" />
     <link rel="stylesheet" href="/static/customer-country.css?v=1" />
     <link rel="stylesheet" href="/static/account-journey.css?v=1" />
+    <link rel="stylesheet" href="/static/lang-switch.css?v=2" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Aller au contenu</a>
+    <a class="skip-link" href="#main-content">{{ tr("Aller au contenu") }}</a>
     <div class="app">
       {#- MENU MOBILE (04/10/2026) : sous 980 px la barre laterale etait masquee sans rien pour la
           remplacer — aucun acces a l'abonnement, aux comptes ni aux sections d'un projet. Une case
@@ -29,20 +30,20 @@
       <label for="nav-mobile" class="nav-mobile-voile" aria-hidden="true"></label>
 
       <!-- SIDEBAR -->
-      <aside class="sidebar" id="barre-laterale" aria-label="Navigation">
-        <label for="nav-mobile" id="nav-mobile-close" class="nav-mobile-close" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">Fermer le menu <span aria-hidden="true">×</span></label>
+      <aside class="sidebar" id="barre-laterale" aria-label="{{ tr("Navigation") }}">
+        <label for="nav-mobile" id="nav-mobile-close" class="nav-mobile-close" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">{{ tr("Fermer le menu") }} <span aria-hidden="true">×</span></label>
 
         <!-- Brand -->
         {# Logo du pack Noyaru (28/09/2026) : symbole ET lettrage, prevus pour un fond sombre. Il
            remplace la pastille-loupe et le texte « SEO Agent ». #}
         <div class="brand brand-noyaru">
-          <a href="/" class="brand-link" aria-label="Noyaru - Accueil">
+          <a href="/" class="brand-link" aria-label="{{ tr("Noyaru - Accueil") }}">
             <picture>
               <source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" />
               <img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" class="brand-image" />
             </picture>
           </a>
-          <div class="brand-sub">Tableau de bord</div>
+          <div class="brand-sub">{{ tr("Tableau de bord") }}</div>
         </div>
 
         <!-- Nav -->
@@ -50,7 +51,7 @@
 
           <a class="nav-item {% if request.url.path == '/' %}active{% endif %}"{% if request.url.path == '/' %} aria-current="page"{% endif %} href="/">
             <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-            Projets
+            {{ tr("Projets") }}
           </a>
 
           {% if project and project.slug %}
@@ -62,77 +63,77 @@
             <div class="nav-section">{{ project.site_name }}</div>
             <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug %}active{% endif %}"{% if request.url.path == '/projects/' ~ project.slug %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}{{ report_query }}">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-              Vue d'ensemble
+              {{ tr("Vue d'ensemble") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/issues') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/issues{{ report_query }}">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-              Anomalies
+              {{ tr("Anomalies") }}
             </a>
 
             <a class="nav-item {% if correction_path %}active{% endif %}"{% if correction_path %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/corrections">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-              Corrections
+              {{ tr("Corrections") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/content') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/content">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-              Contenu <span class="nav-plan">Pro+</span>
+              {{ tr("Contenu") }} <span class="nav-plan">Pro+</span>
             </a>
             <details class="nav-group" {% if '/performance' in request.url.path or '/keywords' in request.url.path or '/competitors' in request.url.path or '/backlinks' in request.url.path or '/netlinking' in request.url.path %}open{% endif %}>
-              <summary>Visibilité et acquisition</summary>
+              <summary>{{ tr("Visibilité et acquisition") }}</summary>
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/performance') or request.url.path == '/projects/' ~ project.slug ~ '/keywords' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/performance">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-              Performance
+              {{ tr("Performance") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/keywords/') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/keywords/opportunities">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              Mots-clés
+              {{ tr("Mots-clés") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/competitors') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/competitors">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
-              Concurrents <span class="nav-plan">Pro+</span>
+              {{ tr("Concurrents") }} <span class="nav-plan">Pro+</span>
             </a>
 
             <a class="nav-item {% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %}active{% endif %}"{% if request.url.path == '/projects/' ~ project.slug ~ '/backlinks' or request.url.path == '/projects/' ~ project.slug ~ '/netlinking' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/backlinks">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-              Liens entrants
+              {{ tr("Liens entrants") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/backlinks/opportunities') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/backlinks/opportunities">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              Faire connaître mon site <span class="nav-plan">Solo+</span>
+              {{ tr("Faire connaître mon site") }} <span class="nav-plan">Solo+</span>
             </a>
             </details>
             <details class="nav-group" {% if '/settings/search' in request.url.path or '/settings/crawl' in request.url.path or '/automation' in request.url.path or '/crawls' in request.url.path or request.url.path == project_path ~ '/cms' %}open{% endif %}>
-              <summary>Réglages et historique</summary>
+              <summary>{{ tr("Réglages et historique") }}</summary>
             <a class="nav-item {% if request.url.path == project_path ~ '/settings/search' %}active{% endif %}"{% if request.url.path == project_path ~ '/settings/search' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/settings/search">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg>
-              Google et Bing
+              {{ tr("Google et Bing") }}
             </a>
             <a class="nav-item {% if request.url.path == project_path ~ '/cms' %}active{% endif %}"{% if request.url.path == project_path ~ '/cms' %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/cms">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8 8H5v8h3m8-8h3v8h-3M8 12h8"/></svg>
-              CMS et intégrations
+              {{ tr("CMS et intégrations") }}
             </a>
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/settings/crawl') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/settings/crawl">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
-              Réglages de l’analyse
+              {{ tr("Réglages de l’analyse") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/automation') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/automation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Automatisation
+              {{ tr("Automatisation") }}
             </a>
 
             <a class="nav-item {% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %}active{% endif %}"{% if request.url.path.startswith('/projects/' ~ project.slug ~ '/crawls') %} aria-current="page"{% endif %} href="/projects/{{ project.slug }}/crawls">
               <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-              Historique des analyses
+              {{ tr("Historique des analyses") }}
             </a>
             </details>
           {% endif %}
-            <div class="nav-section">Votre espace</div>
+            <div class="nav-section">{{ tr("Votre espace") }}</div>
 
           <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}"{% if request.url.path.startswith('/jobs') %} aria-current="page"{% endif %} href="/jobs">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
@@ -141,55 +142,57 @@
 
           <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}"{% if request.url.path.startswith('/billing') %} aria-current="page"{% endif %} href="{{ billing_url }}">
             <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h3"/></svg>
-            Abonnement
+            {{ tr("Abonnement") }}
           </a>
 
           <a class="nav-item {% if request.url.path.startswith('/docs') %}active{% endif %}"{% if request.url.path.startswith('/docs') %} aria-current="page"{% endif %} href="/docs">
             <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h9a3 3 0 013 3v13a2.5 2.5 0 00-2.5-2.5H4z"/><path d="M20 4h-4a3 3 0 00-3 3v13a2.5 2.5 0 012.5-2.5H20z"/></svg>
-            Documentation
+            {{ tr("Documentation") }}
           </a>
 
 
 
-          <div class="nav-section">Votre compte</div>
+          <div class="nav-section">{{ tr("Votre compte") }}</div>
 
           <a class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}"{% if request.url.path.startswith('/settings/accounts') %} aria-current="page"{% endif %} href="/settings/accounts">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/></svg>
-            Mon compte
+            {{ tr("Mon compte") }}
           </a>
 
           <a class="nav-item {% if request.url.path.startswith('/settings/team') %}active{% endif %}"{% if request.url.path.startswith('/settings/team') %} aria-current="page"{% endif %} href="/settings/team">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.8"/><path d="M16 14.3c3 .3 5.5 2.6 5.5 5.7"/></svg>
-            Équipe
+            {{ tr("Équipe") }}
           </a>
 
           {% if request.state.user and request.state.user.is_admin or request.state.can_access_system_settings %}
-            <div class="nav-section">Administration Noyaru</div>
+            <div class="nav-section">{{ tr("Administration Noyaru") }}</div>
           {% endif %}
           {% if request.state.user and request.state.user.is_admin %}
             <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}"{% if request.url.path.startswith('/automation') %} aria-current="page"{% endif %} href="/automation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Automatisation plateforme
+              {{ tr("Automatisation plateforme") }}
             </a>
           {% endif %}
           {% if request.state.can_access_system_settings %}
             <a class="nav-item {% if request.url.path.startswith('/settings/operations') %}active{% endif %}"{% if request.url.path.startswith('/settings/operations') %} aria-current="page"{% endif %} href="/settings/operations">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>
-              Exploitation
+              {{ tr("Exploitation") }}
             </a>
             <a class="nav-item {% if request.url.path.startswith('/settings/activation') %}active{% endif %}"{% if request.url.path.startswith('/settings/activation') %} aria-current="page"{% endif %} href="/settings/activation">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16l-6 8v7l-4 2v-9z"/></svg>
-              Parcours clients
+              {{ tr("Parcours clients") }}
             </a>
             <a class="nav-item {% if request.url.path.startswith('/settings/system') %}active{% endif %}"{% if request.url.path.startswith('/settings/system') %} aria-current="page"{% endif %} href="/settings/system">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="17" cy="12" r="3"/></svg>
-              Système
+              {{ tr("Système") }}
             </a>
           {% endif %}
 
 
         </nav>
 
+
+        <div class="sidebar-lang">{% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}</div>
 
         <!-- User section -->
         {% if request.state.user %}
@@ -203,7 +206,7 @@
             </div>
             <form method="post" action="/auth/logout">
               <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-              <button type="submit" class="sidebar-logout" title="Se déconnecter" aria-label="Se déconnecter">
+              <button type="submit" class="sidebar-logout" title="{{ tr("Se déconnecter") }}" aria-label="{{ tr("Se déconnecter") }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
               </button>
             </form>
@@ -214,32 +217,32 @@
 
       <!-- Assistant IA (outside sidebar so position:fixed works correctly) -->
       <div class="assistant-dock" id="assistant-dock">
-        <button type="button" class="assistant-launcher" id="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel" title="Assistant">
+        <button type="button" class="assistant-launcher" id="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel" title="{{ tr("Assistant") }}">
           <span class="assistant-launcher-icon" aria-hidden="true">
             <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" width="22" height="22" />
           </span>
           <span class="assistant-launcher-text">
-            <span class="assistant-launcher-title">Assistant IA</span>
-            <span class="assistant-launcher-sub">Posez une question</span>
+            <span class="assistant-launcher-title">{{ tr("Assistant IA") }}</span>
+            <span class="assistant-launcher-sub">{{ tr("Posez une question") }}</span>
           </span>
           <span class="assistant-fab-dot" id="assistant-dot" aria-hidden="true"></span>
         </button>
-        <section class="assistant-panel" id="assistant-panel" hidden aria-label="Chat assistant">
+        <section class="assistant-panel" id="assistant-panel" hidden aria-label="{{ tr("Chat assistant") }}">
           <header class="assistant-head">
             <div class="assistant-head-left">
               <span class="assistant-head-icon" aria-hidden="true">
                 <img class="assistant-icon-img" src="/static/assistant-icon.svg" alt="" width="22" height="22" />
               </span>
               <div class="assistant-head-text">
-                <div class="assistant-title">Assistant IA</div>
+                <div class="assistant-title">{{ tr("Assistant IA") }}</div>
                 <div class="assistant-meta" id="assistant-meta">-</div>
               </div>
             </div>
             <div class="assistant-head-actions">
-              <button type="button" class="assistant-clear" id="assistant-clear" aria-label="Effacer la conversation" title="Effacer">
+              <button type="button" class="assistant-clear" id="assistant-clear" aria-label="{{ tr("Effacer la conversation") }}" title="{{ tr("Effacer") }}">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6m-8 4h10m-9 0 .7 14h6.6L16 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
-              <button type="button" class="assistant-close" id="assistant-close" aria-label="Fermer">
+              <button type="button" class="assistant-close" id="assistant-close" aria-label="{{ tr("Fermer") }}">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
               </button>
             </div>
@@ -249,8 +252,8 @@
           </div>
           <div class="assistant-messages" id="assistant-messages" aria-live="polite"></div>
           <form class="assistant-form" id="assistant-form">
-            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" aria-label="Votre question à l’assistant" placeholder="Posez une question..." maxlength="2000" />
-            <button class="assistant-send" id="assistant-send" type="submit" aria-label="Envoyer">
+            <input class="assistant-input" id="assistant-input" type="text" autocomplete="off" aria-label="{{ tr("Votre question à l’assistant") }}" placeholder="{{ tr("Posez une question...") }}" maxlength="2000" />
+            <button class="assistant-send" id="assistant-send" type="submit" aria-label="{{ tr("Envoyer") }}">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5l18-8-8 18-2.2-7.2L3 11.5Z" fill="currentColor" opacity=".95"/></svg>
             </button>
           </form>
@@ -264,11 +267,11 @@
           <label for="nav-mobile" class="nav-mobile-bouton" role="button" tabindex="0" aria-controls="barre-laterale" aria-expanded="false"
                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-            <span>Menu</span>
+            <span>{{ tr("Menu") }}</span>
           </label>
           <div class="crumbs">
             {% block crumbs %}
-              <a href="/">Projets</a>
+              <a href="/">{{ tr("Projets") }}</a>
             {% endblock %}
           </div>
           <div class="topbar-actions">
@@ -281,12 +284,12 @@
             {% if request.state.user and not request.state.user.country and not request.state.can_access_system_settings %}
               {% from "_country_field.html" import country_field %}
               <section class="card country-prompt" aria-labelledby="country-prompt-title">
-                <div><h2 id="country-prompt-title">Quel est votre pays de résidence ?</h2><p class="muted">Complétez votre compte. Vous pourrez modifier ce choix dans vos préférences.</p></div>
+                <div><h2 id="country-prompt-title">{{ tr("Quel est votre pays de résidence ?") }}</h2><p class="muted">{{ tr("Complétez votre compte. Vous pourrez modifier ce choix dans vos préférences.") }}</p></div>
                 <form action="/settings/account/country" method="post">
                   <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                   <input type="hidden" name="next" value="{{ request.url.path }}" />
                   <div class="country-field">{{ country_field('account-declared-country', required=true) }}</div>
-                  <button class="btn" type="submit">Enregistrer mon pays</button>
+                  <button class="btn" type="submit">{{ tr("Enregistrer mon pays") }}</button>
                 </form>
               </section>
             {% endif %}

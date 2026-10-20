@@ -194,10 +194,13 @@ def _lang_url(context: Any, code: str) -> str:
     request = context.get("request")
     if request is None:
         return f"/?lang={code}"
-    params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
-    path = f"{request.url.path}?{urlencode(params)}" if params else request.url.path
-    if _link_builder is not None:
-        path = _link_builder(request, path)
+    try:
+        params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
+        path = f"{request.url.path}?{urlencode(params)}" if params else request.url.path
+        if _link_builder is not None:
+            path = _link_builder(request, path)
+    except Exception:
+        path = "/"  # Requete incomplete (rendu hors HTTP) : le lien reste valide.
     return f"{path}{'&' if '?' in path else '?'}{urlencode([('lang', code)])}"
 
 
@@ -222,18 +225,23 @@ def _country_options(context: Any) -> list[tuple[str, str]]:
     return _country_cache[lang]
 
 
-def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: Any = None) -> None:
-    """`link_builder(request, path)` ajoute aux liens les parametres publics autorises (les
-    etiquettes de campagne, voir signup_attribution.carry)."""
-    global _link_builder
-    _link_builder = link_builder
-    env = templates.env
+def add_template_globals(env: Any) -> None:
+    """Les fonctions de traduction d'un environnement Jinja (aussi utile a un test qui rend un
+    morceau de gabarit dans son propre environnement)."""
     env.globals["tr"] = _tr
     env.globals["tr_html"] = _tr_html
     env.globals["current_lang"] = _current_lang
     env.globals["lang_url"] = _lang_url
     env.globals["languages"] = LANGUAGES
     env.globals["localized_country_options"] = _country_options
+
+
+def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: Any = None) -> None:
+    """`link_builder(request, path)` ajoute aux liens les parametres publics autorises (les
+    etiquettes de campagne, voir signup_attribution.carry)."""
+    global _link_builder
+    _link_builder = link_builder
+    add_template_globals(templates.env)
 
     @app.middleware("http")
     async def remember_lang(request, call_next):  # type: ignore[no-untyped-def]

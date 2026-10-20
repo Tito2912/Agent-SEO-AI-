@@ -61,3 +61,4 @@ Thumbs.db
 .idea/
 .vscode/
 .venv-wsl/
+seo-agent-web/data/.correction-locks/

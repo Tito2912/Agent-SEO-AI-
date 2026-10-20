@@ -5,3 +5,4 @@
 .lang-switch a { color: var(--muted); }
 .lang-switch a:hover { color: var(--text); background: rgba(255,255,255,.04); text-decoration: none; }
 .lang-switch-current { color: var(--text); }
+.sidebar-lang { padding: 8px 12px 0; }
