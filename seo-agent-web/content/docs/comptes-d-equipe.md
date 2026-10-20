@@ -26,7 +26,7 @@ travailler sur **vos** projets, sans lui donner vos identifiants.
 
 ## Inviter quelqu'un
 
-Depuis **Paramètres → Équipe**. Vous saisissez une adresse e-mail, la personne reçoit une
+Depuis **Votre compte → Équipe**. Vous saisissez une adresse e-mail, la personne reçoit une
 invitation, et elle rejoint votre compte qu'elle ait déjà un compte {{app_name}} ou non.
 
 | plan | places incluses |

@@ -5,7 +5,7 @@ description: "The archive of fixes to apply on WordPress, Shopify, Webflow or an
 kind: "Documentation"
 section: "Fixing"
 order: 24
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "All plans"
 keywords: ["fix pack", "WordPress", "Shopify", "Webflow", "without a repository"]
 app_href: "/"
@@ -29,7 +29,7 @@ containing what needs to be applied and the instructions for doing it.
 
 ## Download it
 
-Project page → **Fix Pack ZIP** export. The archive covers the latest available crawl;
+Project overview → **Fix Pack ZIP**. The archive covers the latest available crawl;
 run a new crawl first if yours is out of date.
 
 No fix quota is consumed: it's an export, not model work.

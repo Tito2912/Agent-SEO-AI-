@@ -5,7 +5,7 @@ description: "Relier Search Console à un projet {{app_name}} : autorisation Goo
 kind: "Documentation"
 section: "Search Console et mots-clés"
 order: 30
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["Google Search Console", "GSC", "impressions", "inspection d'URL"]
 app_href: "/settings/accounts#gsc-oauth-card"
@@ -29,7 +29,7 @@ Une `meta description` manquante sur une page à 12 000 impressions et la même 
 
 ## Autoriser Google
 
-**Paramètres → Comptes → Google Search Console → Connecter**. Vous êtes redirigé vers Google,
+**Mon compte → Connexions → Google Search Console → Connecter**. Vous êtes redirigé vers Google,
 vous choisissez le compte qui a accès à la propriété, vous revenez.
 
 L'autorisation est en **lecture seule**. {{app_name}} ne peut rien modifier, ni soumettre, ni
@@ -37,8 +37,8 @@ supprimer dans votre Search Console.
 
 ## Choisir la propriété
 
-Le rattachement se fait projet par projet, dans les paramètres de crawl, champ **Propriété
-Search Console**.
+Le rattachement se fait projet par projet, dans les réglages de l’analyse, champ **Propriété
+GSC**.
 
 C'est l'endroit où presque toutes les connexions échouent, pour une raison unique : la
 propriété ne correspond pas à l'URL du projet.
@@ -57,7 +57,7 @@ vide. Lisez ce message : il nomme la cause dans la quasi-totalité des cas.
 
 ## Les réglages
 
-Dans les paramètres de crawl du projet, section Search Console :
+Dans les réglages de l’analyse du projet, section Search Console :
 
 - **Activer** — joint les données de recherche au crawl.
 - **Période** — le nombre de jours d'historique à récupérer. 28 jours par défaut, ce qui lisse

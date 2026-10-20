@@ -5,7 +5,7 @@ description: "Comment {{app_name}} confirme au crawl suivant qu'une anomalie cor
 kind: "Documentation"
 section: "Corriger"
 order: 23
-updated_at: "2026-10-19"
+updated_at: "2026-10-20"
 audience: "Solo, Pro et Business"
 keywords: ["vérification", "régression SEO", "suivi des corrections", "crawl de contrôle"]
 app_href: "/"
@@ -44,7 +44,7 @@ Pour plusieurs pages d’une même anomalie, **Corriger ces pages dans WordPress
 relecture et lance une seule analyse de contrôle pour toutes.
 → [Corriger dans WordPress avec Yoast SEO](/docs/corriger-dans-wordpress)
 
-Vous pouvez quitter le suivi et le retrouver depuis **Première correction → Suivre ma
+Vous pouvez quitter le suivi et le retrouver depuis **Correction guidée → Suivre ma
 correction**, ou dans **CMS et intégrations → Vos dernières opérations WordPress**.
 La section **Rétablir la valeur précédente** permet d’annuler la modification si les
 métadonnées n’ont pas changé depuis son application.
@@ -80,7 +80,7 @@ Une tâche confirmée résolue passe automatiquement en **Fait**. Vous n'avez ri
 | --- | --- |
 | **Résolue** | Le crawl postérieur ne voit plus l'anomalie sur cette URL. C'est la seule preuve qui compte. |
 | **Toujours présente** | Le correctif est dans le dépôt, l'anomalie est encore en ligne. Voir ci-dessous. |
-| **Pas encore vérifiée** | Aucun crawl n'a eu lieu depuis la correction. Lancez-en un. |
+| **Non vérifiée** | Aucun crawl n'a eu lieu depuis la correction. Lancez-en un. |
 | **Non vérifiable** | Le crawl ne couvre pas assez le correctif pour conclure. Consultez le motif sur la tâche et relancez un crawl complet. |
 
 La page **Corrections** du projet affiche ces compteurs en tête : combien de corrections

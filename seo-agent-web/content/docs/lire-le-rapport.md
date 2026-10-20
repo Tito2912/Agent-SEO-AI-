@@ -5,7 +5,7 @@ description: "Ce que signifient les scores, les compteurs de pages, la comparais
 kind: "Documentation"
 section: "Prise en main"
 order: 13
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["rapport SEO", "score", "vue d'ensemble", "comparaison de crawls"]
 app_href: "/"
@@ -16,7 +16,7 @@ faq:
   - question: "À quoi sert la comparaison entre deux crawls ?"
     answer: "À voir les mouvements plutôt que les états : anomalies apparues, anomalies résolues, pages ajoutées ou disparues. C'est la seule vue qui prouve qu'une correction a fonctionné."
   - question: "Combien de temps les crawls sont-ils conservés ?"
-    answer: "L'historique du projet conserve les crawls successifs, consultables et comparables depuis la page Crawls. Supprimer le projet les supprime."
+    answer: "L'historique du projet conserve les crawls successifs, consultables et comparables depuis la page Historique des analyses. Supprimer le projet les supprime."
 ---
 
 À la fin d'un crawl, la page du projet devient la vue d'ensemble : ce que le site contient, ce
@@ -58,7 +58,7 @@ trois niveaux :
 | --- | --- | --- |
 | **Erreur** | Empêche l'indexation ou casse quelque chose | 5xx, page importante en 404, `noindex` sur une page business, boucle de redirection |
 | **Avertissement** | Dégrade la compréhension ou l'exploration | `title` dupliqué, `h1` absent, lien interne vers une redirection, image sans `alt` |
-| **Remarque** | Bon à savoir, rarement urgent | description manquante sur une archive, URL très longue, page profonde |
+| **Info** | Bon à savoir, rarement urgent | description manquante sur une archive, URL très longue, page profonde |
 
 Le tri par gravité est un point de départ, pas un ordre de travail. Une remarque sur votre
 page tarifs passe avant une erreur sur une page d'archive de 2019.

@@ -5,7 +5,7 @@ description: "Comment {{app_name}} classe les anomalies détectées, ce que cont
 kind: "Documentation"
 section: "Corriger"
 order: 20
-updated_at: "2026-09-30"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["anomalies SEO", "priorisation", "erreurs de crawl", "gravité"]
 app_href: "/"
@@ -50,7 +50,7 @@ en 404, `noindex` non voulu, boucle de redirection, canonical incohérente.
 **Avertissement** — ça dégrade sans bloquer. `title` dupliqué, `h1` absent, lien interne
 pointant vers une redirection, image sans `alt`, profondeur excessive.
 
-**Remarque** — c'est noté, rarement urgent. Description manquante sur une page secondaire,
+**Info** — c'est noté, rarement urgent. Description manquante sur une page secondaire,
 URL très longue, ancre générique.
 
 ## L'ordre dans lequel travailler
@@ -83,7 +83,7 @@ une occurrence chacune demandent trois interventions. Le rendement n'est pas le 
     4. Maillage interne : liens cassés, liens vers des redirections, pages orphelines.
     5. Le reste, à la relance suivante.
 
-## Suivi : todo, en cours, fait, ignoré
+## Suivi : à traiter, en cours, modifié, ignoré
 
 Chaque anomalie peut devenir une **tâche** avec un statut. La page **Corrections** du projet
 les regroupe par colonne, et affiche pour chacune la pull request associée quand il y en a
