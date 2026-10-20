@@ -14134,45 +14134,30 @@ def support_public(request: Request) -> HTMLResponse:
 
 @app.api_route("/status", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def status_public(request: Request) -> HTMLResponse:
-    db_ok = False
-    db_error = ""
     try:
-        with DB.session() as db:
-            db.execute(select(1))
-        db_ok = True
-    except Exception as e:
-        db_ok = False
-        db_error = f"{type(e).__name__}: {str(e)[:180]}"
+        from .public_service_status import database_read_available
+    except ImportError:
+        from public_service_status import database_read_available
 
-    smtp_ok = bool(_smtp_config())
-    s3_ok = bool(object_store.s3_enabled())
-    s3_reason = ""
-    if not s3_ok:
-        reason = str(object_store.s3_available_reason() or "disabled")
-        s3_reason = {
-            "missing_bucket": "Non configuré",
-            "missing_boto3": "Dépendance manquante",
-            "disabled": "Désactivé",
-        }.get(reason, reason)
-
-    return templates.TemplateResponse(
+    db_ok = database_read_available(DB)
+    checked_at = datetime.now(timezone.utc)
+    response = templates.TemplateResponse(
         "status_public.html",
         {
             "request": request,
             "app_name": _app_name(),
             "support_email": _support_email(),
-            "year": datetime.now(timezone.utc).year,
+            "year": checked_at.year,
             "nav_items": _public_nav_items(),
-            "now": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "now": checked_at.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "now_iso": checked_at.isoformat(),
             "web_ok": True,
             "db_ok": db_ok,
-            "db_error": db_error,
-            "smtp_ok": smtp_ok,
-            "s3_ok": s3_ok,
-            "s3_reason": s3_reason,
-            "stripe_ok": billing.stripe_enabled(),
         },
     )
+    # This is a fresh local read, not a monitor of email, payment or object storage.
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> dict[str, Any]:

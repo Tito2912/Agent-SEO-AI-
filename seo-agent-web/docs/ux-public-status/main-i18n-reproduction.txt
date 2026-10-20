@@ -1,0 +1,54 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+____________ test_a_translation_is_the_same_page[connecter-github] _____________
+
+page = {'app_href': '/settings/accounts#github-connect-card', 'audience': 'Solo, Pro and Business', 'body_html': '<p>This is ...tail sheets.</p>\n<p>→ <a href="/en/docs/corrections-automatiques">Automatic fixes</a></p>', 'collection': 'docs', ...}
+
+    @pytest.mark.parametrize("page", TRANSLATED, ids=lambda p: p["slug"])
+    def test_a_translation_is_the_same_page(page: dict) -> None:
+        french = _french(page)
+        raw = lambda p: (cl.DOCS_DIR / ("en/" if p["lang"] == "en" else "") / p["source"]).read_text(encoding="utf-8")
+        assert Counter(TOKEN.findall(raw(page))) == Counter(TOKEN.findall(raw(french)))
+        assert page["order"] == french["order"] and page["related"] == french["related"]
+>       assert page["app_href"] == french["app_href"] and page["updated_at"] == french["updated_at"]
+E       AssertionError: assert ('/settings/ac...-connect-card' == '/settings/ac...-connect-card'
+E         
+E           /settings/accounts#github-connect-card and '2026-09-03' == '2026-10-20'
+E         
+E         - 2026-10-20
+E         ?      -  -
+E         + 2026-09-03
+E         ?       +  +)
+
+tests/test_i18n_docs.py:40: AssertionError
+________________ test_a_translation_is_the_same_page[depannage] ________________
+
+page = {'app_href': '/', 'audience': 'All plans', 'body_html': '<p>The cases that come up most often, with the first thing to... a screenshot. They are almost always enough to trace the problem\non the server side.</p>', 'collection': 'docs', ...}
+
+    @pytest.mark.parametrize("page", TRANSLATED, ids=lambda p: p["slug"])
+    def test_a_translation_is_the_same_page(page: dict) -> None:
+        french = _french(page)
+        raw = lambda p: (cl.DOCS_DIR / ("en/" if p["lang"] == "en" else "") / p["source"]).read_text(encoding="utf-8")
+        assert Counter(TOKEN.findall(raw(page))) == Counter(TOKEN.findall(raw(french)))
+        assert page["order"] == french["order"] and page["related"] == french["related"]
+>       assert page["app_href"] == french["app_href"] and page["updated_at"] == french["updated_at"]
+E       AssertionError: assert ('/' == '/'
+E         
+E           / and '2026-09-03' == '2026-10-20'
+E         
+E         - 2026-10-20
+E         ?      -  -
+E         + 2026-09-03
+E         ?       +  +)
+
+tests/test_i18n_docs.py:40: AssertionError
+=============================== warnings summary ===============================
+../../noyaru-status-venv/lib/python3.12/site-packages/starlette/testclient.py:53
+  /tmp/noyaru-status-venv/lib/python3.12/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_i18n_docs.py::test_a_translation_is_the_same_page[connecter-github]
+FAILED tests/test_i18n_docs.py::test_a_translation_is_the_same_page[depannage]
+2 failed, 1 warning in 1.34s

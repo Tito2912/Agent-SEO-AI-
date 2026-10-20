@@ -1,0 +1,580 @@
+{
+  "method": "Échantillons des textes du composant ; couleurs RGBA calculées dans Chromium et compositées sur les fonds des ancêtres. Pas une certification globale. Observations regroupées par langue et texte ; minimum, maximum et nombre de mesures conservés.",
+  "samples": 360,
+  "minimum_ratio": 6.84,
+  "observations": [
+    {
+      "lang": "en",
+      "text": "Back to home",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Database",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Email",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Get help",
+      "minimum_ratio": 6.84,
+      "maximum_ratio": 7.08,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "No data available.",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Not verifiable",
+      "minimum_ratio": 10.18,
+      "maximum_ratio": 10.18,
+      "occurrences": 36,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Payments (Stripe)",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Refresh",
+      "minimum_ratio": 14.46,
+      "maximum_ratio": 15.03,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Status updated: 2026-10-20 17:17:52 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 2,
+      "widths": [
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Status updated: 2026-10-20 17:17:53 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 2,
+      "widths": [
+        768,
+        1440
+      ],
+      "screens": [
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Status updated: 2026-10-20 17:17:54 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 2,
+      "widths": [
+        768
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Status updated: 2026-10-20 17:17:55 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 3,
+      "widths": [
+        390
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Status updated: 2026-10-20 17:17:56 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 3,
+      "widths": [
+        360
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Storage (S3)",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Web app",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "down",
+      "minimum_ratio": 8.18,
+      "maximum_ratio": 8.18,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "operational",
+      "minimum_ratio": 8.21,
+      "maximum_ratio": 8.21,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Actualiser",
+      "minimum_ratio": 14.46,
+      "maximum_ratio": 15.03,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Application web",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Aucune donnée disponible.",
+      "minimum_ratio": 8.88,
+      "maximum_ratio": 8.88,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Base de données",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Email",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Non vérifiable",
+      "minimum_ratio": 10.18,
+      "maximum_ratio": 10.18,
+      "occurrences": 36,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Obtenir de l’aide",
+      "minimum_ratio": 7.08,
+      "maximum_ratio": 7.08,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Paiement (Stripe)",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Retour à l’accueil",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Statut mis à jour : 2026-10-20 17:17:51 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 1,
+      "widths": [
+        1440
+      ],
+      "screens": [
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Statut mis à jour : 2026-10-20 17:17:52 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 2,
+      "widths": [
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Statut mis à jour : 2026-10-20 17:17:53 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 3,
+      "widths": [
+        768
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Statut mis à jour : 2026-10-20 17:17:54 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 3,
+      "widths": [
+        390
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Statut mis à jour : 2026-10-20 17:17:55 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 3,
+      "widths": [
+        360
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Stockage (S3)",
+      "minimum_ratio": 15.19,
+      "maximum_ratio": 15.19,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "hors service",
+      "minimum_ratio": 8.18,
+      "maximum_ratio": 8.18,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "opérationnel",
+      "minimum_ratio": 8.21,
+      "maximum_ratio": 8.21,
+      "occurrences": 20,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered",
+        "ready"
+      ]
+    }
+  ]
+}
