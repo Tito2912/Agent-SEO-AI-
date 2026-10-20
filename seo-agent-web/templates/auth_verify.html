@@ -1,41 +1,43 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ current_lang() }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Vérification email - Noyaru</title>
+    <title>{{ tr("Vérification email") }} - Noyaru</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
+    <link rel="stylesheet" href="/static/lang-switch.css?v=1" />
   </head>
   <body>
     <main class="auth-shell">
       <section class="card auth-card">
         <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="/" aria-label="Noyaru - Accueil" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
-          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">Audit SEO Intelligent</p>
+          <a href="/" aria-label="Noyaru - {{ tr('Accueil') }}" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
+          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">{{ tr("Audit SEO Intelligent") }}</p>
+          <div style="margin-top:8px;">{% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}</div>
         </div>
         <div class="page-header">
-          <h1>Vérification email</h1>
-          <p class="muted">Confirmez votre adresse email pour accéder à votre espace.</p>
+          <h1>{{ tr("Vérification email") }}</h1>
+          <p class="muted">{{ tr("Confirmez votre adresse email pour accéder à votre espace.") }}</p>
         </div>
 
         {% if ok %}
           <div class="alert ok">
             <span class="badge ok">ok</span>
-            <p class="muted small">Email vérifié.</p>
+            <p class="muted small">{{ tr("Email vérifié.") }}</p>
           </div>
         {% endif %}
 
         {% if err %}
           <div class="alert error">
-            <span class="badge error">erreur</span>
-            <p class="muted small">{{ err }}</p>
+            <span class="badge error">{{ tr("erreur") }}</span>
+            <p class="muted small">{{ tr(err) }}</p>
           </div>
         {% endif %}
 
         <div class="row-actions" style="margin-top: 14px;">
-          <a class="btn primary" href="/auth/login?next={{ next_q }}">Aller à la connexion</a>
-          <a class="btn" href="/auth/verify/resend?next={{ next_q }}">Renvoyer un email</a>
+          <a class="btn primary" href="/auth/login?next={{ next_q }}">{{ tr("Aller à la connexion") }}</a>
+          <a class="btn" href="/auth/verify/resend?next={{ next_q }}">{{ tr("Renvoyer un email") }}</a>
         </div>
       </section>
     </main>

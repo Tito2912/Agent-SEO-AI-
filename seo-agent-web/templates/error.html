@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ current_lang() }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>{% if status_code == 404 %}Page introuvable{% elif status_code == 403 %}Accès refusé{% elif status_code == 401 %}Connexion nécessaire{% elif status_code == 429 %}Patientez un instant{% elif status_code in (502, 503) %}Service indisponible{% else %}Erreur serveur{% endif %} - {{ app_name }}</title>
+    <title>{% if status_code == 404 %}{{ tr("Page introuvable") }}{% elif status_code == 403 %}{{ tr("Accès refusé") }}{% elif status_code == 401 %}{{ tr("Connexion nécessaire") }}{% elif status_code == 429 %}{{ tr("Patientez un instant") }}{% elif status_code in (502, 503) %}{{ tr("Service indisponible") }}{% else %}{{ tr("Erreur serveur") }}{% endif %} - {{ app_name }}</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css" />
     <style>
@@ -53,7 +53,7 @@
         <a href="/" class="brand-link">{{ app_name }}</a>
       </div>
       <div class="topbar-actions">
-        <a class="btn" href="/">Tableau de bord</a>
+        <a class="btn" href="/">{{ tr("Tableau de bord") }}</a>
       </div>
     </header>
 
@@ -62,39 +62,39 @@
         <div class="error-code">{{ status_code }}</div>
 
         {% if status_code == 404 %}
-          <h1 class="error-title">Page introuvable</h1>
-          <p class="error-desc">La page que vous cherchez n'existe pas ou a été déplacée.</p>
+          <h1 class="error-title">{{ tr("Page introuvable") }}</h1>
+          <p class="error-desc">{{ tr("La page que vous cherchez n'existe pas ou a été déplacée.") }}</p>
         {% elif status_code == 401 %}
-          <h1 class="error-title">Reconnectez-vous pour continuer</h1>
-          <p class="error-desc">Votre session n’est plus disponible. Reconnectez-vous avant de reprendre votre travail.</p>
+          <h1 class="error-title">{{ tr("Reconnectez-vous pour continuer") }}</h1>
+          <p class="error-desc">{{ tr("Votre session n’est plus disponible. Reconnectez-vous avant de reprendre votre travail.") }}</p>
         {% elif status_code == 403 %}
-          <h1 class="error-title">Accès refusé</h1>
-          <p class="error-desc">Vous n'avez pas les droits nécessaires pour accéder à cette ressource.</p>
+          <h1 class="error-title">{{ tr("Accès refusé") }}</h1>
+          <p class="error-desc">{{ tr("Vous n'avez pas les droits nécessaires pour accéder à cette ressource.") }}</p>
         {% elif status_code == 429 %}
-          <h1 class="error-title">Patientez un instant</h1>
-          <p class="error-desc">Vous avez effectué trop de requêtes. Veuillez patienter quelques instants avant de réessayer.</p>
+          <h1 class="error-title">{{ tr("Patientez un instant") }}</h1>
+          <p class="error-desc">{{ tr("Vous avez effectué trop de requêtes. Veuillez patienter quelques instants avant de réessayer.") }}</p>
         {% elif status_code in (502, 503) %}
-          <h1 class="error-title">Le service est momentanément indisponible</h1>
-          <p class="error-desc">Nous ne pouvons pas afficher cette étape pour le moment. Revenez dans quelques instants ou consultez l’état du service.</p>
+          <h1 class="error-title">{{ tr("Le service est momentanément indisponible") }}</h1>
+          <p class="error-desc">{{ tr("Nous ne pouvons pas afficher cette étape pour le moment. Revenez dans quelques instants ou consultez l’état du service.") }}</p>
         {% elif status_code == 402 %}
-          <h1 class="error-title">Une limite de votre formule est atteinte</h1>
-          <p class="error-desc">Consultez les limites du compte qui gère le site avant de reprendre votre action.</p>
+          <h1 class="error-title">{{ tr("Une limite de votre formule est atteinte") }}</h1>
+          <p class="error-desc">{{ tr("Consultez les limites du compte qui gère le site avant de reprendre votre action.") }}</p>
         {% elif status_code in (400, 409, 422) %}
-          <h1 class="error-title">Cette demande n’a pas pu aboutir</h1>
-          <p class="error-desc">Revenez à l’écran concerné pour vérifier les informations et l’état de votre demande avant de réessayer.</p>
+          <h1 class="error-title">{{ tr("Cette demande n’a pas pu aboutir") }}</h1>
+          <p class="error-desc">{{ tr("Revenez à l’écran concerné pour vérifier les informations et l’état de votre demande avant de réessayer.") }}</p>
         {% else %}
-          <h1 class="error-title">Nous n’avons pas pu afficher cette étape</h1>
-          <p class="error-desc">Une erreur inattendue s’est produite. Revenez à votre site pour vérifier l’état de l’action avant de la relancer. Si le problème continue, contactez-nous depuis l’aide.</p>
+          <h1 class="error-title">{{ tr("Nous n’avons pas pu afficher cette étape") }}</h1>
+          <p class="error-desc">{{ tr("Une erreur inattendue s’est produite. Revenez à votre site pour vérifier l’état de l’action avant de la relancer. Si le problème continue, contactez-nous depuis l’aide.") }}</p>
         {% endif %}
 
         {% if detail and status_code in (400, 402, 409, 422, 429) %}
-          <details class="error-desc"><summary>Détail de la demande</summary><p class="small">{{ detail }}</p></details>
+          <details class="error-desc"><summary>{{ tr("Détail de la demande") }}</summary><p class="small">{{ tr(detail) }}</p></details>
         {% endif %}
 
         <div class="error-actions">
-          <a href="{{ recovery_url or '/' }}" class="btn primary">{{ recovery_label or "Retour à l’accueil" }}</a>
-          <a href="/support" class="btn">Obtenir de l’aide</a>
-          {% if status_code in (429, 500, 502, 503) %}<a href="/status" class="btn">État du service</a>{% endif %}
+          <a href="{{ recovery_url or '/' }}" class="btn primary">{{ tr(recovery_label or "Retour à l’accueil") }}</a>
+          <a href="/support" class="btn">{{ tr("Obtenir de l’aide") }}</a>
+          {% if status_code in (429, 500, 502, 503) %}<a href="/status" class="btn">{{ tr("État du service") }}</a>{% endif %}
         </div>
       </div>
     </main>
@@ -103,8 +103,8 @@
       <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
         <div>© {{ year }} {{ app_name }}</div>
         <div style="display:flex; gap:12px;">
-          <a href="/support">Support</a>
-          <a href="/status">Statut</a>
+          <a href="/support">{{ tr("Support") }}</a>
+          <a href="/status">{{ tr("Statut") }}</a>
         </div>
       </div>
     </footer>

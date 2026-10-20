@@ -1,12 +1,12 @@
 {% extends "public_layout.html" %}
 
-{% block title %}Tarifs - {{ app_name }}{% endblock %}
+{% block title %}{{ tr("Tarifs") }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="Les plans {{ app_name }} et leurs quotas réels, fonction par fonction : audit, corrections en pull request, rédaction, concurrence, équipe." />
+<meta name="description" content="{{ tr('Les plans {app_name} et leurs quotas réels, fonction par fonction : audit, corrections en pull request, rédaction, concurrence, équipe.', app_name=app_name) }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
-<meta property="og:title" content="Tarifs - {{ app_name }}" />
-<meta property="og:description" content="Les quotas réels de chaque plan, fonction par fonction." />
+<meta property="og:title" content="{{ tr('Tarifs') }} - {{ app_name }}" />
+<meta property="og:description" content="{{ tr("Les quotas réels de chaque plan, fonction par fonction.") }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
 {# Meme grille que la home (`_tarifs.html`), plus la FAQ. Refonte du 29/09/2026 : plan Free
@@ -29,23 +29,23 @@ main.container { max-width: 1160px; }
 
 {% block content %}
   <div class="p-tete">
-    <h1>Des quotas réels, fonction par fonction.</h1>
-    <p>Mensuel et sans engagement. Commencez gratuitement, changez de plan quand votre volume l'exige.</p>
+    <h1>{{ tr("Des quotas réels, fonction par fonction.") }}</h1>
+    <p>{{ tr("Mensuel et sans engagement. Commencez gratuitement, changez de plan quand votre volume l'exige.") }}</p>
   </div>
 
   {% include "_tarifs.html" %}
 
   <section class="faq">
-    <h2>Questions fréquentes</h2>
+    <h2>{{ tr("Questions fréquentes") }}</h2>
     <dl>
-      <dt>Puis-je changer de plan à tout moment ?</dt>
-      <dd>Oui. Un passage au plan supérieur est immédiat, la différence est facturée le jour même. Un retour au plan inférieur prend effet à la fin de la période déjà payée.</dd>
-      <dt>Y a-t-il un engagement de durée ?</dt>
-      <dd>Non. Les plans sont mensuels ; vous résiliez depuis votre espace abonnement quand vous le souhaitez.</dd>
-      <dt>Qu'est-ce qu'une correction décomptée ?</dt>
-      <dd>Une correction écrite par l'IA dans un fichier de votre dépôt. Les réécritures mécaniques — celles qui n'appellent aucun modèle — ne sont pas décomptées.</dd>
-      <dt>Besoin d'un plan sur mesure ?</dt>
-      <dd>Écrivez-nous à <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</dd>
+      <dt>{{ tr("Puis-je changer de plan à tout moment ?") }}</dt>
+      <dd>{{ tr("Oui. Un passage au plan supérieur est immédiat, la différence est facturée le jour même. Un retour au plan inférieur prend effet à la fin de la période déjà payée.") }}</dd>
+      <dt>{{ tr("Y a-t-il un engagement de durée ?") }}</dt>
+      <dd>{{ tr("Non. Les plans sont mensuels ; vous résiliez depuis votre espace abonnement quand vous le souhaitez.") }}</dd>
+      <dt>{{ tr("Qu'est-ce qu'une correction décomptée ?") }}</dt>
+      <dd>{{ tr("Une correction écrite par l'IA dans un fichier de votre dépôt. Les réécritures mécaniques — celles qui n'appellent aucun modèle — ne sont pas décomptées.") }}</dd>
+      <dt>{{ tr("Besoin d'un plan sur mesure ?") }}</dt>
+      <dd>{{ tr("Écrivez-nous à") }} <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</dd>
     </dl>
   </section>
 {% endblock %}

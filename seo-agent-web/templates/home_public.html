@@ -1,14 +1,14 @@
 {% extends "public_layout.html" %}
 {% from "_capture.html" import capture %}
 
-{% block title %}{{ app_name }} - Audit SEO et corrections pour votre site{% endblock %}
-{% block signup_label %}Audit gratuit{% endblock %}
+{% block title %}{{ app_name }} - {{ tr("Audit SEO et corrections pour votre site") }}{% endblock %}
+{% block signup_label %}{{ tr("Audit gratuit") }}{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="Repérez les problèmes SEO de votre site avec {{ app_name }}. Audit gratuit sans carte bancaire, et corrections dans le code sur les sites compatibles." />
+<meta name="description" content="{{ tr('Repérez les problèmes SEO de votre site avec {app_name}. Audit gratuit sans carte bancaire, et corrections dans le code sur les sites compatibles.', app_name=app_name) }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
-<meta property="og:title" content="{{ app_name }} - Comprenez votre SEO, passez aux corrections" />
-<meta property="og:description" content="Analysez votre site, identifiez les problèmes prioritaires et préparez les corrections sur les sites compatibles. Essayez gratuitement, sans carte bancaire." />
+<meta property="og:title" content="{{ app_name }} - {{ tr('Comprenez votre SEO, passez aux corrections') }}" />
+<meta property="og:description" content="{{ tr("Analysez votre site, identifiez les problèmes prioritaires et préparez les corrections sur les sites compatibles. Essayez gratuitement, sans carte bancaire.") }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
 {# REFONTE DU 29/09/2026, demande du proprietaire : « on dirait un site pour enfant ». Retires :
@@ -130,133 +130,131 @@ section[id] { scroll-margin-top: 112px; }
 
   <section class="hero">
     <div>
-      <p class="h-kicker">Pour les indépendants et les petites entreprises</p>
-      <h1>Comprenez votre SEO.<br><em>Passez aux corrections.</em></h1>
+      <p class="h-kicker">{{ tr("Pour les indépendants et les petites entreprises") }}</p>
+      <h1>{{ tr("Comprenez votre SEO.") }}<br><em>{{ tr("Passez aux corrections.") }}</em></h1>
       <p class="hero-sub">
-        {{ app_name }} repère les problèmes de référencement de votre site et les classe par priorité.
-        Sur les sites compatibles, il prépare aussi les corrections dans le code, à valider
-        par vous ou votre prestataire.
+        {{ tr("{app_name} repère les problèmes de référencement de votre site et les classe par priorité. Sur les sites compatibles, il prépare aussi les corrections dans le code, à valider par vous ou votre prestataire.", app_name=app_name) }}
       </p>
       <div class="hero-actions">
-        <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Lancer mon audit gratuit</a>
-        <a class="btn" href="#compatibilite">Vérifier la compatibilité</a>
+        <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{{ tr("Lancer mon audit gratuit") }}</a>
+        <a class="btn" href="#compatibilite">{{ tr("Vérifier la compatibilité") }}</a>
       </div>
-      <p class="hero-note">Compte gratuit requis · Sans carte bancaire<br>Aucune connexion GitHub nécessaire pour l'audit.</p>
-      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ gratuit.corrections }} corrections IA par mois incluses, sur un dépôt compatible ou avec WordPress et Yoast SEO.</p>{% endif %}
+      <p class="hero-note">{{ tr("Compte gratuit requis · Sans carte bancaire") }}<br>{{ tr("Aucune connexion GitHub nécessaire pour l'audit.") }}</p>
+      {% if gratuit and gratuit.corrections %}<p class="hero-note">{{ tr("{n} corrections IA par mois incluses, sur un dépôt compatible ou avec WordPress et Yoast SEO.", n=gratuit.corrections) }}</p>{% endif %}
     </div>
 
     <div class="hero-apercu">
-      <p class="h-kicker">Ce que vous obtenez</p>
-      {{ capture("anomalies", "Extrait d'un audit réel : 17 titres trop longs, 9 descriptions trop longues et des redirections, classés par gravité",
-                 "Une liste des problèmes détectés, de leur gravité et du nombre de pages concernées.", chargement="eager") }}
-      <p class="hero-resultat">Dans cet exemple, 17 pages ont un titre trop long : vous savez quels titres examiner avant de préparer les corrections.</p>
-      <a href="/static/captures/anomalies.webp">Ouvrir la capture en grand</a>
+      <p class="h-kicker">{{ tr("Ce que vous obtenez") }}</p>
+      {{ capture("anomalies", tr("Extrait d'un audit réel : 17 titres trop longs, 9 descriptions trop longues et des redirections, classés par gravité"),
+                 tr("Une liste des problèmes détectés, de leur gravité et du nombre de pages concernées."), chargement="eager") }}
+      <p class="hero-resultat">{{ tr("Dans cet exemple, 17 pages ont un titre trop long : vous savez quels titres examiner avant de préparer les corrections.") }}</p>
+      <a href="/static/captures/anomalies.webp">{{ tr("Ouvrir la capture en grand") }}</a>
     </div>
   </section>
 
   <section class="compatibilite" id="compatibilite" aria-labelledby="compatibilite-titre">
-    <p class="h-kicker">Votre site est-il compatible ?</p>
-    <h2 class="h-titre" id="compatibilite-titre">Un audit avec l'adresse du site. Des corrections selon votre accès.</h2>
-    <p class="h-intro">L'analyse porte sur les pages publiques accessibles au robot, dans les limites de votre plan. L'accès au code intervient ensuite, pour les corrections.</p>
+    <p class="h-kicker">{{ tr("Votre site est-il compatible ?") }}</p>
+    <h2 class="h-titre" id="compatibilite-titre">{{ tr("Un audit avec l'adresse du site. Des corrections selon votre accès.") }}</h2>
+    <p class="h-intro">{{ tr("L'analyse porte sur les pages publiques accessibles au robot, dans les limites de votre plan. L'accès au code intervient ensuite, pour les corrections.") }}</p>
     <div class="compat-cas">
       <div>
-        <h3>Site géré avec WordPress, Shopify ou Wix</h3>
-        <p>Avec WordPress et Yoast SEO, {{ app_name }} rédige et enregistre les titres SEO et méta-descriptions, après votre relecture de chaque texte. Pour les autres changements, et sur Shopify ou Wix, vous ou votre prestataire les appliquez dans votre outil ; dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite ce travail.</p>
-        <a href="{{ campaign_link(request, '/docs/corriger-dans-wordpress') }}">Voir comment corriger dans WordPress</a>
-        <a href="{{ campaign_link(request, '/docs/fix-pack-sans-depot') }}">Voir comment corriger sans dépôt GitHub</a>
+        <h3>{{ tr("Site géré avec WordPress, Shopify ou Wix") }}</h3>
+        <p>{{ tr("Avec WordPress et Yoast SEO, {app_name} rédige et enregistre les titres SEO et méta-descriptions, après votre relecture de chaque texte. Pour les autres changements, et sur Shopify ou Wix, vous ou votre prestataire les appliquez dans votre outil ; dès le plan Solo, une archive avec les données de l'audit et un mode d'emploi facilite ce travail.", app_name=app_name) }}</p>
+        <a href="{{ campaign_link(request, '/docs/corriger-dans-wordpress') }}">{{ tr("Voir comment corriger dans WordPress") }}</a>
+        <a href="{{ campaign_link(request, '/docs/fix-pack-sans-depot') }}">{{ tr("Voir comment corriger sans dépôt GitHub") }}</a>
       </div>
       <div>
-        <h3>Code disponible sur GitHub</h3>
-        <p>Pour les technologies ci-dessous, {{ app_name }} prépare les modifications dans une pull request : une proposition de changement que vous ou votre développeur relisez et validez avant publication.</p>
-        <a href="{{ campaign_link(request, '/docs/connecter-github') }}">Voir comment connecter le dépôt</a>
+        <h3>{{ tr("Code disponible sur GitHub") }}</h3>
+        <p>{{ tr("Pour les technologies ci-dessous, {app_name} prépare les modifications dans une pull request : une proposition de changement que vous ou votre développeur relisez et validez avant publication.", app_name=app_name) }}</p>
+        <a href="{{ campaign_link(request, '/docs/connecter-github') }}">{{ tr("Voir comment connecter le dépôt") }}</a>
       </div>
     </div>
   <div class="stacks">
-    <p>Corrections dans le code — <strong>10 technologies</strong> prises en charge</p>
+    <p>{{ tr_html("Corrections dans le code — <strong>10 technologies</strong> prises en charge") }}</p>
     <ul>
       <li>Next.js App Router</li><li>Next.js Pages Router</li><li>Astro</li><li>Nuxt</li><li>Gatsby</li><li>SvelteKit</li><li>Hugo</li><li>Jekyll</li><li>Flask</li><li>HTML</li>
     </ul>
   </div>
   </section>
 
-  <section class="apercu" aria-label="Aperçu de l'application">
-    {{ capture("apercu-projet", "Vue d'ensemble d'un projet dans " ~ app_name ~ " : score de santé, anomalies par gravité, historique des crawls et répartition des URL",
-               "Un vrai projet : prosperfactory.com, 112 pages analysées lors du dernier crawl.", chargement="eager") }}
+  <section class="apercu" aria-label="{{ tr("Aperçu de l'application") }}">
+    {{ capture("apercu-projet", tr("Vue d'ensemble d'un projet dans {app_name} : score de santé, anomalies par gravité, historique des crawls et répartition des URL", app_name=app_name),
+               tr("Un vrai projet : prosperfactory.com, 112 pages analysées lors du dernier crawl."), chargement="eager") }}
   </section>
 
   <section class="h-section" id="fonctionnement">
-    <p class="h-kicker">Fonctionnement</p>
-    <h2 class="h-titre">Votre premier audit, puis les corrections adaptées à votre site.</h2>
+    <p class="h-kicker">{{ tr("Fonctionnement") }}</p>
+    <h2 class="h-titre">{{ tr("Votre premier audit, puis les corrections adaptées à votre site.") }}</h2>
     <div class="etapes">
       <div class="etape">
         <div class="etape-num">01</div>
-        <h3>Ajoutez votre site</h3>
-        <p>Créez votre compte gratuit, indiquez l'adresse de votre site et lancez l'analyse.</p>
+        <h3>{{ tr("Ajoutez votre site") }}</h3>
+        <p>{{ tr("Créez votre compte gratuit, indiquez l'adresse de votre site et lancez l'analyse.") }}</p>
       </div>
       <div class="etape">
         <div class="etape-num">02</div>
-        <h3>Identifiez les priorités</h3>
-        <p>Consultez les problèmes détectés et les pages concernées, avec leur gravité et l'effort de correction estimé.</p>
+        <h3>{{ tr("Identifiez les priorités") }}</h3>
+        <p>{{ tr("Consultez les problèmes détectés et les pages concernées, avec leur gravité et l'effort de correction estimé.") }}</p>
       </div>
       <div class="etape">
         <div class="etape-num">03</div>
-        <h3>Passez aux corrections</h3>
-        <p>Relisez les modifications proposées sur votre dépôt compatible ou dans WordPress, ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.</p>
+        <h3>{{ tr("Passez aux corrections") }}</h3>
+        <p>{{ tr("Relisez les modifications proposées sur votre dépôt compatible ou dans WordPress, ou transmettez le rapport à votre prestataire pour une intervention dans votre outil.") }}</p>
       </div>
     </div>
   </section>
 
   <section class="h-section" id="fonctions">
-    <p class="h-kicker">Comprendre, corriger, suivre</p>
-    <h2 class="h-titre">De l'erreur détectée au changement que vous validez.</h2>
-    <p class="h-intro">Un audit pour décider où agir, des corrections préparées sur les sites compatibles, et vos données de recherche pour suivre l'évolution.</p>
+    <p class="h-kicker">{{ tr("Comprendre, corriger, suivre") }}</p>
+    <h2 class="h-titre">{{ tr("De l'erreur détectée au changement que vous validez.") }}</h2>
+    <p class="h-intro">{{ tr("Un audit pour décider où agir, des corrections préparées sur les sites compatibles, et vos données de recherche pour suivre l'évolution.") }}</p>
 
     <div class="groupes">
       <div class="groupe">
-        <h3>Comprendre</h3>
+        <h3>{{ tr("Comprendre") }}</h3>
         <div class="fonction">
-          <h4>Repérez les problèmes prioritaires</h4>
-          <p>Titres, liens cassés, redirections, indexation : retrouvez les pages concernées et les anomalies classées par gravité et par effort.</p>
+          <h4>{{ tr("Repérez les problèmes prioritaires") }}</h4>
+          <p>{{ tr("Titres, liens cassés, redirections, indexation : retrouvez les pages concernées et les anomalies classées par gravité et par effort.") }}</p>
         </div>
         <div class="fonction">
-          <h4>Transmettez un rapport exploitable</h4>
-          <p>Exportez l'audit en PDF ou en CSV pour travailler avec la personne qui s'occupe de votre site.</p>
+          <h4>{{ tr("Transmettez un rapport exploitable") }}</h4>
+          <p>{{ tr("Exportez l'audit en PDF ou en CSV pour travailler avec la personne qui s'occupe de votre site.") }}</p>
         </div>
         <div class="fonction">
-          <h4>Posez vos questions sur vos données</h4>
-          <p>L'assistant IA vous aide à interpréter votre SEO et à préparer des descriptions pour vos pages.</p>
-        </div>
-      </div>
-
-      <div class="groupe">
-        <h3>Corriger</h3>
-        <div class="fonction">
-          <h4>Des modifications prêtes à relire</h4>
-          <p>Sur un dépôt compatible, la correction arrive en pull request. Vous ou votre développeur examinez les changements avant de les appliquer.</p>
-        </div>
-        <div class="fonction">
-          <h4>Vérifiées par vos propres tests</h4>
-          <p>Votre chaîne d'intégration vérifie que le site se construit. La proposition reste en brouillon jusqu'au résultat de ces contrôles.</p>
-        </div>
-        <div class="fonction">
-          <h4>Sans dépôt, sur WordPress</h4>
-          <p>Avec Yoast SEO, faites rédiger les titres et méta-descriptions de toutes les pages d'une anomalie, relisez-les sur un seul écran, puis enregistrez-les dans WordPress. Pour le reste, dès le plan Solo, une archive de données et de modèles se transmet à votre prestataire.</p>
+          <h4>{{ tr("Posez vos questions sur vos données") }}</h4>
+          <p>{{ tr("L'assistant IA vous aide à interpréter votre SEO et à préparer des descriptions pour vos pages.") }}</p>
         </div>
       </div>
 
       <div class="groupe">
-        <h3>Suivre</h3>
+        <h3>{{ tr("Corriger") }}</h3>
         <div class="fonction">
-          <h4>Retrouvez vos clics et positions</h4>
-          <p>Connectez Google Search Console ou Bing Webmaster pour suivre les recherches qui amènent des visiteurs sur votre site.</p>
+          <h4>{{ tr("Des modifications prêtes à relire") }}</h4>
+          <p>{{ tr("Sur un dépôt compatible, la correction arrive en pull request. Vous ou votre développeur examinez les changements avant de les appliquer.") }}</p>
         </div>
         <div class="fonction">
-          <h4>Contrôlez les corrections</h4>
-          <p>Après l'intégration d'une correction proposée dans le code, le prochain audit vérifie si l'anomalie a disparu.</p>
+          <h4>{{ tr("Vérifiées par vos propres tests") }}</h4>
+          <p>{{ tr("Votre chaîne d'intégration vérifie que le site se construit. La proposition reste en brouillon jusqu'au résultat de ces contrôles.") }}</p>
         </div>
         <div class="fonction">
-          <h4>Planifiez les prochains audits</h4>
-          <p>Surveillez votre site dans le temps et retrouvez l'historique des analyses, dans les limites de votre plan.</p>
+          <h4>{{ tr("Sans dépôt, sur WordPress") }}</h4>
+          <p>{{ tr("Avec Yoast SEO, faites rédiger les titres et méta-descriptions de toutes les pages d'une anomalie, relisez-les sur un seul écran, puis enregistrez-les dans WordPress. Pour le reste, dès le plan Solo, une archive de données et de modèles se transmet à votre prestataire.") }}</p>
+        </div>
+      </div>
+
+      <div class="groupe">
+        <h3>{{ tr("Suivre") }}</h3>
+        <div class="fonction">
+          <h4>{{ tr("Retrouvez vos clics et positions") }}</h4>
+          <p>{{ tr("Connectez Google Search Console ou Bing Webmaster pour suivre les recherches qui amènent des visiteurs sur votre site.") }}</p>
+        </div>
+        <div class="fonction">
+          <h4>{{ tr("Contrôlez les corrections") }}</h4>
+          <p>{{ tr("Après l'intégration d'une correction proposée dans le code, le prochain audit vérifie si l'anomalie a disparu.") }}</p>
+        </div>
+        <div class="fonction">
+          <h4>{{ tr("Planifiez les prochains audits") }}</h4>
+          <p>{{ tr("Surveillez votre site dans le temps et retrouvez l'historique des analyses, dans les limites de votre plan.") }}</p>
         </div>
       </div>
     </div>
@@ -264,39 +262,39 @@ section[id] { scroll-margin-top: 112px; }
     <div class="ecrans">
       <div class="ecran">
         <div class="ecran-texte">
-          <h3>Voyez la correction avant de l'envoyer</h3>
-          <p>Sur un dépôt compatible, ouvrez l'aperçu du changement proposé, puis créez une pull request à relire. L'écran ci-contre montre les commandes disponibles dans l'application.</p>
+          <h3>{{ tr("Voyez la correction avant de l'envoyer") }}</h3>
+          <p>{{ tr("Sur un dépôt compatible, ouvrez l'aperçu du changement proposé, puis créez une pull request à relire. L'écran ci-contre montre les commandes disponibles dans l'application.") }}</p>
         </div>
-        {{ capture("accueil-corrections", "Accélérateur de correction : anomalies candidates avec leurs boutons Voir, Aperçu IA et Créer PR") }}
+        {{ capture("accueil-corrections", tr("Accélérateur de correction : anomalies candidates avec leurs boutons Voir, Aperçu IA et Créer PR")) }}
       </div>
       <div class="ecran">
         <div class="ecran-texte">
-          <h3>Une page neuve, dans la forme de votre site</h3>
-          <p>Dès le plan Pro : choisissez un sujet, une taille, un ton et une section. La page est livrée en brouillon à relire, dans votre dépôt ou en Markdown et HTML.</p>
+          <h3>{{ tr("Une page neuve, dans la forme de votre site") }}</h3>
+          <p>{{ tr("Dès le plan Pro : choisissez un sujet, une taille, un ton et une section. La page est livrée en brouillon à relire, dans votre dépôt ou en Markdown et HTML.") }}</p>
         </div>
-        {{ capture("rediger-une-page", "Formulaire de rédaction : destination, sujet, taille, ton, section du site, adresse et langues") }}
+        {{ capture("rediger-une-page", tr("Formulaire de rédaction : destination, sujet, taille, ton, section du site, adresse et langues")) }}
       </div>
       <div class="ecran">
         <div class="ecran-texte">
-          <h3>Vos données de recherche, à côté de l'audit</h3>
-          <p>Consultez vos clics, impressions et positions sur la période choisie pour observer l'évolution de votre visibilité.</p>
+          <h3>{{ tr("Vos données de recherche, à côté de l'audit") }}</h3>
+          <p>{{ tr("Consultez vos clics, impressions et positions sur la période choisie pour observer l'évolution de votre visibilité.") }}</p>
         </div>
-        {{ capture("search-console", "Graphique Google Search Console : clics, impressions, CTR et position moyenne sur 28 jours") }}
+        {{ capture("search-console", tr("Graphique Google Search Console : clics, impressions, CTR et position moyenne sur 28 jours")) }}
       </div>
     </div>
 
     <div class="socle">
       <div class="fonction">
-        <h4>Comptes d'équipe</h4>
-        <p>Invitez un consultant ou un client ; ce qu'il consomme est débité sur votre compte, avec la trace de qui a agi.</p>
+        <h4>{{ tr("Comptes d'équipe") }}</h4>
+        <p>{{ tr("Invitez un consultant ou un client ; ce qu'il consomme est débité sur votre compte, avec la trace de qui a agi.") }}</p>
       </div>
       <div class="fonction">
-        <h4>Exports PDF et CSV</h4>
-        <p>Des rapports à transmettre à un client ou à une équipe, sans mise en forme manuelle.</p>
+        <h4>{{ tr("Exports PDF et CSV") }}</h4>
+        <p>{{ tr("Des rapports à transmettre à un client ou à une équipe, sans mise en forme manuelle.") }}</p>
       </div>
       <div class="fonction">
-        <h4>Sécurité</h4>
-        <p>Secrets chiffrés, et suppression complète du compte à tout moment depuis vos paramètres.</p>
+        <h4>{{ tr("Sécurité") }}</h4>
+        <p>{{ tr("Secrets chiffrés, et suppression complète du compte à tout moment depuis vos paramètres.") }}</p>
       </div>
     </div>
   </section>
@@ -304,9 +302,9 @@ section[id] { scroll-margin-top: 112px; }
   <section class="h-section" id="tarifs">
     <div class="tarifs-tete">
       <div>
-        <p class="h-kicker">Tarifs</p>
-        <h2 class="h-titre">Un plan gratuit pour essayer, trois pour travailler.</h2>
-        <p class="h-intro">Mensuel, sans engagement. Un passage au plan supérieur est immédiat ; un retour au plan inférieur prend effet à la fin de la période payée.</p>
+        <p class="h-kicker">{{ tr("Tarifs") }}</p>
+        <h2 class="h-titre">{{ tr("Un plan gratuit pour essayer, trois pour travailler.") }}</h2>
+        <p class="h-intro">{{ tr("Mensuel, sans engagement. Un passage au plan supérieur est immédiat ; un retour au plan inférieur prend effet à la fin de la période payée.") }}</p>
       </div>
     </div>
     {% with cartes_resumees = true %}
@@ -315,44 +313,45 @@ section[id] { scroll-margin-top: 112px; }
   </section>
 
   <section class="h-section" id="questions" aria-labelledby="questions-titre">
-    <p class="h-kicker">Avant de commencer</p>
-    <h2 class="h-titre" id="questions-titre">Ce qu'il faut savoir pour votre premier audit.</h2>
+    <p class="h-kicker">{{ tr("Avant de commencer") }}</p>
+    <h2 class="h-titre" id="questions-titre">{{ tr("Ce qu'il faut savoir pour votre premier audit.") }}</h2>
     <div class="faq">
       <details>
-        <summary>Faut-il savoir coder ou connecter GitHub ?</summary>
-        <p>Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur. Sur WordPress avec Yoast SEO, les titres et méta-descriptions se corrigent sans dépôt ni code : vous relisez chaque texte avant son enregistrement.</p>
+        <summary>{{ tr("Faut-il savoir coder ou connecter GitHub ?") }}</summary>
+        <p>{{ tr("Pour lancer l'audit et lire les rapports, un compte gratuit et l'adresse de votre site suffisent. Les corrections dans le code nécessitent un dépôt GitHub compatible et une personne capable de relire les changements. Vous pouvez confier cette étape à votre développeur. Sur WordPress avec Yoast SEO, les titres et méta-descriptions se corrigent sans dépôt ni code : vous relisez chaque texte avant son enregistrement.") }}</p>
       </details>
       <details>
-        <summary>Mon site sera-t-il modifié pendant l'audit ?</summary>
-        <p>L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site. Avec WordPress, rien n'est enregistré avant que vous ayez validé l'aperçu.</p>
+        <summary>{{ tr("Mon site sera-t-il modifié pendant l'audit ?") }}</summary>
+        <p>{{ tr("L'audit consulte les pages accessibles. Dans le parcours de correction par pull request, les changements attendent votre validation ou celle de votre prestataire avant d'être intégrés au site. Avec WordPress, rien n'est enregistré avant que vous ayez validé l'aperçu.") }}</p>
       </details>
       <details>
-        <summary>Que comprend le plan gratuit ?</summary>
-        <p>{% if gratuit %}{{ gratuit.sites }} site{% if gratuit.sites != 1 %}s{% endif %} suivi{% if gratuit.sites != 1 %}s{% endif %}, {{ gratuit.pages }} pages analysées par mois{% if gratuit.corrections %} et {{ gratuit.corrections }} corrections IA par mois, sur un dépôt compatible ou avec WordPress et Yoast SEO{% endif %}. {% endif %}Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo. Consultez le <a href="{{ campaign_link(request, '/pricing#comparatif') }}">comparatif complet</a> pour les autres limites.</p>
+        <summary>{{ tr("Que comprend le plan gratuit ?") }}</summary>
+        <p>{% if gratuit %}{% if gratuit.sites != 1 %}{{ tr("{n} sites suivis", n=gratuit.sites) }}{% else %}{{ tr("{n} site suivi", n=gratuit.sites) }}{% endif %}, {{ tr("{n} pages analysées par mois", n=gratuit.pages) }}{% if gratuit.corrections %} {{ tr("et {n} corrections IA par mois, sur un dépôt compatible ou avec WordPress et Yoast SEO", n=gratuit.corrections) }}{% endif %}. {% endif %}{{ tr("Les rapports PDF et CSV sont inclus. L'archive de données et de modèles à appliquer sans dépôt est disponible dès le plan Solo.") }} {{ tr_html('Consultez le <a href="{url}">comparatif complet</a> pour les autres limites.', url=campaign_link(request, '/pricing#comparatif')) }}</p>
       </details>
       <details>
-        <summary>Comment sont comptées les pages et les corrections ?</summary>
-        <p>Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages ; sur WordPress, à un titre ou une méta-description rédigé pour une page. <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">Lire le détail des quotas</a>.</p>
+        <summary>{{ tr("Comment sont comptées les pages et les corrections ?") }}</summary>
+        <p>{{ tr("Chaque analyse consomme des pages du quota mensuel. Le nombre de pages possible est limité par vos réglages, le plafond par analyse et le quota mensuel restant : le plus petit s'applique. Une correction IA correspond à un fichier écrit par le modèle, même si ce fichier sert à plusieurs pages ; sur WordPress, à un titre ou une méta-description rédigé pour une page.") }} <a href="{{ campaign_link(request, '/docs/plans-et-quotas') }}">{{ tr("Lire le détail des quotas") }}</a>.</p>
       </details>
       <details>
-        <summary>Puis-je travailler avec mon prestataire ?</summary>
-        <p>Vous pouvez lui transmettre les rapports PDF et CSV. Pour une correction dans le code, il peut relire les modifications proposées sur GitHub. Des comptes collaborateurs sont aussi disponibles selon le plan.</p>
+        <summary>{{ tr("Puis-je travailler avec mon prestataire ?") }}</summary>
+        <p>{{ tr("Vous pouvez lui transmettre les rapports PDF et CSV. Pour une correction dans le code, il peut relire les modifications proposées sur GitHub. Des comptes collaborateurs sont aussi disponibles selon le plan.") }}</p>
       </details>
       <details>
-        <summary>Quand verrai-je un effet sur mon référencement ?</summary>
-        <p>L'audit montre les problèmes détectés et un nouveau passage permet de contrôler les changements. L'évolution des positions dépend ensuite de la réexploration par les moteurs, du contenu et de la concurrence. Le service ne garantit ni délai ni position dans Google.</p>
+        <summary>{{ tr("Quand verrai-je un effet sur mon référencement ?") }}</summary>
+        <p>{{ tr("L'audit montre les problèmes détectés et un nouveau passage permet de contrôler les changements. L'évolution des positions dépend ensuite de la réexploration par les moteurs, du contenu et de la concurrence. Le service ne garantit ni délai ni position dans Google.") }}</p>
       </details>
     </div>
   </section>
 
   {% if featured_resources %}
     <section class="h-section" id="guides">
-      <p class="h-kicker">Guides</p>
-      <h2 class="h-titre">La méthode, en plus de l'outil.</h2>
-      <p class="h-intro">Prioriser un audit, lire Search Console, rattraper une régression — et le produit, écran par écran.</p>
+      <p class="h-kicker">{{ tr("Guides") }}</p>
+      <h2 class="h-titre">{{ tr("La méthode, en plus de l'outil.") }}</h2>
+      <p class="h-intro">{{ tr("Prioriser un audit, lire Search Console, rattraper une régression — et le produit, écran par écran.") }}</p>
+      {% if current_lang() != "fr" %}<p class="h-intro">{{ tr("Ces guides sont pour l'instant rédigés en français.") }}</p>{% endif %}
       <div class="guides">
         {% for resource in featured_resources %}
-          <article class="guide">
+          <article class="guide" lang="fr">
             <div>
               <h3><a href="{{ campaign_link(request, resource.path) }}">{{ resource.title }}</a></h3>
               <p>{{ resource.description }}</p>
@@ -362,19 +361,19 @@ section[id] { scroll-margin-top: 112px; }
         {% endfor %}
       </div>
       <div class="guides-liens">
-        <a href="{{ campaign_link(request, '/ressources-seo') }}">Tous les guides SEO</a>
-        <a href="{{ campaign_link(request, '/docs') }}">Documentation du produit</a>
+        <a href="{{ campaign_link(request, '/ressources-seo') }}">{{ tr("Tous les guides SEO") }}</a>
+        <a href="{{ campaign_link(request, '/docs') }}">{{ tr("Documentation du produit") }}</a>
       </div>
     </section>
   {% endif %}
 
   <section class="fin">
     <div>
-      <h2>Votre premier audit est gratuit.</h2>
+      <h2>{{ tr("Votre premier audit est gratuit.") }}</h2>
       <p>
-        Créez votre compte gratuit, ajoutez l'adresse de votre site et découvrez les problèmes à traiter en priorité. Sans carte bancaire.
+        {{ tr("Créez votre compte gratuit, ajoutez l'adresse de votre site et découvrez les problèmes à traiter en priorité. Sans carte bancaire.") }}
       </p>
     </div>
-    <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Lancer mon audit gratuit</a>
+    <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{{ tr("Lancer mon audit gratuit") }}</a>
   </section>
 {% endblock %}

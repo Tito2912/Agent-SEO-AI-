@@ -10,21 +10,21 @@
   {% for c in comparatif.cartes %}
     <article class="tarif{% if c.en_avant %} tarif--avant{% endif %}">
       <header>
-        <h3>{{ c.nom }}</h3>
-        <p class="tarif-accroche">{{ c.accroche }}</p>
+        <h3>{{ tr(c.nom) }}</h3>
+        <p class="tarif-accroche">{{ tr(c.accroche) }}</p>
       </header>
-      <p class="tarif-prix"><span>{{ c.montant }}</span><small>{{ c.periode or "sans carte bancaire" }}</small></p>
+      <p class="tarif-prix"><span>{{ c.montant }}</span><small>{{ tr(c.periode or "sans carte bancaire") }}</small></p>
       {% if request.state.user %}
-        <a class="btn{% if c.en_avant %} primary{% endif %}" href="{{ campaign_link(request, '/billing') }}">Gérer mon plan</a>
+        <a class="btn{% if c.en_avant %} primary{% endif %}" href="{{ campaign_link(request, '/billing') }}">{{ tr("Gérer mon plan") }}</a>
       {% elif c.cle == "free" %}
-        <a class="btn" href="{{ campaign_link(request, '/auth/signup') }}">{% if cartes_resumees|default(false) %}Lancer mon audit gratuit{% else %}Créer un compte{% endif %}</a>
+        <a class="btn" href="{{ campaign_link(request, '/auth/signup') }}">{% if cartes_resumees|default(false) %}{{ tr("Lancer mon audit gratuit") }}{% else %}{{ tr("Créer un compte") }}{% endif %}</a>
       {% else %}
-        <a class="btn{% if c.en_avant %} primary{% endif %}" href="{{ campaign_link(request, '/auth/signup') }}">Commencer avec {{ c.nom }}</a>
+        <a class="btn{% if c.en_avant %} primary{% endif %}" href="{{ campaign_link(request, '/auth/signup') }}">{{ tr("Commencer avec {plan}", plan=tr(c.nom)) }}</a>
       {% endif %}
       {% if cartes_resumees|default(false) %}
         <ul class="tarif-cles">
           {% for f in c.fonctions if f.resume and f.inclus %}
-            <li{% if f.phare %} class="phare"{% endif %}>{{ f.texte }}</li>
+            <li{% if f.phare %} class="phare"{% endif %}>{{ tr(f.texte) }}</li>
           {% endfor %}
         </ul>
       {% else %}
@@ -35,9 +35,9 @@
 </div>
 
 {% if cartes_resumees|default(false) %}
-  <p class="tarifs-note">Les corrections dans le code nécessitent un dépôt GitHub compatible. Une correction IA correspond à un fichier écrit par le modèle. Chaque analyse reste limitée au quota mensuel de pages disponible.</p>
+  <p class="tarifs-note">{{ tr("Les corrections dans le code nécessitent un dépôt GitHub compatible. Une correction IA correspond à un fichier écrit par le modèle. Chaque analyse reste limitée au quota mensuel de pages disponible.") }}</p>
   <details class="tarifs-detail">
-    <summary>Comparer toutes les fonctions et les quotas</summary>
+    <summary>{{ tr("Comparer toutes les fonctions et les quotas") }}</summary>
     {% include "_comparatif.html" %}
   </details>
 {% else %}

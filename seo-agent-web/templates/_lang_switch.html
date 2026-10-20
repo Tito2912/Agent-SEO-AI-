@@ -1,0 +1,11 @@
+{# Selecteur de langue : un simple lien vers la meme page, avec `?lang=`. La langue choisie est
+   ensuite memorisee dans un cookie (backend/i18n.py). `compact` : codes courts, pour l'en-tete. #}
+<nav class="lang-switch" aria-label="{{ tr('Langue') }}">
+  {% for code, label in languages.items() %}
+    {% if code == current_lang() %}
+      <span class="lang-switch-current" aria-current="true" lang="{{ code }}">{{ code|upper if compact else label }}</span>
+    {% else %}
+      <a href="{{ lang_url(code) }}" hreflang="{{ code }}" lang="{{ code }}" rel="nofollow">{{ code|upper if compact else label }}</a>
+    {% endif %}
+  {% endfor %}
+</nav>

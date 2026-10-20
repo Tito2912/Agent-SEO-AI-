@@ -105,6 +105,7 @@ try:
     from . import first_audit
     from . import search_results
     from . import cms_guidance
+    from . import i18n
 except ImportError:
     # When running from inside this folder (`uvicorn app:app`) or with `--app-dir seo-agent-web/backend`.
     import billing  # type: ignore
@@ -117,6 +118,7 @@ except ImportError:
     import first_audit
     import search_results
     import cms_guidance
+    import i18n
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
@@ -10658,6 +10660,8 @@ def _public_url(request: Request, path: str) -> str:
 templates.env.globals["public_url"] = _public_url
 templates.env.globals["campaign_link"] = signup_attribution.carry
 templates.env.globals["country_options"] = customer_country.OPTIONS
+# Langue de l'interface (francais par defaut, anglais en traduction) : voir backend/i18n.py.
+i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request))
 
 
 def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
@@ -11113,6 +11117,10 @@ def _valid_password_reset_row(db, *, token: str) -> PasswordResetToken | None:
     return row
 
 
+# Les e-mails de compte partent dans la langue de la page d'ou vient la demande (backend/i18n.py).
+_mail_tr = i18n.tr_current
+
+
 def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: datetime) -> None:
     logger.info("[MAIL] reset compose to=%s url_host=%s", _mask_email(to_email), urlsplit(str(reset_url)).netloc)
     ttl_s = _seconds_until(expires_at)
@@ -11123,26 +11131,26 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
     if subject_tpl:
         subject = subject_tpl.replace("{app}", app_name).replace("{brand}", app_name).strip()
     else:
-        subject = f"Réinitialisation du mot de passe — {app_name}"
+        subject = _mail_tr("Réinitialisation du mot de passe — {app}", app=app_name)
     if not subject:
-        subject = f"Réinitialisation du mot de passe — {app_name}"
+        subject = _mail_tr("Réinitialisation du mot de passe — {app}", app=app_name)
 
     safe_url = html.escape(str(reset_url).strip(), quote=True)
     body = "\n".join(
         [
-            "Bonjour,",
+            _mail_tr("Bonjour,"),
             "",
-            "Pour réinitialiser votre mot de passe, cliquez sur ce lien :",
+            _mail_tr("Pour réinitialiser votre mot de passe, cliquez sur ce lien :"),
             str(reset_url).strip(),
             "",
-            f"Ce lien est valable {ttl_minutes} min.",
+            _mail_tr("Ce lien est valable {n} min.", n=ttl_minutes),
             "",
-            "Si vous n’êtes pas à l’origine de cette demande, ignorez cet email.",
+            _mail_tr("Si vous n’êtes pas à l’origine de cette demande, ignorez cet email."),
             "",
         ]
     )
     html_body = f"""<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
+<html lang="{i18n.current_lang()}"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
     <tr><td align="center">
@@ -11151,12 +11159,12 @@ def _send_password_reset_email(*, to_email: str, reset_url: str, expires_at: dat
           <span style="color:#fff;font-size:18px;font-weight:700;">{html.escape(app_name)}</span>
         </td></tr>
         <tr><td style="padding:32px;">
-          <h1 style="font-size:20px;margin:0 0 16px;">Réinitialisation du mot de passe</h1>
-          <p style="color:#555;margin:0 0 24px;">Clique sur le bouton ci-dessous pour définir un nouveau mot de passe. Ce lien est valable <strong>{ttl_minutes}&nbsp;minutes</strong>.</p>
-          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Réinitialiser mon mot de passe</a>
-          <p style="color:#999;font-size:12px;margin:24px 0 0;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br><a href="{safe_url}" style="color:#555;word-break:break-all;">{safe_url}</a></p>
+          <h1 style="font-size:20px;margin:0 0 16px;">{_mail_tr("Réinitialisation du mot de passe")}</h1>
+          <p style="color:#555;margin:0 0 24px;">{_mail_tr("Clique sur le bouton ci-dessous pour définir un nouveau mot de passe. Ce lien est valable <strong>{n}&nbsp;minutes</strong>.", n=ttl_minutes)}</p>
+          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">{_mail_tr("Réinitialiser mon mot de passe")}</a>
+          <p style="color:#999;font-size:12px;margin:24px 0 0;">{_mail_tr("Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :")}<br><a href="{safe_url}" style="color:#555;word-break:break-all;">{safe_url}</a></p>
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-          <p style="color:#bbb;font-size:12px;margin:0;">Si tu n’es pas à l’origine de cette demande, ignore cet email. Ton mot de passe ne changera pas.</p>
+          <p style="color:#bbb;font-size:12px;margin:0;">{_mail_tr("Si tu n’es pas à l’origine de cette demande, ignore cet email. Ton mot de passe ne changera pas.")}</p>
         </td></tr>
         <tr><td style="background:#f4f4f7;padding:16px 32px;text-align:center;">
           <span style="color:#bbb;font-size:12px;">© {datetime.now(timezone.utc).year} {html.escape(app_name)}</span>
@@ -11277,26 +11285,26 @@ def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at
     if subject_tpl:
         subject = subject_tpl.replace("{app}", app_name).replace("{brand}", app_name).strip()
     else:
-        subject = f"Vérifie ton email — {app_name}"
+        subject = _mail_tr("Vérifie ton email — {app}", app=app_name)
     if not subject:
-        subject = f"Vérifie ton email — {app_name}"
+        subject = _mail_tr("Vérifie ton email — {app}", app=app_name)
 
     safe_url = html.escape(str(verify_url).strip(), quote=True)
     body = "\n".join(
         [
-            "Bonjour,",
+            _mail_tr("Bonjour,"),
             "",
-            "Pour confirmer ton email, clique sur ce lien :",
+            _mail_tr("Pour confirmer ton email, clique sur ce lien :"),
             str(verify_url).strip(),
             "",
-            f"Ce lien est valable {ttl_hours} h.",
+            _mail_tr("Ce lien est valable {n} h.", n=ttl_hours),
             "",
-            "Si tu n’es pas à l’origine de cette demande, ignore cet email.",
+            _mail_tr("Si tu n’es pas à l’origine de cette demande, ignore cet email."),
             "",
         ]
     )
     html_body = f"""<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
+<html lang="{i18n.current_lang()}"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
     <tr><td align="center">
@@ -11305,12 +11313,12 @@ def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at
           <span style="color:#fff;font-size:18px;font-weight:700;">{html.escape(app_name)}</span>
         </td></tr>
         <tr><td style="padding:32px;">
-          <h1 style="font-size:20px;margin:0 0 16px;">Confirme ton adresse email</h1>
-          <p style="color:#555;margin:0 0 24px;">Clique sur le bouton ci-dessous pour vérifier ton adresse email. Ce lien est valable <strong>{ttl_hours}&nbsp;h</strong>.</p>
-          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Confirmer mon email</a>
-          <p style="color:#999;font-size:12px;margin:24px 0 0;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :<br><a href="{safe_url}" style="color:#555;word-break:break-all;">{safe_url}</a></p>
+          <h1 style="font-size:20px;margin:0 0 16px;">{_mail_tr("Confirme ton adresse email")}</h1>
+          <p style="color:#555;margin:0 0 24px;">{_mail_tr("Clique sur le bouton ci-dessous pour vérifier ton adresse email. Ce lien est valable <strong>{n}&nbsp;h</strong>.", n=ttl_hours)}</p>
+          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">{_mail_tr("Confirmer mon email")}</a>
+          <p style="color:#999;font-size:12px;margin:24px 0 0;">{_mail_tr("Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :")}<br><a href="{safe_url}" style="color:#555;word-break:break-all;">{safe_url}</a></p>
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-          <p style="color:#bbb;font-size:12px;margin:0;">Si tu n’es pas à l’origine de cette demande, ignore cet email.</p>
+          <p style="color:#bbb;font-size:12px;margin:0;">{_mail_tr("Si tu n’es pas à l’origine de cette demande, ignore cet email.")}</p>
         </td></tr>
         <tr><td style="background:#f4f4f7;padding:16px 32px;text-align:center;">
           <span style="color:#bbb;font-size:12px;">© {datetime.now(timezone.utc).year} {html.escape(app_name)}</span>
@@ -11324,20 +11332,20 @@ def _send_email_verification_email(*, to_email: str, verify_url: str, expires_at
 
 def _send_welcome_email(*, to_email: str, dashboard_url: str) -> None:
     app_name = _app_name()
-    subject = f"Bienvenue sur {app_name} !"
+    subject = _mail_tr("Bienvenue sur {app} !", app=app_name)
     safe_url = html.escape(str(dashboard_url).strip(), quote=True)
     body = "\n".join(
         [
-            f"Bienvenue sur {app_name} !",
+            _mail_tr("Bienvenue sur {app} !", app=app_name),
             "",
-            "Ton compte est prêt. Connecte-toi pour commencer ton audit SEO.",
+            _mail_tr("Ton compte est prêt. Connecte-toi pour commencer ton audit SEO."),
             str(dashboard_url).strip(),
             "",
-            f"— L'équipe {app_name}",
+            _mail_tr("— L'équipe {app}", app=app_name),
         ]
     )
     html_body = f"""<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
+<html lang="{i18n.current_lang()}"><head><meta charset="utf-8"><title>{html.escape(subject)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 0;">
     <tr><td align="center">
@@ -11346,11 +11354,11 @@ def _send_welcome_email(*, to_email: str, dashboard_url: str) -> None:
           <span style="color:#fff;font-size:18px;font-weight:700;">{html.escape(app_name)}</span>
         </td></tr>
         <tr><td style="padding:32px;">
-          <h1 style="font-size:20px;margin:0 0 16px;">Bienvenue sur {html.escape(app_name)} !</h1>
-          <p style="color:#555;margin:0 0 24px;">Ton compte est créé et prêt à l'emploi. Commence par ajouter ton premier site pour lancer un audit SEO complet.</p>
-          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Accéder au tableau de bord</a>
+          <h1 style="font-size:20px;margin:0 0 16px;">{_mail_tr("Bienvenue sur {app} !", app=html.escape(app_name))}</h1>
+          <p style="color:#555;margin:0 0 24px;">{_mail_tr("Ton compte est créé et prêt à l'emploi. Commence par ajouter ton premier site pour lancer un audit SEO complet.")}</p>
+          <a href="{safe_url}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">{_mail_tr("Accéder au tableau de bord")}</a>
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-          <p style="color:#bbb;font-size:12px;margin:0;">Tu reçois cet email car tu viens de créer un compte sur {html.escape(app_name)}.</p>
+          <p style="color:#bbb;font-size:12px;margin:0;">{_mail_tr("Tu reçois cet email car tu viens de créer un compte sur {app}.", app=html.escape(app_name))}</p>
         </td></tr>
         <tr><td style="background:#f4f4f7;padding:16px 32px;text-align:center;">
           <span style="color:#bbb;font-size:12px;">© {datetime.now(timezone.utc).year} {html.escape(app_name)}</span>
