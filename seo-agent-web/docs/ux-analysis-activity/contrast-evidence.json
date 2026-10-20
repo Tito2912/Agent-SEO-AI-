@@ -1,0 +1,2381 @@
+{
+  "method": "Texte calculé dans Chromium, couleurs RGBA compositées sur les fonds des ancêtres ; sélection ciblée des nouveaux textes et contrôles. Observations regroupées par extrait de texte avec minimum et maximum mesurés ; une occurrence est une mesure, pas un écran distinct. Ne constitue pas une certification complète.",
+  "samples": 3905,
+  "minimum_ratio": 4.58,
+  "below_4_5": 0,
+  "observations": [
+    {
+      "text": "",
+      "minimum_ratio": 4.58,
+      "maximum_ratio": 4.64,
+      "occurrences": 151,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "1 traitement(s) correspondant(s) sur les 9 affiché",
+      "minimum_ratio": 4.68,
+      "maximum_ratio": 4.68,
+      "occurrences": 8,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "10/10 pages · finalisation…",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 9,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-restored",
+        "activity-list",
+        "job-finalizing"
+      ]
+    },
+    {
+      "text": "5 pages visitées",
+      "minimum_ratio": 4.6,
+      "maximum_ratio": 4.66,
+      "occurrences": 34,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "5/10 pages",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 1,
+      "widths": [
+        390
+      ],
+      "screens": [
+        "job-session-expired"
+      ]
+    },
+    {
+      "text": "5/10 pages · 50%",
+      "minimum_ratio": 4.6,
+      "maximum_ratio": 4.66,
+      "occurrences": 27,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-restored",
+        "activity-list",
+        "job-cancel_requested",
+        "job-queued",
+        "job-running",
+        "job-update-unavailable"
+      ]
+    },
+    {
+      "text": "9 traitement(s) correspondant(s) sur les 9 affiché",
+      "minimum_ratio": 4.68,
+      "maximum_ratio": 4.68,
+      "occurrences": 6,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list"
+      ]
+    },
+    {
+      "text": "Actualiser le suivi",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Actualiser l’état",
+      "minimum_ratio": 13.87,
+      "maximum_ratio": 15.03,
+      "occurrences": 39,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-filtered-detail",
+        "job-cancel_requested",
+        "job-canceled",
+        "job-done",
+        "job-failed",
+        "job-finalizing",
+        "job-finished-after-refresh",
+        "job-missing",
+        "job-missing-no-premature-redirect",
+        "job-queued",
+        "job-running",
+        "job-update-unavailable"
+      ]
+    },
+    {
+      "text": "Analyse du site",
+      "minimum_ratio": 4.6,
+      "maximum_ratio": 4.66,
+      "occurrences": 62,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Analyses PageSpeed en parallèle. C'est de l'attent",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Appareil testé",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Attente maximale de PageSpeed (secondes)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Attente maximale par page (secondes)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Choisissez le nombre de pages ; les réglages exist",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Choisissez le type d’appareil à simuler ; ces mesu",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Cliquez sur « Choisir mon site » pour sélectionner",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Code ISO optionnel (fr, en, de…). Laissez vide pou",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Complète le bilan avec des mesures de chargement e",
+      "minimum_ratio": 4.59,
+      "maximum_ratio": 4.59,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Connexions simultanées",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Consulter le bilan de cette analyse",
+      "minimum_ratio": 6.33,
+      "maximum_ratio": 6.82,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-done",
+        "job-finished-after-refresh"
+      ]
+    },
+    {
+      "text": "Demander l’arrêt",
+      "minimum_ratio": 6.6,
+      "maximum_ratio": 6.6,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-finalizing",
+        "job-queued",
+        "job-running"
+      ]
+    },
+    {
+      "text": "Demander une nouvelle analyse",
+      "minimum_ratio": 6.82,
+      "maximum_ratio": 6.82,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-filtered-detail",
+        "job-canceled",
+        "job-failed"
+      ]
+    },
+    {
+      "text": "Données Bing à importer.",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Données GSC à importer. 90 jours recommandé.",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Données détaillées récupérées pour ces N pages pri",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Délai max avant d'abandonner une page. 10 s recomm",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Détecte les ressources cassées ou trop lourdes cha",
+      "minimum_ratio": 4.59,
+      "maximum_ratio": 4.59,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Effacer les filtres",
+      "minimum_ratio": 13.27,
+      "maximum_ratio": 14.45,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Exclure ces URLs",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Export CSV depuis Bing Webmaster Tools, si l'API n",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Expression régulière : seules les adresses corresp",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Fichier CSV — pages",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Fichier CSV — requêtes",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Full Access",
+      "minimum_ratio": 4.68,
+      "maximum_ratio": 6.06,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Identifiant : 0d3f96e657fe4ec29411e15ff81827fb",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 8,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-filtered-detail",
+        "job-failed"
+      ]
+    },
+    {
+      "text": "Identifiant : 2798ad6514c34c4b99b2961ea175e35c",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-cancel_requested"
+      ]
+    },
+    {
+      "text": "Identifiant : 6bb58b1108ae4ca283c73541dd822b0f",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-queued",
+        "job-session-expired"
+      ]
+    },
+    {
+      "text": "Identifiant : 881d6b2df38b4c369971e27ebdc94fc8",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-missing"
+      ]
+    },
+    {
+      "text": "Identifiant : b1bd9d49f1e346ad86e39031e8c23765",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-finalizing"
+      ]
+    },
+    {
+      "text": "Identifiant : b8f08189da314cc7ab16003b19818418",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-canceled"
+      ]
+    },
+    {
+      "text": "Identifiant : bbc9b3675ef3444aa26ac7811ce11930",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 5,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-finished-after-refresh",
+        "job-running"
+      ]
+    },
+    {
+      "text": "Identifiant : fb635a98b1b2433093f1a2e18183cf50",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 4,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "job-done"
+      ]
+    },
+    {
+      "text": "Identifiant du robot. Laissez vide pour la valeur ",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Identifiant envoyé par le robot aux serveurs visit",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Importe clics, impressions et erreurs d'indexation",
+      "minimum_ratio": 4.59,
+      "maximum_ratio": 4.59,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Importe clics, impressions, positions et anomalies",
+      "minimum_ratio": 4.59,
+      "maximum_ratio": 4.59,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Impressions min pour les alertes",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 114,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Indexabilité, balises meta, liens internes, canoni",
+      "minimum_ratio": 4.59,
+      "maximum_ratio": 4.59,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "L'API PageSpeed peut être lente. 30–60 s recommand",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Laissez vide pour auto-détection, ou cliquez \"Choi",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Langue des résultats",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Limite de ressources à vérifier",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Limiter l’analyse à ces adresses",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Limiter pour réduire la durée du crawl (API Google",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "L’analyse du site fonctionne sans Google, Bing ni ",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Mode de correction",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Nombre maximal de pages visitées. Votre plan autor",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Pages demandées en parallèle. Réduisez si votre hé",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Pages sous ce seuil sont ignorées dans les anomali",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Pages à analyser",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Pages à analyser en détail (max)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Pages à inspecter (max)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Pages à tester (max)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Par type (CSS, JS, images). 0 = illimité.",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Permet à l'agent de corriger les anomalies directe",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Propriété GSC",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Propriété sélectionnée. N'oubliez pas d'enregistre",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 8,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "settings-google-property-selected",
+        "settings-module-switch"
+      ]
+    },
+    {
+      "text": "Période d'analyse (jours)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 114,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Recharger la liste",
+      "minimum_ratio": 15.03,
+      "maximum_ratio": 15.03,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Regex — les URLs correspondantes sont ignorées.",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Requêtes simultanées",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Retrouver mon activité",
+      "minimum_ratio": 13.27,
+      "maximum_ratio": 14.45,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-filtered-detail",
+        "job-cancel_requested",
+        "job-canceled",
+        "job-done",
+        "job-failed",
+        "job-finalizing",
+        "job-finished-after-refresh",
+        "job-missing",
+        "job-missing-no-premature-redirect",
+        "job-queued",
+        "job-running",
+        "job-session-expired",
+        "job-update-unavailable"
+      ]
+    },
+    {
+      "text": "Retrouvez les analyses et les autres traitements d",
+      "minimum_ratio": 4.68,
+      "maximum_ratio": 4.68,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Revenir au site",
+      "minimum_ratio": 13.27,
+      "maximum_ratio": 14.45,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-filtered-detail",
+        "job-cancel_requested",
+        "job-canceled",
+        "job-done",
+        "job-failed",
+        "job-finalizing",
+        "job-finished-after-refresh",
+        "job-missing",
+        "job-missing-no-premature-redirect",
+        "job-queued",
+        "job-running",
+        "job-session-expired",
+        "job-update-unavailable"
+      ]
+    },
+    {
+      "text": "Site",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Site sélectionné. N’oubliez pas d’enregistrer.",
+      "minimum_ratio": 4.58,
+      "maximum_ratio": 4.58,
+      "occurrences": 12,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "settings-bing-property-selected",
+        "settings-google-property-selected",
+        "settings-module-switch"
+      ]
+    },
+    {
+      "text": "Suivez cette demande et retrouvez son résultat lor",
+      "minimum_ratio": 4.68,
+      "maximum_ratio": 4.68,
+      "occurrences": 40,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-filtered-detail",
+        "job-cancel_requested",
+        "job-canceled",
+        "job-done",
+        "job-failed",
+        "job-finalizing",
+        "job-finished-after-refresh",
+        "job-missing",
+        "job-missing-no-premature-redirect",
+        "job-queued",
+        "job-running",
+        "job-session-expired",
+        "job-update-unavailable"
+      ]
+    },
+    {
+      "text": "Timeout d'inspection (s)",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Type",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Type de résultat",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "URL de ce site dans Bing Webmaster Tools",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "User-Agent",
+      "minimum_ratio": 15.48,
+      "maximum_ratio": 15.48,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Voir le suivi de Atelier des vélos électriques et ",
+      "minimum_ratio": 13.55,
+      "maximum_ratio": 14.45,
+      "occurrences": 52,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "Voir le suivi de Autre atelier",
+      "minimum_ratio": 14.45,
+      "maximum_ratio": 14.45,
+      "occurrences": 10,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter"
+      ]
+    },
+    {
+      "text": "Votre plan analyse jusqu'à 30 pages par crawl. Les",
+      "minimum_ratio": 4.64,
+      "maximum_ratio": 4.64,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "Vérification",
+      "minimum_ratio": 4.68,
+      "maximum_ratio": 6.06,
+      "occurrences": 57,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "github-authorization-needed",
+        "github-confirmed-save",
+        "github-explicit-detach",
+        "github-lost-response",
+        "github-read-after-lost-response",
+        "github-save-refused",
+        "github-session-expired",
+        "settings-advanced",
+        "settings-bing-deep-link",
+        "settings-bing-property-selected",
+        "settings-essential",
+        "settings-exploration",
+        "settings-github",
+        "settings-google-property-selected",
+        "settings-member-readonly",
+        "settings-module-switch",
+        "settings-saved",
+        "settings-sources"
+      ]
+    },
+    {
+      "text": "État",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 14,
+      "widths": [
+        360,
+        390,
+        768,
+        1440
+      ],
+      "screens": [
+        "activity-access-lost",
+        "activity-access-restored",
+        "activity-list",
+        "activity-site-filter",
+        "activity-state-filter"
+      ]
+    },
+    {
+      "text": "État inaccessible",
+      "minimum_ratio": 4.66,
+      "maximum_ratio": 4.66,
+      "occurrences": 9,
+      "widths": [
+        390
+      ],
+      "screens": [
+        "activity-access-lost"
+      ]
+    }
+  ]
+}

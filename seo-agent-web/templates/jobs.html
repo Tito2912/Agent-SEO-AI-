@@ -1,34 +1,13 @@
 {% extends "layout.html" %}
-{% block title %}Exécutions - Noyaru{% endblock %}
-
-{% block head_extra %}
-  {% if jobs %}
-    {% set ns = namespace(live=false) %}
-    {% for j in jobs %}
-      {% if j.status in ['queued', 'running', 'cancel_requested'] %}
-        {% set ns.live = true %}
-      {% endif %}
-    {% endfor %}
-    {% if ns.live %}
-      <meta http-equiv="cache-control" content="no-store" />
-      <meta http-equiv="pragma" content="no-cache" />
-    {% endif %}
-  {% endif %}
-{% endblock %}
-
-{% block crumbs %}
-  <a href="/">Projets</a>
-  <span class="crumb-sep">/</span>
-  <span class="crumb-current">Exécutions</span>
-{% endblock %}
-
+{% block title %}Activité - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/activity.css?v=1" /><script src="/static/activity.js?v=1" defer></script>{% endblock %}
+{% block crumbs %}<a href="/">Mes sites</a><span class="crumb-sep">/</span><span class="crumb-current">Activité</span>{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>Exécutions</h1>
-    <p class="muted">Historique des analyses et audits multi-sites. Les analyses en cours se mettent à jour en temps réel.</p>
-  </div>
-
-  {% if jobs %}
+<div class="activity-page" data-activity-list>
+  <div class="page-header"><h1>Activité</h1><p class="muted">Retrouvez les analyses et les autres traitements de vos sites. « Terminé » décrit l’exécution ; ouvrez le suivi pour consulter le bilan disponible.</p></div>
+  {% if not jobs %}
+    <section class="card"><h2>Votre activité commencera avec une analyse</h2><p class="muted">Ajoutez votre site ou retrouvez-le pour demander un premier bilan.</p><a class="btn primary" href="/">Retrouver mes sites</a></section>
+  {% else %}
     {% set ns = namespace(live=0, done=0, failed=0) %}
     {% for j in jobs %}
       {% if j.status in ['queued', 'running', 'cancel_requested'] %}{% set ns.live = ns.live + 1 %}
@@ -38,214 +17,54 @@
     {% endfor %}
     <div class="stat-strip">
       <div class="stat-strip-item">
-        <div class="stat-strip-num">{{ jobs | length }}</div>
-        <div class="stat-strip-lbl">Total</div>
+        <div class="stat-strip-num" data-count-total>{{ jobs | length }}</div>
+        <div class="stat-strip-lbl">Traitements affichés</div>
       </div>
       {% if ns.live %}
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
-          <div class="stat-strip-num" style="color:var(--warn);">{{ ns.live }}</div>
-          <div class="stat-strip-lbl">En cours</div>
+          <div class="stat-strip-num" style="color:var(--warn);" data-count-active>{{ ns.live }}</div>
+          <div class="stat-strip-lbl">En attente ou en cours</div>
         </div>
       {% endif %}
       <div class="stat-strip-sep"></div>
       <div class="stat-strip-item">
-        <div class="stat-strip-num">{{ ns.done }}</div>
+        <div class="stat-strip-num" data-count-done>{{ ns.done }}</div>
         <div class="stat-strip-lbl">Terminés</div>
       </div>
       {% if ns.failed %}
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
-          <div class="stat-strip-num" style="color:var(--err);">{{ ns.failed }}</div>
-          <div class="stat-strip-lbl">Échecs</div>
+          <div class="stat-strip-num" style="color:var(--err);" data-count-stopped>{{ ns.failed }}</div>
+          <div class="stat-strip-lbl">Arrêtés ou en échec</div>
         </div>
       {% endif %}
     </div>
+
+    <form class="card activity-filters" data-activity-filters>
+      <div class="activity-filter-field"><label for="activity-filter-site">Site</label><select id="activity-filter-site" name="site"><option value="">Tous les sites affichés</option>{% set choices=namespace(ids=[]) %}{% for j in jobs if j.site_id and j.site_id not in choices.ids %}{% set _=choices.ids.append(j.site_id) %}<option value="{{ j.site_id }}">{{ j.site_name }}</option>{% endfor %}</select></div>
+      <div class="activity-filter-field"><label for="activity-filter-kind">Type</label><select id="activity-filter-kind" name="kind"><option value="">Tous les traitements</option><option value="crawl">Analyse d’un site</option><option value="autopilot">Audit de plusieurs sites</option><option value="other">Autres traitements</option></select></div>
+      <div class="activity-filter-field"><label for="activity-filter-status">État</label><select id="activity-filter-status" name="status"><option value="">Tous les états</option><option value="active">En attente ou en cours</option><option value="done">Terminés</option><option value="failed">En échec</option><option value="canceled">Annulés</option></select></div>
+      <button class="btn" type="reset">Effacer les filtres</button>
+    </form>
+    <p class="muted small" data-activity-count>Les filtres portent sur les {{ jobs|length }} traitements affichés : récents et encore actifs. Cet écran n’est pas un historique exhaustif.</p>
+    <div class="activity-refresh"><p id="activity-live-feedback" role="status" aria-live="polite"></p><button class="btn" type="button" data-refresh-activity>Actualiser le suivi</button><button class="btn" type="button" data-reload-activity>Recharger la liste</button></div>
+    <section class="card"><div class="table-wrap" tabindex="0" role="region" aria-label="Activité des sites, tableau à défilement horizontal">
+      <table class="table compact" id="jobs-table"><thead><tr><th scope="col">Site et traitement</th><th scope="col">État</th><th scope="col">Avancement</th><th scope="col">Date de la demande</th><th scope="col">Suivi</th></tr></thead><tbody>
+      {% for j in jobs %}
+        {% set live=j.status in ['queued','running','cancel_requested'] %}
+        {% set progress=j.progress or {} %}{% set current=progress.current|default(0)|int %}{% set total=progress.total|default(0)|int %}
+        {% set finalizing=live and total > 0 and current >= total %}{% set percent=99 if finalizing else ([100, ((current / total * 100)|round|int)]|min if total else 0) %}
+        <tr data-job-id="{{ j.id }}" data-site="{{ j.site_id }}" data-kind="{{ j.kind }}" data-status="{{ j.status }}" data-live="{{ '1' if live else '0' }}"{% if highlight_job_id == j.id %} class="highlight"{% endif %}>
+          <td data-label="Site et traitement"><strong>{{ j.site_name or ('Plusieurs sites' if j.kind == 'autopilot' else 'Traitement') }}</strong><span class="activity-meta muted small">{{ 'Analyse du site' if j.kind == 'crawl' else 'Audit multi-sites' if j.kind == 'autopilot' else 'Traitement' }}</span></td>
+          <td data-label="État"><span class="pill {{ j.status }}" data-role="status">{{ {'queued':'En attente','running':'En cours','cancel_requested':'Arrêt demandé','done':'Terminé','failed':'En échec','canceled':'Annulé'}.get(j.status,'État non reconnu') }}</span></td>
+          <td data-label="Avancement"><span class="muted small" data-role="progress-text">{% if total %}{% if live %}{{ current }}/{{ total }} {{ 'pages' if progress.type == 'crawl' else '' }} · {{ 'finalisation…' if finalizing else percent|string ~ '%' }}{% else %}{{ current }} {{ 'pages visitées' if progress.type == 'crawl' else 'sites traités' if progress.type == 'autopilot' else 'étapes traitées' }}{% endif %}{% else %}Non communiqué{% endif %}</span><div class="progress slim" data-role="progress-bar" role="progressbar" aria-label="Avancement du traitement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"{% if not total or not live %} hidden{% endif %}><div class="progress-fill" data-role="progress-fill" style="--p:{{ percent }}"></div></div></td>
+          <td data-label="Date"><span{% if j.display_timestamp %} data-ts-datetime="{{ j.display_timestamp }}"{% endif %}>{{ j.timestamp_label or 'Non renseignée' }}</span>{% if j.duration_label %}<span class="activity-meta muted small">{{ j.duration_label }}</span>{% endif %}</td>
+          <td><a class="btn" data-job-link href="/jobs/{{ j.id }}">Voir le suivi<span class="sr-only"> de {{ j.site_name or j.id[:8] }}</span></a></td>
+        </tr>
+      {% endfor %}
+      </tbody></table>
+    </div><p data-filter-empty hidden>Aucun traitement ne correspond à ces filtres. <button class="btn" type="button" data-clear-activity>Afficher toute l’activité</button></p></section>
   {% endif %}
-
-  <section class="card">
-    {% if not jobs %}
-      <p class="muted">Aucun job.</p>
-    {% else %}
-      <div class="table-wrap">
-        <table class="table compact" id="jobs-table">
-          <thead>
-            <tr>
-              <th>Site</th>
-              <th>Statut</th>
-              <th>Avancement</th>
-              <th class="num">Date</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for j in jobs %}
-              {% set is_live = j.status in ['queued', 'running', 'cancel_requested'] %}
-              {% set progress = j.progress if j.progress else none %}
-              {% if progress and progress.total %}
-                {% set cur = progress.current|int %}
-                {% set tot = progress.total|int %}
-                {% set pct = ((cur / tot) * 100) if tot else 0 %}
-              {% else %}
-                {% set cur = 0 %}
-                {% set tot = 0 %}
-                {% set pct = 0 %}
-              {% endif %}
-              {% set is_finalizing = is_live and tot and cur >= tot and pct >= 100 %}
-              {% set pct_display = 99 if is_finalizing else (pct|round(0)) %}
-              <tr
-                class="{% if highlight_job_id and j.id == highlight_job_id %}highlight{% endif %}"
-                data-job-id="{{ j.id }}"
-                data-live="{{ '1' if is_live else '0' }}"
-              >
-                <td>
-                  {% if j.kind == 'crawl' and j.slug %}
-                    <div><a href="/projects/{{ j.slug }}">{{ j.slug }}</a></div>
-                    <div class="muted small mono">{{ j.id[:8] }}</div>
-                  {% elif j.kind == 'autopilot' %}
-                    <div>Multi-sites</div>
-                    <div class="muted small mono">{{ j.id[:8] }}</div>
-                  {% else %}
-                    <div class="mono">{{ j.id[:8] }}</div>
-                  {% endif %}
-                </td>
-                <td><span class="pill {{ j.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(j.status, j.status) }}</span></td>
-                <td>
-                  <div class="muted small mono" data-role="progress-text">
-                    {% if progress and progress.total %}
-                      {% if progress.type == 'crawl' %}
-                        {% if is_finalizing %}{{ cur }}/{{ tot }} pages · finalisation…{% else %}{{ cur }}/{{ tot }} pages · {{ pct_display }}%{% endif %}
-                      {% else %}
-                        {% if is_finalizing %}{{ cur }}/{{ tot }} · finalisation…{% else %}{{ cur }}/{{ tot }} · {{ pct_display }}%{% endif %}
-                      {% endif %}
-                      {% if progress.site %}
-                        - {{ progress.site }}
-                      {% endif %}
-                    {% else %}
-                      -
-                    {% endif %}
-                  </div>
-                  <div
-                    class="progress slim {% if progress and progress.type == 'crawl' %}crawl{% endif %}"
-                    data-role="progress-bar"
-                    {% if not (progress and progress.total) %}style="display:none;"{% endif %}
-                  >
-                    <div class="progress-fill" data-role="progress-fill" style="--p: {{ pct_display }};"></div>
-                  </div>
-                </td>
-                <td class="num mono" data-role="ts">
-                  <div {% if j.timestamp %}data-ts-datetime="{{ j.timestamp }}"{% endif %}>{{ j.timestamp_label }}</div>
-                  {% if j.duration_label %}<div class="muted small">{{ j.duration_label }}</div>{% endif %}
-                </td>
-                <td class="actions"><a class="btn" href="/jobs/{{ j.id }}">Ouvrir</a></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% endif %}
-  </section>
-
-  {% if jobs %}
-    <script>
-      (() => {
-        const highlight = document.querySelector("tr.highlight[data-job-id]");
-        if (highlight && highlight.scrollIntoView) {
-          highlight.scrollIntoView({ block: "center" });
-        }
-
-        const liveRows = () => Array.from(document.querySelectorAll('tr[data-job-id][data-live="1"]'));
-        if (!liveRows().length) return;
-
-        const pollMs = 1000;
-
-        function statusLabel(status) {
-          const map = {
-            queued: "en attente",
-            running: "en cours",
-            cancel_requested: "annulation…",
-            done: "terminé",
-            failed: "échec",
-            canceled: "annulé",
-          };
-          return map[status] || status;
-        }
-
-        function formatShortDateFromRunTs(value) {
-          if (!value || !/^\d{8}-\d{6}$/.test(value)) return null;
-          const yy = value.slice(2, 4);
-          const mm = value.slice(4, 6);
-          const dd = value.slice(6, 8);
-          const hh = value.slice(9, 11);
-          const mn = value.slice(11, 13);
-          return `${dd}/${mm}/${yy} ${hh}:${mn}`;
-        }
-
-        async function pollOne(row) {
-          const jobId = row.dataset.jobId;
-          if (!jobId) return;
-          try {
-            const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}?tail=1`, { cache: "no-store" });
-            if (!res.ok) return;
-            const data = await res.json();
-
-            const statusEl = row.querySelector('[data-role="status"]');
-            const progressText = row.querySelector('[data-role="progress-text"]');
-            const progressBar = row.querySelector('[data-role="progress-bar"]');
-            const progressFill = row.querySelector('[data-role="progress-fill"]');
-            const tsEl = row.querySelector('[data-role="ts"]');
-
-            if (statusEl) {
-              const status = (data && data.status) ? String(data.status) : "";
-              statusEl.textContent = statusLabel(status);
-              statusEl.className = `pill ${status}`;
-            }
-
-            if (tsEl && data && data.result && data.result.timestamp) {
-              const d = formatShortDateFromRunTs(String(data.result.timestamp || ""));
-              if (d) tsEl.textContent = d;
-            }
-
-            const progress = data ? data.progress : null;
-            if (progressText && progressBar && progressFill && progress && progress.total) {
-              const cur = Number(progress.current || 0);
-              const tot = Number(progress.total || 0);
-              const isLive = data && (data.status === "queued" || data.status === "running" || data.status === "cancel_requested");
-              const isFinalizing = isLive && tot > 0 && cur >= tot;
-              let pct = tot ? Math.round((cur / tot) * 100) : 0;
-              if (isFinalizing && pct >= 100) pct = 99;
-              progressFill.style.setProperty("--p", String(pct));
-              const base = progress.type === "crawl" ? `${cur}/${tot} pages` : `${cur}/${tot}`;
-              const suffix = isFinalizing ? " · finalisation…" : ` · ${pct}%`;
-              const label = `${base}${suffix}`;
-              const site = progress.site ? ` - ${progress.site}` : "";
-              progressText.textContent = `${label}${site}`;
-              progressBar.style.display = "";
-            } else if (progressText && progressBar) {
-              progressText.textContent = "-";
-              progressBar.style.display = "none";
-            }
-
-            if (data && (data.status === "done" || data.status === "failed" || data.status === "canceled")) {
-              row.dataset.live = "0";
-            }
-          } catch (_) {
-            // ignore
-          }
-        }
-
-        async function pollAll() {
-          const rows = liveRows();
-          if (!rows.length) {
-            clearInterval(timer);
-            return;
-          }
-          await Promise.all(rows.map(pollOne));
-        }
-
-        const timer = setInterval(pollAll, pollMs);
-        pollAll();
-      })();
-    </script>
-  {% endif %}
+</div>
 {% endblock %}

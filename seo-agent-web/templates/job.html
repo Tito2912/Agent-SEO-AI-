@@ -1,187 +1,42 @@
 {% extends "layout.html" %}
-{% block title %}Exécution - Noyaru{% endblock %}
-
-{% block head_extra %}
-  <meta http-equiv="cache-control" content="no-store" />
-  <meta http-equiv="pragma" content="no-cache" />
-{% endblock %}
-
-{% block crumbs %}
-  <a href="/">Projets</a>
-  <span class="crumb-sep">/</span>
-  <a href="/jobs">Exécutions</a>
-  <span class="crumb-sep">/</span>
-  <span class="crumb-current">Exécution</span>
-{% endblock %}
-
+{% from '_correction_progress.html' import steps %}
+{% block title %}{{ activity.title if activity else 'Suivi introuvable' }} - Noyaru{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/activity.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/activity.js?v=1" defer></script>{% endblock %}
+{% block crumbs %}<a href="/">Mes sites</a><span class="crumb-sep">/</span><a href="{{ activity_return or '/jobs' }}">Activité</a><span class="crumb-sep">/</span><span class="crumb-current">Suivi</span>{% endblock %}
 {% block content %}
-  <div class="page-header">
-    <h1>Exécution</h1>
-    <p class="muted">Suivi et détails d'exécution.</p>
-  </div>
-
-      {% if not job %}
-        <section class="card"><p>Exécution introuvable.</p></section>
-      {% else %}
-        {% set job_kind = (job.result or {}).get('type', '') %}
-        {% set job_slug = (job.result or {}).get('slug', '') %}
-        <section class="card">
-          <div class="card-title-row">
-            <div>
-              <h2 style="margin:0; font-size:15px;">{{ 'Analyse du site' if job_kind == 'crawl' else 'Traitement' }}{% if job_slug %} · {{ job_slug }}{% endif %}</h2>
-              {% if job_kind == 'crawl' and job_slug %}
-                <div class="muted small mono" style="margin-top:2px;">analyse du site</div>
-              {% elif job_kind == 'autopilot' %}
-                <div class="muted small mono" style="margin-top:2px;">audit multi-sites</div>
-              {% endif %}
-            </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span id="job-status-pill" class="pill {{ job.status }}">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(job.status, job.status) }}</span>
-              {% if job.status in ['queued', 'running', 'cancel_requested'] %}
-                <form method="post" action="/jobs/{{ job.id }}/cancel" class="inline">
-                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                  <button type="submit" class="btn danger">Annuler</button>
-                </form>
-              {% endif %}
-              {% if job.status in ['failed', 'canceled'] %}
-                <form method="post" action="/jobs/{{ job.id }}/retry" class="inline">
-                  <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-                  <button type="submit" class="btn primary">Relancer</button>
-                </form>
-              {% endif %}
-            </div>
-          </div>
-
-          {% set progress = job.progress if job.progress else none %}
-          {% if progress and progress.total %}
-            {% set cur = progress.current|int %}
-            {% set tot = progress.total|int %}
-            {% set pct = ((cur / tot) * 100) if tot else 0 %}
-          {% else %}
-            {% set cur = 0 %}
-            {% set tot = 0 %}
-            {% set pct = 0 %}
-          {% endif %}
-          {% if job.status in ['queued', 'running'] and tot and cur >= tot and pct >= 100 %}
-            {% set pct = 99 %}
-          {% endif %}
-
-          <div id="job-progress" {% if not (progress and progress.total) %}style="display:none;"{% endif %}>
-            <div class="progress-row">
-              <span class="muted small" id="progress-kind">
-                {% if progress and progress.type == 'crawl' %}
-                  Pages:
-                {% elif progress and progress.type == 'autopilot' %}
-                  Sites:
-                {% else %}
-                  Avancement:
-                {% endif %}
-              </span>
-              <span class="mono" id="progress-count">
-                {% if progress and progress.type == 'crawl' %}
-                  {{ cur }}/{{ tot }} pages
-                {% else %}
-                  {{ cur }}/{{ tot }}
-                {% endif %}
-              </span>
-              <span class="muted small" id="progress-site">
-                {% if progress and progress.type == 'autopilot' and progress.site %}
-                  - {{ progress.site }}
-                {% endif %}
-              </span>
-              <span class="muted small mono" id="progress-pct">{{ pct|round(0) }}%</span>
-            </div>
-            <div id="progress-bar" class="progress {% if progress and progress.type == 'crawl' %}crawl{% endif %}">
-              <div class="progress-fill" id="progress-fill" style="--p: {{ pct|round(0) }};"></div>
-            </div>
-          </div>
-        </section>
-
-        {% if latest %}
-        <section class="card">
-          <div class="card-title-row">
-            <h2>Dernier run global</h2>
-            <span class="muted small mono">{{ latest.timestamp }}</span>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            {% if latest.sites_summary_md %}
-              <a class="btn" href="/file?path={{ latest.sites_summary_md }}" style="font-size:12px;">sites-summary.md</a>
-            {% endif %}
-            {% if latest.interlinking_md %}
-              <a class="btn" href="/file?path={{ latest.interlinking_md }}" style="font-size:12px;">interlinking-plan.md</a>
-            {% endif %}
-          </div>
-        </section>
-        {% endif %}
-
-        {% set result = job.result if job.result else none %}
-        <section class="card" id="job-result" {% if not result %}style="display:none;"{% endif %}>
-          <div class="card-title-row"><h2>Résultat</h2></div>
-          <p>
-            <a
-              id="job-result-link"
-              class="btn primary"
-              href="{% if result and result.type == 'crawl' %}{{ result.project_url }}{% elif result and result.type == 'autopilot' %}/{% else %}#{% endif %}"
-            >
-              {% if result and result.type == 'crawl' %}
-                Voir les résultats de l’analyse
-              {% elif result and result.type == 'autopilot' %}
-                Ouvrir les projets
-              {% else %}
-                Ouvrir
-              {% endif %}
-            </a>
-            <span id="job-result-ts" class="muted small mono">{% if result and result.timestamp %}{{ result.timestamp[6:8] }}/{{ result.timestamp[4:6] }}/{{ result.timestamp[:4] }}{% endif %}</span>
-          </p>
-          <p id="job-result-files" class="muted small" style="display:none;">
-            <span id="job-result-files-label">Rapport:</span>
-            <a id="job-result-md" href="#">report.md</a>
-            <span id="job-result-files-sep"> · </span>
-            <a id="job-result-json" href="#">report.json</a>
-          </p>
-        </section>
-
-        <details class="card screen-options">
-          <summary>Détails techniques et journaux</summary>
-          <p class="muted small">Identifiant : <code>{{ job.id }}</code></p>
-          {% if job.command %}
-            <p class="muted">Commande: <span id="job-command" class="mono">{{ job.command }}</span></p>
-          {% endif %}
-          <p id="job-returncode" {% if job.returncode is none %}style="display:none;"{% endif %}>
-            Code de retour: <span class="mono" id="job-returncode-val">{{ job.returncode }}</span>
-          </p>
-
-          <div class="card-title-row">
-            <h2>Journaux</h2>
-            <div class="tab-buttons" id="log-tabs" style="margin:0;">
-              <button type="button" class="tab-btn active" data-log-tab="stdout">Sortie standard</button>
-              <button type="button" class="tab-btn" data-log-tab="stderr">Erreurs</button>
-            </div>
-          </div>
-          <div id="log-stdout-wrap">
-            <pre id="job-stdout" style="max-height:420px;overflow-y:auto;font-size:11px;line-height:1.6;margin:0;">{{ job.stdout or "Aucune sortie." }}</pre>
-          </div>
-          <div id="log-stderr-wrap" style="display:none;">
-            <pre id="job-stderr" style="max-height:420px;overflow-y:auto;font-size:11px;line-height:1.6;margin:0;color:{% if job.stderr %}var(--err){% else %}var(--muted){% endif %};">{{ job.stderr or "Aucune sortie d'erreur." }}</pre>
-          </div>
-          <script>
-            (() => {
-              const tabs = document.querySelectorAll('[data-log-tab]');
-              const stdoutWrap = document.getElementById('log-stdout-wrap');
-              const stderrWrap = document.getElementById('log-stderr-wrap');
-              tabs.forEach(btn => {
-                btn.addEventListener('click', () => {
-                  tabs.forEach(b => b.classList.remove('active'));
-                  btn.classList.add('active');
-                  const target = btn.dataset.logTab;
-                  if (stdoutWrap) stdoutWrap.style.display = target === 'stdout' ? '' : 'none';
-                  if (stderrWrap) stderrWrap.style.display = target === 'stderr' ? '' : 'none';
-                });
-              });
-            })();
-          </script>
-        </details>
-
+{% if not job %}
+  <section class="card"><h1>Ce suivi n’est pas accessible</h1><p class="muted">Le traitement n’existe plus ou n’est pas disponible dans votre compte.</p><a class="btn primary" href="/jobs">Retrouver mon activité</a></section>
+{% else %}
+<div class="activity-page" data-activity-detail data-job-id="{{ job.id }}" data-status="{{ job.status }}" data-kind="{{ activity.kind }}">
+  <div class="page-header"><h1>{{ activity.title }}</h1><p class="muted">Suivez cette demande et retrouvez son résultat lorsqu’il est disponible.</p></div>
+  {% if activity.active or job.status == 'done' %}{{ steps(activity.stage, complete=false, labels=['Demandé','En cours','Finaliser','Consulter'], aria_label="Progression de l’analyse") }}{% endif %}
+  <section class="card activity-state">
+    <span class="pill {{ job.status }}" id="job-status-pill" role="status">{{ {'queued':'En attente','running':'En cours','cancel_requested':'Arrêt demandé','done':'Terminé','failed':'En échec','canceled':'Annulé'}.get(job.status,'État non reconnu') }}</span>
+    <h2 id="activity-headline">{{ activity.headline }}</h2><p id="activity-message">{{ activity.message }}</p>
+    {% set current=(job.progress or {}).get('current',0)|int %}{% set total=(job.progress or {}).get('total',0)|int %}
+    {% set percent=99 if activity.active and total > 0 and current >= total else ([100, (current / total * 100)|round|int]|min if total else 0) %}
+    <div id="job-progress"{% if not activity.active or not (job.progress and job.progress.total) %} hidden{% endif %}>
+      <p id="progress-count" class="muted small">{% if job.progress and job.progress.total %}{{ job.progress.current }}/{{ job.progress.total }}{% if job.progress.type == 'crawl' %} pages{% endif %}{% endif %}</p>
+      <div class="progress slim" id="progress-bar" role="progressbar" aria-label="Avancement du traitement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><div class="progress-fill" id="progress-fill" style="--p:{{ percent }}"></div></div>
+    </div>
+    <div class="activity-actions">
+      <a class="btn primary" id="job-result-link" href="{{ activity.report_url or '#' }}"{% if not activity.report_ready %} hidden{% endif %}>Consulter le bilan de cette analyse</a>
+      {% if activity.project_url %}<a class="btn" href="{{ activity.project_url }}">Revenir au site</a>{% endif %}
+      <form action="/jobs/{{ job.id }}/cancel" method="post" data-job-cancel{% if not activity.active %} hidden{% endif %}><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn danger" type="submit"{% if job.status == 'cancel_requested' %} disabled{% endif %}>Demander l’arrêt</button></form>
+      <form action="/jobs/{{ job.id }}/retry" method="post" data-job-retry{% if job.status not in ['failed','canceled'] %} hidden{% endif %}><input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><button class="btn primary" type="submit">{{ 'Demander une nouvelle analyse' if activity.kind == 'crawl' else 'Relancer ce traitement' }}</button></form>
+      <a class="btn" href="{{ activity_return or '/jobs' }}">Retrouver mon activité</a>
+    </div>
+  </section>
+  <div class="activity-refresh"><p id="activity-live-feedback" role="status" aria-live="polite"></p><button class="btn" type="button" data-refresh-activity>Actualiser l’état</button></div>
+  <details class="card screen-options" id="activity-technical"><summary>Détails techniques et journaux</summary>
+    <p class="muted small">Identifiant : <code>{{ job.id }}</code></p>
+    {% if job.command %}<p class="muted small">Commande : <code>{{ job.command }}</code></p>{% endif %}
+    <p id="job-returncode" class="muted small"{% if job.returncode is none %} hidden{% endif %}>Code de retour : <span id="job-returncode-val">{{ job.returncode if job.returncode is not none else '' }}</span></p>
+    <h2>Journal du traitement</h2><pre id="job-stdout">{{ job.stdout or 'Aucune sortie disponible.' }}</pre>
+    <h2>Messages d’erreur</h2><pre id="job-stderr">{{ job.stderr or 'Aucun message d’erreur enregistré.' }}</pre>
+    {% if activity.report_ready and job.result %}<p class="small">{% if job.result.report_md %}<a href="/file?path={{ job.result.report_md|urlencode }}">Rapport en texte (Markdown)</a>{% endif %}{% if job.result.report_json %} · <a href="/file?path={{ job.result.report_json|urlencode }}">Données du rapport (JSON)</a>{% endif %}</p>{% endif %}
+    {% if latest %}<h2>Dernier audit multi-sites de la plateforme</h2>{% if latest.sites_summary_md %}<a href="/file?path={{ latest.sites_summary_md|urlencode }}">Synthèse des sites</a>{% endif %}{% if latest.interlinking_md %} · <a href="/file?path={{ latest.interlinking_md|urlencode }}">Plan des liens</a>{% endif %}{% endif %}
+  </details>
         {% if corrections_plan %}
         <section class="card">
           <div class="card-title-row"><h2>Plan de corrections proposé</h2></div>
@@ -220,229 +75,7 @@
           </form>
         </section>
         {% endif %}
-      {% endif %}
 
-      {% if job %}
-        <p id="job-live-note" class="muted small" {% if job.status not in ['queued', 'running', 'cancel_requested'] %}style="display:none;"{% endif %}>
-          Mise à jour en temps réel…
-        </p>
-          <script>
-          (() => {
-            const jobId = "{{ job.id }}";
-            const pollMs = 1000;
-            const tail = 200000;
-            const shouldAutoRedirect = (() => {
-              try {
-                const params = new URLSearchParams(window.location.search);
-                return params.get("autoredirect") === "1";
-              } catch (_) {
-                return false;
-              }
-            })();
-            let hasRedirected = false;
-
-            const statusEl = document.getElementById("job-status-pill");
-            const rcRow = document.getElementById("job-returncode");
-            const rcVal = document.getElementById("job-returncode-val");
-            const stdoutEl = document.getElementById("job-stdout");
-            const stderrEl = document.getElementById("job-stderr");
-            const liveNote = document.getElementById("job-live-note");
-
-            const resultWrap = document.getElementById("job-result");
-            const resultLink = document.getElementById("job-result-link");
-            const resultTs = document.getElementById("job-result-ts");
-            const resultFiles = document.getElementById("job-result-files");
-            const resultFilesLabel = document.getElementById("job-result-files-label");
-            const resultFilesSep = document.getElementById("job-result-files-sep");
-            const resultMd = document.getElementById("job-result-md");
-            const resultJson = document.getElementById("job-result-json");
-
-            const progressWrap = document.getElementById("job-progress");
-            const pKind = document.getElementById("progress-kind");
-            const pCount = document.getElementById("progress-count");
-            const pSite = document.getElementById("progress-site");
-            const pPct = document.getElementById("progress-pct");
-            const pBar = document.getElementById("progress-bar");
-            const pFill = document.getElementById("progress-fill");
-
-            function statusLabel(status) {
-              const map = {
-                queued: "en attente",
-                running: "en cours",
-                cancel_requested: "annulation…",
-                done: "terminé",
-                failed: "échec",
-                canceled: "annulé",
-              };
-              return map[status] || status;
-            }
-
-            function renderProgress(progress, status) {
-              if (!progressWrap || !pKind || !pCount || !pSite || !pPct || !pFill) return;
-              if (!progress || !progress.total) {
-                progressWrap.style.display = "none";
-                return;
-              }
-
-              const cur = Number(progress.current || 0);
-              const tot = Number(progress.total || 0);
-              const isLive = status === "queued" || status === "running" || status === "cancel_requested";
-              const isFinalizing = isLive && tot > 0 && cur >= tot;
-              let pct = tot ? Math.round((cur / tot) * 100) : 0;
-              if (isFinalizing && pct >= 100) pct = 99;
-
-              if (progress.type === "crawl") {
-                if (pBar) pBar.classList.add("crawl");
-                pKind.textContent = "Crawl:";
-                pCount.textContent = `${cur}/${tot} pages`;
-                pSite.textContent = isFinalizing ? "- finalisation…" : "";
-              } else if (progress.type === "autopilot") {
-                if (pBar) pBar.classList.remove("crawl");
-                pKind.textContent = "Sites:";
-                pCount.textContent = `${cur}/${tot}`;
-                const site = progress.site ? `- ${progress.site}` : "";
-                pSite.textContent = isFinalizing ? `${site}${site ? " · " : "- "}finalisation…` : site;
-              } else {
-                if (pBar) pBar.classList.remove("crawl");
-                pKind.textContent = "Progress:";
-                pCount.textContent = `${cur}/${tot}`;
-                pSite.textContent = isFinalizing ? "- finalisation…" : "";
-              }
-
-              pPct.textContent = `${pct}%`;
-              pFill.style.setProperty("--p", String(pct));
-              progressWrap.style.display = "";
-            }
-
-            function render(data) {
-              const status = (data && data.status) ? String(data.status) : "";
-              if (statusEl) {
-                statusEl.textContent = statusLabel(status);
-                statusEl.className = `pill ${status}`;
-              }
-
-              if (liveNote) {
-                liveNote.style.display = (status === "queued" || status === "running" || status === "cancel_requested") ? "" : "none";
-              }
-
-              if (rcRow && rcVal) {
-                if (data && data.returncode !== null && data.returncode !== undefined) {
-                  rcVal.textContent = String(data.returncode);
-                  rcRow.style.display = "";
-                } else {
-                  rcRow.style.display = "none";
-                }
-              }
-
-              renderProgress(data ? data.progress : null, status);
-
-              const result = data && data.result ? data.result : null;
-              if (resultWrap) {
-                resultWrap.style.display = result ? "" : "none";
-              }
-              if (result && resultLink) {
-                if (result.type === "crawl" && result.project_url) {
-                  resultLink.href = String(result.project_url);
-                  resultLink.textContent = "Voir les résultats de l’analyse";
-                } else if (result.type === "autopilot") {
-                  resultLink.href = "/";
-                  resultLink.textContent = "Ouvrir les projets";
-                }
-              }
-              if (resultTs) {
-                const ts = (result && result.timestamp) ? String(result.timestamp) : "";
-                resultTs.textContent = /^\d{8}-\d{6}$/.test(ts) ? `${ts.slice(6,8)}/${ts.slice(4,6)}/${ts.slice(0,4)}` : "";
-              }
-
-              if (resultFiles && resultFilesLabel && resultMd && resultJson) {
-                const showSep = (show) => {
-                  if (!resultFilesSep) return;
-                  resultFilesSep.style.display = show ? "" : "none";
-                };
-
-                if (result && result.type === "crawl" && result.report_md && result.report_json) {
-                  resultFilesLabel.textContent = "Rapport:";
-                  resultMd.textContent = "report.md";
-                  resultJson.textContent = "report.json";
-                  resultMd.href = `/file?path=${encodeURIComponent(String(result.report_md))}`;
-                  resultJson.href = `/file?path=${encodeURIComponent(String(result.report_json))}`;
-                  showSep(true);
-                  resultJson.style.display = "";
-                  resultFiles.style.display = "";
-                } else if (result && result.type === "autopilot" && (result.sites_summary_md || result.interlinking_md)) {
-                  resultFilesLabel.textContent = "Fichiers:";
-                  if (result.sites_summary_md) {
-                    resultMd.textContent = "sites-summary.md";
-                    resultMd.href = `/file?path=${encodeURIComponent(String(result.sites_summary_md))}`;
-                    resultMd.style.display = "";
-                  } else {
-                    resultMd.style.display = "none";
-                  }
-                  if (result.interlinking_md) {
-                    resultJson.textContent = "interlinking-plan.md";
-                    resultJson.href = `/file?path=${encodeURIComponent(String(result.interlinking_md))}`;
-                    resultJson.style.display = "";
-                    showSep(result.sites_summary_md);
-                  } else {
-                    resultJson.style.display = "none";
-                    showSep(false);
-                  }
-                  resultFiles.style.display = "";
-                } else {
-                  resultFiles.style.display = "none";
-                }
-              }
-
-              if (stdoutEl && typeof data.stdout === "string") stdoutEl.textContent = data.stdout;
-              if (stderrEl && typeof data.stderr === "string") stderrEl.textContent = data.stderr;
-            }
-
-            function inferJobKind(data) {
-              const resultType = data && data.result ? data.result.type : null;
-              if (resultType === "crawl" || resultType === "autopilot") return resultType;
-
-              if (Array.isArray(data && data.command)) {
-                const cmd = data.command.join(" ").toLowerCase();
-                if (cmd.includes("seo_audit.py")) return "crawl";
-                if (cmd.includes("seo_autopilot.py")) return "autopilot";
-              }
-              return null;
-            }
-
-            function redirectTarget(data) {
-              const kind = inferJobKind(data);
-              if (kind === "crawl") {
-                const url = data && data.result ? data.result.project_url : null;
-                return url ? String(url) : null;
-              }
-              if (kind === "autopilot") return "/";
-              return null;
-            }
-
-            async function poll() {
-              try {
-                const res = await fetch(`/api/jobs/${jobId}?tail=${tail}`, { cache: "no-store" });
-                if (!res.ok) return;
-                const data = await res.json();
-                render(data);
-                if (data && (data.status === "done" || data.status === "failed" || data.status === "canceled")) {
-                  clearInterval(timer);
-                }
-                if (!hasRedirected && shouldAutoRedirect && data && data.status === "done") {
-                  const target = redirectTarget(data);
-                  if (target) {
-                    hasRedirected = true;
-                    window.location.href = target;
-                  }
-                }
-              } catch (_) {
-                // Ignore transient failures (server reload, network hiccup, etc.)
-              }
-            }
-
-            const timer = setInterval(poll, pollMs);
-            poll();
-          })();
-        </script>
-      {% endif %}
+</div>
+{% endif %}
 {% endblock %}
