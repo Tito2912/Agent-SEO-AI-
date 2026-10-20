@@ -1,30 +1,30 @@
 {% extends "layout.html" %}
 {% from "_cms_workflow.html" import steps %}
-{% block title %}Préparer une correction WordPress{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% endblock %}
-{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">Préparer</span>{% endblock %}
+{% block title %}{{ tr("Préparer une correction WordPress") }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=3" defer></script>{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">{{ tr("CMS et intégrations") }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Préparer") }}</span>{% endblock %}
 {% block content %}<div class="cms-page">
-  <div class="page-header"><h1>Préparer {% if field == 'seo_title' %}le titre SEO{% else %}la méta-description{% endif %}</h1><p class="muted">{{ task.issue_label }}</p></div>
+  <div class="page-header"><h1>{% if field == 'seo_title' %}{{ tr("Préparer le titre SEO") }}{% else %}{{ tr("Préparer la méta-description") }}{% endif %}</h1><p class="muted">{{ tr(task.issue_label) }}</p></div>
   {{ steps(1) }}
-  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
+  {% if err %}<div class="alert error" role="alert">{{ tr(err) }}</div>{% endif %}
   <section class="card">
     <h2>{{ page.post_title }}</h2><p class="cms-url"><a href="{{ task.url }}" target="_blank" rel="noreferrer">{{ task.url }}</a></p>
-    <p class="muted">Valeur actuelle affichée : {{ page[field ~ '_rendered'] or 'Non renseignée' }}</p>
+    <p class="muted">{{ tr("Valeur actuelle affichée :") }} {{ page[field ~ '_rendered'] or tr('Non renseignée') }}</p>
     {% if can_suggest %}
       <form method="post" action="/projects/{{ slug }}/cms/wordpress/suggest" class="cms-form" id="cms-suggest">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
-        <button class="btn primary" type="submit" data-busy-label="Rédaction en cours…">Proposer un texte</button>
-        <p class="muted small">Noyaru rédige une proposition à partir de cette page, dans la bonne longueur. Elle compte pour une correction IA de votre forfait, et rien n’est modifié sur votre site avant votre validation.</p>
+        <button class="btn primary" type="submit" data-busy-label="{{ tr('Rédaction en cours…') }}">{{ tr("Proposer un texte") }}</button>
+        <p class="muted small">{{ tr("Noyaru rédige une proposition à partir de cette page, dans la bonne longueur. Elle compte pour une correction IA de votre forfait, et rien n’est modifié sur votre site avant votre validation.") }}</p>
       </form>
     {% endif %}
     <form method="post" action="/projects/{{ slug }}/cms/wordpress/preview" class="cms-form">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="task_id" value="{{ task.id }}" />
       {% set initial = draft or page[field] or '' %}
-      {% if can_suggest %}<p class="muted small">Ou écrivez-le vous-même :</p>{% endif %}
-      <label>{{ field_label }}{% if field == 'seo_title' %}<input name="value" value="{{ initial }}" maxlength="400" required />{% else %}<textarea name="value" maxlength="2000" rows="4" required>{{ initial }}</textarea>{% endif %}</label>
-      <p class="muted small">Écrivez un texte précis et propre à cette page. {% if field == 'seo_title' %}Visez environ 50 à 60 caractères.{% else %}Visez environ 140 à 160 caractères.{% endif %}</p>
-      <button class="btn {% if not can_suggest %}primary{% endif %}" type="submit" data-busy-label="Préparation de l’aperçu…">Voir l’avant/après</button>
-      <p class="muted small">Votre site sera modifié seulement après votre validation de l’aperçu. Vous pourrez ensuite vérifier le résultat ici.</p>
+      {% if can_suggest %}<p class="muted small">{{ tr("Ou écrivez-le vous-même :") }}</p>{% endif %}
+      <label>{{ tr(field_label) }}{% if field == 'seo_title' %}<input name="value" value="{{ initial }}" maxlength="400" required />{% else %}<textarea name="value" maxlength="2000" rows="4" required>{{ initial }}</textarea>{% endif %}</label>
+      <p class="muted small">{{ tr("Écrivez un texte précis et propre à cette page.") }} {% if field == 'seo_title' %}{{ tr("Visez environ 50 à 60 caractères.") }}{% else %}{{ tr("Visez environ 140 à 160 caractères.") }}{% endif %}</p>
+      <button class="btn {% if not can_suggest %}primary{% endif %}" type="submit" data-busy-label="{{ tr('Préparation de l’aperçu…') }}">{{ tr("Voir l’avant/après") }}</button>
+      <p class="muted small">{{ tr("Votre site sera modifié seulement après votre validation de l’aperçu. Vous pourrez ensuite vérifier le résultat ici.") }}</p>
     </form>
-  </section><a href="/projects/{{ slug }}/first-correction">Revenir aux instructions</a>
+  </section><a href="/projects/{{ slug }}/first-correction">{{ tr("Revenir aux instructions") }}</a>
 </div>{% endblock %}

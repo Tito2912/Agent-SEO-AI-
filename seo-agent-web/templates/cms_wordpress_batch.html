@@ -1,44 +1,44 @@
 {% extends "layout.html" %}
-{% block title %}Corriger dans WordPress - {{ project.site_name }}{% endblock %}
-{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=2" defer></script>{% if poll %}<meta http-equiv="refresh" content="20" />{% endif %}{% endblock %}
-{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">CMS et intégrations</a><span class="crumb-sep">/</span><span class="crumb-current">{{ label }}</span>{% endblock %}
+{% block title %}{{ tr("Corriger dans WordPress") }} - {{ project.site_name }}{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" /><script src="/static/cms_workflow.js?v=3" defer></script>{% if poll %}<meta http-equiv="refresh" content="20" />{% endif %}{% endblock %}
+{% block crumbs %}<a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}/cms">{{ tr("CMS et intégrations") }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr(label) }}</span>{% endblock %}
 {% block content %}
 {#- LE LOT WORDPRESS (19/10/2026) : toutes les pages d'une anomalie, une validation, UNE analyse de
     controle. Les textes se redigent page par page depuis le navigateur : quarante ecritures d'IA
     dans une seule requete depasseraient n'importe quel proxy. -#}
-{% set field_label = 'Titre SEO' if field == 'seo_title' else 'Méta-description' %}
+{% set field_label = tr('Titre SEO' if field == 'seo_title' else 'Méta-description') %}
 {% set a_preparer = rows | selectattr('change', 'none') | list %}
 {% set apercus = rows | rejectattr('change', 'none') | selectattr('change.state', 'equalto', 'preview') | list %}
 {% set a_confirmer = rows | rejectattr('change', 'none') | selectattr('change.state', 'in', ['applying', 'restoring', 'unknown']) | list %}
 {% set enregistrees = rows | rejectattr('verification', 'none') | list %}
-{% set etats = {'verified': 'Résolu, confirmé par l’analyse', 'still_present': 'Encore signalé', 'unverified': 'Non confirmé',
-                'failed': 'Contrôle interrompu', 'running': 'Contrôle en cours', 'finishing': 'Contrôle en cours',
-                'pending': 'Enregistrée, à vérifier', 'superseded': 'Remplacée par une autre opération'} %}
+{% set etats = {'verified': tr('Résolu, confirmé par l’analyse'), 'still_present': tr('Encore signalé'), 'unverified': tr('Non confirmé'),
+                'failed': tr('Contrôle interrompu'), 'running': tr('Contrôle en cours'), 'finishing': tr('Contrôle en cours'),
+                'pending': tr('Enregistrée, à vérifier'), 'superseded': tr('Remplacée par une autre opération')} %}
 <div class="cms-page">
   <div class="page-header">
-    <h1>{{ label }}</h1>
-    <p class="muted">{{ rows | length }} page(s) signalée(s) dans la dernière analyse · {{ field_label }} · WordPress + Yoast SEO</p>
+    <h1>{{ tr(label) }}</h1>
+    <p class="muted">{{ tr("{n} page(s) signalée(s) dans la dernière analyse", n=rows | length) }} · {{ field_label }} · WordPress + Yoast SEO</p>
   </div>
-  {% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
-  {% if msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
-  <dl class="correction-counts" aria-label="Avancement des pages du lot">
-    <div><dt>À préparer</dt><dd>{{ a_preparer|length }}</dd></div>
-    <div><dt>À relire</dt><dd>{{ apercus|length }}</dd></div>
-    <div><dt>État à confirmer</dt><dd>{{ a_confirmer|length }}</dd></div>
-    <div><dt>Enregistrées</dt><dd>{{ enregistrees|length }}</dd><p class="muted small">dont {{ enregistrees|selectattr('verification.state', 'equalto', 'verified')|list|length }} vérifiée(s) par l’analyse</p></div>
+  {% if err %}<div class="alert error" role="alert">{{ tr(err) }}</div>{% endif %}
+  {% if msg %}<div class="alert ok" role="status">{{ tr(msg) }}</div>{% endif %}
+  <dl class="correction-counts" aria-label="{{ tr("Avancement des pages du lot") }}">
+    <div><dt>{{ tr("À préparer") }}</dt><dd>{{ a_preparer|length }}</dd></div>
+    <div><dt>{{ tr("À relire") }}</dt><dd>{{ apercus|length }}</dd></div>
+    <div><dt>{{ tr("État à confirmer") }}</dt><dd>{{ a_confirmer|length }}</dd></div>
+    <div><dt>{{ tr("Enregistrées") }}</dt><dd>{{ enregistrees|length }}</dd><p class="muted small">{{ tr("dont {n} vérifiée(s) par l’analyse", n=enregistrees|selectattr('verification.state', 'equalto', 'verified')|list|length) }}</p></div>
   </dl>
 
   {% if a_preparer %}
     <section class="card" id="batch-prepare">
-      <h2>1. Faire rédiger les textes</h2>
-      <p>Noyaru rédige un texte pour chaque page, à partir de son contenu et dans la bonne longueur. Chaque texte compte pour une correction IA{% if remaining is not none %} : il vous en reste {{ remaining }} ce mois-ci{% endif %}. Rien n’est écrit sur votre site à cette étape.</p>
+      <h2>{{ tr("1. Faire rédiger les textes") }}</h2>
+      <p>{% if remaining is not none %}{{ tr("Noyaru rédige un texte pour chaque page, à partir de son contenu et dans la bonne longueur. Chaque texte compte pour une correction IA : il vous en reste {n} ce mois-ci. Rien n’est écrit sur votre site à cette étape.", n=remaining) }}{% else %}{{ tr("Noyaru rédige un texte pour chaque page, à partir de son contenu et dans la bonne longueur. Chaque texte compte pour une correction IA. Rien n’est écrit sur votre site à cette étape.") }}{% endif %}</p>
       {% if remaining is none or remaining > 0 %}
         <button class="btn primary" type="button" id="batch-propose-all"
                 data-action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/propose"
-                data-limit="{{ remaining if remaining is not none else '' }}">Proposer les textes ({{ a_preparer | length if remaining is none else [a_preparer | length, remaining] | min }} page(s))</button>
+                data-limit="{{ remaining if remaining is not none else '' }}">{{ tr("Proposer les textes ({n} page(s))", n=a_preparer | length if remaining is none else [a_preparer | length, remaining] | min) }}</button>
         <p class="muted small" id="batch-progress" aria-live="polite"></p>
       {% else %}
-        <p class="muted">Votre forfait n’a plus de correction IA ce mois-ci. Vous pouvez écrire chaque texte vous-même.</p>
+        <p class="muted">{{ tr("Votre forfait n’a plus de correction IA ce mois-ci. Vous pouvez écrire chaque texte vous-même.") }}</p>
       {% endif %}
       <ul class="cms-history">
         {% for row in a_preparer %}
@@ -46,9 +46,9 @@
             <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>
             <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/propose" class="inline">
               <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="url" value="{{ row.url }}" />
-              <button class="btn small" type="submit" data-busy-label="Rédaction…">Proposer</button>
+              <button class="btn small" type="submit" data-busy-label="{{ tr('Rédaction…') }}">{{ tr("Proposer") }}</button>
             </form>
-            {% if row.task %}<a class="small" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ row.task.id }}">Écrire moi-même</a>{% endif %}
+            {% if row.task %}<a class="small" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ row.task.id }}">{{ tr("Écrire moi-même") }}</a>{% endif %}
           </li>
         {% endfor %}
       </ul>
@@ -59,47 +59,47 @@
     <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/apply" class="card" id="batch-review">
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
       <input type="hidden" name="shown_at" value="{{ now }}" />
-      <h2>2. Relire et enregistrer</h2>
-      <p class="muted">Corrigez un texte si besoin, décochez une page pour la laisser de côté. Chaque page est relue dans WordPress juste avant d’être modifiée, et son état est vérifié après.</p>
+      <h2>{{ tr("2. Relire et enregistrer") }}</h2>
+      <p class="muted">{{ tr("Corrigez un texte si besoin, décochez une page pour la laisser de côté. Chaque page est relue dans WordPress juste avant d’être modifiée, et son état est vérifié après.") }}</p>
       {% for row in apercus %}{% set ch = row.change %}{% set f = ch.data.field %}
         <div class="cms-form" data-batch-change="{{ ch.id }}">
-          <label><input type="checkbox" name="pick" value="{{ ch.id }}" checked /> <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>{% if ch.data.suggested %} <span class="badge">proposé par Noyaru</span>{% endif %}</label>
-          <p class="muted small">Avant : {{ ch.data.before[f] if ch.data.before[f] is not none else (ch.data.rendered_before or 'Non renseigné') }}</p>
+          <label><input type="checkbox" name="pick" value="{{ ch.id }}" checked /> <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>{% if ch.data.suggested %} <span class="badge">{{ tr("proposé par Noyaru") }}</span>{% endif %}</label>
+          <p class="muted small">{{ tr("Avant :") }} {{ ch.data.before[f] if ch.data.before[f] is not none else (ch.data.rendered_before or tr('Non renseigné')) }}</p>
           <input type="hidden" name="ids" value="{{ ch.id }}" />
           <label>{{ field_label }}{% if f == 'seo_title' %}<input name="values" value="{{ ch.data.after[f] }}" maxlength="400" />{% else %}<textarea name="values" rows="3" maxlength="2000">{{ ch.data.after[f] }}</textarea>{% endif %}</label>
         </div>
       {% endfor %}
-      <button class="btn primary" type="submit" data-busy-label="Enregistrement dans WordPress…">Enregistrer la sélection dans WordPress</button>
-      <p class="muted small">Ces aperçus restent valables 20 minutes après l’affichage de cette page.</p>
+      <button class="btn primary" type="submit" data-busy-label="{{ tr('Enregistrement dans WordPress…') }}">{{ tr("Enregistrer la sélection dans WordPress") }}</button>
+      <p class="muted small">{{ tr("Ces aperçus restent valables 20 minutes après l’affichage de cette page.") }}</p>
     </form>
   {% endif %}
 
   {% if enregistrees or a_confirmer %}
     <section class="card" id="batch-verify">
-      <h2>3. Vérifier le résultat</h2>
+      <h2>{{ tr("3. Vérifier le résultat") }}</h2>
       <ul class="cms-history">
         {% for row in a_confirmer %}
-          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small">À confirmer dans WordPress</span></li>
+          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small">{{ tr("À confirmer dans WordPress") }}</span></li>
         {% endfor %}
         {% for row in enregistrees %}
-          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small" data-batch-state="{{ row.verification.state }}">{{ etats.get(row.verification.state, 'Enregistrée') }}</span></li>
+          <li><a href="/projects/{{ slug }}/cms/wordpress/changes/{{ row.change.id }}">{{ row.url }}</a><span class="muted small" data-batch-state="{{ row.verification.state }}">{{ etats.get(row.verification.state, tr('Enregistrée')) }}</span></li>
         {% endfor %}
       </ul>
       {% if poll %}
-        <p role="status">L’analyse de contrôle est en cours. Cette page s’actualise toute seule.</p>
+        <p role="status">{{ tr("L’analyse de contrôle est en cours. Cette page s’actualise toute seule.") }}</p>
       {% elif enregistrees | rejectattr('verification.state', 'in', ['verified', 'superseded']) | list %}
         <form method="post" action="/projects/{{ slug }}/cms/wordpress/issues/{{ issue_key }}/verify">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-          <button class="btn {% if not apercus %}primary{% endif %}" type="submit" data-busy-label="Lancement de la vérification…">Lancer une analyse de contrôle</button>
+          <button class="btn {% if not apercus %}primary{% endif %}" type="submit" data-busy-label="{{ tr('Lancement de la vérification…') }}">{{ tr("Lancer une analyse de contrôle") }}</button>
         </form>
-        <p class="muted small">Une seule analyse vérifie toutes les pages enregistrées. Elle est décomptée du quota habituel de pages. Si votre site utilise un cache, videz-le avant.</p>
+        <p class="muted small">{{ tr("Une seule analyse vérifie toutes les pages enregistrées. Elle est décomptée du quota habituel de pages. Si votre site utilise un cache, videz-le avant.") }}</p>
       {% endif %}
-      <p class="muted small">Chaque page garde son suivi détaillé, où l’on peut aussi rétablir sa valeur précédente.</p>
+      <p class="muted small">{{ tr("Chaque page garde son suivi détaillé, où l’on peut aussi rétablir sa valeur précédente.") }}</p>
     </section>
   {% endif %}
 
-  {% if beyond %}<p class="muted small">{{ beyond }} autre(s) page(s) sont signalées pour cette anomalie : elles apparaîtront ici une fois celles-ci traitées.</p>{% endif %}
-  <a href="/projects/{{ slug }}/issues/{{ issue_key }}">Revenir à l’anomalie</a>
+  {% if beyond %}<p class="muted small">{{ tr("{n} autre(s) page(s) sont signalées pour cette anomalie : elles apparaîtront ici une fois celles-ci traitées.", n=beyond) }}</p>{% endif %}
+  <a href="/projects/{{ slug }}/issues/{{ issue_key }}">{{ tr("Revenir à l’anomalie") }}</a>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -114,18 +114,18 @@ document.addEventListener('DOMContentLoaded', function () {
     var done = 0, errors = [];
     button.disabled = true;
     for (var i = 0; i < rows.length; i++) {
-      progress.textContent = 'Rédaction ' + (i + 1) + ' sur ' + rows.length + '…';
+      progress.textContent = {{ tr("Rédaction {i} sur {n}…")|tojson }}.replace('{i}', i + 1).replace('{n}', rows.length);
       var body = new URLSearchParams({_csrf: csrf, url: rows[i].dataset.batchUrl});
       try {
         var response = await fetch(button.dataset.action, {method: 'POST', body: body, credentials: 'same-origin',
                                                            headers: {'Accept': 'application/json'}});
         var data = await response.json();
         if (data.ok) { done++; } else { errors.push(data.error); if (data.stop) { break; } }
-      } catch (e) { errors.push('La rédaction a été interrompue.'); break; }
+      } catch (e) { errors.push({{ tr("La rédaction a été interrompue.")|tojson }}); break; }
     }
     var query = new URLSearchParams();
-    if (done) { query.set('msg', done + ' texte(s) proposé(s) : relisez-les avant de les enregistrer.'); }
-    if (errors.length) { query.set('err', errors.length + ' page(s) sans proposition : ' + errors[0]); }
+    if (done) { query.set('msg', {{ tr("{n} texte(s) proposé(s) : relisez-les avant de les enregistrer.")|tojson }}.replace('{n}', done)); }
+    if (errors.length) { query.set('err', {{ tr("{n} page(s) sans proposition :")|tojson }}.replace('{n}', errors.length) + ' ' + errors[0]); }
     window.location.href = window.location.pathname + '?' + query.toString();
   });
 });
