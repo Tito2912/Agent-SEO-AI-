@@ -118,10 +118,13 @@
     const single = button.matches('[data-single-fix], [data-correction-single-fix]') ||
       (button.matches('.gh-fix-btn') && button.dataset.fixRoute !== 'deep-fix');
     const bulk = button.matches('[data-bulk-fix], [data-correction-bulk-fix]');
+    const keyword = button.matches('[data-keyword-pr]');
     selection = {
-      slug: button.dataset.slug || cfg.slug, kind: bulk ? 'bulk' : single ? 'single' : 'deep',
-      issue: button.dataset.issue || '', url: button.dataset.url || '', crawl_ts: button.dataset.crawl || cfg.crawl || ''
+      slug: button.dataset.slug || cfg.slug, kind: keyword ? 'keyword' : bulk ? 'bulk' : single ? 'single' : 'deep',
+      issue: keyword ? "keyword_snippet_rewrite" : button.dataset.issue || '', query: button.dataset.query || '', url: button.dataset.url || '', crawl_ts: button.dataset.crawl || cfg.crawl || ''
     };
+    const labels = keyword ? ['Préparer', 'Créer', 'Relire', 'Vérifier'] : ['Préparer', 'Relire', 'Proposer', 'Vérifier'];
+    dialog.querySelectorAll('.correction-steps li').forEach((item, i) => { item.lastChild.textContent = labels[i]; });
     proposal = null;
     for (const name of ['preview', 'confirm', 'result', 'recovery', 'followup']) el(name).hidden = true;
     el('consent').checked = false;
@@ -136,6 +139,12 @@
     document.getElementById('review-intro').textContent = single
       ? 'Noyaru prépare un texte que vous pourrez relire ici avant de créer une proposition sur GitHub. Cette préparation compte pour une correction IA de votre forfait.'
       : 'Noyaru préparera un brouillon contenant les fichiers traités, dans les limites de votre forfait. Les fichiers rédigés par l’IA sont décomptés de votre quota. Relisez les changements sur GitHub avant de les fusionner.';
+    if (keyword) {
+      document.getElementById('review-title').textContent = 'Préparer la réécriture';
+      el('target').textContent = selection.url + ' · ' + (button.dataset.queryLabel || 'recherche') + ' : « ' + selection.query + ' »';
+      el('prepare').textContent = 'Créer le brouillon à relire';
+      document.getElementById('review-intro').textContent = 'Le modèle réécrit le titre et la description de cette page, dans une proposition GitHub en brouillon. Chaque fichier rédigé est décompté du quota de corrections IA, dans les limites de votre formule. Relisez les changements sur GitHub avant toute fusion.';
+    }
     message('La proposition devra être relue et fusionnée par une personne, y compris si le projet autorise habituellement la fusion automatique.');
     step(1); setBusy(false); dialog.showModal();
     el('prepare').focus();
@@ -154,14 +163,15 @@
     setBusy(true); el('recovery').hidden = true; el('result').hidden = true;
     message('Préparation en cours. Vous pourrez retrouver la proposition dans le suivi des corrections.');
     const base = '/api/projects/' + encodeURIComponent(selection.slug);
-    const route = selection.kind === 'bulk' ? base + '/github/bulk-fix' : base + '/issues/' + encodeURIComponent(selection.issue) + '/' + (selection.kind === 'single' ? 'github-fix' : 'deep-fix');
+    const route = selection.kind === 'keyword' ? base + '/keywords/rewrite-pr' : selection.kind === 'bulk' ? base + '/github/bulk-fix' : base + '/issues/' + encodeURIComponent(selection.issue) + '/' + (selection.kind === 'single' ? 'github-fix' : 'deep-fix');
     const target = selection;
+    if (target.kind === 'keyword') step(2);
     const before = target.kind === 'single' ? null : await baseline(target);
     try {
       const body = selection.kind === 'bulk' ? {review_only: true} : {url: selection.url, crawl_ts: selection.crawl_ts};
       if (selection.kind === 'single') body.confirm = false;
       else body.review_only = true;
-      const data = await request(body, route);
+      const data = await request(selection.kind === 'keyword' ? {query: selection.query, url: selection.url} : body, route);
       if (data.pr_url) result(data);
       else {
         if (!data.file || !data.patched_content || data.diff === '') throw new Error('Cet aperçu ne contient pas de changement complet à relire. Aucune proposition n’a été créée.');
@@ -202,7 +212,7 @@
     } finally { setBusy(false); }
   });
   document.addEventListener('click', event => {
-    const button = event.target.closest('[data-single-fix], [data-bulk-fix], [data-correction-single-fix], [data-correction-bulk-fix], [data-correction-deep-fix], .gh-fix-btn');
+    const button = event.target.closest('[data-single-fix], [data-bulk-fix], [data-correction-single-fix], [data-correction-bulk-fix], [data-correction-deep-fix], [data-keyword-pr], .gh-fix-btn');
     if (!button) return;
     event.preventDefault(); open(button);
   });

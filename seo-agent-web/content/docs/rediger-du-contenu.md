@@ -1,11 +1,11 @@
 ---
-title: "Rédiger une page et la proposer en pull request"
+title: "Rédiger un article et préparer sa publication"
 meta_title: "Rédaction de contenu SEO — documentation {{app_name}}"
-description: "Faire écrire une page neuve par l'agent, dans la forme de votre site, liée à sa section, et la recevoir en pull request brouillon sur votre dépôt."
+description: "Rédiger un article à relire en HTML et Markdown ou préparer une proposition GitHub ; comprendre les quotas par langue et les étapes de publication."
 kind: "Documentation"
 section: "Aller plus loin"
 order: 44
-updated_at: "2026-09-30"
+updated_at: "2026-10-19"
 audience: "Pro et Business"
 keywords: ["rédaction IA", "contenu SEO", "page neuve", "pull request", "mode automatique"]
 app_href: "/"
@@ -14,26 +14,26 @@ faq:
   - question: "Pourquoi n'y a-t-il pas d'aperçu avant la pull request ?"
     answer: "Parce que la pull request EST l'aperçu. Elle s'ouvre en brouillon : vous lisez le diff complet, le build de votre dépôt se prononce, et rien n'est publié tant que vous ne fusionnez pas. Un aperçu séparé ferait payer un brouillon jeté, ou laisserait engendrer des pages gratuitement en boucle."
   - question: "L'agent peut-il écrire sur un sujet que mon site traite déjà ?"
-    answer: "En mode automatique, non : il ne prend que des sujets qu'un concurrent traite et qu'aucune de vos pages ne couvre. Deux pages qui se disputent la même requête se cannibalisent. En saisie libre, vous restez maître du sujet."
+    answer: "Le mode automatique retient les sujets non repérés dans vos pages analysées. Vérifiez le périmètre de l’analyse : une page peut exister ailleurs sur votre site. En saisie libre, vous choisissez le sujet."
   - question: "Combien de pages l'agent écrit-il tout seul ?"
-    answer: "Une par semaine et par projet au maximum, et jamais au-delà de votre quota mensuel. Ces plafonds sont bas volontairement : la politique anti-spam de Google vise le contenu produit en masse pour le classement, quelle qu'en soit la fabrication."
+    answer: "Selon la fréquence choisie : une page par mois, toutes les deux semaines, chaque semaine ou deux fois par semaine. Chaque version linguistique compte dans le quota mensuel du compte qui gère le projet."
   - question: "Que se passe-t-il si l'agent ne sait pas où poser la page ?"
     answer: "Il refuse et vous le dit. Créer une arborescence chez vous sur une supposition est pire que de dire qu'on ne sait pas. Il lui faut au moins une page existante dans la même section pour en transposer la convention."
 ---
 
-L'agent écrit une page neuve **dans la forme de votre site**, l'ajoute à l'index de sa section
-pour qu'elle ne soit pas orpheline, et vous l'envoie en **pull request brouillon**. Rien n'est
-publié sans votre fusion.
+{{app_name}} prépare un texte à relire à partir d’un sujet et d’une rubrique existante. Choisissez **Contenu seul** pour obtenir du Markdown et du HTML à publier vous-même, ou une **proposition GitHub en brouillon** si le code du site est connecté.
 
 ## Où trouver l'écran
 
-**Contenu**, dans le menu de gauche d'un projet. Il demande un dépôt GitHub connecté : une page
-neuve est un fichier ajouté à votre dépôt, et sans dépôt il n'y a nulle part où l'écrire. Voir
-[Connecter GitHub à un projet](/docs/connecter-github).
+**Contenu**, dans le menu d’un projet, à partir du plan Pro. Le mode **Contenu seul** demande une analyse du site pour connaître ses rubriques et ses pages. Il fonctionne avec votre CMS sans dépôt GitHub. Le mode **Proposition GitHub** et la rédaction automatique demandent un [dépôt connecté](/docs/connecter-github).
 
 ## Écrire une page à la main
 
-Deux champs : un **sujet** et une **adresse**. L'adresse est suggérée à partir du sujet, et vous
+Choisissez la destination, le **sujet**, sa **rubrique**, puis la longueur, le ton et les langues si nécessaire. Le récapitulatif indique le nombre de versions et leur coût.
+
+En mode **Contenu seul**, relisez l’aperçu isolé ou le texte en Markdown, puis copiez ou téléchargez la version choisie. Aucune copie ne publie l’article : insérez-le ensuite dans votre CMS et contrôlez la page en ligne.
+
+En mode **Proposition GitHub**, renseignez aussi une **adresse**. L'adresse est suggérée à partir du sujet, et vous
 la corrigez — la section (`/blog`, `/guides`, `/ressources`) est une décision éditoriale que
 personne ne peut deviner à votre place.
 
@@ -83,9 +83,9 @@ relira l'adresse avant la pull request, et `/blog` contre `/guides` ne se devine
 
 ![Réglages du mode automatique : section, fréquence, jour, heure, fuseau, taille, ton, traductions et publication](/static/captures/mode-automatique.webp "Les réglages du mode automatique.")
 
-Une fois allumé, l'agent écrit **au plus une page par semaine et par projet**, et seulement :
+La rédaction suit votre fréquence, votre jour, votre heure et votre fuseau, dans les quotas disponibles. Elle ne prépare une page que :
 
-- sur un sujet qu'un de vos concurrents traite et qu'**aucune de vos pages ne couvre** — voir
+- sur un sujet qu'un de vos concurrents traite et qui n’a pas été repéré dans les pages analysées de votre site — voir
   [Analyser les concurrents](/docs/analyser-les-concurrents) ;
 - si un crawl de votre propre site existe, sans quoi tout sujet paraîtrait non couvert ;
 - sur un sujet **jamais proposé auparavant**, même si vous aviez fermé sa pull request ;
@@ -93,11 +93,15 @@ Une fois allumé, l'agent écrit **au plus une page par semaine et par projet**,
   personne ne lira l'avertissement, donc une page qu'il ne sait pas relier n'est pas écrite du
   tout.
 
+La publication se règle séparément : **avec votre validation**, la proposition attend votre relecture puis votre autorisation de fusion ; **Automatique · fusion après contrôles**, elle peut être fusionnée lorsque les vérifications du dépôt passent. Sans contrôle exploitable ou en cas d’échec, une validation est demandée.
+
+Une proposition validée peut donc rester en attente. Une proposition fusionnée n’est pas une preuve de mise en ligne : celle-ci dépend du déploiement de votre site.
+
 Un compte dont le forfait a changé peut toujours **éteindre** le mode, quel que soit son plan.
 
 ## Ce que ça coûte
 
-Un article vaut **une unité**, quelle que soit la taille de la page et le nombre de fichiers
+Chaque **version linguistique vaut une unité**, quelle que soit la taille de la page et le nombre de fichiers
 touchés — l'index modifié au passage n'est pas un second article. Le compteur est **séparé de
 celui des corrections** : publier deux pages ne vous prive pas de vos corrections du mois.
 
@@ -114,8 +118,7 @@ Un plafond généreux ferait de cette fonction un moyen de nuire au site qu'elle
 
 ## Ce que cette page ne fait pas
 
-- Elle ne **publie** rien. La pull request reste en brouillon et n'est jamais fusionnée
-  automatiquement, quel que soit le mode du projet — tout le texte vient d'un modèle.
+- La rédaction **manuelle** ne publie rien : vous copiez le contenu dans votre CMS, ou relisez la proposition GitHub en brouillon avant sa fusion. La rédaction **automatique** suit le réglage de publication explicite décrit ci-dessus.
 - Elle ne **vérifie pas les faits**. Chiffres, noms, dates, prix et promesses commerciales sont
   à contrôler avant de fusionner. Le texte est plausible, il n'est pas vérifié.
 - Elle n'écrit pas la **première** page d'une section. Sans page sœur, la convention de votre

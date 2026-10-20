@@ -5,7 +5,7 @@ description: "Crawler un site rival, comparer les sujets qu'il traite aux vôtre
 kind: "Documentation"
 section: "Aller plus loin"
 order: 40
-updated_at: "2026-09-30"
+updated_at: "2026-10-19"
 audience: "Pro et Business"
 keywords: ["concurrents", "analyse concurrentielle", "sujets non couverts", "content gap"]
 app_href: "/"
@@ -68,6 +68,8 @@ historique. La renforcer coûte infiniment moins cher que d'en créer une.
 
 Croisez avec les [opportunités de mots-clés](/docs/opportunites-de-mots-cles) : si cette page
 est en position 12 sur la requête du sujet, vous tenez à la fois le quoi et le pourquoi.
+
+Pour un sujet non repéré dans les pages analysées, « Préparer un article » ouvre Contenu avec le sujet prérempli, sans lancer de rédaction. Le mode « Contenu seul » fonctionne sans GitHub. Pour une page déjà présente, relisez-la dans votre plateforme ou préparez une amélioration GitHub si un dépôt est connecté.
 
 ## Les quatre états de la page
 

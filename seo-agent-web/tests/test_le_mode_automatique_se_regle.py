@@ -276,7 +276,7 @@ def test_VALIDER_avec_des_verifications_VERTES_fusionne(client_connecte, plan, g
     client, slug, pid = client_connecte
     task_id = _une_page_en_attente(projet, github, modele, monkeypatch)
     page, r = _valider(client, slug, task_id)
-    assert page.status_code == 200 and "Valider et fusionner" in page.text
+    assert page.status_code == 200 and "Autoriser la fusion" in page.text
     assert "msg=" in r.headers["location"], r.headers["location"]
     gestes = [g for g in depot["gestes"] if "/contents/" not in g]      # l'ecriture de la page mise a part
     assert gestes == ["prete", "/repos/client/site.fr/pulls/91/merge"], gestes

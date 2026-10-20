@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 {% block title %}Concurrents - {{ project.site_name if project else slug }}{% endblock %}
 
+{% block head_extra %}<link rel="stylesheet" href="/static/visibility-journey.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=2" defer></script>{% endblock %}
+{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">Concurrents</span>{% endblock %}
 {% block content %}
   <div class="page-header">
     <h1>Concurrents</h1>
@@ -22,7 +24,9 @@
     </section>
   {% else %}
 
-    <section class="card">
+    <nav class="visibility-path" aria-label="Parcours des sujets"><a href="#competitor-sites">1. Choisir les sites à observer</a><a href="/projects/{{ slug }}/content">2. Préparer un sujet dans Contenu</a></nav>
+    <p class="muted small">La comparaison porte sur les pages analysées. Un sujet non repéré peut déjà exister ailleurs sur votre site ; vérifiez-le avant de rédiger une nouvelle page.</p>
+    <section class="card" id="competitor-sites">
       <div class="card-title-row">
         <h2 style="margin:0;">Sites suivis</h2>
         <span class="muted small">{{ competitors|length }} / {{ max_competitors }}</span>
@@ -42,7 +46,7 @@
           {# « Trouver avec l'IA » DANS le champ (demande du 28/09/2026) : l'IA formule les
              recherches du site, Google dit qui s'y classe. Rien n'est ajoute d'office. #}
           <span style="position:relative;display:block;">
-            <input id="k-url" name="url" placeholder="exemple-concurrent.com" required style="padding-right:150px;" />
+            <input id="k-url" name="url" aria-label="Adresse du concurrent à observer" placeholder="exemple-concurrent.com" required style="padding-right:150px;" />
             <button type="button" id="k-trouver" class="btn small"
                     style="position:absolute;right:5px;top:50%;transform:translateY(-50%);"
                     title="Cherche les sites qui se classent sur les mêmes recherches que vous">Trouver avec l'IA</button>
@@ -279,12 +283,12 @@
                   </td>
                   <td class="num mono">{{ '%.0f'|format(f.match_score * 100) }} %</td>
                   <td class="num">
-                    {% if not github_cfg or not github_cfg.repo %}
-                      <span class="muted small">GitHub requis</span>
-                    {% elif f.covered %}
-                      <button type="button" class="btn primary" data-keyword-pr
+                    {% if f.covered %}
+                      {% if github_cfg and github_cfg.repo %}
+                      <button type="button" class="btn primary" data-keyword-pr data-query-label="sujet observé"
                               data-query="{{ f.competitor_title }}" data-url="{{ f.own_url }}"
-                              title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de votre page pour ce sujet">Recibler (PR)</button>
+                              title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de votre page pour ce sujet">Préparer une amélioration</button>
+                      {% else %}<a class="btn" href="{{ f.own_url }}" target="_blank" rel="noopener noreferrer">Relire ma page</a><p class="muted small">Vous pouvez la modifier dans votre plateforme.</p>{% endif %}
                     {% else %}
                       {# « Retarget first, create later » : le later est arrivé le 20/09/2026. Un
                          sujet NON couvert ne se recible pas — glisser un mot-clé dans une page
@@ -294,7 +298,7 @@
                          l'adresse avant de dépenser un article. #}
                       <a class="btn" data-content-draft
                          href="/projects/{{ slug }}/content?sujet={{ f.competitor_title | urlencode }}"
-                         title="Ouvrez l’écran Contenu avec ce sujet pré-rempli">Rédiger une page</a>
+                         title="Ouvrez l’écran Contenu avec ce sujet pré-rempli">Préparer un article</a>
                     {% endif %}
                   </td>
                 </tr>
@@ -318,54 +322,8 @@
     {% endif %}
 
     <style>
-      .kw-actions { display:flex; gap:6px; align-items:center; justify-content:flex-end; }
-      #kw-status { margin-top:10px; font-size:13px; }
-      #kw-status.ok { color:var(--ok-2); }
-      #kw-status.error { color:#f87171; }
+      .kw-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:flex-end; }
     </style>
-    <div id="kw-status" class="muted" role="status" aria-live="polite"></div>
-
-    <script>
-    (function () {
-      /* Same endpoint as the keywords page: retargeting IS a snippet rewrite, and the subject
-         plays the part of the query. */
-      var slug = {{ slug | tojson }};
-      var box = document.getElementById('kw-status');
-      function say(html, cls) { box.className = cls || 'muted'; box.innerHTML = html; }
-      function esc(v) {
-        return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-        });
-      }
-      document.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-keyword-pr]');
-        if (!btn) return;
-        var query = btn.dataset.query || '', url = btn.dataset.url || '';
-        var original = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = 'Réécriture…';
-        say('Le modèle réécrit le titre et la description de <span class="mono">' + esc(url) +
-            '</span> pour ce sujet. Cela prend une vingtaine de secondes.');
-        fetch('/api/projects/' + encodeURIComponent(slug) + '/keywords/rewrite-pr', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: query, url: url })
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            btn.disabled = false;
-            btn.textContent = d.ok ? 'PR créée' : original;
-            var link = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Ouvrir la PR</a>' : '';
-            if (!d.ok) { say(esc(d.error || 'Erreur pendant la réécriture.') + link, 'error'); return; }
-            say('Pull request ouverte sur ' + esc(d.files_count) + ' fichier(s).' + link +
-                ' Le texte est écrit par le modèle : relis-le avant de merger.', 'ok');
-          })
-          .catch(function () {
-            btn.disabled = false;
-            btn.textContent = original;
-            say('Erreur réseau pendant la réécriture.', 'error');
-          });
-      });
-    })();
-    </script>
+    {% include '_correction_review.html' %}
   {% endif %}
 {% endblock %}

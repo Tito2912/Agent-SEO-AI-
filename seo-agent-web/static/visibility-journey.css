@@ -1,0 +1,19 @@
+.visibility-path { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0; }
+.visibility-path a { padding:10px 14px; border:1px solid var(--border); border-radius:9px; background:var(--surface-inset); color:var(--text); text-decoration:none; min-height:44px; }
+.outreach-actions .btn { white-space:normal; min-height:44px; }
+.opp-page section, .opp-page [id] { scroll-margin-top:20px; }
+.queue-card-title, .opp-saved-title, .res-target-input { overflow-wrap:anywhere; }
+@media(max-width:600px) {
+  .queue-card-header, .opp-saved-header { flex-wrap:wrap; }
+  .queue-card-header > div[style*="flex:1"], .opp-saved-header > div[style*="flex:1"] { flex-basis:65%; }
+  .outreach-actions { width:100%; flex-direction:row !important; flex-wrap:wrap; align-items:stretch !important; }
+  .outreach-actions > .btn { flex:1 1 135px; }
+  .queue-card-header > .queue-status-badge { max-width:100%; }
+  .opp-filters > input, .opp-filters > select { min-width:0 !important; max-width:100%; flex:1 1 140px; }
+  #k-url { padding-right:12px !important; }
+  #k-trouver { position:static !important; transform:none !important; margin-top:8px; }
+}
+
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+@media(max-width:600px) { .status-seg { display:flex; flex-wrap:wrap; } .status-seg-btn { flex:1 1 100px; min-height:44px; white-space:normal; } }

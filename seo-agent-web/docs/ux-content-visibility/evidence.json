@@ -1,0 +1,393 @@
+{
+  "displays": 77,
+  "checks": [
+    {
+      "screen": "content-free",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-solo",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-no-crawl",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-manual",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-quota",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-github",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-github-error",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "review-initial",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "review-approved",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "review-failed",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "review-merged",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "outreach",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "links",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "competitors",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-recap",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-created",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "content-free",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-solo",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-no-crawl",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-manual",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-quota",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-github",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-github-error",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "review-initial",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "review-approved",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "review-failed",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "review-merged",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "outreach",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "links",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "competitors",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-recap",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-created",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "content-free",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-solo",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-no-crawl",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-manual",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-quota",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-github",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-github-error",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "review-initial",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "review-approved",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "review-failed",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "review-merged",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "outreach",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "links",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "competitors",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-recap",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-created",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "content-free",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content-solo",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content-no-crawl",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content-manual",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content-quota",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content-github",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "content-github-error",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "review-initial",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "review-approved",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "review-failed",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "review-merged",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "outreach",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "links",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "competitors",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-recap",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-created",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "article-ready",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "draft-ready",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-quota",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-session",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-duplicate",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "keyword-lost",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "article-expired",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "review-consent-required",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "copy-open-no-declaration",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "copy-refused-no-declaration",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "explicit-declaration",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "preview-isolation",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "next-draft-after-choice-change",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "pageerrors": [],
+  "generation": "UI endpoints for drafting, repo sections and keyword proposals intercepted; server workflow tests separate",
+  "outreach": "Real local backend and DB, no external message sent"
+}
