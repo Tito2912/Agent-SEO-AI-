@@ -136,7 +136,7 @@
 
           <a class="nav-item {% if request.url.path.startswith('/jobs') %}active{% endif %}"{% if request.url.path.startswith('/jobs') %} aria-current="page"{% endif %} href="/jobs">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-            Exécutions
+            Activité
           </a>
 
           <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}"{% if request.url.path.startswith('/billing') %} aria-current="page"{% endif %} href="{{ billing_url }}">

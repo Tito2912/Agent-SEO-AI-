@@ -1,0 +1,32 @@
+.activity-page { min-width: 0; }
+.activity-page :is(h1, h2, p, strong, code) { overflow-wrap: anywhere; }
+.activity-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.activity-filter-field { flex: 1 1 200px; display: grid; gap: 8px; font-size: 14px; }
+.activity-filters select { min-width: 0; width: 100%; min-height: 44px; }
+.activity-page .btn { min-height: 44px; }
+.activity-meta { display: block; margin-top: 6px; }
+.activity-refresh, .activity-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
+.activity-refresh p { flex: 1 1 250px; margin: 0; font-size: 14px; }
+.activity-state > h2 { margin-top: 18px; }
+.activity-actions form { margin: 0; }
+.activity-page .table-wrap { overflow: auto; }
+#jobs-table { min-width: 780px; }
+#jobs-table tr[hidden], .activity-page [hidden] { display: none !important; }
+#activity-technical pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; font-size: 13px; }
+#activity-technical summary { min-height: 44px; cursor: pointer; }
+.activity-page .corr-flow { margin-bottom: 20px; }
+.activity-page .table td { white-space: normal; }
+@media(max-width: 640px) {
+  #jobs-table { min-width: 0; display: block; }
+  #jobs-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #jobs-table tbody { display: grid; gap: 16px; }
+  #jobs-table tr { display: block; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+  #jobs-table td { display: block; padding: 8px 0; border: 0; }
+  #jobs-table td[data-label]::before { content: attr(data-label); display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .activity-actions { align-items: stretch; }
+  .activity-actions .btn { white-space: normal; text-align: center; }
+}
+
+.activity-page .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+.activity-filter-field label { margin: 0; font-size: 14px; }
