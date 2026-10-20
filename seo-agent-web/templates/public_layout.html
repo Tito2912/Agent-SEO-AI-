@@ -81,9 +81,10 @@
     <meta name="twitter:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png') }}" />
     {# Une page publique a une adresse par langue (/pricing, /en/pricing) : chacune annonce les
        autres a Google. Le francais est la version par defaut (x-default). #}
-    {% if request.url.path in localized_pages %}
-      {% for code in languages %}<link rel="alternate" hreflang="{{ code }}" href="{{ public_url(request, localized_path(request.url.path, code)) }}" />
-      {% endfor %}<link rel="alternate" hreflang="x-default" href="{{ public_url(request, request.url.path) }}" />
+    {% set page_versions = page_alternates() %}
+    {% if page_versions %}
+      {% for code, href in page_versions.items() %}<link rel="alternate" hreflang="{{ code }}" href="{{ public_url(request, href) }}" />
+      {% endfor %}<link rel="alternate" hreflang="x-default" href="{{ public_url(request, page_versions['fr']) }}" />
       <meta property="og:locale" content="{{ 'en_US' if current_lang() == 'en' else 'fr_FR' }}" />
     {% endif %}
     {% block head_extra %}{% endblock %}

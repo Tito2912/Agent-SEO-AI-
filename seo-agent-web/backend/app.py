@@ -10617,13 +10617,16 @@ def _plan_token_value(catalog: dict[str, Any], plan_key: str, group: str, field:
     return f"{number:,}".replace(",", " ")
 
 
-def _content_tokens() -> dict[str, str]:
+def _content_tokens(lang: str = "fr") -> dict[str, str]:
     """Values a content page may interpolate with `{{token}}`.
 
     Documentation that hardcodes a quota is documentation that lies the first time an admin
     tunes PLAN_CONFIG_JSON. These are read live, per request, from the same catalogue the
-    billing code enforces.
+    billing code enforces. In another language, numbers and prices take that language's form
+    (« 20 000 » -> "20,000", « 49€/mois » -> "€49/month").
     """
+    if lang != i18n.DEFAULT_LANG:
+        return {key: i18n.translate(value, lang) for key, value in _content_tokens().items()}
     tokens: dict[str, str] = {
         "app_name": _app_name(),
         "support_email": _support_email(),
@@ -14162,6 +14165,7 @@ def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> di
         "publisher": {"@type": "Organization", "name": _app_name()},
         "mainEntityOfPage": _public_url(request, path),
         "keywords": ", ".join(page.get("keywords") or []),
+        "inLanguage": page.get("lang") or "fr",
     }
     faq = page.get("faq") or []
     if faq:
@@ -14185,22 +14189,34 @@ def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> di
     return {"@context": "https://schema.org", **article}
 
 
+def _doc_path(slug: str) -> str:
+    """The address of a doc page in the language of the current request: its translation when
+    it has one (`/en/docs/<slug>`), the French page otherwise."""
+    page = content_library.get_doc(slug, i18n.current_lang()) or content_library.get_doc(slug)
+    return str(page["path"]) if page else f"/docs/{slug}"
+
+
+templates.env.globals["doc_path"] = _doc_path
+
+
 @app.api_route("/docs", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def docs_index_public(request: Request) -> HTMLResponse:
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    tokens = _content_tokens(lang)
     sections = [
         {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
-        for section in content_library.docs_sections()
+        for section in content_library.docs_sections(lang)
     ]
     return templates.TemplateResponse(
         "docs_index.html",
         _public_template_context(
             request,
             sections=sections,
-            canonical_url=_public_url(request, "/docs"),
-            meta_description=(
-                f"Documentation {_app_name()} : prise en main, crawl, anomalies, corrections "
-                "automatiques en pull request, Search Console, concurrents, backlinks et quotas."
+            canonical_url=_public_url(request, i18n.localized_path("/docs", lang)),
+            meta_description=i18n.tr_current(
+                "Documentation {app_name} : prise en main, crawl, anomalies, corrections "
+                "automatiques en pull request, Search Console, concurrents, backlinks et quotas.",
+                app_name=_app_name(),
             ),
         ),
     )
@@ -14208,12 +14224,24 @@ def docs_index_public(request: Request) -> HTMLResponse:
 
 @app.api_route("/docs/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def docs_article_public(request: Request, slug: str) -> HTMLResponse:
-    raw = content_library.get_doc(slug)
-    if not raw:
+    french = content_library.get_doc(slug)
+    if not french:
         raise HTTPException(status_code=404, detail="doc_not_found")
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    translated = content_library.get_doc(slug, lang) if lang != i18n.DEFAULT_LANG else None
+    if lang != i18n.DEFAULT_LANG and translated is None and getattr(request.state, "url_lang", None):
+        # /en/docs/<page> sans traduction : la page n'existe qu'en francais, a son adresse.
+        return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
+    raw = translated or french
+    # Chaque version d'une page traduite annonce toutes les autres ; une page seulement
+    # francaise n'en annonce aucune.
+    versions = {code: content_library.get_doc(slug, code) for code in i18n.LANGUAGES if code != i18n.DEFAULT_LANG}
+    alternates = {code: str(other["path"]) for code, other in versions.items() if other}
+    if alternates:
+        alternates = {i18n.DEFAULT_LANG: str(french["path"]), **alternates}
+    tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
-    path = f"/docs/{page['slug']}"
+    path = str(page["path"])
     return templates.TemplateResponse(
         "docs_article.html",
         _public_template_context(
@@ -14221,11 +14249,12 @@ def docs_article_public(request: Request, slug: str) -> HTMLResponse:
             page=page,
             sections=[
                 {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
-                for section in content_library.docs_sections()
+                for section in content_library.docs_sections(lang)
             ],
             related=content_library.resolve_all(content_library.related_pages(raw), tokens),
             canonical_url=_public_url(request, path),
             json_ld=_content_json_ld(request, page, path=path),
+            alternates=alternates,
         ),
     )
 

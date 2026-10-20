@@ -38,7 +38,11 @@ _COOKIE_MAX_AGE = 365 * 24 * 3600
 # Les pages publiques qui ont une adresse par langue : `/pricing` en francais, `/en/pricing` en
 # anglais. Google indexe chaque version, et chacune annonce l'autre (balises hreflang). Les
 # ecrans de l'application gardent une seule adresse et suivent la langue du client.
-LOCALIZED_PAGES = frozenset({"/", "/pricing", "/support", "/status"})
+LOCALIZED_PAGES = frozenset({"/", "/pricing", "/support", "/status", "/docs"})
+# Les pages de documentation (`/en/docs/<page>`) : leur route sert la traduction quand elle
+# existe et renvoie vers la page francaise sinon. Chacune annonce ses versions elle-meme
+# (`alternates` dans le contexte du gabarit).
+LOCALIZED_PREFIXES = ("/docs/",)
 
 # La langue de la requete en cours, pour les macros importees sans contexte (`{% from ... import
 # ... %}`) : elles ne voient pas `request`, seulement les variables globales.
@@ -300,9 +304,10 @@ def _lang_url(context: Any, code: str) -> str:
     try:
         params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
         path = request.url.path
-        if path in LOCALIZED_PAGES and getattr(request.state, "user", None) is None:
+        alternates = _page_alternates(context)
+        if code in alternates and getattr(request.state, "user", None) is None:
             own_address = code != DEFAULT_LANG
-            path = localized_path(path, code)
+            path = alternates[code]
         path = f"{path}?{urlencode(params)}" if params else path
         if _link_builder is not None:
             path = _link_builder(request, path)
@@ -312,6 +317,21 @@ def _lang_url(context: Any, code: str) -> str:
     if own_address:
         return path
     return f"{path}{'&' if '?' in path else '?'}{urlencode([('lang', code)])}"
+
+
+@pass_context
+def _page_alternates(context: Any) -> dict[str, str]:
+    """Les adresses de la page courante dans chaque langue ({} si elle n'en a qu'une) : celles
+    que la route a passees (`alternates`, une page de documentation traduite), sinon celles
+    d'une page de LOCALIZED_PAGES."""
+    given = context.get("alternates")
+    if isinstance(given, dict):
+        return given
+    request = context.get("request")
+    path = getattr(getattr(request, "url", None), "path", "")
+    if path in LOCALIZED_PAGES:
+        return {code: localized_path(path, code) for code in LANGUAGES}
+    return {}
 
 
 _country_cache: dict[str, list[tuple[str, str]]] = {}
@@ -393,6 +413,7 @@ def add_template_globals(env: Any) -> None:
     env.globals["lang_url"] = _lang_url
     env.globals["localized_path"] = localized_path
     env.globals["localized_pages"] = LOCALIZED_PAGES
+    env.globals["page_alternates"] = _page_alternates
     env.globals["languages"] = LANGUAGES
     env.globals["localized_country_options"] = _country_options
     env.globals["js_catalog"] = _js_catalog
@@ -457,7 +478,7 @@ class LocalizedPaths:
                     await response(scope, receive, send)
                     return
                 page = path[len(prefix):]
-                if page in LOCALIZED_PAGES:
+                if page in LOCALIZED_PAGES or page.startswith(LOCALIZED_PREFIXES):
                     state = {**(scope.get("state") or {}), "url_lang": lang}
                     scope = {**scope, "path": page, "raw_path": page.encode(), "state": state}
                 break

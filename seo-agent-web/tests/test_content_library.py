@@ -136,7 +136,8 @@ def test_tables_are_wrapped_for_small_screens() -> None:
 
 def test_sitemap_entries_cover_every_page() -> None:
     entries = list(cl.sitemap_entries())
-    assert len(entries) == len(cl.all_pages())
+    translations = sum(len(cl.translated_docs(lang)) for lang in cl.DOCS_TRANSLATION_DIRS)
+    assert len(entries) == len(cl.all_pages()) + translations
     for entry in entries:
         assert entry["path"].startswith("/")
         assert len(entry["lastmod"]) == 10

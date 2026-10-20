@@ -15,7 +15,7 @@
 
 {% block content %}
 <div class="content-shell">
-  <aside class="content-aside" aria-label="Sommaire de la documentation">
+  <aside class="content-aside" aria-label="{{ tr("Sommaire de la documentation") }}">
     {% for section in sections %}
       <div class="content-aside-group">
         <div class="content-aside-title">{{ section.name }}</div>
@@ -27,10 +27,10 @@
   </aside>
 
   <article>
-    <nav class="content-breadcrumb" aria-label="Fil d'Ariane">
-      <a href="{{ campaign_link(request, '/') }}">Accueil</a>
+    <nav class="content-breadcrumb" aria-label="{{ tr("Fil d'Ariane") }}">
+      <a href="{{ campaign_link(request, '/') }}">{{ tr("Accueil") }}</a>
       <span>/</span>
-      <a href="{{ campaign_link(request, '/docs') }}">Documentation</a>
+      <a href="{{ campaign_link(request, '/docs') }}">{{ tr("Documentation") }}</a>
       <span>/</span>
       <span>{{ page.title }}</span>
     </nav>
@@ -38,14 +38,14 @@
     <header class="content-header">
       <div class="content-meta">
         <span class="content-kind">{{ page.kind }}</span>
-        <span>{{ page.reading_time }} de lecture</span>
-        <span>Mis à jour le {{ page.updated_at }}</span>
+        <span>{{ tr("{time} de lecture", time=page.reading_time) }}</span>
+        <span>{{ tr("Mis à jour le {date}", date=page.updated_at) }}</span>
         {% if page.audience %}<span>{{ page.audience }}</span>{% endif %}
       </div>
       <h1>{{ page.title }}</h1>
       <p class="content-lead">{{ page.description }}</p>
       {% if page.app_href and request.state.user %}
-        <a class="btn" href="{{ campaign_link(request, page.app_href) }}">Ouvrir dans l'application &rarr;</a>
+        <a class="btn" href="{{ campaign_link(request, page.app_href) }}">{{ tr("Ouvrir dans l'application") }} &rarr;</a>
       {% endif %}
     </header>
 
@@ -53,7 +53,7 @@
 
     {% if page.faq %}
       <section class="content-faq">
-        <h2>Questions fréquentes</h2>
+        <h2>{{ tr("Questions fréquentes") }}</h2>
         {% for item in page.faq %}
           <div class="card content-faq-item">
             <h3>{{ item.question }}</h3>
@@ -64,8 +64,8 @@
     {% endif %}
 
     {% if related %}
-      <aside class="content-related" aria-label="Pages liées">
-        <h2>À lire ensuite</h2>
+      <aside class="content-related" aria-label="{{ tr("Pages liées") }}">
+        <h2>{{ tr("À lire ensuite") }}</h2>
         <div class="content-related-list">
           {% for item in related %}
             <a class="content-related-link" href="{{ campaign_link(request, item.path) }}">
@@ -79,9 +79,9 @@
 
     {% if not request.state.user %}
       <section class="content-cta">
-        <h2>Essayer {{ app_name }}</h2>
-        <p>Créez un projet, lancez un crawl et parcourez votre premier rapport. Aucune carte bancaire n'est demandée.</p>
-        <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Créer un compte gratuit</a>
+        <h2>{{ tr("Essayer {app_name}", app_name=app_name) }}</h2>
+        <p>{{ tr("Créez un projet, lancez un crawl et parcourez votre premier rapport. Aucune carte bancaire n'est demandée.") }}</p>
+        <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{{ tr("Créer un compte gratuit") }}</a>
       </section>
     {% endif %}
   </article>
