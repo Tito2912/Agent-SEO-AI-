@@ -63,8 +63,14 @@ def test_missing_or_invalid_country_is_rejected_by_new_forms(lab, monkeypatch, c
     assert response.status_code == 303 and 'err=' in response.headers['location']
     with lab['db'].session() as db:
         assert not db.scalar(select(User.id).where(User.email == address))
+    # GET checks which sign-in methods to display. Guard the POST independently:
+    # an invalid country must still be rejected before OAuth is accessed.
+    c.get('/auth/signup')
     monkeypatch.setattr(m, '_google_oauth_client', lambda: (_ for _ in ()).throw(AssertionError('country checked before OAuth')))
-    response = post(c, '/auth/google/start', mode='signup', country=country, country_requested='yes')
+    response = c.post('/auth/google/start', data={
+        '_csrf': c.cookies.get(m._CSRF_COOKIE_NAME), 'mode': 'signup',
+        'country': country, 'country_requested': 'yes',
+    }, follow_redirects=False)
     assert response.status_code == 303 and response.headers['location'].startswith('/auth/signup?')
 
 

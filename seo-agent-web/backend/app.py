@@ -13430,6 +13430,7 @@ def auth_login(
             "err": str(err or "").strip(),
             "email": e,
             "email_q": quote(e),
+            "google_auth_available": all(_google_oauth_client()),
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -13461,6 +13462,7 @@ def auth_login_submit(
                 "err": message,
                 "email": e,
                 "email_q": quote(e),
+                "google_auth_available": all(_google_oauth_client()),
             },
             status_code=status_code,
         )
@@ -13594,9 +13596,15 @@ def auth_signup(
             "err": str(err or "").strip(),
             "email": e,
             "signup_country": customer_country.normalize(country) or "",
+            "email_q": quote(e),
             "invite_required": invite_required,
             "invite_code": "",
             "signup_disabled": signup_disabled,
+            # Team invitations can authorize email signup without the global code.
+            # Google start still requires that code; do not offer a blocked method.
+            "google_auth_available": all(_google_oauth_client()) and not (
+                bool(_safe_env("SIGNUP_INVITE_CODE")) and not invite_required
+            ),
             "acquisition_campaign": signup_attribution.find(DB, query=request.query_params),
         },
     )

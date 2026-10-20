@@ -10,38 +10,19 @@
     <link rel="stylesheet" href="/static/lang-switch.css?v=2" />
     <link rel="stylesheet" href="/static/attribution.css?v=1" />
     <link rel="stylesheet" href="/static/customer-country.css?v=1" />
+    <link rel="stylesheet" href="/static/auth-entry.css?v=1" />
   </head>
-  <body>
+  <body class="auth-entry">
     <main class="auth-shell">
       <section class="card auth-card">
+        {% with heading = tr("Créer un compte"), description = tr("Votre premier audit, puis les corrections adaptées à votre site.") %}
+          {% include "_auth_entry_intro.html" %}
+        {% endwith %}
 
-        <!-- Brand header -->
-        <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="{{ campaign_link(request, '/') }}" aria-label="Noyaru - {{ tr('Accueil') }}" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
-          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">{{ tr("Audit SEO Intelligent") }}</p>
-          <div style="margin-top:8px;">{% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}</div>
-        </div>
-
-        <div class="page-header">
-          <h1>{{ tr("Créer un compte") }}</h1>
-          <p class="muted">{{ tr("Auditez vos sites et suivez votre SEO au quotidien.") }}</p>
-        </div>
-
-        {% if msg %}
-          <div class="alert ok">
-            <span class="badge ok">ok</span>
-            <p class="muted small">{{ tr(msg) }}</p>
-          </div>
-        {% endif %}
-
-        {% if err %}
-          <div class="alert error">
-            <span class="badge error">{{ tr("erreur") }}</span>
-            <p class="muted small">{{ tr(err) }}</p>
-          </div>
-        {% endif %}
-
-        <form method="post" action="/auth/signup">
+        {% if signup_disabled %}
+          <p class="auth-entry-closed" role="status">{{ tr("Inscriptions fermées.") }}</p>
+        {% else %}
+        <form method="post" action="/auth/signup" class="auth-entry-form">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="next" value="{{ next }}" />
           <input type="hidden" name="country_requested" value="yes" />
@@ -49,67 +30,53 @@
             {{ country_field('signup-country', signup_country, required=true) }}
             <p class="muted small">{{ tr("Pays déclaré par vous, modifiable dans vos préférences.") }}</p>
           </div>
+          {% if invite_required %}
+            <div class="auth-entry-field">
+              <label for="signup-invite">{{ tr("Code d'invitation") }}</label>
+              <input id="signup-invite" name="invite_code" type="text" autocomplete="off" value="{{ invite_code }}" />
+            </div>
+          {% endif %}
+          <div class="auth-entry-field">
+            <label for="signup-email">{{ tr("Email") }}</label>
+            <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="320" required value="{{ email }}" />
+          </div>
+          <div class="auth-entry-field">
+            <label for="signup-password">{{ tr("Mot de passe") }}</label>
+            <input id="signup-password" name="password" type="password" autocomplete="new-password" required minlength="10" aria-describedby="signup-password-hint" />
+            <p id="signup-password-hint" class="muted small">{{ tr("Minimum 10 caractères.") }}</p>
+          </div>
 
           {% if acquisition_campaign %}
-          <input type="hidden" name="acquisition_campaign" value="{{ acquisition_campaign.id }}" />
-          <label class="signup-attribution-choice">
-            <input type="checkbox" name="acquisition_consent" value="yes" />
-            <span>{{ tr("J’accepte que Noyaru relie la campagne qui m’a amené ici à mes premiers résultats.") }}
-              <span class="muted small">{{ tr("Facultatif, sans effet sur votre compte. Retrait à tout moment dans « Comptes & connexions ».") }} <a href="{{ campaign_link(request, '/privacy#signup-attribution') }}">{{ tr("En savoir plus") }}</a>.</span>
-            </span>
-          </label>
+            <input type="hidden" name="acquisition_campaign" value="{{ acquisition_campaign.id }}" />
+            <details class="auth-entry-optional">
+              <summary>{{ tr("Origine de mon inscription") }} <span class="muted">{{ tr("(facultatif)") }}</span></summary>
+              <label class="signup-attribution-choice">
+                <input type="checkbox" name="acquisition_consent" value="yes" />
+                <span>{{ tr("J’accepte que Noyaru relie la campagne qui m’a amené ici à mes premiers résultats.") }}
+                  <span class="muted small">{{ tr("Facultatif, sans effet sur votre compte. Retrait à tout moment dans « Comptes & connexions ».") }} <a href="{{ campaign_link(request, '/privacy#signup-attribution') }}">{{ tr("En savoir plus") }}</a>.</span>
+                </span>
+              </label>
+            </details>
           {% endif %}
 
-          <button
-            class="btn block"
-            type="submit"
-            formaction="/auth/google/start"
-            name="mode"
-            value="signup"
-            formnovalidate
-            {% if signup_disabled %}disabled{% endif %}
-          >
-            <img class="oauth-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-            {{ tr("Continuer avec Google") }}
-          </button>
-
-          <div class="auth-divider"><span>{{ tr("ou") }}</span></div>
-
-          {% if signup_disabled %}
-            <p class="muted small" style="margin: 0 0 10px;">{{ tr("Inscriptions fermées.") }}</p>
+          <button class="btn primary block" type="submit">{{ tr("Créer le compte") }}</button>
+          {% if google_auth_available %}
+            <div class="auth-divider"><span>{{ tr("ou") }}</span></div>
+            <button class="btn block" type="submit" formaction="/auth/google/start" name="mode" value="signup" formnovalidate>
+              <img class="oauth-logo" src="/static/google.svg" alt="" aria-hidden="true" />
+              {{ tr("Continuer avec Google") }}
+            </button>
           {% endif %}
-
-          <label>
-            {{ tr("Email") }}
-            <input name="email" type="email" autocomplete="email" required value="{{ email }}" />
-          </label>
-
-          <div class="row"></div>
-
-          {% if invite_required %}
-            <label>
-              {{ tr("Code d'invitation") }}
-              <input name="invite_code" type="text" autocomplete="off" value="{{ invite_code }}" />
-            </label>
-            <div class="row"></div>
-          {% endif %}
-
-          <label>
-            {{ tr("Mot de passe") }}
-            <input name="password" type="password" autocomplete="new-password" required minlength="10" />
-          </label>
-          <p class="muted small" style="margin: 8px 0 0;">{{ tr("Minimum 10 caractères.") }}</p>
-
-          <div class="row-actions">
-            <button class="btn primary" type="submit" {% if signup_disabled %}disabled{% endif %}>{{ tr("Créer le compte") }}</button>
-            <a class="btn" href="{{ campaign_link(request, '/auth/login?next=' ~ next_q) }}">{{ tr("J'ai déjà un compte") }}</a>
-          </div>
         </form>
+        {% endif %}
 
-        <p class="muted small" style="margin:18px 0 0; text-align:center;">
+        <div class="auth-entry-footer">
+          <a class="btn block" href="{{ campaign_link(request, '/auth/login?next=' ~ next_q ~ '&email=' ~ email_q) }}">{{ tr("J'ai déjà un compte") }}</a>
+          <a class="auth-entry-help" href="{{ localized_path('/support', current_lang()) }}">{{ tr("Aide") }}</a>
+        </div>
+        <p class="muted small auth-entry-terms">
           {{ tr_html('En créant un compte, vous acceptez les <a href="{terms}">CGU</a> et la <a href="{privacy}">politique de confidentialité</a>.', terms=campaign_link(request, '/terms'), privacy=campaign_link(request, '/privacy')) }}
         </p>
-
       </section>
     </main>
   </body>
