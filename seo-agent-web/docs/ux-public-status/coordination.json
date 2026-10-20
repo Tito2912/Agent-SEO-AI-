@@ -21,5 +21,24 @@
     "duration_seconds": 6.67
   },
   "branches_modified_by_simulation": false,
-  "scope": "Arbre combiné exporté dans /tmp, base SQLite de test isolée ; seuls les commits publiés sont couverts."
+  "scope": "Arbre combiné exporté dans /tmp, base SQLite de test isolée ; seuls les commits publiés sont couverts.",
+  "after_pr32_merge": {
+    "main_commit": "076046e37875781560cc6fb2095c9b1eb7bf3ac3",
+    "claude_commit": "2d5f3d256935aa4b3b6c9f5a3fd11f0aa56c9e60",
+    "integration_commit": "45a6841",
+    "conflicts": [],
+    "targeted_tests": {
+      "passed": 112,
+      "failed": 0,
+      "duration_seconds": 26.05
+    },
+    "browser": {
+      "cases": 24,
+      "javascript_errors": [],
+      "provider_calls": 0,
+      "contrast_samples": 360,
+      "minimum_ratio": 6.84
+    },
+    "previous_doc_failures": "Both resolved by PR #32 and rechecked without modifying their tests."
+  }
 }
