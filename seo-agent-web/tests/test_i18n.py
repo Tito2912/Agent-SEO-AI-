@@ -99,9 +99,10 @@ def test_unknown_lang_parameter_is_ignored(client: TestClient) -> None:
     assert '<html lang="fr">' in response.text
 
 
-def test_language_switch_keeps_other_query_parameters(client: TestClient) -> None:
-    response = client.get("/auth/login", params={"next": "/projects", "lang": "en"})
+def test_language_switch_keeps_next_but_drops_private_parameters(client: TestClient) -> None:
+    response = client.get("/auth/login", params={"next": "/projects", "gclid": "private-click", "lang": "en"})
     assert 'href="/auth/login?next=%2Fprojects&amp;lang=fr"' in response.text
+    assert "private-click" not in response.text
 
 
 def test_computed_plan_texts_are_translated_with_their_numbers() -> None:

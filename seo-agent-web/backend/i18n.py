@@ -182,15 +182,23 @@ def _current_lang(context: Any) -> str:
     return request_lang(context.get("request"))
 
 
+# Les seuls parametres que le selecteur recopie. Les autres (identifiants de clic, adresse
+# e-mail...) ne doivent jamais se retrouver dans un lien de la page.
+_KEPT_PARAMS = ("next",)
+_link_builder: Any = None
+
+
 @pass_context
 def _lang_url(context: Any, code: str) -> str:
     """L'adresse de la page courante dans une autre langue."""
     request = context.get("request")
     if request is None:
         return f"/?lang={code}"
-    params = [(k, v) for k, v in request.query_params.multi_items() if k != "lang"]
-    params.append(("lang", code))
-    return f"{request.url.path}?{urlencode(params)}"
+    params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
+    path = f"{request.url.path}?{urlencode(params)}" if params else request.url.path
+    if _link_builder is not None:
+        path = _link_builder(request, path)
+    return f"{path}{'&' if '?' in path else '?'}{urlencode([('lang', code)])}"
 
 
 _country_cache: dict[str, list[tuple[str, str]]] = {}
@@ -214,7 +222,11 @@ def _country_options(context: Any) -> list[tuple[str, str]]:
     return _country_cache[lang]
 
 
-def install(app: Any, templates: Any, *, is_secure: Any = None) -> None:
+def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: Any = None) -> None:
+    """`link_builder(request, path)` ajoute aux liens les parametres publics autorises (les
+    etiquettes de campagne, voir signup_attribution.carry)."""
+    global _link_builder
+    _link_builder = link_builder
     env = templates.env
     env.globals["tr"] = _tr
     env.globals["tr_html"] = _tr_html

@@ -10661,7 +10661,7 @@ templates.env.globals["public_url"] = _public_url
 templates.env.globals["campaign_link"] = signup_attribution.carry
 templates.env.globals["country_options"] = customer_country.OPTIONS
 # Langue de l'interface (francais par defaut, anglais en traduction) : voir backend/i18n.py.
-i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request))
+i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request), link_builder=signup_attribution.carry)
 
 
 def _public_template_context(request: Request, **extra: Any) -> dict[str, Any]:
