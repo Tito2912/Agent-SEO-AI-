@@ -304,7 +304,10 @@ def test_list_links_to_fiche_and_retains_existing_csv_filter_scope(lab):
     page = c.get('/settings/activation/accounts?usage=verified_email')
     soup = BeautifulSoup(page.text, 'html.parser')
     link = soup.select_one('.account-open')
-    assert link['href'] == '/settings/activation/accounts/' + owner.id
+    from urllib.parse import parse_qs, urlsplit
+    assert urlsplit(link['href']).path == '/settings/activation/accounts/' + owner.id
+    return_to = parse_qs(urlsplit(link['href']).query)['return_to'][0]
+    assert parse_qs(urlsplit(return_to).query)['usage'] == ['verified_email']
     assert c.get(link['href']).status_code == 200
     rows = list(csv.DictReader(io.StringIO(c.get('/settings/activation/accounts.csv?usage=verified_email').content.decode('utf-8-sig')), delimiter=';'))
     assert len(rows) == 1 and rows[0]['Identifiant du compte'] == owner.id

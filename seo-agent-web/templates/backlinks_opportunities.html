@@ -180,7 +180,7 @@
     <div class="alert notice" style="margin-top:16px;">
       <span class="badge notice">Solo+</span>
       <p class="muted small" style="margin:6px 0 12px;">Fonctionnalité réservée aux plans Solo, Pro et Business. Plan actuel : <strong>{{ plan_key | title }}</strong>.</p>
-      <a href="/billing" class="btn primary">Voir les plans</a>
+      <a href="{{ billing_url or '/billing' }}" class="btn primary">Voir les plans</a>
     </div>
   </section>
 {% else %}

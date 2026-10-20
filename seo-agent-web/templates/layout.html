@@ -1,5 +1,13 @@
 <!doctype html>
 <html lang="fr">
+{% set billing_filters = {} %}
+{% if project and project.slug and request.url.query %}
+  {% for field in ('range', 'start', 'end', 'q', 'crawl', 'compare') %}
+    {% if request.query_params.get(field) %}{% set _ = billing_filters.update({field: request.query_params.get(field)}) %}{% endif %}
+  {% endfor %}
+{% endif %}
+{% set billing_return = request.url.path ~ ('?' ~ (billing_filters|urlencode) if billing_filters else '') %}
+{% set billing_url = '/billing?' ~ ({'project': project.slug, 'return_to': billing_return}|urlencode) if project and project.slug else '/billing' %}
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,6 +16,7 @@
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
     <link rel="stylesheet" href="/static/customer-country.css?v=1" />
+    <link rel="stylesheet" href="/static/account-journey.css?v=1" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
@@ -130,7 +139,7 @@
             Exécutions
           </a>
 
-          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}"{% if request.url.path.startswith('/billing') %} aria-current="page"{% endif %} href="/billing">
+          <a class="nav-item {% if request.url.path.startswith('/billing') %}active{% endif %}"{% if request.url.path.startswith('/billing') %} aria-current="page"{% endif %} href="{{ billing_url }}">
             <svg class="nav-icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h3"/></svg>
             Abonnement
           </a>
@@ -140,18 +149,13 @@
             Documentation
           </a>
 
-          {% if request.state.user and request.state.user.is_admin %}
-            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}"{% if request.url.path.startswith('/automation') %} aria-current="page"{% endif %} href="/automation">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-              Automatisation
-            </a>
-          {% endif %}
+
 
           <div class="nav-section">Votre compte</div>
 
           <a class="nav-item {% if request.url.path.startswith('/settings/accounts') %}active{% endif %}"{% if request.url.path.startswith('/settings/accounts') %} aria-current="page"{% endif %} href="/settings/accounts">
             <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/></svg>
-            Comptes &amp; connexions
+            Mon compte
           </a>
 
           <a class="nav-item {% if request.url.path.startswith('/settings/team') %}active{% endif %}"{% if request.url.path.startswith('/settings/team') %} aria-current="page"{% endif %} href="/settings/team">
@@ -159,8 +163,16 @@
             Équipe
           </a>
 
-          {% if request.state.can_access_system_settings %}
+          {% if request.state.user and request.state.user.is_admin or request.state.can_access_system_settings %}
             <div class="nav-section">Administration Noyaru</div>
+          {% endif %}
+          {% if request.state.user and request.state.user.is_admin %}
+            <a class="nav-item {% if request.url.path.startswith('/automation') %}active{% endif %}"{% if request.url.path.startswith('/automation') %} aria-current="page"{% endif %} href="/automation">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+              Automatisation plateforme
+            </a>
+          {% endif %}
+          {% if request.state.can_access_system_settings %}
             <a class="nav-item {% if request.url.path.startswith('/settings/operations') %}active{% endif %}"{% if request.url.path.startswith('/settings/operations') %} aria-current="page"{% endif %} href="/settings/operations">
               <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>
               Exploitation
@@ -278,7 +290,8 @@
                 </form>
               </section>
             {% endif %}
-            {% block content %}{% endblock %}
+            {% include '_admin_scope.html' %}
+          {% block content %}{% endblock %}
           </div>
         </div>
       </main>
@@ -351,27 +364,7 @@
       } | tojson }};
     </script>
     <script src="/static/chatbot.js" defer></script>
-    <script>
-      (() => {
-        function autoHideAlerts() {
-          document.querySelectorAll(".alert.ok").forEach((el) => {
-            setTimeout(() => {
-              el.style.transition = "opacity .4s ease, max-height .4s ease, margin .4s ease";
-              el.style.opacity = "0";
-              el.style.maxHeight = "0";
-              el.style.overflow = "hidden";
-              el.style.margin = "0";
-              setTimeout(() => el.remove(), 420);
-            }, 5000);
-          });
-        }
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", autoHideAlerts);
-        } else {
-          autoHideAlerts();
-        }
-      })();
-    </script>
+    <script src="/static/feedback.js?v=1" defer></script>
     <script>
       /* ── Localize all UTC timestamps to the visitor's local timezone ── */
       (function () {

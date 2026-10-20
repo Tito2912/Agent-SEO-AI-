@@ -53,7 +53,7 @@
         {% set revoir = verification.state == 'still_present' and published.kind != 'stale' %}
         <div class="cms-actions">{% if revoir %}<a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ change.task_id }}">Revoir mon texte</a>{% endif %}{{ action_button('verify', 'Vérifier le résultat' if verification.state == 'pending' else 'Relancer la vérification', not revoir, 'Lancement de la vérification…') }}</div>
         <p class="muted small">Ce contrôle lance une nouvelle analyse, décomptée du quota habituel de pages. Le résultat s’affichera ici.</p>
-        <p class="muted small">Si votre site utilise un cache, actualisez-le avant le contrôle. <a href="/billing">Voir mon quota</a></p>
+        <p class="muted small">Si votre site utilise un cache, actualisez-le avant le contrôle. <a href="{{ billing_url or '/billing' }}">Voir mon quota</a></p>
       {% endif %}
     </section>
     <section class="card"><details><summary>Voir la modification appliquée</summary>{{ comparison() }}</details></section>

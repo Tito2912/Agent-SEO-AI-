@@ -17,9 +17,19 @@
 
 {% block content %}
   <div class="page-header">
-    <h1>Exploitation prod</h1>
+    <h1>Exploitation de la plateforme</h1>
     <p class="muted">Vue propriétaire pour vérifier l'ouverture, les jobs, les intégrations et les signaux récents.</p>
   </div>
+
+  <nav class="section-nav" aria-label="Sections d’exploitation">
+    <a href="#ops-incidents">À examiner</a><a href="#ops-checks">Services</a><a href="#couts-ia">Coûts IA</a><a href="#ops-jobs">Activité</a><a href="#ops-logs">Journal</a>
+  </nav>
+  <section class="card ops-incidents" id="ops-incidents" aria-labelledby="ops-incidents-title">
+    <h2 id="ops-incidents-title">{{ snapshot.status_counts.error }} contrôle(s) bloquant(s) · {{ snapshot.status_counts.warning }} point(s) d’attention</h2>
+    <p class="muted small">État lu le {{ snapshot.generated_at }}. Ces contrôles décrivent la configuration et l’activité observées.</p>
+    <ul>{% for check in snapshot.checks if check.status != 'ok' %}<li><strong>{{ check.label }}</strong> · {{ 'Bloquant' if check.status == 'error' else 'À examiner' }} — {{ check.detail or 'Consultez le contrôle détaillé.' }}</li>{% else %}<li>Aucun contrôle en alerte à cette lecture.</li>{% endfor %}</ul>
+    <a href="#ops-checks">Voir tous les contrôles</a>
+  </section>
 
   <div class="stat-strip">
     <div class="stat-strip-item">
@@ -51,7 +61,7 @@
     <div class="card-title-row">
       <h2>Coût réel des IA — {{ couts_ia.periode }}</h2>
       <form method="get" action="/settings/operations" class="inline" style="display:flex;gap:6px;align-items:center;">
-        <input type="month" name="mois" value="{{ couts_ia.periode }}" style="max-width:170px;" />
+        <label for="ops-cost-month">Mois des coûts IA</label><input id="ops-cost-month" type="month" name="mois" value="{{ couts_ia.periode }}" style="max-width:170px;" />
         <button type="submit" class="btn small">Afficher</button>
       </form>
     </div>
@@ -64,7 +74,7 @@
         <strong>{{ "%.2f"|format(couts_ia.total.usd) }} $ ≈ {{ "%.2f"|format(couts_ia.total.eur) }} €</strong>
         (1 $ ≈ {{ couts_ia.taux }} €){% if couts_ia.total.sans_prix %} · {{ couts_ia.total.sans_prix }} appel(s) d'un modèle sans prix connu, coût non compté{% endif %}
       </p>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Coûts IA par formule">
         <table class="table compact">
           <thead>
             <tr><th>Plan</th><th>Comptes</th><th>Appels</th><th>Coût IA</th><th>Par compte</th><th>Prix HT</th><th>Marge IA par compte</th></tr>
@@ -84,7 +94,7 @@
           </tbody>
         </table>
       </div>
-      <div class="table-wrap" style="margin-top:14px;">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Coûts IA par fonction" style="margin-top:14px;">
         <table class="table compact">
           <thead>
             <tr><th>Fonction</th><th>Appels</th><th>Tokens entrée</th><th>Tokens sortie</th><th>Coût</th><th>Par appel</th></tr>
@@ -119,7 +129,7 @@
         <strong>{{ pilote_wordpress.declined }}</strong> refusée(s) · {{ pilote_wordpress.projects }} projet(s)
       </p>
       {% if pilote_wordpress.reasons %}
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Pilote WordPress">
           <table class="table compact">
             <thead><tr><th>Raison du refus</th><th>Tentatives</th></tr></thead>
             <tbody>
@@ -135,7 +145,7 @@
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Readiness ouverture</h2>
+      <h2 id="ops-checks">État des services et de la configuration</h2>
       {% if snapshot.ready %}
         <span class="badge ok">ouvrable</span>
       {% else %}
@@ -144,7 +154,7 @@
     </div>
     <p class="muted small" style="margin-top:0;">Généré le {{ snapshot.generated_at }}</p>
 
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Contrôles des services">
       <table class="table compact">
         <thead>
           <tr>
@@ -171,7 +181,7 @@
   <div class="grid two">
     <section class="card">
       <div class="card-title-row">
-        <h2>Jobs</h2>
+        <h2 id="ops-jobs">Traitements</h2>
       </div>
       <div class="kv setting-kv">
         <div class="kv-item">
@@ -193,7 +203,7 @@
       <div class="card-title-row">
         <h2>Stockage</h2>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Stockage">
         <table class="table compact">
           <thead>
             <tr>
@@ -253,7 +263,7 @@
       {% if not snapshot.stale_jobs %}
         <p class="muted">Aucun job actif depuis plus de deux heures.</p>
       {% else %}
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Traitements bloqués">
           <table class="table compact">
             <thead>
               <tr>
@@ -285,7 +295,7 @@
       {% if not snapshot.recent_problem_jobs %}
         <p class="muted">Aucun échec récent dans les derniers jobs.</p>
       {% else %}
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Traitements en erreur">
           <table class="table compact">
             <thead>
               <tr>
@@ -313,7 +323,7 @@
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Audit logs récents</h2>
+      <h2 id="ops-logs">Journal récent</h2>
       {% if snapshot.db.recent_audit_problem_count %}
         <span class="badge warning">{{ snapshot.db.recent_audit_problem_count }} signalement(s) 24h</span>
       {% else %}
@@ -323,7 +333,7 @@
     {% if not snapshot.recent_audit %}
       <p class="muted">Aucun événement d'audit.</p>
     {% else %}
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Journal des actions">
         <table class="table compact">
           <thead>
             <tr>

@@ -401,13 +401,13 @@ def _creer_invitation(*, owner_user_id: str, email: str, invited_by: str) -> tup
 
     sieges = _sieges_du_plan(hote)
     if sieges <= 0:
-        return None, "", ("Les comptes d'équipe ne sont pas inclus dans ton forfait. "
-                          "Passe à Pro ou Business pour inviter des collaborateurs.")
+        return None, "", ("Les comptes d'équipe ne sont pas inclus dans votre forfait. "
+                          "Passez à Pro ou Business pour inviter des collaborateurs.")
 
     with DB.session() as db:
         proprio = db.get(User, hote)
         if proprio is not None and _normalize_email(getattr(proprio, "email", "")) == adresse:
-            return None, "", "C'est ta propre adresse : tu es déjà propriétaire du compte."
+            return None, "", "C’est votre propre adresse : vous êtes déjà propriétaire du compte."
 
         invite = db.scalar(select(User).where(User.email == adresse))
         if invite is not None:
@@ -416,12 +416,12 @@ def _creer_invitation(*, owner_user_id: str, email: str, invited_by: str) -> tup
             deja = db.scalar(select(AccountMember).where(AccountMember.member_user_id == str(invite.id)))
             if deja is not None:
                 if str(deja.owner_user_id) == hote:
-                    return None, "", "Cette personne fait déjà partie de ton compte."
+                    return None, "", "Cette personne fait déjà partie de votre compte."
                 return None, "", ("Cette personne appartient déjà à un autre compte d'équipe. "
-                                  "Elle doit le quitter avant de rejoindre le tien.")
+                                  "Elle doit le quitter avant de rejoindre le vôtre.")
 
     if _sieges_occupes(hote) >= sieges:
-        return None, "", ("Tu as utilisé les %d places de ton forfait (membres et invitations en "
+        return None, "", ("Vous avez utilisé les %d places de votre forfait (membres et invitations en "
                           "attente comprises)." % sieges)
 
     for existante in _invitations_en_attente(hote):
@@ -444,6 +444,11 @@ def _creer_invitation(*, owner_user_id: str, email: str, invited_by: str) -> tup
     return ligne, jeton, ""
 
 
+def _masked_invitation_email(email: str) -> str:
+    local, _, domain = str(email or "").partition("@")
+    return (local[:1] + "•••@" + domain) if domain else "l’adresse invitée"
+
+
 def _accepter_invitation(*, token: str, user: Any) -> tuple[bool, str]:
     """Rend (acceptee, message). Toutes les verifications sont refaites ICI.
 
@@ -456,7 +461,7 @@ def _accepter_invitation(*, token: str, user: Any) -> tuple[bool, str]:
         return False, "Lien d'invitation invalide."
     uid = str(getattr(user, "id", "") or "").strip()
     if not uid:
-        return False, "Connecte-toi pour accepter cette invitation."
+        return False, "Connectez-vous pour accepter cette invitation."
 
     with DB.session() as db:
         ligne = db.scalar(select(AccountInvite).where(AccountInvite.token_hash == empreinte))
@@ -466,36 +471,36 @@ def _accepter_invitation(*, token: str, user: Any) -> tuple[bool, str]:
             return False, "Cette invitation a déjà été utilisée."
         limite = _dt_as_naive_utc(ligne.expires_at)
         if limite is None or limite <= _utc_now_naive():
-            return False, "Cette invitation a expiré. Demande-en une nouvelle."
+            return False, "Cette invitation a expiré. Demandez un nouveau lien à la personne qui vous a invité."
 
         # LIEE A L'ADRESSE, et c'est la garde qui empeche un lien transfere d'ouvrir le compte
         # d'une agence — avec ses depots GitHub — a qui le detient.
         moi = db.get(User, uid)
         if moi is None or _normalize_email(getattr(moi, "email", "")) != _normalize_email(ligne.email):
-            return False, ("Cette invitation a été envoyée à %s. Connecte-toi avec cette adresse "
-                           "pour l'accepter." % ligne.email)
+            return False, ("Cette invitation a été envoyée à %s. Connectez-vous avec cette adresse "
+                           "pour l'accepter." % _masked_invitation_email(ligne.email))
 
         if str(ligne.owner_user_id) == uid:
-            return False, "Tu ne peux pas rejoindre ton propre compte."
+            return False, "Vous ne pouvez pas rejoindre votre propre compte."
 
         deja = db.scalar(select(AccountMember).where(AccountMember.member_user_id == uid))
         if deja is not None:
             if str(deja.owner_user_id) == str(ligne.owner_user_id):
-                return False, "Tu fais déjà partie de ce compte."
-            return False, ("Tu appartiens déjà à un autre compte d'équipe. Quitte-le avant de "
+                return False, "Vous faites déjà partie de ce compte."
+            return False, ("Vous appartenez déjà à un autre compte d’équipe. Quittez-le avant de "
                            "rejoindre celui-ci.")
 
         hote = str(ligne.owner_user_id)
         sieges = _sieges_du_plan(hote)
         if len(_membres_du_compte(hote)) >= sieges:
-            return False, ("Ce compte n'a plus de place disponible. Préviens la personne qui "
-                           "t'a invité.")
+            return False, ("Ce compte n'a plus de place disponible. Prévenez la personne qui "
+                           "vous a invité.")
 
         db.add(AccountMember(owner_user_id=hote, member_user_id=uid))
         ligne.used_at = _utc_now_naive()
         ligne.accepted_by_user_id = uid
         db.commit()
-    return True, "Tu as rejoint le compte."
+    return True, "Vous avez rejoint le compte."
 
 
 def _retirer_membre(*, owner_user_id: str, member_user_id: str) -> tuple[bool, str]:
@@ -507,7 +512,7 @@ def _retirer_membre(*, owner_user_id: str, member_user_id: str) -> tuple[bool, s
         ligne = db.scalar(select(AccountMember).where(
             AccountMember.owner_user_id == hote, AccountMember.member_user_id == membre))
         if ligne is None:
-            return False, "Cette personne ne fait pas partie de ton compte."
+            return False, "Cette personne ne fait pas partie de votre compte."
         db.delete(ligne)
         db.commit()
     return True, "Membre retiré."
@@ -13755,9 +13760,12 @@ def auth_signup_submit(
 
 
 @app.post("/auth/logout")
-def auth_logout(request: Request) -> RedirectResponse:
+def auth_logout(request: Request, next: str = Form(default="")) -> RedirectResponse:
     user = getattr(request.state, "user", None)
-    resp = RedirectResponse(url="/auth/login", status_code=303)
+    destination = "/auth/login"
+    if next:
+        destination += "?" + urlencode({"next": _safe_next_path(next)})
+    resp = RedirectResponse(url=destination, status_code=303)
     resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
     _audit_log(request, action="auth.logout", status="ok", user=user)
     return resp
@@ -14303,10 +14311,30 @@ def billing_page(
     session_id: str | None = None,
     msg: str | None = None,
     err: str | None = None,
+    project: str = "",
+    return_to: str = "",
 ) -> HTMLResponse:
     user = getattr(request.state, "user", None)
     if not user:
         return RedirectResponse(url="/auth/login", status_code=303)  # type: ignore[return-value]
+
+    # Resolve access before any Stripe reconciliation. A slug is not proof of ownership.
+    billing_context = None
+    if project:
+        site = _db_project_or_404(request, project)
+        site_path = "/projects/" + str(site.slug)
+        back = _safe_next_path(return_to) if return_to else site_path
+        if urlsplit(back).path != site_path and not urlsplit(back).path.startswith(site_path + "/"):
+            back = site_path
+        with DB.session() as db:
+            owner = db.get(User, str(site.owner_user_id))
+            site_plan = billing.effective_plan_key(db, user_id=str(site.owner_user_id))
+        billing_context = {
+            "site_name": site.site_name, "return_url": back,
+            "shared": str(site.owner_user_id) != str(user.id),
+            "owner_email": str(getattr(owner, "email", "") or "Propriétaire du site"),
+            "plan_label": billing.plan_catalog().get(site_plan, {}).get("label", site_plan),
+        }
 
     stripe_ready = billing.stripe_enabled()
     catalog = billing.plan_catalog()
@@ -14395,6 +14423,8 @@ def billing_page(
         {
             "request": request,
             "stripe_ready": stripe_ready,
+            "billing_context": billing_context,
+            "account_host": _compte_hote_de(str(user.id)),
             "msg": msg_out,
             "err": err_out,
             "plan_key": plan_key,
@@ -37470,12 +37500,26 @@ def _wants_json(request: Request) -> bool:
 
 
 def _error_ctx(request: Request, status_code: int, detail: str) -> dict:
+    user = getattr(request.state, "user", None)
+    recovery_url = "/" if user else "/auth/login"
+    recovery_label = "Retrouver mes sites" if user else "Me connecter"
+    match = _PROJET_DE_L_ADRESSE.match(request.url.path)
+    if user and match:
+        try:
+            site = _db_project(str(user.id), match.group(1))
+        except Exception:
+            site = None  # Error recovery must still render if the database is unavailable.
+        if site:
+            recovery_url = "/projects/" + str(site.slug)
+            recovery_label = "Revenir au bilan du site"
     return {
         "request": request,
         "app_name": _app_name(),
         "year": datetime.now(timezone.utc).year,
         "status_code": status_code,
         "detail": detail,
+        "recovery_url": recovery_url,
+        "recovery_label": recovery_label,
     }
 
 
@@ -37508,7 +37552,8 @@ def _jour_lisible(valeur: datetime | None) -> str:
 
 
 @app.get("/settings/team", response_class=HTMLResponse)
-def settings_team(request: Request, msg: str | None = None, err: str | None = None) -> HTMLResponse:
+def settings_team(request: Request, msg: str | None = None, err: str | None = None,
+                  invitation: str = "") -> HTMLResponse:
     """L'ecran d'equipe, et le premier endroit d'ou une adhesion peut naitre.
 
     Il montre DEUX choses a la meme personne, parce qu'elles sont independantes : le compte
@@ -37545,6 +37590,16 @@ def settings_team(request: Request, msg: str | None = None, err: str | None = No
                     "expire": _jour_lisible(i.expires_at)}
                    for i in _invitations_en_attente(uid)]
 
+    invitation_retry = None
+    if invitation:
+        with DB.session() as db:
+            pending = db.scalar(select(AccountInvite).where(AccountInvite.token_hash == _invite_token_hash(invitation)))
+            if (pending and pending.used_at is None
+                    and (_dt_as_naive_utc(pending.expires_at) or _utc_now_naive()) > _utc_now_naive()
+                    and _normalize_email(pending.email) != _normalize_email(user.email)):
+                invitation_retry = {"email": _masked_invitation_email(pending.email),
+                                    "path": "/team/accept?" + urlencode({"token": invitation})}
+
     sieges = _sieges_du_plan(uid)
     return templates.TemplateResponse(
         "settings_team.html",
@@ -37557,7 +37612,9 @@ def settings_team(request: Request, msg: str | None = None, err: str | None = No
             "appartenance": appartenance,
             "sieges": sieges,
             "occupes": len(membres) + len(invitations),
+            "invitation_retry": invitation_retry,
         },
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
     )
 
 
@@ -37591,7 +37648,7 @@ def settings_team_invite(request: Request, email: str = Form(default="")) -> Red
         return RedirectResponse(
             url=_path_with_flash("/settings/team",
                                  err="Invitation créée, mais l'email n'a pas pu être envoyé. "
-                                     "Annule-la et réessaie."),
+                                     "Annulez-la puis réessayez."),
             status_code=303)
 
     _audit_log(request, action="team.invite", status="ok", user=user,
@@ -37643,13 +37700,13 @@ def settings_team_leave(request: Request) -> RedirectResponse:
         hote = str(adhesion.owner_user_id) if adhesion is not None else ""
     if not hote:
         return RedirectResponse(
-            url=_path_with_flash("/settings/team", err="Tu ne fais partie d'aucun compte."),
+            url=_path_with_flash("/settings/team", err="Vous ne faites partie d’aucun compte."),
             status_code=303)
     ok, _m = _retirer_membre(owner_user_id=hote, member_user_id=uid)
     _audit_log(request, action="team.leave", status="ok" if ok else "refused", user=user,
                target_type="user", target_id=hote)
     return RedirectResponse(
-        url=_path_with_flash("/settings/team", msg="Tu as quitté ce compte."), status_code=303)
+        url=_path_with_flash("/settings/team", msg="Vous avez quitté ce compte."), status_code=303)
 
 
 @app.get("/team/accept", response_class=HTMLResponse)
@@ -37670,7 +37727,9 @@ def team_accept(request: Request, token: str = "") -> RedirectResponse:
                meta=None if ok else {"reason": message})
     if ok:
         return RedirectResponse(url=_path_with_flash("/", msg=message), status_code=303)
-    return RedirectResponse(url=_path_with_flash("/settings/team", err=message), status_code=303)
+    destination = "/settings/team?" + urlencode({"err": message, "invitation": token})
+    return RedirectResponse(url=destination, status_code=303,
+                            headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
 
 def _reprendre_une_verification(tache: Any) -> str:

@@ -2,7 +2,7 @@
 {% set account = dossier.account %}
 {% block title %}Fiche client - Noyaru{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/customer-profile.css?v=1" />{% endblock %}
-{% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><a href="/settings/activation/accounts">Comptes clients</a><span class="crumb-sep">/</span><span class="crumb-current">Fiche client</span>{% endblock %}
+{% block crumbs %}<a href="/settings/activation">Parcours clients</a><span class="crumb-sep">/</span><a href="{{ return_url or '/settings/activation/accounts' }}">Comptes clients</a><span class="crumb-sep">/</span><span class="crumb-current">Fiche client</span>{% endblock %}
 {% block actions %}<a class="btn" href="{{ account.profile_url }}/export.csv">Exporter la fiche (CSV)</a>{% endblock %}
 {% macro stored(connection) %}<span class="badge {% if connection.saved %}ok{% endif %}">{{ 'Enregistrée' if connection.saved else 'Non retrouvée en base' }}</span>{% if connection.date %}<span class="profile-date muted small">{{ connection.date }}</span>{% endif %}{% endmacro %}
 {% block content %}
@@ -49,6 +49,6 @@
     <section class="card"><h2>Premières étapes observées</h2><dl class="profile-facts">{% for milestone in dossier.milestones %}<div><dt>{{ milestone.label }}</dt><dd>{{ milestone.date or 'Non renseignée' }}</dd></div>{% endfor %}</dl><p class="small muted">Dates en heure de Paris. Ce suivi a commencé récemment : les étapes anciennes ne sont pas reconstruites. Un site ou une analyse peuvent exister sans date de première étape conservée.</p></section>
     <section class="card"><h2>Origine de l’inscription</h2>{% if dossier.campaign %}<dl class="profile-facts"><div><dt>Source</dt><dd>{{ dossier.campaign.source }}</dd></div><div><dt>Support</dt><dd>{{ dossier.campaign.medium }}</dd></div><div><dt>Campagne</dt><dd>{{ dossier.campaign.name }}</dd></div></dl><p class="small muted">Origine enregistrée avec l’accord du client à l’inscription.</p>{% else %}<p class="muted">Origine non renseignée.</p><p class="small muted">Aucune campagne reconnue et acceptée n’est disponible, ou l’accord a été retiré. Cela ne prouve pas une visite directe.</p>{% endif %}</section>
   </div>
-  <p><a href="/settings/activation/accounts">← Retour aux comptes clients</a></p>
+  <p><a href="{{ return_url or '/settings/activation/accounts' }}">← Retour aux comptes clients</a></p>
 </div>
 {% endblock %}

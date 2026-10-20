@@ -12,7 +12,7 @@
 {% block content %}
   <div class="page-header">
     <h1>Abonnement</h1>
-    <p class="muted">Gérez votre plan, vos quotas et votre facturation.</p>
+    <p class="muted">La formule et les compteurs ci-dessous appartiennent à votre compte personnel.</p>
   <a href="/docs/plans-et-quotas" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
   </div>
 
@@ -28,6 +28,24 @@
       <p class="muted small">{{ err }}</p>
     </div>
   {% endif %}
+
+  <section class="card billing-scope" aria-labelledby="billing-scope-title">
+    <h2 id="billing-scope-title">Compte concerné : {{ request.state.user.email }}</h2>
+    <p>Un achat ici modifie votre abonnement et les limites de vos propres sites.</p>
+    {% if billing_context %}
+      {% if billing_context.shared %}
+        <p><strong>{{ billing_context.site_name }}</strong> appartient à <strong>{{ billing_context.owner_email }}</strong> et utilise sa formule <strong>{{ billing_context.plan_label }}</strong>. Pour changer les limites de ce site, contactez son propriétaire. Votre achat personnel ne les modifiera pas.</p>
+      {% else %}
+        <p><strong>{{ billing_context.site_name }}</strong> utilise votre formule. Les quotas mensuels sont partagés entre vos propres sites.</p>
+      {% endif %}
+      <a class="btn" href="{{ billing_context.return_url }}">Revenir à {{ billing_context.site_name }}</a>
+    {% elif account_host %}
+      <p>Les sites partagés par <strong>{{ account_host }}</strong> utilisent la formule de ce propriétaire. Votre abonnement personnel ne change pas leurs limites.</p>
+      <a class="btn" href="/settings/team">Voir le compte que j’ai rejoint</a>
+    {% else %}
+      <p class="muted small">Les quotas mensuels sont partagés entre vos propres sites. Les sites d’un autre propriétaire utilisent sa formule et ses quotas.</p>
+    {% endif %}
+  </section>
 
   <div class="grid two">
     <div class="card">
@@ -165,7 +183,7 @@
       <div class="setting-note" style="margin-bottom:12px;">
         {% if pending_change.known %}
           <strong>Changement de plan déjà demandé.</strong>
-          Ton abonnement passera en <strong>{{ pending_change.label }}</strong>
+          Votre abonnement passera en <strong>{{ pending_change.label }}</strong>
           {%- if pending_change.effective_at %}
             le <strong>{{ pending_change.effective_at.strftime('%d/%m/%Y') }}</strong>, à la fin
             de la période déjà payée.
@@ -176,7 +194,7 @@
           n'est prélevé pour ce changement.
         {% else %}
           <strong>Un changement de plan est déjà demandé</strong> et prendra effet à la fin de la
-          période en cours. Son détail n'a pas pu être récupéré à l'instant ; recharge la page.
+          période en cours. Son détail n'a pas pu être récupéré à l'instant ; rechargez la page.
         {% endif %}
         {#
           Outside the branch on purpose: cancelling reads the schedule id from the stored
@@ -195,7 +213,7 @@
         (« Monitoring + alertes », « Suggestions IA avancées »), et pas de Free du tout. -#}
     {% include "_tarifs_styles.html" %}
     {% if not stripe_ready %}
-      <p class="muted">Le paiement en ligne est momentanément indisponible. Écris-nous à <a href="mailto:contact@noyaru.com">contact@noyaru.com</a> pour changer de plan.</p>
+      <p class="muted">Le paiement en ligne est momentanément indisponible. Écrivez-nous à <a href="mailto:contact@noyaru.com">contact@noyaru.com</a> pour changer de plan.</p>
     {% else %}
       {% set rank = {'free': 0, 'solo': 1, 'pro': 2, 'business': 3} %}
       {% set current_rank = rank.get(plan_key, 0) %}
@@ -290,7 +308,7 @@
         <h2>Historique des factures</h2>
         <span class="muted small">{{ invoices | length }} facture{{ 's' if invoices | length > 1 else '' }}</span>
       </div>
-      <table class="table">
+      <div class="billing-invoices" tabindex="0" role="region" aria-label="Historique des factures, tableau à défilement horizontal"><table class="table">
         <thead>
           <tr>
             <th>N°</th>
@@ -328,7 +346,7 @@
             </tr>
           {% endfor %}
         </tbody>
-      </table>
+      </table></div>
     </div>
   {% endif %}
 {% endblock %}

@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 {% from "_country_field.html" import country_field %}
-{% block title %}Paramètres - Comptes & connexions{% endblock %}
+{% block title %}Mon compte - Noyaru{% endblock %}
 
 {% macro help_dialog(item) -%}
   {% if item.help %}
-    <dialog id="info-{{ item.key }}" class="modal">
+    <dialog id="info-{{ item.key }}" class="modal" aria-labelledby="info-title-{{ item.key }}">
       <div class="modal-head">
-        <h2>{{ item.help.title }}</h2>
+        <h2 id="info-title-{{ item.key }}">{{ item.help.title }}</h2>
         <form method="dialog">
           <button class="btn">Fermer</button>
         </form>
@@ -117,18 +117,18 @@
   <span class="crumb-sep">/</span>
   <span class="crumb-current">Paramètres</span>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Comptes &amp; connexions</span>
+  <span class="crumb-current">Mon compte</span>
 {% endblock %}
 
 {% block content %}
   <div class="account-connections-page">
   <div class="page-header">
-    <h1>Comptes &amp; connexions</h1>
-    <p class="muted">Gérez vos préférences et les comptes connectés. Pour Google et Bing, les connexions et les résultats restent propres à chaque site.</p>
+    <h1>Mon compte</h1>
+    <p class="muted">Retrouvez vos préférences, votre sécurité et les connexions utilisées par vos propres sites.</p>
     <nav class="account-shortcuts" aria-label="Sections du compte">
-      <a class="btn" href="#gsc-oauth-card">Google</a><a class="btn" href="#github-connect-card">GitHub</a>
-      <a class="btn" href="#bing-connect-card">Bing</a><a class="btn" href="#netlify-connect-card">Netlify</a>
-      <a class="btn" href="#mon-compte">Mon compte</a>
+      <a class="btn" href="#preferences-card">Préférences</a><a class="btn" href="#security-card">Sécurité</a>
+      <a class="btn" href="#signup-attribution">Vie privée</a><a class="btn" href="#gsc-oauth-card">Connexions</a>
+      <a class="btn" href="/settings/team">Équipe</a><a class="btn" href="/billing">Abonnement</a>
     </nav>
   </div>
 
@@ -144,6 +144,213 @@
     </div>
   {% endif %}
 
+  <section id="mon-compte" aria-labelledby="mon-compte-title">
+    <h2 id="mon-compte-title">Votre compte personnel</h2>
+    <p class="account-identity"><strong>{{ request.state.user.email }}</strong></p>
+    {% if github_oauth.compte_hote %}<p class="muted">Vous travaillez aussi sur les sites de <strong>{{ github_oauth.compte_hote }}</strong>. Les connexions et la formule de ce propriétaire s’appliquent à ses sites. <a href="/settings/team">Voir mon rattachement</a>.</p>{% endif %}
+  {# ── Préférences utilisateur ── #}
+  <section class="card setting-card" id="preferences-card">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Préférences</h2>
+        <div class="muted small">Fuseau horaire, pays et langue d'affichage.</div>
+      </div>
+    </div>
+    <form method="post" action="/settings/account/preferences" style="margin-top:16px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+        <label class="field-label">
+          Fuseau horaire
+          <select name="timezone" class="input" style="margin-top:6px;">
+            <option value="">— automatique (navigateur) —</option>
+            <optgroup label="UTC">
+              <option value="UTC" {% if user_prefs.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+            </optgroup>
+            <optgroup label="Europe">
+              <option value="Europe/London"    {% if user_prefs.timezone == 'Europe/London'    %}selected{% endif %}>London (UTC±0/+1)</option>
+              <option value="Europe/Lisbon"    {% if user_prefs.timezone == 'Europe/Lisbon'    %}selected{% endif %}>Lisbon (UTC±0/+1)</option>
+              <option value="Europe/Paris"     {% if user_prefs.timezone == 'Europe/Paris'     %}selected{% endif %}>Paris / Brussels / Madrid (UTC+1/+2)</option>
+              <option value="Europe/Berlin"    {% if user_prefs.timezone == 'Europe/Berlin'    %}selected{% endif %}>Berlin / Rome / Vienna (UTC+1/+2)</option>
+              <option value="Europe/Amsterdam" {% if user_prefs.timezone == 'Europe/Amsterdam' %}selected{% endif %}>Amsterdam (UTC+1/+2)</option>
+              <option value="Europe/Zurich"    {% if user_prefs.timezone == 'Europe/Zurich'    %}selected{% endif %}>Zurich (UTC+1/+2)</option>
+              <option value="Europe/Warsaw"    {% if user_prefs.timezone == 'Europe/Warsaw'    %}selected{% endif %}>Warsaw / Prague (UTC+1/+2)</option>
+              <option value="Europe/Stockholm" {% if user_prefs.timezone == 'Europe/Stockholm' %}selected{% endif %}>Stockholm / Oslo / Copenhagen (UTC+1/+2)</option>
+              <option value="Europe/Helsinki"  {% if user_prefs.timezone == 'Europe/Helsinki'  %}selected{% endif %}>Helsinki / Tallinn / Riga (UTC+2/+3)</option>
+              <option value="Europe/Athens"    {% if user_prefs.timezone == 'Europe/Athens'    %}selected{% endif %}>Athens / Bucharest (UTC+2/+3)</option>
+              <option value="Europe/Moscow"    {% if user_prefs.timezone == 'Europe/Moscow'    %}selected{% endif %}>Moscow / Minsk (UTC+3)</option>
+              <option value="Europe/Istanbul"  {% if user_prefs.timezone == 'Europe/Istanbul'  %}selected{% endif %}>Istanbul (UTC+3)</option>
+            </optgroup>
+            <optgroup label="Afrique">
+              <option value="Africa/Casablanca"     {% if user_prefs.timezone == 'Africa/Casablanca'     %}selected{% endif %}>Casablanca / Tunis (UTC+1)</option>
+              <option value="Africa/Cairo"          {% if user_prefs.timezone == 'Africa/Cairo'          %}selected{% endif %}>Cairo (UTC+2)</option>
+              <option value="Africa/Nairobi"        {% if user_prefs.timezone == 'Africa/Nairobi'        %}selected{% endif %}>Nairobi / Addis Ababa (UTC+3)</option>
+              <option value="Africa/Lagos"          {% if user_prefs.timezone == 'Africa/Lagos'          %}selected{% endif %}>Lagos / Kinshasa (UTC+1)</option>
+              <option value="Africa/Johannesburg"   {% if user_prefs.timezone == 'Africa/Johannesburg'   %}selected{% endif %}>Johannesburg (UTC+2)</option>
+            </optgroup>
+            <optgroup label="Amérique">
+              <option value="America/New_York"              {% if user_prefs.timezone == 'America/New_York'              %}selected{% endif %}>New York / Toronto (UTC−5/−4)</option>
+              <option value="America/Chicago"               {% if user_prefs.timezone == 'America/Chicago'               %}selected{% endif %}>Chicago (UTC−6/−5)</option>
+              <option value="America/Denver"                {% if user_prefs.timezone == 'America/Denver'                %}selected{% endif %}>Denver / Phoenix (UTC−7/−6)</option>
+              <option value="America/Los_Angeles"           {% if user_prefs.timezone == 'America/Los_Angeles'           %}selected{% endif %}>Los Angeles / Vancouver (UTC−8/−7)</option>
+              <option value="America/Anchorage"             {% if user_prefs.timezone == 'America/Anchorage'             %}selected{% endif %}>Anchorage (UTC−9/−8)</option>
+              <option value="America/Honolulu"              {% if user_prefs.timezone == 'America/Honolulu'              %}selected{% endif %}>Honolulu (UTC−10)</option>
+              <option value="America/Mexico_City"           {% if user_prefs.timezone == 'America/Mexico_City'           %}selected{% endif %}>Mexico City (UTC−6/−5)</option>
+              <option value="America/Bogota"                {% if user_prefs.timezone == 'America/Bogota'                %}selected{% endif %}>Bogotá / Lima (UTC−5)</option>
+              <option value="America/Santiago"              {% if user_prefs.timezone == 'America/Santiago'              %}selected{% endif %}>Santiago (UTC−4/−3)</option>
+              <option value="America/Sao_Paulo"             {% if user_prefs.timezone == 'America/Sao_Paulo'             %}selected{% endif %}>São Paulo / Buenos Aires (UTC−3)</option>
+              <option value="America/Halifax"               {% if user_prefs.timezone == 'America/Halifax'               %}selected{% endif %}>Halifax (UTC−4/−3)</option>
+            </optgroup>
+            <optgroup label="Asie">
+              <option value="Asia/Dubai"       {% if user_prefs.timezone == 'Asia/Dubai'       %}selected{% endif %}>Dubai / Muscat (UTC+4)</option>
+              <option value="Asia/Tehran"      {% if user_prefs.timezone == 'Asia/Tehran'      %}selected{% endif %}>Tehran (UTC+3:30/+4:30)</option>
+              <option value="Asia/Karachi"     {% if user_prefs.timezone == 'Asia/Karachi'     %}selected{% endif %}>Karachi (UTC+5)</option>
+              <option value="Asia/Kolkata"     {% if user_prefs.timezone == 'Asia/Kolkata'     %}selected{% endif %}>Kolkata / Mumbai (UTC+5:30)</option>
+              <option value="Asia/Kathmandu"   {% if user_prefs.timezone == 'Asia/Kathmandu'   %}selected{% endif %}>Kathmandu (UTC+5:45)</option>
+              <option value="Asia/Tashkent"    {% if user_prefs.timezone == 'Asia/Tashkent'    %}selected{% endif %}>Tashkent / Almaty (UTC+5/+6)</option>
+              <option value="Asia/Bangkok"     {% if user_prefs.timezone == 'Asia/Bangkok'     %}selected{% endif %}>Bangkok / Jakarta (UTC+7)</option>
+              <option value="Asia/Shanghai"    {% if user_prefs.timezone == 'Asia/Shanghai'    %}selected{% endif %}>Shanghai / Beijing (UTC+8)</option>
+              <option value="Asia/Singapore"   {% if user_prefs.timezone == 'Asia/Singapore'   %}selected{% endif %}>Singapore / Kuala Lumpur (UTC+8)</option>
+              <option value="Asia/Hong_Kong"   {% if user_prefs.timezone == 'Asia/Hong_Kong'   %}selected{% endif %}>Hong Kong / Taipei (UTC+8)</option>
+              <option value="Asia/Seoul"       {% if user_prefs.timezone == 'Asia/Seoul'       %}selected{% endif %}>Seoul (UTC+9)</option>
+              <option value="Asia/Tokyo"       {% if user_prefs.timezone == 'Asia/Tokyo'       %}selected{% endif %}>Tokyo (UTC+9)</option>
+            </optgroup>
+            <optgroup label="Océanie">
+              <option value="Australia/Perth"     {% if user_prefs.timezone == 'Australia/Perth'     %}selected{% endif %}>Perth (UTC+8)</option>
+              <option value="Australia/Adelaide"  {% if user_prefs.timezone == 'Australia/Adelaide'  %}selected{% endif %}>Adelaide (UTC+9:30/+10:30)</option>
+              <option value="Australia/Brisbane"  {% if user_prefs.timezone == 'Australia/Brisbane'  %}selected{% endif %}>Brisbane (UTC+10)</option>
+              <option value="Australia/Sydney"    {% if user_prefs.timezone == 'Australia/Sydney'    %}selected{% endif %}>Sydney / Melbourne (UTC+10/+11)</option>
+              <option value="Pacific/Auckland"    {% if user_prefs.timezone == 'Pacific/Auckland'    %}selected{% endif %}>Auckland (UTC+12/+13)</option>
+              <option value="Pacific/Fiji"        {% if user_prefs.timezone == 'Pacific/Fiji'        %}selected{% endif %}>Fiji (UTC+12)</option>
+            </optgroup>
+          </select>
+        </label>
+
+        <div class="field-label country-field" style="display:grid;gap:6px;min-width:0;">
+          {{ country_field('preference-country', user_prefs.country) }}
+          <span class="muted small">Pays déclaré par vous, affiché dans les informations de votre compte.</span>
+        </div>
+
+        <label class="field-label">
+          Langue
+          <select name="language" class="input" style="margin-top:6px;">
+            <option value="">— automatique —</option>
+            <option value="ar" {% if user_prefs.language == 'ar' %}selected{% endif %}>العربية (Arabe)</option>
+            <option value="de" {% if user_prefs.language == 'de' %}selected{% endif %}>Deutsch (Allemand)</option>
+            <option value="en" {% if user_prefs.language == 'en' %}selected{% endif %}>English (Anglais)</option>
+            <option value="es" {% if user_prefs.language == 'es' %}selected{% endif %}>Español (Espagnol)</option>
+            <option value="fr" {% if user_prefs.language == 'fr' %}selected{% endif %}>Français</option>
+            <option value="it" {% if user_prefs.language == 'it' %}selected{% endif %}>Italiano (Italien)</option>
+            <option value="ja" {% if user_prefs.language == 'ja' %}selected{% endif %}>日本語 (Japonais)</option>
+            <option value="ko" {% if user_prefs.language == 'ko' %}selected{% endif %}>한국어 (Coréen)</option>
+            <option value="nl" {% if user_prefs.language == 'nl' %}selected{% endif %}>Nederlands (Néerlandais)</option>
+            <option value="pl" {% if user_prefs.language == 'pl' %}selected{% endif %}>Polski (Polonais)</option>
+            <option value="pt" {% if user_prefs.language == 'pt' %}selected{% endif %}>Português (Portugais)</option>
+            <option value="ru" {% if user_prefs.language == 'ru' %}selected{% endif %}>Русский (Russe)</option>
+            <option value="tr" {% if user_prefs.language == 'tr' %}selected{% endif %}>Türkçe (Turc)</option>
+            <option value="zh" {% if user_prefs.language == 'zh' %}selected{% endif %}>中文 (Chinois)</option>
+          </select>
+        </label>
+      </div>
+      <div style="margin-top:16px;">
+        <button type="submit" class="btn">Enregistrer</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card setting-card" id="signup-attribution">
+    <h2 class="setting-title">Origine de mon inscription</h2>
+    {% if not signup_attribution.available %}
+      <p class="muted">Votre choix n’est pas disponible pour le moment. Réessayez dans quelques instants.</p>
+    {% elif signup_attribution.accepted %}
+      <p class="muted">Vous avez accepté que Noyaru relie votre campagne d’origine à vos premiers résultats. Ces informations servent uniquement à mesurer les campagnes de Noyaru.</p>
+      <form method="post" action="/settings/account/attribution/withdraw">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <button class="btn" type="submit">Retirer mon accord et effacer l’origine</button>
+      </form>
+    {% else %}
+      <p class="muted">Aucune campagne d’origine n’est conservée pour votre inscription.</p>
+    {% endif %}
+    <p class="small"><a href="/privacy#signup-attribution">Comprendre l’utilisation de ces données</a></p>
+  </section>
+
+  <section class="card setting-card" id="security-card">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Changer le mot de passe</h2>
+        <div class="muted small">Saisir l'ancien mot de passe pour confirmer.</div>
+      </div>
+    </div>
+    <details class="setting-details">
+      <summary>Modifier mon mot de passe</summary>
+      <form method="post" action="/settings/account/password" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <label>
+          Mot de passe actuel
+          <input type="password" name="current_password" autocomplete="current-password" required />
+        </label>
+        <label>
+          Nouveau mot de passe <span class="muted small">(10 caractères min.)</span>
+          <input type="password" name="new_password" autocomplete="new-password" required minlength="10" />
+        </label>
+        <label>
+          Confirmer le nouveau mot de passe
+          <input type="password" name="new_password2" autocomplete="new-password" required minlength="10" />
+        </label>
+        <div class="modal-actions between">
+          <span></span>
+          <button class="btn primary" type="submit">Enregistrer</button>
+        </div>
+      </form>
+    </details>
+  </section>
+
+  <section class="card setting-card" id="danger-zone">
+    <div class="setting-head">
+      <div>
+        <h2 class="setting-title">Zone à risque</h2>
+        <div class="muted small">Suppression définitive du compte et des données associées.</div>
+      </div>
+      <div class="setting-actions">
+        <span class="badge notice">irréversible</span>
+      </div>
+    </div>
+    <p class="muted small setting-note" style="margin-top:0;">
+      Cette action supprime le compte, ses projets, ses connexions et ses fichiers (runs / tokens OAuth).
+    </p>
+    <details class="setting-details">
+      <summary>Supprimer mon compte</summary>
+      <form method="post" action="/settings/account/delete" class="setting-form">
+        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
+        <label>
+          Saisissez <span class="mono">DELETE</span> pour confirmer
+          <input name="confirm" type="text" autocomplete="off" placeholder="DELETE" />
+        </label>
+        <div class="modal-actions between">
+          <span></span>
+          <button
+            class="btn danger"
+            type="submit"
+            onclick="return confirm('Supprimer définitivement le compte ?');"
+          >
+            Supprimer définitivement
+          </button>
+        </div>
+      </form>
+    </details>
+  </section>
+  <section class="card">
+    <div class="card-title-row">
+      <h2>Sécurité &amp; stockage</h2>
+    </div>
+    <ul class="examples muted small" style="margin:0;">
+      <li>Les connexions utilisateur sont stockées côté serveur et masquées dans l'interface.</li>
+      <li>Les paramètres internes de la plateforme ne sont plus exposés ici.</li>
+      <li>Les projets masqués/importés n'apparaissent pas dans cette page.</li>
+    </ul>
+  </section>
+
+
+  </section>
+
   {% if can_access_system_settings %}
     <section class="card">
       <div class="card-title-row">
@@ -151,7 +358,7 @@
         <a class="btn" href="/settings/system">Ouvrir les paramètres système</a>
       </div>
       <p class="muted small" style="margin:0;">
-        Cette page reste orientée utilisatrice. Les secrets internes de la plateforme sont déplacés dans <span class="mono">/settings/system</span>.
+        Les réglages internes de Noyaru sont séparés de votre compte personnel.
       </p>
     </section>
   {% endif %}
@@ -294,7 +501,7 @@
         <div class="setting-head">
           <div>
             <h2 class="setting-title">GitHub</h2>
-            <div class="muted small">Compte utilisé pour sélectionner les dépôts et préparer les flux de fix/deploy.</div>
+            <div class="muted small">Connexion pour choisir le dépôt de vos sites et y préparer des propositions de correction.</div>
             {% if github_oauth.compte_hote %}
               {# Sans cette phrase, un membre lit « compte connecté » et en déduit que ses
                  corrections partiront de CE compte. Sur les projets de son hôte, elles
@@ -392,12 +599,13 @@
           <div class="card-title-row" style="margin-top:16px;">
             <h3 style="margin:0; font-size:15px;">Dépôts GitHub accessibles</h3>
             <div style="display:flex; gap:8px; align-items:center;">
-              <button class="btn" type="button" id="github-load-repos">Charger les dépôts</button>
-              <span class="muted small" id="github-repos-status">Chargez les dépôts accessibles depuis votre compte GitHub.</span>
+              <button class="btn" type="button" id="github-load-repos" {% if not github_oauth.configured %}disabled title="Connectez d’abord votre compte."{% endif %}>Charger les dépôts</button>
+              <span class="muted small" id="github-repos-status" role="status" aria-live="polite">Chargez les dépôts accessibles depuis votre compte GitHub.</span>
             </div>
           </div>
           <div class="oauth-project-list" id="github-repos-list"></div>
         </div>
+        {% if github_oauth.help %}<button class="btn" type="button" data-open-dialog="info-{{ github_oauth.key }}">Aide {{ github_oauth.label }}</button>{% endif %}
         {{ help_dialog(github_oauth) }}
       </section>
 
@@ -474,8 +682,8 @@
               </button>
             </form>
           {% endif %}
-          <button class="btn" type="button" id="bing-test-btn">Tester</button>
-          <span class="muted small" id="bing-test-result"></span>
+          <button class="btn" type="button" id="bing-test-btn" {% if bing_oauth.mode == 'none' %}disabled title="Connectez d’abord votre compte."{% endif %}>Tester</button>
+          <span class="muted small" id="bing-test-result" role="status" aria-live="polite"></span>
         </div>
 
         {% if bing_projects %}
@@ -536,12 +744,13 @@
           <div class="card-title-row" style="margin-top:16px;">
             <h3 style="margin:0; font-size:15px;">Sites Bing importables</h3>
             <div style="display:flex; gap:8px; align-items:center;">
-              <button class="btn" type="button" id="bing-load-sites">Charger les sites Bing</button>
-              <span class="muted small" id="bing-sites-status">Chargez les sites accessibles depuis votre compte Bing.</span>
+              <button class="btn" type="button" id="bing-load-sites" {% if bing_oauth.mode == 'none' %}disabled title="Connectez d’abord votre compte."{% endif %}>Charger les sites Bing</button>
+              <span class="muted small" id="bing-sites-status" role="status" aria-live="polite">Chargez les sites accessibles depuis votre compte Bing.</span>
             </div>
           </div>
           <div class="oauth-project-list" id="bing-sites-list"></div>
         </div>
+        {% if bing_oauth.manual_item.help %}<button class="btn" type="button" data-open-dialog="info-{{ bing_oauth.manual_item.key }}">Aide {{ bing_oauth.manual_item.label }}</button>{% endif %}
         {{ help_dialog(bing_oauth.manual_item) }}
       </section>
     </div>
@@ -671,220 +880,18 @@
           <div class="card-title-row" style="margin-top:16px;">
             <h3 style="margin:0; font-size:15px;">Sites Netlify accessibles</h3>
             <div style="display:flex; gap:8px; align-items:center;">
-              <button class="btn" type="button" id="netlify-load-sites">Charger les sites</button>
-              <span class="muted small" id="netlify-sites-status">Chargez les sites accessibles depuis votre compte Netlify.</span>
+              <button class="btn" type="button" id="netlify-load-sites" {% if not netlify_oauth.configured %}disabled title="Connectez d’abord votre compte."{% endif %}>Charger les sites</button>
+              <span class="muted small" id="netlify-sites-status" role="status" aria-live="polite">Chargez les sites accessibles depuis votre compte Netlify.</span>
             </div>
           </div>
           <div class="oauth-project-list" id="netlify-sites-list"></div>
         </div>
+        {% if netlify_oauth.help %}<button class="btn" type="button" data-open-dialog="info-{{ netlify_oauth.key }}">Aide {{ netlify_oauth.label }}</button>{% endif %}
         {{ help_dialog(netlify_oauth) }}
       </section>
     </div>
   </div>
-  <section id="mon-compte" aria-labelledby="mon-compte-title">
-    <h2 id="mon-compte-title">Mon compte</h2>
-  <section class="card">
-    <div class="card-title-row">
-      <h2>Sécurité &amp; stockage</h2>
-    </div>
-    <ul class="examples muted small" style="margin:0;">
-      <li>Les connexions utilisateur sont stockées côté serveur et masquées dans l'interface.</li>
-      <li>Les paramètres internes de la plateforme ne sont plus exposés ici.</li>
-      <li>Les projets masqués/importés n'apparaissent pas dans cette page.</li>
-    </ul>
-  </section>
 
-  {# ── Préférences utilisateur ── #}
-  <section class="card setting-card" id="signup-attribution">
-    <h2 class="setting-title">Origine de mon inscription</h2>
-    {% if not signup_attribution.available %}
-      <p class="muted">Votre choix n’est pas disponible pour le moment. Réessayez dans quelques instants.</p>
-    {% elif signup_attribution.accepted %}
-      <p class="muted">Vous avez accepté que Noyaru relie votre campagne d’origine à vos premiers résultats. Ces informations servent uniquement à mesurer les campagnes de Noyaru.</p>
-      <form method="post" action="/settings/account/attribution/withdraw">
-        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-        <button class="btn" type="submit">Retirer mon accord et effacer l’origine</button>
-      </form>
-    {% else %}
-      <p class="muted">Aucune campagne d’origine n’est conservée pour votre inscription.</p>
-    {% endif %}
-    <p class="small"><a href="/privacy#signup-attribution">Comprendre l’utilisation de ces données</a></p>
-  </section>
-
-  <section class="card setting-card" id="preferences-card">
-    <div class="setting-head">
-      <div>
-        <h2 class="setting-title">Préférences</h2>
-        <div class="muted small">Fuseau horaire, pays et langue d'affichage.</div>
-      </div>
-    </div>
-    <form method="post" action="/settings/account/preferences" style="margin-top:16px;">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
-        <label class="field-label">
-          Fuseau horaire
-          <select name="timezone" class="input" style="margin-top:6px;">
-            <option value="">— automatique (navigateur) —</option>
-            <optgroup label="UTC">
-              <option value="UTC" {% if user_prefs.timezone == 'UTC' %}selected{% endif %}>UTC</option>
-            </optgroup>
-            <optgroup label="Europe">
-              <option value="Europe/London"    {% if user_prefs.timezone == 'Europe/London'    %}selected{% endif %}>London (UTC±0/+1)</option>
-              <option value="Europe/Lisbon"    {% if user_prefs.timezone == 'Europe/Lisbon'    %}selected{% endif %}>Lisbon (UTC±0/+1)</option>
-              <option value="Europe/Paris"     {% if user_prefs.timezone == 'Europe/Paris'     %}selected{% endif %}>Paris / Brussels / Madrid (UTC+1/+2)</option>
-              <option value="Europe/Berlin"    {% if user_prefs.timezone == 'Europe/Berlin'    %}selected{% endif %}>Berlin / Rome / Vienna (UTC+1/+2)</option>
-              <option value="Europe/Amsterdam" {% if user_prefs.timezone == 'Europe/Amsterdam' %}selected{% endif %}>Amsterdam (UTC+1/+2)</option>
-              <option value="Europe/Zurich"    {% if user_prefs.timezone == 'Europe/Zurich'    %}selected{% endif %}>Zurich (UTC+1/+2)</option>
-              <option value="Europe/Warsaw"    {% if user_prefs.timezone == 'Europe/Warsaw'    %}selected{% endif %}>Warsaw / Prague (UTC+1/+2)</option>
-              <option value="Europe/Stockholm" {% if user_prefs.timezone == 'Europe/Stockholm' %}selected{% endif %}>Stockholm / Oslo / Copenhagen (UTC+1/+2)</option>
-              <option value="Europe/Helsinki"  {% if user_prefs.timezone == 'Europe/Helsinki'  %}selected{% endif %}>Helsinki / Tallinn / Riga (UTC+2/+3)</option>
-              <option value="Europe/Athens"    {% if user_prefs.timezone == 'Europe/Athens'    %}selected{% endif %}>Athens / Bucharest (UTC+2/+3)</option>
-              <option value="Europe/Moscow"    {% if user_prefs.timezone == 'Europe/Moscow'    %}selected{% endif %}>Moscow / Minsk (UTC+3)</option>
-              <option value="Europe/Istanbul"  {% if user_prefs.timezone == 'Europe/Istanbul'  %}selected{% endif %}>Istanbul (UTC+3)</option>
-            </optgroup>
-            <optgroup label="Afrique">
-              <option value="Africa/Casablanca"     {% if user_prefs.timezone == 'Africa/Casablanca'     %}selected{% endif %}>Casablanca / Tunis (UTC+1)</option>
-              <option value="Africa/Cairo"          {% if user_prefs.timezone == 'Africa/Cairo'          %}selected{% endif %}>Cairo (UTC+2)</option>
-              <option value="Africa/Nairobi"        {% if user_prefs.timezone == 'Africa/Nairobi'        %}selected{% endif %}>Nairobi / Addis Ababa (UTC+3)</option>
-              <option value="Africa/Lagos"          {% if user_prefs.timezone == 'Africa/Lagos'          %}selected{% endif %}>Lagos / Kinshasa (UTC+1)</option>
-              <option value="Africa/Johannesburg"   {% if user_prefs.timezone == 'Africa/Johannesburg'   %}selected{% endif %}>Johannesburg (UTC+2)</option>
-            </optgroup>
-            <optgroup label="Amérique">
-              <option value="America/New_York"              {% if user_prefs.timezone == 'America/New_York'              %}selected{% endif %}>New York / Toronto (UTC−5/−4)</option>
-              <option value="America/Chicago"               {% if user_prefs.timezone == 'America/Chicago'               %}selected{% endif %}>Chicago (UTC−6/−5)</option>
-              <option value="America/Denver"                {% if user_prefs.timezone == 'America/Denver'                %}selected{% endif %}>Denver / Phoenix (UTC−7/−6)</option>
-              <option value="America/Los_Angeles"           {% if user_prefs.timezone == 'America/Los_Angeles'           %}selected{% endif %}>Los Angeles / Vancouver (UTC−8/−7)</option>
-              <option value="America/Anchorage"             {% if user_prefs.timezone == 'America/Anchorage'             %}selected{% endif %}>Anchorage (UTC−9/−8)</option>
-              <option value="America/Honolulu"              {% if user_prefs.timezone == 'America/Honolulu'              %}selected{% endif %}>Honolulu (UTC−10)</option>
-              <option value="America/Mexico_City"           {% if user_prefs.timezone == 'America/Mexico_City'           %}selected{% endif %}>Mexico City (UTC−6/−5)</option>
-              <option value="America/Bogota"                {% if user_prefs.timezone == 'America/Bogota'                %}selected{% endif %}>Bogotá / Lima (UTC−5)</option>
-              <option value="America/Santiago"              {% if user_prefs.timezone == 'America/Santiago'              %}selected{% endif %}>Santiago (UTC−4/−3)</option>
-              <option value="America/Sao_Paulo"             {% if user_prefs.timezone == 'America/Sao_Paulo'             %}selected{% endif %}>São Paulo / Buenos Aires (UTC−3)</option>
-              <option value="America/Halifax"               {% if user_prefs.timezone == 'America/Halifax'               %}selected{% endif %}>Halifax (UTC−4/−3)</option>
-            </optgroup>
-            <optgroup label="Asie">
-              <option value="Asia/Dubai"       {% if user_prefs.timezone == 'Asia/Dubai'       %}selected{% endif %}>Dubai / Muscat (UTC+4)</option>
-              <option value="Asia/Tehran"      {% if user_prefs.timezone == 'Asia/Tehran'      %}selected{% endif %}>Tehran (UTC+3:30/+4:30)</option>
-              <option value="Asia/Karachi"     {% if user_prefs.timezone == 'Asia/Karachi'     %}selected{% endif %}>Karachi (UTC+5)</option>
-              <option value="Asia/Kolkata"     {% if user_prefs.timezone == 'Asia/Kolkata'     %}selected{% endif %}>Kolkata / Mumbai (UTC+5:30)</option>
-              <option value="Asia/Kathmandu"   {% if user_prefs.timezone == 'Asia/Kathmandu'   %}selected{% endif %}>Kathmandu (UTC+5:45)</option>
-              <option value="Asia/Tashkent"    {% if user_prefs.timezone == 'Asia/Tashkent'    %}selected{% endif %}>Tashkent / Almaty (UTC+5/+6)</option>
-              <option value="Asia/Bangkok"     {% if user_prefs.timezone == 'Asia/Bangkok'     %}selected{% endif %}>Bangkok / Jakarta (UTC+7)</option>
-              <option value="Asia/Shanghai"    {% if user_prefs.timezone == 'Asia/Shanghai'    %}selected{% endif %}>Shanghai / Beijing (UTC+8)</option>
-              <option value="Asia/Singapore"   {% if user_prefs.timezone == 'Asia/Singapore'   %}selected{% endif %}>Singapore / Kuala Lumpur (UTC+8)</option>
-              <option value="Asia/Hong_Kong"   {% if user_prefs.timezone == 'Asia/Hong_Kong'   %}selected{% endif %}>Hong Kong / Taipei (UTC+8)</option>
-              <option value="Asia/Seoul"       {% if user_prefs.timezone == 'Asia/Seoul'       %}selected{% endif %}>Seoul (UTC+9)</option>
-              <option value="Asia/Tokyo"       {% if user_prefs.timezone == 'Asia/Tokyo'       %}selected{% endif %}>Tokyo (UTC+9)</option>
-            </optgroup>
-            <optgroup label="Océanie">
-              <option value="Australia/Perth"     {% if user_prefs.timezone == 'Australia/Perth'     %}selected{% endif %}>Perth (UTC+8)</option>
-              <option value="Australia/Adelaide"  {% if user_prefs.timezone == 'Australia/Adelaide'  %}selected{% endif %}>Adelaide (UTC+9:30/+10:30)</option>
-              <option value="Australia/Brisbane"  {% if user_prefs.timezone == 'Australia/Brisbane'  %}selected{% endif %}>Brisbane (UTC+10)</option>
-              <option value="Australia/Sydney"    {% if user_prefs.timezone == 'Australia/Sydney'    %}selected{% endif %}>Sydney / Melbourne (UTC+10/+11)</option>
-              <option value="Pacific/Auckland"    {% if user_prefs.timezone == 'Pacific/Auckland'    %}selected{% endif %}>Auckland (UTC+12/+13)</option>
-              <option value="Pacific/Fiji"        {% if user_prefs.timezone == 'Pacific/Fiji'        %}selected{% endif %}>Fiji (UTC+12)</option>
-            </optgroup>
-          </select>
-        </label>
-
-        <div class="field-label country-field" style="display:grid;gap:6px;min-width:0;">
-          {{ country_field('preference-country', user_prefs.country) }}
-          <span class="muted small">Pays déclaré par vous, affiché dans les informations de votre compte.</span>
-        </div>
-
-        <label class="field-label">
-          Langue
-          <select name="language" class="input" style="margin-top:6px;">
-            <option value="">— automatique —</option>
-            <option value="ar" {% if user_prefs.language == 'ar' %}selected{% endif %}>العربية (Arabe)</option>
-            <option value="de" {% if user_prefs.language == 'de' %}selected{% endif %}>Deutsch (Allemand)</option>
-            <option value="en" {% if user_prefs.language == 'en' %}selected{% endif %}>English (Anglais)</option>
-            <option value="es" {% if user_prefs.language == 'es' %}selected{% endif %}>Español (Espagnol)</option>
-            <option value="fr" {% if user_prefs.language == 'fr' %}selected{% endif %}>Français</option>
-            <option value="it" {% if user_prefs.language == 'it' %}selected{% endif %}>Italiano (Italien)</option>
-            <option value="ja" {% if user_prefs.language == 'ja' %}selected{% endif %}>日本語 (Japonais)</option>
-            <option value="ko" {% if user_prefs.language == 'ko' %}selected{% endif %}>한국어 (Coréen)</option>
-            <option value="nl" {% if user_prefs.language == 'nl' %}selected{% endif %}>Nederlands (Néerlandais)</option>
-            <option value="pl" {% if user_prefs.language == 'pl' %}selected{% endif %}>Polski (Polonais)</option>
-            <option value="pt" {% if user_prefs.language == 'pt' %}selected{% endif %}>Português (Portugais)</option>
-            <option value="ru" {% if user_prefs.language == 'ru' %}selected{% endif %}>Русский (Russe)</option>
-            <option value="tr" {% if user_prefs.language == 'tr' %}selected{% endif %}>Türkçe (Turc)</option>
-            <option value="zh" {% if user_prefs.language == 'zh' %}selected{% endif %}>中文 (Chinois)</option>
-          </select>
-        </label>
-      </div>
-      <div style="margin-top:16px;">
-        <button type="submit" class="btn">Enregistrer</button>
-      </div>
-    </form>
-  </section>
-
-  <section class="card setting-card" id="security-card">
-    <div class="setting-head">
-      <div>
-        <h2 class="setting-title">Changer le mot de passe</h2>
-        <div class="muted small">Saisir l'ancien mot de passe pour confirmer.</div>
-      </div>
-    </div>
-    <details class="setting-details">
-      <summary>Modifier mon mot de passe</summary>
-      <form method="post" action="/settings/account/password" class="setting-form">
-        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-        <label>
-          Mot de passe actuel
-          <input type="password" name="current_password" autocomplete="current-password" required />
-        </label>
-        <label>
-          Nouveau mot de passe <span class="muted small">(10 caractères min.)</span>
-          <input type="password" name="new_password" autocomplete="new-password" required minlength="10" />
-        </label>
-        <label>
-          Confirmer le nouveau mot de passe
-          <input type="password" name="new_password2" autocomplete="new-password" required minlength="10" />
-        </label>
-        <div class="modal-actions between">
-          <span></span>
-          <button class="btn primary" type="submit">Enregistrer</button>
-        </div>
-      </form>
-    </details>
-  </section>
-
-  <section class="card setting-card" id="danger-zone">
-    <div class="setting-head">
-      <div>
-        <h2 class="setting-title">Zone à risque</h2>
-        <div class="muted small">Suppression définitive du compte et des données associées.</div>
-      </div>
-      <div class="setting-actions">
-        <span class="badge notice">irréversible</span>
-      </div>
-    </div>
-    <p class="muted small setting-note" style="margin-top:0;">
-      Cette action supprime le compte, ses projets, ses connexions et ses fichiers (runs / tokens OAuth).
-    </p>
-    <details class="setting-details">
-      <summary>Supprimer mon compte</summary>
-      <form method="post" action="/settings/account/delete" class="setting-form">
-        <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-        <label>
-          Tape <span class="mono">DELETE</span> pour confirmer
-          <input name="confirm" type="text" autocomplete="off" placeholder="DELETE" />
-        </label>
-        <div class="modal-actions between">
-          <span></span>
-          <button
-            class="btn danger"
-            type="submit"
-            onclick="return confirm('Supprimer définitivement le compte ?');"
-          >
-            Supprimer définitivement
-          </button>
-        </div>
-      </form>
-    </details>
-  </section>
-
-  </section>
   </div>
 
   <script>
@@ -1004,15 +1011,32 @@
         });
       }
 
+      async function accountData(response, output) {
+        if (response.status === 401 || (response.redirected && new URL(response.url).pathname === '/auth/login')) {
+          const link = document.createElement('a');
+          link.href = '/auth/login?next=' + encodeURIComponent(location.pathname + location.search + location.hash);
+          link.textContent = 'Me reconnecter';
+          output.replaceChildren(document.createTextNode('Votre session a expiré. '), link);
+          return null;
+        }
+        if (!(response.headers.get('content-type') || '').includes('application/json')) {
+          throw new Error('Le service ne répond pas comme prévu. Réessayez dans quelques instants.');
+        }
+        return response.json();
+      }
+
       async function testBing() {
         if (!bingOut) return;
         bingOut.textContent = "Test en cours…";
+        if (bingTestBtn.disabled) return;
+        bingTestBtn.disabled = true;
         try {
           const response = await fetch("/api/bing/sites", {
             headers: { Accept: "application/json" },
             cache: "no-store",
           });
-          const data = await response.json();
+          const data = await accountData(response, bingOut);
+          if (!data) return;
           if (!data || !data.ok) {
             bingOut.textContent = data && data.error ? data.error : "Erreur Bing";
             return;
@@ -1020,7 +1044,9 @@
           const count = Array.isArray(data.sites) ? data.sites.length : 0;
           bingOut.textContent = `${count} sites accessibles.`;
         } catch (error) {
-          bingOut.textContent = String(error);
+          bingOut.textContent = error.message || "Le chargement a échoué. Réessayez.";
+        } finally {
+          bingTestBtn.disabled = false;
         }
       }
 
@@ -1028,12 +1054,15 @@
         if (!bingSitesStatus || !bingSitesList) return;
         bingSitesStatus.textContent = "Chargement…";
         bingSitesList.innerHTML = "";
+        if (bingLoadSitesBtn.disabled) return;
+        bingLoadSitesBtn.disabled = true;
         try {
           const response = await fetch("/api/bing/sites", {
             headers: { Accept: "application/json" },
             cache: "no-store",
           });
-          const data = await response.json();
+          const data = await accountData(response, bingSitesStatus);
+          if (!data) return;
           if (!data || !data.ok) {
             bingSitesStatus.textContent = data && data.error ? data.error : "Erreur Bing";
             return;
@@ -1042,7 +1071,9 @@
           bingSitesStatus.textContent = `${items.length} site(s) détecté(s).`;
           renderImportRows(bingSitesList, items, "bing");
         } catch (error) {
-          bingSitesStatus.textContent = String(error);
+          bingSitesStatus.textContent = error.message || "Le chargement a échoué. Réessayez.";
+        } finally {
+          bingLoadSitesBtn.disabled = false;
         }
       }
 
@@ -1050,12 +1081,15 @@
         if (!githubReposStatus || !githubReposList) return;
         githubReposStatus.textContent = "Chargement…";
         githubReposList.innerHTML = "";
+        if (githubLoadReposBtn.disabled) return;
+        githubLoadReposBtn.disabled = true;
         try {
           const response = await fetch("/api/github/repos", {
             headers: { Accept: "application/json" },
             cache: "no-store",
           });
-          const data = await response.json();
+          const data = await accountData(response, githubReposStatus);
+          if (!data) return;
           if (!data || !data.ok) {
             githubReposStatus.textContent = data && data.error ? data.error : "Erreur GitHub";
             return;
@@ -1064,7 +1098,9 @@
           githubReposStatus.textContent = `${repos.length} dépôt(s) détecté(s).`;
           renderRepoRows(githubReposList, repos);
         } catch (error) {
-          githubReposStatus.textContent = String(error);
+          githubReposStatus.textContent = error.message || "Le chargement a échoué. Réessayez.";
+        } finally {
+          githubLoadReposBtn.disabled = false;
         }
       }
 
@@ -1072,12 +1108,15 @@
         if (!netlifySitesStatus || !netlifySitesList) return;
         netlifySitesStatus.textContent = "Chargement…";
         netlifySitesList.innerHTML = "";
+        if (netlifyLoadSitesBtn.disabled) return;
+        netlifyLoadSitesBtn.disabled = true;
         try {
           const response = await fetch("/api/netlify/sites", {
             headers: { Accept: "application/json" },
             cache: "no-store",
           });
-          const data = await response.json();
+          const data = await accountData(response, netlifySitesStatus);
+          if (!data) return;
           if (!data || !data.ok) {
             netlifySitesStatus.textContent = data && data.error ? data.error : "Erreur Netlify";
             return;
@@ -1086,7 +1125,9 @@
           netlifySitesStatus.textContent = `${items.length} site(s) détecté(s).`;
           renderImportRows(netlifySitesList, items, "netlify");
         } catch (error) {
-          netlifySitesStatus.textContent = String(error);
+          netlifySitesStatus.textContent = error.message || "Le chargement a échoué. Réessayez.";
+        } finally {
+          netlifyLoadSitesBtn.disabled = false;
         }
       }
 
