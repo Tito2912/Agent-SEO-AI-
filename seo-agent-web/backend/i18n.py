@@ -8,8 +8,9 @@ jamais une cle technique.
 Choix de la langue, du plus explicite au plus implicite :
   1. `?lang=en` dans l'adresse (le selecteur de langue) — memorise ensuite dans un cookie ;
   2. le cookie `noyaru_lang` ;
-  3. l'en-tete `Accept-Language` du navigateur ;
-  4. le francais.
+  3. la langue d'affichage choisie dans « Mon compte » ;
+  4. l'en-tete `Accept-Language` du navigateur ;
+  5. le francais.
 Un robot d'indexation n'envoie en general ni cookie ni `Accept-Language` : il voit le
 francais, la version de reference des pages publiques.
 """
@@ -25,6 +26,7 @@ from urllib.parse import urlencode
 
 from jinja2 import pass_context
 from markupsafe import Markup, escape
+from starlette.responses import JSONResponse as _JSONResponse
 
 DEFAULT_LANG = "fr"
 # L'ordre est celui du selecteur.
@@ -138,7 +140,8 @@ def _numbered(source: str, lang: str, catalog: dict[str, str]) -> str | None:
 # Phrases composees par le code avec une valeur du site (« … la marque (exemple.fr) … ») : le
 # catalogue les connait avec un trou nomme, « … la marque ({domain}) … ». Seuls ces noms-la
 # ouvrent un trou : un trou comme {n} ou {plan} vient d'un gabarit qui passe deja sa valeur.
-_PATTERN_FIELDS = frozenset({"domain", "url", "src", "label", "candidates"})
+# `{detail}` sert de second trou quand une phrase porte deux valeurs differentes.
+_PATTERN_FIELDS = frozenset({"domain", "url", "src", "label", "candidates", "detail"})
 _PLACEHOLDER = re.compile(r"\{([a-z_][a-z_0-9]*)\}")
 _pattern_cache: dict[str, list[tuple[re.Pattern[str], str]]] = {}
 
@@ -201,6 +204,18 @@ def translate(text: str, lang: str = DEFAULT_LANG, **values: Any) -> str:
             except (KeyError, IndexError, ValueError):
                 result = source
     return result
+
+
+class JSONResponse(_JSONResponse):
+    """Une reponse JSON dont le message `error` suit la langue du client, comme les messages
+    `msg` et `err` qu'affichent les gabarits : l'ecran l'affiche tel quel. En francais, ou
+    hors d'une requete (une tache de fond), la reponse ne change pas."""
+
+    def render(self, content: Any) -> bytes:
+        lang = current_lang()
+        if lang != DEFAULT_LANG and isinstance(content, dict) and isinstance(content.get("error"), str):
+            content = {**content, "error": translate(content["error"], lang)}
+        return super().render(content)
 
 
 def current_lang() -> str:

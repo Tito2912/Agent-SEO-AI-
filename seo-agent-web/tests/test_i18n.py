@@ -308,3 +308,63 @@ def test_language_chosen_in_my_account_follows_the_customer(lab) -> None:
     )
     assert response.status_code == 303
     assert browser.cookies.get(i18n.COOKIE_NAME) is None
+
+
+def test_content_keywords_and_competitors_in_english(lab, tmp_path) -> None:
+    owner = user(lab["db"], admin=True)  # l'acces Pro sans passer par la facturation
+    project(lab["db"], owner, slug="atelier")
+    url = "https://atelier.example/"
+    report_dir = tmp_path / "runs" / str(owner.id) / "atelier" / "20261018-120000" / "audit"
+    report_dir.mkdir(parents=True)
+    (report_dir / "report.json").write_text(json.dumps({
+        "meta": {"base_url": url},
+        "pages": [{"url": url, "status_code": 200, "content_type": "text/html", "indexable": True},
+                  {"url": url + "blog/velo", "status_code": 200, "content_type": "text/html", "indexable": True}],
+        "issues": {},
+    }))
+    browser = session_client(owner)
+
+    content = browser.get("/projects/atelier/content", params={"lang": "en"}).text
+    assert "Write a page" in content and "Customize length and tone" in content
+    assert '"Write the article"' in content  # texte du script
+    assert "Écrire une page" not in content and "Rédiger l\\u0027article" not in content
+    competitors = browser.get("/projects/atelier/competitors").text
+    assert "Add a competitor" in competitors and "Find with AI" in competitors
+    assert "Ajouter un concurrent" not in competitors
+    keywords = browser.get("/projects/atelier/keywords/opportunities").text
+    assert "Tracked keywords" in keywords and "Connect Google for this site" in keywords
+    performance = browser.get("/projects/atelier/performance").text
+    assert "Source, period and filters" in performance and "Click-through rate" in performance
+    assert "Écrire une page" in browser.get("/projects/atelier/content", params={"lang": "fr"}).text
+
+
+def test_json_errors_follow_the_customer_language(lab) -> None:
+    owner = user(lab["db"])
+    project(lab["db"], owner, slug="atelier")
+    browser = session_client(owner)
+    browser.get("/projects/atelier/content", params={"lang": "en"})
+    headers = {"x-csrf-token": browser.cookies.get(app_module._CSRF_COOKIE_NAME) or ""}
+
+    english = browser.post("/api/projects/atelier/content/article", json={}, headers=headers)
+    assert english.status_code == 400
+    assert english.json()["error"] == "Topic or section missing."
+    browser.get("/projects/atelier/content", params={"lang": "fr"})
+    french = browser.post("/api/projects/atelier/content/article", json={}, headers=headers)
+    assert french.json()["error"] == "Sujet ou section manquant."
+    # Hors requete (une tache de fond), rien ne change.
+    assert json.loads(i18n.JSONResponse({"error": "Session expirée."}).body)["error"] == "Session expirée."
+
+
+def test_next_automatic_page_date_in_english() -> None:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    auto = {"fuseau": "Europe/London"}
+    creneau = datetime(2026, 10, 5, 9, tzinfo=ZoneInfo("Europe/London"))
+    token = i18n._current_lang_var.set("en")
+    try:
+        english = app_module._dire_creneau(creneau, auto, maintenant=0)
+    finally:
+        i18n._current_lang_var.reset(token)
+    assert english == "Monday, October 5 at 09:00 (London)"
+    assert app_module._dire_creneau(creneau, auto, maintenant=0) == "lundi 5 octobre à 09:00 (Londres)"

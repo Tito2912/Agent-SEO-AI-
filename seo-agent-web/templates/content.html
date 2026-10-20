@@ -1,41 +1,41 @@
 {% extends "layout.html" %}
 {% from '_correction_progress.html' import steps %}
-{% block title %}Contenu - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Contenu") }} - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/content-journey.css?v=1" />{% endblock %}
-{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">Contenu</span>{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Contenu") }}</span>{% endblock %}
 {% block content %}
 <div class="content-journey-page">
   <div class="page-header">
-    <h1>Contenu</h1>
+    <h1>{{ tr("Contenu") }}</h1>
     <p class="muted">
-      {{ project.site_name }} · rédigez un article à relire, puis à publier dans votre site
+      {{ project.site_name }} · {{ tr("rédigez un article à relire, puis à publier dans votre site") }}
     </p>
   </div>
 
   {% if not has_access %}
     <section class="card">
-      <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
-      <p class="muted">Transformez un sujet en article avec un titre, une meta description et un texte en HTML et Markdown. Vous pouvez le publier vous-même ou préparer une proposition sur GitHub. Disponible à partir du plan Pro.</p>
-      <div class="feature-example"><p class="muted small">Exemple de livrable · démonstration</p><p><strong>Entretenir son vélo électrique au quotidien</strong></p><p class="muted">Un article structuré, une adresse suggérée et des liens vers les pages de votre site, à relire avant publication.</p></div>
-      <a class="btn primary" href="{{ billing_url or '/billing' }}" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
+      <h2 style="margin-top:0;">{{ tr("Réservé aux plans Pro et supérieurs") }}</h2>
+      <p class="muted">{{ tr("Transformez un sujet en article avec un titre, une meta description et un texte en HTML et Markdown. Vous pouvez le publier vous-même ou préparer une proposition sur GitHub. Disponible à partir du plan Pro.") }}</p>
+      <div class="feature-example"><p class="muted small">{{ tr("Exemple de livrable · démonstration") }}</p><p><strong>{{ tr("Entretenir son vélo électrique au quotidien") }}</strong></p><p class="muted">{{ tr("Un article structuré, une adresse suggérée et des liens vers les pages de votre site, à relire avant publication.") }}</p></div>
+      <a class="btn primary" href="{{ billing_url or '/billing' }}" style="margin-top:12px;display:inline-block;">{{ tr("Voir les forfaits") }}</a>
     </section>
   {% else %}
     {% set a_depot = github_cfg and github_cfg.repo %}
     <div id="content-progress">{{ steps(1, labels=['Choisir', 'Rédiger', 'Relire', 'Publier'], aria_label='Progression de votre contenu') }}</div>
     <div class="content-readiness">
-      <p id="c-readiness" role="status">{{ 'Choisissez une destination et un sujet.' if sections_crawl or a_depot else 'Une analyse du site est nécessaire pour identifier ses rubriques.' }}</p>
-      <a class="btn" id="c-prerequisite-action" href="/projects/{{ slug }}" {% if sections_crawl or a_depot %}hidden{% endif %}>Lancer une analyse</a>
+      <p id="c-readiness" role="status">{{ tr('Choisissez une destination et un sujet.') if sections_crawl or a_depot else tr('Une analyse du site est nécessaire pour identifier ses rubriques.') }}</p>
+      <a class="btn" id="c-prerequisite-action" href="/projects/{{ slug }}" {% if sections_crawl or a_depot %}hidden{% endif %}>{{ tr("Lancer une analyse") }}</a>
     </div>
 
     <section class="card" id="content-compose">
       <div class="card-title-row">
-        <h2 style="margin:0;">Écrire une page</h2>
+        <h2 style="margin:0;">{{ tr("Écrire une page") }}</h2>
         <span class="muted small">
           {% if restant is none %}
-            Articles sans plafond mensuel
+            {{ tr("Articles sans plafond mensuel") }}
           {% else %}
-            {{ restant }} article{{ 's' if restant > 1 }} restant{{ 's' if restant > 1 }} ce mois-ci · solde à l’ouverture
+            {{ tr('{n} articles restants ce mois-ci · solde à l’ouverture', n=restant) if restant > 1 else tr('{n} article restant ce mois-ci · solde à l’ouverture', n=restant) }}
           {% endif %}
         </span>
       </div>
@@ -43,33 +43,33 @@
       {# DEUX MODES, decision du proprietaire du 28/09/2026. Sans depot, le mode GitHub reste
          VISIBLE mais inactif : le client doit savoir qu'il existe et comment l'ouvrir. #}
       <fieldset class="c-modes" style="border:0;padding:0;margin:0 0 10px;">
-        <legend class="muted small">Où va la page</legend>
+        <legend class="muted small">{{ tr("Où va la page") }}</legend>
         {# `.radio` et non un `label` nu : la regle generale `label { flex-direction: column }`
            posait le bouton AU-DESSUS de son texte (capture du 28/09/2026). #}
         <label class="radio" style="align-items:flex-start;">
           <input type="radio" name="c-mode" value="github" {% if a_depot %}checked{% else %}disabled{% endif %} style="margin-top:3px;" />
-          <span><strong>Proposition sur votre dépôt GitHub</strong>
-            <span class="muted small">— une proposition en brouillon à relire sur GitHub, avec le lien depuis sa rubrique ; la page n’est pas encore publiée.
-            {% if not a_depot %}<a href="/projects/{{ slug }}/settings/crawl">Connectez un dépôt GitHub</a> pour l'activer.{% endif %}</span></span>
+          <span><strong>{{ tr("Proposition sur votre dépôt GitHub") }}</strong>
+            <span class="muted small">{{ tr("— une proposition en brouillon à relire sur GitHub, avec le lien depuis sa rubrique ; la page n’est pas encore publiée.") }}
+            {% if not a_depot %}{{ tr_html('<a href="{url}">Connectez un dépôt GitHub</a> pour l\'activer.', url='/projects/' ~ slug ~ '/settings/crawl') }}{% endif %}</span></span>
         </label>
         <label class="radio" style="align-items:flex-start;">
           <input type="radio" name="c-mode" value="contenu" {% if not a_depot %}checked{% endif %} style="margin-top:3px;" />
-          <span><strong>Contenu seul</strong>
-            <span class="muted small">— vous obtenez l'article en Markdown et en HTML, et vous le publiez vous-même.</span></span>
+          <span><strong>{{ tr("Contenu seul") }}</strong>
+            <span class="muted small">{{ tr("— vous obtenez l'article en Markdown et en HTML, et vous le publiez vous-même.") }}</span></span>
         </label>
       </fieldset>
 
-      <p class="muted">Choisissez un sujet et le public auquel il s’adresse, puis la destination de l’article. Vous recevrez un texte à relire avant publication.</p>
+      <p class="muted">{{ tr("Choisissez un sujet et le public auquel il s’adresse, puis la destination de l’article. Vous recevrez un texte à relire avant publication.") }}</p>
       <div class="setting-form">
         <label>
-          Sujet et public visé
+          {{ tr("Sujet et public visé") }}
           {# « Sujet IA » DANS le champ, a droite (demande du 28/09/2026) : un sujet pour la
              section choisie, tire de ce que les concurrents traitent et pas le site. #}
           <span style="position:relative;display:block;">
-            <input id="c-sujet" placeholder="Ex. : choisir un vélo électrique pour ses trajets quotidiens" style="padding-right:120px;" />
+            <input id="c-sujet" placeholder="{{ tr("Ex. : choisir un vélo électrique pour ses trajets quotidiens") }}" style="padding-right:120px;" />
             <button type="button" id="c-sujet-ia" class="btn small"
                     style="position:absolute;right:5px;top:50%;transform:translateY(-50%);"
-                    title="Propose un sujet que vos concurrents traitent et pas vous, pour la section choisie">Sujet IA</button>
+                    title="{{ tr("Propose un sujet que vos concurrents traitent et pas vous, pour la section choisie") }}">{{ tr("Sujet IA") }}</button>
           </span>
         </label>
         {# LA PROPOSITION DE L'IA, dans un encadre a elle (capture du 28/09/2026 : une phrase
@@ -81,46 +81,44 @@
 
         {# TAILLE ET TON, communs aux deux modes (demande du 28/09/2026). Par defaut rien
            n'est impose : l'article imite une page de sa section, comme avant. #}
-        <details class="screen-options content-style"><summary>Personnaliser la longueur et le ton</summary>
+        <details class="screen-options content-style"><summary>{{ tr("Personnaliser la longueur et le ton") }}</summary>
         <div class="c-style-ligne">
           <label>
-            Taille
+            {{ tr("Taille") }}
             <select id="c-taille">
-              <option value="">Style du site</option>
-              {% for cle, libelle in tailles_article %}<option value="{{ cle }}">{{ libelle }}</option>{% endfor %}
+              <option value="">{{ tr("Style du site") }}</option>
+              {% for cle, libelle in tailles_article %}<option value="{{ cle }}">{{ tr(libelle) }}</option>{% endfor %}
             </select>
           </label>
           <label>
-            Ton
+            {{ tr("Ton") }}
             <select id="c-ton">
-              <option value="">Style du site</option>
-              {% for cle, libelle in tons_article %}<option value="{{ cle }}">{{ libelle }}</option>{% endfor %}
+              <option value="">{{ tr("Style du site") }}</option>
+              {% for cle, libelle in tons_article %}<option value="{{ cle }}">{{ tr(libelle) }}</option>{% endfor %}
             </select>
           </label>
         </div>
         <span class="muted small" style="display:block;margin:-2px 0 10px;">
-          « Style du site » reprend la longueur et le ton d’une page existante dans la rubrique choisie. Vous pouvez les personnaliser. Chaque version linguistique compte pour un article.
+          {{ tr("« Style du site » reprend la longueur et le ton d’une page existante dans la rubrique choisie. Vous pouvez les personnaliser. Chaque version linguistique compte pour un article.") }}
         </span>
         </details>
 
         <div id="c-bloc-contenu" {% if a_depot %}hidden{% endif %}>
           {% if sections_crawl %}
             <label>
-              Section du site
+              {{ tr("Section du site") }}
               <select id="c-section">
                 {% for s in sections_crawl %}
-                  <option value="{{ s.section }}">{{ s.section }}/ · {{ s.pages }} pages déjà publiées</option>
+                  <option value="{{ s.section }}">{{ s.section }}/ · {{ tr("{n} pages déjà publiées", n=s.pages) }}</option>
                 {% endfor %}
               </select>
               <span class="muted small">
-                Le nombre de pages dit combien la section en contient déjà : l'article imite
-                l'une d'elles — longueur du titre, ton, type de plan — et ne lie que des pages
-                que la dernière analyse a vues.
+                {{ tr("Le nombre de pages dit combien la section en contient déjà : l'article imite l'une d'elles — longueur du titre, ton, type de plan — et ne lie que des pages que la dernière analyse a vues.") }}
               </span>
             </label>
             {% if langues_crawl|length > 1 %}
               <fieldset id="c-langues-contenu" class="c-langues-ligne" style="border:0;padding:0;margin:10px 0 0;">
-                <legend>Langues</legend>
+                <legend>{{ tr("Langues") }}</legend>
                 <div style="display:flex;flex-wrap:wrap;gap:4px 18px;">
                   {% for l in langues_crawl %}
                     <label class="checkbox"><input type="checkbox" value="{{ l.code }}" />
@@ -128,60 +126,52 @@
                   {% endfor %}
                 </div>
                 <span class="muted small">
-                  L'article s'écrit d'abord dans la langue de la section, puis se traduit dans
-                  chaque langue cochée — même plan, mêmes chiffres. Pour écrire d'abord dans une
-                  autre langue, choisissez sa rubrique dans la liste ci-dessus.
+                  {{ tr("L'article s'écrit d'abord dans la langue de la section, puis se traduit dans chaque langue cochée — même plan, mêmes chiffres. Pour écrire d'abord dans une autre langue, choisissez sa rubrique dans la liste ci-dessus.") }}
                 </span>
               </fieldset>
             {% endif %}
           {% else %}
             <p class="muted small" id="c-sans-crawl">
-              Aucune analyse de votre site pour l'instant. L’analyse identifie les rubriques existantes
-              et à quoi ressemblent leurs pages : <a href="/projects/{{ slug }}">lancez une analyse</a>,
-              puis revenez ici.
+              {{ tr_html('Aucune analyse de votre site pour l\'instant. L’analyse identifie les rubriques existantes et à quoi ressemblent leurs pages : <a href="{url}">lancez une analyse</a>, puis revenez ici.', url='/projects/' ~ slug) }}
             </p>
           {% endif %}
         </div>
 
         <div id="c-bloc-github" {% if not a_depot %}hidden{% endif %}>
-        <p id="c-depot-status" class="muted small" role="status">Lecture des rubriques du dépôt…</p>
+        <p id="c-depot-status" class="muted small" role="status">{{ tr("Lecture des rubriques du dépôt…") }}</p>
         {# Rempli apres le rendu par /content/langues, avec les sections du DEPOT : l'adresse se
            compose de la section et du slug du sujet, et reste modifiable a la main. #}
         <label id="c-section-github-bloc" hidden>
-          Section du site
+          {{ tr("Section du site") }}
           <select id="c-section-github"></select>
         </label>
         <label>
-          Adresse de la page
-          <input id="c-route" class="mono" placeholder="se remplit avec le sujet" />
+          {{ tr("Adresse de la page") }}
+          <input id="c-route" class="mono" placeholder="{{ tr("se remplit avec le sujet") }}" />
           <span class="muted small">
-            Composée de la section et du sujet ; vous pouvez la modifier. Le nombre de pages d'une
-            section dit combien elle en contient déjà : l'agent imite l'une d'elles.
+            {{ tr("Composée de la section et du sujet ; vous pouvez la modifier. Le nombre de pages d'une section dit combien elle en contient déjà : l'agent imite l'une d'elles.") }}
           </span>
         </label>
         {# Rempli apres le rendu par /content/langues : lire l'arbre du depot prend des
            secondes. Reste cache sur un site qui ne sert qu'une langue. #}
         <fieldset id="c-langues-bloc" hidden style="border:0;padding:0;margin:10px 0 0;">
-          <legend>Langues</legend>
+          <legend>{{ tr("Langues") }}</legend>
           <div id="c-langues" style="display:flex;flex-wrap:wrap;gap:4px 18px;margin:4px 0;"></div>
           <span class="muted small">
-            La page s'écrit d'abord dans la langue de son adresse, puis se traduit dans chaque
-            langue cochée — toutes dans la même pull request, liées entre elles (hreflang). Pour
-            écrire d'abord dans une autre langue, choisissez sa rubrique.
+            {{ tr("La page s'écrit d'abord dans la langue de son adresse, puis se traduit dans chaque langue cochée — toutes dans la même pull request, liées entre elles (hreflang). Pour écrire d'abord dans une autre langue, choisissez sa rubrique.") }}
           </span>
 
         </fieldset>
         </div>
         <div class="content-receipt">
-          <p id="c-destination" class="muted small">Article en Markdown et HTML à publier vous-même.</p>
-          <p id="c-cout" class="muted small" role="status" aria-live="polite">1 version : 1 article décompté du quota.</p>
+          <p id="c-destination" class="muted small">{{ tr("Article en Markdown et HTML à publier vous-même.") }}</p>
+          <p id="c-cout" class="muted small" role="status" aria-live="polite">{{ tr("{n} version : {n} article décompté du quota.", n=1) }}</p>
         </div>
         <div class="modal-actions between">
           <span class="muted small">
-            Besoin d'idées ? <a href="/projects/{{ slug }}/competitors">Concurrents</a> liste
-            des sujets repérés chez eux et absents des pages analysées de votre site.
+            {{ tr_html('Besoin d\'idées ? <a href="{url}">Concurrents</a> liste des sujets repérés chez eux et absents des pages analysées de votre site.', url='/projects/' ~ slug ~ '/competitors') }}
           </span>
-          <button class="btn primary" type="button" id="c-go">{% if a_depot %}Préparer la proposition{% else %}Rédiger l'article{% endif %}</button>
+          <button class="btn primary" type="button" id="c-go">{% if a_depot %}{{ tr("Préparer la proposition") }}{% else %}{{ tr("Rédiger l'article") }}{% endif %}</button>
         </div>
       </div>
 
@@ -193,62 +183,58 @@
       {# L'article du mode « contenu seul ». L'apercu est un iframe SANS script : le HTML vient
          d'un modele, et meme echappe au rendu il n'a rien a executer dans l'ecran du client. #}
       <div id="c-article" hidden style="margin-top:14px;">
-        <h2 class="content-article-heading" tabindex="-1">Votre article est prêt à relire</h2>
-        <p class="muted">Contrôlez les informations, les liens et chaque langue. Copiez ou téléchargez ensuite le texte pour le publier dans votre plateforme. Cette étape ne met pas votre site en ligne.</p>
+        <h2 class="content-article-heading" tabindex="-1">{{ tr("Votre article est prêt à relire") }}</h2>
+        <p class="muted">{{ tr("Contrôlez les informations, les liens et chaque langue. Copiez ou téléchargez ensuite le texte pour le publier dans votre plateforme. Cette étape ne met pas votre site en ligne.") }}</p>
         <div id="c-versions" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
         <div class="setting-form">
-          <label>Titre (balise title) <input id="c-a-titre" readonly /></label>
-          <label>Meta description <span id="c-a-desc-n" class="muted small"></span>
+          <label>{{ tr("Titre (balise title)") }} <input id="c-a-titre" readonly /></label>
+          <label>{{ tr("Meta description") }} <span id="c-a-desc-n" class="muted small"></span>
             <textarea id="c-a-desc" rows="2" readonly></textarea></label>
-          <label>Adresse suggérée <input id="c-a-adresse" class="mono" readonly /></label>
+          <label>{{ tr("Adresse suggérée") }} <input id="c-a-adresse" class="mono" readonly /></label>
         </div>
         <ul id="c-a-notes" class="muted small"></ul>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">
-          <button class="btn" type="button" data-copier="markdown">Copier le Markdown</button>
-          <button class="btn" type="button" data-copier="html">Copier le HTML</button>
-          <button class="btn" type="button" data-telecharger="md">Télécharger .md</button>
-          <button class="btn" type="button" data-telecharger="html">Télécharger .html</button>
+          <button class="btn" type="button" data-copier="markdown">{{ tr("Copier le Markdown") }}</button>
+          <button class="btn" type="button" data-copier="html">{{ tr("Copier le HTML") }}</button>
+          <button class="btn" type="button" data-telecharger="md">{{ tr("Télécharger .md") }}</button>
+          <button class="btn" type="button" data-telecharger="html">{{ tr("Télécharger .html") }}</button>
         </div>
-        <iframe id="c-a-apercu" sandbox title="Aperçu de l'article"
+        <iframe id="c-a-apercu" sandbox title="{{ tr("Aperçu de l'article") }}"
                 style="width:100%;height:520px;border:1px solid var(--border, #333);border-radius:8px;background:#fff;"></iframe>
-        <details class="screen-options"><summary>Lire le texte en Markdown</summary><label for="c-a-source">Texte de la version sélectionnée</label><textarea id="c-a-source" readonly rows="12"></textarea></details>
+        <details class="screen-options"><summary>{{ tr("Lire le texte en Markdown") }}</summary><label for="c-a-source">{{ tr("Texte de la version sélectionnée") }}</label><textarea id="c-a-source" readonly rows="12"></textarea></details>
       </div>
     </section>
 
-    <p class="content-actions"><a class="btn" href="/projects/{{ slug }}/content">Actualiser les contenus et le solde</a><a class="btn" href="/projects/{{ slug }}/competitors">Trouver des sujets avec mes concurrents</a></p>
+    <p class="content-actions"><a class="btn" href="/projects/{{ slug }}/content">{{ tr("Actualiser les contenus et le solde") }}</a><a class="btn" href="/projects/{{ slug }}/competitors">{{ tr("Trouver des sujets avec mes concurrents") }}</a></p>
     {% if a_depot %}
     <section class="card">
     <details class="content-automation" {% if auto.enabled %}open{% endif %}>
-      <summary>Rédaction automatique · {{ 'activée' if auto.enabled else 'désactivée' }}</summary>
+      <summary>{{ tr("Rédaction automatique") }} · {{ tr('activée') if auto.enabled else tr('désactivée') }}</summary>
       <div>
       <div class="card-title-row">
-        <h2 style="margin:0;">Mode automatique</h2>
+        <h2 style="margin:0;">{{ tr("Mode automatique") }}</h2>
         <span class="muted small">
-          {% if auto.enabled %}<span class="badge ok">allumé</span>{% else %}éteint{% endif %}
+          {% if auto.enabled %}<span class="badge ok">{{ tr("allumé") }}</span>{% else %}{{ tr("éteint") }}{% endif %}
         </span>
       </div>
 
       <p class="muted small">
-        Des pages prises dans les sujets que
-        <a href="/projects/{{ slug }}/competitors">vos concurrents traitent et qui n’ont pas été repérés dans vos pages analysées</a> — jamais un sujet que vous traitez déjà, ce serait concurrencer vos propres pages. Chaque version
-        compte dans votre quota mensuel, et une page que l'agent ne sait pas
-        <strong>lier</strong> à sa section n'est pas écrite du tout.
+        {{ tr_html('Des pages prises dans les sujets que <a href="{url}">vos concurrents traitent et qui n’ont pas été repérés dans vos pages analysées</a> — jamais un sujet que vous traitez déjà, ce serait concurrencer vos propres pages. Chaque version compte dans votre quota mensuel, et une page que l\'agent ne sait pas <strong>lier</strong> à sa section n\'est pas écrite du tout.', url='/projects/' ~ slug ~ '/competitors') }}
       </p>
 
       <div class="setting-form">
         <label class="checkbox">
           <input type="checkbox" id="c-auto" {% if auto.enabled %}checked{% endif %} />
-          <span>Écrire des pages automatiquement</span>
+          <span>{{ tr("Écrire des pages automatiquement") }}</span>
         </label>
-        {% if auto_prochain %}<p class="muted small" id="c-auto-prochain" style="margin:0;">Prochaine page : {{ auto_prochain }}</p>
+        {% if auto_prochain %}<p class="muted small" id="c-auto-prochain" style="margin:0;">{{ tr("Prochaine page : {date}", date=auto_prochain) }}</p>
         {% else %}<p class="muted small" id="c-auto-prochain" style="margin:0;" hidden></p>{% endif %}
         <label>
-          Section où poser les pages
-          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="ex. /guides" list="c-sections-liste" />
+          {{ tr("Section où poser les pages") }}
+          <input id="c-auto-section" class="mono" value="{{ auto.section }}" placeholder="{{ tr("ex. {section}", section="/guides") }}" list="c-sections-liste" />
           <datalist id="c-sections-liste"></datalist>
           <span class="muted small">
-            Obligatoire pour allumer : <span class="mono">/blog</span> ou
-            <span class="mono">/guides</span> n'est pas une chose qui se devine, et la rubrique doit être choisie avant la préparation automatique.
+            {{ tr_html('Obligatoire pour allumer : <span class="mono">/blog</span> ou <span class="mono">/guides</span> n\'est pas une chose qui se devine, et la rubrique doit être choisie avant la préparation automatique.') }}
           </span>
         </label>
 
@@ -256,48 +242,47 @@
            deux par semaine, Paris par defaut). #}
         <div class="c-style-ligne">
           <label>
-            Fréquence
+            {{ tr("Fréquence") }}
             <select id="c-auto-frequence">
-              {% for cle, libelle in frequences_auto %}<option value="{{ cle }}" {% if auto.frequence == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+              {% for cle, libelle in frequences_auto %}<option value="{{ cle }}" {% if auto.frequence == cle %}selected{% endif %}>{{ tr(libelle) }}</option>{% endfor %}
             </select>
           </label>
           <label>
-            Jour
+            {{ tr("Jour") }}
             <select id="c-auto-jour">
-              {% for i, nom in jours_auto %}<option value="{{ i }}" {% if auto.jour == i %}selected{% endif %}>{{ nom|capitalize }}</option>{% endfor %}
+              {% for i, nom in jours_auto %}<option value="{{ i }}" {% if auto.jour == i %}selected{% endif %}>{{ tr(nom|capitalize) }}</option>{% endfor %}
             </select>
           </label>
           <label>
-            Heure
+            {{ tr("Heure") }}
             <select id="c-auto-heure">
               {% for h in range(24) %}<option value="{{ h }}" {% if auto.heure == h %}selected{% endif %}>{{ '%02d' % h }}:00</option>{% endfor %}
             </select>
           </label>
           <label>
-            Fuseau horaire
+            {{ tr("Fuseau horaire") }}
             <select id="c-auto-fuseau">
-              {% for cle, nom in fuseaux_auto %}<option value="{{ cle }}" {% if auto.fuseau == cle %}selected{% endif %}>{{ nom }}</option>{% endfor %}
+              {% for cle, nom in fuseaux_auto %}<option value="{{ cle }}" {% if auto.fuseau == cle %}selected{% endif %}>{{ tr(nom) }}</option>{% endfor %}
             </select>
           </label>
         </div>
         <span class="muted small" style="display:block;margin:-2px 0 6px;">
-          « Deux par semaine » : le jour choisi et trois jours plus tard. « Une par mois » : le
-          jour choisi de la première semaine du mois.
+          {{ tr("« Deux par semaine » : le jour choisi et trois jours plus tard. « Une par mois » : le jour choisi de la première semaine du mois.") }}
         </span>
 
         <div class="c-style-ligne">
           <label>
-            Taille
+            {{ tr("Taille") }}
             <select id="c-auto-taille">
-              <option value="">Style du site</option>
-              {% for cle, libelle in tailles_article %}<option value="{{ cle }}" {% if auto.taille == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+              <option value="">{{ tr("Style du site") }}</option>
+              {% for cle, libelle in tailles_article %}<option value="{{ cle }}" {% if auto.taille == cle %}selected{% endif %}>{{ tr(libelle) }}</option>{% endfor %}
             </select>
           </label>
           <label>
-            Ton
+            {{ tr("Ton") }}
             <select id="c-auto-ton">
-              <option value="">Style du site</option>
-              {% for cle, libelle in tons_article %}<option value="{{ cle }}" {% if auto.ton == cle %}selected{% endif %}>{{ libelle }}</option>{% endfor %}
+              <option value="">{{ tr("Style du site") }}</option>
+              {% for cle, libelle in tons_article %}<option value="{{ cle }}" {% if auto.ton == cle %}selected{% endif %}>{{ tr(libelle) }}</option>{% endfor %}
             </select>
           </label>
         </div>
@@ -305,27 +290,27 @@
         {# Rempli par /content/langues, comme la redaction manuelle : seules les langues que le
            depot sert. Cache sur un site d'une seule langue. #}
         <fieldset id="c-auto-langues-bloc" hidden style="border:0;padding:0;margin:10px 0 0;">
-          <legend>Traduire aussi en</legend>
+          <legend>{{ tr("Traduire aussi en") }}</legend>
           <div id="c-auto-langues" style="display:flex;flex-wrap:wrap;gap:4px 18px;"></div>
         </fieldset>
 
         <fieldset style="border:0;padding:0;margin:10px 0 0;">
-          <legend>Publication</legend>
+          <legend>{{ tr("Publication") }}</legend>
           <label class="radio" style="align-items:flex-start;">
             <input type="radio" name="c-auto-publication" value="verification" {% if auto.publication != 'auto' %}checked{% endif %} style="margin-top:3px;" />
-            <span><strong>Avec votre validation</strong>
-              <span class="muted small">— la proposition attend votre relecture et votre autorisation de fusion ; un e-mail vous prévient.</span></span>
+            <span><strong>{{ tr("Avec votre validation") }}</strong>
+              <span class="muted small">{{ tr("— la proposition attend votre relecture et votre autorisation de fusion ; un e-mail vous prévient.") }}</span></span>
           </label>
           <label class="radio" style="align-items:flex-start;">
             <input type="radio" name="c-auto-publication" value="auto" {% if auto.publication == 'auto' %}checked{% endif %} style="margin-top:3px;" />
-            <span><strong>Automatique · fusion après contrôles</strong>
-              <span class="muted small">— la pull request est fusionnée seule dès que les vérifications de votre dépôt passent. Sans vérification, ou si elles échouent, elle attend votre validation et un e-mail vous prévient.</span></span>
+            <span><strong>{{ tr("Automatique · fusion après contrôles") }}</strong>
+              <span class="muted small">{{ tr("— la pull request est fusionnée seule dès que les vérifications de votre dépôt passent. Sans vérification, ou si elles échouent, elle attend votre validation et un e-mail vous prévient.") }}</span></span>
           </label>
         </fieldset>
 
         <div class="modal-actions between">
           <span id="c-auto-status" class="muted small" role="status" aria-live="polite"></span>
-          <button class="btn" type="button" id="c-auto-save">Enregistrer</button>
+          <button class="btn" type="button" id="c-auto-save">{{ tr("Enregistrer") }}</button>
         </div>
       </div>
       </div>
@@ -336,12 +321,12 @@
     {% if articles %}
     <section class="card">
       <div class="card-title-row">
-        <h2 style="margin:0;">Articles rédigés</h2>
+        <h2 style="margin:0;">{{ tr("Articles rédigés") }}</h2>
         <span class="muted small">{{ articles|length }}</span>
       </div>
-      <div class="table-wrap" tabindex="0" role="region" aria-label="Contenus enregistrés, défilement horizontal si nécessaire">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Contenus enregistrés, défilement horizontal si nécessaire") }}">
         <table class="table compact">
-          <thead><tr><th>Adresse suggérée</th><th>Sujet</th><th>Langues</th><th>Le</th><th></th></tr></thead>
+          <thead><tr><th>{{ tr("Adresse suggérée") }}</th><th>{{ tr("Sujet") }}</th><th>{{ tr("Langues") }}</th><th>{{ tr("Le") }}</th><th></th></tr></thead>
           <tbody>
             {% for a in articles %}
               <tr>
@@ -349,7 +334,7 @@
                 <td class="muted small">{{ a.sujet }}</td>
                 <td class="muted small">{{ a.langues|join(', ') }}</td>
                 <td class="muted small">{{ a.updated_at }}</td>
-                <td><button class="btn" type="button" data-ouvrir-article="{{ a.id }}">Ouvrir</button></td>
+                <td><button class="btn" type="button" data-ouvrir-article="{{ a.id }}">{{ tr("Ouvrir") }}</button></td>
               </tr>
             {% endfor %}
           </tbody>
@@ -360,22 +345,22 @@
 
     <section class="card">
       <div class="card-title-row">
-        <h2 style="margin:0;">Pages proposées</h2>
+        <h2 style="margin:0;">{{ tr("Pages proposées") }}</h2>
         <span class="muted small">{{ pages|length }}</span>
       </div>
 
       {% if not pages %}
-        <p class="muted">Aucune page proposée pour l'instant.</p>
+        <p class="muted">{{ tr("Aucune page proposée pour l'instant.") }}</p>
       {% else %}
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Contenus enregistrés, défilement horizontal si nécessaire">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Contenus enregistrés, défilement horizontal si nécessaire") }}">
           <table class="table compact">
             <thead>
               <tr>
-                <th>Adresse</th>
-                <th>Sujet demandé</th>
-                <th>Lien depuis la section</th>
-                <th>Pull request</th>
-                <th>Le</th>
+                <th>{{ tr("Adresse") }}</th>
+                <th>{{ tr("Sujet demandé") }}</th>
+                <th>{{ tr("Lien depuis la section") }}</th>
+                <th>{{ tr("Pull request") }}</th>
+                <th>{{ tr("Le") }}</th>
               </tr>
             </thead>
             <tbody>
@@ -385,9 +370,9 @@
                   <td class="muted small">{{ p.sujet }}</td>
                   <td>
                     {% if p.orpheline %}
-                      <span class="badge warn">à lier à la main</span>
+                      <span class="badge warn">{{ tr("à lier à la main") }}</span>
                     {% else %}
-                      <span class="badge ok">liée</span>
+                      <span class="badge ok">{{ tr("liée") }}</span>
                     {% endif %}
                   </td>
                   <td>
@@ -395,14 +380,14 @@
                       <a href="{{ p.pr_url }}" target="_blank" rel="noreferrer">#{{ p.pr_number }}</a>
                       {# Les etats que la verification ECRIT (`_reprendre_une_verification`) :
                          le gabarit testait `refusee` et `inconnue`, qu'elle n'ecrit jamais. #}
-                      {% if p.status == 'done' %}<span class="badge ok">fusionnée</span>
-                      {% elif p.etat == 'en_attente' %}<span class="muted small">· {{ 'validée, fusion en attente' if p.approved else 'contrôles en cours, à relire' }}</span>
-                      {% elif p.etat == 'verifiee' %}<span class="muted small">· contrôles réussis</span>
-                      {% elif p.etat == 'echouee' %}<span class="badge error">contrôles en échec</span>
-                      {% elif p.etat == 'non_verifiable' %}<span class="muted small">· rien à vérifier sur ce dépôt</span>
+                      {% if p.status == 'done' %}<span class="badge ok">{{ tr("fusionnée") }}</span>
+                      {% elif p.etat == 'en_attente' %}<span class="muted small">· {{ tr('validée, fusion en attente') if p.approved else tr('contrôles en cours, à relire') }}</span>
+                      {% elif p.etat == 'verifiee' %}<span class="muted small">· {{ tr("contrôles réussis") }}</span>
+                      {% elif p.etat == 'echouee' %}<span class="badge error">{{ tr("contrôles en échec") }}</span>
+                      {% elif p.etat == 'non_verifiable' %}<span class="muted small">· {{ tr("rien à vérifier sur ce dépôt") }}</span>
                       {% endif %}
                       {% if p.status != 'done' and p.etat != 'abandonnee' %}
-                        · <a href="/projects/{{ slug }}/content/valider/{{ p.id }}">Relire et suivre</a>
+                        · <a href="/projects/{{ slug }}/content/valider/{{ p.id }}">{{ tr("Relire et suivre") }}</a>
                       {% endif %}
                     {% else %}
                       <span class="muted small">—</span>
@@ -425,6 +410,11 @@
       var btn = document.getElementById('c-go');
       var box = document.getElementById('c-status');
       var touche = false;
+      /* Les phrases traduites gardent leurs trous nommes ({n}, {title}...) : une valeur n'est
+         jamais interpretee comme un motif de remplacement. */
+      function fill(text, values) {
+        return String(text).replace(/\{(\w+)\}/g, function (m, k) { return k in values ? String(values[k]) : m; });
+      }
 
       function contentStage(stage) {
         document.querySelectorAll('#content-progress li').forEach(function (item, i) {
@@ -445,11 +435,11 @@
         availability();
       }
       function readResponse(response) {
-        if (response.status === 401 || (response.redirected && new URL(response.url).pathname.startsWith('/auth/'))) return Promise.resolve({ok:false, session_expired:true, error:'Votre session a expiré. Reconnectez-vous pour reprendre ce contenu.'});
+        if (response.status === 401 || (response.redirected && new URL(response.url).pathname.startsWith('/auth/'))) return Promise.resolve({ok:false, session_expired:true, error:{{ tr("Votre session a expiré. Reconnectez-vous pour reprendre ce contenu.")|tojson }}});
         return response.json();
       }
       function failure(data, fallback) {
-        var link = data.session_expired ? ' <a href="/auth/login?next=' + encodeURIComponent(location.pathname + location.search) + '">Me reconnecter</a>' : data.billing_url ? ' <a href="{{ billing_url or '/billing' }}">Voir l’abonnement</a>' : '';
+        var link = data.session_expired ? ' <a href="/auth/login?next=' + encodeURIComponent(location.pathname + location.search) + '">' + {{ tr("Me reconnecter")|tojson }} + '</a>' : data.billing_url ? ' <a href="{{ billing_url or '/billing' }}">' + {{ tr("Voir l’abonnement")|tojson }} + '</a>' : '';
         say(esc(data.error || fallback) + link, 'error'); contentStage(1);
       }
       function say(html, cls) { box.className = cls || 'muted'; box.innerHTML = html; }
@@ -476,7 +466,7 @@
         if (touche) return;
         var s = slugifier(sujet.value);
         var prefixe = (sectionGithub && sectionGithub.value) ? sectionGithub.value.replace(/\/$/, '') : '';
-        route.placeholder = prefixe ? prefixe + '/…' : 'se remplit avec le sujet';
+        route.placeholder = prefixe ? prefixe + '/…' : {{ tr("se remplit avec le sujet")|tojson }};
         route.value = s ? prefixe + '/' + s + (slashFinal ? '/' : '') : '';
         majLangues();
       }
@@ -502,7 +492,7 @@
           ? (sectionSel ? sectionSel.value : '')
           : (sectionGithub && sectionGithub.value ? sectionGithub.value : '');
         boutonIA.disabled = true;
-        boutonIA.textContent = 'Recherche…';
+        boutonIA.textContent = {{ tr("Recherche…")|tojson }};
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/sujet', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ section: sectionIA, deja: sujetsProposes })
@@ -510,12 +500,12 @@
           .then(readResponse)
           .then(function (d) {
             boutonIA.disabled = false;
-            boutonIA.textContent = 'Sujet IA';
+            boutonIA.textContent = {{ tr("Sujet IA")|tojson }};
             noteIA.hidden = false;
             if (!d.ok) {
               noteIA.className = 'c-proposition erreur';
-              noteIA.innerHTML = '<p>' + esc(d.error || 'Aucun sujet proposé.') + (d.concurrents_url
-                ? ' <a href="' + esc(d.concurrents_url) + '">Ouvrir Concurrents</a>' : '') + '</p>';
+              noteIA.innerHTML = '<p>' + esc(d.error || {{ tr("Aucun sujet proposé.")|tojson }}) + (d.concurrents_url
+                ? ' <a href="' + esc(d.concurrents_url) + '">' + {{ tr("Ouvrir Concurrents")|tojson }} + '</a>' : '') + '</p>';
               return;
             }
             sujetsProposes.push(d.inspire_de);
@@ -523,19 +513,18 @@
             sujet.dispatchEvent(new Event('input'));
             noteIA.className = 'c-proposition';
             noteIA.innerHTML =
-              '<div class="c-proposition-tete"><span class="badge ok">Sujet proposé par l\'IA</span>' +
-              '<button type="button" class="btn small" id="c-sujet-autre">Autre sujet</button></div>' +
+              '<div class="c-proposition-tete"><span class="badge ok">' + {{ tr("Sujet proposé par l'IA")|tojson }} + '</span>' +
+              '<button type="button" class="btn small" id="c-sujet-autre">' + {{ tr("Autre sujet")|tojson }} + '</button></div>' +
               (d.pourquoi ? '<p>' + esc(d.pourquoi) + '</p>' : '') +
-              '<p class="muted small">Source : « ' + esc(sansMarque(d.inspire_de)) +
-              ' », un sujet que traite un de vos concurrents et pas vous.</p>';
+              '<p class="muted small">' + fill({{ tr("Source : « {title} », un sujet que traite un de vos concurrents et pas vous.")|tojson }}, {title: esc(sansMarque(d.inspire_de))}) + '</p>';
             document.getElementById('c-sujet-autre').addEventListener('click', function () { boutonIA.click(); });
           })
           .catch(function () {
             boutonIA.disabled = false;
-            boutonIA.textContent = 'Sujet IA';
+            boutonIA.textContent = {{ tr("Sujet IA")|tojson }};
             noteIA.hidden = false;
             noteIA.className = 'error small';
-            noteIA.textContent = 'Erreur réseau.';
+            noteIA.textContent = {{ tr("Erreur réseau.")|tojson }};
           });
       });
 
@@ -592,7 +581,7 @@
       var nomRacine = {{ nom_racine | tojson }};
       var isoRacine = {{ iso_racine | tojson }};
       var noms = null;
-      try { noms = new Intl.DisplayNames(['fr'], { type: 'language' }); } catch (e) { noms = null; }
+      try { noms = new Intl.DisplayNames([{{ current_lang()|tojson }}], { type: 'language' }); } catch (e) { noms = null; }
       function nomLangue(iso) {
         var n = '';
         try { n = noms && iso ? noms.of(iso) : ''; } catch (e) { n = ''; }
@@ -601,10 +590,10 @@
       }
       function libelle(code) {
         if (code) return nomLangue(code);
-        return isoRacine ? nomLangue(isoRacine) + ' (racine)' : (nomRacine || 'racine (sans préfixe)');
+        return isoRacine ? nomLangue(isoRacine) + ' ' + {{ tr("(racine)")|tojson }} : (nomRacine || {{ tr("racine (sans préfixe)")|tojson }});
       }
       Array.prototype.forEach.call(document.querySelectorAll('[data-iso]'), function (s) {
-        if (s.dataset.iso) s.textContent = nomLangue(s.dataset.iso) + (s.dataset.racine ? ' (racine)' : '');
+        if (s.dataset.iso) s.textContent = nomLangue(s.dataset.iso) + (s.dataset.racine ? ' ' + {{ tr("(racine)")|tojson }} : '');
         s.dataset.nom = s.textContent;
       });
       /* LA LANGUE VERROUILLEE DIT POURQUOI, dans son propre libelle. Une case cochee et grisee
@@ -628,9 +617,9 @@
       }
       function afficherCout(n) {
         requestedVersions = n;
-        var txt = n + (n > 1 ? ' versions : ' : ' version : ') + n + (n > 1 ? ' articles décomptés du quota.' : ' article décompté du quota.');
+        var txt = fill(n > 1 ? {{ tr("{n} versions : {n} articles décomptés du quota.")|tojson }} : {{ tr("{n} version : {n} article décompté du quota.")|tojson }}, {n: n});
         cout.className = restant !== null && n > restant ? 'error small' : 'muted small';
-        cout.textContent = txt + (restant !== null && n > restant ? ' Votre solde est de ' + restant + ' ce mois-ci.' : '');
+        cout.textContent = txt + (restant !== null && n > restant ? ' ' + fill({{ tr("Votre solde est de {n} ce mois-ci.")|tojson }}, {n: restant}) : '');
         availability();
       }
       function majLangues() {
@@ -647,8 +636,8 @@
           if (est && !c.checked) { c.checked = true; c.dataset.auto = '1'; }
           if (!est && c.dataset.auto) { c.checked = false; delete c.dataset.auto; }
           c.disabled = est;
-          c.title = est ? "langue de l'adresse : toujours écrite" : '';
-          nommerVerrou(c, est, "langue de l'adresse");
+          c.title = est ? {{ tr("langue de l'adresse : toujours écrite")|tojson }} : '';
+          nommerVerrou(c, est, {{ tr("langue de l'adresse")|tojson }});
         });
         if (mode() === 'github') afficherCout(Math.max(1, cochees().length));
       }
@@ -682,21 +671,21 @@
         var isPrepared = preparedFor && choiceStamp() === preparedFor;
         var isUncertain = uncertainFor && choiceStamp() === uncertainFor;
         btn.disabled = drafting || missingCrawl || quota || unavailableRepo || Boolean(isPrepared) || Boolean(isUncertain);
-        var message = isUncertain ? 'Le traitement peut continuer. Actualisez le suivi avant de relancer cette demande.' : isPrepared ? 'Votre brouillon est prêt à relire. Modifiez vos choix pour en préparer un autre.' : drafting ? 'Rédaction en cours : les choix sont conservés jusqu’à la réponse.' : quota ? 'Le solde affiché ne permet pas de rédiger toutes ces versions.' : missingCrawl ? 'Une analyse du site est nécessaire pour identifier ses rubriques.' : unavailableRepo ? (depotState === 'loading' ? 'Lecture des rubriques GitHub en cours…' : 'Le dépôt est indisponible. Vérifiez sa connexion ou choisissez « Contenu seul ».') : 'Prêt à rédiger un brouillon, à relire avant publication.';
+        var message = isUncertain ? {{ tr("Le traitement peut continuer. Actualisez le suivi avant de relancer cette demande.")|tojson }} : isPrepared ? {{ tr("Votre brouillon est prêt à relire. Modifiez vos choix pour en préparer un autre.")|tojson }} : drafting ? {{ tr("Rédaction en cours : les choix sont conservés jusqu’à la réponse.")|tojson }} : quota ? {{ tr("Le solde affiché ne permet pas de rédiger toutes ces versions.")|tojson }} : missingCrawl ? {{ tr("Une analyse du site est nécessaire pour identifier ses rubriques.")|tojson }} : unavailableRepo ? (depotState === 'loading' ? {{ tr("Lecture des rubriques GitHub en cours…")|tojson }} : {{ tr("Le dépôt est indisponible. Vérifiez sa connexion ou choisissez « Contenu seul ».")|tojson }}) : {{ tr("Prêt à rédiger un brouillon, à relire avant publication.")|tojson }};
         document.getElementById('c-readiness').textContent = message;
         var action = document.getElementById('c-prerequisite-action');
         action.hidden = drafting || !(isPrepared || isUncertain || missingCrawl || quota || (unavailableRepo && depotState !== 'loading'));
         action.href = isPrepared ? preparedLink : isUncertain ? '/projects/' + encodeURIComponent(slug) + '/content' : quota ? '/billing' : missingCrawl ? '/projects/' + encodeURIComponent(slug) : '/projects/' + encodeURIComponent(slug) + '/settings/crawl';
-        action.textContent = isPrepared ? 'Relire le brouillon' : isUncertain ? 'Actualiser le suivi' : quota ? 'Voir le solde du forfait' : missingCrawl ? 'Lancer une analyse' : 'Vérifier GitHub';
+        action.textContent = isPrepared ? {{ tr("Relire le brouillon")|tojson }} : isUncertain ? {{ tr("Actualiser le suivi")|tojson }} : quota ? {{ tr("Voir le solde du forfait")|tojson }} : missingCrawl ? {{ tr("Lancer une analyse")|tojson }} : {{ tr("Vérifier GitHub")|tojson }};
       }
       function majMode() {
         var m = mode();
         blocGithub.hidden = m !== 'github';
         blocContenu.hidden = m !== 'contenu';
-        btn.textContent = m === 'github' ? 'Préparer la proposition' : "Rédiger l'article";
+        btn.textContent = m === 'github' ? {{ tr("Préparer la proposition")|tojson }} : {{ tr("Rédiger l'article")|tojson }};
         document.getElementById('c-destination').textContent = m === 'github'
-          ? 'Proposition GitHub en brouillon : relisez le texte et les vérifications avant de le fusionner.'
-          : 'Article en Markdown et HTML à télécharger ou copier, puis à publier vous-même.';
+          ? {{ tr("Proposition GitHub en brouillon : relisez le texte et les vérifications avant de le fusionner.")|tojson }}
+          : {{ tr("Article en Markdown et HTML à télécharger ou copier, puis à publier vous-même.")|tojson }};
         if (m === 'github') majLangues();
         else majCoutContenu();
       }
@@ -725,8 +714,8 @@
           if (est && !c.checked) { c.checked = true; c.dataset.auto = '1'; }
           if (!est && c.dataset.auto) { c.checked = false; delete c.dataset.auto; }
           c.disabled = est;
-          c.title = est ? 'langue de la section : toujours écrite' : '';
-          nommerVerrou(c, est, 'langue de la section');
+          c.title = est ? {{ tr("langue de la section : toujours écrite")|tojson }} : '';
+          nommerVerrou(c, est, {{ tr("langue de la section")|tojson }});
         });
         afficherCout(Math.max(1, languesArticle().length));
       }
@@ -746,7 +735,7 @@
         });
         document.getElementById('c-a-titre').value = courante.titre;
         document.getElementById('c-a-desc').value = courante.description;
-        document.getElementById('c-a-desc-n').textContent = '(' + courante.description.length + ' caractères)';
+        document.getElementById('c-a-desc-n').textContent = fill({{ tr("({n} caractères)")|tojson }}, {n: courante.description.length});
         document.getElementById('c-a-adresse').value = courante.adresse || courante.slug;
         document.getElementById('c-a-source').value = courante.markdown || '';
         document.getElementById('c-a-notes').innerHTML = (courante.notes || []).map(function (n) {
@@ -780,10 +769,10 @@
         b.addEventListener('click', function () {
           if (!courante) return;
           var texte = courante[b.dataset.copier];
-          var fait = function () { say('Copié dans le presse-papiers.', 'ok'); };
+          var fait = function () { say({{ tr("Copié dans le presse-papiers.")|tojson }}, 'ok'); };
           if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(texte).then(fait, function () { say('Copie refusée par le navigateur : utilisez le téléchargement.', 'error'); });
-          } else { say('Copie indisponible dans ce navigateur : utilisez le téléchargement.', 'error'); }
+            navigator.clipboard.writeText(texte).then(fait, function () { say({{ tr("Copie refusée par le navigateur : utilisez le téléchargement.")|tojson }}, 'error'); });
+          } else { say({{ tr("Copie indisponible dans ce navigateur : utilisez le téléchargement.")|tojson }}, 'error'); }
         });
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-telecharger]'), function (b) {
@@ -805,27 +794,26 @@
           fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article/' + encodeURIComponent(b.dataset.ouvrirArticle))
             .then(readResponse)
             .then(function (d) {
-              if (!d.ok) { say(esc(d.error || 'Article illisible.'), 'error'); return; }
+              if (!d.ok) { say(esc(d.error || {{ tr("Article illisible.")|tojson }}), 'error'); return; }
               if (d.sujet) sujet.value = d.sujet;
               afficherArticle(d.versions);
               articleBox.scrollIntoView({ behavior: 'smooth' });
             })
-            .catch(function () { say('Erreur réseau.', 'error'); });
+            .catch(function () { say({{ tr("Erreur réseau.")|tojson }}, 'error'); });
         });
       });
 
       function redigerArticle() {
         var s = (sujet.value || '').trim();
-        if (!sectionSel) { say("Lancez d’abord une analyse : l’analyse identifie les rubriques existantes.", 'error'); return; }
-        if (!s) { say('Renseignez un sujet pour rédiger l’article.', 'error'); sujet.focus(); return; }
+        if (!sectionSel) { say({{ tr("Lancez d’abord une analyse : l’analyse identifie les rubriques existantes.")|tojson }}, 'error'); return; }
+        if (!s) { say({{ tr("Renseignez un sujet pour rédiger l’article.")|tojson }}, 'error'); sujet.focus(); return; }
         var langues = languesArticle();
         writing(true);
-        btn.textContent = 'Rédaction…';
+        btn.textContent = {{ tr("Rédaction…")|tojson }};
         articleBox.hidden = true;
         say(langues.length > 1
-          ? 'Le modèle écrit la version principale, puis ' + (langues.length - 1) + ' traduction(s). ' +
-            'Cela prend environ une minute : gardez cet onglet ouvert.'
-          : "Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.");
+          ? fill({{ tr("Le modèle écrit la version principale, puis {n} traduction(s). Cela prend environ une minute : gardez cet onglet ouvert.")|tojson }}, {n: langues.length - 1})
+          : {{ tr("Le modèle écrit l'article en imitant une page de la section. Une trentaine de secondes.")|tojson }});
         var jeton = nouveauJeton();
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/article', {
@@ -837,10 +825,10 @@
           .then(function (d) {
             arreterSuivi(d.ok);
             writing(false);
-            btn.textContent = "Rédiger l'article";
-            if (!d.ok) { failure(d, 'Erreur pendant la rédaction.'); return; }
-            say((d.versions.length > 1 ? d.versions.length + ' versions rédigées. ' : 'Article rédigé. ') +
-                'Le texte vient d\'un modèle : relisez-le avant de le publier. Il reste dans « Articles rédigés ».', 'ok');
+            btn.textContent = {{ tr("Rédiger l'article")|tojson }};
+            if (!d.ok) { failure(d, {{ tr("Erreur pendant la rédaction.")|tojson }}); return; }
+            say((d.versions.length > 1 ? fill({{ tr("{n} versions rédigées.")|tojson }}, {n: d.versions.length}) : {{ tr("Article rédigé.")|tojson }}) + ' ' +
+                {{ tr("Le texte vient d'un modèle : relisez-le avant de le publier. Il reste dans « Articles rédigés ».")|tojson }}, 'ok');
             afficherArticle(d.versions);
             prepared();
           })
@@ -848,10 +836,8 @@
             arreterSuivi(false);
             writing(false);
             uncertain();
-            btn.textContent = "Rédiger l'article";
-            say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être de ' +
-                'notre côté. Rechargez cette page dans quelques minutes : l\'article apparaîtra dans ' +
-                '« Articles rédigés ». Ne relancez pas avant, vous risqueriez de payer deux fois.', 'error');
+            btn.textContent = {{ tr("Rédiger l'article")|tojson }};
+            say({{ tr("La connexion a été coupée pendant la rédaction, mais elle continue peut-être de notre côté. Rechargez cette page dans quelques minutes : l'article apparaîtra dans « Articles rédigés ». Ne relancez pas avant, vous risqueriez de payer deux fois.")|tojson }}, 'error');
           });
       }
 
@@ -862,7 +848,7 @@
              formulaire marche comme avant. La redaction dira elle-meme pourquoi elle refuse. */
           depotState = d.ok ? 'ready' : 'unavailable';
           var depotStatus = document.getElementById('c-depot-status');
-          depotStatus.textContent = d.ok ? 'Dépôt accessible. Choisissez sa rubrique et l’adresse de la page.' : d.error || 'Le dépôt est indisponible. Vérifiez sa connexion.';
+          depotStatus.textContent = d.ok ? {{ tr("Dépôt accessible. Choisissez sa rubrique et l’adresse de la page.")|tojson }} : d.error || {{ tr("Le dépôt est indisponible. Vérifiez sa connexion.")|tojson }};
           availability();
           if (!d.ok) return;
           /* Les sections du depot, dans la liste de l'adresse ET dans celle du mode
@@ -870,7 +856,7 @@
           if (d.sections && d.sections.length && sectionGithub) {
             sectionGithub.innerHTML = d.sections.map(function (s) {
               return '<option value="' + esc(s.section) + '">' + esc(s.section.replace(/\/$/, '')) + '/ · ' +
-                esc(s.pages) + ' pages déjà publiées</option>';
+                fill({{ tr("{n} pages déjà publiées")|tojson }}, {n: esc(s.pages)}) + '</option>';
             }).join('');
             document.getElementById('c-section-github-bloc').hidden = false;
             var liste = document.getElementById('c-sections-liste');
@@ -879,7 +865,7 @@
             }).join('');
             /* La suggestion du mode automatique est une section QUI EXISTE, plus `/blog`. */
             var autoChamp = document.getElementById('c-auto-section');
-            if (autoChamp) autoChamp.placeholder = 'ex. ' + d.sections[0].section;
+            if (autoChamp) autoChamp.placeholder = fill({{ tr("ex. {section}")|tojson }}, {section: d.sections[0].section});
             composerRoute();
           }
           if (!d.langues || d.langues.length < 2) return;
@@ -909,7 +895,7 @@
             document.getElementById('c-auto-langues-bloc').hidden = false;
           }
         })
-        .catch(function () { depotState = 'unavailable'; document.getElementById('c-depot-status').textContent = 'Le dépôt est indisponible. Vérifiez sa connexion ou réessayez plus tard.'; availability(); });
+        .catch(function () { depotState = 'unavailable'; document.getElementById('c-depot-status').textContent = {{ tr("Le dépôt est indisponible. Vérifiez sa connexion ou réessayez plus tard.")|tojson }}; availability(); });
 
       /* Le sujet de Concurrents arrive par l'URL : ?sujet=… pre-remplit le formulaire sans
          rien engendrer, pour que le client relise avant de depenser un article. */
@@ -921,15 +907,13 @@
       btn.addEventListener('click', function () {
         if (mode() === 'contenu') { redigerArticle(); return; }
         var s = (sujet.value || '').trim(), r = (route.value || '').trim();
-        if (!s || !r) { say('Renseignez un sujet et une adresse.', 'error'); (!s ? sujet : route).focus(); return; }
+        if (!s || !r) { say({{ tr("Renseignez un sujet et une adresse.")|tojson }}, 'error'); (!s ? sujet : route).focus(); return; }
         var langues = cochees();
         writing(true);
-        btn.textContent = 'Rédaction…';
+        btn.textContent = {{ tr("Rédaction…")|tojson }};
         say(langues.length > 1
-          ? 'Le modèle écrit ' + langues.length + ' versions, chacune en imitant la même page ' +
-            'dans sa langue. Cela prend environ une minute : gardez cet onglet ouvert.'
-          : 'Le modèle écrit la page en imitant une page existante de la même section. ' +
-            'Cela prend une trentaine de secondes.');
+          ? fill({{ tr("Le modèle écrit {n} versions, chacune en imitant la même page dans sa langue. Cela prend environ une minute : gardez cet onglet ouvert.")|tojson }}, {n: langues.length})
+          : {{ tr("Le modèle écrit la page en imitant une page existante de la même section. Cela prend une trentaine de secondes.")|tojson }});
         var jeton = nouveauJeton();
         suivre(jeton);
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/draft', {
@@ -941,21 +925,21 @@
           .then(function (d) {
             arreterSuivi(d.ok);
             writing(false);
-            btn.textContent = d.ok ? 'PR créée' : 'Préparer la proposition';
-            var lien = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">Relire la proposition GitHub</a>' : '';
-            if (!d.ok) { failure(d, 'Erreur pendant la rédaction.'); return; }
+            btn.textContent = d.ok ? {{ tr("PR créée")|tojson }} : {{ tr("Préparer la proposition")|tojson }};
+            var lien = d.pr_url ? ' <a href="' + esc(d.pr_url) + '" target="_blank" rel="noreferrer">' + {{ tr("Relire la proposition GitHub")|tojson }} + '</a>' : '';
+            if (!d.ok) { failure(d, {{ tr("Erreur pendant la rédaction.")|tojson }}); return; }
             contentStage(3);
             prepared(d.pr_url);
-            var mot = d.orpheline
-              ? ' <strong>Cette page n\'est liée depuis aucun index</strong> : ajoutez le lien avant de fusionner.'
-              : ' Le lien depuis <span class="mono">' + esc(d.index || 'la section') + '</span> est dans le diff.';
+            var mot = ' ' + (d.orpheline
+              ? {{ tr("<strong>Cette page n'est liée depuis aucun index</strong> : ajoutez le lien avant de fusionner.")|tojson }}
+              : fill({{ tr('Le lien depuis <span class="mono">{index}</span> est dans le diff.')|tojson }}, {index: esc(d.index || {{ tr("la section")|tojson }})}));
             var ecrits = (d.pages && d.pages.length > 1)
-              ? d.pages.length + ' versions écrites : ' + d.pages.map(function (p) {
+              ? fill({{ tr("{n} versions écrites : {routes}.")|tojson }}, {n: d.pages.length, routes: d.pages.map(function (p) {
                   return '<span class="mono">' + esc(p.route) + '</span>';
-                }).join(', ') + '.'
-              : 'Page écrite dans <span class="mono">' + esc(d.file) + '</span>.';
-            say(ecrits + lien + mot +
-                ' Le texte vient d\'un modèle : relisez-le avant de fusionner. La mise en ligne dépendra ensuite de votre déploiement.',
+                }).join(', ')})
+              : fill({{ tr('Page écrite dans <span class="mono">{file}</span>.')|tojson }}, {file: esc(d.file)});
+            say(ecrits + lien + mot + ' ' +
+                {{ tr("Le texte vient d'un modèle : relisez-le avant de fusionner. La mise en ligne dépendra ensuite de votre déploiement.")|tojson }},
                 d.orpheline ? 'muted' : 'ok');
           })
           .catch(function () {
@@ -964,12 +948,9 @@
                debits. On dit ce qui se passe vraiment. */
             arreterSuivi(false);
             writing(false);
-            btn.textContent = 'Préparer la proposition';
+            btn.textContent = {{ tr("Préparer la proposition")|tojson }};
             uncertain();
-            say('La connexion a été coupée pendant la rédaction, mais elle continue peut-être ' +
-                'de notre côté. Rechargez cette page dans quelques minutes : si la pull request ' +
-                'a été ouverte, elle apparaîtra dans « Pages proposées ». Ne relancez pas ' +
-                'avant, vous risqueriez de payer deux fois.', 'error');
+            say({{ tr("La connexion a été coupée pendant la rédaction, mais elle continue peut-être de notre côté. Rechargez cette page dans quelques minutes : si la pull request a été ouverte, elle apparaîtra dans « Pages proposées ». Ne relancez pas avant, vous risqueriez de payer deux fois.")|tojson }}, 'error');
           });
       });
 
@@ -984,7 +965,7 @@
       if (autoSave) autoSave.addEventListener('click', function () {
         autoSave.disabled = true;
         autoStatus.className = 'muted small';
-        autoStatus.textContent = 'Enregistrement…';
+        autoStatus.textContent = {{ tr("Enregistrement…")|tojson }};
         fetch('/api/projects/' + encodeURIComponent(slug) + '/content/auto', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1002,23 +983,23 @@
             autoSave.disabled = false;
             if (!d.ok) {
               autoStatus.className = 'error small';
-              autoStatus.textContent = d.error || 'Enregistrement impossible.';
+              autoStatus.textContent = d.error || {{ tr("Enregistrement impossible.")|tojson }};
               return;
             }
             autoStatus.className = 'ok small';
             autoStatus.textContent = d.enabled
-              ? 'Mode automatique allumé sur ' + d.section + '.'
-              : 'Mode automatique éteint.';
+              ? fill({{ tr("Mode automatique allumé sur {section}.")|tojson }}, {section: d.section})
+              : {{ tr("Mode automatique éteint.")|tojson }};
             var prochain = document.getElementById('c-auto-prochain');
             if (prochain) {
               prochain.hidden = !d.prochain;
-              prochain.textContent = d.prochain ? 'Prochaine page : ' + d.prochain : '';
+              prochain.textContent = d.prochain ? fill({{ tr("Prochaine page : {date}")|tojson }}, {date: d.prochain}) : '';
             }
           })
           .catch(function () {
             autoSave.disabled = false;
             autoStatus.className = 'error small';
-            autoStatus.textContent = 'Erreur réseau.';
+            autoStatus.textContent = {{ tr("Erreur réseau.")|tojson }};
           });
       });
       document.getElementById('content-compose').addEventListener('input', function () {

@@ -8,18 +8,20 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 try:
     from . import cms_guidance, correction_guard, first_correction, wordpress_cms as wp
+    from .i18n import JSONResponse
     from .models import AuditLog, CmsChange, IssueTask, JobRecord, Project
 except ImportError:
     import cms_guidance
     import correction_guard
     import first_correction
     import wordpress_cms as wp
+    from i18n import JSONResponse
     from models import AuditLog, CmsChange, IssueTask, JobRecord, Project
 
 router = APIRouter()

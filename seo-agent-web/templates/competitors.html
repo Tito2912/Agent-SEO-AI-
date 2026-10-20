@@ -1,60 +1,57 @@
 {% extends "layout.html" %}
-{% block title %}Concurrents - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Concurrents") }} - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}<link rel="stylesheet" href="/static/visibility-journey.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=3" defer></script>{% endblock %}
-{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">Concurrents</span>{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Concurrents") }}</span>{% endblock %}
 {% block content %}
   <div class="page-header">
-    <h1>Concurrents</h1>
+    <h1>{{ tr("Concurrents") }}</h1>
     <p class="muted">
-      {{ project.site_name }} · ce que vos concurrents traitent, et les réponses déjà présentes sur votre site
-      <a href="/docs/analyser-les-concurrents" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
+      {{ project.site_name }} · {{ tr("ce que vos concurrents traitent, et les réponses déjà présentes sur votre site") }}
+      <a href="/docs/analyser-les-concurrents" class="muted small" style="margin-left:8px;" title="{{ tr("Documentation") }}">{{ tr("Aide") }}</a>
     </p>
   </div>
 
-  {% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>{% endif %}
-  {% if msg %}<div class="alert" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>{% endif %}
+  {% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">{{ tr("erreur") }}</span> <span class="muted small">{{ tr(err) }}</span></div>{% endif %}
+  {% if msg %}<div class="alert" style="margin-bottom:12px;"><span class="badge ok">{{ tr("ok") }}</span> <span class="muted small">{{ tr(msg) }}</span></div>{% endif %}
 
   {% if not has_access %}
     <section class="card">
-      <h2 style="margin-top:0;">Réservé aux plans Pro et supérieurs</h2>
-      <p class="muted">Repérez les sujets abordés par vos concurrents et absents de votre site, puis préparez une nouvelle page ou améliorez une page existante. Disponible à partir du plan Pro.</p>
-      <div class="feature-example"><p class="muted small">Exemple de résultat · démonstration</p><p><strong>Comment entretenir un vélo électrique ?</strong></p><p class="muted">Sujet traité par un concurrent, absent des pages analysées de votre site. Action possible : préparer un article sur ce sujet.</p></div>
-      <a class="btn primary" href="{{ billing_url or '/billing' }}" style="margin-top:12px;display:inline-block;">Voir les forfaits</a>
+      <h2 style="margin-top:0;">{{ tr("Réservé aux plans Pro et supérieurs") }}</h2>
+      <p class="muted">{{ tr("Repérez les sujets abordés par vos concurrents et absents de votre site, puis préparez une nouvelle page ou améliorez une page existante. Disponible à partir du plan Pro.") }}</p>
+      <div class="feature-example"><p class="muted small">{{ tr("Exemple de résultat · démonstration") }}</p><p><strong>{{ tr("Comment entretenir un vélo électrique ?") }}</strong></p><p class="muted">{{ tr("Sujet traité par un concurrent, absent des pages analysées de votre site. Action possible : préparer un article sur ce sujet.") }}</p></div>
+      <a class="btn primary" href="{{ billing_url or '/billing' }}" style="margin-top:12px;display:inline-block;">{{ tr("Voir les forfaits") }}</a>
     </section>
   {% else %}
 
-    <nav class="visibility-path" aria-label="Parcours des sujets"><a href="#competitor-sites">1. Choisir les sites à observer</a><a href="/projects/{{ slug }}/content">2. Préparer un sujet dans Contenu</a></nav>
-    <p class="muted small">La comparaison porte sur les pages analysées. Un sujet non repéré peut déjà exister ailleurs sur votre site ; vérifiez-le avant de rédiger une nouvelle page.</p>
+    <nav class="visibility-path" aria-label="{{ tr("Parcours des sujets") }}"><a href="#competitor-sites">1. {{ tr("Choisir les sites à observer") }}</a><a href="/projects/{{ slug }}/content">2. {{ tr("Préparer un sujet dans Contenu") }}</a></nav>
+    <p class="muted small">{{ tr("La comparaison porte sur les pages analysées. Un sujet non repéré peut déjà exister ailleurs sur votre site ; vérifiez-le avant de rédiger une nouvelle page.") }}</p>
     <section class="card" id="competitor-sites">
       <div class="card-title-row">
-        <h2 style="margin:0;">Sites suivis</h2>
+        <h2 style="margin:0;">{{ tr("Sites suivis") }}</h2>
         <span class="muted small">{{ competitors|length }} / {{ max_competitors }}</span>
       </div>
 
       <p class="muted small">
-        Chaque analyse lit jusqu'à {{ max_pages }} pages du concurrent — titres, H1 et URL,
-        rien d'autre : ses performances ne nous regardent pas. Elle dure quelques minutes, et
-        {{ budget_minutes }} au plus : un site lent est lu en partie plutôt que pas du tout. Elle se relance toute seule tous
-        les {{ refresh_days }} jours, et à la demande quand vous le demandez.
+        {{ tr("Chaque analyse lit jusqu'à {pages} pages du concurrent — titres, H1 et URL, rien d'autre : ses performances ne nous regardent pas. Elle dure quelques minutes, et {minutes} au plus : un site lent est lu en partie plutôt que pas du tout. Elle se relance toute seule tous les {days} jours, et à la demande quand vous le demandez.", pages=max_pages, minutes=budget_minutes, days=refresh_days) }}
       </p>
 
       <form method="post" action="/projects/{{ slug }}/competitors/add" class="setting-form">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
         <label>
-          Ajouter un concurrent
+          {{ tr("Ajouter un concurrent") }}
           {# « Trouver avec l'IA » DANS le champ (demande du 28/09/2026) : l'IA formule les
              recherches du site, Google dit qui s'y classe. Rien n'est ajoute d'office. #}
           <span style="position:relative;display:block;">
-            <input id="k-url" name="url" aria-label="Adresse du concurrent à observer" placeholder="exemple-concurrent.com" required style="padding-right:150px;" />
+            <input id="k-url" name="url" aria-label="{{ tr("Adresse du concurrent à observer") }}" placeholder="{{ tr("exemple-concurrent.com") }}" required style="padding-right:150px;" />
             <button type="button" id="k-trouver" class="btn small"
                     style="position:absolute;right:5px;top:50%;transform:translateY(-50%);"
-                    title="Cherche les sites qui se classent sur les mêmes recherches que vous">Trouver avec l'IA</button>
+                    title="{{ tr("Cherche les sites qui se classent sur les mêmes recherches que vous") }}">{{ tr("Trouver avec l'IA") }}</button>
           </span>
         </label>
         <div class="modal-actions between">
           <span></span>
-          <button class="btn primary" type="submit" id="k-ajouter">Ajouter</button>
+          <button class="btn primary" type="submit" id="k-ajouter">{{ tr("Ajouter") }}</button>
         </div>
       </form>
       <div id="k-statut" class="muted small" role="status" aria-live="polite" hidden style="margin-top:8px;"></div>
@@ -71,6 +68,9 @@
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
           });
         }
+        function fill(text, values) {
+          return String(text).replace(/\{(\w+)\}/g, function (m, k) { return k in values ? String(values[k]) : m; });
+        }
         function dire(texte, cls) { statut.hidden = false; statut.className = cls || 'muted small'; statut.textContent = texte; }
         /* « Ajouter » ENVOIE le formulaire, donc recharge la page : la liste, qui n'existait que
            dans la page, disparaissait au premier ajout (releve le 28/09/2026). Elle est gardee
@@ -81,19 +81,19 @@
         function garder(d) { try { sessionStorage.setItem(cle, JSON.stringify(d)); } catch (e) {} }
         function relire() { try { return JSON.parse(sessionStorage.getItem(cle) || 'null'); } catch (e) { return null; } }
         function afficher(d) {
-          dire('Recherches : « ' + d.requetes.join(' », « ') + ' ». Ajoutez ceux que vous reconnaissez.');
+          dire(fill({{ tr("Recherches : « {queries} ». Ajoutez ceux que vous reconnaissez.")|tojson }}, {queries: d.requetes.join(' », « ')}));
           /* Chaque candidat avec sa PREUVE : sur combien de vos recherches il se classe, et
              sa meilleure position. « Ajouter » passe par le formulaire ci-dessus et ses
              controles (cible publique, doublon, plafond de cinq). */
           liste.innerHTML = d.candidats.map(function (c) {
             var action = suivis.indexOf(c.domaine) >= 0
-              ? '<span class="badge ok">Suivi</span>'
+              ? '<span class="badge ok">' + {{ tr("Suivi")|tojson }} + '</span>'
               : '<button type="button" class="btn small" data-ajouter="' + esc(c.domaine) + '"' +
-                (plein ? ' disabled title="Plafond de sites suivis atteint"' : '') + '>Ajouter</button>';
+                (plein ? ' disabled title="' + esc({{ tr("Plafond de sites suivis atteint")|tojson }}) + '"' : '') + '>' + {{ tr("Ajouter")|tojson }} + '</button>';
             return '<div class="checkbox" style="justify-content:space-between;border-top:1px solid var(--border);padding:6px 0;">' +
-              '<span><strong>' + esc(c.domaine) + '</strong> <span class="muted small">— classé sur ' +
-              c.requetes.length + ' de vos ' + d.requetes.length + ' recherches, meilleure position ' +
-              esc(c.position) + '</span></span>' + action + '</div>';
+              '<span><strong>' + esc(c.domaine) + '</strong> <span class="muted small">' +
+              fill({{ tr("— classé sur {n} de vos {total} recherches, meilleure position {position}")|tojson }}, {n: c.requetes.length, total: d.requetes.length, position: esc(c.position)}) +
+              '</span></span>' + action + '</div>';
           }).join('');
           liste.hidden = false;
           Array.prototype.forEach.call(liste.querySelectorAll('[data-ajouter]'), function (b) {
@@ -107,27 +107,26 @@
         if (precedent && precedent.candidats && precedent.candidats.length) { afficher(precedent); }
         bouton.addEventListener('click', function () {
           bouton.disabled = true;
-          bouton.textContent = 'Recherche…';
+          bouton.textContent = {{ tr("Recherche…")|tojson }};
           liste.hidden = true;
-          dire("L'IA formule vos recherches, puis Google dit qui s'y classe. Une quinzaine de secondes.");
+          dire({{ tr("L'IA formule vos recherches, puis Google dit qui s'y classe. Une quinzaine de secondes.")|tojson }});
           fetch('/api/projects/' + encodeURIComponent(slug) + '/competitors/suggest', { method: 'POST' })
             .then(function (resp) { return resp.json(); })
             .then(function (d) {
               bouton.disabled = false;
-              bouton.textContent = "Trouver avec l'IA";
-              if (!d.ok) { dire(d.error || 'Recherche impossible.', 'error small'); return; }
+              bouton.textContent = {{ tr("Trouver avec l'IA")|tojson }};
+              if (!d.ok) { dire(d.error || {{ tr("Recherche impossible.")|tojson }}, 'error small'); return; }
               garder(d);
               if (!d.candidats || !d.candidats.length) {
-                dire('Aucun concurrent trouvé sur ' + d.requetes.length + ' recherches : « ' +
-                     d.requetes.join(' », « ') + ' ».');
+                dire(fill({{ tr("Aucun concurrent trouvé sur {n} recherches : « {queries} ».")|tojson }}, {n: d.requetes.length, queries: d.requetes.join(' », « ')}));
                 return;
               }
               afficher(d);
             })
             .catch(function () {
               bouton.disabled = false;
-              bouton.textContent = "Trouver avec l'IA";
-              dire('Erreur réseau.', 'error small');
+              bouton.textContent = {{ tr("Trouver avec l'IA")|tojson }};
+              dire({{ tr("Erreur réseau.")|tojson }}, 'error small');
             });
         });
       })();
@@ -137,7 +136,7 @@
         <div class="table-wrap" style="margin-top:14px;">
           <table class="table compact">
             <thead>
-              <tr><th>Domaine</th><th>État</th><th class="num">Pages lues</th><th>Dernière analyse</th><th></th></tr>
+              <tr><th>{{ tr("Domaine") }}</th><th>{{ tr("État") }}</th><th class="num">{{ tr("Pages lues") }}</th><th>{{ tr("Dernière analyse") }}</th><th></th></tr>
             </thead>
             <tbody>
               {% for c in competitors %}
@@ -147,14 +146,14 @@
                     {# Four states, four different next actions. "Jamais analysé" and "analysé,
                        rien trouvé" are not the same answer. #}
                     {% if c.status == 'ready' %}
-                      <span class="badge ok">Analysé</span>
+                      <span class="badge ok">{{ tr("Analysé") }}</span>
                     {% elif c.status == 'crawling' %}
-                      <span class="badge warning">Analyse en cours…</span>
+                      <span class="badge warning">{{ tr("Analyse en cours…") }}</span>
                       <div class="muted small" data-avancement="{{ c.id }}" style="margin-top:4px;">{{ c.avancement }}</div>
                     {% elif c.status == 'failed' %}
-                      <span class="badge error" title="{{ c.error }}">Illisible</span>
+                      <span class="badge error" title="{{ tr(c.error) }}">{{ tr("Illisible") }}</span>
                     {% else %}
-                      <span class="badge notice">Jamais analysé</span>
+                      <span class="badge notice">{{ tr("Jamais analysé") }}</span>
                     {% endif %}
                   </td>
                   <td class="num mono">{{ c.pages_count or '—' }}</td>
@@ -165,19 +164,19 @@
                         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                         <input type="hidden" name="competitor_id" value="{{ c.id }}" />
                         <button class="btn" type="submit" {% if c.status == 'crawling' %}disabled{% endif %}>
-                          {{ 'Analyser' if c.status in ('new', 'failed') else 'Réanalyser' }}
+                          {{ tr('Analyser') if c.status in ('new', 'failed') else tr('Réanalyser') }}
                         </button>
                       </form>
                       <form method="post" action="/projects/{{ slug }}/competitors/remove" class="inline">
                         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                         <input type="hidden" name="competitor_id" value="{{ c.id }}" />
-                        <button class="btn danger" type="submit">Retirer</button>
+                        <button class="btn danger" type="submit">{{ tr("Retirer") }}</button>
                       </form>
                     </div>
                   </td>
                 </tr>
                 {% if c.status == 'failed' and c.error %}
-                  <tr><td colspan="5" class="muted small">{{ c.error }}</td></tr>
+                  <tr><td colspan="5" class="muted small">{{ tr(c.error) }}</td></tr>
                 {% endif %}
               {% endfor %}
             </tbody>
@@ -186,7 +185,7 @@
         {% set en_cours = competitors | selectattr('status', 'equalto', 'crawling') | list %}
         {% if en_cours %}
           <p class="muted small" id="k-suivi-analyse" style="margin-top:8px;">
-            La page se met à jour seule à la fin de l'analyse.
+            {{ tr("La page se met à jour seule à la fin de l'analyse.") }}
           </p>
           <script>
           /* Tant qu'une analyse tourne, la page demande l'etat toutes les 10 s et ne se recharge
@@ -220,49 +219,42 @@
         {% endif %}
       {% else %}
         <p class="muted" style="margin-top:12px;">
-          Aucun concurrent suivi. Ajoutez le domaine d'un site qui vous dispute les mêmes
-          recherches : la comparaison se fait sur les sujets qu'il publie, sans acheter de
-          base de mots-clés à personne.
+          {{ tr("Aucun concurrent suivi. Ajoutez le domaine d'un site qui vous dispute les mêmes recherches : la comparaison se fait sur les sujets qu'il publie, sans acheter de base de mots-clés à personne.") }}
         </p>
       {% endif %}
     </section>
 
     {% if own_pages_count == 0 %}
       <section class="card">
-        <h2 style="margin-top:0;">Il manque l’analyse de votre site</h2>
+        <h2 style="margin-top:0;">{{ tr("Il manque l’analyse de votre site") }}</h2>
         <p class="muted">
-          La comparaison a besoin des deux côtés. Lancez une analyse de votre site : sans lui, on peut
-          lister ce que publie un concurrent, mais pas dire si vous y répondez déjà.
+          {{ tr("La comparaison a besoin des deux côtés. Lancez une analyse de votre site : sans lui, on peut lister ce que publie un concurrent, mais pas dire si vous y répondez déjà.") }}
         </p>
-        <a class="btn primary" href="/projects/{{ slug }}" style="margin-top:12px;display:inline-block;">Aller au projet</a>
+        <a class="btn primary" href="/projects/{{ slug }}" style="margin-top:12px;display:inline-block;">{{ tr("Aller au projet") }}</a>
       </section>
     {% elif findings %}
       <section class="card">
         <div class="card-title-row">
-          <h2 style="margin:0;">Sujets traités par vos concurrents</h2>
+          <h2 style="margin:0;">{{ tr("Sujets traités par vos concurrents") }}</h2>
           <span class="muted small">
-            {{ summary.total }} sujet{{ 's' if summary.total > 1 }} ·
-            {{ summary.covered }} déjà couvert{{ 's' if summary.covered > 1 }} ·
-            {{ summary.uncovered }} non couvert{{ 's' if summary.uncovered > 1 }}
+            {{ tr('{n} sujets', n=summary.total) if summary.total > 1 else tr('{n} sujet', n=summary.total) }} ·
+            {{ tr('{n} déjà couverts', n=summary.covered) if summary.covered > 1 else tr('{n} déjà couvert', n=summary.covered) }} ·
+            {{ tr('{n} non couverts', n=summary.uncovered) if summary.uncovered > 1 else tr('{n} non couvert', n=summary.uncovered) }}
           </span>
         </div>
 
         <p class="muted small">
-          Comparé à vos {{ own_pages_count }} pages du crawl {{ own_crawl_ts }}. Un sujet
-          « couvert » veut dire qu'une de vos pages parle déjà de ça : on peut donc réécrire son
-          titre et sa description pour le dire clairement. Un sujet « non couvert » est signalé,
-          jamais corrigé automatiquement — glisser un mot-clé dans une page qui ne traite pas le
-          sujet, c'est du bourrage, et ça dégrade le site.
+          {{ tr("Comparé à vos {n} pages du crawl {crawl}. Un sujet « couvert » veut dire qu'une de vos pages parle déjà de ça : on peut donc réécrire son titre et sa description pour le dire clairement. Un sujet « non couvert » est signalé, jamais corrigé automatiquement — glisser un mot-clé dans une page qui ne traite pas le sujet, c'est du bourrage, et ça dégrade le site.", n=own_pages_count, crawl=own_crawl_ts) }}
         </p>
 
         <div class="table-wrap">
           <table class="table compact">
             <thead>
               <tr>
-                <th>Sujet du concurrent</th>
-                <th>Concurrent</th>
-                <th>Votre page</th>
-                <th class="num">Recouvrement</th>
+                <th>{{ tr("Sujet du concurrent") }}</th>
+                <th>{{ tr("Concurrent") }}</th>
+                <th>{{ tr("Votre page") }}</th>
+                <th class="num">{{ tr("Recouvrement") }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -278,17 +270,17 @@
                     {% if f.covered %}
                       <a href="{{ f.own_url }}" target="_blank" rel="noreferrer">{{ f.own_title or f.own_url }}</a>
                     {% else %}
-                      <span class="badge notice">Aucune page sur ce sujet</span>
+                      <span class="badge notice">{{ tr("Aucune page sur ce sujet") }}</span>
                     {% endif %}
                   </td>
                   <td class="num mono">{{ '%.0f'|format(f.match_score * 100) }} %</td>
                   <td class="num">
                     {% if f.covered %}
                       {% if github_cfg and github_cfg.repo %}
-                      <button type="button" class="btn primary" data-keyword-pr data-query-label="sujet observé"
+                      <button type="button" class="btn primary" data-keyword-pr data-query-label="{{ tr("sujet observé") }}"
                               data-query="{{ f.competitor_title }}" data-url="{{ f.own_url }}"
-                              title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de votre page pour ce sujet">Préparer une amélioration</button>
-                      {% else %}<a class="btn" href="{{ f.own_url }}" target="_blank" rel="noopener noreferrer">Relire ma page</a><p class="muted small">Vous pouvez la modifier dans votre plateforme.</p>{% endif %}
+                              title="{{ tr("Ouvrez une proposition GitHub qui réécrit le titre et la meta description de votre page pour ce sujet") }}">{{ tr("Préparer une amélioration") }}</button>
+                      {% else %}<a class="btn" href="{{ f.own_url }}" target="_blank" rel="noopener noreferrer">{{ tr("Relire ma page") }}</a><p class="muted small">{{ tr("Vous pouvez la modifier dans votre plateforme.") }}</p>{% endif %}
                     {% else %}
                       {# « Retarget first, create later » : le later est arrivé le 20/09/2026. Un
                          sujet NON couvert ne se recible pas — glisser un mot-clé dans une page
@@ -298,7 +290,7 @@
                          l'adresse avant de dépenser un article. #}
                       <a class="btn" data-content-draft
                          href="/projects/{{ slug }}/content?sujet={{ f.competitor_title | urlencode }}"
-                         title="Ouvrez l’écran Contenu avec ce sujet pré-rempli">Préparer un article</a>
+                         title="{{ tr("Ouvrez l’écran Contenu avec ce sujet pré-rempli") }}">{{ tr("Préparer un article") }}</a>
                     {% endif %}
                   </td>
                 </tr>
@@ -311,11 +303,9 @@
       <section class="card">
         <p class="muted">
           {% if competitors | selectattr('status', 'equalto', 'ready') | list %}
-            Aucun sujet exploitable trouvé chez les concurrents analysés. C'est un résultat, pas
-            une panne : leurs pages ne partagent pas assez de termes avec les tiennes pour qu'on
-            parle du même sujet.
+            {{ tr("Aucun sujet exploitable trouvé chez les concurrents analysés. C'est un résultat, pas une panne : leurs pages ne partagent pas assez de termes avec les tiennes pour qu'on parle du même sujet.") }}
           {% else %}
-            Lancez une analyse sur un des sites ci-dessus pour voir ce qu'il publie.
+            {{ tr("Lancez une analyse sur un des sites ci-dessus pour voir ce qu'il publie.") }}
           {% endif %}
         </p>
       </section>

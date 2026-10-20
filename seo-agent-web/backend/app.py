@@ -58,7 +58,7 @@ except Exception:  # pragma: no cover
     class InvalidToken(Exception):  # type: ignore
         pass
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -119,6 +119,9 @@ except ImportError:
     import search_results
     import cms_guidance
     import i18n
+
+# Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
+JSONResponse = i18n.JSONResponse
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
@@ -9684,15 +9687,15 @@ def _avancement_analyse(row: Any) -> str:
     if job is None:
         return ""
     if job.status == "queued":
-        return "en file d'attente"
+        return i18n.tr_current("en file d'attente")
     debut = float(job.started_at or job.created_at or 0.0)
     minutes = max(0, int((time.time() - debut) // 60)) if debut else 0
-    duree = "%d min" % minutes if minutes else "moins d'une minute"
+    duree = i18n.tr_current("{n} min", n=minutes) if minutes else i18n.tr_current("moins d'une minute")
     prog = job.progress if isinstance(job.progress, dict) else {}
     lues, sur = prog.get("current"), prog.get("total")
     if isinstance(lues, int) and isinstance(sur, int) and sur > 0:
-        return "%d/%d pages · %s" % (lues, sur, duree)
-    return "démarrage · %s" % duree
+        return i18n.tr_current("{lues}/{sur} pages · {duree}", lues=lues, sur=sur, duree=duree)
+    return i18n.tr_current("démarrage · {duree}", duree=duree)
 
 
 def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -32910,7 +32913,7 @@ def api_content_suivi(request: Request, slug: str, jeton: str) -> JSONResponse:
     entree = _SUIVIS.get(str(jeton or ""))
     if entree is None or (entree["slug"], entree["user"]) != (slug, str(user.id)):
         return JSONResponse({"ok": False, "etapes": []}, status_code=404)
-    return JSONResponse({"ok": True, "etapes": list(entree["etapes"])})
+    return JSONResponse({"ok": True, "etapes": [i18n.tr_current(e) for e in entree["etapes"]]})
 
 
 def _chemins_du_depot(*, owner: str, repo_name: str, branch: str, token: str) -> list[str]:
@@ -34428,10 +34431,12 @@ def _dire_creneau(creneau: "datetime | None", auto: dict[str, Any], *, maintenan
     if creneau is None:
         return ""
     if creneau.timestamp() <= maintenant:
-        return "au prochain passage (quelques minutes)"
-    return "%s %d %s à %02d:00 (%s)" % (
-        _JOURS_AUTO[creneau.weekday()], creneau.day, _MOIS_AUTO[creneau.month - 1],
-        creneau.hour, dict(_FUSEAUX_AUTO).get(auto["fuseau"], auto["fuseau"]))
+        return i18n.tr_current("au prochain passage (quelques minutes)")
+    return i18n.tr_current(
+        "{jour} {n} {mois} à {heure} ({fuseau})",
+        jour=i18n.tr_current(_JOURS_AUTO[creneau.weekday()]), n=creneau.day,
+        mois=i18n.tr_current(_MOIS_AUTO[creneau.month - 1]), heure="%02d:00" % creneau.hour,
+        fuseau=i18n.tr_current(dict(_FUSEAUX_AUTO).get(auto["fuseau"], auto["fuseau"])))
 
 
 @app.get("/projects/{slug}/content", response_class=HTMLResponse)
