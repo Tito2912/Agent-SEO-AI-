@@ -3,10 +3,11 @@
 {% block title %}{{ tr("État du service") }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
-<meta name="description" content="{{ tr('État du service') }} — {{ app_name }}" />
+{% set status_description %}{{ tr('État du service') }} — {{ app_name }}. {{ tr('Application web') }}, {{ tr('Base de données') }}. {{ tr('Connexions') }} — {{ tr('Email') }}, {{ tr('Stockage (S3)') }}, {{ tr('Paiement (Stripe)') }}. {{ tr('Obtenir de l’aide') }}.{% endset %}
+<meta name="description" content="{{ status_description }}" />
 <link rel="canonical" href="{{ public_url(request, localized_path('/status', current_lang())) }}" />
 <meta property="og:title" content="{{ tr('État du service') }} - {{ app_name }}" />
-<meta property="og:description" content="{{ tr('État du service') }} — {{ app_name }}" />
+<meta property="og:description" content="{{ status_description }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ public_url(request, localized_path('/status', current_lang())) }}" />
 <link rel="stylesheet" href="/static/public-service-status.css?v=1" />

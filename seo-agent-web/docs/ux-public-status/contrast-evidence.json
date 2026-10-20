@@ -1,7 +1,7 @@
 {
   "method": "Échantillons des textes du composant ; couleurs RGBA calculées dans Chromium et compositées sur les fonds des ancêtres. Pas une certification globale. Observations regroupées par langue et texte ; minimum, maximum et nombre de mesures conservés.",
   "samples": 360,
-  "minimum_ratio": 7,
+  "minimum_ratio": 6.87,
   "observations": [
     {
       "lang": "en",
@@ -60,7 +60,7 @@
     {
       "lang": "en",
       "text": "Get help",
-      "minimum_ratio": 7,
+      "minimum_ratio": 6.87,
       "maximum_ratio": 7.08,
       "occurrences": 12,
       "widths": [
@@ -149,22 +149,34 @@
     },
     {
       "lang": "en",
-      "text": "Status updated: 2026-10-20 16:28:10 UTC",
+      "text": "Status updated: 2026-10-20 16:38:23 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
-      "occurrences": 3,
+      "occurrences": 1,
       "widths": [
         1440
       ],
       "screens": [
-        "failed-read",
-        "read-recovered",
         "ready"
       ]
     },
     {
       "lang": "en",
-      "text": "Status updated: 2026-10-20 16:28:11 UTC",
+      "text": "Status updated: 2026-10-20 16:38:24 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 2,
+      "widths": [
+        1440
+      ],
+      "screens": [
+        "failed-read",
+        "read-recovered"
+      ]
+    },
+    {
+      "lang": "en",
+      "text": "Status updated: 2026-10-20 16:38:25 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
       "occurrences": 3,
@@ -179,26 +191,11 @@
     },
     {
       "lang": "en",
-      "text": "Status updated: 2026-10-20 16:28:12 UTC",
-      "minimum_ratio": 9.16,
-      "maximum_ratio": 9.16,
-      "occurrences": 2,
-      "widths": [
-        390
-      ],
-      "screens": [
-        "failed-read",
-        "ready"
-      ]
-    },
-    {
-      "lang": "en",
-      "text": "Status updated: 2026-10-20 16:28:13 UTC",
+      "text": "Status updated: 2026-10-20 16:38:26 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
       "occurrences": 3,
       "widths": [
-        360,
         390
       ],
       "screens": [
@@ -209,15 +206,17 @@
     },
     {
       "lang": "en",
-      "text": "Status updated: 2026-10-20 16:28:14 UTC",
+      "text": "Status updated: 2026-10-20 16:38:27 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
-      "occurrences": 1,
+      "occurrences": 3,
       "widths": [
         360
       ],
       "screens": [
-        "read-recovered"
+        "failed-read",
+        "read-recovered",
+        "ready"
       ]
     },
     {
@@ -454,34 +453,22 @@
     },
     {
       "lang": "fr",
-      "text": "Statut mis à jour : 2026-10-20 16:28:09 UTC",
+      "text": "Statut mis à jour : 2026-10-20 16:38:23 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
-      "occurrences": 1,
-      "widths": [
-        1440
-      ],
-      "screens": [
-        "ready"
-      ]
-    },
-    {
-      "lang": "fr",
-      "text": "Statut mis à jour : 2026-10-20 16:28:10 UTC",
-      "minimum_ratio": 9.16,
-      "maximum_ratio": 9.16,
-      "occurrences": 2,
+      "occurrences": 3,
       "widths": [
         1440
       ],
       "screens": [
         "failed-read",
-        "read-recovered"
+        "read-recovered",
+        "ready"
       ]
     },
     {
       "lang": "fr",
-      "text": "Statut mis à jour : 2026-10-20 16:28:11 UTC",
+      "text": "Statut mis à jour : 2026-10-20 16:38:24 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
       "occurrences": 3,
@@ -496,32 +483,45 @@
     },
     {
       "lang": "fr",
-      "text": "Statut mis à jour : 2026-10-20 16:28:12 UTC",
+      "text": "Statut mis à jour : 2026-10-20 16:38:25 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
-      "occurrences": 3,
+      "occurrences": 2,
       "widths": [
         390
       ],
       "screens": [
         "failed-read",
+        "ready"
+      ]
+    },
+    {
+      "lang": "fr",
+      "text": "Statut mis à jour : 2026-10-20 16:38:26 UTC",
+      "minimum_ratio": 9.16,
+      "maximum_ratio": 9.16,
+      "occurrences": 2,
+      "widths": [
+        360,
+        390
+      ],
+      "screens": [
         "read-recovered",
         "ready"
       ]
     },
     {
       "lang": "fr",
-      "text": "Statut mis à jour : 2026-10-20 16:28:13 UTC",
+      "text": "Statut mis à jour : 2026-10-20 16:38:27 UTC",
       "minimum_ratio": 9.16,
       "maximum_ratio": 9.16,
-      "occurrences": 3,
+      "occurrences": 2,
       "widths": [
         360
       ],
       "screens": [
         "failed-read",
-        "read-recovered",
-        "ready"
+        "read-recovered"
       ]
     },
     {
