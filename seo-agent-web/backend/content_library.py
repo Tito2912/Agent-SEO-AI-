@@ -45,11 +45,13 @@ CONTENT_ROOT = Path(__file__).resolve().parent.parent / "content"
 DOCS_DIR = CONTENT_ROOT / "docs"
 BLOG_DIR = CONTENT_ROOT / "blog"
 
-#: Translated documentation, one folder per language next to the French source, same file name
-#: and therefore the same slug: ``content/docs/en/connecter-github.md`` is served at
-#: ``/en/docs/connecter-github``. French stays the reference: a page without a translation is
-#: served in French, and a translation without a French page is refused at load.
-DOCS_TRANSLATION_DIRS = {"en": DOCS_DIR / "en"}
+#: Translations, one folder per language next to the French source, same file name and
+#: therefore the same slug: ``content/docs/en/connecter-github.md`` is served at
+#: ``/en/docs/connecter-github``, ``content/blog/en/<guide>.md`` at ``/en/ressources-seo/<guide>``.
+#: French stays the reference: a page without a translation is served in French, and a
+#: translation without a French page is refused at load.
+TRANSLATION_DIRS = {"docs": {"en": DOCS_DIR / "en"}, "blog": {"en": BLOG_DIR / "en"}}
+DOCS_TRANSLATION_DIRS = TRANSLATION_DIRS["docs"]
 
 # Front matter is fenced the way every static-site generator fences it, so the files stay
 # portable if this ever moves to a real SSG.
@@ -293,7 +295,7 @@ LOAD_ERRORS: list[str] = []
 
 def _dir_stamp() -> tuple[Any, ...]:
     stamp: list[Any] = []
-    for directory in (DOCS_DIR, BLOG_DIR, *DOCS_TRANSLATION_DIRS.values()):
+    for directory in (DOCS_DIR, BLOG_DIR, *(d for dirs in TRANSLATION_DIRS.values() for d in dirs.values())):
         if not directory.is_dir():
             continue
         for path in sorted(directory.glob("*.md")):
@@ -311,18 +313,22 @@ def reload() -> None:
     errors: list[str] = []
     _CACHE["docs"] = _load_collection(DOCS_DIR, collection="docs", errors=errors)
     _CACHE["blog"] = _load_collection(BLOG_DIR, collection="blog", errors=errors)
-    french = {page["slug"] for page in _CACHE["docs"]}
-    for lang, directory in DOCS_TRANSLATION_DIRS.items():
-        pages = []
-        for page in _load_collection(directory, collection="docs", errors=errors, lang=lang):
-            if page["slug"] not in french:
-                errors.append(f"docs/{lang}/{page['source']}: no French page with slug {page['slug']!r}")
-                continue
-            pages.append(page)
-        translated = {page["slug"] for page in pages}
-        for page in pages:
-            page["body_html"] = _localize_doc_links(page["body_html"], lang, translated)
-        _CACHE[f"docs_{lang}"] = pages
+    for collection, directories in TRANSLATION_DIRS.items():
+        french = {page["slug"] for page in _CACHE[collection]}
+        for lang, directory in directories.items():
+            pages = []
+            for page in _load_collection(directory, collection=collection, errors=errors, lang=lang):
+                if page["slug"] not in french:
+                    errors.append(f"{collection}/{lang}/{page['source']}: no French page with slug {page['slug']!r}")
+                    continue
+                pages.append(page)
+            _CACHE[f"{collection}_{lang}"] = pages
+    # Links are localized once every translation is known: a guide may link to a doc page.
+    for lang in {lang for directories in TRANSLATION_DIRS.values() for lang in directories}:
+        translated = {c: {p["slug"] for p in _CACHE.get(f"{c}_{lang}") or []} for c in TRANSLATION_DIRS}
+        for collection in TRANSLATION_DIRS:
+            for page in _CACHE.get(f"{collection}_{lang}") or []:
+                page["body_html"] = _localize_links(page["body_html"], lang, translated)
     _CACHE_STAMP = _dir_stamp()
     LOAD_ERRORS[:] = errors
     for reason in errors:
@@ -337,44 +343,53 @@ def _ensure_loaded() -> None:
         reload()
 
 
-_DOC_LINK_RE = re.compile(r'href="/docs(?:/([a-z0-9-]+))?((?:[#?][^"]*)?)"')
+_CONTENT_LINK_RE = re.compile(r'href="/(docs|ressources-seo)(?:/([a-z0-9-]+))?((?:[#?][^"]*)?)"')
+_HUB_COLLECTION = {"docs": "docs", "ressources-seo": "blog"}
 
 
-def _localize_doc_links(html_text: str, lang: str, translated: set[str]) -> str:
-    """In a translated page, a link to another doc page leads to that page's translation when
-    it exists, and to the French page otherwise. Writers keep writing ``/docs/<slug>``."""
+def _localize_links(html_text: str, lang: str, translated: dict[str, set[str]]) -> str:
+    """In a translated page, a link to a doc page or a guide leads to its translation when it
+    exists, and to the French page otherwise. Writers keep writing ``/docs/<slug>`` and
+    ``/ressources-seo/<slug>``."""
 
     def _replace(match: re.Match[str]) -> str:
-        slug, rest = match.group(1), match.group(2)
+        hub, slug, rest = match.group(1), match.group(2), match.group(3)
         if slug is None:
-            return f'href="/{lang}/docs{rest}"'
-        if slug in translated:
-            return f'href="/{lang}/docs/{slug}{rest}"'
+            return f'href="/{lang}/{hub}{rest}"'
+        if slug in translated.get(_HUB_COLLECTION[hub], set()):
+            return f'href="/{lang}/{hub}/{slug}{rest}"'
         return match.group(0)
 
-    return _DOC_LINK_RE.sub(_replace, html_text)
+    return _CONTENT_LINK_RE.sub(_replace, html_text)
 
 
-def docs_pages(lang: str = "fr") -> list[dict[str, Any]]:
-    """The docs in their usual order; in another language, each page's translation when it has
-    one, the French page otherwise — the sidebar never loses a page."""
+def translated_pages(collection: str, lang: str) -> list[dict[str, Any]]:
+    """Only the pages of ``collection`` that exist in ``lang``."""
     _ensure_loaded()
-    french = list(_CACHE.get("docs") or [])
-    if lang == "fr":
-        return french
-    translated = {page["slug"]: page for page in translated_docs(lang)}
-    return [translated.get(page["slug"], page) for page in french]
+    return list(_CACHE.get(f"{collection}_{lang}") or [])
 
 
 def translated_docs(lang: str) -> list[dict[str, Any]]:
-    """Only the pages that exist in ``lang``."""
-    _ensure_loaded()
-    return list(_CACHE.get(f"docs_{lang}") or [])
+    return translated_pages("docs", lang)
 
 
-def blog_pages() -> list[dict[str, Any]]:
+def _in_lang(pages: list[dict[str, Any]], collection: str, lang: str) -> list[dict[str, Any]]:
+    """``pages`` in their usual order, each replaced by its translation when it has one: a list
+    in another language never loses a page."""
+    if lang == "fr":
+        return pages
+    translated = {page["slug"]: page for page in translated_pages(collection, lang)}
+    return [translated.get(page["slug"], page) for page in pages]
+
+
+def docs_pages(lang: str = "fr") -> list[dict[str, Any]]:
     _ensure_loaded()
-    return list(_CACHE.get("blog") or [])
+    return _in_lang(list(_CACHE.get("docs") or []), "docs", lang)
+
+
+def blog_pages(lang: str = "fr") -> list[dict[str, Any]]:
+    _ensure_loaded()
+    return _in_lang(list(_CACHE.get("blog") or []), "blog", lang)
 
 
 def all_pages() -> list[dict[str, Any]]:
@@ -388,12 +403,14 @@ def get_doc(slug: str, lang: str = "fr") -> dict[str, Any] | None:
     return next((p for p in pages if p["slug"] == clean), None)
 
 
-def get_article(slug: str) -> dict[str, Any] | None:
+def get_article(slug: str, lang: str = "fr") -> dict[str, Any] | None:
+    """The guide in ``lang`` — ``None`` when it has no translation in that language."""
     clean = _clean_str(slug).lower()
-    return next((p for p in blog_pages() if p["slug"] == clean), None)
+    pages = blog_pages() if lang == "fr" else translated_pages("blog", lang)
+    return next((p for p in pages if p["slug"] == clean), None)
 
 
-def featured_articles(limit: int = 3) -> list[dict[str, Any]]:
+def featured_articles(limit: int = 3, lang: str = "fr") -> list[dict[str, Any]]:
     """Pages the author marked ``featured``, newest first, topped up with the newest others.
 
     The old implementation took the first three of a hand-ordered list, which meant the home
@@ -406,7 +423,7 @@ def featured_articles(limit: int = 3) -> list[dict[str, Any]]:
             break
         if page not in picked:
             picked.append(page)
-    return picked[: max(0, int(limit))]
+    return _in_lang(picked[: max(0, int(limit))], "blog", lang)
 
 
 def docs_sections(lang: str = "fr") -> list[dict[str, Any]]:
@@ -436,10 +453,9 @@ def related_pages(page: dict[str, Any], *, limit: int = 4) -> list[dict[str, Any
     """
     lang = page.get("lang") or "fr"
     if lang != "fr":
-        translated = {p["slug"]: p for p in translated_docs(lang)}
-        french = get_doc(page["slug"]) or page
-        return [translated.get(p["slug"], p) if p["collection"] == "docs" else p
-                for p in related_pages(french, limit=limit)]
+        translated = {(c, p["slug"]): p for c in TRANSLATION_DIRS for p in translated_pages(c, lang)}
+        french = (get_doc if page["collection"] == "docs" else get_article)(page["slug"]) or page
+        return [translated.get((p["collection"], p["slug"]), p) for p in related_pages(french, limit=limit)]
     by_slug = {p["slug"]: p for p in all_pages()}
     out: list[dict[str, Any]] = []
     for slug in page.get("related") or []:
@@ -508,7 +524,8 @@ def substitute(text: str, tokens: dict[str, Any] | None = None) -> str:
 
 def sitemap_entries() -> Iterable[dict[str, str]]:
     """Every public content URL, with the page's own date as ``lastmod``."""
-    for page in all_pages() + [p for pages in map(translated_docs, DOCS_TRANSLATION_DIRS) for p in pages]:
+    translations = [p for c, dirs in TRANSLATION_DIRS.items() for lang in dirs for p in translated_pages(c, lang)]
+    for page in all_pages() + translations:
         yield {"path": page["path"], "lastmod": page["updated_at"], "changefreq": "monthly"}
 
 

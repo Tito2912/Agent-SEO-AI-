@@ -14199,6 +14199,15 @@ def _doc_path(slug: str) -> str:
 templates.env.globals["doc_path"] = _doc_path
 
 
+def _content_versions(collection: str, slug: str, french: dict[str, Any]) -> dict[str, str]:
+    """Les adresses d'une page de contenu dans chaque langue ou elle existe : chaque version
+    d'une page traduite annonce toutes les autres ; une page seulement francaise, aucune."""
+    get = content_library.get_doc if collection == "docs" else content_library.get_article
+    versions = {code: get(slug, code) for code in i18n.LANGUAGES if code != i18n.DEFAULT_LANG}
+    others = {code: str(page["path"]) for code, page in versions.items() if page}
+    return {i18n.DEFAULT_LANG: str(french["path"]), **others} if others else {}
+
+
 @app.api_route("/docs", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def docs_index_public(request: Request) -> HTMLResponse:
     lang = i18n.current_lang()
@@ -14233,12 +14242,6 @@ def docs_article_public(request: Request, slug: str) -> HTMLResponse:
         # /en/docs/<page> sans traduction : la page n'existe qu'en francais, a son adresse.
         return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
     raw = translated or french
-    # Chaque version d'une page traduite annonce toutes les autres ; une page seulement
-    # francaise n'en annonce aucune.
-    versions = {code: content_library.get_doc(slug, code) for code in i18n.LANGUAGES if code != i18n.DEFAULT_LANG}
-    alternates = {code: str(other["path"]) for code, other in versions.items() if other}
-    if alternates:
-        alternates = {i18n.DEFAULT_LANG: str(french["path"]), **alternates}
     tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
     path = str(page["path"])
@@ -14254,21 +14257,22 @@ def docs_article_public(request: Request, slug: str) -> HTMLResponse:
             related=content_library.resolve_all(content_library.related_pages(raw), tokens),
             canonical_url=_public_url(request, path),
             json_ld=_content_json_ld(request, page, path=path),
-            alternates=alternates,
+            alternates=_content_versions("docs", slug, french),
         ),
     )
 
 
 @app.api_route("/ressources-seo", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resources_public(request: Request) -> HTMLResponse:
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    tokens = _content_tokens(lang)
     return templates.TemplateResponse(
         "seo_resources_public.html",
         _public_template_context(
             request,
-            resources=content_library.resolve_all(content_library.blog_pages(), tokens),
-            canonical_url=_public_url(request, "/ressources-seo"),
-            meta_description=(
+            resources=content_library.resolve_all(content_library.blog_pages(lang), tokens),
+            canonical_url=_public_url(request, i18n.localized_path("/ressources-seo", lang)),
+            meta_description=i18n.tr_current(
                 "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, "
                 "suivre Google Search Console et améliorer le référencement naturel."
             ),
@@ -14278,12 +14282,18 @@ def seo_resources_public(request: Request) -> HTMLResponse:
 
 @app.api_route("/ressources-seo/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
-    raw = content_library.get_article(slug)
-    if not raw:
+    french = content_library.get_article(slug)
+    if not french:
         raise HTTPException(status_code=404, detail="resource_not_found")
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    translated = content_library.get_article(slug, lang) if lang != i18n.DEFAULT_LANG else None
+    if lang != i18n.DEFAULT_LANG and translated is None and getattr(request.state, "url_lang", None):
+        # /en/ressources-seo/<guide> sans traduction : le guide n'existe qu'en francais.
+        return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
+    raw = translated or french
+    tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
-    path = f"/ressources-seo/{page['slug']}"
+    path = str(page["path"])
     return templates.TemplateResponse(
         "seo_resource_article_public.html",
         _public_template_context(
@@ -14292,6 +14302,7 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
             related=content_library.resolve_all(content_library.related_pages(raw), tokens),
             canonical_url=_public_url(request, path),
             json_ld=_content_json_ld(request, page, path=path),
+            alternates=_content_versions("blog", slug, french),
         ),
     )
 
@@ -14811,7 +14822,8 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
                 catalog=billing.plan_catalog(),
                 comparatif=_comparatif_des_plans(),
                 featured_resources=content_library.resolve_all(
-                    content_library.featured_articles(3), _content_tokens()
+                    content_library.featured_articles(3, i18n.current_lang()),
+                    _content_tokens(i18n.current_lang()),
                 ),
                 canonical_url=_public_url(request, i18n.localized_path("/", i18n.current_lang())),
             ),

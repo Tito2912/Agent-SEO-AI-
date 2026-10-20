@@ -2840,5 +2840,15 @@
   "Essayer {app_name}": "Try {app_name}",
   "Créez un projet, lancez un crawl et parcourez votre premier rapport. Aucune carte bancaire n'est demandée.": "Create a project, run a crawl and browse your first report. No credit card required.",
   "Créer un compte gratuit": "Create a free account",
-  "Documentation {app_name} : prise en main, crawl, anomalies, corrections automatiques en pull request, Search Console, concurrents, backlinks et quotas.": "{app_name} documentation: getting started, crawl, issues, automatic fixes as pull requests, Search Console, competitors, backlinks and quotas."
+  "Documentation {app_name} : prise en main, crawl, anomalies, corrections automatiques en pull request, Search Console, concurrents, backlinks et quotas.": "{app_name} documentation: getting started, crawl, issues, automatic fixes as pull requests, Search Console, competitors, backlinks and quotas.",
+  "Guides et tutoriels SEO": "SEO guides and tutorials",
+  "La méthode, pas seulement l'outil": "The method, not just the tool",
+  "Vous cherchez comment {app_name} fonctionne ?": "Looking for how {app_name} works?",
+  "Ces guides traitent de méthode SEO, indépendamment de l'outil. Pour le produit lui-même — lancer un crawl, lire un rapport, connecter un dépôt GitHub, corriger en pull request, brancher Search Console — la documentation est à part.": "These guides cover SEO method, independently of the tool. For the product itself — running a crawl, reading a report, connecting a GitHub repository, fixing with a pull request, plugging in Search Console — the documentation is separate.",
+  "Voir la documentation": "View the documentation",
+  "Sommaire de l'article": "Article contents",
+  "Sur cette page": "On this page",
+  "Mettre ce guide en pratique": "Put this guide into practice",
+  "Ouvrir le tableau de bord": "Open the dashboard",
+  "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, suivre Google Search Console et améliorer le référencement naturel.": "SEO guides, tutorials and checklists to audit a site, prioritize fixes, follow Google Search Console and improve your organic rankings."
 }

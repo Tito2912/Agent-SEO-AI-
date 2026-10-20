@@ -136,7 +136,7 @@ def test_tables_are_wrapped_for_small_screens() -> None:
 
 def test_sitemap_entries_cover_every_page() -> None:
     entries = list(cl.sitemap_entries())
-    translations = sum(len(cl.translated_docs(lang)) for lang in cl.DOCS_TRANSLATION_DIRS)
+    translations = sum(len(cl.translated_pages(c, lang)) for c, dirs in cl.TRANSLATION_DIRS.items() for lang in dirs)
     assert len(entries) == len(cl.all_pages()) + translations
     for entry in entries:
         assert entry["path"].startswith("/")

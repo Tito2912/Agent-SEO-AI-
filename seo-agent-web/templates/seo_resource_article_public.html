@@ -16,9 +16,9 @@
 {% block content %}
 <div class="content-shell{% if not page.headings %} no-aside{% endif %}">
   {% if page.headings %}
-    <aside class="content-aside" aria-label="Sommaire de l'article">
+    <aside class="content-aside" aria-label="{{ tr("Sommaire de l'article") }}">
       <div class="content-aside-group">
-        <div class="content-aside-title">Sur cette page</div>
+        <div class="content-aside-title">{{ tr("Sur cette page") }}</div>
         {% for heading in page.headings %}
           <a href="#{{ heading.id }}">{{ heading.title }}</a>
         {% endfor %}
@@ -27,10 +27,10 @@
   {% endif %}
 
   <article>
-    <nav class="content-breadcrumb" aria-label="Fil d'Ariane">
-      <a href="{{ campaign_link(request, '/') }}">Accueil</a>
+    <nav class="content-breadcrumb" aria-label="{{ tr("Fil d'Ariane") }}">
+      <a href="{{ campaign_link(request, '/') }}">{{ tr("Accueil") }}</a>
       <span>/</span>
-      <a href="{{ campaign_link(request, '/ressources-seo') }}">Guides SEO</a>
+      <a href="{{ campaign_link(request, '/ressources-seo') }}">{{ tr("Guides SEO") }}</a>
       <span>/</span>
       <span>{{ page.title }}</span>
     </nav>
@@ -38,8 +38,8 @@
     <header class="content-header">
       <div class="content-meta">
         <span class="content-kind">{{ page.kind }}</span>
-        <span>{{ page.reading_time }} de lecture</span>
-        <span>Mis à jour le {{ page.updated_at }}</span>
+        <span>{{ tr("{time} de lecture", time=page.reading_time) }}</span>
+        <span>{{ tr("Mis à jour le {date}", date=page.updated_at) }}</span>
         {% if page.audience %}<span>{{ page.audience }}</span>{% endif %}
       </div>
       <h1>{{ page.title }}</h1>
@@ -50,7 +50,7 @@
 
     {% if page.faq %}
       <section class="content-faq">
-        <h2>Questions fréquentes</h2>
+        <h2>{{ tr("Questions fréquentes") }}</h2>
         {% for item in page.faq %}
           <div class="card content-faq-item">
             <h3>{{ item.question }}</h3>
@@ -62,20 +62,20 @@
 
     {% if page.cta %}
       <section class="content-cta">
-        <h2>Mettre ce guide en pratique</h2>
+        <h2>{{ tr("Mettre ce guide en pratique") }}</h2>
         <p>{{ page.cta }}</p>
         {% if request.state.user %}
-          <a class="btn primary" href="{{ campaign_link(request, '/') }}">Ouvrir le tableau de bord &rarr;</a>
+          <a class="btn primary" href="{{ campaign_link(request, '/') }}">{{ tr("Ouvrir le tableau de bord") }} &rarr;</a>
         {% else %}
-          <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">Créer un compte gratuit</a>
-          <a class="btn" href="{{ campaign_link(request, '/docs') }}">Voir la documentation</a>
+          <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{{ tr("Créer un compte gratuit") }}</a>
+          <a class="btn" href="{{ campaign_link(request, '/docs') }}">{{ tr("Voir la documentation") }}</a>
         {% endif %}
       </section>
     {% endif %}
 
     {% if related %}
-      <aside class="content-related" aria-label="À lire ensuite">
-        <h2>À lire ensuite</h2>
+      <aside class="content-related" aria-label="{{ tr("À lire ensuite") }}">
+        <h2>{{ tr("À lire ensuite") }}</h2>
         <div class="content-related-list">
           {% for item in related %}
             <a class="content-related-link" href="{{ campaign_link(request, item.path) }}">

@@ -47,7 +47,8 @@ def test_a_translation_is_the_same_page(page: dict) -> None:
 
 @pytest.mark.parametrize("page", TRANSLATED, ids=lambda p: p["slug"])
 def test_links_of_a_translation_lead_to_existing_pages(page: dict) -> None:
-    known = {p["path"] for p in cl.all_pages()} | {p["path"] for p in TRANSLATED} | {"/docs", "/en/docs"}
+    translations = {p["path"] for c in cl.TRANSLATION_DIRS for p in cl.translated_pages(c, "en")}
+    known = {p["path"] for p in cl.all_pages()} | translations | {"/docs", "/en/docs", "/ressources-seo", "/en/ressources-seo"}
     for href in re.findall(r'href="(/(?:en/)?(?:docs|ressources-seo)(?:/[a-z0-9-]+)?)"', page["body_html"]):
         assert href in known, f"{page['source']} : {href}"
     # Une page traduite mene a la traduction de ses voisines quand elle existe.

@@ -38,11 +38,11 @@ _COOKIE_MAX_AGE = 365 * 24 * 3600
 # Les pages publiques qui ont une adresse par langue : `/pricing` en francais, `/en/pricing` en
 # anglais. Google indexe chaque version, et chacune annonce l'autre (balises hreflang). Les
 # ecrans de l'application gardent une seule adresse et suivent la langue du client.
-LOCALIZED_PAGES = frozenset({"/", "/pricing", "/support", "/status", "/docs"})
-# Les pages de documentation (`/en/docs/<page>`) : leur route sert la traduction quand elle
-# existe et renvoie vers la page francaise sinon. Chacune annonce ses versions elle-meme
-# (`alternates` dans le contexte du gabarit).
-LOCALIZED_PREFIXES = ("/docs/",)
+LOCALIZED_PAGES = frozenset({"/", "/pricing", "/support", "/status", "/docs", "/ressources-seo"})
+# Les pages de documentation et les guides (`/en/docs/<page>`, `/en/ressources-seo/<guide>`) :
+# leur route sert la traduction quand elle existe et renvoie vers la page francaise sinon.
+# Chacune annonce ses versions elle-meme (`alternates` dans le contexte du gabarit).
+LOCALIZED_PREFIXES = ("/docs/", "/ressources-seo/")
 
 # La langue de la requete en cours, pour les macros importees sans contexte (`{% from ... import
 # ... %}`) : elles ne voient pas `request`, seulement les variables globales.
