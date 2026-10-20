@@ -18081,6 +18081,46 @@ def cron_autopilot(request: Request) -> JSONResponse:
     return JSONResponse({"ok": True, "balayages": balayages})
 
 
+def _job_activity(job: Job, user: Any) -> dict[str, Any]:
+    """Build links from the job's owner and a readable report, never from a stored URL."""
+    try:
+        from . import activity
+    except ImportError:
+        import activity
+    result = job.result if isinstance(job.result, dict) else {}
+    owner_id, slug = str(result.get("user_id") or ""), str(result.get("slug") or "")
+    kind = str(result.get("type") or _job_kind_from_command(job.command) or "")
+    project_url, report_url, site_name = "", "", slug
+    if owner_id and slug:
+        with DB.session() as db:
+            site = db.scalar(select(Project).where(Project.owner_user_id == owner_id, Project.slug == slug))
+        if site:
+            site_name = str(site.site_name or slug)
+            # The viewer's personal project takes precedence when two accounts share a slug.
+            selected = _db_project(str(getattr(user, "id", "")), slug)
+            if selected and str(selected.id) == str(site.id):
+                project_url = "/projects/" + quote(slug, safe="")
+                timestamp = str(result.get("timestamp") or "")
+                if (job.status == "done" and kind == "crawl" and _RUN_TS_RE.fullmatch(timestamp)
+                        and re.fullmatch(r"[a-zA-Z0-9_-]+", slug)):
+                    runs = _runs_dir_for_user(owner_id)
+                    path = dash.report_path(runs, slug, timestamp)
+                    try:
+                        if _ensure_runs_file_local(path) and isinstance(dash.load_report_json(runs, slug, timestamp), dict):
+                            report_url = project_url + "?" + urlencode({"crawl": timestamp})
+                    except Exception:
+                        pass  # Availability is unknown; do not promise a readable result.
+    return activity.view(job, site_name=site_name, project_url=project_url, report_url=report_url, kind=kind)
+
+
+def _activity_return_url(value: str) -> str:
+    parsed = urlsplit(_safe_next_path(value))
+    if parsed.path != "/jobs":
+        return "/jobs"
+    pairs = [(key, val) for key, val in parse_qsl(parsed.query) if key in {"site", "kind", "status"}]
+    return "/jobs" + (("?" + urlencode(pairs)) if pairs else "")
+
+
 @app.get("/jobs", response_class=HTMLResponse)
 def jobs(request: Request, job: str | None = None) -> HTMLResponse:
     jobs_view: list[dict[str, Any]] = []
@@ -18088,19 +18128,26 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
     is_admin = bool(getattr(user, "is_admin", False))
     visibles = _comptes_visibles(user)
     raw_jobs = _travaux_recents_et_actifs(None if is_admin else visibles)
+    owner_ids = {str((j.result or {}).get("user_id") or "") for j in raw_jobs if isinstance(j.result, dict)}
+    if not is_admin:
+        owner_ids &= visibles
+    with DB.session() as db:
+        site_rows = list(db.scalars(select(Project).where(Project.owner_user_id.in_(owner_ids)))) if owner_ids else []
+    sites = {(str(site.owner_user_id), str(site.slug)): site for site in site_rows}
     for j in raw_jobs:
         result = j.result if isinstance(j.result, dict) else None
         if not is_admin:
             owner_id = str(result.get("user_id") or "").strip() if result else ""
             if not owner_id or owner_id not in visibles:
                 continue
-        kind = _job_kind_from_command(j.command) or "unknown"
+        kind = str((result or {}).get("type") or _job_kind_from_command(j.command) or "unknown")
         slug = str(result.get("slug") or "").strip() if result else ""
+        site = sites.get((str((result or {}).get("user_id") or ""), slug))
         run_ts = str(result.get("timestamp") or "").strip() if result else ""
         run_dt = dash.parse_timestamp(run_ts) if run_ts else None
-        created_dt = datetime.fromtimestamp(float(j.created_at)) if j.created_at else None
-        ts_label = (run_dt.strftime("%d/%m/%y %H:%M") if run_dt else None) or (
-            created_dt.strftime("%d/%m/%y %H:%M") if created_dt else ""
+        created_dt = datetime.fromtimestamp(float(j.created_at), timezone.utc) if j.created_at else None
+        ts_label = (created_dt.strftime("%d/%m/%y %H:%M") if created_dt else None) or (
+            run_dt.strftime("%d/%m/%y %H:%M") if run_dt else ""
         )
         sa = float(j.started_at or j.created_at or 0)
         fa = float(j.finished_at or 0)
@@ -18111,8 +18158,11 @@ def jobs(request: Request, job: str | None = None) -> HTMLResponse:
                 "status": j.status,
                 "kind": kind,
                 "slug": slug,
+                "site_name": str(site.site_name or slug) if site else slug,
+                "site_id": str(site.id) if site else "",
                 "timestamp": run_ts,
                 "timestamp_label": ts_label,
+                "display_timestamp": created_dt.strftime("%Y%m%d-%H%M%S") if created_dt else run_ts,
                 "created_at": j.created_at,
                 "started_at": j.started_at,
                 "finished_at": j.finished_at,
@@ -18845,6 +18895,14 @@ def project_crawl_settings(
             plan_crawl = billing.crawl_config_for_plan(
                 billing.effective_plan_key(db, user_id=_compte_payeur(str(getattr(user, "id", "")), slug))
             )
+    # The analysis form retains its existing owner-only write rule, unlike job visibility.
+    can_edit_analysis = str(proj.owner_user_id) == str(user.id)
+    with DB.session() as db:
+        analysis_owner = db.get(User, str(proj.owner_user_id))
+        analysis_owner_email = str(getattr(analysis_owner, "email", "") or "le propriétaire du site")
+    project.update({"site_name": str(proj.site_name or slug), "base_url": str(proj.base_url or "")})
+    crawl = {**crawl, "max_pages": min(crawl["max_pages"], plan_crawl["max_pages_per_crawl"]),
+             "pagespeed_max_urls": min(crawl["pagespeed_max_urls"], plan_crawl["max_pagespeed_urls"])}
     resp = templates.TemplateResponse(
         "crawl_settings.html",
         {
@@ -18860,6 +18918,8 @@ def project_crawl_settings(
             "bing_api_ready": bing_api_ready,
             "bing_auth_mode": str(bing_auth.get("mode") or ""),
             "plan_crawl": plan_crawl,
+            "can_edit_analysis": can_edit_analysis,
+            "analysis_owner_email": analysis_owner_email,
         },
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -18928,8 +18988,9 @@ def project_crawl_settings_save(
         "profile": profile,
         "check_resources": bool(check_resources),
         "pagespeed": bool(pagespeed),
-        "ai_keywords": bool(ai_keywords),
-        "backlinks_research": bool(backlinks_research),
+        # These flags have no editable control in this form. Preserve stored values.
+        "ai_keywords": bool(ai_keywords) if ai_keywords is not None else effective_crawl["ai_keywords"],
+        "backlinks_research": bool(backlinks_research) if backlinks_research is not None else effective_crawl["backlinks_research"],
         "allow_subdomains": bool(allow_subdomains),
         "ignore_robots": bool(ignore_robots),
         "max_resources": max_resources,
@@ -18975,11 +19036,14 @@ def project_crawl_settings_save(
     with DB.session() as db:
         row = db.scalar(select(Project).where(Project.owner_user_id == str(user.id), Project.slug == slug))
         if not row:
-            return RedirectResponse(url=f"/projects/{slug}/settings/crawl?err={quote('Projet introuvable')}", status_code=303)
+            return RedirectResponse(url=_path_with_flash(f"/projects/{slug}/settings/crawl",
+                                    err="Seul le propriétaire du site peut enregistrer ces réglages d’analyse."), status_code=303)
         current_settings = row.settings if isinstance(row.settings, dict) else {}
         row.base_url = base_url
         row.site_name = site_name
-        row.settings = {**current_settings, "crawl": crawl_cfg, "gsc_api": gsc_cfg, "bing": bing_cfg}
+        previous_crawl, previous_gsc, previous_bing = _project_overrides_from_settings(current_settings)
+        row.settings = {**current_settings, "crawl": {**previous_crawl, **crawl_cfg},
+                        "gsc_api": {**previous_gsc, **gsc_cfg}, "bing": {**previous_bing, **bing_cfg}}
         db.add(row)
         db.commit()
 
@@ -19230,6 +19294,7 @@ class _GithubConnectBody(BaseModel):
     repo: str        # "owner/repo"
     branch: str = "main"
     mode: str = "review"   # "review" or "auto"
+    disconnect: bool = False
 
 
 class _GithubFixBody(BaseModel):
@@ -19244,6 +19309,18 @@ class _GithubFixBody(BaseModel):
 def api_github_connect(request: Request, slug: str, body: _GithubConnectBody) -> JSONResponse:
     proj = _db_project_or_404(request, slug)
     user = getattr(request.state, "user", None)
+    if body.disconnect:
+        # An explicit detach does not revoke the account token or touch the remote repository.
+        with DB.session() as db:
+            row = db.get(type(proj), proj.id)
+            if row is None:
+                raise HTTPException(status_code=404, detail="Projet introuvable.")
+            settings = dict(row.settings) if isinstance(row.settings, dict) else {}
+            for key in ("github_repo", "github_branch", "github_mode"):
+                settings.pop(key, None)
+            row.settings = settings
+            db.commit()
+        return JSONResponse({"ok": True, "connected": False, "repo": "", "mode": "review"})
     token, source = _effective_user_connection_value(user_id=_compte_payeur(str(user.id), slug), key="GITHUB_TOKEN")
     if not token or source != "user":
         return JSONResponse({"ok": False, "error": "GitHub non connecté. Va dans Comptes & connexions pour connecter GitHub."}, status_code=400)
@@ -37119,10 +37196,10 @@ def cron_auto_post_backlinks(request: Request) -> JSONResponse:
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
-def job_detail(request: Request, job_id: str) -> HTMLResponse:
+def job_detail(request: Request, job_id: str, return_to: str = "") -> HTMLResponse:
     job = _load_job(job_id)
     if not job:
-        resp = templates.TemplateResponse("job.html", {"request": request, "job": None})
+        resp = templates.TemplateResponse("job.html", {"request": request, "job": None}, status_code=404)
         resp.headers["Cache-Control"] = "no-store"
         return resp
     user = getattr(request.state, "user", None)
@@ -37180,6 +37257,8 @@ def job_detail(request: Request, job_id: str) -> HTMLResponse:
         {
             "request": request,
             "job": job,
+            "activity": _job_activity(job, user),
+            "activity_return": _activity_return_url(return_to),
             "latest": latest,
             "corrections_plan": corrections_plan,
             "corrections_plan_path": corrections_plan_path,
@@ -37316,6 +37395,7 @@ def job_api(request: Request, job_id: str, tail: int = 20_000) -> JSONResponse:
         _save_job(job)
 
     data = asdict(job)
+    data["activity"] = _job_activity(job, user)
     tail = int(tail) if isinstance(tail, int) else 20_000
     if tail > 0:
         data["stdout"] = (data.get("stdout") or "")[-tail:]

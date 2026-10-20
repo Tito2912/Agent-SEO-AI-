@@ -5,7 +5,7 @@ description: "Autoriser {{app_name}} sur GitHub, rattacher un dépôt et une bra
 kind: "Documentation"
 section: "Corriger"
 order: 21
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Solo, Pro et Business"
 keywords: ["GitHub", "pull request", "dépôt", "OAuth"]
 app_href: "/settings/accounts#github-connect-card"
@@ -26,7 +26,7 @@ Elle est facultative — et c'est la fonction pour laquelle le produit existe.
 
 ## Autoriser GitHub sur votre compte
 
-**Paramètres → Comptes → GitHub → Connecter**. Vous partez sur GitHub, vous autorisez, vous
+**Mon compte → Connexions → GitHub → Connecter**. Vous partez sur GitHub, vous autorisez, vous
 revenez. La carte affiche alors le compte connecté et la liste des dépôts accessibles.
 
 Les autorisations demandées : lecture du profil et de l'e-mail, et accès aux dépôts. Cette
@@ -45,7 +45,7 @@ disponible. Il fait la même chose et se configure sur la même page.
 La connexion GitHub est au niveau du **compte**. Le rattachement est au niveau du **projet** :
 un projet, un dépôt, une branche.
 
-Trois réglages :
+Ouvrez **Réglages de l’analyse → GitHub (facultatif)** dans le site concerné. Trois réglages :
 
 - **Dépôt** — au format `organisation/depot`. Choisissez-le dans la liste des dépôts
   accessibles.
@@ -112,3 +112,10 @@ mode. Si elle affiche « aucun dépôt connecté », les boutons de correction r
 des fiches d'anomalie.
 
 → [Corrections automatiques](/docs/corrections-automatiques)
+
+
+## Retirer le dépôt d’un seul site
+
+Dans le même panneau, **Déconnecter** retire le rattachement après votre confirmation. Votre connexion GitHub personnelle et les dépôts liés à vos autres sites restent disponibles. Les propositions déjà ouvertes sur GitHub ne sont pas supprimées.
+
+La confirmation affichée suit la réponse du serveur. Si une réponse est perdue, **Actualiser l’état** vérifie le rattachement enregistré avant de recommencer ; cette lecture ne crée ni correction ni proposition.

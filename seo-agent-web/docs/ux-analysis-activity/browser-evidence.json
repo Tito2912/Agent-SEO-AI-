@@ -1,0 +1,643 @@
+{
+  "checks": [
+    {
+      "screen": "settings-essential",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-exploration",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-sources",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-advanced",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-deep-link",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-property-selected",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-google-property-selected",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-module-switch",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-saved",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-github",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "github-authorization-needed",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "github-confirmed-save",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-member-readonly",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "activity-list",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "activity-site-filter",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "activity-state-filter",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "activity-filtered-detail",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-queued",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-running",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-done",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-failed",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-canceled",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-cancel_requested",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-missing",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "job-finalizing",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "screen": "settings-essential",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-exploration",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-sources",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-advanced",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-deep-link",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-property-selected",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-google-property-selected",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-module-switch",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-saved",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-github",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "github-authorization-needed",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "github-confirmed-save",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-member-readonly",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "activity-list",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "activity-site-filter",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "activity-state-filter",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "activity-filtered-detail",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-queued",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-running",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-done",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-failed",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-canceled",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-cancel_requested",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-missing",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "job-finalizing",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "screen": "settings-essential",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-exploration",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-sources",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-advanced",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-deep-link",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-property-selected",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-google-property-selected",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-module-switch",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-saved",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-github",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-authorization-needed",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-confirmed-save",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-member-readonly",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "activity-list",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "activity-site-filter",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "activity-state-filter",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "activity-filtered-detail",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-queued",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-running",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-done",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-failed",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-canceled",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-cancel_requested",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-missing",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-finalizing",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "settings-essential",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-exploration",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-sources",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-advanced",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-deep-link",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-bing-property-selected",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-google-property-selected",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-module-switch",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-saved",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-github",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "github-authorization-needed",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "github-confirmed-save",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "settings-member-readonly",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "activity-list",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "activity-site-filter",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "activity-state-filter",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "activity-filtered-detail",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-queued",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-running",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-done",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-failed",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-canceled",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-cancel_requested",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-missing",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-finalizing",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "job-update-unavailable",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-finished-after-refresh",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-missing-no-premature-redirect",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "job-session-expired",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "activity-access-lost",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "activity-access-restored",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-lost-response",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-read-after-lost-response",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-save-refused",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-explicit-detach",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "github-session-expired",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "javascript_errors": [],
+  "posts": [
+    {
+      "path": "/projects/first-88cf13ba5a4345b6b009a850093beefe/settings/crawl",
+      "body": "form"
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/site",
+        "branch": "main",
+        "mode": "auto"
+      }
+    },
+    {
+      "path": "/projects/first-88cf13ba5a4345b6b009a850093beefe/settings/crawl",
+      "body": "form"
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/site",
+        "branch": "main",
+        "mode": "auto"
+      }
+    },
+    {
+      "path": "/projects/first-88cf13ba5a4345b6b009a850093beefe/settings/crawl",
+      "body": "form"
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/site",
+        "branch": "main",
+        "mode": "auto"
+      }
+    },
+    {
+      "path": "/projects/first-88cf13ba5a4345b6b009a850093beefe/settings/crawl",
+      "body": "form"
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/site",
+        "branch": "main",
+        "mode": "auto"
+      }
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/apres-reponse-perdue",
+        "branch": "main",
+        "mode": "review"
+      }
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/apres-reponse-perdue",
+        "branch": "main",
+        "mode": "review"
+      }
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "",
+        "disconnect": true
+      }
+    },
+    {
+      "path": "/api/projects/first-88cf13ba5a4345b6b009a850093beefe/github/connect",
+      "body": {
+        "repo": "atelier/site",
+        "branch": "main",
+        "mode": "review"
+      }
+    }
+  ],
+  "providers": "simulated GitHub/Google/Bing transports; real local API and database",
+  "scope": "Navigateur Chromium local ; données fictives ; fournisseurs simulés ; aucune production authentifiée."
+}

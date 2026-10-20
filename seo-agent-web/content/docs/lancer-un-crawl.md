@@ -1,18 +1,18 @@
 ---
-title: "Lancer un crawl et régler ses paramètres"
+title: "Lancer une analyse et choisir son périmètre"
 meta_title: "Crawl SEO : lancer et paramétrer — documentation {{app_name}}"
-description: "Comment {{app_name}} explore un site : profondeur, nombre de pages, cadence, filtres d'URL, JavaScript, robots.txt et options avancées."
+description: "Choisir les pages et sous-domaines à analyser, adapter les paramètres disponibles et suivre la préparation de son bilan."
 kind: "Documentation"
 section: "Prise en main"
 order: 12
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["crawl SEO", "paramètres de crawl", "robots.txt", "profondeur"]
 app_href: "/"
 related: ["lire-le-rapport", "anomalies-et-priorites", "automatiser-les-audits", "plans-et-quotas"]
 faq:
   - question: "Mon crawl s'est arrêté avant la fin, pourquoi ?"
-    answer: "Trois causes possibles : la limite de pages du plan ou du projet a été atteinte, le délai maximal du job a expiré, ou l'hôte a commencé à refuser les requêtes. La page du job indique laquelle."
+    answer: "Trois causes possibles : la limite de pages du plan ou du projet a été atteinte, le délai maximal du job a expiré, ou l'hôte a commencé à refuser les requêtes. Consultez le suivi dans Activité pour lire les informations disponibles."
   - question: "{{app_name}} exécute-t-il le JavaScript ?"
     answer: "Oui, le crawler dispose d'un moteur de rendu Chromium. Le rendu est plus lent et plus coûteux que la lecture du HTML brut, il est donc réservé aux cas où il change le résultat."
   - question: "Le crawl compte-t-il les images et les fichiers CSS dans mon quota de pages ?"
@@ -21,7 +21,7 @@ faq:
     answer: "Pour un audit de votre propre site, oui bien sûr. Pour un site tiers, la fonction Concurrents existe et se limite volontairement à un échantillon de pages, à cadence réduite."
 ---
 
-Sur la page du projet, **Lancer un crawl**. Pour un premier passage, ne touchez à rien : les
+Sur la page du projet, lancez une **nouvelle analyse**. Pour un premier passage, ne touchez à rien : les
 valeurs par défaut couvrent la quasi-totalité des sites.
 
 Le crawl s'exécute sur un worker séparé de l'interface. Fermer l'onglet ne l'interrompt pas.
@@ -44,67 +44,28 @@ Pour chaque page atteinte :
 
 ## Les réglages qui comptent vraiment
 
-Tout se règle dans **Paramètres de crawl**, page par projet. Les options sont nombreuses ;
-en pratique, cinq suffisent.
+Dans le menu du site, ouvrez **Réglages de l’analyse**. Le nombre de pages et les sous-domaines sont accessibles en premier. Les autres choix sont regroupés dans des sections repliables ; les réglages d’analyse d’un site partagé sont consultables par les collaborateurs et enregistrables par son propriétaire.
 
-### Nombre de pages maximum
+### Nombre de pages et sous-domaines
 
-La limite de sécurité. Elle évite qu'un calendrier d'événements ou un moteur à facettes
-génère 400 000 URLs et consomme votre quota mensuel en une nuit.
+Choisissez un nombre maximal de pages. Le moteur applique les plafonds de votre formule et le solde mensuel du compte qui gère le site. L’option des sous-domaines étend le périmètre, par exemple à `blog.exemple.fr`.
 
-Le plafond réel est le plus petit de trois valeurs : celle que vous fixez ici, celle de votre
-plan, et ce qu'il reste de votre quota mensuel de pages.
+**Enregistrer les paramètres ne lance pas d’analyse** et ne modifie aucune page du site. Vos choix seront repris lors des prochaines demandes.
 
-### Profondeur maximale
+### Adapter l’exploration
 
-Le nombre de clics depuis l'URL de départ. Une profondeur de 3 ou 4 suffit à cartographier un
-site vitrine. Un e-commerce a besoin de plus, sinon les fiches produit restent invisibles.
+Dans **Adapter l’exploration (avancé)** :
 
-Si des pages importantes n'apparaissent pas dans le rapport, c'est souvent la première chose
-à regarder — et le fait qu'elles soient si profondes est en soi un problème SEO.
+- **Connexions simultanées** : nombre de pages demandées en parallèle. Réduisez-le si votre hébergement refuse les requêtes.
+- **Attente maximale par page** : délai laissé à une page pour répondre.
+- **Inclure / exclure des adresses** : expressions régulières pour limiter l’analyse à une rubrique ou écarter certaines adresses. Ces filtres ne changent pas ce que Google peut explorer.
+- **Ignorer robots.txt** : option à réserver à un site que vous gérez, avec une compréhension des restrictions qu’il définit.
 
-### Cadence : workers, délai minimum, crawl-delay
+Le groupe **Options avancées** contient l’identifiant du robot (User-Agent).
 
-Trois réglages liés :
+### Données complémentaires
 
-- **Workers** — le nombre de requêtes en parallèle.
-- **Délai minimum entre deux requêtes** — le frein.
-- **Respecter le crawl-delay de robots.txt** — activé par défaut, et à laisser activé.
-
-!!! warning "Un site qui répond 429 ou 403 n'est pas un site cassé"
-    Si l'hôte se met à refuser le crawler, {{app_name}} ralentit puis s'arrête plutôt que
-    d'insister, et ces réponses ne sont **pas** comptées comme des erreurs de votre site dans
-    le rapport. Elles apparaissent comme un incident de crawl. Baissez les workers et
-    augmentez le délai avant de relancer.
-
-### Filtres d'URL : inclure, exclure, paramètres
-
-Trois leviers pour empêcher le crawler de se perdre :
-
-- **Inclure / exclure** (expressions régulières) — pour restreindre à une section, ou écarter
-  `/panier/`, `/mon-compte/`, un calendrier infini.
-- **Supprimer des paramètres** — `utm_source`, `gclid`, `sessionid` : le même contenu vu vingt
-  fois sous vingt URLs pollue le rapport et gaspille le quota.
-- **Nombre maximum de paramètres** — un garde-fou contre les facettes combinatoires.
-
-Ces filtres décrivent ce que **le crawl** explore. Ils ne changent rien à ce que Google
-explore : une URL exclue ici reste indexable en réalité.
-
-### Vérification des ressources
-
-Désactivée par défaut. Activée, le crawler contrôle aussi les images, CSS et scripts liés :
-c'est ce qui remonte les images cassées et les ressources bloquées. Le coût est un volume de
-requêtes nettement supérieur, plafonné par un réglage dédié.
-
-## Les options avancées
-
-- **Ignorer robots.txt** — sur votre propre site, pour auditer une préproduction verrouillée.
-  Jamais ailleurs.
-- **Suivre les liens en nofollow** — utile pour cartographier un site qui abuse du `nofollow`
-  interne.
-- **User-agent** — personnalisable si vous devez autoriser le crawler dans un pare-feu.
-- **Délais d'attente** — à augmenter sur un hébergement lent, plutôt que de conclure à des
-  erreurs 5xx qui n'en sont pas.
+Les ressources (images, styles et scripts), PageSpeed, Google Search Console et Bing sont regroupés dans **Données en plus**. Consultez les choix enregistrés avant de les modifier ; les autorisations Google et Bing se gèrent aussi depuis les connexions du site. Ces services sont facultatifs pour obtenir une première analyse.
 
 ## PageSpeed et Core Web Vitals
 
@@ -113,8 +74,7 @@ mobile ou desktop.
 
 Cette mesure passe par l'API Google PageSpeed Insights, qui est lente et contingentée. C'est
 pourquoi elle ne s'applique qu'à un échantillon d'URLs, dont la taille dépend de votre plan.
-Choisissez cet échantillon : la home et vos gabarits principaux valent mieux que les vingt
-premières URLs par ordre alphabétique.
+Les réglages permettent de choisir le nombre maximal de pages et le type d’appareil ; ils ne proposent pas de sélectionner manuellement chaque adresse testée.
 
 → [Suivre la performance](/docs/suivre-la-performance)
 
@@ -128,11 +88,12 @@ anomalies sur les pages qui vous rapportent du trafic ».
 
 → [Connecter Search Console](/docs/connecter-search-console)
 
-## Suivre et arrêter un crawl
+## Suivre une analyse et retrouver son bilan
 
-La page **Jobs** liste tous les traitements en cours et passés : crawls, corrections,
-analyses de concurrents. Chaque job affiche son avancement, sa durée, ses journaux, et deux
-boutons — **Annuler** et **Relancer**.
+Ouvrez **Activité**. La liste rassemble les traitements récents et ceux encore actifs accessibles à votre compte. Les filtres Site, Type et État s’appliquent à cette liste ; utilisez **Recharger la liste** pour récupérer d’autres demandes.
 
-Un crawl annulé conserve ce qu'il a déjà collecté, mais son rapport est partiel : traitez-le
-comme un sondage, pas comme un audit.
+**Voir le suivi** distingue attente, exécution, préparation du bilan, échec et annulation. Un traitement « Terminé » ne suffit pas à garantir que son rapport est lisible : le bouton **Consulter le bilan de cette analyse** apparaît lorsque ce rapport précis est disponible.
+
+**Demander l’arrêt** agit sur un traitement actif. Une fois arrêté ou en échec, **Demander une nouvelle analyse** crée une nouvelle demande, soumise aux limites et au quota du compte propriétaire. Un arrêt ne garantit pas qu’un rapport partiel soit disponible ; les bilans précédents restent accessibles depuis le site.
+
+Si la mise à jour est interrompue, **Actualiser l’état** relit le suivi sans relancer d’analyse. Une session expirée propose de se reconnecter puis de revenir au même écran. Les journaux sont accessibles dans **Détails techniques et journaux**.

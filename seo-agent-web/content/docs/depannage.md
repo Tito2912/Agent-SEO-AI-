@@ -5,7 +5,7 @@ description: "Crawl vide ou incomplet, Search Console qui ne remonte rien, bouto
 kind: "Dépannage"
 section: "Compte et facturation"
 order: 52
-updated_at: "2026-09-03"
+updated_at: "2026-10-20"
 audience: "Tous les plans"
 keywords: ["dépannage", "erreurs", "crawl vide", "problème"]
 app_href: "/"
@@ -21,24 +21,22 @@ Les cas qui reviennent, avec la vérification à faire en premier.
 
 ## Le crawl ne trouve que la page d'accueil
 
-**Cause la plus fréquente : le maillage interne n'est pas lisible par le crawler.**
+Commencez par vérifier les liens et le périmètre réellement analysé.
 
 - Les liens sont-ils de vraies balises `<a href="…">` ? Un menu construit en JavaScript sans
   liens réels n'est suivi par personne.
 - Le `robots.txt` bloque-t-il l'exploration ? Ouvrez `votresite.com/robots.txt`.
-- La profondeur maximale est-elle trop basse ? Une profondeur de 1 ne voit que ce qui est lié
-  depuis la page de départ.
+- Le plafond de pages, les sous-domaines et les filtres d’inclusion/exclusion couvrent-ils les adresses attendues ? Ces choix sont dans les réglages de l’analyse.
 - L'URL de départ est-elle bien la version canonique — bon protocole, bon `www` ? Sinon le
   premier saut est une redirection.
 
 ## Le crawl s'est arrêté avant la fin
 
-Trois causes, et la page du job dit laquelle :
+Trois pistes à vérifier dans le suivi de l’analyse, accessible depuis **Activité** :
 
 1. **Limite de pages atteinte** — celle du projet, celle du plan, ou le quota mensuel.
 2. **Délai maximal du job dépassé** — un site lent, ou beaucoup de pages.
-3. **L'hôte a refusé les requêtes** — 403 ou 429. Baissez le nombre de workers et augmentez le
-   délai minimum entre requêtes.
+3. **L'hôte a refusé les requêtes** — 403 ou 429. Réduisez les connexions simultanées dans les options d’exploration, puis relisez le suivi avant de relancer.
 
 Dans le troisième cas, ces refus ne sont **pas** comptés comme des erreurs de votre site : ils
 apparaissent comme un incident de crawl.
@@ -47,7 +45,7 @@ apparaissent comme un incident de crawl.
 
 ## Search Console est connectée mais aucune donnée ne remonte
 
-Dans neuf cas sur dix, **la propriété ne correspond pas à l'URL du projet**.
+Vérifiez d’abord que **la propriété correspond à l’URL du projet**.
 
 Vérifiez caractère par caractère : `https` contre `http`, avec `www` contre sans, barre finale.
 Si vous avez une propriété de type Domaine (`sc-domain:…`), prenez-la : elle couvre tous les
@@ -134,3 +132,10 @@ crawler.
 {{support_email}}, avec quatre éléments : l'e-mail du compte, le nom du projet, l'heure
 approximative du problème, une capture d'écran. Ils suffisent presque toujours à retrouver la
 trace côté serveur.
+
+
+## Le suivi ne se met plus à jour
+
+Un message d’interruption conserve le dernier état reçu ; il ne prouve pas que l’analyse s’est arrêtée. Cliquez sur **Actualiser l’état** avant toute nouvelle demande. Si votre session a expiré, utilisez le lien de reconnexion : il conserve l’écran de départ.
+
+Un traitement terminé sans rapport lisible reste signalé comme tel. Un ancien bilan accessible depuis le site ne doit pas être interprété comme le résultat de la nouvelle demande.

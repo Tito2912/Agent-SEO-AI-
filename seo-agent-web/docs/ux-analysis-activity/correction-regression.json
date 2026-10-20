@@ -1,0 +1,106 @@
+{
+  "displays": [
+    {
+      "scenario": "automation",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "automation",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 1440,
+      "status": 200,
+      "scrollWidth": 1440,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 768,
+      "status": 200,
+      "scrollWidth": 768,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "cms-batch",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "github-awaiting-publication",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "resume-awaiting-publication",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "batch-mixed",
+      "width": 360,
+      "status": 200,
+      "scrollWidth": 360,
+      "dialogWidth": null,
+      "dialogScroll": null
+    },
+    {
+      "scenario": "review-consent",
+      "width": 390,
+      "status": 200,
+      "scrollWidth": 390,
+      "dialogWidth": 350,
+      "dialogScroll": 350
+    }
+  ],
+  "checks": [
+    "Lot WordPress mixte : une page à préparer, une page à relire ; puis une enregistrée et enfin vérifiée, sans valider le lot entier.",
+    "Case de relecture visible, en-tête de la fenêtre conservé pendant le défilement.",
+    "Proposition GitHub : étape Relire et invitation à publier sur le suivi et l’accueil, sans invitation prématurée au contrôle SEO."
+  ],
+  "jsErrors": []
+}
