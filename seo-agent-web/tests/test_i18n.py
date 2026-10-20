@@ -433,3 +433,34 @@ def test_english_public_pages_pass_the_beta_gate(monkeypatch: pytest.MonkeyPatch
     assert fresh.get("/pricing").status_code == 200
     assert fresh.get("/en/pricing").status_code == 200
     assert fresh.get("/auth/login").status_code == 401  # la porte beta est bien fermee ailleurs
+
+
+def test_assistant_answers_in_the_customer_language(lab, monkeypatch: pytest.MonkeyPatch) -> None:
+    owner = user(lab["db"], admin=True)  # sans quota a consommer
+    browser = session_client(owner)
+    asked: list[str] = []
+
+    def fake_claude(messages, *, system, model):  # type: ignore[no-untyped-def]
+        asked.append(system)
+        return "ok"
+
+    monkeypatch.setattr(app_module, "_assistant_effective_provider", lambda: "claude")
+    monkeypatch.setattr(app_module, "_assistant_claude_chat", fake_claude)
+    browser.get("/", params={"lang": "en"})
+    headers = {"x-csrf-token": browser.cookies.get(app_module._CSRF_COOKIE_NAME) or ""}
+    assert browser.post("/api/assistant/chat", json={"message": "Hello"}, headers=headers).json()["ok"] is True
+    browser.get("/", params={"lang": "fr"})
+    browser.post("/api/assistant/chat", json={"message": "Bonjour"}, headers=headers)
+    english, french = asked
+    assert "Réponds en anglais" in english and "Réponds en français" in french
+
+    monkeypatch.setattr(app_module, "_assistant_effective_provider", lambda: "none")
+    browser.get("/", params={"lang": "en"})
+    refused = browser.post("/api/assistant/chat", json={"message": "Hello"}, headers=headers).json()
+    assert refused["error"] == "Assistant temporarily unavailable."
+
+
+def test_assistant_script_texts_are_translated() -> None:
+    keys = i18n._js_keys()
+    for text in ("Comment puis-je vous aider ?", "Erreur:", "Effacer la conversation ?"):
+        assert text in keys and text in CATALOG

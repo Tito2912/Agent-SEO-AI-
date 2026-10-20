@@ -3316,8 +3316,13 @@ def _assistant_model(provider: str) -> str:
     return ""
 
 
+# La langue des reponses de l'assistant, d'apres la langue de l'interface du client.
+_LANGUE_DES_REPONSES = {"fr": "en français", "en": "en anglais"}
+
+
 def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     ctx = context if isinstance(context, dict) else {}
+    langue = _LANGUE_DES_REPONSES.get(i18n.current_lang(), _LANGUE_DES_REPONSES["fr"])
     path = str(ctx.get("path") or "").strip()
     project = ctx.get("project") if isinstance(ctx.get("project"), dict) else {}
     slug = str(project.get("slug") or "").strip()
@@ -3345,7 +3350,8 @@ def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
         "- Par projet: Overview, Paramètres crawl, Performance, Backlinks, All issues, Crawl log.\n"
         "- Intégrations possibles: Google Search Console (API), Bing, PageSpeed Insights, Ahrefs.\n"
         "Règles:\n"
-        "- Réponds en français.\n"
+        f"- Réponds {langue}, la langue de l’interface de l’utilisateur ; s’il t’écrit dans une autre "
+        "langue, réponds dans la sienne.\n"
         "- Ton professionnel, clair, utile.\n"
         "- Réponses courtes et actionnables (listes à puces quand pertinent).\n"
         "- Si la question sort du SEO / de l’app, répond quand même (ne dis pas que tu es “uniquement SEO”).\n"

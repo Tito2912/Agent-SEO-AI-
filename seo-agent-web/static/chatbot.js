@@ -1,4 +1,5 @@
 (() => {
+  const noyaruT = window.noyaruT || ((text) => text);
   const dock = document.getElementById("assistant-dock");
   const toggle = document.getElementById("assistant-toggle");
   const panel = document.getElementById("assistant-panel");
@@ -35,22 +36,30 @@
   function getSuggestions() {
     if (projectSlug) {
       return [
-        "Quels sont les problèmes critiques sur ce site ?",
-        "Par quoi devrais-je commencer pour améliorer le SEO ?",
-        "Résume les anomalies les plus importantes",
+        noyaruT("Quels sont les problèmes critiques sur ce site ?"),
+        noyaruT("Par quoi devrais-je commencer pour améliorer le SEO ?"),
+        noyaruT("Résume les anomalies les plus importantes"),
       ];
     }
     return [
-      "Comment fonctionne le crawl SEO ?",
-      "Quelle est la différence entre une erreur et un avertissement ?",
-      "Comment connecter Google Search Console ?",
+      noyaruT("Comment fonctionne le crawl SEO ?"),
+      noyaruT("Quelle est la différence entre une erreur et un avertissement ?"),
+      noyaruT("Comment connecter Google Search Console ?"),
     ];
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+  // Une reponse d'erreur commence par « Erreur: » (« Error: » en anglais) : c'est ce qui la
+  // distingue a l'affichage, y compris dans un historique ecrit dans l'autre langue.
+  const errorPrefix = noyaruT("Erreur:");
+  function isErrorText(content) {
+    const s = String(content || "").trim().toLowerCase();
+    return s.startsWith("erreur:") || s.startsWith(errorPrefix.toLowerCase());
+  }
+
   function normalizeAssistantText(content) {
     let s = String(content || "").trim();
-    s = s.replace(/^Erreur:\s*(?:RuntimeError|Exception|Error):\s*/i, "Erreur: ");
+    s = s.replace(/^(Erreur|Error):\s*(?:RuntimeError|Exception|Error):\s*/i, "$1: ");
     s = s.replace(/^RuntimeError:\s*/i, "");
     return s.slice(0, 4000);
   }
@@ -170,7 +179,7 @@
   function renderMessage(role, content) {
     const row = document.createElement("div");
     row.className = `assistant-msg ${role}`;
-    const isError = role === "assistant" && String(content || "").trim().toLowerCase().startsWith("erreur:");
+    const isError = role === "assistant" && isErrorText(content);
     if (isError) row.classList.add("error");
 
     const bubble = document.createElement("div");
@@ -212,11 +221,11 @@
 
     const title = document.createElement("div");
     title.className = "assistant-empty-title";
-    title.textContent = projectName ? `Assistant — ${projectName}` : "Comment puis-je vous aider ?";
+    title.textContent = projectName ? `${noyaruT("Assistant")} — ${projectName}` : noyaruT("Comment puis-je vous aider ?");
 
     const sub = document.createElement("div");
     sub.className = "assistant-empty-sub";
-    sub.textContent = "Posez une question sur vos données SEO ou choisissez une suggestion.";
+    sub.textContent = noyaruT("Posez une question sur vos données SEO ou choisissez une suggestion.");
 
     const chips = document.createElement("div");
     chips.className = "assistant-suggestions";
@@ -251,7 +260,7 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
     if (meta && meta.configured === false) {
-      footEl.textContent = "Assistant temporairement indisponible.";
+      footEl.textContent = noyaruT("Assistant temporairement indisponible.");
     } else {
       footEl.textContent = "";
     }
@@ -277,14 +286,14 @@
     }
 
     if (!meta || meta.ok !== true) {
-      metaEl.textContent = "Assistant indisponible";
+      metaEl.textContent = noyaruT("Assistant indisponible");
       setDot("err");
       return;
     }
 
     const configured = Boolean(meta.configured);
 
-    metaEl.textContent = configured ? "En ligne" : "Indisponible";
+    metaEl.textContent = configured ? noyaruT("En ligne") : noyaruT("Indisponible");
     setDot(configured ? "ok" : "err");
     if (isOpen) render();
   }
@@ -317,15 +326,15 @@
       });
       const data = await resp.json();
       if (!data || data.ok !== true) {
-        throw new Error((data && data.error) ? data.error : "Erreur inconnue");
+        throw new Error((data && data.error) ? data.error : noyaruT("Erreur inconnue"));
       }
       history.push({ role: "assistant", content: String(data.reply || "").trim() || "—" });
       saveHistory();
       await refreshMeta();
       render();
     } catch (e) {
-      const msg = (e && e.message) ? e.message : String(e || "Erreur");
-      history.push({ role: "assistant", content: normalizeAssistantText(`Erreur: ${msg}`) });
+      const msg = (e && e.message) ? e.message : String(e || noyaruT("Erreur"));
+      history.push({ role: "assistant", content: normalizeAssistantText(`${errorPrefix} ${msg}`) });
       saveHistory();
       setDot("err");
       render();
@@ -342,7 +351,7 @@
   if (closeBtn) closeBtn.addEventListener("click", () => setOpen(false));
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
-      if (!window.confirm("Effacer la conversation ?")) return;
+      if (!window.confirm(noyaruT("Effacer la conversation ?"))) return;
       history = [];
       saveHistory();
       render();
