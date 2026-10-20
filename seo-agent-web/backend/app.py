@@ -12534,13 +12534,27 @@ def _validate_settings_env_value(key: str, value: str) -> str | None:
     return None
 
 
+def _auth_recovery_response(response: Response) -> Response:
+    """Recovery URLs may contain email addresses, invite context or single-use tokens."""
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 @app.get("/auth/forgot", response_class=HTMLResponse)
-def auth_forgot(request: Request, next: str | None = None, msg: str | None = None, err: str | None = None) -> Response:
+def auth_forgot(
+    request: Request,
+    next: str | None = None,
+    email: str | None = None,
+    msg: str | None = None,
+    err: str | None = None,
+) -> Response:
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
+    e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
         "auth_forgot.html",
         {
@@ -12549,11 +12563,13 @@ def auth_forgot(request: Request, next: str | None = None, msg: str | None = Non
             "next_q": quote(n),
             "msg": str(msg or "").strip(),
             "err": str(err or "").strip(),
-            "email": "",
+            "email": e,
+            "email_q": quote(e),
+            "recovery_sent": str(msg or "").strip() == "Si un compte existe, un email de réinitialisation a été envoyé.",
         },
     )
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/forgot")
@@ -12565,7 +12581,7 @@ def auth_forgot_submit(
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
     e = _normalize_email(email)
 
@@ -12578,12 +12594,14 @@ def auth_forgot_submit(
                 "next_q": quote(n),
                 "msg": "",
                 "err": message,
+                "recovery_unavailable": status_code >= 500,
                 "email": e,
+                "email_q": quote(e),
             },
             status_code=status_code,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     ip = _request_client_ip(request) or "unknown"
     retry_ip = _rate_limit_retry_after(bucket="auth_forgot_ip", subject=ip, limit=20, window_s=60 * 60)
@@ -12654,7 +12672,7 @@ def auth_forgot_submit(
                     target_id=str(getattr(row, "id", "") or ""),
                     meta={"error": f"{type(exc).__name__}: {str(exc)[:180]}"},
                 )
-                return _forgot_error("Email non envoyé (erreur serveur). Vérifie la config SendGrid/SMTP.", 503)
+                return _forgot_error("Email non envoyé (erreur serveur). Réessaie plus tard.", 503)
             _audit_log(
                 request,
                 action="auth.forgot",
@@ -12667,7 +12685,9 @@ def auth_forgot_submit(
             logger.info("[MAIL] forgot user_found=0 email=%s", _mask_email(e))
             _audit_log(request, action="auth.forgot", status="ok")
 
-    return RedirectResponse(url=_path_with_flash(f"/auth/forgot?next={quote(n)}", msg=public_msg), status_code=303)
+    return _auth_recovery_response(RedirectResponse(
+        url=_path_with_flash(f"/auth/forgot?next={quote(n)}&email={quote(e)}", msg=public_msg), status_code=303,
+    ))
 
 
 @app.get("/auth/reset", response_class=HTMLResponse)
@@ -12697,9 +12717,8 @@ def auth_reset(request: Request, token: str | None = None, next: str | None = No
         },
         status_code=(200 if ok else 400),
     )
-    resp.headers["Cache-Control"] = "no-store"
-    resp.headers["Referrer-Policy"] = "no-referrer"
-    return resp
+
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/reset")
@@ -12727,12 +12746,12 @@ def auth_reset_submit(
                 "token": t,
                 "ok": ok,
                 "err": message,
+                "recovery_unavailable": status_code >= 500,
             },
             status_code=status_code,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     if not t:
         return _reset_error("Lien invalide.", 400, ok=False)
@@ -12744,6 +12763,7 @@ def auth_reset_submit(
     now = datetime.now(timezone.utc)
     uid = ""
     email_out = ""
+    needs_verification = False
     with DB.session() as db:
         row = _valid_password_reset_row(db, token=t)
         if not row:
@@ -12754,6 +12774,7 @@ def auth_reset_submit(
             _audit_log(request, action="auth.reset_password", status="user_missing")
             return _reset_error("Compte introuvable.", 400, ok=False)
 
+        needs_verification = _email_verification_enabled() and not _user_email_verified(db, user_id=str(user.id))
         user.password_hash = auth.hash_password(password)
         row.used_at = now
         db.add(user)
@@ -12764,6 +12785,17 @@ def auth_reset_submit(
 
     if not uid:
         return _reset_error("Erreur serveur.", 500, ok=False)
+
+    _audit_log(request, action="auth.reset_password", status="ok", actor_email=email_out, target_type="user", target_id=uid)
+    if needs_verification:
+        # Password ownership does not override the existing email-verification gate.
+        # Clear any previous account's cookie before resuming confirmation for this account.
+        resp = RedirectResponse(url=_path_with_flash(
+            f"/auth/verify/resend?{urlencode({'next': n, 'email': email_out})}",
+            msg="Mot de passe mis à jour.",
+        ), status_code=303)
+        resp.delete_cookie(auth.SESSION_COOKIE_NAME, path="/")
+        return _auth_recovery_response(resp)
 
     token_out = auth.make_session_token(user_id=uid, secret=secret)
     resp = RedirectResponse(url=n, status_code=303)
@@ -12778,8 +12810,7 @@ def auth_reset_submit(
         secure=secure_cookie,
         path="/",
     )
-    _audit_log(request, action="auth.reset_password", status="ok", actor_email=email_out, target_type="user", target_id=uid)
-    return resp
+    return _auth_recovery_response(resp)
 
 
 @app.get("/auth/verify/resend", response_class=HTMLResponse)
@@ -12793,7 +12824,7 @@ def auth_verify_resend(
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
     e = _normalize_email(email or "")
     resp = templates.TemplateResponse(
@@ -12805,10 +12836,12 @@ def auth_verify_resend(
             "msg": str(msg or "").strip(),
             "err": str(err or "").strip(),
             "email": e,
+            "email_q": quote(e),
+            "recovery_sent": str(msg or "").strip() == "Si un compte existe, un email de vérification a été envoyé.",
         },
     )
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/verify/resend")
@@ -12820,7 +12853,7 @@ def auth_verify_resend_submit(
     user = getattr(request.state, "user", None)
     n = _safe_next_path(next)
     if user:
-        return RedirectResponse(url=n, status_code=303)
+        return _auth_recovery_response(RedirectResponse(url=n, status_code=303))
 
     e = _normalize_email(email)
 
@@ -12833,12 +12866,14 @@ def auth_verify_resend_submit(
                 "next_q": quote(n),
                 "msg": "",
                 "err": message,
+                "recovery_unavailable": status_code >= 500,
                 "email": e,
+                "email_q": quote(e),
             },
             status_code=status_code,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     if not e or "@" not in e or len(e) > 320:
         return _resend_error("Email invalide.", 400)
@@ -12899,10 +12934,10 @@ def auth_verify_resend_submit(
         else:
             _audit_log(request, action="auth.verify_send", status="ok", actor_email=e, meta={"note": "noop"})
 
-    return RedirectResponse(
+    return _auth_recovery_response(RedirectResponse(
         url=_path_with_flash(f"/auth/verify/resend?next={quote(n)}&email={quote(e)}", msg=public_msg),
         status_code=303,
-    )
+    ))
 
 
 @app.get("/auth/verify", response_class=HTMLResponse)
@@ -12919,9 +12954,8 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
             {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Lien invalide."},
             status_code=400,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     if not _email_verification_enabled():
         resp = templates.TemplateResponse(
@@ -12932,12 +12966,12 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
                 "next_q": quote(n),
                 "ok": False,
                 "err": "Vérification email non configurée.",
+                "recovery_unavailable": True,
             },
             status_code=503,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     now = datetime.now(timezone.utc)
     uid = ""
@@ -12951,9 +12985,8 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
                 {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Lien invalide ou expiré."},
                 status_code=400,
             )
-            resp.headers["Cache-Control"] = "no-store"
-            resp.headers["Referrer-Policy"] = "no-referrer"
-            return resp
+
+            return _auth_recovery_response(resp)
 
         user = db.get(User, str(getattr(row, "user_id", "") or ""))
         if not user:
@@ -12963,9 +12996,8 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
                 {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Compte introuvable."},
                 status_code=400,
             )
-            resp.headers["Cache-Control"] = "no-store"
-            resp.headers["Referrer-Policy"] = "no-referrer"
-            return resp
+
+            return _auth_recovery_response(resp)
 
         row.used_at = now
         db.add(row)
@@ -12979,12 +13011,11 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
     if not uid:
         resp = templates.TemplateResponse(
             "auth_verify.html",
-            {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Erreur serveur."},
+            {"request": request, "next": n, "next_q": quote(n), "ok": False, "err": "Erreur serveur.", "recovery_unavailable": True},
             status_code=500,
         )
-        resp.headers["Cache-Control"] = "no-store"
-        resp.headers["Referrer-Policy"] = "no-referrer"
-        return resp
+
+        return _auth_recovery_response(resp)
 
     token_out = auth.make_session_token(user_id=uid, secret=secret)
     # `next` is wherever the visitor happened to be when they signed up — often a page owned by
@@ -13006,7 +13037,7 @@ def auth_verify(request: Request, token: str | None = None, next: str | None = N
         path="/",
     )
     _audit_log(request, action="auth.verify_email", status="ok", actor_email=email_out, target_type="user", target_id=uid)
-    return resp
+    return _auth_recovery_response(resp)
 
 
 @app.post("/auth/google/start")

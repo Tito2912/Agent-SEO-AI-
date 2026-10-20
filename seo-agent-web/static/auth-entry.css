@@ -1,4 +1,4 @@
-/* Scoped to account entry; recovery screens and shared layouts retain their styles. */
+/* Account entry and recovery share a visual system; shared layouts retain their styles. */
 .auth-entry { --muted: #b9c2bd; }
 .auth-entry .auth-shell { padding: 32px 18px; }
 .auth-entry .auth-card { width: min(520px, 100%); padding: 28px; overflow-wrap: anywhere; }
@@ -45,3 +45,7 @@
   .auth-entry-brand img { width: 128px; }
   .auth-entry .page-header h1 { font-size: 26px; }
 }
+
+.auth-recovery-hint { margin: 0 0 20px; line-height: 1.6; }
+.auth-recovery-email { font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
+.auth-recovery-resend form { padding: 10px 0 16px; }

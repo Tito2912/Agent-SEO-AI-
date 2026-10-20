@@ -1,0 +1,5 @@
+<div class="auth-entry-footer">
+  {% if recovery_unavailable %}<a class="btn primary block" href="{{ localized_path('/support', current_lang()) }}">{{ tr("Obtenir de l’aide") }}</a>{% endif %}
+  <a class="btn block" href="/auth/login?next={{ next_q }}{% if email_q %}&amp;email={{ email_q }}{% endif %}">{{ tr("Retour connexion") }}</a>
+  {% if not recovery_unavailable %}<a class="auth-entry-help" href="{{ localized_path('/support', current_lang()) }}">{{ tr("Aide") }}</a>{% endif %}
+</div>
