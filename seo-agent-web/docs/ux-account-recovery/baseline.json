@@ -1,0 +1,168 @@
+{
+  "checks": [
+    {
+      "path": "/auth/forgot",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/reset",
+      "width": 1440,
+      "lang": "fr",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify",
+      "width": 1440,
+      "lang": "fr",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify/resend",
+      "width": 1440,
+      "lang": "fr",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/forgot",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/reset",
+      "width": 1440,
+      "lang": "en",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify",
+      "width": 1440,
+      "lang": "en",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify/resend",
+      "width": 1440,
+      "lang": "en",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/forgot",
+      "width": 360,
+      "lang": "fr",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/reset",
+      "width": 360,
+      "lang": "fr",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify",
+      "width": 360,
+      "lang": "fr",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify/resend",
+      "width": 360,
+      "lang": "fr",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/forgot",
+      "width": 360,
+      "lang": "en",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    },
+    {
+      "path": "/auth/reset",
+      "width": 360,
+      "lang": "en",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify",
+      "width": 360,
+      "lang": "en",
+      "status": 400,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 37.5,
+      "help_link": false
+    },
+    {
+      "path": "/auth/verify/resend",
+      "width": 360,
+      "lang": "en",
+      "status": 200,
+      "overflow": false,
+      "alert_roles": 0,
+      "minimum_button_height": 33,
+      "help_link": false
+    }
+  ],
+  "notes": [
+    "Read-only initial audit for recovery lot 12 after merged PR 36. Invalid reset/verification links only. Local synthetic data. No external request."
+  ],
+  "base_commit": "8dd4b62876ad464ea0b9c7f61ef3266e9986f271"
+}

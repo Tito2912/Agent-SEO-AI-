@@ -12,6 +12,8 @@ Les verbes sont ceux déclarés dans le code. Une route peut servir plusieurs é
 
 ## Routes, écrans, actions et sorties
 
+Mise à jour du lot 12 : `/auth/forgot`, `/auth/reset`, `/auth/verify` et `/auth/verify/resend`, leurs erreurs, confirmations et reprises sont décrits dans [le bilan dédié](UX_ACCOUNT_RECOVERY_LOT12.md). Aucune nouvelle route ni action serveur ; le pied de page partagé porte le total à 82 templates. L’en-tête du lot 10 est réutilisé. Un mot de passe changé ne contourne pas la confirmation email ; les accès et destinations restent contrôlés côté serveur.
+
 Mise à jour du lot 11 : les exports du bilan, des problèmes et de leur détail, ainsi que `/file` et ses états vide/403/404/413/503, sont décrits dans [le bilan dédié](UX_EXPORTS_FILES_LOT11.md). Aucune nouvelle route ni nouvelle mutation ; une inclusion de choix d’exports porte le total à 81 templates. Les paramètres de retour ne changent pas les autorisations.
 
 Mise à jour du lot 10 : les écrans `/auth/login` et `/auth/signup`, leurs méthodes, messages, volet d’accord facultatif, fermeture des inscriptions et repli pour invitation d’équipe sont décrits dans [le bilan dédié](UX_AUTH_ENTRY_LOT10.md). Aucune nouvelle route ; une inclusion limitée à ces deux écrans (`_auth_entry_intro.html`) porte le total actuel à 80 templates. Les décomptes initiaux ci-dessus restent ceux de l’audit du 19 octobre.
