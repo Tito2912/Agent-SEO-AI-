@@ -19,7 +19,7 @@
 .billing-scope p { line-height: 1.6; }
 .section-nav, .admin-scope nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px; }
 .section-nav a, .admin-scope a { display: inline-flex; align-items: center; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
-.admin-scope { padding: 16px; margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+.admin-scope { padding: 16px; margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--panel); }
 .admin-scope > span { display: block; margin-top: 4px; }
 .admin-scope nav { margin-bottom: 0; }
 .admin-scope [aria-current] { color: var(--accent); border-color: var(--accent); }
