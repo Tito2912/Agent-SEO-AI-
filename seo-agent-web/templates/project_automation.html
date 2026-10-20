@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Automatisation - {{ project.site_name }}{% endblock %}
+{% block title %}{{ tr("Automatisation") }} - {{ project.site_name }}{% endblock %}
 
 {% block head_extra %}
 <style>
@@ -27,21 +27,21 @@
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a>
   <span class="crumb-sep">/</span>
-  <span class="crumb-current">Automatisation</span>
+  <span class="crumb-current">{{ tr("Automatisation") }}</span>
 {% endblock %}
 
 {% block actions %}
-  <a class="btn" href="/projects/{{ slug }}/issues">Voir les anomalies</a>
+  <a class="btn" href="/projects/{{ slug }}/issues">{{ tr("Voir les anomalies") }}</a>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1>Automatisation</h1>
-  <p class="muted">Préparation et suivi des corrections GitHub pour {{ project.site_name }}</p>
+  <h1>{{ tr("Automatisation") }}</h1>
+  <p class="muted">{{ tr("Préparation et suivi des corrections GitHub pour {site}", site=project.site_name) }}</p>
 </div>
 
 {# ── Stats ── #}
@@ -49,20 +49,20 @@
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
   <div class="pa-stat">
     <span class="pa-stat-num" style="color:#a5b4fc;">{{ counts.todo }}</span>
-    <span class="pa-stat-label">À corriger</span>
+    <span class="pa-stat-label">{{ tr("À corriger") }}</span>
   </div>
   <div class="pa-stat">
     <span class="pa-stat-num" style="color:#fbbf24;">{{ counts.in_progress }}</span>
-    <span class="pa-stat-label">PR en cours</span>
+    <span class="pa-stat-label">{{ tr("PR en cours") }}</span>
   </div>
   <div class="pa-stat">
     <span class="pa-stat-num" style="color:var(--ok-2);">{{ counts.done }}</span>
-    <span class="pa-stat-label">Déclarées modifiées</span>
+    <span class="pa-stat-label">{{ tr("Déclarées modifiées") }}</span>
   </div>
   {% if counts.ignored %}
   <div class="pa-stat">
     <span class="pa-stat-num" style="color:var(--muted);">{{ counts.ignored }}</span>
-    <span class="pa-stat-label">Ignorés</span>
+    <span class="pa-stat-label">{{ tr("Ignorés") }}</span>
   </div>
   {% endif %}
 </div>
@@ -70,28 +70,28 @@
 
 {# ── GitHub connection ── #}
 <div class="pa-section">
-  <div class="pa-section-title">Dépôt GitHub</div>
+  <div class="pa-section-title">{{ tr("Dépôt GitHub") }}</div>
   {% if github_cfg.repo %}
   <div class="card" style="padding:14px 16px;">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <svg style="width:18px;height:18px;flex-shrink:0;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       <div>
         <div style="font-weight:600;font-size:13px;">{{ github_cfg.repo }}</div>
-        <div class="muted small">Branche : <span class="mono">{{ github_cfg.branch }}</span></div>
+        <div class="muted small">{{ tr("Branche :") }} <span class="mono">{{ github_cfg.branch }}</span></div>
       </div>
       <span class="badge {{ 'ok' if github_cfg.mode == 'auto' else 'notice' }}" style="font-size:11px;">
-        {{ 'Full Access · automatisation configurée' if github_cfg.mode == 'auto' else 'Relecture sur GitHub' }}
+        {{ tr('Full Access · automatisation configurée') if github_cfg.mode == 'auto' else tr('Relecture sur GitHub') }}
       </span>
       <span style="flex:1"></span>
-      <a class="btn small" href="/projects/{{ slug }}/settings/crawl#github-section">Modifier</a>
+      <a class="btn small" href="/projects/{{ slug }}/settings/crawl#github-section">{{ tr("Modifier") }}</a>
     </div>
   </div>
   {% else %}
   <div class="gh-connect-card">
     <svg style="width:32px;height:32px;margin-bottom:12px;color:var(--muted);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-    <p style="margin:0 0 6px;font-weight:600;">Aucun dépôt GitHub connecté</p>
-    <p class="muted small" style="margin:0 0 16px;">Connectez un dépôt pour préparer des propositions de modification du code à relire sur GitHub.</p>
-    <a class="btn primary" href="/projects/{{ slug }}/settings/crawl#github-section">Connecter un dépôt →</a>
+    <p style="margin:0 0 6px;font-weight:600;">{{ tr("Aucun dépôt GitHub connecté") }}</p>
+    <p class="muted small" style="margin:0 0 16px;">{{ tr("Connectez un dépôt pour préparer des propositions de modification du code à relire sur GitHub.") }}</p>
+    <a class="btn primary" href="/projects/{{ slug }}/settings/crawl#github-section">{{ tr("Connecter un dépôt") }} →</a>
   </div>
   {% endif %}
 </div>
@@ -99,16 +99,16 @@
 {# ── Bulk fix action ── #}
 {% if github_cfg.repo %}
 <div class="pa-section">
-  <div class="pa-section-title">Correction globale</div>
+  <div class="pa-section-title">{{ tr("Correction globale") }}</div>
   <div class="card" style="padding:16px 18px;">
     <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;">
       <div style="flex:1;min-width:200px;">
-        <div style="font-weight:600;font-size:13px;margin-bottom:4px;">Préparer plusieurs corrections</div>
-        <div class="muted small">Prépare les fichiers traitables du dernier bilan dans <strong>une proposition GitHub à relire</strong>, selon les limites de votre forfait.</div>
-        <p class="muted small">Les propositions préparées ici attendent votre relecture et votre fusion sur GitHub.</p>
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px;">{{ tr("Préparer plusieurs corrections") }}</div>
+        <div class="muted small">{{ tr_html("Prépare les fichiers traitables du dernier bilan dans <strong>une proposition GitHub à relire</strong>, selon les limites de votre forfait.") }}</div>
+        <p class="muted small">{{ tr("Les propositions préparées ici attendent votre relecture et votre fusion sur GitHub.") }}</p>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">Préparer un brouillon GitHub</button>
+        <button type="button" class="btn primary" data-bulk-fix style="white-space:nowrap;">{{ tr("Préparer un brouillon GitHub") }}</button>
         <span id="bulk-fix-err" style="display:none;font-size:11px;color:var(--err);max-width:220px;text-align:right;"></span>
       </div>
     </div>
@@ -122,9 +122,9 @@
 
 {% if total == 0 %}
 <div class="card" style="text-align:center;padding:32px;">
-  <p class="muted">Aucune correction enregistrée pour ce projet.</p>
-  <p class="muted small" style="margin-top:6px;">Choisissez un problème à préparer, puis relisez la proposition avant de poursuivre.</p>
-  <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">Voir les anomalies</a>
+  <p class="muted">{{ tr("Aucune correction enregistrée pour ce projet.") }}</p>
+  <p class="muted small" style="margin-top:6px;">{{ tr("Choisissez un problème à préparer, puis relisez la proposition avant de poursuivre.") }}</p>
+  <a class="btn primary" href="/projects/{{ slug }}/issues" style="margin-top:14px;display:inline-block;">{{ tr("Voir les anomalies") }}</a>
 </div>
 {% else %}
 
@@ -132,23 +132,23 @@
 {% if tasks_by_status[col] %}
 <div class="pa-section">
   <div class="pa-section-title">
-    {{ col_label }}
+    {{ tr(col_label) }}
     <span class="badge {{ {'todo':'notice','in_progress':'warning','done':'ok','ignored':''}[col] }}" style="font-size:10px;">{{ tasks_by_status[col]|length }}</span>
   </div>
   {% for task in tasks_by_status[col] %}
   <div class="pa-task-row" style="border-left:3px solid {{ sev_color.get(task.severity, 'var(--border)') }};">
     <div>
-      <span class="badge {{ task.severity }}" style="font-size:10px;">{{ sev_lbl.get(task.severity, task.severity) }}</span>
+      <span class="badge {{ task.severity }}" style="font-size:10px;">{{ tr(sev_lbl.get(task.severity, task.severity)) }}</span>
     </div>
     <div>
       <div class="pa-task-label">
-        <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}" style="color:var(--text);">{{ task.issue_label }}</a>
+        <a href="/projects/{{ slug }}/issues/{{ task.issue_key }}{% if task.crawl_ts %}?crawl={{ task.crawl_ts }}{% endif %}" style="color:var(--text);">{{ tr(task.issue_label) }}</a>
       </div>
-      {% if task.verified %}<span class="badge ok">Vérifié par analyse</span>{% elif task.status == 'done' %}<span class="badge warning">Résultat à vérifier</span>{% endif %}
+      {% if task.verified %}<span class="badge ok">{{ tr("Vérifié par analyse") }}</span>{% elif task.status == 'done' %}<span class="badge warning">{{ tr("Résultat à vérifier") }}</span>{% endif %}
       <div class="pa-task-url" title="{{ task.url or '' }}">{{ task.url or '—' }}</div>
       {% if task.pr and task.pr.pr_url %}
       <a href="{{ task.pr.pr_url }}" target="_blank" rel="noreferrer" class="pa-pr-link">
-        ⎇ {% if task.pr.branch %}{{ task.pr.branch }}{% endif %}{% if task.pr.pr_number %} · PR #{{ task.pr.pr_number }}{% endif %}{% if task.pr.commit_sha %} · {{ task.pr.commit_sha }}{% endif %}{% if task.pr.get('merged') %} · mergé ✓{% endif %} ↗
+        ⎇ {% if task.pr.branch %}{{ task.pr.branch }}{% endif %}{% if task.pr.pr_number %} · PR #{{ task.pr.pr_number }}{% endif %}{% if task.pr.commit_sha %} · {{ task.pr.commit_sha }}{% endif %}{% if task.pr.get('merged') %} · {{ tr("mergé") }} ✓{% endif %} ↗
       </a>
       {% endif %}
     </div>
@@ -157,9 +157,9 @@
         <button type="button" class="btn small" style="font-size:10px;"
           data-single-fix data-issue="{{ task.issue_key }}"
           data-url="{{ task.url or '' }}"
-          data-crawl="{{ task.crawl_ts or '' }}">Préparer</button>
+          data-crawl="{{ task.crawl_ts or '' }}">{{ tr("Préparer") }}</button>
       {% endif %}
-      <a class="btn small" style="font-size:10px;" href="/projects/{{ slug }}/corrections">Suivi des corrections</a>
+      <a class="btn small" style="font-size:10px;" href="/projects/{{ slug }}/corrections">{{ tr("Suivi des corrections") }}</a>
     </div>
   </div>
   {% endfor %}

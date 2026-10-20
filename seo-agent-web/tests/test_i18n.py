@@ -368,3 +368,28 @@ def test_next_automatic_page_date_in_english() -> None:
         i18n._current_lang_var.reset(token)
     assert english == "Monday, October 5 at 09:00 (London)"
     assert app_module._dire_creneau(creneau, auto, maintenant=0) == "lundi 5 octobre à 09:00 (Londres)"
+
+
+def test_backlinks_outreach_and_automation_in_english(lab, tmp_path) -> None:
+    owner = user(lab["db"], admin=True)  # l'acces Solo+ sans passer par la facturation
+    project(lab["db"], owner, slug="atelier")
+    url = "https://atelier.example/"
+    report_dir = tmp_path / "runs" / str(owner.id) / "atelier" / "20261018-120000" / "audit"
+    report_dir.mkdir(parents=True)
+    (report_dir / "report.json").write_text(json.dumps({
+        "meta": {"base_url": url},
+        "pages": [{"url": url, "status_code": 200, "content_type": "text/html", "indexable": True}],
+        "issues": {},
+    }))
+    browser = session_client(owner)
+
+    backlinks = browser.get("/projects/atelier/backlinks", params={"lang": "en", "err": "Fichier vide"}).text
+    assert "Links to your site" in backlinks and "Empty file" in backlinks
+    assert "Liens vers votre site" not in backlinks
+    outreach = browser.get("/projects/atelier/backlinks/opportunities").text
+    assert "Replies to review and post" in outreach and "Turn on automatic search" in outreach
+    assert '"Generate AI reply"' in outreach  # texte du script
+    assert "Réponses à relire et à envoyer" not in outreach
+    automation = browser.get("/projects/atelier/automation").text
+    assert "No fix recorded for this project." in automation
+    assert "Aucune correction enregistrée" not in automation

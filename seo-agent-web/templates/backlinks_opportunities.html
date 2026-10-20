@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Opportunités Backlinks - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Opportunités Backlinks") }} - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="/static/visibility-journey.css?v=1" />
@@ -157,14 +157,14 @@
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <a href="/projects/{{ project.slug }}/backlinks">Liens vers mon site</a>
+    <a href="/projects/{{ project.slug }}/backlinks">{{ tr("Liens vers mon site") }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Faire connaître mon site</span>
+    <span class="crumb-current">{{ tr("Faire connaître mon site") }}</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -174,44 +174,44 @@
 {% if not has_access %}
   <section class="card">
     <div class="page-header">
-      <h1>Faire connaître mon site</h1>
-      <p class="muted">Repérez des discussions pertinentes, préparez une réponse à relire, puis envoyez-la vous-même.</p>
+      <h1>{{ tr("Faire connaître mon site") }}</h1>
+      <p class="muted">{{ tr("Repérez des discussions pertinentes, préparez une réponse à relire, puis envoyez-la vous-même.") }}</p>
     </div>
     <div class="alert notice" style="margin-top:16px;">
       <span class="badge notice">Solo+</span>
-      <p class="muted small" style="margin:6px 0 12px;">Fonctionnalité réservée aux plans Solo, Pro et Business. Plan actuel : <strong>{{ plan_key | title }}</strong>.</p>
-      <a href="{{ billing_url or '/billing' }}" class="btn primary">Voir les plans</a>
+      <p class="muted small" style="margin:6px 0 12px;">{{ tr_html("Fonctionnalité réservée aux plans Solo, Pro et Business. Plan actuel : <strong>{plan}</strong>.", plan=plan_key | title) }}</p>
+      <a href="{{ billing_url or '/billing' }}" class="btn primary">{{ tr("Voir les plans") }}</a>
     </div>
   </section>
 {% else %}
 
 <div class="page-header">
-  <h1>Faire connaître mon site</h1>
-  <p class="muted">{{ project.site_name }} · Reddit et Google · des réponses à préparer, relire et envoyer vous-même</p>
+  <h1>{{ tr("Faire connaître mon site") }}</h1>
+  <p class="muted">{{ project.site_name }} · {{ tr("Reddit et Google · des réponses à préparer, relire et envoyer vous-même") }}</p>
 </div>
 
-{% if msg %}<div class="alert ok" style="margin-bottom:12px;"><span class="badge ok">ok</span> <span class="muted small">{{ msg }}</span></div>{% endif %}
-{% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">erreur</span> <span class="muted small">{{ err }}</span></div>{% endif %}
+{% if msg %}<div class="alert ok" style="margin-bottom:12px;"><span class="badge ok">{{ tr("ok") }}</span> <span class="muted small">{{ tr(msg) }}</span></div>{% endif %}
+{% if err %}<div class="alert error" style="margin-bottom:12px;"><span class="badge error">{{ tr("erreur") }}</span> <span class="muted small">{{ tr(err) }}</span></div>{% endif %}
 
 <div class="opp-page">
-<nav class="visibility-path" aria-label="Étapes pour faire connaître votre site"><a href="#outreach-search">1. Chercher une discussion</a><a href="#outreach-queue">2. Relire une réponse</a><a href="#outreach-saved">3. Suivre mes envois</a></nav>
-<p class="muted small">Une recherche utilise une unité du quota de recherches ; un brouillon utilise une unité du quota de réponses IA. Les scores aident à trier les pistes et ne garantissent pas l’obtention d’un lien.</p>
+<nav class="visibility-path" aria-label="{{ tr("Étapes pour faire connaître votre site") }}"><a href="#outreach-search">1. {{ tr("Chercher une discussion") }}</a><a href="#outreach-queue">2. {{ tr("Relire une réponse") }}</a><a href="#outreach-saved">3. {{ tr("Suivre mes envois") }}</a></nav>
+<p class="muted small">{{ tr("Une recherche utilise une unité du quota de recherches ; un brouillon utilise une unité du quota de réponses IA. Les scores aident à trier les pistes et ne garantissent pas l’obtention d’un lien.") }}</p>
 
 {# ── File d'attente ── #}
 {% if queue_items %}
 <section class="card" id="outreach-queue">
   <div class="card-title-row" style="margin-bottom:14px;">
     <div>
-      <h2>Réponses à relire et à envoyer</h2>
-      <p class="muted small" style="margin-top:2px;">Relisez le brouillon, puis copiez-le et ouvrez la discussion. Vous envoyez la réponse sur le site concerné.</p>
+      <h2>{{ tr("Réponses à relire et à envoyer") }}</h2>
+      <p class="muted small" style="margin-top:2px;">{{ tr("Relisez le brouillon, puis copiez-le et ouvrez la discussion. Vous envoyez la réponse sur le site concerné.") }}</p>
     </div>
-    <span class="badge notice" style="font-size:11px;">{{ queue_items|length }} en attente</span>
+    <span class="badge notice" style="font-size:11px;">{{ tr("{n} en attente", n=queue_items|length) }}</span>
   </div>
 
   {% for qopp in queue_items %}
   <div class="queue-card {{ qopp.queue_status }}" id="qcard-{{ qopp.id }}">
     <div class="queue-card-header">
-      <span class="queue-status-badge {{ qopp.queue_status }}">{{ 'Approuvé' if qopp.queue_status == 'approved' else 'En attente' }}</span>
+      <span class="queue-status-badge {{ qopp.queue_status }}">{{ tr('Approuvé') if qopp.queue_status == 'approved' else tr('En attente') }}</span>
       <span class="res-source-badge {{ qopp.source }}">{{ qopp.source|upper }}</span>
       <div style="flex:1;min-width:0;">
         <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="queue-card-title">{{ qopp.title[:90] }}{% if qopp.title|length > 90 %}…{% endif %}</a>
@@ -226,9 +226,9 @@
       <div class="outreach-actions" style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;">
         {% if qopp.queue_status == 'pending' %}
           <button type="button" class="btn small" style="font-size:11px;background:rgba(var(--ok-rgb),.15);color:var(--ok-2);border-color:rgba(var(--ok-rgb),.3);"
-            onclick="queueAction('{{ qopp.id }}','approve')">J’ai relu ce texte</button>
+            onclick="queueAction('{{ qopp.id }}','approve')">{{ tr("J’ai relu ce texte") }}</button>
           <button type="button" class="btn small" style="font-size:11px;"
-            onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
+            onclick="queueAction('{{ qopp.id }}','reject')">✗ {{ tr("Rejeter") }}</button>
         {% else %}
           {% if qopp.reply %}
             <button type="button" class="btn small primary" style="font-size:11px;"
@@ -236,20 +236,20 @@
               data-url="{{ qopp.url }}"
               data-reply="{{ qopp.reply | e }}"
               data-opp-id="{{ qopp.id }}"
-              onclick="queueReply(this)">Copier et ouvrir</button>
+              onclick="queueReply(this)">{{ tr("Copier et ouvrir") }}</button>
           {% else %}
-            <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="btn small" style="font-size:11px;">Ouvrir ↗</a>
+            <a href="{{ qopp.url }}" target="_blank" rel="noreferrer" class="btn small" style="font-size:11px;">{{ tr("Ouvrir") }} ↗</a>
           {% endif %}
-          <button type="button" class="btn small" data-mark-sent="{{ qopp.id }}" onclick="queueMarkSent(this)">J’ai envoyé la réponse</button>
+          <button type="button" class="btn small" data-mark-sent="{{ qopp.id }}" onclick="queueMarkSent(this)">{{ tr("J’ai envoyé la réponse") }}</button>
           <button type="button" class="btn small" style="font-size:11px;"
-            onclick="queueAction('{{ qopp.id }}','reject')">✗ Rejeter</button>
+            onclick="queueAction('{{ qopp.id }}','reject')">✗ {{ tr("Rejeter") }}</button>
         {% endif %}
       </div>
     </div>
     {% if qopp.reply %}
     <div class="queue-card-body">
       <details>
-        <summary class="reply-toggle">Relire le brouillon IA</summary>
+        <summary class="reply-toggle">{{ tr("Relire le brouillon IA") }}</summary>
         <pre class="opp-reply-pre" style="margin-top:8px;">{{ qopp.reply }}</pre>
       </details>
     </div>
@@ -258,37 +258,37 @@
   </div>
   {% endfor %}
 </section>
-{% else %}<section class="card" id="outreach-queue"><h2>Réponses à relire et à envoyer</h2><p class="muted">Aucun brouillon en attente. Recherchez une discussion pertinente pour préparer une première réponse.</p></section>{% endif %}
+{% else %}<section class="card" id="outreach-queue"><h2>{{ tr("Réponses à relire et à envoyer") }}</h2><p class="muted">{{ tr("Aucun brouillon en attente. Recherchez une discussion pertinente pour préparer une première réponse.") }}</p></section>{% endif %}
 
 {# ── Search ── #}
 <section class="card" id="outreach-search">
   <div class="card-title-row" style="margin-bottom:14px;">
     <div>
-      <h2>Rechercher des opportunités</h2>
-      <p class="muted small" style="margin-top:2px;">Reddit &amp; Google via SerpAPI · Réponses générées par IA</p>
+      <h2>{{ tr("Rechercher des opportunités") }}</h2>
+      <p class="muted small" style="margin-top:2px;">{{ tr("Reddit & Google via SerpAPI · Réponses générées par IA") }}</p>
     </div>
     {# Quotas #}
     <div class="quota-row">
       {% if search_remaining is not none %}
       <div class="quota-item">
-        <span>{{ search_remaining }} recherches restantes ce mois-ci</span>
+        <span>{{ tr("{n} recherches restantes ce mois-ci", n=search_remaining) }}</span>
       </div>
       {% endif %}
       {% if reply_remaining is not none %}
       <div class="quota-item">
-        <span>{{ reply_remaining }} brouillons restants ce mois-ci</span>
+        <span>{{ tr("{n} brouillons restants ce mois-ci", n=reply_remaining) }}</span>
       </div>
       {% endif %}
     </div>
   </div>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
-    <label class="sr-only" for="opp-query">Discussion ou sujet à rechercher</label><input id="opp-query" class="input" type="text" placeholder="Ex: meilleur outil SEO gratuit…" style="flex:1;min-width:200px;" />
+    <label class="sr-only" for="opp-query">{{ tr("Discussion ou sujet à rechercher") }}</label><input id="opp-query" class="input" type="text" placeholder="{{ tr("Ex: meilleur outil SEO gratuit…") }}" style="flex:1;min-width:200px;" />
     <div class="src-toggle">
       <button class="src-btn active" id="btn-reddit" type="button" data-source="reddit">Reddit</button>
       <button class="src-btn" id="btn-google" type="button" data-source="google">Google</button>
     </div>
-    <button class="btn primary" id="btn-search" type="button">Rechercher</button>
+    <button class="btn primary" id="btn-search" type="button">{{ tr("Rechercher") }}</button>
   </div>
 
   <div id="search-status" class="muted small" style="min-height:18px;"></div>
@@ -298,28 +298,28 @@
 {# ── Saved opportunities ── #}
 <section class="card" id="outreach-saved">
   <div class="card-title-row" style="margin-bottom:14px;">
-    <h2>Mes discussions et mes envois</h2>
-    <span class="muted small">{{ total }} au total</span>
+    <h2>{{ tr("Mes discussions et mes envois") }}</h2>
+    <span class="muted small">{{ tr("{n} au total", n=total) }}</span>
   </div>
 
   <form method="get" class="opp-filters">
-    <label class="sr-only" for="outreach-filter">Rechercher dans les discussions enregistrées</label><input id="outreach-filter" class="input" type="text" name="q" value="{{ q }}" placeholder="Rechercher dans les titres…" style="flex:1;min-width:160px;" />
-    <label class="sr-only" for="outreach-status">Statut du suivi</label><select id="outreach-status" class="opp-filter-select" name="status">
-      <option value="">Tous les statuts</option>
-      <option value="new"       {% if status_filter=='new'       %}selected{% endif %}>Nouveau</option>
-      <option value="contacted" {% if status_filter=='contacted' %}selected{% endif %}>Contacté</option>
-      <option value="won"       {% if status_filter=='won'       %}selected{% endif %}>Obtenu</option>
-      <option value="lost"      {% if status_filter=='lost'      %}selected{% endif %}>Perdu</option>
+    <label class="sr-only" for="outreach-filter">{{ tr("Rechercher dans les discussions enregistrées") }}</label><input id="outreach-filter" class="input" type="text" name="q" value="{{ q }}" placeholder="{{ tr("Rechercher dans les titres…") }}" style="flex:1;min-width:160px;" />
+    <label class="sr-only" for="outreach-status">{{ tr("Statut du suivi") }}</label><select id="outreach-status" class="opp-filter-select" name="status">
+      <option value="">{{ tr("Tous les statuts") }}</option>
+      <option value="new"       {% if status_filter=='new'       %}selected{% endif %}>{{ tr("Nouveau") }}</option>
+      <option value="contacted" {% if status_filter=='contacted' %}selected{% endif %}>{{ tr("Contacté") }}</option>
+      <option value="won"       {% if status_filter=='won'       %}selected{% endif %}>{{ tr("Obtenu") }}</option>
+      <option value="lost"      {% if status_filter=='lost'      %}selected{% endif %}>{{ tr("Perdu") }}</option>
     </select>
-    <button class="btn" type="submit">Filtrer</button>
+    <button class="btn" type="submit">{{ tr("Filtrer") }}</button>
   </form>
 
   {% if not opportunities %}
   <div class="opp-empty">
     {% if q or status_filter %}
-      <p>Aucun résultat pour ces filtres.</p>
+      <p>{{ tr("Aucun résultat pour ces filtres.") }}</p>
     {% else %}
-      <p>Aucune piste sauvegardée.<br>Utilise le panneau de recherche pour en trouver.</p>
+      <p>{{ tr("Aucune piste sauvegardée.") }}<br>{{ tr("Utilise le panneau de recherche pour en trouver.") }}</p>
     {% endif %}
   </div>
   {% else %}
@@ -340,28 +340,28 @@
           <span class="score-label" style="color:{{ sc_col }};">{{ sc }}</span>
         </div>
         {% if opp.queue_status == 'posted' %}
-        <span style="font-size:10px;color:var(--ok-2);font-weight:700;">Envoi enregistré · lien à vérifier{% if opp.posted_at %} le {{ opp.posted_at.strftime('%d/%m %H:%M') }}{% endif %}</span>
+        <span style="font-size:10px;color:var(--ok-2);font-weight:700;">{{ tr("Envoi enregistré · lien à vérifier") }}{% if opp.posted_at %} {{ tr("le {date}", date=opp.posted_at.strftime('%d/%m %H:%M')) }}{% endif %}</span>
         {% endif %}
       </div>
       <div class="outreach-actions" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
-        <a href="{{ opp.url }}" target="_blank" rel="noreferrer" class="btn small" style="font-size:11px;">Ouvrir ↗</a>
+        <a href="{{ opp.url }}" target="_blank" rel="noreferrer" class="btn small" style="font-size:11px;">{{ tr("Ouvrir") }} ↗</a>
         <form method="post" action="/projects/{{ slug }}/backlinks/opportunities/{{ opp.id }}/delete"
-              onsubmit="return confirm('Supprimer ?');" style="margin:0;">
+              onsubmit="return confirm({{ tr("Supprimer ?")|tojson|forceescape }});" style="margin:0;">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-          <button class="btn small danger" type="submit" style="font-size:11px;">Supprimer</button>
+          <button class="btn small danger" type="submit" style="font-size:11px;">{{ tr("Supprimer") }}</button>
         </form>
       </div>
     </div>
     <div class="opp-saved-body">
       <div class="status-seg" data-opp-id="{{ opp.id }}" data-current="{{ opp.status }}">
-        {% for st, lbl in [('new','Nouveau'),('contacted','Contacté'),('won','Obtenu ✓'),('lost','Perdu')] %}
+        {% for st, lbl in [('new', tr('Nouveau')),('contacted', tr('Contacté')),('won', tr('Obtenu') ~ ' ✓'),('lost', tr('Perdu'))] %}
         <button type="button" class="status-seg-btn {% if opp.status == st %}active-{{ st }}{% endif %}"
                 data-status="{{ st }}">{{ lbl }}</button>
         {% endfor %}
       </div>
       {% if opp.reply %}
       <details style="margin-top:10px;">
-        <summary class="reply-toggle">Relire la réponse IA</summary>
+        <summary class="reply-toggle">{{ tr("Relire la réponse IA") }}</summary>
         <pre class="opp-reply-pre" style="margin-top:8px;">{{ opp.reply }}</pre>
       </details>
       {% endif %}
@@ -371,9 +371,9 @@
 
   {% if pages_total > 1 %}
   <div class="opp-pagination">
-    {% if page > 1 %}<a class="btn" href="?q={{ q|urlencode }}&status={{ status_filter }}&page={{ page-1 }}">← Précédent</a>{% endif %}
-    <span class="muted small">Page {{ page }} / {{ pages_total }}</span>
-    {% if page < pages_total %}<a class="btn" href="?q={{ q|urlencode }}&status={{ status_filter }}&page={{ page+1 }}">Suivant →</a>{% endif %}
+    {% if page > 1 %}<a class="btn" href="?q={{ q|urlencode }}&status={{ status_filter }}&page={{ page-1 }}">← {{ tr("Précédent") }}</a>{% endif %}
+    <span class="muted small">{{ tr("Page {page} / {pages}", page=page, pages=pages_total) }}</span>
+    {% if page < pages_total %}<a class="btn" href="?q={{ q|urlencode }}&status={{ status_filter }}&page={{ page+1 }}">{{ tr("Suivant") }} →</a>{% endif %}
   </div>
   {% endif %}
   {% endif %}
@@ -383,82 +383,82 @@
 <section class="card">
   <details {% if auto_cfg.enabled %}open{% endif %}>
     <summary style="cursor:pointer;display:flex;align-items:center;gap:10px;list-style:none;user-select:none;">
-      <h2 style="margin:0;">Automatisation</h2>
+      <h2 style="margin:0;">{{ tr("Automatisation") }}</h2>
       {% if auto_cfg.enabled %}
-        <span class="badge ok" style="font-size:10px;">Activée</span>
+        <span class="badge ok" style="font-size:10px;">{{ tr("Activée") }}</span>
       {% else %}
-        <span class="badge" style="font-size:10px;background:var(--border-2);color:var(--muted);">Désactivée</span>
+        <span class="badge" style="font-size:10px;background:var(--border-2);color:var(--muted);">{{ tr("Désactivée") }}</span>
       {% endif %}
       <span class="muted small" style="margin-left:auto;margin-right:4px;">▼</span>
     </summary>
 
     <div style="margin-top:16px;">
-    <p class="muted small" style="margin:0 0 16px;">Noyaru peut rechercher des discussions et préparer des brouillons dans vos quotas. Vous relisez chaque réponse et l’envoyez vous-même. Copier ou ouvrir une discussion n’enregistre pas un envoi.</p>
+    <p class="muted small" style="margin:0 0 16px;">{{ tr("Noyaru peut rechercher des discussions et préparer des brouillons dans vos quotas. Vous relisez chaque réponse et l’envoyez vous-même. Copier ou ouvrir une discussion n’enregistre pas un envoi.") }}</p>
 
     {# ── Auto-search ── #}
-    <div class="auto-section-title">Recherche automatique</div>
+    <div class="auto-section-title">{{ tr("Recherche automatique") }}</div>
     <div class="auto-settings-grid" style="margin-bottom:16px;">
 
       <div class="auto-field" style="grid-column:1/-1;">
-        <label for="as-keywords">Mots-clés (1 par ligne, max 20)</label>
-        <textarea id="as-keywords" rows="4" placeholder="meilleur outil SEO&#10;alternative à Ahrefs&#10;comment améliorer son référencement">{{ auto_cfg.keywords | join('\n') }}</textarea>
-        <span class="hint">L'agent cherchera ces mots-clés sur Reddit et Google.</span>
+        <label for="as-keywords">{{ tr("Mots-clés (1 par ligne, max 20)") }}</label>
+        <textarea id="as-keywords" rows="4" placeholder="{{ tr("meilleur outil SEO\nalternative à Ahrefs\ncomment améliorer son référencement") }}">{{ auto_cfg.keywords | join('\n') }}</textarea>
+        <span class="hint">{{ tr("L'agent cherchera ces mots-clés sur Reddit et Google.") }}</span>
       </div>
 
       <div class="auto-field">
-        <label for="as-frequency">Fréquence</label>
+        <label for="as-frequency">{{ tr("Fréquence") }}</label>
         <select id="as-frequency">
-          <option value="daily"  {% if auto_cfg.frequency == 'daily'  %}selected{% endif %}>Quotidienne</option>
-          <option value="weekly" {% if auto_cfg.frequency == 'weekly' %}selected{% endif %}>Hebdomadaire</option>
+          <option value="daily"  {% if auto_cfg.frequency == 'daily'  %}selected{% endif %}>{{ tr("Quotidienne") }}</option>
+          <option value="weekly" {% if auto_cfg.frequency == 'weekly' %}selected{% endif %}>{{ tr("Hebdomadaire") }}</option>
         </select>
       </div>
 
       <div class="auto-field">
-        <label for="as-max-per-run">Pistes maximum par recherche</label>
+        <label for="as-max-per-run">{{ tr("Pistes maximum par recherche") }}</label>
         <input type="number" id="as-max-per-run" min="1" max="20" value="{{ auto_cfg.max_per_run }}" />
       </div>
 
       <div style="grid-column:1/-1;">
         <div class="toggle-row">
           <label class="toggle-switch">
-            <input type="checkbox" id="as-src-reddit" aria-label="Rechercher sur Reddit" {% if 'reddit' in auto_cfg.sources %}checked{% endif %} />
+            <input type="checkbox" id="as-src-reddit" aria-label="{{ tr("Rechercher sur Reddit") }}" {% if 'reddit' in auto_cfg.sources %}checked{% endif %} />
             <span class="toggle-slider"></span>
           </label>
           <span class="toggle-label">Reddit</span>
           <label class="toggle-switch" style="margin-left:16px;">
-            <input type="checkbox" id="as-src-google" aria-label="Rechercher sur Google" {% if 'google' in auto_cfg.sources %}checked{% endif %} />
+            <input type="checkbox" id="as-src-google" aria-label="{{ tr("Rechercher sur Google") }}" {% if 'google' in auto_cfg.sources %}checked{% endif %} />
             <span class="toggle-slider"></span>
           </label>
           <span class="toggle-label">Google</span>
         </div>
         <div class="toggle-row">
           <label class="toggle-switch">
-            <input type="checkbox" id="as-auto-draft" aria-label="Préparer automatiquement des brouillons IA" {% if auto_cfg.auto_draft %}checked{% endif %} />
+            <input type="checkbox" id="as-auto-draft" aria-label="{{ tr("Préparer automatiquement des brouillons IA") }}" {% if auto_cfg.auto_draft %}checked{% endif %} />
             <span class="toggle-slider"></span>
           </label>
-          <span class="toggle-label">Générer un brouillon IA automatiquement</span>
-          <span class="toggle-hint" style="margin-left:8px;">(consomme des unités du quota de réponses)</span>
+          <span class="toggle-label">{{ tr("Générer un brouillon IA automatiquement") }}</span>
+          <span class="toggle-hint" style="margin-left:8px;">{{ tr("(consomme des unités du quota de réponses)") }}</span>
         </div>
       </div>
 
       <div style="grid-column:1/-1;">
         <div class="toggle-row">
           <label class="toggle-switch">
-            <input type="checkbox" id="as-enabled" aria-label="Activer la recherche automatique" {% if auto_cfg.enabled %}checked{% endif %} />
+            <input type="checkbox" id="as-enabled" aria-label="{{ tr("Activer la recherche automatique") }}" {% if auto_cfg.enabled %}checked{% endif %} />
             <span class="toggle-slider"></span>
           </label>
-          <span class="toggle-label" style="font-weight:700;">Activer la recherche automatique</span>
+          <span class="toggle-label" style="font-weight:700;">{{ tr("Activer la recherche automatique") }}</span>
         </div>
       </div>
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-      <button type="button" class="btn primary" id="btn-save-auto-settings">Enregistrer les paramètres</button>
+      <button type="button" class="btn primary" id="btn-save-auto-settings">{{ tr("Enregistrer les paramètres") }}</button>
       <span id="auto-settings-status" class="muted small" style="align-self:center;"></span>
     </div>
 
     {% if auto_cfg.last_run %}
-    <p class="muted small" style="margin-top:14px;">Dernière exécution : {{ auto_cfg.last_run[:16] | replace('T',' ') }} UTC</p>
+    <p class="muted small" style="margin-top:14px;">{{ tr("Dernière exécution : {date} UTC", date=auto_cfg.last_run[:16] | replace('T',' ')) }}</p>
     {% endif %}
 
     </div>{# end details body #}
@@ -472,6 +472,8 @@
   var csrfToken = (document.querySelector('meta[name="csrf-token"]')||{}).content||'';
   var slug = {{ slug | tojson }};
   var activeSource = 'reddit';
+  function fill(text, values){ return String(text).replace(/\{(\w+)\}/g, function(m, k){ return k in values ? String(values[k]) : m; }); }
+  function failed(error){ return fill({{ tr("Erreur : {error}")|tojson }}, {error: error || {{ tr("Erreur")|tojson }}}); }
 
   /* ── Source toggle ── */
   document.querySelectorAll('.src-btn').forEach(function(btn){
@@ -488,7 +490,7 @@
 
   function renderResults(items){
     var el = document.getElementById('search-results');
-    if(!items.length){ el.innerHTML='<div class="opp-empty"><p>Aucun résultat trouvé.</p></div>'; return; }
+    if(!items.length){ el.innerHTML='<div class="opp-empty"><p>'+escHtml({{ tr("Aucun résultat trouvé.")|tojson }})+'</p></div>'; return; }
     el.innerHTML = items.map(function(item, i){
       var sc = item.opportunity_score;
       var col = scoreColor(sc);
@@ -501,18 +503,18 @@
         +'<p class="res-snippet">'+escHtml(item.snippet||'')+'</p>'
         +'<div class="score-bar-wrap">'
         +'<div class="score-bar-track"><div class="score-bar-fill" style="width:'+sc+'%;background:'+col+';"></div></div>'
-        +'<span class="score-label" style="color:'+col+';">Score '+sc+'</span>'
+        +'<span class="score-label" style="color:'+col+';">'+escHtml(fill({{ tr("Score {n}")|tojson }}, {n: sc}))+'</span>'
         +'</div>'
         +'</div></div>'
-        +'<label for="target-'+i+'" class="muted small">Page de votre site à faire connaître</label><input class="res-target-input" type="text" id="target-'+i+'" placeholder="URL de votre page à faire connaître (ex: https://monsite.com/article)" />'
+        +'<label for="target-'+i+'" class="muted small">'+escHtml({{ tr("Page de votre site à faire connaître")|tojson }})+'</label><input class="res-target-input" type="text" id="target-'+i+'" placeholder="'+escHtml({{ tr("URL de votre page à faire connaître (ex: https://monsite.com/article)")|tojson }})+'" />'
         +'<div class="res-actions">'
-        +'<button class="btn small primary" type="button" onclick="window._genReply('+i+','+JSON.stringify(item)+')">Générer réponse IA</button>'
-        +'<button class="btn small" type="button" onclick="window.open(\''+escHtml(item.url)+'\',\'_blank\',\'noopener\')">Ouvrir ↗</button>'
-        +'<button class="btn small" id="copy-btn-'+i+'" style="display:none;" onclick="window._copyReply('+i+')">Copier</button>'
-        +'<button class="btn small" type="button" onclick="window._saveOpp('+i+','+JSON.stringify(item)+')">Sauvegarder</button>'
+        +'<button class="btn small primary" type="button" onclick="window._genReply('+i+','+JSON.stringify(item)+')">'+escHtml({{ tr("Générer réponse IA")|tojson }})+'</button>'
+        +'<button class="btn small" type="button" onclick="window.open(\''+escHtml(item.url)+'\',\'_blank\',\'noopener\')">'+escHtml({{ tr("Ouvrir")|tojson }})+' ↗</button>'
+        +'<button class="btn small" id="copy-btn-'+i+'" style="display:none;" onclick="window._copyReply('+i+')">'+escHtml({{ tr("Copier")|tojson }})+'</button>'
+        +'<button class="btn small" type="button" onclick="window._saveOpp('+i+','+JSON.stringify(item)+')">'+escHtml({{ tr("Sauvegarder")|tojson }})+'</button>'
         +'</div>'
         +'<div class="res-reply-status" id="reply-status-'+i+'"></div>'
-        +'<textarea class="res-reply-area" id="reply-'+i+'" aria-label="Brouillon de réponse à relire" placeholder="La réponse IA apparaîtra ici…" style="display:none;"></textarea>'
+        +'<textarea class="res-reply-area" id="reply-'+i+'" aria-label="'+escHtml({{ tr("Brouillon de réponse à relire")|tojson }})+'" placeholder="'+escHtml({{ tr("La réponse IA apparaîtra ici…")|tojson }})+'" style="display:none;"></textarea>'
         +'<div id="save-form-'+i+'"></div>'
         +'</div>';
     }).join('');
@@ -521,24 +523,24 @@
   window._genReply = function(i, item){
     var targetUrl = (document.getElementById('target-'+i)||{}).value||'';
     var statusEl = document.getElementById('reply-status-'+i);
-    statusEl.textContent = 'Génération en cours…';
+    statusEl.textContent = {{ tr("Génération en cours…")|tojson }};
     fetch('/api/projects/'+slug+'/backlinks/generate-reply',{
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
       body: JSON.stringify({platform:item.source, opportunityTitle:item.title, opportunityUrl:item.url, targetArticleUrl:targetUrl})
     }).then(function(r){return r.json();}).then(function(data){
-      if(!data.ok){ statusEl.textContent='Erreur : '+(data.error||'Erreur'); return; }
+      if(!data.ok){ statusEl.textContent=failed(data.error); return; }
       var ta = document.getElementById('reply-'+i);
       ta.value = data.reply||''; ta.style.display='block';
       var cb = document.getElementById('copy-btn-'+i); if(cb) cb.style.display='';
-      statusEl.textContent = '✓ Réponse générée';
-    }).catch(function(e){ statusEl.textContent='Erreur : '+e.message; });
+      statusEl.textContent = '✓ ' + {{ tr("Réponse générée")|tojson }};
+    }).catch(function(e){ statusEl.textContent=failed(e.message); });
   };
 
   window._copyReply = function(i){
     var ta = document.getElementById('reply-'+i); if(!ta) return;
     if(navigator.clipboard) navigator.clipboard.writeText(ta.value).catch(function(){});
     var btn = document.getElementById('copy-btn-'+i);
-    if(btn){ var prev=btn.textContent; btn.textContent='Copié !'; setTimeout(function(){ btn.textContent=prev; },1800); }
+    if(btn){ var prev=btn.textContent; btn.textContent={{ tr("Copié !")|tojson }}; setTimeout(function(){ btn.textContent=prev; },1800); }
   };
 
   window._saveOpp = function(i, item){
@@ -558,21 +560,21 @@
 
   function doSearch(source){
     var q = (document.getElementById('opp-query')||{}).value||'';
-    if(!q.trim()){ alert('Entre une requête de recherche.'); return; }
+    if(!q.trim()){ alert({{ tr("Entre une requête de recherche.")|tojson }}); return; }
     var statusEl = document.getElementById('search-status');
     var resultsEl = document.getElementById('search-results');
-    statusEl.textContent = 'Recherche '+source+' en cours…';
+    statusEl.textContent = fill({{ tr("Recherche {source} en cours…")|tojson }}, {source: source});
     resultsEl.innerHTML = '';
     document.getElementById('btn-search').disabled = true;
     fetch('/api/projects/'+slug+'/backlinks/search',{
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
       body: JSON.stringify({query:q, source:source})
     }).then(function(r){return r.json();}).then(function(data){
-      if(!data.ok){ statusEl.textContent='Erreur : '+(data.error||'Erreur'); return; }
+      if(!data.ok){ statusEl.textContent=failed(data.error); return; }
       var items = data.data||[];
-      statusEl.textContent = items.length+' résultat'+(items.length!==1?'s':'')+' pour "'+escHtml(q)+'"';
+      statusEl.textContent = fill(items.length!==1 ? {{ tr("{n} résultats pour « {q} »")|tojson }} : {{ tr("{n} résultat pour « {q} »")|tojson }}, {n: items.length, q: q});
       renderResults(items);
-    }).catch(function(e){ statusEl.textContent='Erreur réseau : '+e.message; })
+    }).catch(function(e){ statusEl.textContent=fill({{ tr("Erreur réseau : {error}")|tojson }}, {error: e.message}); })
      .finally(function(){ document.getElementById('btn-search').disabled=false; });
   }
 
@@ -613,11 +615,11 @@
       if(d.ok){ window.location.reload(); }
       else {
         var msgEl = document.getElementById('qcard-msg-'+oppId);
-        if(msgEl){ msgEl.textContent='Erreur : '+(d.error||'Erreur'); msgEl.style.display='block'; }
+        if(msgEl){ msgEl.textContent=failed(d.error); msgEl.style.display='block'; }
       }
     }).catch(function(){
       var msgEl = document.getElementById('qcard-msg-'+oppId);
-      if(msgEl){ msgEl.textContent='Erreur réseau'; msgEl.style.display='block'; }
+      if(msgEl){ msgEl.textContent={{ tr("Erreur réseau")|tojson }}; msgEl.style.display='block'; }
     });
   };
 
@@ -629,28 +631,28 @@
   window.queueReply = function(btn) {
     var oppId = btn.dataset.oppId;
     if (btn.dataset.url) window.open(btn.dataset.url, '_blank', 'noopener');
-    queueMessage(oppId, 'Discussion ouverte. Relisez et envoyez votre réponse sur le site concerné, puis revenez déclarer l’envoi.');
+    queueMessage(oppId, {{ tr("Discussion ouverte. Relisez et envoyez votre réponse sur le site concerné, puis revenez déclarer l’envoi.")|tojson }});
     if (navigator.clipboard && btn.dataset.reply) {
       navigator.clipboard.writeText(btn.dataset.reply).then(function () {
-        queueMessage(oppId, 'Texte copié. Relisez-le et envoyez-le dans la discussion, puis revenez déclarer l’envoi.');
+        queueMessage(oppId, {{ tr("Texte copié. Relisez-le et envoyez-le dans la discussion, puis revenez déclarer l’envoi.")|tojson }});
       }).catch(function () {
-        queueMessage(oppId, 'La copie a été refusée. Ouvrez le brouillon ci-dessus et copiez son texte manuellement. Aucun envoi n’a été enregistré.');
+        queueMessage(oppId, {{ tr("La copie a été refusée. Ouvrez le brouillon ci-dessus et copiez son texte manuellement. Aucun envoi n’a été enregistré.")|tojson }});
       });
-    } else queueMessage(oppId, 'La copie est indisponible. Ouvrez le brouillon et copiez-le manuellement. Aucun envoi n’a été enregistré.');
+    } else queueMessage(oppId, {{ tr("La copie est indisponible. Ouvrez le brouillon et copiez-le manuellement. Aucun envoi n’a été enregistré.")|tojson }});
   };
   window.queueMarkSent = function(btn) {
     var oppId = btn.dataset.markSent;
     if (btn.disabled) return;
     btn.disabled = true;
-    queueMessage(oppId, 'Enregistrement de votre déclaration…');
+    queueMessage(oppId, {{ tr("Enregistrement de votre déclaration…")|tojson }});
     fetch('/api/projects/'+slug+'/backlinks/queue/'+oppId+'/mark-sent', {
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken}, body:'{}'
     }).then(function(r){return r.json();}).then(function(d) {
-      if (!d.ok) { btn.disabled = false; queueMessage(oppId, d.error || 'Votre déclaration n’a pas été enregistrée.'); return; }
-      queueMessage(oppId, 'Envoi enregistré. La présence du lien reste à vérifier.');
+      if (!d.ok) { btn.disabled = false; queueMessage(oppId, d.error || {{ tr("Votre déclaration n’a pas été enregistrée.")|tojson }}); return; }
+      queueMessage(oppId, {{ tr("Envoi enregistré. La présence du lien reste à vérifier.")|tojson }});
       window.location.reload();
     }).catch(function() {
-      queueMessage(oppId, 'La confirmation est indisponible. Actualisez cette page pour vérifier si votre déclaration a été enregistrée.');
+      queueMessage(oppId, {{ tr("La confirmation est indisponible. Actualisez cette page pour vérifier si votre déclaration a été enregistrée.")|tojson }});
     });
   };
 
@@ -670,17 +672,17 @@
       auto_draft: document.getElementById('as-auto-draft').checked,
     };
     btnSaveAuto.disabled=true;
-    statusEl.textContent='Enregistrement…';
+    statusEl.textContent={{ tr("Enregistrement…")|tojson }};
     fetch('/api/projects/'+slug+'/backlinks/auto-settings',{
       method:'POST', headers:{'Content-Type':'application/json','x-csrf-token':csrfToken},
       body: JSON.stringify(body)
     }).then(function(r){return r.json();}).then(function(d){
       btnSaveAuto.disabled=false;
-      statusEl.textContent = d.ok ? '✓ Paramètres enregistrés' : 'Erreur : '+(d.error||'Erreur');
+      statusEl.textContent = d.ok ? '✓ ' + {{ tr("Paramètres enregistrés")|tojson }} : failed(d.error);
 
     }).catch(function(){
       btnSaveAuto.disabled=false;
-      statusEl.textContent='Erreur réseau';
+      statusEl.textContent={{ tr("Erreur réseau")|tojson }};
     });
   });
 
