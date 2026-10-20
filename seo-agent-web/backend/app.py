@@ -1467,7 +1467,7 @@ def _effective_bing_connection(*, user_id: str, slug: str = "", db=None) -> dict
                 "token": api_key,
                 "refresh_token": "",
                 "meta": {},
-                "masked": _mask_secret(api_key) if source == "user" else "fourni par la plateforme",
+                "masked": _mask_secret(api_key) if source == "user" else i18n.tr_current("fourni par la plateforme"),
                 "source_label": "mon compte" if source == "user" else ("plateforme" if source == "system" else "non configuré"),
             }
         return {
@@ -1494,7 +1494,7 @@ def _build_user_connection_item(*, user_id: str, key: str, db) -> dict[str, Any]
         "system": "plateforme",
         "none": "non configuré",
     }.get(source, "non configuré")
-    masked = _mask_secret(value) if has_user_value else ("fourni par la plateforme" if source == "system" else "—")
+    masked = _mask_secret(value) if has_user_value else (i18n.tr_current("fourni par la plateforme") if source == "system" else "—")
     return {
         "key": key,
         "label": str(meta.get("label") or key),
@@ -15314,10 +15314,13 @@ def settings_account_preferences_save(
             u.country = co
             u.language = la
             db.commit()
-    return RedirectResponse(
+    response = RedirectResponse(
         url=_path_with_flash("/settings/accounts", msg="Préférences enregistrées.") + "#preferences-card",
         status_code=303,
     )
+    # La langue d'affichage s'applique tout de suite, et sur les prochaines visites.
+    i18n.remember(response, la, secure=_request_is_secure(request))
+    return response
 
 
 # « declined » : un WordPress trop ancien chez un client n'est pas une panne de production.

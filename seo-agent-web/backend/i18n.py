@@ -96,6 +96,8 @@ def request_lang(request: Any) -> str:
         lang = (
             normalize(request.query_params.get("lang"))
             or normalize(request.cookies.get(COOKIE_NAME))
+            # La langue choisie dans « Mon compte » suit le client d'un appareil a l'autre.
+            or normalize(getattr(getattr(state, "user", None), "language", None))
             or _from_accept_language(request.headers.get("accept-language", ""))
             or DEFAULT_LANG
         )
@@ -312,6 +314,16 @@ def _js_catalog(context: Any) -> dict[str, str]:
         catalog = _catalog(lang)
         _js_catalog_cache[lang] = {key: catalog[key] for key in _js_keys() if key in catalog}
     return _js_catalog_cache[lang]
+
+
+def remember(response: Any, lang: Any, *, secure: bool = False) -> None:
+    """Retenir la langue choisie dans « Mon compte » pour ce navigateur, ou l'oublier si le
+    client a choisi une langue que l'interface ne parle pas encore."""
+    code = normalize(lang)
+    if code:
+        response.set_cookie(COOKIE_NAME, code, max_age=_COOKIE_MAX_AGE, httponly=True, samesite="lax", secure=secure)
+    else:
+        response.delete_cookie(COOKIE_NAME)
 
 
 def add_template_globals(env: Any) -> None:

@@ -266,3 +266,45 @@ def test_corrections_tracker_in_english(lab, tmp_path) -> None:
     assert "2 occurrences in the latest analysis." in page
     assert "Anomalies encore détectées" not in page
     assert i18n.translate("Page rédigée : /blog/article", "en") == "Page written: /blog/article"
+
+
+def test_account_settings_in_english(lab) -> None:
+    owner = user(lab["db"])
+    project(lab["db"], owner, slug="atelier")
+    browser = session_client(owner)
+
+    account_page = browser.get("/settings/accounts", params={"lang": "en"}).text
+    assert "Time zone" in account_page and "Danger zone" in account_page
+    assert "Fuseau horaire" not in account_page and "Zone à risque" not in account_page
+    assert "Members of your personal account" in browser.get("/settings/team").text
+    assert "Google and Bing for this site" in browser.get("/projects/atelier/settings/search").text
+    flash = browser.get("/settings/team", params={"err": "Cette personne fait déjà partie de votre compte."}).text
+    assert "This person is already part of your account." in flash
+    assert i18n.translate("Invitation envoyée à client@exemple.fr.", "en") == "Invitation sent to client@exemple.fr."
+
+
+def test_language_chosen_in_my_account_follows_the_customer(lab) -> None:
+    owner = user(lab["db"])
+    browser = session_client(owner)
+    browser.get("/settings/accounts")
+    response = browser.post(
+        "/settings/account/preferences",
+        data={"language": "en", "_csrf": browser.cookies.get(app_module._CSRF_COOKIE_NAME)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert browser.cookies.get(i18n.COOKIE_NAME) == "en"
+    assert "Preferences saved." in browser.get(response.headers["location"]).text
+
+    # Un autre appareil, sans cookie ni langue de navigateur : la preference du compte s'applique.
+    other_device = session_client(owner)
+    assert '<html lang="en">' in other_device.get("/settings/accounts", headers={"accept-language": "fr"}).text
+
+    # Une langue que l'interface ne parle pas encore oublie le choix de l'appareil.
+    response = browser.post(
+        "/settings/account/preferences",
+        data={"language": "de", "_csrf": browser.cookies.get(app_module._CSRF_COOKIE_NAME)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert browser.cookies.get(i18n.COOKIE_NAME) is None

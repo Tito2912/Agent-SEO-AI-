@@ -1,32 +1,32 @@
 {% extends "layout.html" %}
 {% from "_search_connection_badge.html" import connection_actions with context %}
-{% block title %}Google et Bing — {{ project.site_name }}{% endblock %}
+{% block title %}{{ tr("Google et Bing") }} — {{ project.site_name }}{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/search-results.css?v=1" />{% endblock %}
-{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">Google et Bing</span>{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Google et Bing") }}</span>{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>Google et Bing pour ce site</h1>
+  <h1>{{ tr("Google et Bing pour ce site") }}</h1>
   <p class="muted">{{ project.site_name }} · {{ project.base_url }}</p>
-  <p>Reliez le compte qui gère ce site pour comprendre les recherches qui le font apparaître.</p>
-  <a class="btn" href="{{ return_to }}">Revenir aux résultats</a>
+  <p>{{ tr("Reliez le compte qui gère ce site pour comprendre les recherches qui le font apparaître.") }}</p>
+  <a class="btn" href="{{ return_to }}">{{ tr("Revenir aux résultats") }}</a>
 </div>
-{% if request.query_params.get('err') %}<div class="alert error" role="alert">{{ request.query_params.get('err') }}</div>{% elif request.query_params.get('msg') %}<div class="alert ok" role="status">{{ request.query_params.get('msg') }}</div>{% endif %}
+{% if request.query_params.get('err') %}<div class="alert error" role="alert">{{ tr(request.query_params.get('err')) }}</div>{% elif request.query_params.get('msg') %}<div class="alert ok" role="status">{{ tr(request.query_params.get('msg')) }}</div>{% endif %}
 <div class="result-connections">
   {% for source in ['gsc', 'bing'] %}{% set connection = search_connections[source] %}
   <section class="card project-search-connection" id="{{ source }}-connection">
-    <div class="card-title-row"><h2>{{ connection.label }}</h2><span class="badge {{ 'ok' if connection.connected else 'notice' }}">{{ 'Compte autorisé' if connection.connected else 'À connecter' }}</span></div>
+    <div class="card-title-row"><h2>{{ connection.label }}</h2><span class="badge {{ 'ok' if connection.connected else 'notice' }}">{{ tr('Compte autorisé' if connection.connected else 'À connecter') }}</span></div>
     {{ connection_actions(connection) }}
     {% if connection.connected %}
-    <p class="muted small">L’autorisation est enregistrée. Les résultats confirment ensuite si ce compte a accès aux données de ce site.</p>
-    <a class="btn primary" href="/projects/{{ slug }}/performance?source={{ source }}">Consulter les données {{ connection.label }}</a>
+    <p class="muted small">{{ tr("L’autorisation est enregistrée. Les résultats confirment ensuite si ce compte a accès aux données de ce site.") }}</p>
+    <a class="btn primary" href="/projects/{{ slug }}/performance?source={{ source }}">{{ tr("Consulter les données {name}", name=connection.label) }}</a>
     {% endif %}
   </section>
   {% endfor %}
 </div>
 <section class="card">
-  <h2>Une connexion limitée à ce projet</h2>
-  <p>Google et Bing fournissent les statistiques de recherche. Cette connexion ne modifie pas le contenu de votre site. Les autres projets conservent leurs propres réglages.</p>
-  <details><summary>Propriété du site et réglages avancés</summary><p>Si le compte est autorisé mais qu’aucune donnée n’est disponible, vérifiez la propriété Google ou l’adresse Bing dans les <a href="/projects/{{ slug }}/settings/crawl">réglages de l’analyse</a>.</p><p><a href="/docs/connecter-search-console">Aide pour connecter Google Search Console</a></p></details>
-  <p class="muted small">Les préférences personnelles et les connexions communes GitHub/Netlify restent dans <a href="/settings/accounts#mon-compte">Mon compte</a>.</p>
+  <h2>{{ tr("Une connexion limitée à ce projet") }}</h2>
+  <p>{{ tr("Google et Bing fournissent les statistiques de recherche. Cette connexion ne modifie pas le contenu de votre site. Les autres projets conservent leurs propres réglages.") }}</p>
+  <details><summary>{{ tr("Propriété du site et réglages avancés") }}</summary><p>{{ tr_html('Si le compte est autorisé mais qu’aucune donnée n’est disponible, vérifiez la propriété Google ou l’adresse Bing dans les <a href="{url}">réglages de l’analyse</a>.', url='/projects/' ~ slug ~ '/settings/crawl') }}</p><p><a href="/docs/connecter-search-console">{{ tr("Aide pour connecter Google Search Console") }}</a></p></details>
+  <p class="muted small">{{ tr_html('Les préférences personnelles et les connexions communes GitHub/Netlify restent dans <a href="/settings/accounts#mon-compte">Mon compte</a>.') }}</p>
 </section>
 {% endblock %}
