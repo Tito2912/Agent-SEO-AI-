@@ -1,11 +1,11 @@
 {% extends "public_layout.html" %}
 
-{% block title %}Documentation - {{ app_name }}{% endblock %}
+{% block title %}{{ tr("Documentation") }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
 <meta name="description" content="{{ meta_description }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
-<meta property="og:title" content="Documentation {{ app_name }}" />
+<meta property="og:title" content="{{ tr("Documentation {app_name}", app_name=app_name) }}" />
 <meta property="og:description" content="{{ meta_description }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
@@ -106,26 +106,26 @@
 
 {% block content %}
   <header class="docs-hero">
-    <div class="docs-eyebrow">Documentation</div>
-    <h1>Comment {{ app_name }} fonctionne, écran par écran</h1>
+    <div class="docs-eyebrow">{{ tr("Documentation") }}</div>
+    <h1>{{ tr("Comment {app_name} fonctionne, écran par écran", app_name=app_name) }}</h1>
     <p>{{ meta_description }}</p>
   </header>
 
   <div class="docs-start">
     <section class="card docs-start-card">
       <div class="step-num">1</div>
-      <h2><a href="{{ campaign_link(request, '/docs/ajouter-un-projet') }}">Ajouter votre site</a></h2>
-      <p>Une URL de départ suffit. Un projet par domaine.</p>
+      <h2><a href="{{ campaign_link(request, doc_path('ajouter-un-projet')) }}">{{ tr("Ajouter votre site") }}</a></h2>
+      <p>{{ tr("Une URL de départ suffit. Un projet par domaine.") }}</p>
     </section>
     <section class="card docs-start-card">
       <div class="step-num">2</div>
-      <h2><a href="{{ campaign_link(request, '/docs/lancer-un-crawl') }}">Lancer un crawl</a></h2>
-      <p>Les réglages par défaut conviennent au premier passage.</p>
+      <h2><a href="{{ campaign_link(request, doc_path('lancer-un-crawl')) }}">{{ tr("Lancer un crawl") }}</a></h2>
+      <p>{{ tr("Les réglages par défaut conviennent au premier passage.") }}</p>
     </section>
     <section class="card docs-start-card">
       <div class="step-num">3</div>
-      <h2><a href="{{ campaign_link(request, '/docs/corrections-automatiques') }}">Corriger en pull request</a></h2>
-      <p>Le correctif arrive dans votre dépôt. Vous relisez, vous fusionnez.</p>
+      <h2><a href="{{ campaign_link(request, doc_path('corrections-automatiques')) }}">{{ tr("Corriger en pull request") }}</a></h2>
+      <p>{{ tr("Le correctif arrive dans votre dépôt. Vous relisez, vous fusionnez.") }}</p>
     </section>
   </div>
 
@@ -133,7 +133,7 @@
     <section class="docs-section">
       <div class="docs-section-head">
         <h2>{{ section.name }}</h2>
-        <span>{{ section.pages | length }} page{{ 's' if section.pages | length > 1 }}</span>
+        <span>{{ tr('{n} pages', n=section.pages | length) if section.pages | length > 1 else tr('{n} page', n=section.pages | length) }}</span>
       </div>
       <div class="docs-grid">
         {% for item in section.pages %}
@@ -148,12 +148,10 @@
   {% endfor %}
 
   <section class="docs-footer-note">
-    <h2>Vous cherchez plutôt des conseils SEO ?</h2>
+    <h2>{{ tr("Vous cherchez plutôt des conseils SEO ?") }}</h2>
     <p>
-      Cette documentation décrit le produit. Pour la méthode — prioriser un audit, lire Search Console,
-      corriger des balises à grande échelle, détecter une régression après un déploiement — les guides
-      sont ailleurs.
+      {{ tr("Cette documentation décrit le produit. Pour la méthode — prioriser un audit, lire Search Console, corriger des balises à grande échelle, détecter une régression après un déploiement — les guides sont ailleurs.") }}
     </p>
-    <a class="btn" href="{{ campaign_link(request, '/ressources-seo') }}">Voir les guides SEO</a>
+    <a class="btn" href="{{ campaign_link(request, '/ressources-seo') }}">{{ tr("Voir les guides SEO") }}</a>
   </section>
 {% endblock %}

@@ -1,13 +1,13 @@
 {% extends "layout.html" %}
-{% block title %}Backlinks - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Backlinks") }} - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Liens du site</span>
+    <span class="crumb-current">{{ tr("Liens du site") }}</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -16,56 +16,56 @@
 {% block actions %}
   {% if project %}
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn primary">Nouvelle analyse</button>
+      <button type="submit" class="btn primary">{{ tr("Nouvelle analyse") }}</button>
     </form>
   {% endif %}
 {% endblock %}
 
 {% block content %}
   {% if not project %}
-    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+    <section class="card"><p>{{ tr("Projet introuvable:") }} <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     {% set cur = project.current %}
     <div class="page-header">
-      <h1>Liens vers et dans votre site</h1>
+      <h1>{{ tr("Liens vers et dans votre site") }}</h1>
       <p class="muted">{{ project.site_name }} · <span class="mono">{{ cur.timestamp }}</span></p>
     </div>
 
     {% if err %}
       <div class="alert error">
-        <span class="badge error">erreur</span>
-        <p class="muted small">{{ err }}</p>
+        <span class="badge error">{{ tr("erreur") }}</span>
+        <p class="muted small">{{ tr(err) }}</p>
       </div>
     {% elif msg %}
       <div class="alert ok">
-        <span class="badge ok">ok</span>
-        <p class="muted small">{{ msg }}</p>
+        <span class="badge ok">{{ tr("ok") }}</span>
+        <p class="muted small">{{ tr(msg) }}</p>
       </div>
     {% endif %}
 
     <section class="card">
       <form method="get" class="filters">
         <label>
-          Analyse affichée
+          {{ tr("Analyse affichée") }}
           <select name="crawl">
             {% for ts in project.crawls %}
               <option value="{{ ts }}" {% if ts == cur.timestamp %}selected{% endif %}>{{ ts }}</option>
             {% endfor %}
           </select>
         </label>
-        <button type="submit" class="btn">Appliquer</button>
+        <button type="submit" class="btn">{{ tr("Appliquer") }}</button>
       </form>
       <p class="muted small" style="margin: 10px 0 0;">
-        Les liens <strong>vers votre site</strong> proviennent des sources importées ci-dessous. Les liens <strong>dans votre site</strong> proviennent de l’analyse sélectionnée : liens internes entre vos pages et liens sortants vers d’autres sites.
+        {{ tr_html("Les liens <strong>vers votre site</strong> proviennent des sources importées ci-dessous. Les liens <strong>dans votre site</strong> proviennent de l’analyse sélectionnée : liens internes entre vos pages et liens sortants vers d’autres sites.") }}
       </p>
     </section>
 
-    <h2 id="incoming-links">Liens vers votre site</h2>
-    <p class="muted">Un lien entrant est un lien placé sur un autre site qui pointe vers le vôtre. <a href="/projects/{{ project.slug }}/backlinks/opportunities">Rechercher des discussions pour faire connaître votre site</a>.</p>
+    <h2 id="incoming-links">{{ tr("Liens vers votre site") }}</h2>
+    <p class="muted">{{ tr_html('Un lien entrant est un lien placé sur un autre site qui pointe vers le vôtre. <a href="{url}">Rechercher des discussions pour faire connaître votre site</a>.', url='/projects/' ~ project.slug ~ '/backlinks/opportunities') }}</p>
     <section class="card">
       <div class="card-title-row">
-        <h2>Importer les liens vers votre site</h2>
-        <a class="muted small" href="/projects/{{ project.slug }}/settings/search">Connexions Google et Bing de ce site</a>
+        <h2>{{ tr("Importer les liens vers votre site") }}</h2>
+        <a class="muted small" href="/projects/{{ project.slug }}/settings/search">{{ tr("Connexions Google et Bing de ce site") }}</a>
       </div>
       <form
         method="post"
@@ -76,27 +76,27 @@
       >
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
         <label>
-          Source
+          {{ tr("Source") }}
           <select name="source">
-            <option value="gsc">Google Search Console (export Liens)</option>
-            <option value="bing">Bing Webmaster Tools (export Backlinks)</option>
-            <option value="ahrefs">Ahrefs (export Backlinks)</option>
+            <option value="gsc">{{ tr("Google Search Console (export Liens)") }}</option>
+            <option value="bing">{{ tr("Bing Webmaster Tools (export Backlinks)") }}</option>
+            <option value="ahrefs">{{ tr("Ahrefs (export Backlinks)") }}</option>
           </select>
         </label>
         <label class="grow">
-          Fichier CSV
+          {{ tr("Fichier CSV") }}
           <input type="file" name="file" accept=".csv,text/csv" required />
         </label>
-        <button type="submit" class="btn primary">Importer</button>
+        <button type="submit" class="btn primary">{{ tr("Importer") }}</button>
       </form>
 	      <ul class="examples muted small" style="margin-top:10px;">
-	        <li>GSC : Search Console → <strong>Liens</strong> → Exporter (sites / pages / ancres).</li>
-	        <li>Bing : Webmaster Tools → Backlinks → Télécharger tout / Exporter.</li>
-	        <li>Ahrefs : Site Explorer → Backlinks / Referring domains / Anchors → Export.</li>
+	        <li>{{ tr_html("GSC : Search Console → <strong>Liens</strong> → Exporter (sites / pages / ancres).") }}</li>
+	        <li>{{ tr("Bing : Webmaster Tools → Backlinks → Télécharger tout / Exporter.") }}</li>
+	        <li>{{ tr("Ahrefs : Site Explorer → Backlinks / Referring domains / Anchors → Export.") }}</li>
 	      </ul>
 	      <p class="muted small" style="margin: 10px 0 0;">
-	        <span class="badge notice">bientôt</span>
-	        Synchronisation automatique des backlinks : prochainement disponible.
+	        <span class="badge notice">{{ tr("bientôt") }}</span>
+	        {{ tr("Synchronisation automatique des backlinks : prochainement disponible.") }}
 	      </p>
 	    </section>
 
@@ -106,18 +106,18 @@
         <section class="card setting-card">
           <div class="setting-head">
             <div>
-              <h2 class="setting-title">{{ src.label }}</h2>
+              <h2 class="setting-title">{{ tr(src.label) }}</h2>
               <div class="muted small">
                 {% if src.imported_via == "api" %}
-                  Sync API ({{ cur.timestamp }})
+                  {{ tr("Sync API ({ts})", ts=cur.timestamp) }}
                 {% else %}
-                  Import CSV ({{ cur.timestamp }})
+                  {{ tr("Import CSV ({ts})", ts=cur.timestamp) }}
                 {% endif %}
                 {% if src.key == "ahrefs" and ahrefs_plan %}
-                  · Plan : <span class="mono">{{ ahrefs_plan }}</span>
+                  · {{ tr("Plan :") }} <span class="mono">{{ ahrefs_plan }}</span>
                 {% endif %}
                 {% if src.last_imported_at %}
-                  · MAJ: <span class="mono">{{ src.last_imported_at }}</span>
+                  · {{ tr("MAJ:") }} <span class="mono">{{ src.last_imported_at }}</span>
                 {% endif %}
               </div>
             </div>
@@ -127,21 +127,21 @@
                   {% if ahrefs_can_sync %}
                     <form method="post" action="/projects/{{ project.slug }}/backlinks/ahrefs/sync" class="inline">
                       <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
-                      <button class="btn" type="submit">Synchroniser</button>
+                      <button class="btn" type="submit">{{ tr("Synchroniser") }}</button>
                     </form>
                   {% else %}
                     {% if ahrefs_plan %}
-                      <span class="badge notice">API: plan insuffisant</span>
+                      <span class="badge notice">{{ tr("API: plan insuffisant") }}</span>
                     {% else %}
-                      <span class="badge notice">API: indisponible</span>
+                      <span class="badge notice">{{ tr("API: indisponible") }}</span>
                     {% endif %}
                   {% endif %}
                 {% else %}
-                  <span class="muted small">Import CSV (sans clé)</span>
+                  <span class="muted small">{{ tr("Import CSV (sans clé)") }}</span>
                 {% endif %}
               {% endif %}
               {% if has %}
-                <span class="badge ok">ok</span>
+                <span class="badge ok">{{ tr("ok") }}</span>
               {% else %}
                 <span class="badge notice">-</span>
               {% endif %}
@@ -150,30 +150,30 @@
 
           <div class="metric-band" style="margin:10px 0 4px;">
             <div class="metric-tile">
-              <div class="metric-tile-label">Domaines référents</div>
+              <div class="metric-tile-label">{{ tr("Domaines référents") }}</div>
               <div class="metric-tile-value">{{ src.domains.total }}</div>
             </div>
             <div class="metric-tile">
-              <div class="metric-tile-label">Liens (domaines)</div>
+              <div class="metric-tile-label">{{ tr("Liens (domaines)") }}</div>
               <div class="metric-tile-value">{{ src.domains.links_total }}</div>
             </div>
             <div class="metric-tile">
-              <div class="metric-tile-label">Backlinks</div>
+              <div class="metric-tile-label">{{ tr("Backlinks") }}</div>
               <div class="metric-tile-value">{{ src.backlinks.total }}</div>
             </div>
           </div>
 
           {% if has %}
             <details class="setting-details">
-              <summary>Détails</summary>
+              <summary>{{ tr("Détails") }}</summary>
 
               {% if src.domains.rows %}
                 <div class="table-wrap" style="margin-top:12px;">
                   <table class="table compact">
                     <thead>
                       <tr>
-                        <th>Domaine</th>
-                        <th class="num">Liens</th>
+                        <th>{{ tr("Domaine") }}</th>
+                        <th class="num">{{ tr("Liens") }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -193,8 +193,8 @@
                   <table class="table compact">
                     <thead>
                       <tr>
-                        <th>Page</th>
-                        <th class="num">Liens</th>
+                        <th>{{ tr("Page") }}</th>
+                        <th class="num">{{ tr("Liens") }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -214,8 +214,8 @@
                   <table class="table compact">
                     <thead>
                       <tr>
-                        <th>Ancre</th>
-                        <th class="num">Liens</th>
+                        <th>{{ tr("Ancre") }}</th>
+                        <th class="num">{{ tr("Liens") }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -235,8 +235,8 @@
                   <table class="table compact">
                     <thead>
                       <tr>
-                        <th>Source</th>
-                        <th>Target</th>
+                        <th>{{ tr("Source") }}</th>
+                        <th>{{ tr("Cible") }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -255,31 +255,31 @@
                 <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
                 <input type="hidden" name="source" value="{{ src.key }}" />
                 <input type="hidden" name="kind" value="all" />
-                <button class="btn danger" type="submit" onclick="return confirm('Supprimer l\\'import {{ src.label }} pour cette analyse ?');">
-                  Supprimer l'import
+                <button class="btn danger" type="submit" onclick="return confirm({{ tr("Supprimer l'import {label} pour cette analyse ?", label=tr(src.label))|tojson|forceescape }});">
+                  {{ tr("Supprimer l'import") }}
                 </button>
               </form>
             </details>
           {% else %}
 	            {% if src.key == "ahrefs" %}
 	              <p class="muted small" style="margin: 10px 0 0;">
-	                Pas de données Ahrefs pour cette analyse.
+	                {{ tr("Pas de données Ahrefs pour cette analyse.") }}
 	                {% if ahrefs_configured %}
 	                  {% if ahrefs_can_sync %}
-	                    Clique « Synchroniser ».
+	                    {{ tr("Clique « Synchroniser ».") }}
 	                  {% else %}
 	                    {% if ahrefs_plan %}
-	                      Ton abonnement Ahrefs ne permet pas la synchronisation pour ce domaine : l'API complète d'Ahrefs demande son offre Enterprise. L'import CSV ci-dessus fonctionne avec toutes les offres.
+	                      {{ tr("Ton abonnement Ahrefs ne permet pas la synchronisation pour ce domaine : l'API complète d'Ahrefs demande son offre Enterprise. L'import CSV ci-dessus fonctionne avec toutes les offres.") }}
 	                    {% else %}
-	                      Impossible de vérifier le plan Ahrefs pour le moment.
+	                      {{ tr("Impossible de vérifier le plan Ahrefs pour le moment.") }}
 	                    {% endif %}
 	                  {% endif %}
 	                {% else %}
-	                  Importe un CSV Ahrefs via le formulaire ci-dessus (Source = Ahrefs).
+	                  {{ tr("Importe un CSV Ahrefs via le formulaire ci-dessus (Source = Ahrefs).") }}
 	                {% endif %}
 	              </p>
 	            {% else %}
-	              <p class="muted small" style="margin: 10px 0 0;">Aucun import pour cette analyse.</p>
+	              <p class="muted small" style="margin: 10px 0 0;">{{ tr("Aucun import pour cette analyse.") }}</p>
 	            {% endif %}
           {% endif %}
         </section>
@@ -288,28 +288,28 @@
 
     {% if not report_ok %}
       <section class="card">
-        <p class="muted" style="margin: 0;">Aucun rapport pour cette analyse.</p>
+        <p class="muted" style="margin: 0;">{{ tr("Aucun rapport pour cette analyse.") }}</p>
       </section>
     {% else %}
       <section class="card">
         <div class="card-title-row">
-          <h2>Liens dans les pages analysées</h2>
-          <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">Voir anomalies “Liens”</a>
+          <h2>{{ tr("Liens dans les pages analysées") }}</h2>
+          <a class="muted small" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}&category=Links">{{ tr("Voir anomalies “Liens”") }}</a>
         </div>
         <div class="metric-band" style="margin-top:4px;">
           <div class="metric-tile">
-            <div class="metric-tile-label">Pages analysées</div>
+            <div class="metric-tile-label">{{ tr("Pages analysées") }}</div>
             <div class="metric-tile-value">{{ summary.pages_total }}</div>
           </div>
           <div class="metric-tile" style="border-color:rgba(195,162,90,.22); background:rgba(195,162,90,.06);">
-            <div class="metric-tile-label">Pages orphelines</div>
+            <div class="metric-tile-label">{{ tr("Pages orphelines") }}</div>
             <div class="metric-tile-value" style="color:var(--warn);">{{ summary.orphans_total }}</div>
-            <div class="metric-tile-sub">0 lien entrant</div>
+            <div class="metric-tile-sub">{{ tr("0 lien entrant") }}</div>
           </div>
           <div class="metric-tile">
-            <div class="metric-tile-label">Domaines externes</div>
+            <div class="metric-tile-label">{{ tr("Domaines externes") }}</div>
             <div class="metric-tile-value">{{ summary.external_domains }}</div>
-            <div class="metric-tile-sub">liens sortants</div>
+            <div class="metric-tile-sub">{{ tr("liens sortants") }}</div>
           </div>
         </div>
       </section>
@@ -317,18 +317,18 @@
       <div class="grid">
         <section class="card">
           <div class="card-title-row">
-            <h2>Top pages (liens internes entrants)</h2>
+            <h2>{{ tr("Top pages (liens internes entrants)") }}</h2>
             <span class="muted small">dofollow</span>
           </div>
           {% if not top_incoming %}
-            <p class="muted">Aucune donnée.</p>
+            <p class="muted">{{ tr("Aucune donnée.") }}</p>
           {% else %}
-            <div class="table-wrap" tabindex="0" role="region" aria-label="Liens, défilement horizontal si nécessaire">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Liens, défilement horizontal si nécessaire") }}">
               <table class="table compact">
                 <thead>
                   <tr>
-                    <th>Page</th>
-                    <th class="num">Liens entrants</th>
+                    <th>{{ tr("Page") }}</th>
+                    <th class="num">{{ tr("Liens entrants") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -348,19 +348,19 @@
 
         <section class="card">
           <div class="card-title-row">
-            <h2>Top domaines externes (liens sortants)</h2>
-            <span class="muted small">pages</span>
+            <h2>{{ tr("Top domaines externes (liens sortants)") }}</h2>
+            <span class="muted small">{{ tr("pages") }}</span>
           </div>
           {% if not top_external_domains %}
-            <p class="muted">Aucun lien externe détecté.</p>
+            <p class="muted">{{ tr("Aucun lien externe détecté.") }}</p>
           {% else %}
-            <div class="table-wrap" tabindex="0" role="region" aria-label="Liens, défilement horizontal si nécessaire">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Liens, défilement horizontal si nécessaire") }}">
               <table class="table compact">
                 <thead>
                   <tr>
-                    <th>Domaine</th>
-                    <th class="num">Liens</th>
-                    <th class="num">Pages</th>
+                    <th>{{ tr("Domaine") }}</th>
+                    <th class="num">{{ tr("Liens") }}</th>
+                    <th class="num">{{ tr("Pages") }}</th>
                   </tr>
                 </thead>
                 <tbody>

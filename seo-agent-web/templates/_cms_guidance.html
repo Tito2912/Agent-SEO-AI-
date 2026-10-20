@@ -1,13 +1,13 @@
 {% if platform_guide %}
 <div class="cms-guide">
   {% if platform_guide.platform %}
-    <h3>Dans {{ platform_guide.label }}{% if platform_guide.seo_plugin == 'yoast' %} avec Yoast SEO{% elif platform_guide.seo_plugin == 'rank_math' %} avec Rank Math{% endif %}</h3>
-    {% if platform_guide.steps %}<ol class="help-steps">{% for step in platform_guide.steps %}<li>{{ step }}</li>{% endfor %}</ol>{% endif %}
-    {% if platform_guide.source %}<a class="small" href="{{ platform_guide.source }}" target="_blank" rel="noreferrer">Aide officielle</a> · {% endif %}<a class="small" href="/projects/{{ slug }}/cms">Modifier ma plateforme</a>
+    <h3>{% if platform_guide.seo_plugin == 'yoast' %}{{ tr("Dans {platform} avec Yoast SEO", platform=tr(platform_guide.label)) }}{% elif platform_guide.seo_plugin == 'rank_math' %}{{ tr("Dans {platform} avec Rank Math", platform=tr(platform_guide.label)) }}{% else %}{{ tr("Dans {platform}", platform=tr(platform_guide.label)) }}{% endif %}</h3>
+    {% if platform_guide.steps %}<ol class="help-steps">{% for step in platform_guide.steps %}<li>{{ tr(step) }}</li>{% endfor %}</ol>{% endif %}
+    {% if platform_guide.source %}<a class="small" href="{{ platform_guide.source }}" target="_blank" rel="noreferrer">{{ tr("Aide officielle") }}</a> · {% endif %}<a class="small" href="/projects/{{ slug }}/cms">{{ tr("Modifier ma plateforme") }}</a>
   {% else %}
-    <h3>Où modifier votre page ?</h3>
-    <p class="muted">Indiquez la plateforme de votre site pour obtenir les instructions adaptées.</p>
-    <a class="btn" href="/projects/{{ slug }}/cms">Choisir ma plateforme</a>
+    <h3>{{ tr("Où modifier votre page ?") }}</h3>
+    <p class="muted">{{ tr("Indiquez la plateforme de votre site pour obtenir les instructions adaptées.") }}</p>
+    <a class="btn" href="/projects/{{ slug }}/cms">{{ tr("Choisir ma plateforme") }}</a>
   {% endif %}
 </div>
 {% endif %}

@@ -1,130 +1,130 @@
 {% extends "layout.html" %}
-{% block title %}Performance - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Performance") }} - {{ project.site_name if project else slug }}{% endblock %}
 
 {% block head_extra %}
   <link rel="stylesheet" href="/static/search-results.css?v=1" />
-  <script src="/static/project_overview.js?v=4" defer></script>
+  <script src="/static/project_overview.js?v=5" defer></script>
 {% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Performance</span>
+    <span class="crumb-current">{{ tr("Performance") }}</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
 {% endblock %}
 
 {% block actions %}
-  {% if project %}<a class="btn primary" href="{{ request.url.path }}?{{ request.url.query }}">Actualiser les résultats</a>{% endif %}
+  {% if project %}<a class="btn primary" href="{{ request.url.path }}?{{ request.url.query }}">{{ tr("Actualiser les résultats") }}</a>{% endif %}
 {% endblock %}
 
 {% block content %}
   {% if not project %}
-    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+    <section class="card"><p>{{ tr("Projet introuvable:") }} <span class="mono">{{ slug }}</span></p></section>
   {% else %}
     <div class="page-header">
-      <h1>Performance</h1>
+      <h1>{{ tr("Performance") }}</h1>
       <p class="muted">
         {{ project.site_name }} ·
         {% if live and live.fallback %}
-          Données de la dernière analyse
+          {{ tr("Données de la dernière analyse") }}
         {% elif live and live.ok and live.start_date %}
-          Données reçues · {{ live.start_date }} → {{ live.end_date }} ({{ days }}j)
+          {{ tr("Données reçues") }} · {{ live.start_date }} → {{ live.end_date }} ({{ tr("{n}j", n=days) }})
         {% else %}
-          {{ days }}j
+          {{ tr("{n}j", n=days) }}
         {% endif %}
       </p>
     </div>
 
-    <p class="result-actions"><a class="btn" href="{{ connections_url }}">Google et Bing pour ce site</a>{% if source == 'gsc' %}<a class="btn" href="/projects/{{ slug }}/keywords/opportunities?days={{ days }}">Trouver des pistes d’amélioration</a>{% endif %}</p>
+    <p class="result-actions"><a class="btn" href="{{ connections_url }}">{{ tr("Google et Bing pour ce site") }}</a>{% if source == 'gsc' %}<a class="btn" href="/projects/{{ slug }}/keywords/opportunities?days={{ days }}">{{ tr("Trouver des pistes d’amélioration") }}</a>{% endif %}</p>
     {% if not perf_ok %}
       {% include "_search_unavailable.html" %}
     {% endif %}
       <details class="screen-options" {% if q %}open{% endif %}>
-        <summary>Source, période et filtres{% if q %} · filtres actifs{% endif %}</summary>
+        <summary>{{ tr("Source, période et filtres") }}{% if q %} · {{ tr("filtres actifs") }}{% endif %}</summary>
     <div class="data-toolbar">
       <form method="get" class="filters" style="width:100%;">
         <label>
-          Source
+          {{ tr("Source") }}
           <select name="source">
             <option value="gsc" {% if source == 'gsc' %}selected{% endif %}>Google Search Console</option>
             <option value="bing" {% if source == 'bing' %}selected{% endif %}>Bing Webmaster</option>
           </select>
         </label>
         <label>
-          Voir par
+          {{ tr("Voir par") }}
           <select name="dim">
-            <option value="query" {% if dim == 'query' %}selected{% endif %}>Recherches des internautes</option>
-            <option value="page" {% if dim == 'page' %}selected{% endif %}>Pages</option>
+            <option value="query" {% if dim == 'query' %}selected{% endif %}>{{ tr("Recherches des internautes") }}</option>
+            <option value="page" {% if dim == 'page' %}selected{% endif %}>{{ tr("Pages") }}</option>
           </select>
         </label>
         <label>
-          Période
+          {{ tr("Période") }}
           <select name="days">
             {% for d in ([7, 28, 90] + ([days] if days not in [7, 28, 90] else []))|sort %}
-              <option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }} jours</option>
+              <option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ tr("{n} jours", n=d) }}</option>
             {% endfor %}
           </select>
         </label>
         <label class="grow">
-          Recherche
-          <input name="q" value="{{ q }}" placeholder="{% if dim == 'page' %}filtrer par URL…{% else %}filtrer par mot-clé…{% endif %}" />
+          {{ tr("Recherche") }}
+          <input name="q" value="{{ q }}" placeholder="{% if dim == 'page' %}{{ tr("filtrer par URL…") }}{% else %}{{ tr("filtrer par mot-clé…") }}{% endif %}" />
         </label>
         <label>
-          Trier par
+          {{ tr("Trier par") }}
           <select name="sort">
-            <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>Clics</option>
-            <option value="impressions" {% if sort == 'impressions' %}selected{% endif %}>Impressions</option>
-            <option value="ctr" {% if sort == 'ctr' %}selected{% endif %}>Taux de clics</option>
-            <option value="position" {% if sort == 'position' %}selected{% endif %}>Position</option>
+            <option value="clicks" {% if sort == 'clicks' %}selected{% endif %}>{{ tr("Clics") }}</option>
+            <option value="impressions" {% if sort == 'impressions' %}selected{% endif %}>{{ tr("Impressions") }}</option>
+            <option value="ctr" {% if sort == 'ctr' %}selected{% endif %}>{{ tr("Taux de clics") }}</option>
+            <option value="position" {% if sort == 'position' %}selected{% endif %}>{{ tr("Position") }}</option>
           </select>
         </label>
         <label>
-          Ordre
+          {{ tr("Ordre") }}
           <select name="dir">
-            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>↓ Décroissant</option>
-            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>↑ Croissant</option>
+            <option value="desc" {% if dir == 'desc' %}selected{% endif %}>↓ {{ tr("Décroissant") }}</option>
+            <option value="asc" {% if dir == 'asc' %}selected{% endif %}>↑ {{ tr("Croissant") }}</option>
           </select>
         </label>
-        <button type="submit" class="btn primary">Appliquer</button>
+        <button type="submit" class="btn primary">{{ tr("Appliquer") }}</button>
       </form>
     </div>
 
       </details>
     {% if perf_ok %}
-      <p class="muted small">Synthèse des {{ source_rows }} lignes reçues (5 000 au maximum). Les filtres portent sur le tableau ; le graphique couvre toute la source.</p>
+      <p class="muted small">{{ tr("Synthèse des {n} lignes reçues (5 000 au maximum). Les filtres portent sur le tableau ; le graphique couvre toute la source.", n=source_rows) }}</p>
       <div class="stat-strip">
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ totals.clicks }}</div>
-          <div class="stat-strip-lbl">Clics</div>
+          <div class="stat-strip-lbl">{{ tr("Clics") }}</div>
           {% if live and live.ok %}
             <div class="stat-strip-sub">
-              {% if live.fallback %}Dernière analyse{% else %}{{ live.start_date }} → {{ live.end_date }}{% endif %}
+              {% if live.fallback %}{{ tr("Dernière analyse") }}{% else %}{{ live.start_date }} → {{ live.end_date }}{% endif %}
             </div>
           {% endif %}
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ totals.impressions }}</div>
-          <div class="stat-strip-lbl">Impressions</div>
+          <div class="stat-strip-lbl">{{ tr("Impressions") }}</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ (totals.avg_ctr * 100)|round(1) }}<span style="font-size:18px;font-weight:600;">%</span></div>
-          <div class="stat-strip-lbl">Taux de clics</div>
+          <div class="stat-strip-lbl">{{ tr("Taux de clics") }}</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num">{{ "%.1f"|format(totals.avg_position) if totals.avg_position else "—" }}</div>
-          <div class="stat-strip-lbl">Position moyenne</div>
+          <div class="stat-strip-lbl">{{ tr("Position moyenne") }}</div>
         </div>
         {% if csv_url %}
           <div style="margin-left:auto;align-self:center;">
-            <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">CSV complet</a>
+            <a class="btn" href="{{ csv_url }}" style="font-size:11px;padding:4px 10px;">{{ tr("CSV complet") }}</a>
           </div>
         {% endif %}
       </div>
@@ -132,10 +132,10 @@
       {% include "_search_metrics_help.html" %}
       <section class="card">
         <div class="card-title-row">
-          <h2>Évolution</h2>
+          <h2>{{ tr("Évolution") }}</h2>
           <span class="muted small">
             {{ source|upper }} ·
-            {% if live and live.fallback %}Dernière analyse{% else %}{{ days }}j · données reçues{% endif %}
+            {% if live and live.fallback %}{{ tr("Dernière analyse") }}{% else %}{{ tr("{n}j", n=days) }} · {{ tr("données reçues") }}{% endif %}
           </span>
         </div>
 
@@ -147,31 +147,31 @@
           data-max-metrics="2"
           data-live-url="/api/projects/{{ project.slug }}/search-series?source={{ source }}&days={{ days }}"
         >
-          <div class="ts-metrics" aria-label="Métriques {{ source|upper }}">
+          <div class="ts-metrics" aria-label="{{ tr("Métriques {source}", source=source|upper) }}">
             <button type="button" class="ts-metric active" data-metric="clicks" aria-pressed="true">
               <span class="ts-metric-check">✓</span>
-              <span class="ts-metric-label">Clics</span>
+              <span class="ts-metric-label">{{ tr("Clics") }}</span>
               <span class="ts-metric-value" data-value-for="clicks">{{ totals.clicks }}</span>
             </button>
             <button type="button" class="ts-metric active" data-metric="impressions" aria-pressed="true">
               <span class="ts-metric-check">✓</span>
-              <span class="ts-metric-label">Impressions</span>
+              <span class="ts-metric-label">{{ tr("Impressions") }}</span>
               <span class="ts-metric-value" data-value-for="impressions">{{ totals.impressions }}</span>
             </button>
             <button type="button" class="ts-metric" data-metric="ctr" aria-pressed="false">
               <span class="ts-metric-check">✓</span>
-              <span class="ts-metric-label">Taux de clics</span>
+              <span class="ts-metric-label">{{ tr("Taux de clics") }}</span>
               <span class="ts-metric-value" data-value-for="ctr">{{ (totals.avg_ctr * 100)|round(1) }}%</span>
             </button>
             <button type="button" class="ts-metric" data-metric="position" aria-pressed="false">
               <span class="ts-metric-check">✓</span>
-              <span class="ts-metric-label">Position moyenne</span>
+              <span class="ts-metric-label">{{ tr("Position moyenne") }}</span>
               <span class="ts-metric-value" data-value-for="position">{{ totals.avg_position|round(1) if totals.avg_position else "—" }}</span>
             </button>
           </div>
           <div class="ts-chart">
-            <canvas class="ts-canvas" aria-label="Graphique {{ source|upper }}" role="img"></canvas>
-            <div class="ts-empty" role="status">Chargement du graphique…</div>
+            <canvas class="ts-canvas" aria-label="{{ tr("Graphique {source}", source=source|upper) }}" role="img"></canvas>
+            <div class="ts-empty" role="status">{{ tr("Chargement du graphique…") }}</div>
           </div>
           <div class="ts-meta muted small" data-ts-meta></div>
         </div>
@@ -179,27 +179,27 @@
 
       <section class="card">
         <div class="card-title-row">
-          <h2>{% if dim == 'page' %}Pages{% else %}Requêtes{% endif %}</h2>
-          <span class="muted small">{{ total_rows }} résultat{{ 's' if total_rows > 1 else '' }}</span>
+          <h2>{% if dim == 'page' %}{{ tr("Pages") }}{% else %}{{ tr("Requêtes") }}{% endif %}</h2>
+          <span class="muted small">{{ tr('{n} résultats', n=total_rows) if total_rows > 1 else tr('{n} résultat', n=total_rows) }}</span>
         </div>
 
         {% if not rows %}
           {% if q %}
-          <p class="muted">Aucun résultat pour « {{ q }} » sur cette période.</p>
-          <a class="btn" href="?source={{ source }}&amp;dim={{ dim }}&amp;days={{ days }}">Effacer la recherche</a>
+          <p class="muted">{{ tr("Aucun résultat pour « {q} » sur cette période.", q=q) }}</p>
+          <a class="btn" href="?source={{ source }}&amp;dim={{ dim }}&amp;days={{ days }}">{{ tr("Effacer la recherche") }}</a>
           {% else %}
-          <p class="muted">Aucune recherche ou page reçue pour cette période. Cela ne permet pas de conclure sur les visites ou les ventes de votre site.</p>
+          <p class="muted">{{ tr("Aucune recherche ou page reçue pour cette période. Cela ne permet pas de conclure sur les visites ou les ventes de votre site.") }}</p>
           {% endif %}
         {% else %}
-          <div class="table-wrap" tabindex="0" role="region" aria-label="Résultats détaillés, défilement horizontal si nécessaire">
+          <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Résultats détaillés, défilement horizontal si nécessaire") }}">
             <table class="table compact">
               <thead>
                 <tr>
-                  <th>{% if dim == 'page' %}Page{% else %}Mot-clé{% endif %}</th>
-                  <th class="num">Clics</th>
-                  <th class="num">Impressions</th>
-                  <th class="num">Taux de clics</th>
-                  <th class="num">Pos. moy.</th>
+                  <th>{% if dim == 'page' %}{{ tr("Page") }}{% else %}{{ tr("Mot-clé") }}{% endif %}</th>
+                  <th class="num">{{ tr("Clics") }}</th>
+                  <th class="num">{{ tr("Impressions") }}</th>
+                  <th class="num">{{ tr("Taux de clics") }}</th>
+                  <th class="num">{{ tr("Pos. moy.") }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,13 +232,13 @@
 
           {% if pages and pages > 1 %}
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
-              <span class="muted small">Page {{ page }} / {{ pages }}</span>
+              <span class="muted small">{{ tr("Page {page} / {pages}", page=page, pages=pages) }}</span>
               <div style="display:flex;gap:6px;">
                 {% if page > 1 %}
-                  <a class="btn" href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}" style="font-size:12px;">← Précédent</a>
+                  <a class="btn" href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page - 1 }}" style="font-size:12px;">← {{ tr("Précédent") }}</a>
                 {% endif %}
                 {% if page < pages %}
-                  <a class="btn" href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}" style="font-size:12px;">Suivant →</a>
+                  <a class="btn" href="?source={{ source }}&dim={{ dim }}&days={{ days }}&q={{ q|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page + 1 }}" style="font-size:12px;">{{ tr("Suivant") }} →</a>
                 {% endif %}
               </div>
             </div>

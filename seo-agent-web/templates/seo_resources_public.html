@@ -1,11 +1,11 @@
 {% extends "public_layout.html" %}
 
-{% block title %}Guides SEO - {{ app_name }}{% endblock %}
+{% block title %}{{ tr("Guides SEO") }} - {{ app_name }}{% endblock %}
 
 {% block head_extra %}
 <meta name="description" content="{{ meta_description }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
-<meta property="og:title" content="Guides SEO - {{ app_name }}" />
+<meta property="og:title" content="{{ tr("Guides SEO") }} - {{ app_name }}" />
 <meta property="og:description" content="{{ meta_description }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ canonical_url }}" />
@@ -98,8 +98,8 @@
 
 {% block content %}
   <header class="resources-hero">
-    <div class="resources-eyebrow">Guides et tutoriels SEO</div>
-    <h1>La méthode, pas seulement l'outil</h1>
+    <div class="resources-eyebrow">{{ tr("Guides et tutoriels SEO") }}</div>
+    <h1>{{ tr("La méthode, pas seulement l'outil") }}</h1>
     <p>{{ meta_description }}</p>
   </header>
 
@@ -109,7 +109,7 @@
         <div class="resource-meta">
           <span class="resource-kind">{{ resource.kind }}</span>
           <span>{{ resource.reading_time }}</span>
-          <span>Mis à jour le {{ resource.updated_at }}</span>
+          <span>{{ tr("Mis à jour le {date}", date=resource.updated_at) }}</span>
         </div>
         <h2><a href="{{ campaign_link(request, resource.path) }}">{{ resource.title }}</a></h2>
         <p>{{ resource.description }}</p>
@@ -123,12 +123,10 @@
   </div>
 
   <section class="resources-note">
-    <h2>Vous cherchez comment {{ app_name }} fonctionne ?</h2>
+    <h2>{{ tr("Vous cherchez comment {app_name} fonctionne ?", app_name=app_name) }}</h2>
     <p>
-      Ces guides traitent de méthode SEO, indépendamment de l'outil. Pour le produit lui-même —
-      lancer un crawl, lire un rapport, connecter un dépôt GitHub, corriger en pull request,
-      brancher Search Console — la documentation est à part.
+      {{ tr("Ces guides traitent de méthode SEO, indépendamment de l'outil. Pour le produit lui-même — lancer un crawl, lire un rapport, connecter un dépôt GitHub, corriger en pull request, brancher Search Console — la documentation est à part.") }}
     </p>
-    <a class="btn" href="{{ campaign_link(request, '/docs') }}">Voir la documentation</a>
+    <a class="btn" href="{{ campaign_link(request, '/docs') }}">{{ tr("Voir la documentation") }}</a>
   </section>
 {% endblock %}

@@ -1,4 +1,6 @@
 (() => {
+  // Textes traduits : templates/_lang_script.html ; sans traduction, le francais reste.
+  const noyaruT = window.noyaruT || ((text) => text);
   const widgetStates = new WeakMap();
   const miniStates = new WeakMap();
   const METRIC_CONFIG = {
@@ -159,7 +161,7 @@
     if (!state) return;
     const empty = widget.querySelector(".ts-empty");
     if (empty) {
-      empty.textContent = String(message || "Aucune donnée");
+      empty.textContent = String(message || noyaruT("Aucune donnée"));
       empty.hidden = false;
     }
     state.canvas.hidden = true;
@@ -316,7 +318,7 @@
     if (!state) return;
     const points = state.points;
     if (!Array.isArray(points) || points.length < 2) {
-      setWidgetEmpty(widget, state.emptyMessage || "Aucune donnée disponible");
+      setWidgetEmpty(widget, state.emptyMessage || noyaruT("Aucune donnée disponible"));
       return;
     }
     setWidgetReady(widget);
@@ -357,7 +359,7 @@
     if (data.source === "bing" && data.site_url) parts.push(`Bing · ${data.site_url}`);
     if (data.start_date && data.end_date) {
       const days = Number(data.days || 0);
-      parts.push(`${data.start_date} → ${data.end_date}${days > 0 ? ` (${days}j)` : ""}`);
+      parts.push(`${data.start_date} → ${data.end_date}${days > 0 ? ` (${noyaruT("{n} j").replace("{n}", days)})` : ""}`);
     }
     if (data.data_delay_hint) parts.push(String(data.data_delay_hint));
     return parts.join(" · ");
@@ -365,12 +367,12 @@
 
   function errorLabel(data) {
     const reason = String(data?.reason || "");
-    if (reason === "session_expired") return "Votre session a expiré. Reconnectez-vous pour reprendre cet écran.";
-    if (reason === "disabled") return "Le suivi est désactivé pour ce site.";
-    if (["missing_credentials", "oauth_not_connected", "not_connected", "missing_api_key", "oauth_invalid_grant"].includes(reason)) return "Autorisation absente ou expirée. Vérifiez la connexion de ce site.";
-    if (["site_not_found", "forbidden"].includes(reason)) return "Le compte autorisé n’a pas accès aux données de ce site.";
-    if (reason === "no_data") return "Aucune donnée reçue sur cette période.";
-    return "Les données sont indisponibles. Réessayez ou vérifiez l’accès à ce site.";
+    if (reason === "session_expired") return noyaruT("Votre session a expiré. Reconnectez-vous pour reprendre cet écran.");
+    if (reason === "disabled") return noyaruT("Le suivi est désactivé pour ce site.");
+    if (["missing_credentials", "oauth_not_connected", "not_connected", "missing_api_key", "oauth_invalid_grant"].includes(reason)) return noyaruT("Autorisation absente ou expirée. Vérifiez la connexion de ce site.");
+    if (["site_not_found", "forbidden"].includes(reason)) return noyaruT("Le compte autorisé n’a pas accès aux données de ce site.");
+    if (reason === "no_data") return noyaruT("Aucune donnée reçue sur cette période.");
+    return noyaruT("Les données sont indisponibles. Réessayez ou vérifiez l’accès à ce site.");
   }
 
   function loginUrl() {
@@ -383,13 +385,13 @@
     const link = document.createElement("a");
     link.className = "ts-recovery muted small";
     link.href = reason === "session_expired" ? loginUrl() : (widget.dataset.connectionsUrl || window.location.href);
-    link.textContent = reason === "session_expired" ? "Se reconnecter" : "Vérifier la connexion de ce site";
+    link.textContent = reason === "session_expired" ? noyaruT("Se reconnecter") : noyaruT("Vérifier la connexion de ce site");
     widget.append(link);
   }
 
   function storedPeriod(el) {
     const period = el.getAttribute("data-stored-period") || "";
-    return `Analyse enregistrée${period.replace(/[ →]/g, "") ? ` · ${period}` : " · période non renseignée"}`;
+    return noyaruT("Analyse enregistrée") + (period.replace(/[ →]/g, "") ? ` · ${period}` : " · " + noyaruT("période non renseignée"));
   }
 
   function miniDays(widgetId) {
@@ -428,14 +430,14 @@
 
     if (!payload || !payload.ok) {
       const target = payload?.reason === "session_expired" ? loginUrl() : `/projects/${encodeURIComponent(miniStates.get(el)?.slug || "")}/settings/search?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
-      const label = payload?.reason === "session_expired" ? "Se reconnecter" : "Vérifier la connexion";
+      const label = payload?.reason === "session_expired" ? noyaruT("Se reconnecter") : noyaruT("Vérifier la connexion");
       body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(errorLabel(payload || {}))} <a href="${escapeHtml(target)}">${label}</a></td></tr>`;
       return;
     }
 
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) {
-      body.innerHTML = `<tr><td colspan="5" class="muted">Aucune donnée reçue sur cette période.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(noyaruT("Aucune donnée reçue sur cette période."))}</td></tr>`;
       return;
     }
 
@@ -469,9 +471,9 @@
     state.requestId = requestId;
 
     const body = el.querySelector("[data-mini-body]");
-    if (body) body.innerHTML = `<tr><td colspan="5" class="muted">Chargement…</td></tr>`;
+    if (body) body.innerHTML = `<tr><td colspan="5" class="muted">${escapeHtml(noyaruT("Chargement…"))}</td></tr>`;
     const meta = el.querySelector("[data-mini-meta]");
-    if (meta) meta.textContent = "Consultation de la période sélectionnée…";
+    if (meta) meta.textContent = noyaruT("Consultation de la période sélectionnée…");
 
     const days = miniDays(state.daysWidgetId);
     const url = new URL(`/api/projects/${state.slug}/search-items`, window.location.origin);
@@ -586,9 +588,9 @@
       state.totals = computeTotals([]);
       updateMetricCards(widget, state.totals);
     }
-    state.emptyMessage = "Chargement du graphique…";
+    state.emptyMessage = noyaruT("Chargement du graphique…");
     if (!state.points.length) setWidgetEmpty(widget, state.emptyMessage);
-    setWidgetMeta(widget, "Consultation de la période sélectionnée…");
+    setWidgetMeta(widget, noyaruT("Consultation de la période sélectionnée…"));
 
     let response;
     let data = null;
@@ -611,7 +613,7 @@
     if (response.ok && data?.ok) {
       state.points = nextPoints;
       state.totals = computeTotals(nextPoints);
-      state.emptyMessage = nextPoints.length === 1 ? "Un seul jour reçu : pas encore assez de points pour tracer une évolution." : "Aucune donnée reçue sur cette période.";
+      state.emptyMessage = nextPoints.length === 1 ? noyaruT("Un seul jour reçu : pas encore assez de points pour tracer une évolution.") : noyaruT("Aucune donnée reçue sur cette période.");
       const summaryBlock = widget.closest(".card")?.querySelector("[data-summary-block][data-summary-fallback='true']");
       if (summaryBlock) summaryBlock.hidden = true;
       updateMetricCards(widget, state.totals);
@@ -651,7 +653,7 @@
         metrics: defaultMetrics.length ? defaultMetrics : metricOrder.slice(0, Math.min(2, metricOrder.length)),
         points: inlinePoints,
         totals: inlineTotals,
-        emptyMessage: inlinePoints.length ? "Un seul jour enregistré : pas encore assez de points pour tracer une évolution." : "Aucune donnée enregistrée.",
+        emptyMessage: inlinePoints.length ? noyaruT("Un seul jour enregistré : pas encore assez de points pour tracer une évolution.") : noyaruT("Aucune donnée enregistrée."),
         requestId: 0,
       };
       widgetStates.set(widget, state);

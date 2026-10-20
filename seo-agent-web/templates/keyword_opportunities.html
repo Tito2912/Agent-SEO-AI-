@@ -1,56 +1,56 @@
 {% extends "layout.html" %}
-{% block title %}Mots-clés - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Mots-clés") }} - {{ project.site_name if project else slug }}{% endblock %}
 
-{% block head_extra %}<link rel="stylesheet" href="/static/search-results.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=2" defer></script>{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="/static/search-results.css?v=1" /><link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=3" defer></script>{% endblock %}
 
-{% block crumbs %}<a href="/">Projets</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">Mots-clés</span>{% endblock %}
+{% block crumbs %}<a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span><a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span><span class="crumb-current">{{ tr("Mots-clés") }}</span>{% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Mots-clés</h1>
+    <h1>{{ tr("Mots-clés") }}</h1>
     <p class="muted">
-      {{ project.site_name }} · Google Search Console · période demandée : {{ days }} jours
-      <a href="/docs/opportunites-de-mots-cles" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
+      {{ project.site_name }} · Google Search Console · {{ tr("période demandée : {n} jours", n=days) }}
+      <a href="/docs/opportunites-de-mots-cles" class="muted small" style="margin-left:8px;" title="{{ tr("Documentation") }}">{{ tr("Aide") }}</a>
     </p>
   </div>
 
   <form method="get" class="result-period">
-    <label for="keyword-days">Période des recommandations</label>
+    <label for="keyword-days">{{ tr("Période des recommandations") }}</label>
     <select name="days" id="keyword-days">
-      {% for d in ([7, 28, 90] + ([days] if days not in [7, 28, 90] else []))|sort %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }} jours</option>{% endfor %}
+      {% for d in ([7, 28, 90] + ([days] if days not in [7, 28, 90] else []))|sort %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ tr("{n} jours", n=d) }}</option>{% endfor %}
     </select>
-    <button class="btn" type="submit">Actualiser</button>
-    <a class="btn" href="{{ connections_url }}">Connexion Google de ce site</a>
+    <button class="btn" type="submit">{{ tr("Actualiser") }}</button>
+    <a class="btn" href="{{ connections_url }}">{{ tr("Connexion Google de ce site") }}</a>
   </form>
-  {% if live.start_date and live.end_date %}<p class="muted small">Du {{ live.start_date }} au {{ live.end_date }} · {{ live.data_delay_hint or 'Les données de recherche arrivent avec un décalage.' }}</p>{% endif %}
+  {% if live.start_date and live.end_date %}<p class="muted small">{{ tr("Du {start} au {end}", start=live.start_date, end=live.end_date) }} · {{ tr(live.data_delay_hint or 'Les données de recherche arrivent avec un décalage.') }}</p>{% endif %}
   {% if not gsc_ok %}
     {% include "_search_unavailable.html" %}
   {% else %}
 
     <section class="card">
       <div class="card-title-row">
-        <h2 style="margin:0;">À travailler en priorité</h2>
-        <span class="muted small">{{ summary.total }} requête{{ 's' if summary.total > 1 }} · {{ summary.impressions }} impressions</span>
+        <h2 style="margin:0;">{{ tr("À travailler en priorité") }}</h2>
+        <span class="muted small">{{ tr('{n} requêtes', n=summary.total) if summary.total > 1 else tr('{n} requête', n=summary.total) }} · {{ tr('{n} impressions', n=summary.impressions) }}</span>
       </div>
 
       {% if not opportunities %}
         <p class="muted">
-          Aucune recherche reçue ne remplit les critères sur cette période (au moins 50 affichages, puis clics ou position à améliorer). Cela ne mesure ni les conversions ni les ventes. Vous pouvez essayer une autre période ou consulter les résultats détaillés.
+          {{ tr("Aucune recherche reçue ne remplit les critères sur cette période (au moins 50 affichages, puis clics ou position à améliorer). Cela ne mesure ni les conversions ni les ventes. Vous pouvez essayer une autre période ou consulter les résultats détaillés.") }}
         </p>
       {% else %}
         <p class="muted small">
-          Ces recherches affichent déjà votre site. Relire le titre, la description ou le contenu de la page peut aider ; ces pistes ne garantissent pas de nouveaux clics ni un meilleur classement.
+          {{ tr("Ces recherches affichent déjà votre site. Relire le titre, la description ou le contenu de la page peut aider ; ces pistes ne garantissent pas de nouveaux clics ni un meilleur classement.") }}
         </p>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Mots-clés, défilement horizontal si nécessaire">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="{{ tr("Mots-clés, défilement horizontal si nécessaire") }}">
           <table class="table compact">
             <thead>
               <tr>
-                <th>Requête</th>
-                <th>Situation</th>
-                <th class="num">Position</th>
-                <th class="num">Impressions</th>
-                <th class="num">Clics</th>
-                <th>Page concernée</th>
+                <th>{{ tr("Requête") }}</th>
+                <th>{{ tr("Situation") }}</th>
+                <th class="num">{{ tr("Position") }}</th>
+                <th class="num">{{ tr("Impressions") }}</th>
+                <th class="num">{{ tr("Clics") }}</th>
+                <th>{{ tr("Page concernée") }}</th>
                 <th></th>
               </tr>
             </thead>
@@ -63,7 +63,7 @@
                 } %}
                 <tr>
                   <td>{{ o.query }}</td>
-                  <td><span class="badge notice">{{ labels.get(o.kind, o.kind) }}</span></td>
+                  <td><span class="badge notice">{{ tr(labels.get(o.kind, o.kind)) }}</span></td>
                   <td class="num mono">{{ '%.1f'|format(o.position) }}</td>
                   <td class="num mono">{{ o.impressions }}</td>
                   <td class="num mono">{{ o.clicks }}</td>
@@ -77,14 +77,14 @@
                   <td class="num">
                     <div class="kw-actions">
                       {% if o.query in already_tracked %}
-                        <span class="muted small">suivie</span>
+                        <span class="muted small">{{ tr("suivie") }}</span>
                       {% else %}
                         <form method="post" action="/projects/{{ slug }}/keywords/track" class="inline">
                           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                           <input type="hidden" name="query" value="{{ o.query }}" />
                           <input type="hidden" name="target_url" value="{{ o.page }}" />
                           <input type="hidden" name="source" value="gsc_opportunity" />
-                          <button class="btn" type="submit">Suivre</button>
+                          <button class="btn" type="submit">{{ tr("Suivre") }}</button>
                         </form>
                       {% endif %}
                       {# The whole point of naming the page and not only the query: the corrector
@@ -92,7 +92,7 @@
                       {% if o.page and github_cfg and github_cfg.repo %}
                         <button type="button" class="btn primary" data-keyword-pr
                                 data-query="{{ o.query }}" data-url="{{ o.page }}"
-                                title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de cette page pour cette requête">Préparer une réécriture</button>
+                                title="{{ tr("Ouvrez une proposition GitHub qui réécrit le titre et la meta description de cette page pour cette requête") }}">{{ tr("Préparer une réécriture") }}</button>
                       {% endif %}
                     </div>
                   </td>
@@ -103,23 +103,21 @@
         </div>
         {% if summary.potential_clicks is none %}
           <p class="muted small" style="margin-top:10px;">
-            Aucune estimation de gain n'est affichée : ce site n'a encore aucune requête dans les
-            trois premières positions, donc rien de vérifiable à quoi le comparer. La comparaison sera disponible si des données suffisantes sont reçues.
+            {{ tr("Aucune estimation de gain n'est affichée : ce site n'a encore aucune requête dans les trois premières positions, donc rien de vérifiable à quoi le comparer. La comparaison sera disponible si des données suffisantes sont reçues.") }}
           </p>
         {% else %}
           <p class="muted small" style="margin-top:10px;">
-            Environ <strong>{{ summary.potential_clicks }}</strong> clics supplémentaires sur cette période si ces
-            recherches obtenaient le même taux de clics que celles où ce site est déjà dans les trois premiers. C’est une comparaison indicative, sans garantie de gain.
+            {{ tr_html("Environ <strong>{n}</strong> clics supplémentaires sur cette période si ces recherches obtenaient le même taux de clics que celles où ce site est déjà dans les trois premiers. C’est une comparaison indicative, sans garantie de gain.", n=summary.potential_clicks) }}
           </p>
         {% endif %}
       {% endif %}
     </section>
   {% endif %}
 
-  <p><a class="btn" href="/projects/{{ slug }}/performance?source=gsc&amp;days={{ days }}">Voir les résultats Google détaillés</a></p>
+  <p><a class="btn" href="/projects/{{ slug }}/performance?source=gsc&amp;days={{ days }}">{{ tr("Voir les résultats Google détaillés") }}</a></p>
   <section class="card">
     <div class="card-title-row">
-      <h2 style="margin:0;">Mots-clés suivis</h2>
+      <h2 style="margin:0;">{{ tr("Mots-clés suivis") }}</h2>
       <span class="muted small">{{ tracked|length }}</span>
     </div>
 
@@ -127,16 +125,16 @@
       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
       <input type="hidden" name="source" value="manual" />
       <label>
-        Ajouter un mot-clé
-        <input name="query" placeholder="ex. logiciel de voix off IA" required />
+        {{ tr("Ajouter un mot-clé") }}
+        <input name="query" placeholder="{{ tr("ex. logiciel de voix off IA") }}" required />
       </label>
       <label>
-        Page à suivre (facultatif)
+        {{ tr("Page à suivre (facultatif)") }}
         <input name="target_url" placeholder="https://…" />
       </label>
       <div class="modal-actions between">
         <span></span>
-        <button class="btn primary" type="submit">Suivre</button>
+        <button class="btn primary" type="submit">{{ tr("Suivre") }}</button>
       </div>
     </form>
 
@@ -144,7 +142,7 @@
       <div class="table-wrap" style="margin-top:14px;">
         <table class="table compact">
           <thead>
-            <tr><th>Requête</th><th>Page cible</th><th>Origine</th><th></th></tr>
+            <tr><th>{{ tr("Requête") }}</th><th>{{ tr("Page cible") }}</th><th>{{ tr("Origine") }}</th><th></th></tr>
           </thead>
           <tbody>
             {% for t in tracked %}
@@ -154,23 +152,23 @@
                   {% if t.target_url %}
                     <a href="{{ t.target_url }}" target="_blank" rel="noreferrer">{{ t.target_url|replace('https://', '')|replace('http://', '') }}</a>
                   {% else %}
-                    <span class="muted small">non définie</span>
+                    <span class="muted small">{{ tr("non définie") }}</span>
                   {% endif %}
                 </td>
                 <td>
-                  <span class="muted small">{{ 'proposée' if t.source == 'gsc_opportunity' else 'ajoutée à la main' }}</span>
+                  <span class="muted small">{{ tr('proposée') if t.source == 'gsc_opportunity' else tr('ajoutée à la main') }}</span>
                 </td>
                 <td class="num">
                   <div class="kw-actions">
                     {% if t.target_url and github_cfg and github_cfg.repo %}
                       <button type="button" class="btn primary" data-keyword-pr
                               data-query="{{ t.query }}" data-url="{{ t.target_url }}"
-                              title="Ouvrez une proposition GitHub qui réécrit le titre et la meta description de la page cible">Préparer une réécriture</button>
+                              title="{{ tr("Ouvrez une proposition GitHub qui réécrit le titre et la meta description de la page cible") }}">{{ tr("Préparer une réécriture") }}</button>
                     {% endif %}
                     <form method="post" action="/projects/{{ slug }}/keywords/untrack" class="inline">
                       <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
                       <input type="hidden" name="keyword_id" value="{{ t.id }}" />
-                      <button class="btn danger" type="submit">Retirer</button>
+                      <button class="btn danger" type="submit">{{ tr("Retirer") }}</button>
                     </form>
                   </div>
                 </td>
@@ -181,7 +179,7 @@
       </div>
     {% else %}
       <p class="muted" style="margin-top:12px;">
-        Aucun mot-clé suivi pour l’instant. Ajoutez une recherche et, si vous la connaissez, la page concernée pour les retrouver ici.
+        {{ tr("Aucun mot-clé suivi pour l’instant. Ajoutez une recherche et, si vous la connaissez, la page concernée pour les retrouver ici.") }}
       </p>
     {% endif %}
   </section>

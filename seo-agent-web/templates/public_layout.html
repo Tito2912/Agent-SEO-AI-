@@ -6,8 +6,9 @@
     <meta name="csrf-token" content="{{ request.state.csrf_token or '' }}" />
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     {% include "_favicons.html" %}
+    {% include "_lang_script.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
-    <link rel="stylesheet" href="/static/lang-switch.css?v=1" />
+    <link rel="stylesheet" href="/static/lang-switch.css?v=2" />
     <style>
       /* Public nav overrides */
       .pub-nav {
@@ -78,6 +79,14 @@
     <meta property="og:image:alt" content="{{ app_name }} — {{ tr("l'audit SEO qui livre le correctif") }}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png') }}" />
+    {# Une page publique a une adresse par langue (/pricing, /en/pricing) : chacune annonce les
+       autres a Google. Le francais est la version par defaut (x-default). #}
+    {% set page_versions = page_alternates() %}
+    {% if page_versions %}
+      {% for code, href in page_versions.items() %}<link rel="alternate" hreflang="{{ code }}" href="{{ public_url(request, href) }}" />
+      {% endfor %}<link rel="alternate" hreflang="x-default" href="{{ public_url(request, page_versions['fr']) }}" />
+      <meta property="og:locale" content="{{ 'en_US' if current_lang() == 'en' else 'fr_FR' }}" />
+    {% endif %}
     {% block head_extra %}{% endblock %}
   </head>
   <body>

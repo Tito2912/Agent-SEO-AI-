@@ -1,15 +1,15 @@
 {% extends "layout.html" %}
-{% block title %}{{ project.issue.label if project else issue_key }} - Anomalie{% endblock %}
+{% block title %}{{ tr(project.issue.label) if project else issue_key }} - {{ tr("Anomalie") }}{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name or project.slug }}</a>
     <span class="crumb-sep">/</span>
-    <a href="/projects/{{ project.slug }}/issues?crawl={{ project.timestamp }}">Anomalies</a>
+    <a href="/projects/{{ project.slug }}/issues?crawl={{ project.timestamp }}">{{ tr("Anomalies") }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">{{ project.issue.label }}</span>
+    <span class="crumb-current">{{ tr(project.issue.label) }}</span>
   {% else %}
     <span class="crumb-current">{{ issue_key }}</span>
   {% endif %}
@@ -18,7 +18,7 @@
 {% block content %}
   {% set correction_controls = correction_controls|default({'deep_fix': false, 'url_fix': false}, true) %}
   {% if not project %}
-    <section class="card"><p>Anomalie introuvable: <span class="mono">{{ issue_key }}</span></p></section>
+    <section class="card"><p>{{ tr("Anomalie introuvable :") }} <span class="mono">{{ issue_key }}</span></p></section>
   {% else %}
     {% set cat_labels = {
       'Internal pages': 'Pages internes',
@@ -40,29 +40,29 @@
       'Other': 'Autres'
     } %}
     <div class="page-header">
-      <h1>{{ project.issue.label }}</h1>
+      <h1>{{ tr(project.issue.label) }}</h1>
       <p class="muted">
-        {% set sev_label = {'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(project.issue.severity, project.issue.severity) %}
+        {% set sev_label = tr({'error': 'erreur', 'warning': 'avertissement', 'notice': 'info'}.get(project.issue.severity, project.issue.severity)) %}
         <span class="badge {{ project.issue.severity }}">{{ sev_label }}</span>
-        Analyse du <span data-ts-datetime="{{ project.timestamp }}">{{ project.timestamp[6:8] }}/{{ project.timestamp[4:6] }}/{{ project.timestamp[:4] }}</span>
+        {{ tr("Analyse du") }} <span data-ts-datetime="{{ project.timestamp }}">{{ project.timestamp[6:8] }}/{{ project.timestamp[4:6] }}/{{ project.timestamp[:4] }}</span>
       </p>
-      <details class="technical-details"><summary>Détails techniques</summary><code>{{ project.issue.key }}</code> · <code>{{ project.timestamp }}</code></details>
+      <details class="technical-details"><summary>{{ tr("Détails techniques") }}</summary><code>{{ project.issue.key }}</code> · <code>{{ project.timestamp }}</code></details>
     </div>
 
     {% include "_cms_guidance.html" %}
-    {% if wordpress_batch_href %}<p><a class="btn primary" href="{{ wordpress_batch_href }}">Corriger ces pages dans WordPress</a></p>{% endif %}
+    {% if wordpress_batch_href %}<p><a class="btn primary" href="{{ wordpress_batch_href }}">{{ tr("Corriger ces pages dans WordPress") }}</a></p>{% endif %}
 
     <div class="metric-band" style="margin-bottom:16px;">
       <div class="metric-tile">
-        <div class="metric-tile-label">Occurrences</div>
+        <div class="metric-tile-label">{{ tr("Occurrences") }}</div>
         <div class="metric-tile-value">{{ project.issue.count }}</div>
       </div>
       <div class="metric-tile">
-        <div class="metric-tile-label">Catégorie</div>
-        <div class="metric-tile-value" style="font-size:16px;">{{ cat_labels.get(project.issue.category, project.issue.category) }}</div>
+        <div class="metric-tile-label">{{ tr("Catégorie") }}</div>
+        <div class="metric-tile-value" style="font-size:16px;">{{ tr(cat_labels.get(project.issue.category, project.issue.category)) }}</div>
       </div>
       <div class="metric-tile" style="min-width:0;">
-        <div class="metric-tile-label">Exporter</div>
+        <div class="metric-tile-label">{{ tr("Exporter") }}</div>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
           <a class="btn" href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.csv?crawl={{ project.timestamp }}">CSV</a>
           <a class="btn" href="/projects/{{ project.slug }}/export/issues/{{ project.issue.key }}.pdf?crawl={{ project.timestamp }}">PDF</a>
@@ -73,20 +73,20 @@
 
     <section class="card">
       <div class="card-title-row" style="flex-wrap:wrap;">
-        <h2>Correction recommandée</h2>
+        <h2>{{ tr("Correction recommandée") }}</h2>
         <div class="card-title-actions" style="flex-wrap:wrap;">
           {% if fix_suggestion and fix_suggestion.priority %}
             {% set p = fix_suggestion.priority %}
             {% set badge = 'error' if p == 'high' else ('warning' if p == 'medium' else 'notice') %}
-            {% set p_label = {'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(p, p) %}
+            {% set p_label = tr({'high': 'haute', 'medium': 'moyenne', 'low': 'faible'}.get(p, p)) %}
             <span class="badge {{ badge }}">{{ p_label }}</span>
           {% endif %}
           {% if fix_suggestions_path %}
-            <a class="btn" href="/file?path={{ fix_suggestions_path }}">Plan complet (JSON)</a>
+            <a class="btn" href="/file?path={{ fix_suggestions_path }}">{{ tr("Plan complet (JSON)") }}</a>
           {% else %}
             <form method="post" action="/projects/{{ project.slug }}/fix-suggestions/generate" class="inline">
               <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
-              <button type="submit" class="btn">Générer le plan complet</button>
+              <button type="submit" class="btn">{{ tr("Générer le plan complet") }}</button>
             </form>
           {% endif %}
         </div>
@@ -94,7 +94,7 @@
 
       {# ── Suivi de correction ── #}
       <div class="issue-task-bar" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding:8px 10px;background:var(--bg);border-radius:4px;border:1px solid var(--border);">
-        <span class="muted small" style="flex-shrink:0;">Statut :</span>
+        <span class="muted small" style="flex-shrink:0;">{{ tr("Statut :") }}</span>
         {% for st, lbl, icon in [('todo','À traiter','○'),('in_progress','En cours','◑'),('done','Modifié · à vérifier','●'),('ignored','Ignoré','—')] %}
           <button type="button"
             class="btn task-status-btn"
@@ -104,35 +104,35 @@
             data-label="{{ project.issue.label }}"
             data-crawl="{{ project.timestamp }}"
             data-severity="{{ project.issue.severity }}"
-            data-slug="{{ project.slug }}">{{ icon }} {{ lbl }}</button>
+            data-slug="{{ project.slug }}">{{ icon }} {{ tr(lbl) }}</button>
         {% endfor %}
         <span class="task-status-msg muted small" style="margin-left:4px;"></span>
-        <a href="/projects/{{ project.slug }}/corrections" class="muted small" style="margin-left:auto;">Voir toutes les corrections →</a>
+        <a href="/projects/{{ project.slug }}/corrections" class="muted small" style="margin-left:auto;">{{ tr("Voir toutes les corrections →") }}</a>
       </div>
 
       {% if fix_suggestion and fix_suggestion.why %}
-        <p class="muted">{{ fix_suggestion.why }}</p>
+        <p class="muted">{{ tr(fix_suggestion.why) }}</p>
       {% endif %}
 
       <div class="grid two">
         <div class="card">
-          <div class="card-title-row"><h3>Actions à faire</h3></div>
+          <div class="card-title-row"><h3>{{ tr("Actions à faire") }}</h3></div>
           {% if fix_suggestion and fix_suggestion.fix %}
             <ul class="help-steps">
               {% for step in fix_suggestion.fix %}
-                <li>{{ step }}</li>
+                <li>{{ tr(step) }}</li>
               {% endfor %}
             </ul>
           {% else %}
-            <p class="muted">Aucune recommandation disponible.</p>
+            <p class="muted">{{ tr("Aucune recommandation disponible.") }}</p>
           {% endif %}
         </div>
         <div class="card">
-          <div class="card-title-row"><h3>Comment vérifier</h3></div>
+          <div class="card-title-row"><h3>{{ tr("Comment vérifier") }}</h3></div>
           {% if fix_suggestion and fix_suggestion.verify %}
             <ul class="help-steps">
               {% for step in fix_suggestion.verify %}
-                <li>{{ step }}</li>
+                <li>{{ tr(step) }}</li>
               {% endfor %}
             </ul>
           {% else %}
@@ -143,7 +143,7 @@
 
       {% if fix_suggestion and fix_suggestion.sample_urls %}
         <div style="margin-top:14px;">
-          <p class="muted small" style="margin-bottom:4px;">URLs réelles affectées</p>
+          <p class="muted small" style="margin-bottom:4px;">{{ tr("URLs réelles affectées") }}</p>
           {% for u in fix_suggestion.sample_urls %}
             {% set _gh = gh_tasks.get(u) if gh_tasks else none %}
             {% set _gh_pr = _gh.pr if _gh else none %}
@@ -153,32 +153,32 @@
                 {# ── GitHub PR badge ── #}
                 {% if _gh_pr and _gh_pr.pr_url %}
                   {% if _gh.verified %}
-                    <span class="badge ok" style="font-size:10px;padding:2px 7px;">✓ Vérifié par analyse</span>
+                    <span class="badge ok" style="font-size:10px;padding:2px 7px;">{{ tr("✓ Vérifié par analyse") }}</span>
                   {% else %}
-                    <span class="badge warning" style="font-size:10px;padding:2px 7px;">PR en cours</span>
+                    <span class="badge warning" style="font-size:10px;padding:2px 7px;">{{ tr("PR en cours") }}</span>
                   {% endif %}
                   <a href="{{ _gh_pr.pr_url }}" target="_blank" rel="noreferrer"
                      style="font-size:11px;color:var(--muted);text-decoration:none;padding:2px 7px;border:1px solid var(--border);border-radius:4px;font-family:monospace;"
-                     title="Voir le commit">{% if _gh_pr.pr_number %}#{{ _gh_pr.pr_number }}{% endif %}{% if _gh_pr.commit_sha %} {{ _gh_pr.commit_sha }}{% endif %} ↗</a>
+                     title="{{ tr("Voir le commit") }}">{% if _gh_pr.pr_number %}#{{ _gh_pr.pr_number }}{% endif %}{% if _gh_pr.commit_sha %} {{ _gh_pr.commit_sha }}{% endif %} ↗</a>
                 {% endif %}
                 {# ── Verification badge (set by last crawl) ── #}
                 {% set _v = _gh.verify if _gh else none %}
                 {% if _v and _v.result == 'resolved' %}
-                  <span class="badge ok" style="font-size:10px;padding:2px 7px;" title="Confirmé résolu au dernier crawl">✓ Vérifié résolu</span>
+                  <span class="badge ok" style="font-size:10px;padding:2px 7px;" title="{{ tr("Confirmé résolu au dernier crawl") }}">{{ tr("✓ Vérifié résolu") }}</span>
                 {% elif _v and _v.result == 'still_present' %}
-                  <span class="badge error" style="font-size:10px;padding:2px 7px;" title="Toujours détecté après correction">⚠ Toujours présent</span>
+                  <span class="badge error" style="font-size:10px;padding:2px 7px;" title="{{ tr("Toujours détecté après correction") }}">{{ tr("⚠ Toujours présent") }}</span>
                 {% endif %}
                 {% if correction_controls.url_fix %}
                 <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
                   data-url="{{ u }}"
                   data-issue="{{ project.issue.key }}"
                   data-crawl="{{ project.timestamp }}"
-                  data-slug="{{ project.slug }}">Correction IA</button>
+                  data-slug="{{ project.slug }}">{{ tr("Correction IA") }}</button>
                 {% endif %}
                 {% if correction_controls.deep_fix %}
                 <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
                   data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
-                  title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
+                  title="{{ tr('Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR') }}"
                   data-url="{{ u }}"
                   data-issue="{{ project.issue.key }}"
                   data-crawl="{{ project.timestamp }}"
@@ -196,10 +196,10 @@
     <section class="card">
       {% if project.issue.kind %}
         <div class="card-title-row">
-          <h2>Erreurs réelles</h2>
+          <h2>{{ tr("Erreurs réelles") }}</h2>
         {% if project.issue.pagination %}
           <span class="muted small mono">
-            {{ project.issue.pagination.total }} · page {{ project.issue.pagination.page }}/{{ project.issue.pagination.pages }}
+            {{ project.issue.pagination.total }} · {{ tr("page") }} {{ project.issue.pagination.page }}/{{ project.issue.pagination.pages }}
           </span>
         {% endif %}
       </div>
@@ -207,28 +207,28 @@
       <form method="get" class="filters" style="margin-top: 8px;">
         <input type="hidden" name="crawl" value="{{ project.timestamp }}" />
         <label class="grow">
-          Recherche
-          <input type="text" name="q" value="{{ q or '' }}" placeholder="URL, état, code, etc." />
+          {{ tr("Recherche") }}
+          <input type="text" name="q" value="{{ q or '' }}" placeholder="{{ tr("URL, état, code, etc.") }}" />
         </label>
         <label>
-          Par page
+          {{ tr("Par page") }}
           <select name="per_page">
             {% for n in [50, 100, 200, 500] %}
               <option value="{{ n }}" {% if project.issue.pagination and (project.issue.pagination.per_page == n) %}selected{% endif %}>{{ n }}</option>
             {% endfor %}
           </select>
         </label>
-        <button type="submit" class="btn">Appliquer</button>
+        <button type="submit" class="btn">{{ tr("Appliquer") }}</button>
       </form>
 
         {% if project.issue.source %}
           <p class="muted small" style="margin-top: 10px;">
-            Source: <a href="/file?path={{ project.issue.source }}">ouvrir le fichier</a>
+            {{ tr("Source :") }} <a href="/file?path={{ project.issue.source }}">{{ tr("ouvrir le fichier") }}</a>
           </p>
         {% endif %}
 
         {% if not project.issue.rows %}
-          <p class="muted" style="margin-top: 10px;">Aucune ligne à afficher.</p>
+          <p class="muted" style="margin-top: 10px;">{{ tr("Aucune ligne à afficher.") }}</p>
         {% else %}
           {% if project.issue.kind == "gsc_url_inspection" %}
             <div class="table-wrap" style="margin-top: 10px;">
@@ -236,12 +236,12 @@
                 <thead>
                   <tr>
                     <th>URL</th>
-                    <th>Verdict</th>
-                    <th>Couverture</th>
+                    <th>{{ tr("Verdict") }}</th>
+                    <th>{{ tr("Couverture") }}</th>
                     <th>Robots</th>
-                    <th>Indexation</th>
-                    <th>Récupération</th>
-                    <th>Détails</th>
+                    <th>{{ tr("Indexation") }}</th>
+                    <th>{{ tr("Récupération") }}</th>
+                    <th>{{ tr("Détails") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -255,7 +255,7 @@
                       <td class="mono">{{ row.fetch_state }}</td>
                       <td>
                         <details class="logs-details">
-                          <summary class="muted small">voir</summary>
+                          <summary class="muted small">{{ tr("voir") }}</summary>
                           <div class="kv">
                             <div class="kv-item"><span class="muted">Google canonical</span><div class="mono">{{ row.google_canonical }}</div></div>
                             <div class="kv-item"><span class="muted">User canonical</span><div class="mono">{{ row.user_canonical }}</div></div>
@@ -272,8 +272,8 @@
               <table class="table">
                 <thead>
                   <tr>
-                    <th>Ligne</th>
-                    <th>Détails</th>
+                    <th>{{ tr("Ligne") }}</th>
+                    <th>{{ tr("Détails") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -291,7 +291,7 @@
                       </td>
                       <td>
                         <details class="logs-details">
-                          <summary class="muted small">voir</summary>
+                          <summary class="muted small">{{ tr("voir") }}</summary>
                           <pre>{% for k, v in row.items() %}{{ k }}: {{ v }}{% if not loop.last %}{{ "\n" }}{% endif %}{% endfor %}</pre>
                         </details>
                       </td>
@@ -309,37 +309,37 @@
               {% set next = pag.page + 1 %}
               <div>
                 {% if pag.page > 1 %}
-                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ prev }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">← Précédent</a>
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ prev }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">{{ tr("← Précédent") }}</a>
                 {% else %}
-                  <span class="btn" style="opacity:.5; pointer-events:none;">← Précédent</span>
+                  <span class="btn" style="opacity:.5; pointer-events:none;">{{ tr("← Précédent") }}</span>
                 {% endif %}
               </div>
-              <div class="muted small">Page <span class="mono">{{ pag.page }}</span> / <span class="mono">{{ pag.pages }}</span></div>
+              <div class="muted small">{{ tr("Page") }} <span class="mono">{{ pag.page }}</span> / <span class="mono">{{ pag.pages }}</span></div>
               <div>
                 {% if pag.page < pag.pages %}
-                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ next }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">Suivant →</a>
+                  <a class="btn" href="/projects/{{ project.slug }}/issues/{{ project.issue.key }}?crawl={{ project.timestamp }}&page={{ next }}&per_page={{ pag.per_page }}&q={{ q|urlencode }}">{{ tr("Suivant →") }}</a>
                 {% else %}
-                  <span class="btn" style="opacity:.5; pointer-events:none;">Suivant →</span>
+                  <span class="btn" style="opacity:.5; pointer-events:none;">{{ tr("Suivant →") }}</span>
                 {% endif %}
               </div>
             </div>
           {% endif %}
         {% endif %}
       {% else %}
-        <h2>URLs concernées</h2>
+        <h2>{{ tr("URLs concernées") }}</h2>
         {% if not project.issue.examples %}
-          <p class="muted">Aucune donnée disponible.</p>
+          <p class="muted">{{ tr("Aucune donnée disponible.") }}</p>
         {% else %}
           {% if project.issue.cwv %}
           {% set m = project.issue.cwv.metric %}
           {% set th = project.issue.cwv.thresholds %}
           <p class="muted small">
             {% if m == "lcp" %}
-              Seuils: bon ≤ {{ (th.good_max / 1000) if th.good_max else 2.5 }}s · amélioration ≤ {{ (th.ni_max / 1000) if th.ni_max else 4.0 }}s · médiocre &gt; {{ (th.ni_max / 1000) if th.ni_max else 4.0 }}s
+              {{ tr("Seuils : bon ≤ {good} · amélioration ≤ {ni} · médiocre > {poor}", good=((th.good_max / 1000) if th.good_max else 2.5)|string ~ 's', ni=((th.ni_max / 1000) if th.ni_max else 4.0)|string ~ 's', poor=((th.ni_max / 1000) if th.ni_max else 4.0)|string ~ 's') }}
             {% elif m == "tbt" %}
-              Seuils: bon ≤ {{ th.good_max if th.good_max else 200 }}ms · amélioration ≤ {{ th.ni_max if th.ni_max else 600 }}ms · médiocre &gt; {{ th.ni_max if th.ni_max else 600 }}ms
+              {{ tr("Seuils : bon ≤ {good} · amélioration ≤ {ni} · médiocre > {poor}", good=(th.good_max if th.good_max else 200)|string ~ 'ms', ni=(th.ni_max if th.ni_max else 600)|string ~ 'ms', poor=(th.ni_max if th.ni_max else 600)|string ~ 'ms') }}
             {% elif m == "cls" %}
-              Seuils: bon ≤ {{ th.good_max if th.good_max else 0.1 }} · amélioration ≤ {{ th.ni_max if th.ni_max else 0.25 }} · médiocre &gt; {{ th.ni_max if th.ni_max else 0.25 }}
+              {{ tr("Seuils : bon ≤ {good} · amélioration ≤ {ni} · médiocre > {poor}", good=th.good_max if th.good_max else 0.1, ni=th.ni_max if th.ni_max else 0.25, poor=th.ni_max if th.ni_max else 0.25) }}
             {% endif %}
           </p>
 
@@ -348,16 +348,16 @@
               <thead>
                 <tr>
                   <th>URL</th>
-                  <th>Statut</th>
-                  <th class="num">Valeur</th>
-                  <th>Source</th>
+                  <th>{{ tr("Statut") }}</th>
+                  <th class="num">{{ tr("Valeur") }}</th>
+                  <th>{{ tr("Source") }}</th>
                 </tr>
               </thead>
               <tbody>
                 {% for row in project.issue.cwv.rows %}
                   {% set cat = row.category %}
                   {% set badge = 'error' if cat == 'poor' else ('warning' if cat == 'ni' else 'notice') %}
-                  {% set label = 'à corriger' if cat == 'poor' else ('moyen' if cat == 'ni' else 'n/a') %}
+                  {% set label = tr('à corriger' if cat == 'poor' else ('moyen' if cat == 'ni' else 'n/a')) %}
                   {% set v = row.value %}
                   <tr>
                     <td class="mono"><a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a></td>
@@ -397,12 +397,12 @@
 	                      </span>
 	                      {% if correction_controls.url_fix %}
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
-	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">{{ tr("Correction IA") }}</button>
 	                      {% endif %}
 	                      {% if correction_controls.deep_fix %}
 	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
-	                        title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
+	                        title="{{ tr('Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR') }}"
 	                        data-url="{{ src }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
 	                      {% endif %}
 	                    </div>
@@ -417,12 +417,12 @@
 	                      <span class="mono" style="font-size:12px;flex:1;word-break:break-all;"><a href="{{ u }}" target="_blank" rel="noreferrer">{{ u }}</a> <span class="muted">{{ tail }}</span></span>
 	                      {% if correction_controls.url_fix %}
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
-	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">{{ tr("Correction IA") }}</button>
 	                      {% endif %}
 	                      {% if correction_controls.deep_fix %}
 	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
-	                        title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
+	                        title="{{ tr('Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR') }}"
 	                        data-url="{{ u }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
 	                      {% endif %}
 	                    </div>
@@ -435,12 +435,12 @@
 	                      <a href="{{ ex }}" target="_blank" rel="noreferrer" class="mono" style="font-size:12px;flex:1;word-break:break-all;">{{ ex }}</a>
 	                      {% if correction_controls.url_fix %}
 	                      <button type="button" class="btn url-ai-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
-	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">Correction IA</button>
+	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">{{ tr("Correction IA") }}</button>
 	                      {% endif %}
 	                      {% if correction_controls.deep_fix %}
 	                      <button type="button" class="btn gh-fix-btn" style="font-size:11px;padding:3px 10px;flex-shrink:0;"
 	                        data-fix-route="{{ 'github-fix' if correction_controls.url_fix else 'deep-fix' }}"
-	                        title="{{ 'Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR' }}"
+	                        title="{{ tr('Apercu du correctif' if correction_controls.url_fix else 'Correction des occurrences verifiees dans une PR') }}"
 	                        data-url="{{ ex }}" data-issue="{{ project.issue.key }}" data-crawl="{{ project.timestamp }}" data-slug="{{ project.slug }}">&#8982; GitHub</button>
 	                      {% endif %}
 	                    </div>
@@ -462,7 +462,7 @@
 {% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=2" defer></script>
+<link rel="stylesheet" href="/static/correction-review.css?v=1" /><script src="/static/correction-review.js?v=3" defer></script>
 <link rel="stylesheet" href="/static/cms.css?v=1" />
 <script>
 (function () {
@@ -490,8 +490,8 @@
       .then(function(data) {
         btn.disabled = false;
         if (data.ok) {
-          var labels = { todo:'À traiter', in_progress:'En cours', done:'Modifié · à vérifier', ignored:'Ignoré' };
-          if (msg) { msg.textContent = status === 'done' ? 'Modification déclarée. Une nouvelle analyse doit vérifier le résultat.' : 'Statut mis à jour : ' + (labels[status] || status); }
+          var labels = { todo:{{ tr("À traiter")|tojson }}, in_progress:{{ tr("En cours")|tojson }}, done:{{ tr("Modifié · à vérifier")|tojson }}, ignored:{{ tr("Ignoré")|tojson }} };
+          if (msg) { msg.textContent = status === 'done' ? {{ tr("Modification déclarée. Une nouvelle analyse doit vérifier le résultat.")|tojson }} : {{ tr("Statut mis à jour :")|tojson }} + ' ' + (labels[status] || status); }
           bar && bar.querySelectorAll('.task-status-btn').forEach(function(b) {
             b.style.fontWeight = b.dataset.status === status ? '700' : '';
             b.style.opacity = b.dataset.status === status ? '1' : '0.6';
@@ -515,13 +515,13 @@
     const slug = btn.dataset.slug;
 
     btn.disabled = true;
-    btn.textContent = 'Analyse…';
+    btn.textContent = {{ tr("Analyse…")|tojson }};
 
     fetch(`/api/projects/${encodeURIComponent(slug)}/issues/${encodeURIComponent(issue)}/url-fix?url=${encodeURIComponent(url)}&crawl=${encodeURIComponent(crawl || '')}`)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.error) {
-          btn.textContent = 'Réessayer';
+          btn.textContent = {{ tr("Réessayer")|tojson }};
           btn.disabled = false;
           btn.title = data.error;
           result.innerHTML = '<p style="color:var(--error,#f87171);font-size:12px;">&#x2717; ' + _esc(data.error) + '</p>';
@@ -529,15 +529,15 @@
           return;
         }
         let html = '';
-        if (data.fix) html += '<strong>Diagnostic&nbsp;:</strong> ' + _esc(data.fix);
-        if (data.code) html += '<br><strong>Code&nbsp;:</strong><pre style="margin:6px 0 4px;padding:8px 10px;background:var(--bg,#0d0d0f);border:1px solid var(--border);border-radius:4px;font-size:11px;white-space:pre-wrap;word-break:break-all;overflow-x:auto;font-family:monospace;">' + _esc(data.code) + '</pre>';
-        if (data.action) html += '<strong>Action&nbsp;:</strong> ' + _esc(data.action);
+        if (data.fix) html += '<strong>' + {{ tr("Diagnostic :")|tojson }} + '</strong> ' + _esc(data.fix);
+        if (data.code) html += '<br><strong>' + {{ tr("Code :")|tojson }} + '</strong><pre style="margin:6px 0 4px;padding:8px 10px;background:var(--bg,#0d0d0f);border:1px solid var(--border);border-radius:4px;font-size:11px;white-space:pre-wrap;word-break:break-all;overflow-x:auto;font-family:monospace;">' + _esc(data.code) + '</pre>';
+        if (data.action) html += '<strong>' + {{ tr("Action :")|tojson }} + '</strong> ' + _esc(data.action);
         result.innerHTML = html;
         result.style.display = 'block';
         btn.style.display = 'none';
       })
       .catch(function () {
-        btn.textContent = 'Erreur';
+        btn.textContent = {{ tr("Erreur")|tojson }};
         btn.disabled = false;
       });
   });

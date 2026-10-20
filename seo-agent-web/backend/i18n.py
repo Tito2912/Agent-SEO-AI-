@@ -6,12 +6,14 @@ catalogue s'affiche en francais : un ecran pas encore traduit reste utilisable, 
 jamais une cle technique.
 
 Choix de la langue, du plus explicite au plus implicite :
-  1. `?lang=en` dans l'adresse (le selecteur de langue) — memorise ensuite dans un cookie ;
+  1. l'adresse d'une page publique (`/en/pricing`), ou `?lang=en` (le selecteur de langue) —
+     memorisee ensuite dans un cookie ;
   2. le cookie `noyaru_lang` ;
-  3. l'en-tete `Accept-Language` du navigateur ;
-  4. le francais.
+  3. la langue d'affichage choisie dans « Mon compte » ;
+  4. l'en-tete `Accept-Language` du navigateur ;
+  5. le francais.
 Un robot d'indexation n'envoie en general ni cookie ni `Accept-Language` : il voit le
-francais, la version de reference des pages publiques.
+francais a l'adresse francaise, l'anglais a l'adresse anglaise (`LOCALIZED_PAGES`).
 """
 from __future__ import annotations
 
@@ -21,16 +23,26 @@ from contextvars import ContextVar
 import unicodedata
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, urlunsplit
 
 from jinja2 import pass_context
 from markupsafe import Markup, escape
+from starlette.responses import JSONResponse as _JSONResponse, RedirectResponse
 
 DEFAULT_LANG = "fr"
 # L'ordre est celui du selecteur.
 LANGUAGES: dict[str, str] = {"fr": "Français", "en": "English"}
 COOKIE_NAME = "noyaru_lang"
 _COOKIE_MAX_AGE = 365 * 24 * 3600
+
+# Les pages publiques qui ont une adresse par langue : `/pricing` en francais, `/en/pricing` en
+# anglais. Google indexe chaque version, et chacune annonce l'autre (balises hreflang). Les
+# ecrans de l'application gardent une seule adresse et suivent la langue du client.
+LOCALIZED_PAGES = frozenset({"/", "/pricing", "/support", "/status", "/docs", "/ressources-seo"})
+# Les pages de documentation et les guides (`/en/docs/<page>`, `/en/ressources-seo/<guide>`) :
+# leur route sert la traduction quand elle existe et renvoie vers la page francaise sinon.
+# Chacune annonce ses versions elle-meme (`alternates` dans le contexte du gabarit).
+LOCALIZED_PREFIXES = ("/docs/", "/ressources-seo/")
 
 # La langue de la requete en cours, pour les macros importees sans contexte (`{% from ... import
 # ... %}`) : elles ne voient pas `request`, seulement les variables globales.
@@ -57,6 +69,29 @@ def normalize(value: Any) -> str:
     """`en-US` -> `en` ; une langue inconnue -> chaine vide."""
     code = str(value or "").strip().lower().replace("_", "-").split("-", 1)[0]
     return code if code in LANGUAGES else ""
+
+
+def localized_path(path: str, lang: str) -> str:
+    """L'adresse d'une page publique dans une langue : `/pricing` -> `/en/pricing`, `/` -> `/en/`.
+    En francais, ou pour une page sans adresse par langue, l'adresse ne change pas."""
+    if lang == DEFAULT_LANG or lang not in LANGUAGES or path not in LOCALIZED_PAGES:
+        return path
+    return f"/{lang}/" if path == "/" else f"/{lang}{path}"
+
+
+def localized_links(builder: Any) -> Any:
+    """Les liens des pages publiques (`campaign_link`) menent a la version de la langue de la
+    page : `/pricing#comparatif` devient `/en/pricing#comparatif` sur une page en anglais. Une
+    personne connectee garde des adresses simples : sa langue suit son compte."""
+
+    def link(request: Any, path: str) -> str:
+        parts = urlsplit(str(path))
+        if not parts.scheme and not parts.netloc and getattr(request.state, "user", None) is None:
+            local = localized_path(parts.path, request_lang(request))
+            path = urlunsplit(("", "", local, parts.query, parts.fragment))
+        return builder(request, path)
+
+    return link
 
 
 def _from_accept_language(header: str) -> str:
@@ -94,8 +129,12 @@ def request_lang(request: Any) -> str:
         return cached
     try:
         lang = (
-            normalize(request.query_params.get("lang"))
+            # `/en/pricing` : l'adresse elle-meme dit la langue (voir LocalizedPaths).
+            normalize(getattr(state, "url_lang", None))
+            or normalize(request.query_params.get("lang"))
             or normalize(request.cookies.get(COOKIE_NAME))
+            # La langue choisie dans « Mon compte » suit le client d'un appareil a l'autre.
+            or normalize(getattr(getattr(state, "user", None), "language", None))
             or _from_accept_language(request.headers.get("accept-language", ""))
             or DEFAULT_LANG
         )
@@ -133,12 +172,60 @@ def _numbered(source: str, lang: str, catalog: dict[str, str]) -> str | None:
         return None
 
 
+# Phrases composees par le code avec une valeur du site (« … la marque (exemple.fr) … ») : le
+# catalogue les connait avec un trou nomme, « … la marque ({domain}) … ». Seuls ces noms-la
+# ouvrent un trou : un trou comme {n} ou {plan} vient d'un gabarit qui passe deja sa valeur.
+# `{detail}` sert de second trou quand une phrase porte deux valeurs differentes.
+_PATTERN_FIELDS = frozenset({"domain", "url", "src", "label", "candidates", "detail"})
+_PLACEHOLDER = re.compile(r"\{([a-z_][a-z_0-9]*)\}")
+_pattern_cache: dict[str, list[tuple[re.Pattern[str], str]]] = {}
+
+
+def _patterns(lang: str, catalog: dict[str, str]) -> list[tuple[re.Pattern[str], str]]:
+    if lang not in _pattern_cache:
+        compiled: list[tuple[re.Pattern[str], str]] = []
+        for key, target in catalog.items():
+            names = _PLACEHOLDER.findall(key)
+            if not names or not set(names) <= _PATTERN_FIELDS:
+                continue
+            parts = _PLACEHOLDER.split(key)  # texte, nom, texte, nom, ..., texte
+            seen: set[str] = set()
+            regex = ""
+            for index, part in enumerate(parts):
+                if index % 2 == 0:
+                    regex += re.escape(part)
+                elif part in seen:
+                    regex += f"(?P={part})"
+                else:
+                    seen.add(part)
+                    regex += f"(?P<{part}>.+?)"
+            compiled.append((re.compile(regex, re.S), target))
+        _pattern_cache[lang] = compiled
+    return _pattern_cache[lang]
+
+
+def _patterned(source: str, lang: str, catalog: dict[str, str]) -> str | None:
+    for regex, target in _patterns(lang, catalog):
+        match = regex.fullmatch(source)
+        if match is None:
+            continue
+        # La valeur inseree se traduit elle aussi quand elle est connue (« aucune page identifiée »).
+        values = {name: catalog.get(value, value) for name, value in match.groupdict().items()}
+        try:
+            return target.format(**values)
+        except (IndexError, KeyError, ValueError):
+            return None
+    return None
+
+
 def translate(text: str, lang: str = DEFAULT_LANG, **values: Any) -> str:
     source = str(text or "")
     catalog = _catalog(lang)
     result = catalog.get(source)
+    if result is None and catalog:
+        result = _numbered(source, lang, catalog) or (None if values else _patterned(source, lang, catalog))
     if result is None:
-        result = (_numbered(source, lang, catalog) if catalog else None) or source
+        result = source
     if values:
         values = {
             key: _localize_number(value, lang) if isinstance(value, str) and _NUMBER.fullmatch(value) else value
@@ -147,8 +234,23 @@ def translate(text: str, lang: str = DEFAULT_LANG, **values: Any) -> str:
         try:
             result = result.format(**values)
         except (KeyError, IndexError, ValueError):
-            result = source.format(**values)
+            try:
+                result = source.format(**values)
+            except (KeyError, IndexError, ValueError):
+                result = source
     return result
+
+
+class JSONResponse(_JSONResponse):
+    """Une reponse JSON dont le message `error` suit la langue du client, comme les messages
+    `msg` et `err` qu'affichent les gabarits : l'ecran l'affiche tel quel. En francais, ou
+    hors d'une requete (une tache de fond), la reponse ne change pas."""
+
+    def render(self, content: Any) -> bytes:
+        lang = current_lang()
+        if lang != DEFAULT_LANG and isinstance(content, dict) and isinstance(content.get("error"), str):
+            content = {**content, "error": translate(content["error"], lang)}
+        return super().render(content)
 
 
 def current_lang() -> str:
@@ -190,15 +292,46 @@ _link_builder: Any = None
 
 @pass_context
 def _lang_url(context: Any, code: str) -> str:
-    """L'adresse de la page courante dans une autre langue."""
+    """L'adresse de la page courante dans une autre langue.
+
+    Une page publique a sa propre adresse dans chaque langue (`/en/pricing`) ; son retour en
+    francais garde `?lang=fr`, qui remplace un choix anglais deja memorise. Les autres pages,
+    et les pages vues par une personne connectee, gardent leur adresse avec `?lang=`."""
     request = context.get("request")
     if request is None:
         return f"/?lang={code}"
-    params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
-    path = f"{request.url.path}?{urlencode(params)}" if params else request.url.path
-    if _link_builder is not None:
-        path = _link_builder(request, path)
+    own_address = False
+    try:
+        params = [(k, v) for k, v in request.query_params.multi_items() if k in _KEPT_PARAMS]
+        path = request.url.path
+        alternates = _page_alternates(context)
+        if code in alternates and getattr(request.state, "user", None) is None:
+            own_address = code != DEFAULT_LANG
+            path = alternates[code]
+        path = f"{path}?{urlencode(params)}" if params else path
+        if _link_builder is not None:
+            path = _link_builder(request, path)
+    except Exception:
+        path = "/"  # Requete incomplete (rendu hors HTTP) : le lien reste valide.
+        own_address = False
+    if own_address:
+        return path
     return f"{path}{'&' if '?' in path else '?'}{urlencode([('lang', code)])}"
+
+
+@pass_context
+def _page_alternates(context: Any) -> dict[str, str]:
+    """Les adresses de la page courante dans chaque langue ({} si elle n'en a qu'une) : celles
+    que la route a passees (`alternates`, une page de documentation traduite), sinon celles
+    d'une page de LOCALIZED_PAGES."""
+    given = context.get("alternates")
+    if isinstance(given, dict):
+        return given
+    request = context.get("request")
+    path = getattr(getattr(request, "url", None), "path", "")
+    if path in LOCALIZED_PAGES:
+        return {code: localized_path(path, code) for code in LANGUAGES}
+    return {}
 
 
 _country_cache: dict[str, list[tuple[str, str]]] = {}
@@ -222,22 +355,80 @@ def _country_options(context: Any) -> list[tuple[str, str]]:
     return _country_cache[lang]
 
 
+# Les fichiers static/*.js appellent `noyaruT("texte francais")`. Seuls ces textes-la sont
+# envoyes a la page (voir `_lang_script.html`), pas tout le catalogue.
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+_JS_CALL = re.compile(r"noyaruT\(\s*(\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*')")
+_js_keys_cache: list[str] | None = None
+_js_catalog_cache: dict[str, dict[str, str]] = {}
+
+
+def _js_keys() -> list[str]:
+    global _js_keys_cache
+    if _js_keys_cache is None:
+        keys: list[str] = []
+        for path in sorted(_STATIC_DIR.glob("*.js")):
+            try:
+                source = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for literal in _JS_CALL.findall(source):
+                try:
+                    key = json.loads(literal) if literal.startswith('"') else json.loads('"' + literal[1:-1].replace("\\'", "'").replace('"', '\\"') + '"')
+                except ValueError:
+                    continue
+                if key not in keys:
+                    keys.append(key)
+        _js_keys_cache = keys
+    return _js_keys_cache
+
+
+@pass_context
+def _js_catalog(context: Any) -> dict[str, str]:
+    lang = request_lang(context.get("request"))
+    if lang == DEFAULT_LANG:
+        return {}
+    if lang not in _js_catalog_cache:
+        catalog = _catalog(lang)
+        _js_catalog_cache[lang] = {key: catalog[key] for key in _js_keys() if key in catalog}
+    return _js_catalog_cache[lang]
+
+
+def remember(response: Any, lang: Any, *, secure: bool = False) -> None:
+    """Retenir la langue choisie dans « Mon compte » pour ce navigateur, ou l'oublier si le
+    client a choisi une langue que l'interface ne parle pas encore."""
+    code = normalize(lang)
+    if code:
+        response.set_cookie(COOKIE_NAME, code, max_age=_COOKIE_MAX_AGE, httponly=True, samesite="lax", secure=secure)
+    else:
+        response.delete_cookie(COOKIE_NAME)
+
+
+def add_template_globals(env: Any) -> None:
+    """Les fonctions de traduction d'un environnement Jinja (aussi utile a un test qui rend un
+    morceau de gabarit dans son propre environnement)."""
+    env.globals["tr"] = _tr
+    env.globals["tr_html"] = _tr_html
+    env.globals["current_lang"] = _current_lang
+    env.globals["lang_url"] = _lang_url
+    env.globals["localized_path"] = localized_path
+    env.globals["localized_pages"] = LOCALIZED_PAGES
+    env.globals["page_alternates"] = _page_alternates
+    env.globals["languages"] = LANGUAGES
+    env.globals["localized_country_options"] = _country_options
+    env.globals["js_catalog"] = _js_catalog
+
+
 def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: Any = None) -> None:
     """`link_builder(request, path)` ajoute aux liens les parametres publics autorises (les
     etiquettes de campagne, voir signup_attribution.carry)."""
     global _link_builder
     _link_builder = link_builder
-    env = templates.env
-    env.globals["tr"] = _tr
-    env.globals["tr_html"] = _tr_html
-    env.globals["current_lang"] = _current_lang
-    env.globals["lang_url"] = _lang_url
-    env.globals["languages"] = LANGUAGES
-    env.globals["localized_country_options"] = _country_options
+    add_template_globals(templates.env)
 
     @app.middleware("http")
     async def remember_lang(request, call_next):  # type: ignore[no-untyped-def]
-        chosen = normalize(request.query_params.get("lang"))
+        chosen = normalize(getattr(request.state, "url_lang", None)) or normalize(request.query_params.get("lang"))
         token = _current_lang_var.set(request_lang(request))
         try:
             response = await call_next(request)
@@ -260,3 +451,35 @@ def install(app: Any, templates: Any, *, is_secure: Any = None, link_builder: An
                 secure=bool(is_secure(request)) if is_secure else request.url.scheme == "https",
             )
         return response
+
+
+class LocalizedPaths:
+    """Sert `/en/pricing` par la route de `/pricing`, l'anglais fixe par l'adresse.
+
+    A declarer en DERNIER dans app.py, donc a executer en PREMIER : les controles d'acces et
+    les routes ne voient que l'adresse francaise, qu'ils connaissent deja. `/en` renvoie vers
+    `/en/` (l'accueil). Une adresse `/en/...` qui n'est pas dans LOCALIZED_PAGES n'est pas
+    touchee : elle n'existe pas.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") == "http":
+            path = str(scope.get("path") or "")
+            for lang in LANGUAGES:
+                prefix = f"/{lang}"
+                if lang == DEFAULT_LANG or not (path == prefix or path.startswith(prefix + "/")):
+                    continue
+                if path == prefix:
+                    query = scope.get("query_string", b"").decode("latin-1")
+                    response = RedirectResponse(prefix + "/" + (f"?{query}" if query else ""), status_code=308)
+                    await response(scope, receive, send)
+                    return
+                page = path[len(prefix):]
+                if page in LOCALIZED_PAGES or page.startswith(LOCALIZED_PREFIXES):
+                    state = {**(scope.get("state") or {}), "url_lang": lang}
+                    scope = {**scope, "path": page, "raw_path": page.encode(), "state": state}
+                break
+        await self.app(scope, receive, send)

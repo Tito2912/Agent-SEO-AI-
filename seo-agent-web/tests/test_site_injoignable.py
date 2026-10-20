@@ -118,6 +118,8 @@ def _fragment():
     import jinja2
     source = (REPO_ROOT / "seo-agent-web" / "templates" / "project_overview.html").read_text(encoding="utf-8")
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(str(REPO_ROOT / "seo-agent-web" / "templates")))
+    from backend import i18n
+    i18n.add_template_globals(env)  # le fragment est traduisible (tr)
     return env, source
 
 
@@ -140,7 +142,10 @@ def test_the_projects_list_shows_a_badge_not_a_percentage() -> None:
     source = (REPO_ROOT / "seo-agent-web" / "templates" / "projects.html").read_text(encoding="utf-8")
     start = source.index("{% if p.timestamp and p.site_injoignable %}")
     end = source.index("{% else %}", source.index("{% elif p.timestamp %}"))
-    tpl = jinja2.Environment().from_string(source[start:end] + "{% endif %}")
+    env = jinja2.Environment()
+    from backend import i18n
+    i18n.add_template_globals(env)  # le fragment est traduisible (tr)
+    tpl = env.from_string(source[start:end] + "{% endif %}")
     assert "Site injoignable" in tpl.render(p={"timestamp": "x", "site_injoignable": {"raison": "dns"}, "health_score": 0})
     rendu = tpl.render(p={"timestamp": "x", "site_injoignable": None, "health_score": 87})
     assert "87%" in rendu and "Site injoignable" not in rendu

@@ -1,10 +1,10 @@
 {% extends "layout.html" %}
-{% block title %}Projets - Noyaru{% endblock %}
+{% block title %}{{ tr("Projets") }} - Noyaru{% endblock %}
 
 {% block head_extra %}
   <link rel="stylesheet" href="/static/journey.css?v=1" />
   <link rel="stylesheet" href="/static/first-audit.css?v=1" />
-  <script src="/static/first-audit.js?v=1" defer></script>
+  <script src="/static/first-audit.js?v=2" defer></script>
   {% if jobs %}
     {% set ns = namespace(live=false) %}
     {% for j in jobs %}
@@ -20,26 +20,26 @@
 {% endblock %}
 
 {% block crumbs %}
-  <span class="crumb-current">Projets</span>
+  <span class="crumb-current">{{ tr("Projets") }}</span>
 {% endblock %}
 
 {% block actions %}{% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>{% if projects %}Projets{% else %}Votre premier audit SEO{% endif %}</h1>
-    <p class="muted">{% if projects %}Retrouvez votre prochaine action et suivez les résultats de vos sites.{% else %}Découvrez ce qui freine votre site et par où commencer.{% endif %}</p>
+    <h1>{% if projects %}{{ tr("Projets") }}{% else %}{{ tr("Votre premier audit SEO") }}{% endif %}</h1>
+    <p class="muted">{% if projects %}{{ tr("Retrouvez votre prochaine action et suivez les résultats de vos sites.") }}{% else %}{{ tr("Découvrez ce qui freine votre site et par où commencer.") }}{% endif %}</p>
   </div>
 
   {% if err %}
     <div class="alert error">
-      <span class="badge error">erreur</span>
-      <p class="muted small">{{ err }}</p>
+      <span class="badge error">{{ tr("erreur") }}</span>
+      <p class="muted small">{{ tr(err) }}</p>
     </div>
   {% elif msg %}
     <div class="alert ok">
       <span class="badge ok">ok</span>
-      <p class="muted small">{{ msg }}</p>
+      <p class="muted small">{{ tr(msg) }}</p>
     </div>
   {% endif %}
 
@@ -59,21 +59,21 @@
     <div class="stat-strip">
       <div class="stat-strip-item">
         <div class="stat-strip-num">{{ projects | length }}</div>
-        <div class="stat-strip-lbl">Sites</div>
-        <div class="stat-strip-sub">projets configurés</div>
+        <div class="stat-strip-lbl">{{ tr("Sites") }}</div>
+        <div class="stat-strip-sub">{{ tr("projets configurés") }}</div>
       </div>
       <div class="stat-strip-sep"></div>
       <div class="stat-strip-item">
         <div class="stat-strip-num">{{ ns.crawled_count }}</div>
-        <div class="stat-strip-lbl">Analysés</div>
-        <div class="stat-strip-sub">avec un bilan exploitable</div>
+        <div class="stat-strip-lbl">{{ tr("Analysés") }}</div>
+        <div class="stat-strip-sub">{{ tr("avec un bilan exploitable") }}</div>
       </div>
       {% if ns.live_count %}
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--warn);">{{ ns.live_count }}</div>
-          <div class="stat-strip-lbl">En cours</div>
-          <div class="stat-strip-sub">analyse active</div>
+          <div class="stat-strip-lbl">{{ tr("En cours") }}</div>
+          <div class="stat-strip-sub">{{ tr("analyse active") }}</div>
         </div>
       {% endif %}
     </div>
@@ -89,32 +89,32 @@
   {% else %}
   <section class="card">
       <div class="card-title-row">
-	        <h2>Vos sites</h2>
+	        <h2>{{ tr("Vos sites") }}</h2>
 	        <div class="topbar-actions">
-              <label class="checkbox small"><input type="checkbox" id="select-all-projects" />Tout sélectionner</label>
+              <label class="checkbox small"><input type="checkbox" id="select-all-projects" />{{ tr("Tout sélectionner") }}</label>
 	          <div id="batch-project-actions" class="batch-project-actions" hidden>
-              <span class="muted small" id="batch-crawl-count">0 sélectionné</span>
+              <span class="muted small" id="batch-crawl-count">{{ tr("0 sélectionné") }}</span>
 	          <button type="submit" form="batch-crawl-form" class="btn primary" id="batch-crawl-btn" disabled>
-	            Auditer la sélection
+	            {{ tr("Auditer la sélection") }}
 	          </button>
 	          <button type="submit" form="delete-projects-form" class="btn danger" id="delete-projects-btn" disabled>
-	            Supprimer
+	            {{ tr("Supprimer") }}
 	          </button>
 	          </div>
-              <button type="button" class="btn" id="add-project-open" data-open-add-project>Ajouter un site</button>
+              <button type="button" class="btn" id="add-project-open" data-open-add-project>{{ tr("Ajouter un site") }}</button>
 	        </div>
 	      </div>
 	      <div class="table-wrap">
-	        <table class="table projects-table" role="table" aria-label="Vos sites">
+	        <table class="table projects-table" role="table" aria-label="{{ tr("Vos sites") }}">
           <thead>
             <tr>
-              <th style="width: 42px;" aria-label="Sélection"></th>
-              <th>Projet</th>
-              <th>Dernière analyse</th>
-              <th>Santé</th>
-              <th class="num">URL analysées</th>
-              <th class="num">URLs avec erreurs</th>
-              <th>Anomalies</th>
+              <th style="width: 42px;" aria-label="{{ tr("Sélection") }}"></th>
+              <th>{{ tr("Projet") }}</th>
+              <th>{{ tr("Dernière analyse") }}</th>
+              <th>{{ tr("Santé") }}</th>
+              <th class="num">{{ tr("URL analysées") }}</th>
+              <th class="num">{{ tr("URLs avec erreurs") }}</th>
+              <th>{{ tr("Anomalies") }}</th>
               <th></th>
             </tr>
           </thead>
@@ -128,7 +128,7 @@
 	                    <input
 	                      type="checkbox"
 	                      class="project-select"
-                        aria-label="Sélectionner {{ p.site_name }}"
+                        aria-label="{{ tr('Sélectionner {name}', name=p.site_name) }}"
 	                      value="{{ p.slug }}"
 	                    />
 	                  </label>
@@ -144,7 +144,7 @@
 	                        <a href="/projects/{{ p.slug }}">{{ p.site_name }}</a>
                         {% endif %}
 	                      {% if not p.timestamp %}
-	                        <span class="badge notice" style="margin-left:8px;">nouveau</span>
+	                        <span class="badge notice" style="margin-left:8px;">{{ tr("nouveau") }}</span>
 	                      {% endif %}
 	                      </div>
 	                      <div class="muted small">{{ p.base_url }}</div>
@@ -154,11 +154,11 @@
                       <div class="muted small gh-etat" data-project-slug="{{ p.slug }}">
                         {% if p.github_repo %}
                           <a href="https://github.com/{{ p.github_repo }}" target="_blank"
-                             rel="noreferrer noopener" title="Dépôt lié à ce projet">⎇ {{ p.github_repo }}</a>{% if p.github_branch %}<span class="muted"> · {{ p.github_branch }}</span>{% endif %}
+                             rel="noreferrer noopener" title="{{ tr("Dépôt lié à ce projet") }}">⎇ {{ p.github_repo }}</a>{% if p.github_branch %}<span class="muted"> · {{ p.github_branch }}</span>{% endif %}
                         {% else %}
                           <button type="button" class="btn gh-lier" data-slug="{{ p.slug }}"
-                                  title="Lier un dépôt GitHub pour pouvoir corriger ce projet">
-                            Connecter GitHub
+                                  title="{{ tr("Lier un dépôt GitHub pour pouvoir corriger ce projet") }}">
+                            {{ tr("Connecter GitHub") }}
                           </button>
                         {% endif %}
                       </div>
@@ -167,17 +167,17 @@
 	                  </td>
                 <td>
 	                  {% if p.timestamp %}
-	                    <span class="project-mobile-label" aria-hidden="true">Dernière analyse</span><div data-ts-datetime="{{ p.timestamp }}">{{ p.timestamp_label }}</div>
+	                    <span class="project-mobile-label" aria-hidden="true">{{ tr("Dernière analyse") }}</span><div data-ts-datetime="{{ p.timestamp }}">{{ p.timestamp_label }}</div>
 	                  {% else %}
 	                    <div class="muted">-</div>
                       {% if recent_job and recent_job.status == 'failed' %}
-	                    <div class="muted small">Dernière tentative en échec</div>
+	                    <div class="muted small">{{ tr("Dernière tentative en échec") }}</div>
                       {% elif recent_job and recent_job.status == 'done' %}
-                      <div class="muted small">Bilan indisponible : ouvrez le projet pour réessayer</div>
+                      <div class="muted small">{{ tr("Bilan indisponible : ouvrez le projet pour réessayer") }}</div>
                       {% elif recent_job and recent_job.status in ['queued', 'running', 'cancel_requested'] %}
-                      <div class="muted small">Analyse en cours</div>
+                      <div class="muted small">{{ tr("Analyse en cours") }}</div>
                       {% else %}
-	                    <div class="muted small">Pas encore analysé</div>
+	                    <div class="muted small">{{ tr("Pas encore analysé") }}</div>
                       {% endif %}
 		                  {% endif %}
 		                  <div class="row-crawl-slot" data-project-slug="{{ p.slug }}">
@@ -197,7 +197,7 @@
 
 	                      <div class="row-crawl" data-job-id="{{ live.id }}" data-live="1" data-project-slug="{{ p.slug }}">
 	                        <div class="row-crawl-head">
-	                          <span class="pill {{ live.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live.status, live.status) }}</span>
+	                          <span class="pill {{ live.status }}" data-role="status">{{ tr({'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(live.status, live.status)) }}</span>
 	                          <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}-{% endif %}</span>
 	                        </div>
 	                        <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
@@ -217,7 +217,7 @@
                           {% endif %}
                           <div class="row-crawl" data-job-id="{{ recent_job.id }}" data-live="0" data-project-slug="{{ p.slug }}">
                             <div class="row-crawl-head">
-                              <span class="pill {{ recent_job.status }}" data-role="status">{{ {'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(recent_job.status, recent_job.status) }}</span>
+                              <span class="pill {{ recent_job.status }}" data-role="status">{{ tr({'queued':'en attente','running':'en cours','cancel_requested':'annulation…','done':'terminé','failed':'échec','canceled':'annulé'}.get(recent_job.status, recent_job.status)) }}</span>
                               <span class="mono small" data-role="progress-count">{% if tot %}{{ cur }}/{{ tot }}{% else %}-{% endif %}</span>
                             </div>
                             <div class="progress slim crawl" data-role="progress-bar" {% if not tot %}style="display:none;"{% endif %}>
@@ -226,16 +226,16 @@
                           </div>
                           {% if recent_job.status == 'failed' %}
                             <div class="muted small" style="margin-top:6px;">
-                              <a href="/projects/{{ p.slug }}?job={{ recent_job.id }}">Voir l'erreur</a>
+                              <a href="/projects/{{ p.slug }}?job={{ recent_job.id }}">{{ tr("Voir l'erreur") }}</a>
                             </div>
                           {% endif %}
 	                    {% endif %}
 	                  </div>
 	                </td>
 	                <td>
-                    <span class="project-mobile-label" aria-hidden="true">Santé des pages analysées</span>
+                    <span class="project-mobile-label" aria-hidden="true">{{ tr("Santé des pages analysées") }}</span>
 	                  {% if p.timestamp and p.site_injoignable %}
-	                    <span class="badge error" title="Aucune page n'a répondu au dernier crawl">Site injoignable</span>
+	                    <span class="badge error" title="{{ tr("Aucune page n'a répondu au dernier crawl") }}">{{ tr("Site injoignable") }}</span>
 	                  {% elif p.timestamp %}
 	                    {% set hcls = 'ok' if p.health_score >= 90 else ('warning' if p.health_score >= 70 else 'error') %}
 	                    <div class="health-inline">
@@ -246,9 +246,9 @@
 	                    <span class="muted">-</span>
 	                  {% endif %}
 	                </td>
-	                <td class="num mono"><span class="project-mobile-label" aria-hidden="true">URL analysées</span>{% if p.timestamp %}{{ p.urls_crawled }}{% else %}-{% endif %}</td>
+	                <td class="num mono"><span class="project-mobile-label" aria-hidden="true">{{ tr("URL analysées") }}</span>{% if p.timestamp %}{{ p.urls_crawled }}{% else %}-{% endif %}</td>
 	                <td class="num mono">
-                    <span class="project-mobile-label" aria-hidden="true">URL avec erreurs</span>
+                    <span class="project-mobile-label" aria-hidden="true">{{ tr("URL avec erreurs") }}</span>
 	                  {% if p.timestamp %}
 	                    {% if p.urls_with_errors > 0 %}
 	                      <span class="badge error">{{ p.urls_with_errors }}</span>
@@ -260,7 +260,7 @@
 	                  {% endif %}
 	                </td>
 	                <td>
-                    <span class="project-mobile-label" aria-hidden="true">Erreurs · avertissements · infos</span>
+                    <span class="project-mobile-label" aria-hidden="true">{{ tr("Erreurs · avertissements · infos") }}</span>
 	                  {% if p.timestamp %}
 	                    <div class="issues-inline">
 	                      <span class="dot error"></span><span class="mono">{{ p.issues_distribution.error or 0 }}</span>
@@ -276,14 +276,14 @@
 		                    <a
 		                      class="icon-btn"
 		                      href="/projects/{{ p.slug }}/settings/crawl"
-		                      title="Réglages de l’analyse"
-		                      aria-label="Réglages de l’analyse"
+		                      title="{{ tr("Réglages de l’analyse") }}"
+		                      aria-label="{{ tr("Réglages de l’analyse") }}"
 		                    >⚙</a>
 		                    <form method="post" action="/projects/{{ p.slug }}/crawl" class="crawl-start-form" data-slug="{{ p.slug }}">
 		                      <input type="hidden" name="config_path" value="{{ config_path }}" />
 		                      {% set live_running = live and live.status in ['queued','running','cancel_requested'] %}
 		                      <button type="submit" class="btn" data-role="start-btn" {% if live_running %}disabled{% endif %}>
-		                        {% if live_running %}En cours{% else %}Lancer l’analyse{% endif %}
+		                        {% if live_running %}{{ tr("En cours") }}{% else %}{{ tr("Lancer l’analyse") }}{% endif %}
 		                      </button>
 		                    </form>
 		                  </div>
@@ -340,7 +340,7 @@
 		            el.className = "row-crawl";
 		            el.innerHTML = `
 		              <div class="row-crawl-head">
-		                <span class="pill queued" data-role="status">en attente</span>
+		                <span class="pill queued" data-role="status">{{ tr("en attente") }}</span>
 		                <span class="mono small" data-role="progress-count">-</span>
 		              </div>
 		              <div class="progress slim crawl" data-role="progress-bar" style="display:none;">
@@ -352,12 +352,12 @@
 
 		          function statusLabel(status) {
 		            const map = {
-		              queued: "en attente",
-		              running: "en cours",
-		              cancel_requested: "annulation…",
-		              done: "terminé",
-		              failed: "échec",
-		              canceled: "annulé",
+		              queued: {{ tr("en attente")|tojson }},
+		              running: {{ tr("en cours")|tojson }},
+		              cancel_requested: {{ tr("annulation…")|tojson }},
+		              done: {{ tr("terminé")|tojson }},
+		              failed: {{ tr("échec")|tojson }},
+		              canceled: {{ tr("annulé")|tojson }},
 		            };
 		            return map[status] || status;
 		          }
@@ -377,14 +377,14 @@
 		          const startBtn = document.querySelector(`form.crawl-start-form[data-slug="${esc}"] [data-role="start-btn"]`);
 		          if (startBtn) {
 		            startBtn.disabled = true;
-		            startBtn.textContent = "En cours";
+		            startBtn.textContent = {{ tr("En cours")|tojson }};
 		          }
 		        }
 
 		        function render() {
 		          const checked = selectedValues().length;
                   document.getElementById("batch-project-actions").hidden = checked === 0;
-		          if (countEl) countEl.textContent = checked === 1 ? "1 sélectionné" : `${checked} sélectionnés`;
+		          if (countEl) countEl.textContent = checked === 1 ? {{ tr("1 sélectionné")|tojson }} : {{ tr("{n} sélectionnés")|tojson }}.replace("{n}", checked);
 		          if (btn) btn.disabled = checked === 0;
 	          if (delBtn) delBtn.disabled = checked === 0;
 	          if (selectAll) {
@@ -415,7 +415,7 @@
 	            const prevText = btn ? btn.textContent : "";
 	            if (btn) {
 	              btn.disabled = true;
-	              btn.textContent = "Démarrage…";
+	              btn.textContent = {{ tr("Démarrage…")|tojson }};
 	            }
 	            try {
 	              const res = await fetch(batchForm.action, {
@@ -437,9 +437,9 @@
 	              });
 	              boxes.forEach((b) => { if (slugs.includes(b.value)) b.checked = false; });
 	            } catch (err) {
-	              alert(`Erreur: ${String(err && err.message ? err.message : err)}`);
+	              alert({{ tr("Erreur : ")|tojson }} + String(err && err.message ? err.message : err));
 	            } finally {
-	              if (btn) btn.textContent = prevText || "Auditer la sélection";
+	              if (btn) btn.textContent = prevText || {{ tr("Auditer la sélection")|tojson }};
 	              render();
 	            }
 	          });
@@ -454,7 +454,7 @@
 	            const prevText = startBtn ? startBtn.textContent : "";
 	            if (startBtn) {
 	              startBtn.disabled = true;
-	              startBtn.textContent = "Démarrage…";
+	              startBtn.textContent = {{ tr("Démarrage…")|tojson }};
 	            }
 	            try {
 	              const res = await fetch(form.action, {
@@ -471,9 +471,9 @@
 	            } catch (err) {
 	              if (startBtn) {
 	                startBtn.disabled = false;
-	                startBtn.textContent = prevText || "Démarrer";
+	                startBtn.textContent = prevText || {{ tr("Démarrer")|tojson }};
 	              }
-	              alert(`Erreur: ${String(err && err.message ? err.message : err)}`);
+	              alert({{ tr("Erreur : ")|tojson }} + String(err && err.message ? err.message : err));
 	            }
 	          });
 	        });
@@ -485,8 +485,12 @@
 	              return;
 	            }
 	            const msg = slugs.length === 1
-	              ? `Supprimer le projet \"${slugs[0]}\" ?\\n\\nLes données seront déplacées dans seo-runs/_trash/.`
-	              : `Supprimer ${slugs.length} projets ?\\n\\nLes données seront déplacées dans seo-runs/_trash/.`;
+	              ? {{ tr("Supprimer le projet « {name} » ?
+
+Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{name}", slugs[0])
+	              : {{ tr("Supprimer {n} projets ?
+
+Les données seront déplacées dans seo-runs/_trash/.")|tojson }}.replace("{n}", slugs.length);
 	            if (!confirm(msg)) {
 	              e.preventDefault();
 	              return;
@@ -510,17 +514,17 @@
 	          </svg>
 	        </span>
 	        <div class="modal-title-copy">
-	          <h2>Ajouter un projet</h2>
-	          <div class="modal-subtitle">Ajoutez un domaine, une URL précise ou importez vos propriétés Search Console.</div>
+	          <h2>{{ tr("Ajouter un projet") }}</h2>
+	          <div class="modal-subtitle">{{ tr("Ajoutez un domaine, une URL précise ou importez vos propriétés Search Console.") }}</div>
 	        </div>
 	      </div>
 	      <form method="dialog">
-	        <button class="btn">Fermer</button>
+	        <button class="btn">{{ tr("Fermer") }}</button>
 	      </form>
 	    </div>
 	    <div class="modal-body">
 	      <div class="tab-buttons" id="add-project-tabs">
-	        <button type="button" class="tab-btn active" data-tab="domain">Domaine</button>
+	        <button type="button" class="tab-btn active" data-tab="domain">{{ tr("Domaine") }}</button>
 	        <button type="button" class="tab-btn" data-tab="url">URL</button>
 	        {% if request.state.user and request.state.user.is_admin %}
 	          <button type="button" class="tab-btn google-tab" data-tab="gsc">
@@ -534,15 +538,15 @@
 	        <form method="post" action="/projects/add">
 	          <input type="hidden" name="mode" value="domain" />
 	          <label>
-	            Nom de domaine
+	            {{ tr("Nom de domaine") }}
 	            <input name="domain" placeholder="example.com" required />
 	          </label>
 	          <label>
-	            Nom (optionnel)
-	            <input name="site_name" placeholder="Nom affiché" />
+	            {{ tr("Nom (optionnel)") }}
+	            <input name="site_name" placeholder="{{ tr("Nom affiché") }}" />
 	          </label>
 	          <div class="modal-actions">
-	            <button type="submit" class="btn primary">Ajouter</button>
+	            <button type="submit" class="btn primary">{{ tr("Ajouter") }}</button>
 	          </div>
 	        </form>
 	      </div>
@@ -555,11 +559,11 @@
 	            <input name="url" placeholder="https://example.com/" required />
 	          </label>
 	          <label>
-	            Nom (optionnel)
-	            <input name="site_name" placeholder="Nom affiché" />
+	            {{ tr("Nom (optionnel)") }}
+	            <input name="site_name" placeholder="{{ tr("Nom affiché") }}" />
 	          </label>
 	          <div class="modal-actions">
-	            <button type="submit" class="btn primary">Ajouter</button>
+	            <button type="submit" class="btn primary">{{ tr("Ajouter") }}</button>
 	          </div>
 	        </form>
 	      </div>
@@ -571,19 +575,19 @@
 	            <div class="gsc-toolbar">
 	              <button type="button" class="btn google-btn" id="gsc-load">
 	                <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-	                Charger depuis Google
+	                {{ tr("Charger depuis Google") }}
 	              </button>
 	              <span class="muted small" id="gsc-status"></span>
 	            </div>
 	            <div class="gsc-list is-empty" id="gsc-list">
 	              <div class="gsc-empty-state">
 	                <img class="google-logo" src="/static/google.svg" alt="" aria-hidden="true" />
-	                <span>Chargez les propriétés accessibles avec votre compte Google.</span>
+	                <span>{{ tr("Chargez les propriétés accessibles avec votre compte Google.") }}</span>
 	              </div>
 	            </div>
 	            <div class="modal-actions">
-	              <span class="muted small" id="gsc-count">0 sélectionné</span>
-	              <button type="submit" class="btn primary" id="gsc-submit" disabled>Ajouter la sélection</button>
+	              <span class="muted small" id="gsc-count">{{ tr("0 sélectionné") }}</span>
+	              <button type="submit" class="btn primary" id="gsc-submit" disabled>{{ tr("Ajouter la sélection") }}</button>
 	            </div>
 	          </form>
 	        </div>
@@ -640,13 +644,13 @@
 	        function renderGscState() {
 	          const boxes = Array.from(gscList.querySelectorAll("input[type=checkbox][name=gsc_urls]"));
 	          const checked = boxes.filter((b) => b.checked).length;
-	          gscCount.textContent = checked === 1 ? "1 sélectionné" : `${checked} sélectionnés`;
+	          gscCount.textContent = checked === 1 ? {{ tr("1 sélectionné")|tojson }} : {{ tr("{n} sélectionnés")|tojson }}.replace("{n}", checked);
 	          gscSubmit.disabled = checked === 0;
 	        }
 
 	        async function loadGsc() {
-	          gscStatus.textContent = "Chargement…";
-	          setGscEmpty("Connexion à Google Search Console…", true);
+	          gscStatus.textContent = {{ tr("Chargement…")|tojson }};
+	          setGscEmpty({{ tr("Connexion à Google Search Console…")|tojson }}, true);
 	          gscSubmit.disabled = true;
 	          try {
 	            // Try per-user OAuth first (full list), fall back to service account
@@ -661,18 +665,18 @@
 	              data = await r2.json();
 	            }
 	            if (!data || !data.ok) {
-	              const errorMessage = (data && data.error) ? data.error : "Erreur GSC";
+	              const errorMessage = (data && data.error) ? data.error : {{ tr("Erreur GSC")|tojson }};
 	              gscStatus.textContent = errorMessage;
 	              setGscEmpty(errorMessage);
 	              return;
 	            }
 	            const items = Array.isArray(data.properties) ? data.properties : [];
 	            if (items.length === 0) {
-	              gscStatus.textContent = "Aucune propriété accessible.";
-	              setGscEmpty("Aucune propriété accessible avec ce compte Google.");
+	              gscStatus.textContent = {{ tr("Aucune propriété accessible.")|tojson }};
+	              setGscEmpty({{ tr("Aucune propriété accessible avec ce compte Google.")|tojson }});
 	              return;
 	            }
-	            gscStatus.textContent = `${items.length} propriétés`;
+	            gscStatus.textContent = {{ tr("{n} propriétés")|tojson }}.replace("{n}", items.length);
 	            gscList.classList.remove("is-empty", "is-loading");
 	            gscList.innerHTML = "";
 
@@ -681,7 +685,7 @@
 	            header.innerHTML = `
 	              <label class="checkbox" style="justify-content:flex-start;">
 	                <input type="checkbox" id="gsc-select-all" />
-	                <span>Tout sélectionner</span>
+	                <span>${ {{ tr("Tout sélectionner")|tojson }} }</span>
 	              </label>
 	            `;
 	            gscList.appendChild(header);
@@ -696,12 +700,12 @@
 	              const safeDomain = escapeHtml(domain || value);
 	              if (p.already_added) {
 	                label.className = "checkbox gsc-already-added";
-	                label.title = "Déjà dans vos projets";
+	                label.title = {{ tr("Déjà dans vos projets")|tojson }};
 	                label.innerHTML = `
 	                  <input type="checkbox" name="gsc_urls" value="${safeValue}" disabled />
 	                  <span class="mono">${safeDomain}</span>
 	                  <span class="muted small">${safeValue}</span>
-	                  <span class="badge ok" style="margin-left:auto;font-size:10px;">Ajouté</span>
+	                  <span class="badge ok" style="margin-left:auto;font-size:10px;">${ {{ tr("Ajouté")|tojson }} }</span>
 	                `;
 	              } else {
 	                label.className = "checkbox";
@@ -766,12 +770,12 @@
 
 	      function statusLabel(status) {
 	        const map = {
-	          queued: "en attente",
-	          running: "en cours",
-	          cancel_requested: "annulation…",
-	          done: "terminé",
-	          failed: "échec",
-	          canceled: "annulé",
+	          queued: {{ tr("en attente")|tojson }},
+	          running: {{ tr("en cours")|tojson }},
+	          cancel_requested: {{ tr("annulation…")|tojson }},
+	          done: {{ tr("terminé")|tojson }},
+	          failed: {{ tr("échec")|tojson }},
+	          canceled: {{ tr("annulé")|tojson }},
 	        };
 	        return map[status] || status;
 	      }
@@ -814,7 +818,7 @@
 	            const startBtn = document.querySelector(`form.crawl-start-form[data-slug="${esc}"] [data-role="start-btn"]`);
 	            if (startBtn) {
 	              startBtn.disabled = false;
-	              startBtn.textContent = status === "failed" ? "Réessayer" : "Démarrer";
+	              startBtn.textContent = status === "failed" ? {{ tr("Réessayer")|tojson }} : {{ tr("Démarrer")|tojson }};
 	            }
 	          }
 	        }
@@ -887,7 +891,7 @@
 	        if (!panneau) return;
 	        if (!panneau.hidden) { panneau.hidden = true; return; }
 	        panneau.hidden = false;
-	        panneau.innerHTML = '<span class="muted small">Chargement des dépôts…</span>';
+	        panneau.innerHTML = '<span class="muted small">' + {{ tr("Chargement des dépôts…")|tojson }} + '</span>';
 
 	        fetch('/api/github/repos?slug=' + encodeURIComponent(slug), { cache: 'no-store' })
 	          .then(function (r) { return r.json(); })
@@ -896,27 +900,27 @@
 	              /* Compte GitHub non connecte : on ne fait pas semblant de proposer un choix,
 	                 on envoie la ou le probleme se regle, et on revient ici ensuite. */
 	              panneau.innerHTML = '<div class="muted small" style="margin:6px 0;">'
-	                + esc(d.error || 'GitHub non connecté.') + '</div>'
+	                + esc(d.error || {{ tr("GitHub non connecté.")|tojson }}) + '</div>'
 	                + '<a class="btn small primary" href="/oauth/github/connect?next='
-	                + encodeURIComponent('/') + '">Connecter mon compte GitHub</a>';
+	                + encodeURIComponent('/') + '">' + {{ tr("Connecter mon compte GitHub")|tojson }} + '</a>';
 	              return;
 	            }
-	            var opts = '<option value="">— Choisir un dépôt —</option>';
+	            var opts = '<option value="">' + {{ tr("— Choisir un dépôt —")|tojson }} + '</option>';
 	            (d.repos || []).forEach(function (repo) {
 	              opts += '<option value="' + esc(repo.full_name) + '|'
 	                + esc(repo.default_branch || 'main') + '">' + esc(repo.full_name)
-	                + (repo.private ? ' [privé]' : '') + '</option>';
+	                + (repo.private ? ' [' + {{ tr("privé")|tojson }} + ']' : '') + '</option>';
 	            });
 	            panneau.innerHTML = [
 	              '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;">',
 	              '<select class="gh-depot" style="flex:1;min-width:190px;' + champ + '">' + opts + '</select>',
-	              '<input class="gh-branche" type="text" value="main" placeholder="branche" style="width:88px;' + champ + '">',
-	              '<button type="button" class="btn small primary gh-valider">Lier</button>',
+	              '<input class="gh-branche" type="text" value="main" placeholder="' + {{ tr("branche")|tojson }} + '" style="width:88px;' + champ + '">',
+	              '<button type="button" class="btn small primary gh-valider">' + {{ tr("Lier")|tojson }} + '</button>',
 	              '</div>',
 	              /* Le mode n'est pas demande ici : le serveur retient « PR a verifier », le seul
 	                 qui ne fusionne rien sans relecture. Trois champs dans une ligne de tableau
 	                 auraient alourdi l'ecran pour un reglage qui se change dans le projet. */
-	              '<div class="gh-msg muted small" style="margin-top:6px;">Les corrections arriveront en pull request à relire.</div>'
+	              '<div class="gh-msg muted small" style="margin-top:6px;">' + {{ tr("Les corrections arriveront en pull request à relire.")|tojson }} + '</div>'
 	            ].join('');
 
 	            var choix = panneau.querySelector('.gh-depot');
@@ -931,36 +935,36 @@
 	              var branche = (panneau.querySelector('.gh-branche').value || '').trim() || 'main';
 	              var msg = panneau.querySelector('.gh-msg');
 	              if (depot.indexOf('/') < 0) {
-	                msg.textContent = 'Sélectionne un dépôt.';
+	                msg.textContent = {{ tr("Sélectionne un dépôt.")|tojson }};
 	                msg.style.color = 'var(--err,#f87171)';
 	                return;
 	              }
 	              var b = panneau.querySelector('.gh-valider');
-	              b.textContent = 'Liaison…'; b.disabled = true;
+	              b.textContent = {{ tr("Liaison…")|tojson }}; b.disabled = true;
 	              fetch('/api/projects/' + encodeURIComponent(slug) + '/github/connect', {
 	                method: 'POST', headers: { 'Content-Type': 'application/json' },
 	                body: JSON.stringify({ repo: depot, branch: branche })
 	              }).then(function (r) { return r.json(); }).then(function (d2) {
 	                if (d2.ok) {
-	                  msg.textContent = '✓ Dépôt lié.';
+	                  msg.textContent = '✓ ' + {{ tr("Dépôt lié.")|tojson }};
 	                  msg.style.color = 'var(--ok-2)';
 	                  setTimeout(function () { window.location.reload(); }, 700);
 	                } else {
 	                  /* Le serveur explique pourquoi — droits manquants, depot introuvable,
 	                     branche invalide. On montre SA raison, on n'en invente pas une. */
-	                  msg.textContent = '✗ ' + (d2.error || 'Erreur');
+	                  msg.textContent = '✗ ' + (d2.error || {{ tr("Erreur")|tojson }});
 	                  msg.style.color = 'var(--err,#f87171)';
-	                  b.textContent = 'Lier'; b.disabled = false;
+	                  b.textContent = {{ tr("Lier")|tojson }}; b.disabled = false;
 	                }
 	              }).catch(function (e) {
 	                msg.textContent = String(e);
 	                msg.style.color = 'var(--err,#f87171)';
-	                b.textContent = 'Lier'; b.disabled = false;
+	                b.textContent = {{ tr("Lier")|tojson }}; b.disabled = false;
 	              });
 	            });
 	          })
 	          .catch(function () {
-	            panneau.innerHTML = '<span class="muted small">Impossible de charger les dépôts.</span>';
+	            panneau.innerHTML = '<span class="muted small">' + {{ tr("Impossible de charger les dépôts.")|tojson }} + '</span>';
 	          });
 	      });
 	    })();

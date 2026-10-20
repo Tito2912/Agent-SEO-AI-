@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Textes traduits : templates/_lang_script.html ; sans traduction, le francais reste.
+  const noyaruT = window.noyaruT || ((text) => text);
   function revealAnchor() {
     const target = document.getElementById(window.location.hash.slice(1));
     if (target?.matches('details')) target.open = true;
@@ -34,9 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
         return;
       }
-      if (message) message.textContent = 'Suivi actualisé automatiquement.';
+      if (message) message.textContent = noyaruT('Suivi actualisé automatiquement.');
     } catch (_) {
-      if (message) message.textContent = 'Le suivi est momentanément indisponible. Nouvelle tentative dans quelques secondes, ou utilisez « Actualiser le suivi ».';
+      if (message) message.textContent = noyaruT('Le suivi est momentanément indisponible. Nouvelle tentative dans quelques secondes, ou utilisez « Actualiser le suivi ».');
     }
     window.setTimeout(poll, 4000);
   }

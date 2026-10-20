@@ -1,155 +1,155 @@
 {% extends "layout.html" %}
 {% from "_correction_progress.html" import steps %}
-{% block title %}Correction guidée - {{ project.site_name }}{% endblock %}
+{% block title %}{{ tr("Correction guidée") }} - {{ project.site_name }}{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/correction-review.css?v=1" /><link rel="stylesheet" href="/static/first_correction.css?v=1" /><link rel="stylesheet" href="/static/cms.css?v=2" />{% endblock %}
 {% block crumbs %}
-  <a href="/">Projets</a><span class="crumb-sep">/</span>
+  <a href="/">{{ tr("Projets") }}</a><span class="crumb-sep">/</span>
   <a href="/projects/{{ slug }}">{{ project.site_name }}</a><span class="crumb-sep">/</span>
-  <span class="crumb-current">Correction guidée</span>
+  <span class="crumb-current">{{ tr("Correction guidée") }}</span>
 {% endblock %}
 {% macro check_control() %}
       <section class="card first-correction-control" id="verification">
-        <h2>Faites vérifier le résultat</h2>
-        <p class="muted">Noyaru doit revisiter la page et confirmer que le problème a disparu.</p>
+        <h2>{{ tr("Faites vérifier le résultat") }}</h2>
+        <p class="muted">{{ tr("Noyaru doit revisiter la page et confirmer que le problème a disparu.") }}</p>
         {% if live_job %}
-          <p role="status">Une analyse est en cours. Le résultat apparaîtra une fois le contrôle terminé.</p>
-          <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">Voir la progression</a>
+          <p role="status">{{ tr("Une analyse est en cours. Le résultat apparaîtra une fois le contrôle terminé.") }}</p>
+          <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">{{ tr("Voir la progression") }}</a>
         {% else %}
           <form method="post" action="/projects/{{ slug }}/crawl">
             <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <button class="btn primary" type="submit">Lancer la vérification</button>
+            <button class="btn primary" type="submit">{{ tr("Lancer la vérification") }}</button>
           </form>
-          <p class="muted small">Ce contrôle lance une nouvelle analyse, décomptée de votre quota habituel de pages.</p>
+          <p class="muted small">{{ tr("Ce contrôle lance une nouvelle analyse, décomptée de votre quota habituel de pages.") }}</p>
         {% endif %}
       </section>
 {% endmacro %}
 {% block content %}
 <div class="first-correction-page">
   <div class="page-header">
-    <h1>{% if choosing %}Choisir une correction{% else %}Votre correction{% endif %}</h1>
-    <p class="muted">Une page, une modification, puis un résultat contrôlé par Noyaru.</p>
+    <h1>{% if choosing %}{{ tr("Choisir une correction") }}{% else %}{{ tr("Votre correction") }}{% endif %}</h1>
+    <p class="muted">{{ tr("Une page, une modification, puis un résultat contrôlé par Noyaru.") }}</p>
   </div>
-  {% if err %}<div class="alert error" role="alert">{{ err }}</div>
-  {% elif msg %}<div class="alert ok" role="status">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="alert error" role="alert">{{ tr(err) }}</div>
+  {% elif msg %}<div class="alert ok" role="status">{{ tr(msg) }}</div>{% endif %}
 
   {% if not choosing and not clean %}{{ steps(4 if state.declared else 2 if state.pr_url else 1, state.verified) }}{% endif %}
 
   {% if state.verified and not choosing %}
     <section class="card first-correction-result" role="status">
-      <span class="badge ok">Résultat confirmé</span>
-      <h2>Votre correction est vérifiée</h2>
-      <p>Le contrôle a confirmé la résolution du problème « {{ state.label }} ».</p>
+      <span class="badge ok">{{ tr("Résultat confirmé") }}</span>
+      <h2>{{ tr("Votre correction est vérifiée") }}</h2>
+      <p>{{ tr("Le contrôle a confirmé la résolution du problème « {issue} ».", issue=tr(state.label)) }}</p>
       {% if state.url %}<p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>{% endif %}
-      <p class="muted small">Analyse de contrôle : <span data-ts-datetime="{{ state.verify.crawl_ts }}">{{ state.verify.crawl_ts }}</span>.</p>
-      {% if state.verify.introduced %}<p class="muted">D’autres anomalies sont en hausse depuis l’analyse de référence. Consultez le bilan avant de poursuivre.</p>{% endif %}
-      <a class="btn primary" href="/projects/{{ slug }}/first-correction?choose=1">Choisir une autre correction</a>
-      <a class="btn" href="/projects/{{ slug }}?crawl={{ state.verify.crawl_ts }}">Voir le bilan du contrôle</a>
-      {% if state.cms_change_id %}<a class="btn" href="/projects/{{ slug }}/cms/wordpress/changes/{{ state.cms_change_id }}#restoration">Rétablir la valeur précédente</a>{% endif %}
-      <p><a href="/projects/{{ slug }}/corrections">Voir le suivi et l’historique des corrections</a></p>
+      <p class="muted small">{{ tr("Analyse de contrôle :") }} <span data-ts-datetime="{{ state.verify.crawl_ts }}">{{ state.verify.crawl_ts }}</span>.</p>
+      {% if state.verify.introduced %}<p class="muted">{{ tr("D’autres anomalies sont en hausse depuis l’analyse de référence. Consultez le bilan avant de poursuivre.") }}</p>{% endif %}
+      <a class="btn primary" href="/projects/{{ slug }}/first-correction?choose=1">{{ tr("Choisir une autre correction") }}</a>
+      <a class="btn" href="/projects/{{ slug }}?crawl={{ state.verify.crawl_ts }}">{{ tr("Voir le bilan du contrôle") }}</a>
+      {% if state.cms_change_id %}<a class="btn" href="/projects/{{ slug }}/cms/wordpress/changes/{{ state.cms_change_id }}#restoration">{{ tr("Rétablir la valeur précédente") }}</a>{% endif %}
+      <p><a href="/projects/{{ slug }}/corrections">{{ tr("Voir le suivi et l’historique des corrections") }}</a></p>
     </section>
   {% elif clean %}
     <section class="card first-correction-result" role="status">
-      <span class="badge ok">Bilan disponible</span>
-      <h2>Aucune anomalie détectée sur les pages analysées</h2>
-      <p class="muted">Aucune correction n’est à préparer pour ce bilan. Vous pouvez consulter les résultats et suivre l’évolution du site lors des prochaines analyses.</p>
-      <a class="btn primary" href="/projects/{{ slug }}">Voir mon bilan</a>
+      <span class="badge ok">{{ tr("Bilan disponible") }}</span>
+      <h2>{{ tr("Aucune anomalie détectée sur les pages analysées") }}</h2>
+      <p class="muted">{{ tr("Aucune correction n’est à préparer pour ce bilan. Vous pouvez consulter les résultats et suivre l’évolution du site lors des prochaines analyses.") }}</p>
+      <a class="btn primary" href="/projects/{{ slug }}">{{ tr("Voir mon bilan") }}</a>
     </section>
   {% elif not usable %}
     <section class="card">
-      <h2>{% if unreachable %}Le site n’a pas pu être analysé{% else %}Commencez par analyser votre site{% endif %}</h2>
-      <p class="muted">{% if unreachable %}Vérifiez que le site est accessible, puis relancez l’analyse pour obtenir des corrections adaptées.{% else %}Noyaru doit visiter vos pages pour proposer une première correction.{% endif %}</p>
+      <h2>{% if unreachable %}{{ tr("Le site n’a pas pu être analysé") }}{% else %}{{ tr("Commencez par analyser votre site") }}{% endif %}</h2>
+      <p class="muted">{% if unreachable %}{{ tr("Vérifiez que le site est accessible, puis relancez l’analyse pour obtenir des corrections adaptées.") }}{% else %}{{ tr("Noyaru doit visiter vos pages pour proposer une première correction.") }}{% endif %}</p>
       {% if live_job %}
-        <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">Voir l’analyse en cours</a>
+        <a class="btn primary" href="/projects/{{ slug }}?job={{ live_job.id }}">{{ tr("Voir l’analyse en cours") }}</a>
       {% else %}
         <form method="post" action="/projects/{{ slug }}/crawl">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-          <button class="btn primary" type="submit">{% if unreachable %}Réessayer l’analyse{% else %}Lancer la première analyse{% endif %}</button>
+          <button class="btn primary" type="submit">{% if unreachable %}{{ tr("Réessayer l’analyse") }}{% else %}{{ tr("Lancer la première analyse") }}{% endif %}</button>
         </form>
       {% endif %}
     </section>
   {% elif not state or choosing %}
     <section class="card">
-      <h2>{% if choosing %}Choisissez une autre correction à suivre{% else %}Choisissez un problème à traiter{% endif %}</h2>
-      <p class="muted">Commencez par une page. Vous pourrez lire les instructions, modifier votre site puis faire vérifier le résultat.</p>
+      <h2>{% if choosing %}{{ tr("Choisissez une autre correction à suivre") }}{% else %}{{ tr("Choisissez un problème à traiter") }}{% endif %}</h2>
+      <p class="muted">{{ tr("Commencez par une page. Vous pourrez lire les instructions, modifier votre site puis faire vérifier le résultat.") }}</p>
       {% if choosing %}
-        <p class="muted small first-correction-url">{% if state.verified %}La correction de {{ state.url }} reste vérifiée et disponible dans l’historique. Le nouveau suivi commence après votre choix.{% else %}Votre correction actuelle reste sélectionnée jusqu’à la validation d’un nouveau choix. Retrouvez les corrections déjà suivies dans Corrections.{% endif %}</p>
-        <p><a class="btn" href="/projects/{{ slug }}/first-correction">{% if state.verified %}Revenir au résultat vérifié{% else %}Revenir à ma correction{% endif %}</a></p>
+        <p class="muted small first-correction-url">{% if state.verified %}{{ tr("La correction de {page} reste vérifiée et disponible dans l’historique. Le nouveau suivi commence après votre choix.", page=state.url) }}{% else %}{{ tr("Votre correction actuelle reste sélectionnée jusqu’à la validation d’un nouveau choix. Retrouvez les corrections déjà suivies dans Corrections.") }}{% endif %}</p>
+        <p><a class="btn" href="/projects/{{ slug }}/first-correction">{% if state.verified %}{{ tr("Revenir au résultat vérifié") }}{% else %}{{ tr("Revenir à ma correction") }}{% endif %}</a></p>
       {% endif %}
       {% for candidate in candidates %}
         <article class="first-correction-choice">
-          <h3>{{ candidate.label }}</h3>
-          <p class="muted">{{ candidate.why }}</p>
+          <h3>{{ tr(candidate.label) }}</h3>
+          <p class="muted">{{ tr(candidate.why) }}</p>
           <form method="post" action="/projects/{{ slug }}/first-correction">
             <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <input type="hidden" name="action" value="select" />
             <input type="hidden" name="crawl_ts" value="{{ crawl_ts }}" />
             <input type="hidden" name="issue_key" value="{{ candidate.issue_key }}" />
-            <label>Page à corriger
+            <label>{{ tr("Page à corriger") }}
               <select name="url" required>
-                {% if candidate.urls|length > 1 %}<option value="" disabled selected>Sélectionnez une page</option>{% endif %}
+                {% if candidate.urls|length > 1 %}<option value="" disabled selected>{{ tr("Sélectionnez une page") }}</option>{% endif %}
                 {% for url in candidate.urls %}<option value="{{ url }}">{{ url }}</option>{% endfor %}
               </select>
             </label>
-            <button class="btn {% if loop.first %}primary{% endif %}" type="submit">Choisir cette correction</button>
+            <button class="btn {% if loop.first %}primary{% endif %}" type="submit">{{ tr("Choisir cette correction") }}</button>
           </form>
         </article>
       {% else %}
-        <p class="muted">Cette analyse ne permet pas de proposer une page à suivre dans ce parcours. Consultez les anomalies et les indications du rapport pour poursuivre.</p>
+        <p class="muted">{{ tr("Cette analyse ne permet pas de proposer une page à suivre dans ce parcours. Consultez les anomalies et les indications du rapport pour poursuivre.") }}</p>
       {% endfor %}
-      <a class="muted small" href="/projects/{{ slug }}/issues">Voir toutes les anomalies</a>
+      <a class="muted small" href="/projects/{{ slug }}/issues">{{ tr("Voir toutes les anomalies") }}</a>
     </section>
   {% elif state.pr_url and not state.declared %}
     <section class="card first-correction-control">
-      <h2>Relisez et publiez votre proposition</h2>
-      <p>{{ state.label }}</p><p class="first-correction-url">{{ state.url }}</p>
-      <p class="muted">La proposition doit passer les vérifications du dépôt, être relue puis fusionnée sur GitHub. La modification doit ensuite être publiée sur votre site.</p>
-      <a class="btn primary" href="{{ state.pr_url }}" target="_blank" rel="noopener noreferrer">Relire la proposition GitHub</a>
+      <h2>{{ tr("Relisez et publiez votre proposition") }}</h2>
+      <p>{{ tr(state.label) }}</p><p class="first-correction-url">{{ state.url }}</p>
+      <p class="muted">{{ tr("La proposition doit passer les vérifications du dépôt, être relue puis fusionnée sur GitHub. La modification doit ensuite être publiée sur votre site.") }}</p>
+      <a class="btn primary" href="{{ state.pr_url }}" target="_blank" rel="noopener noreferrer">{{ tr("Relire la proposition GitHub") }}</a>
       <form method="post" action="/projects/{{ slug }}/first-correction">
         <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" /><input type="hidden" name="action" value="ready" /><input type="hidden" name="task_id" value="{{ state.task_id }}" />
-        <p class="muted small">Une fois la modification visible sur votre site, signalez-la pour passer au contrôle SEO.</p>
-        <button class="btn" type="submit">La modification est en ligne</button>
+        <p class="muted small">{{ tr("Une fois la modification visible sur votre site, signalez-la pour passer au contrôle SEO.") }}</p>
+        <button class="btn" type="submit">{{ tr("La modification est en ligne") }}</button>
       </form>
     </section>
   {% elif state.cms_change_id %}
     <section class="card first-correction-control" id="verification">
-      <h2>Retrouvez votre correction WordPress</h2>
-      <p>{{ state.label }}</p>
+      <h2>{{ tr("Retrouvez votre correction WordPress") }}</h2>
+      <p>{{ tr(state.label) }}</p>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
-      <p class="muted">L’application, la vérification et son résultat sont regroupés sur votre écran de suivi.</p>
-      <a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/changes/{{ state.cms_change_id }}">Suivre ma correction</a>
+      <p class="muted">{{ tr("L’application, la vérification et son résultat sont regroupés sur votre écran de suivi.") }}</p>
+      <a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/changes/{{ state.cms_change_id }}">{{ tr("Suivre ma correction") }}</a>
     </section>
   {% else %}
     {% if state.declared and state.verify.result != 'still_present' %}{{ check_control() }}{% endif %}
     <section class="card">
-      <h2>{{ state.label }}</h2>
+      <h2>{{ tr(state.label) }}</h2>
       <p class="first-correction-url"><a href="{{ state.url }}" target="_blank" rel="noreferrer">{{ state.url }}</a></p>
-      <p><a class="btn" href="/projects/{{ slug }}/first-correction?choose=1">Choisir une autre page</a></p>
+      <p><a class="btn" href="/projects/{{ slug }}/first-correction?choose=1">{{ tr("Choisir une autre page") }}</a></p>
       {% set wordpress_editor = cms_connected and platform_guide.platform == 'wordpress' and platform_guide.seo_plugin in ['', 'yoast'] and platform_guide.field %}
       {% if wordpress_editor %}
-        <p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ state.task_id }}">Préparer dans WordPress</a></p>
-        <p class="muted small">Relisez l’avant/après avant de valider l’enregistrement sur votre site.</p>
+        <p><a class="btn primary" href="/projects/{{ slug }}/cms/wordpress/edit?task_id={{ state.task_id }}">{{ tr("Préparer dans WordPress") }}</a></p>
+        <p class="muted small">{{ tr("Relisez l’avant/après avant de valider l’enregistrement sur votre site.") }}</p>
       {% elif platform_guide.platform == 'wordpress' and platform_guide.seo_plugin == 'yoast' and platform_guide.field %}
-        <p><a class="btn" href="/projects/{{ slug }}/cms">Connecter WordPress pour appliquer cette correction</a></p>
+        <p><a class="btn" href="/projects/{{ slug }}/cms">{{ tr("Connecter WordPress pour appliquer cette correction") }}</a></p>
       {% endif %}
-      {% if wordpress_editor %}<details class="cms-help"><summary>Faire la modification moi-même dans WordPress</summary>{% endif %}
+      {% if wordpress_editor %}<details class="cms-help"><summary>{{ tr("Faire la modification moi-même dans WordPress") }}</summary>{% endif %}
       {% include "_cms_guidance.html" %}
-      <h3>Modifiez votre page</h3>
-      <p class="muted">Appliquez ces instructions dans votre site, ou faites-les suivre à votre prestataire.</p>
-      <ul class="help-steps">{% for instruction in instructions %}<li>{{ instruction }}</li>{% endfor %}</ul>
-      <p><a href="/projects/{{ slug }}/issues/{{ state.issue_key }}?crawl={{ state.crawl_ts }}">Ouvrir les instructions détaillées</a></p>
-      {% if state.pr_url %}<p><a href="{{ state.pr_url }}" target="_blank" rel="noreferrer">Voir la proposition GitHub</a> · La modification doit être publiée sur votre site avant le contrôle.</p>{% endif %}
+      <h3>{{ tr("Modifiez votre page") }}</h3>
+      <p class="muted">{{ tr("Appliquez ces instructions dans votre site, ou faites-les suivre à votre prestataire.") }}</p>
+      <ul class="help-steps">{% for instruction in instructions %}<li>{{ tr(instruction) }}</li>{% endfor %}</ul>
+      <p><a href="/projects/{{ slug }}/issues/{{ state.issue_key }}?crawl={{ state.crawl_ts }}">{{ tr("Ouvrir les instructions détaillées") }}</a></p>
+      {% if state.pr_url %}<p><a href="{{ state.pr_url }}" target="_blank" rel="noreferrer">{{ tr("Voir la proposition GitHub") }}</a> · {{ tr("La modification doit être publiée sur votre site avant le contrôle.") }}</p>{% endif %}
       {% if state.verify.result == 'still_present' %}
-        <div class="alert warning" role="status">Le problème est encore présent. Reprenez les instructions et vérifiez que la modification a bien été publiée.</div>
+        <div class="alert warning" role="status">{{ tr("Le problème est encore présent. Reprenez les instructions et vérifiez que la modification a bien été publiée.") }}</div>
       {% elif state.verify.result == 'unverified' %}
-        <div class="alert warning" role="status">Le contrôle n’a pas pu confirmer le résultat. {{ state.verify.reason }}</div>
+        <div class="alert warning" role="status">{{ tr("Le contrôle n’a pas pu confirmer le résultat.") }} {{ tr(state.verify.reason) }}</div>
       {% endif %}
       {% if not state.declared or state.verify %}
         <form method="post" action="/projects/{{ slug }}/first-correction">
           <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
           <input type="hidden" name="action" value="ready" />
           <input type="hidden" name="task_id" value="{{ state.task_id }}" />
-          <p class="muted small">Signalez la modification une fois qu’elle est visible sur votre site. Noyaru la vérifiera lors d’une nouvelle analyse.</p>
-          <button class="btn primary" type="submit">{% if state.verify %}J’ai à nouveau modifié cette page{% else %}J’ai modifié cette page{% endif %}</button>
+          <p class="muted small">{{ tr("Signalez la modification une fois qu’elle est visible sur votre site. Noyaru la vérifiera lors d’une nouvelle analyse.") }}</p>
+          <button class="btn primary" type="submit">{% if state.verify %}{{ tr("J’ai à nouveau modifié cette page") }}{% else %}{{ tr("J’ai modifié cette page") }}{% endif %}</button>
         </form>
       {% endif %}
       {% if wordpress_editor %}</details>{% endif %}

@@ -61,3 +61,6 @@ Thumbs.db
 .idea/
 .vscode/
 .venv-wsl/
+# Donnees locales de l'application (base, jetons Google, verrous de correction, travaux) :
+# rien dans ce dossier n'est suivi par Git, et rien ne doit l'etre.
+seo-agent-web/data/

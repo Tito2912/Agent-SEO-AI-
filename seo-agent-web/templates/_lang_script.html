@@ -1,0 +1,3 @@
+{# Traductions des textes de static/*.js (backend/i18n.py, `noyaruT`). En francais : rien a
+   traduire, la fonction rend le texte tel quel. #}
+<script>window.NOYARU_I18N = {{ js_catalog()|tojson }};window.noyaruT = function (text) { var d = window.NOYARU_I18N || {}; return Object.prototype.hasOwnProperty.call(d, text) ? d[text] : text; };</script>

@@ -58,7 +58,7 @@ except Exception:  # pragma: no cover
     class InvalidToken(Exception):  # type: ignore
         pass
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -119,6 +119,9 @@ except ImportError:
     import search_results
     import cms_guidance
     import i18n
+
+# Le message `error` d'une reponse JSON suit la langue du client (voir backend/i18n.py).
+JSONResponse = i18n.JSONResponse
 
 try:
     # When running as `uvicorn backend.app:app` (recommended).
@@ -1467,7 +1470,7 @@ def _effective_bing_connection(*, user_id: str, slug: str = "", db=None) -> dict
                 "token": api_key,
                 "refresh_token": "",
                 "meta": {},
-                "masked": _mask_secret(api_key) if source == "user" else "fourni par la plateforme",
+                "masked": _mask_secret(api_key) if source == "user" else i18n.tr_current("fourni par la plateforme"),
                 "source_label": "mon compte" if source == "user" else ("plateforme" if source == "system" else "non configuré"),
             }
         return {
@@ -1494,7 +1497,7 @@ def _build_user_connection_item(*, user_id: str, key: str, db) -> dict[str, Any]
         "system": "plateforme",
         "none": "non configuré",
     }.get(source, "non configuré")
-    masked = _mask_secret(value) if has_user_value else ("fourni par la plateforme" if source == "system" else "—")
+    masked = _mask_secret(value) if has_user_value else (i18n.tr_current("fourni par la plateforme") if source == "system" else "—")
     return {
         "key": key,
         "label": str(meta.get("label") or key),
@@ -3313,8 +3316,13 @@ def _assistant_model(provider: str) -> str:
     return ""
 
 
+# La langue des reponses de l'assistant, d'apres la langue de l'interface du client.
+_LANGUE_DES_REPONSES = {"fr": "en français", "en": "en anglais"}
+
+
 def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
     ctx = context if isinstance(context, dict) else {}
+    langue = _LANGUE_DES_REPONSES.get(i18n.current_lang(), _LANGUE_DES_REPONSES["fr"])
     path = str(ctx.get("path") or "").strip()
     project = ctx.get("project") if isinstance(ctx.get("project"), dict) else {}
     slug = str(project.get("slug") or "").strip()
@@ -3342,7 +3350,8 @@ def _assistant_system_prompt(context: dict[str, Any] | None) -> str:
         "- Par projet: Overview, Paramètres crawl, Performance, Backlinks, All issues, Crawl log.\n"
         "- Intégrations possibles: Google Search Console (API), Bing, PageSpeed Insights, Ahrefs.\n"
         "Règles:\n"
-        "- Réponds en français.\n"
+        f"- Réponds {langue}, la langue de l’interface de l’utilisateur ; s’il t’écrit dans une autre "
+        "langue, réponds dans la sienne.\n"
         "- Ton professionnel, clair, utile.\n"
         "- Réponses courtes et actionnables (listes à puces quand pertinent).\n"
         "- Si la question sort du SEO / de l’app, répond quand même (ne dis pas que tu es “uniquement SEO”).\n"
@@ -9684,15 +9693,15 @@ def _avancement_analyse(row: Any) -> str:
     if job is None:
         return ""
     if job.status == "queued":
-        return "en file d'attente"
+        return i18n.tr_current("en file d'attente")
     debut = float(job.started_at or job.created_at or 0.0)
     minutes = max(0, int((time.time() - debut) // 60)) if debut else 0
-    duree = "%d min" % minutes if minutes else "moins d'une minute"
+    duree = i18n.tr_current("{n} min", n=minutes) if minutes else i18n.tr_current("moins d'une minute")
     prog = job.progress if isinstance(job.progress, dict) else {}
     lues, sur = prog.get("current"), prog.get("total")
     if isinstance(lues, int) and isinstance(sur, int) and sur > 0:
-        return "%d/%d pages · %s" % (lues, sur, duree)
-    return "démarrage · %s" % duree
+        return i18n.tr_current("{lues}/{sur} pages · {duree}", lues=lues, sur=sur, duree=duree)
+    return i18n.tr_current("démarrage · {duree}", duree=duree)
 
 
 def _competitor_pages_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -10608,13 +10617,16 @@ def _plan_token_value(catalog: dict[str, Any], plan_key: str, group: str, field:
     return f"{number:,}".replace(",", " ")
 
 
-def _content_tokens() -> dict[str, str]:
+def _content_tokens(lang: str = "fr") -> dict[str, str]:
     """Values a content page may interpolate with `{{token}}`.
 
     Documentation that hardcodes a quota is documentation that lies the first time an admin
     tunes PLAN_CONFIG_JSON. These are read live, per request, from the same catalogue the
-    billing code enforces.
+    billing code enforces. In another language, numbers and prices take that language's form
+    (« 20 000 » -> "20,000", « 49€/mois » -> "€49/month").
     """
+    if lang != i18n.DEFAULT_LANG:
+        return {key: i18n.translate(value, lang) for key, value in _content_tokens().items()}
     tokens: dict[str, str] = {
         "app_name": _app_name(),
         "support_email": _support_email(),
@@ -10658,7 +10670,7 @@ def _public_url(request: Request, path: str) -> str:
 # Toutes les routes publiques ne passent pas par `_public_template_context` : une fonction globale
 # sert donc toutes les pages, y compris /status et /support.
 templates.env.globals["public_url"] = _public_url
-templates.env.globals["campaign_link"] = signup_attribution.carry
+templates.env.globals["campaign_link"] = i18n.localized_links(signup_attribution.carry)
 templates.env.globals["country_options"] = customer_country.OPTIONS
 # Langue de l'interface (francais par defaut, anglais en traduction) : voir backend/i18n.py.
 i18n.install(app, templates, is_secure=lambda request: _request_is_secure(request), link_builder=signup_attribution.carry)
@@ -11847,6 +11859,11 @@ async def noindex_middleware(request: Request, call_next):  # type: ignore[no-un
     if _env_bool("SEO_AGENT_NOINDEX"):
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
+
+
+# Les pages publiques en anglais (/en/pricing) sont servies par leur route francaise. Declare
+# en DERNIER, donc execute en PREMIER : les controles d'acces ci-dessus ne voient que /pricing.
+app.add_middleware(i18n.LocalizedPaths)
 
 
 @app.get("/healthz")
@@ -13978,7 +13995,7 @@ def pricing_public(request: Request) -> HTMLResponse:
             "nav_items": _public_nav_items(),
             "catalog": billing.plan_catalog(),
             "comparatif": _comparatif_des_plans(),
-            "canonical_url": _public_url(request, "/pricing"),
+            "canonical_url": _public_url(request, i18n.localized_path("/pricing", i18n.current_lang())),
             "stripe_ok": billing.stripe_enabled(),
         },
     )
@@ -14148,6 +14165,7 @@ def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> di
         "publisher": {"@type": "Organization", "name": _app_name()},
         "mainEntityOfPage": _public_url(request, path),
         "keywords": ", ".join(page.get("keywords") or []),
+        "inLanguage": page.get("lang") or "fr",
     }
     faq = page.get("faq") or []
     if faq:
@@ -14171,22 +14189,43 @@ def _content_json_ld(request: Request, page: dict[str, Any], *, path: str) -> di
     return {"@context": "https://schema.org", **article}
 
 
+def _doc_path(slug: str) -> str:
+    """The address of a doc page in the language of the current request: its translation when
+    it has one (`/en/docs/<slug>`), the French page otherwise."""
+    page = content_library.get_doc(slug, i18n.current_lang()) or content_library.get_doc(slug)
+    return str(page["path"]) if page else f"/docs/{slug}"
+
+
+templates.env.globals["doc_path"] = _doc_path
+
+
+def _content_versions(collection: str, slug: str, french: dict[str, Any]) -> dict[str, str]:
+    """Les adresses d'une page de contenu dans chaque langue ou elle existe : chaque version
+    d'une page traduite annonce toutes les autres ; une page seulement francaise, aucune."""
+    get = content_library.get_doc if collection == "docs" else content_library.get_article
+    versions = {code: get(slug, code) for code in i18n.LANGUAGES if code != i18n.DEFAULT_LANG}
+    others = {code: str(page["path"]) for code, page in versions.items() if page}
+    return {i18n.DEFAULT_LANG: str(french["path"]), **others} if others else {}
+
+
 @app.api_route("/docs", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def docs_index_public(request: Request) -> HTMLResponse:
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    tokens = _content_tokens(lang)
     sections = [
         {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
-        for section in content_library.docs_sections()
+        for section in content_library.docs_sections(lang)
     ]
     return templates.TemplateResponse(
         "docs_index.html",
         _public_template_context(
             request,
             sections=sections,
-            canonical_url=_public_url(request, "/docs"),
-            meta_description=(
-                f"Documentation {_app_name()} : prise en main, crawl, anomalies, corrections "
-                "automatiques en pull request, Search Console, concurrents, backlinks et quotas."
+            canonical_url=_public_url(request, i18n.localized_path("/docs", lang)),
+            meta_description=i18n.tr_current(
+                "Documentation {app_name} : prise en main, crawl, anomalies, corrections "
+                "automatiques en pull request, Search Console, concurrents, backlinks et quotas.",
+                app_name=_app_name(),
             ),
         ),
     )
@@ -14194,12 +14233,18 @@ def docs_index_public(request: Request) -> HTMLResponse:
 
 @app.api_route("/docs/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def docs_article_public(request: Request, slug: str) -> HTMLResponse:
-    raw = content_library.get_doc(slug)
-    if not raw:
+    french = content_library.get_doc(slug)
+    if not french:
         raise HTTPException(status_code=404, detail="doc_not_found")
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    translated = content_library.get_doc(slug, lang) if lang != i18n.DEFAULT_LANG else None
+    if lang != i18n.DEFAULT_LANG and translated is None and getattr(request.state, "url_lang", None):
+        # /en/docs/<page> sans traduction : la page n'existe qu'en francais, a son adresse.
+        return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
+    raw = translated or french
+    tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
-    path = f"/docs/{page['slug']}"
+    path = str(page["path"])
     return templates.TemplateResponse(
         "docs_article.html",
         _public_template_context(
@@ -14207,25 +14252,27 @@ def docs_article_public(request: Request, slug: str) -> HTMLResponse:
             page=page,
             sections=[
                 {"name": section["name"], "pages": content_library.resolve_all(section["pages"], tokens)}
-                for section in content_library.docs_sections()
+                for section in content_library.docs_sections(lang)
             ],
             related=content_library.resolve_all(content_library.related_pages(raw), tokens),
             canonical_url=_public_url(request, path),
             json_ld=_content_json_ld(request, page, path=path),
+            alternates=_content_versions("docs", slug, french),
         ),
     )
 
 
 @app.api_route("/ressources-seo", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resources_public(request: Request) -> HTMLResponse:
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    tokens = _content_tokens(lang)
     return templates.TemplateResponse(
         "seo_resources_public.html",
         _public_template_context(
             request,
-            resources=content_library.resolve_all(content_library.blog_pages(), tokens),
-            canonical_url=_public_url(request, "/ressources-seo"),
-            meta_description=(
+            resources=content_library.resolve_all(content_library.blog_pages(lang), tokens),
+            canonical_url=_public_url(request, i18n.localized_path("/ressources-seo", lang)),
+            meta_description=i18n.tr_current(
                 "Guides SEO, tutoriels et checklists pour auditer un site, prioriser les corrections, "
                 "suivre Google Search Console et améliorer le référencement naturel."
             ),
@@ -14235,12 +14282,18 @@ def seo_resources_public(request: Request) -> HTMLResponse:
 
 @app.api_route("/ressources-seo/{slug}", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
-    raw = content_library.get_article(slug)
-    if not raw:
+    french = content_library.get_article(slug)
+    if not french:
         raise HTTPException(status_code=404, detail="resource_not_found")
-    tokens = _content_tokens()
+    lang = i18n.current_lang()
+    translated = content_library.get_article(slug, lang) if lang != i18n.DEFAULT_LANG else None
+    if lang != i18n.DEFAULT_LANG and translated is None and getattr(request.state, "url_lang", None):
+        # /en/ressources-seo/<guide> sans traduction : le guide n'existe qu'en francais.
+        return RedirectResponse(url=str(french["path"]), status_code=302)  # type: ignore[return-value]
+    raw = translated or french
+    tokens = _content_tokens(str(raw.get("lang") or i18n.DEFAULT_LANG))
     page = content_library.resolve(raw, tokens)
-    path = f"/ressources-seo/{page['slug']}"
+    path = str(page["path"])
     return templates.TemplateResponse(
         "seo_resource_article_public.html",
         _public_template_context(
@@ -14249,6 +14302,7 @@ def seo_resource_article_public(request: Request, slug: str) -> HTMLResponse:
             related=content_library.resolve_all(content_library.related_pages(raw), tokens),
             canonical_url=_public_url(request, path),
             json_ld=_content_json_ld(request, page, path=path),
+            alternates=_content_versions("blog", slug, french),
         ),
     )
 
@@ -14295,6 +14349,11 @@ def sitemap_xml(request: Request) -> PlainTextResponse:
         {"path": "/ressources-seo", "lastmod": now, "changefreq": "weekly"},
         {"path": "/docs", "lastmod": now, "changefreq": "weekly"},
     ]
+    # Les versions anglaises des pages publiques (/en/, /en/pricing...), voir backend/i18n.py.
+    localized = [item for item in urls if item["path"] in i18n.LOCALIZED_PAGES]
+    for lang in i18n.LANGUAGES:
+        if lang != i18n.DEFAULT_LANG:
+            urls.extend({**item, "path": i18n.localized_path(str(item["path"]), lang)} for item in localized)
     urls.extend(content_library.sitemap_entries())
     url_blocks = "\n".join(
         (
@@ -14763,9 +14822,10 @@ def projects(request: Request, msg: str | None = None, err: str | None = None, f
                 catalog=billing.plan_catalog(),
                 comparatif=_comparatif_des_plans(),
                 featured_resources=content_library.resolve_all(
-                    content_library.featured_articles(3), _content_tokens()
+                    content_library.featured_articles(3, i18n.current_lang()),
+                    _content_tokens(i18n.current_lang()),
                 ),
-                canonical_url=_public_url(request, "/"),
+                canonical_url=_public_url(request, i18n.localized_path("/", i18n.current_lang())),
             ),
         )
     # L'ordre des comptes EST la regle de priorite : le sien d'abord, puis celui qui l'accueille.
@@ -15314,10 +15374,13 @@ def settings_account_preferences_save(
             u.country = co
             u.language = la
             db.commit()
-    return RedirectResponse(
+    response = RedirectResponse(
         url=_path_with_flash("/settings/accounts", msg="Préférences enregistrées.") + "#preferences-card",
         status_code=303,
     )
+    # La langue d'affichage s'applique tout de suite, et sur les prochaines visites.
+    i18n.remember(response, la, secure=_request_is_secure(request))
+    return response
 
 
 # « declined » : un WordPress trop ancien chez un client n'est pas une panne de production.
@@ -32907,7 +32970,7 @@ def api_content_suivi(request: Request, slug: str, jeton: str) -> JSONResponse:
     entree = _SUIVIS.get(str(jeton or ""))
     if entree is None or (entree["slug"], entree["user"]) != (slug, str(user.id)):
         return JSONResponse({"ok": False, "etapes": []}, status_code=404)
-    return JSONResponse({"ok": True, "etapes": list(entree["etapes"])})
+    return JSONResponse({"ok": True, "etapes": [i18n.tr_current(e) for e in entree["etapes"]]})
 
 
 def _chemins_du_depot(*, owner: str, repo_name: str, branch: str, token: str) -> list[str]:
@@ -34425,10 +34488,12 @@ def _dire_creneau(creneau: "datetime | None", auto: dict[str, Any], *, maintenan
     if creneau is None:
         return ""
     if creneau.timestamp() <= maintenant:
-        return "au prochain passage (quelques minutes)"
-    return "%s %d %s à %02d:00 (%s)" % (
-        _JOURS_AUTO[creneau.weekday()], creneau.day, _MOIS_AUTO[creneau.month - 1],
-        creneau.hour, dict(_FUSEAUX_AUTO).get(auto["fuseau"], auto["fuseau"]))
+        return i18n.tr_current("au prochain passage (quelques minutes)")
+    return i18n.tr_current(
+        "{jour} {n} {mois} à {heure} ({fuseau})",
+        jour=i18n.tr_current(_JOURS_AUTO[creneau.weekday()]), n=creneau.day,
+        mois=i18n.tr_current(_MOIS_AUTO[creneau.month - 1]), heure="%02d:00" % creneau.hour,
+        fuseau=i18n.tr_current(dict(_FUSEAUX_AUTO).get(auto["fuseau"], auto["fuseau"])))
 
 
 @app.get("/projects/{slug}/content", response_class=HTMLResponse)

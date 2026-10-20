@@ -1,14 +1,14 @@
 {% extends "layout.html" %}
-{% block title %}Anomalies - {{ project.site_name if project else slug }}{% endblock %}
+{% block title %}{{ tr("Anomalies") }} - {{ project.site_name if project else slug }}{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/journey.css?v=1" />{% endblock %}
 
 {% block crumbs %}
-  <a href="/">Projets</a>
+  <a href="/">{{ tr("Projets") }}</a>
   <span class="crumb-sep">/</span>
   {% if project %}
     <a href="/projects/{{ project.slug }}">{{ project.site_name }}</a>
     <span class="crumb-sep">/</span>
-    <span class="crumb-current">Anomalies</span>
+    <span class="crumb-current">{{ tr("Anomalies") }}</span>
   {% else %}
     <span class="crumb-current">{{ slug }}</span>
   {% endif %}
@@ -16,22 +16,22 @@
 
 {% block actions %}
   {% if project and project.current %}
-    <a class="btn" href="/projects/{{ project.slug }}/corrections">Suivi des corrections</a>
+    <a class="btn" href="/projects/{{ project.slug }}/corrections">{{ tr("Suivi des corrections") }}</a>
     <form method="post" action="/projects/{{ project.slug }}/crawl" class="inline">
-      <button type="submit" class="btn" {% if analyse_en_cours %}disabled{% endif %}>{% if analyse_en_cours %}Analyse en cours{% else %}Nouvelle analyse{% endif %}</button>
+      <button type="submit" class="btn" {% if analyse_en_cours %}disabled{% endif %}>{% if analyse_en_cours %}{{ tr("Analyse en cours") }}{% else %}{{ tr("Nouvelle analyse") }}{% endif %}</button>
     </form>
   {% endif %}
 {% endblock %}
 
 {% block content %}
   {% if not project %}
-    <section class="card"><p>Projet introuvable: <span class="mono">{{ slug }}</span></p></section>
+    <section class="card"><p>{{ tr("Projet introuvable :") }} <span class="mono">{{ slug }}</span></p></section>
   {% elif not project.current %}
-    <div class="page-header"><h1>Anomalies</h1><p class="muted">{{ project.site_name }}</p></div>
+    <div class="page-header"><h1>{{ tr("Anomalies") }}</h1><p class="muted">{{ project.site_name }}</p></div>
     <section class="card report-empty">
-      <h2>{% if analyse_en_cours %}Votre analyse est en cours{% else %}Votre bilan n’est pas encore disponible{% endif %}</h2>
-      <p class="muted">Votre site est enregistré. Les problèmes détectés apparaîtront ici lorsqu’un rapport sera disponible.{% if not analyse_en_cours %} Retrouvez le projet pour lancer ou réessayer l’analyse.{% endif %}</p>
-      <a class="btn primary" href="/projects/{{ project.slug }}">{% if analyse_en_cours %}Retrouver mon analyse{% else %}Ouvrir mon projet{% endif %}</a>
+      <h2>{% if analyse_en_cours %}{{ tr("Votre analyse est en cours") }}{% else %}{{ tr("Votre bilan n’est pas encore disponible") }}{% endif %}</h2>
+      <p class="muted">{{ tr("Votre site est enregistré. Les problèmes détectés apparaîtront ici lorsqu’un rapport sera disponible.") }}{% if not analyse_en_cours %} {{ tr("Retrouvez le projet pour lancer ou réessayer l’analyse.") }}{% endif %}</p>
+      <a class="btn primary" href="/projects/{{ project.slug }}">{% if analyse_en_cours %}{{ tr("Retrouver mon analyse") }}{% else %}{{ tr("Ouvrir mon projet") }}{% endif %}</a>
     </section>
   {% else %}
     {% set cur = project.current %}
@@ -55,18 +55,18 @@
       'Other': 'Autres'
     } %}
     <div class="page-header">
-      <h1>Anomalies</h1>
+      <h1>{{ tr("Anomalies") }}</h1>
       <p class="muted">{{ project.site_name }} · <span data-ts-datetime="{{ cur.timestamp }}">{{ cur.label }}</span></p>
-      <a href="/docs/anomalies-et-priorites" class="muted small" style="margin-left:8px;" title="Documentation">Aide</a>
+      <a href="/docs/anomalies-et-priorites" class="muted small" style="margin-left:8px;" title="{{ tr('Documentation') }}">{{ tr("Aide") }}</a>
     </div>
     {% include "_repli_de_rapport.html" %}
     {% include "_next_step.html" %}
 
-    <p class="muted small issue-guide">Commencez par les erreurs, puis les améliorations recommandées. Une occurrence est un cas détecté : plusieurs problèmes peuvent concerner la même page.</p>
+    <p class="muted small issue-guide">{{ tr("Commencez par les erreurs, puis les améliorations recommandées. Une occurrence est un cas détecté : plusieurs problèmes peuvent concerner la même page.") }}</p>
 
     {% set defects = issues | rejectattr('is_delta') | list %}
     {% set changes = issues | selectattr('is_delta') | list %}
-    <p class="muted issue-count-summary">{{ defects|length }} types de problèmes · {{ defects|sum(attribute='count') }} occurrences{% if severity or category or q %} · résultats filtrés{% endif %}.</p>
+    <p class="muted issue-count-summary">{{ tr("{types} types de problèmes · {n} occurrences", types=defects|length, n=defects|sum(attribute='count')) }}{% if severity or category or q %} · {{ tr("résultats filtrés") }}{% endif %}.</p>
     {% if issues %}
       {% set ns = namespace(errors=0, warnings=0, notices=0) %}
       {% for it in defects %}
@@ -75,46 +75,46 @@
         {% elif it.severity == 'notice' %}{% set ns.notices = ns.notices + it.count %}
         {% endif %}
       {% endfor %}
-      <div class="stat-strip issue-severity-strip" aria-label="Occurrences par gravité">
+      <div class="stat-strip issue-severity-strip" aria-label="{{ tr("Occurrences par gravité") }}">
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--err);">{{ ns.errors }}</div>
-          <div class="stat-strip-lbl">Erreurs</div><div class="stat-strip-sub">À traiter en premier</div>
+          <div class="stat-strip-lbl">{{ tr("Erreurs") }}</div><div class="stat-strip-sub">{{ tr("À traiter en premier") }}</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--warn);">{{ ns.warnings }}</div>
-          <div class="stat-strip-lbl">Avertissements</div><div class="stat-strip-sub">Améliorations recommandées</div>
+          <div class="stat-strip-lbl">{{ tr("Avertissements") }}</div><div class="stat-strip-sub">{{ tr("Améliorations recommandées") }}</div>
         </div>
         <div class="stat-strip-sep"></div>
         <div class="stat-strip-item">
           <div class="stat-strip-num" style="color:var(--notice);">{{ ns.notices }}</div>
-          <div class="stat-strip-lbl">Infos</div><div class="stat-strip-sub">Points à examiner</div>
+          <div class="stat-strip-lbl">{{ tr("Infos") }}</div><div class="stat-strip-sub">{{ tr("Points à examiner") }}</div>
         </div>
       </div>
     {% endif %}
 
     <details class="screen-options">
-      <summary>Préparer un plan de corrections</summary>
+      <summary>{{ tr("Préparer un plan de corrections") }}</summary>
       <div class="card-title-row">
-        <h2>Plan de corrections</h2>
+        <h2>{{ tr("Plan de corrections") }}</h2>
         {% if fix_suggestions_meta and fix_suggestions_meta.generated_at %}
-          <span class="muted small">Généré le <span class="mono">{{ fix_suggestions_meta.generated_at }}</span></span>
+          <span class="muted small">{{ tr("Généré le") }} <span class="mono">{{ fix_suggestions_meta.generated_at }}</span></span>
         {% endif %}
       </div>
       <p class="muted small">
-        Générez des recommandations concrètes pour chaque anomalie (priorité, actions, vérifications). Pensez à valider avant déploiement.
+        {{ tr("Générez des recommandations concrètes pour chaque anomalie (priorité, actions, vérifications). Pensez à valider avant déploiement.") }}
       </p>
       <form method="post" action="/projects/{{ project.slug }}/fix-suggestions/generate" class="inline">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
-        <button type="submit" class="btn">Générer / mettre à jour</button>
+        <button type="submit" class="btn">{{ tr("Générer / mettre à jour") }}</button>
         {% if fix_suggestions_path %}
-          <a class="btn" href="/file?path={{ fix_suggestions_path }}">Ouvrir le JSON</a>
+          <a class="btn" href="/file?path={{ fix_suggestions_path }}">{{ tr("Ouvrir le JSON") }}</a>
         {% endif %}
       </form>
     </details>
 
     <details class="screen-options" {% if severity or category or q %}open{% endif %}>
-      <summary>Filtres et exports{% if severity or category or q %} · filtres actifs{% endif %}</summary>
+      <summary>{{ tr("Filtres et exports") }}{% if severity or category or q %} · {{ tr("filtres actifs") }}{% endif %}</summary>
     <div class="data-toolbar">
       <form method="get" class="filters" style="width:100%;">
         <input type="hidden" name="crawl" value="{{ cur.timestamp }}" />
@@ -123,32 +123,32 @@
         {% endif %}
 
         <label>
-          Gravité
+          {{ tr("Gravité") }}
           <select name="severity">
-            <option value="" {% if not severity %}selected{% endif %}>Toutes</option>
-            <option value="error" {% if severity == 'error' %}selected{% endif %}>Erreurs</option>
-            <option value="warning" {% if severity == 'warning' %}selected{% endif %}>Avertissements</option>
-            <option value="notice" {% if severity == 'notice' %}selected{% endif %}>Infos</option>
+            <option value="" {% if not severity %}selected{% endif %}>{{ tr("Toutes") }}</option>
+            <option value="error" {% if severity == 'error' %}selected{% endif %}>{{ tr("Erreurs") }}</option>
+            <option value="warning" {% if severity == 'warning' %}selected{% endif %}>{{ tr("Avertissements") }}</option>
+            <option value="notice" {% if severity == 'notice' %}selected{% endif %}>{{ tr("Infos") }}</option>
           </select>
         </label>
 
         <label>
-          Catégorie
+          {{ tr("Catégorie") }}
           <select name="category">
-            <option value="" {% if not category %}selected{% endif %}>Toutes</option>
+            <option value="" {% if not category %}selected{% endif %}>{{ tr("Toutes") }}</option>
             {% for c in categories %}
-              <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ cat_labels.get(c, c) }}</option>
+              <option value="{{ c }}" {% if category == c %}selected{% endif %}>{{ tr(cat_labels.get(c, c)) }}</option>
             {% endfor %}
           </select>
         </label>
 
         <label class="grow">
-          Recherche
-          <input name="q" value="{{ q }}" placeholder="titre, description, image…" />
+          {{ tr("Recherche") }}
+          <input name="q" value="{{ q }}" placeholder="{{ tr("titre, description, image…") }}" />
         </label>
 
-        <button type="submit" class="btn primary">Filtrer</button>
-        {% if severity or category or q %}<a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">Effacer les filtres</a>{% endif %}
+        <button type="submit" class="btn primary">{{ tr("Filtrer") }}</button>
+        {% if severity or category or q %}<a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">{{ tr("Effacer les filtres") }}</a>{% endif %}
 
         {% set export_qs = "crawl=" ~ cur.timestamp %}
         {% if project.compare and project.compare.timestamp %}{% set export_qs = export_qs ~ "&compare=" ~ project.compare.timestamp %}{% endif %}
@@ -157,7 +157,7 @@
         {% if q %}{% set export_qs = export_qs ~ "&q=" ~ (q | urlencode) %}{% endif %}
 
         <a class="btn" href="/projects/{{ project.slug }}/export/issues.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">CSV</a>
-        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;" title="CSV complet — une ligne par URL affectée">CSV (URLs)</a>
+        <a class="btn" href="/projects/{{ project.slug }}/export/issues-all-urls.csv?{{ export_qs }}" style="font-size:11px;padding:4px 10px;" title="{{ tr("CSV complet — une ligne par URL affectée") }}">CSV (URLs)</a>
         <a class="btn" href="/projects/{{ project.slug }}/export/issues.pdf?{{ export_qs }}" style="font-size:11px;padding:4px 10px;">PDF</a>
       </form>
     </div>
@@ -167,17 +167,17 @@
       {% if not defects %}
         <div class="report-empty">
         {% if severity or category or q %}
-          <h2>Aucun problème ne correspond à vos filtres</h2>
-          <p class="muted">Le bilan peut contenir d’autres problèmes. Effacez les filtres pour retrouver la liste complète de cette analyse.</p>
-          <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">Voir tous les problèmes</a>
+          <h2>{{ tr("Aucun problème ne correspond à vos filtres") }}</h2>
+          <p class="muted">{{ tr("Le bilan peut contenir d’autres problèmes. Effacez les filtres pour retrouver la liste complète de cette analyse.") }}</p>
+          <a class="btn" href="/projects/{{ project.slug }}/issues?crawl={{ cur.timestamp }}{% if project.compare and project.compare.timestamp %}&amp;compare={{ project.compare.timestamp }}{% endif %}">{{ tr("Voir tous les problèmes") }}</a>
         {% elif cur.summary.analysis_complete %}
-          <h2>Aucun problème détecté sur les pages analysées</h2>
-          <p class="muted">Aucune correction à préparer pour ce bilan. Ce résultat concerne les pages visitées lors de cette analyse.</p>
-          <a class="btn" href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}">Voir le périmètre du bilan</a>
+          <h2>{{ tr("Aucun problème détecté sur les pages analysées") }}</h2>
+          <p class="muted">{{ tr("Aucune correction à préparer pour ce bilan. Ce résultat concerne les pages visitées lors de cette analyse.") }}</p>
+          <a class="btn" href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}">{{ tr("Voir le périmètre du bilan") }}</a>
         {% else %}
-          <h2>{% if cur.summary.site_injoignable %}Le site n’a pas pu être analysé{% else %}Ce bilan reste à compléter{% endif %}</h2>
-          <p class="muted">L’absence de problèmes dans cette liste ne suffit pas à conclure que tout va bien.{% if cur.summary.blocked_by_host.count %} Certaines pages ont été refusées par le site.{% elif cur.summary.stopped_on_time_budget %} L’analyse a atteint sa limite de durée.{% endif %} Consultez le bilan avant de relancer.</p>
-          <a class="btn" href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}">Comprendre les limites de l’analyse</a>
+          <h2>{% if cur.summary.site_injoignable %}{{ tr("Le site n’a pas pu être analysé") }}{% else %}{{ tr("Ce bilan reste à compléter") }}{% endif %}</h2>
+          <p class="muted">{{ tr("L’absence de problèmes dans cette liste ne suffit pas à conclure que tout va bien.") }}{% if cur.summary.blocked_by_host.count %} {{ tr("Certaines pages ont été refusées par le site.") }}{% elif cur.summary.stopped_on_time_budget %} {{ tr("L’analyse a atteint sa limite de durée.") }}{% endif %} {{ tr("Consultez le bilan avant de relancer.") }}</p>
+          <a class="btn" href="/projects/{{ project.slug }}?crawl={{ cur.timestamp }}">{{ tr("Comprendre les limites de l’analyse") }}</a>
         {% endif %}
         </div>
       {% else %}
@@ -185,22 +185,22 @@
           <table class="table compact">
             <thead>
               <tr>
-                <th>Anomalie</th>
-                <th>Catégorie</th>
-                <th>Gravité</th>
-                <th class="num">Occurrences</th>
-                <th class="num">Évolution</th>
+                <th>{{ tr("Anomalie") }}</th>
+                <th>{{ tr("Catégorie") }}</th>
+                <th>{{ tr("Gravité") }}</th>
+                <th class="num">{{ tr("Occurrences") }}</th>
+                <th class="num">{{ tr("Évolution") }}</th>
               </tr>
             </thead>
             <tbody>
               {% for it in defects %}
                 <tr>
                   <td>
-                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
-                    <details class="technical-details"><summary>Détails techniques</summary><code>{{ it.key }}</code></details>
+                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ tr(it.label) }}</a>
+                    <details class="technical-details"><summary>{{ tr("Détails techniques") }}</summary><code>{{ it.key }}</code></details>
                   </td>
-                  <td>{{ cat_labels.get(it.category, it.category) }}</td>
-                  {% set sev_label = {'error': 'erreur', 'warning': 'avert.', 'notice': 'info'}.get(it.severity, it.severity) %}
+                  <td>{{ tr(cat_labels.get(it.category, it.category)) }}</td>
+                  {% set sev_label = tr({'error': 'erreur', 'warning': 'avert.', 'notice': 'info'}.get(it.severity, it.severity)) %}
                   <td><span class="sev {{ it.severity }}">{{ sev_label }}</span></td>
                   <td class="num mono">
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
@@ -229,30 +229,28 @@
     {% if changes %}
       <section class="card" id="analysis-changes">
         <div class="card-title-row">
-          <h2 style="margin:0; font-size:15px;">Changements depuis l’analyse précédente</h2>
+          <h2 style="margin:0; font-size:15px;">{{ tr("Changements depuis l’analyse précédente") }}</h2>
         </div>
         <p class="muted small">
-          Ce ne sont pas des anomalies : ces lignes indiquent ce qui a bougé sur le site entre les
-          deux dernières analyses. Une correction appliquée fait normalement apparaître le changement
-          correspondant ici. Elles ne comptent pas dans le total d'anomalies.
+          {{ tr("Ce ne sont pas des anomalies : ces lignes indiquent ce qui a bougé sur le site entre les deux dernières analyses. Une correction appliquée fait normalement apparaître le changement correspondant ici. Elles ne comptent pas dans le total d'anomalies.") }}
         </p>
         <div class="table-wrap">
           <table class="table compact">
             <thead>
               <tr>
-                <th>Changement</th>
-                <th>Catégorie</th>
-                <th class="num">Pages</th>
+                <th>{{ tr("Changement") }}</th>
+                <th>{{ tr("Catégorie") }}</th>
+                <th class="num">{{ tr("Pages") }}</th>
               </tr>
             </thead>
             <tbody>
               {% for it in changes %}
                 <tr>
                   <td>
-                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.label }}</a>
-                    <details class="technical-details"><summary>Détails techniques</summary><code>{{ it.key }}</code></details>
+                    <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ tr(it.label) }}</a>
+                    <details class="technical-details"><summary>{{ tr("Détails techniques") }}</summary><code>{{ it.key }}</code></details>
                   </td>
-                  <td>{{ cat_labels.get(it.category, it.category) }}</td>
+                  <td>{{ tr(cat_labels.get(it.category, it.category)) }}</td>
                   <td class="num mono">
                     <a href="/projects/{{ project.slug }}/issues/{{ it.key }}?crawl={{ cur.timestamp }}">{{ it.count }}</a>
                   </td>
