@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ current_lang() }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,6 +7,7 @@
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
+    <link rel="stylesheet" href="/static/lang-switch.css?v=1" />
     <style>
       /* Public nav overrides */
       .pub-nav {
@@ -74,14 +75,14 @@
     <meta property="og:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png') }}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="{{ app_name }} — l'audit SEO qui livre le correctif" />
+    <meta property="og:image:alt" content="{{ app_name }} — {{ tr("l'audit SEO qui livre le correctif") }}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="{{ public_url(request, '/static/brand/noyaru-partage.png') }}" />
     {% block head_extra %}{% endblock %}
   </head>
   <body>
     <header class="pub-nav">
-      <a href="{{ campaign_link(request, '/') }}" class="pub-nav-brand" aria-label="{{ app_name }} - Accueil">
+      <a href="{{ campaign_link(request, '/') }}" class="pub-nav-brand" aria-label="{{ app_name }} - {{ tr('Accueil') }}">
         <picture>
           <source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" />
           <img src="/static/brand/noyaru-logo.png?v=3" alt="{{ app_name }}" width="1200" height="316"
@@ -93,20 +94,21 @@
         {% set path = request.url.path %}
         {% for item in nav_items if item.primary %}
           <a href="{{ campaign_link(request, item.href) }}"
-             {% if path == item.href or (item.href != '/' and path.startswith(item.href ~ '/')) %}class="active"{% endif %}>{{ item.label }}</a>
+             {% if path == item.href or (item.href != '/' and path.startswith(item.href ~ '/')) %}class="active"{% endif %}>{{ tr(item.label) }}</a>
         {% endfor %}
       </nav>
 
       <div class="pub-nav-actions">
+        {% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}
         {% if request.state.user %}
-          <a class="btn" href="{{ campaign_link(request, '/') }}">Tableau de bord</a>
+          <a class="btn" href="{{ campaign_link(request, '/') }}">{{ tr("Tableau de bord") }}</a>
           <form method="post" action="/auth/logout" class="inline">
             <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
-            <button type="submit" class="btn">Se d&eacute;connecter</button>
+            <button type="submit" class="btn">{{ tr("Se déconnecter") }}</button>
           </form>
         {% else %}
-          <a class="btn" href="{{ campaign_link(request, '/auth/login') }}">Se connecter</a>
-          <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{% block signup_label %}Commencer &rarr;{% endblock %}</a>
+          <a class="btn" href="{{ campaign_link(request, '/auth/login') }}">{{ tr("Se connecter") }}</a>
+          <a class="btn primary" href="{{ campaign_link(request, '/auth/signup') }}">{% block signup_label %}{{ tr("Commencer") }} &rarr;{% endblock %}</a>
         {% endif %}
       </div>
     </header>
@@ -120,18 +122,19 @@
         <div style="font-size:13px; color:var(--muted);">
           &copy; {{ year }} {{ app_name }} &middot; <a href="mailto:{{ support_email }}" style="color:var(--muted);">{{ support_email }}</a>
         </div>
+        {% include "_lang_switch.html" %}
         <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
           {% for item in nav_items %}
-            <a href="{{ campaign_link(request, item.href) }}" style="color:var(--muted);">{{ item.label }}</a>
+            <a href="{{ campaign_link(request, item.href) }}" style="color:var(--muted);">{{ tr(item.label) }}</a>
           {% endfor %}
         </div>
       </div>
     </footer>
 
     <!-- Cookie consent banner -->
-    <div id="cookie-banner" role="dialog" aria-label="Politique de cookies" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;font-size:14px;">
-      <span>Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun cookie publicitaire. <a href="{{ campaign_link(request, '/privacy') }}" style="color:#aaa;text-decoration:underline;">En savoir plus</a></span>
-      <button id="cookie-accept" type="button" style="background:#fff;color:#111;border:none;border-radius:4px;padding:7px 18px;font-weight:600;cursor:pointer;white-space:nowrap;">Fermer</button>
+    <div id="cookie-banner" role="dialog" aria-label="{{ tr('Politique de cookies') }}" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#111;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;font-size:14px;">
+      <span>{{ tr("Ce site utilise uniquement des cookies nécessaires au fonctionnement du service. Aucun cookie publicitaire.") }} <a href="{{ campaign_link(request, '/privacy') }}" style="color:#aaa;text-decoration:underline;">{{ tr("En savoir plus") }}</a></span>
+      <button id="cookie-accept" type="button" style="background:#fff;color:#111;border:none;border-radius:4px;padding:7px 18px;font-weight:600;cursor:pointer;white-space:nowrap;">{{ tr("Fermer") }}</button>
     </div>
     <script>
       (() => {

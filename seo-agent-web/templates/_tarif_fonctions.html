@@ -5,9 +5,9 @@
 {% macro liste_fonctions(c) -%}
 <ul class="tarif-cles">
   {% for f in c.fonctions %}
-    {% if f.rubrique %}<li class="tarif-rubrique">{{ f.rubrique }}</li>
-    {% elif f.inclus %}<li{% if f.phare %} class="phare"{% endif %}>{{ f.texte }}</li>
-    {% else %}<li class="absent"><span class="sr">Non inclus : </span>{{ f.texte }}</li>{% endif %}
+    {% if f.rubrique %}<li class="tarif-rubrique">{{ tr(f.rubrique) }}</li>
+    {% elif f.inclus %}<li{% if f.phare %} class="phare"{% endif %}>{{ tr(f.texte) }}</li>
+    {% else %}<li class="absent"><span class="sr">{{ tr("Non inclus :") }} </span>{{ tr(f.texte) }}</li>{% endif %}
   {% endfor %}
 </ul>
 {%- endmacro %}

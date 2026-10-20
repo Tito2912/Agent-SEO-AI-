@@ -1,53 +1,53 @@
 {% extends "public_layout.html" %}
 
-{% block title %}Statut - {{ app_name }}{% endblock %}
+{% block title %}{{ tr("Statut") }} - {{ app_name }}{% endblock %}
 
 {# 12/10/2026 : la page n'avait ni description, ni canonical, ni Open Graph (Ahrefs : « Meta
    description tag missing », « Open Graph tags missing », « X card missing »). #}
 {% block head_extra %}
-<meta name="description" content="L'état en direct des services de {{ app_name }} : l'application web, la base de données, l'envoi des e-mails et le stockage des rapports." />
+<meta name="description" content="{{ tr("L'état en direct des services de {app_name} : l'application web, la base de données, l'envoi des e-mails et le stockage des rapports.", app_name=app_name) }}" />
 <link rel="canonical" href="{{ public_url(request, '/status') }}" />
-<meta property="og:title" content="Statut - {{ app_name }}" />
-<meta property="og:description" content="L'état en direct des services de {{ app_name }}." />
+<meta property="og:title" content="{{ tr('Statut') }} - {{ app_name }}" />
+<meta property="og:description" content="{{ tr("L'état en direct des services de {app_name}.", app_name=app_name) }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ public_url(request, '/status') }}" />
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Statut</h1>
-    <p class="muted">État des services (best-effort).</p>
+    <h1>{{ tr("Statut") }}</h1>
+    <p class="muted">{{ tr("État des services (best-effort).") }}</p>
   </div>
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Services</h2>
+      <h2>{{ tr("Services") }}</h2>
       <span class="muted small">{{ now }}</span>
     </div>
 
     <div style="display:grid; gap:10px;">
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">Application web</span>
-        <span class="badge {% if web_ok %}ok{% else %}error{% endif %}">{% if web_ok %}opérationnel{% else %}hors service{% endif %}</span>
+        <span class="muted small">{{ tr("Application web") }}</span>
+        <span class="badge {% if web_ok %}ok{% else %}error{% endif %}">{% if web_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("hors service") }}{% endif %}</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
         <div>
-          <span class="muted small">Base de données</span>
+          <span class="muted small">{{ tr("Base de données") }}</span>
           {% if db_error %}<div class="muted small mono" style="font-size:11px;">{{ db_error }}</div>{% endif %}
         </div>
-        <span class="badge {% if db_ok %}ok{% else %}error{% endif %}">{% if db_ok %}opérationnel{% else %}hors service{% endif %}</span>
+        <span class="badge {% if db_ok %}ok{% else %}error{% endif %}">{% if db_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("hors service") }}{% endif %}</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">Emails (SMTP)</span>
-        <span class="badge {% if smtp_ok %}ok{% else %}notice{% endif %}">{% if smtp_ok %}opérationnel{% else %}non configuré{% endif %}</span>
+        <span class="muted small">{{ tr("Emails (SMTP)") }}</span>
+        <span class="badge {% if smtp_ok %}ok{% else %}notice{% endif %}">{% if smtp_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("non configuré") }}{% endif %}</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">Stockage (S3)</span>
-        <span class="badge {% if s3_ok %}ok{% else %}notice{% endif %}">{% if s3_ok %}opérationnel{% else %}{{ s3_reason }}{% endif %}</span>
+        <span class="muted small">{{ tr("Stockage (S3)") }}</span>
+        <span class="badge {% if s3_ok %}ok{% else %}notice{% endif %}">{% if s3_ok %}{{ tr("opérationnel") }}{% else %}{{ tr(s3_reason) }}{% endif %}</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.02); border:1px solid var(--border);">
-        <span class="muted small">Paiement (Stripe)</span>
-        <span class="badge {% if stripe_ok %}ok{% else %}notice{% endif %}">{% if stripe_ok %}opérationnel{% else %}non configuré{% endif %}</span>
+        <span class="muted small">{{ tr("Paiement (Stripe)") }}</span>
+        <span class="badge {% if stripe_ok %}ok{% else %}notice{% endif %}">{% if stripe_ok %}{{ tr("opérationnel") }}{% else %}{{ tr("non configuré") }}{% endif %}</span>
       </div>
     </div>
   </section>

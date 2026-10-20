@@ -1,28 +1,30 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ current_lang() }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Réinitialiser le mot de passe - Noyaru</title>
+    <title>{{ tr("Réinitialiser le mot de passe") }} - Noyaru</title>
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
+    <link rel="stylesheet" href="/static/lang-switch.css?v=1" />
   </head>
   <body>
     <main class="auth-shell">
       <section class="card auth-card">
         <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="/" aria-label="Noyaru - Accueil" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
-          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">Audit SEO Intelligent</p>
+          <a href="/" aria-label="Noyaru - {{ tr('Accueil') }}" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
+          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">{{ tr("Audit SEO Intelligent") }}</p>
+          <div style="margin-top:8px;">{% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}</div>
         </div>
         <div class="page-header">
-          <h1>Nouveau mot de passe</h1>
-          <p class="muted">Choisissez un nouveau mot de passe pour votre compte.</p>
+          <h1>{{ tr("Nouveau mot de passe") }}</h1>
+          <p class="muted">{{ tr("Choisissez un nouveau mot de passe pour votre compte.") }}</p>
         </div>
 
         {% if err %}
           <div class="alert error">
-            <span class="badge error">erreur</span>
-            <p class="muted small">{{ err }}</p>
+            <span class="badge error">{{ tr("erreur") }}</span>
+            <p class="muted small">{{ tr(err) }}</p>
           </div>
         {% endif %}
 
@@ -33,25 +35,25 @@
             <input type="hidden" name="next" value="{{ next }}" />
 
             <label>
-              Mot de passe
+              {{ tr("Mot de passe") }}
               <input name="password" type="password" autocomplete="new-password" required minlength="10" />
             </label>
             <div class="row"></div>
             <label>
-              Confirmation
+              {{ tr("Confirmation") }}
               <input name="password2" type="password" autocomplete="new-password" required minlength="10" />
             </label>
-            <p class="muted small" style="margin: 8px 0 0;">Minimum 10 caractères.</p>
+            <p class="muted small" style="margin: 8px 0 0;">{{ tr("Minimum 10 caractères.") }}</p>
 
             <div class="row-actions" style="margin-top: 14px;">
-              <button class="btn primary" type="submit">Réinitialiser</button>
-              <a class="btn" href="/auth/login?next={{ next_q }}">Retour connexion</a>
+              <button class="btn primary" type="submit">{{ tr("Réinitialiser") }}</button>
+              <a class="btn" href="/auth/login?next={{ next_q }}">{{ tr("Retour connexion") }}</a>
             </div>
           </form>
         {% else %}
           <div class="row-actions">
-            <a class="btn primary" href="/auth/forgot?next={{ next_q }}">Demander un nouveau lien</a>
-            <a class="btn" href="/auth/login?next={{ next_q }}">Retour connexion</a>
+            <a class="btn primary" href="/auth/forgot?next={{ next_q }}">{{ tr("Demander un nouveau lien") }}</a>
+            <a class="btn" href="/auth/login?next={{ next_q }}">{{ tr("Retour connexion") }}</a>
           </div>
         {% endif %}
       </section>

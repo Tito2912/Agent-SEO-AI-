@@ -1,45 +1,45 @@
 {% extends "public_layout.html" %}
 
-{% block title %}Support - {{ app_name }}{% endblock %}
+{% block title %}{{ tr("Support") }} - {{ app_name }}{% endblock %}
 
 {# 12/10/2026 : meme manque que /status — ni description, ni canonical, ni Open Graph. #}
 {% block head_extra %}
-<meta name="description" content="Un problème de connexion, d'intégration GitHub ou de facturation ? Écrivez au support de {{ app_name }} avec les informations utiles." />
+<meta name="description" content="{{ tr("Un problème de connexion, d'intégration GitHub ou de facturation ? Écrivez au support de {app_name} avec les informations utiles.", app_name=app_name) }}" />
 <link rel="canonical" href="{{ public_url(request, '/support') }}" />
-<meta property="og:title" content="Support - {{ app_name }}" />
-<meta property="og:description" content="Connexion, intégration GitHub ou facturation : comment joindre le support de {{ app_name }}." />
+<meta property="og:title" content="{{ tr('Support') }} - {{ app_name }}" />
+<meta property="og:description" content="{{ tr('Connexion, intégration GitHub ou facturation : comment joindre le support de {app_name}.', app_name=app_name) }}" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="{{ public_url(request, '/support') }}" />
 {% endblock %}
 
 {% block content %}
   <div class="page-header">
-    <h1>Support</h1>
-    <p class="muted">Un problème de connexion, d'intégration ou de facturation ?</p>
+    <h1>{{ tr("Support") }}</h1>
+    <p class="muted">{{ tr("Un problème de connexion, d'intégration ou de facturation ?") }}</p>
   </div>
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Contact</h2>
+      <h2>{{ tr("Contact") }}</h2>
       <span class="badge notice">email</span>
     </div>
     <p class="muted small">
-      Écris à <a href="mailto:{{ support_email }}">{{ support_email }}</a> en précisant :
+      {{ tr_html('Écris à <a href="mailto:{email}">{email}</a> en précisant :', email=support_email) }}
     </p>
     <ul class="examples">
-      <li>Ton email de compte</li>
-      <li>Le nom du projet concerné</li>
-      <li>Une capture d'écran + l'heure approximative</li>
+      <li>{{ tr("Ton email de compte") }}</li>
+      <li>{{ tr("Le nom du projet concerné") }}</li>
+      <li>{{ tr("Une capture d'écran + l'heure approximative") }}</li>
     </ul>
   </section>
 
   <section class="card">
     <div class="card-title-row">
-      <h2>Statut</h2>
+      <h2>{{ tr("Statut") }}</h2>
       <span class="muted small">live</span>
     </div>
     <p class="muted small">
-      Consulte la page <a href="/status">Statut</a> pour vérifier l'état des services.
+      {{ tr_html("Consulte la page <a href=\"/status\">Statut</a> pour vérifier l'état des services.") }}
     </p>
   </section>
 {% endblock %}

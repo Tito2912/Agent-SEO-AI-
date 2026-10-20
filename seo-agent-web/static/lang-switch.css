@@ -1,0 +1,7 @@
+/* Selecteur de langue (templates/_lang_switch.html). */
+.lang-switch { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; }
+.lang-switch a,
+.lang-switch-current { padding: 6px 8px; border-radius: var(--radius-sm, 6px); font-weight: 600; line-height: 1; }
+.lang-switch a { color: var(--muted); }
+.lang-switch a:hover { color: var(--text); background: rgba(255,255,255,.04); text-decoration: none; }
+.lang-switch-current { color: var(--text); }
