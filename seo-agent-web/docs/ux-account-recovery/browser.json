@@ -1,0 +1,1608 @@
+{
+  "checks": [
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "fr",
+      "width": 1440,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "fr",
+      "width": 1440,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "en",
+      "width": 1440,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "en",
+      "width": 1440,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "width": 1440,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "fr",
+      "width": 768,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "fr",
+      "width": 768,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "en",
+      "width": 768,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "en",
+      "width": 768,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "width": 768,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "fr",
+      "width": 390,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "fr",
+      "width": 390,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "en",
+      "width": 390,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "en",
+      "width": 390,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "width": 390,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "fr",
+      "width": 360,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "fr",
+      "width": 360,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-initial",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-confirmation",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-explicit-retry",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-initial",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-confirmation",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-explicit-retry",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-disabled",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-sender",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "forgot-rate",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-disabled",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-sender",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "resend-rate",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-valid",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-password-mismatch",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-complete-session",
+      "lang": "en",
+      "width": 360,
+      "redirect": "/settings/accounts",
+      "password_verified": true
+    },
+    {
+      "screen": "reset-replayed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-expired",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-expired",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-forged",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-service-unavailable",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "reset-awaiting-email-confirmation",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-request-after-password-reset",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "verify-complete-session",
+      "lang": "en",
+      "width": 360,
+      "redirect": "/settings/accounts",
+      "email_verified": true
+    },
+    {
+      "screen": "verify-replayed",
+      "lang": "en",
+      "width": 360,
+      "overflow": false,
+      "controls_at_least_44px": true,
+      "labels_present": true
+    },
+    {
+      "screen": "/auth/forgot-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/verify/resend-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/reset-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/verify-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/forgot-retry-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "presentation_only": true
+    },
+    {
+      "screen": "/auth/verify/resend-retry-without-javascript",
+      "lang": "fr",
+      "width": 360,
+      "presentation_only": true
+    },
+    {
+      "screen": "/auth/forgot-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/verify/resend-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/reset-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/verify-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "screen": "/auth/forgot-retry-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "presentation_only": true
+    },
+    {
+      "screen": "/auth/verify/resend-retry-without-javascript",
+      "lang": "en",
+      "width": 360,
+      "presentation_only": true
+    }
+  ],
+  "javascript_errors": [],
+  "network": {
+    "external": 0,
+    "posts": 96
+  },
+  "mail_captured": {
+    "reset": 8,
+    "verify": 16
+  },
+  "notes": [
+    "All users, passwords and tokens are local synthetic fixtures. Emails are captured by local functions. No provider request, real mailbox or client site modified. Native no-JavaScript confirmation cases verify presentation only."
+  ]
+}

@@ -7,55 +7,34 @@
     {% include "_favicons.html" %}
     <link rel="stylesheet" href="/static/styles.css?v=26" />
     <link rel="stylesheet" href="/static/lang-switch.css?v=2" />
+    <link rel="stylesheet" href="/static/auth-entry.css?v=2" />
   </head>
-  <body>
+  <body class="auth-entry auth-recovery">
     <main class="auth-shell">
       <section class="card auth-card">
-        <div style="text-align:center; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border);">
-          <a href="/" aria-label="Noyaru - {{ tr('Accueil') }}" style="display:inline-block;"><picture><source srcset="/static/brand/noyaru-logo.webp?v=3" type="image/webp" /><img src="/static/brand/noyaru-logo.png?v=3" alt="Noyaru" width="1200" height="316" style="display:block;height:34px;width:auto;margin:0 auto;" /></picture></a>
-          <p style="margin:5px 0 0; font-size:12px; color:var(--muted);">{{ tr("Audit SEO Intelligent") }}</p>
-          <div style="margin-top:8px;">{% with compact = true %}{% include "_lang_switch.html" %}{% endwith %}</div>
-        </div>
-        <div class="page-header">
-          <h1>{{ tr("Nouveau mot de passe") }}</h1>
-          <p class="muted">{{ tr("Choisissez un nouveau mot de passe pour votre compte.") }}</p>
-        </div>
-
-        {% if err %}
-          <div class="alert error">
-            <span class="badge error">{{ tr("erreur") }}</span>
-            <p class="muted small">{{ tr(err) }}</p>
-          </div>
-        {% endif %}
-
+        {% with heading = tr("Nouveau mot de passe"), description = tr("Choisissez un nouveau mot de passe pour votre compte.") %}
+          {% include "_auth_entry_intro.html" %}
+        {% endwith %}
         {% if ok %}
-          <form method="post" action="/auth/reset">
+          <form method="post" action="/auth/reset" class="auth-entry-form">
             <input type="hidden" name="_csrf" value="{{ request.state.csrf_token or '' }}" />
             <input type="hidden" name="token" value="{{ token }}" />
             <input type="hidden" name="next" value="{{ next }}" />
-
-            <label>
-              {{ tr("Mot de passe") }}
-              <input name="password" type="password" autocomplete="new-password" required minlength="10" />
-            </label>
-            <div class="row"></div>
-            <label>
-              {{ tr("Confirmation") }}
-              <input name="password2" type="password" autocomplete="new-password" required minlength="10" />
-            </label>
-            <p class="muted small" style="margin: 8px 0 0;">{{ tr("Minimum 10 caractères.") }}</p>
-
-            <div class="row-actions" style="margin-top: 14px;">
-              <button class="btn primary" type="submit">{{ tr("Réinitialiser") }}</button>
-              <a class="btn" href="/auth/login?next={{ next_q }}">{{ tr("Retour connexion") }}</a>
+            <div class="auth-entry-field">
+              <label for="reset-password">{{ tr("Nouveau mot de passe") }}</label>
+              <input id="reset-password" name="password" type="password" autocomplete="new-password" required minlength="10" aria-describedby="reset-password-hint" />
+              <p id="reset-password-hint" class="muted small">{{ tr("Minimum 10 caractères.") }}</p>
             </div>
+            <div class="auth-entry-field">
+              <label for="reset-confirmation">{{ tr("Confirmation") }}</label>
+              <input id="reset-confirmation" name="password2" type="password" autocomplete="new-password" required minlength="10" aria-describedby="reset-password-hint" />
+            </div>
+            <button class="btn primary block" type="submit">{{ tr("Réinitialiser") }}</button>
           </form>
-        {% else %}
-          <div class="row-actions">
-            <a class="btn primary" href="/auth/forgot?next={{ next_q }}">{{ tr("Demander un nouveau lien") }}</a>
-            <a class="btn" href="/auth/login?next={{ next_q }}">{{ tr("Retour connexion") }}</a>
-          </div>
+        {% elif not recovery_unavailable %}
+          <a class="btn primary block" href="/auth/forgot?next={{ next_q }}">{{ tr("Demander un nouveau lien") }}</a>
         {% endif %}
+        {% include "_auth_recovery_footer.html" %}
       </section>
     </main>
   </body>

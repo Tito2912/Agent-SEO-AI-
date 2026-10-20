@@ -39,7 +39,7 @@
         </form>
 
         <nav class="auth-entry-recovery" aria-label="{{ tr('Aide') }}">
-          <a href="/auth/forgot?next={{ next_q }}">{{ tr("Mot de passe oublié ?") }}</a>
+          <a href="/auth/forgot?next={{ next_q }}&amp;email={{ email_q }}">{{ tr("Mot de passe oublié ?") }}</a>
           <a href="/auth/verify/resend?next={{ next_q }}&email={{ email_q }}">{{ tr("Renvoyer la vérification") }}</a>
         </nav>
         <div class="auth-entry-footer">
