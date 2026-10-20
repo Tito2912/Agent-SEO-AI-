@@ -14128,6 +14128,7 @@ def support_public(request: Request) -> HTMLResponse:
             "support_email": _support_email(),
             "year": datetime.now(timezone.utc).year,
             "nav_items": _public_nav_items(),
+            "help_pages": _public_help_pages(("depannage", "verifier-une-correction", "plans-et-quotas")),
         },
     )
 
@@ -14206,6 +14207,22 @@ def _doc_path(slug: str) -> str:
 templates.env.globals["doc_path"] = _doc_path
 
 
+def _public_help_pages(slugs: tuple[str, ...]) -> list[dict[str, Any]]:
+    """Use the actual translated page, including its tokens, or the existing French fallback."""
+    language = i18n.current_lang()
+    tokens_by_language: dict[str, dict[str, str]] = {}
+    pages = []
+    for slug in slugs:
+        raw = content_library.get_doc(slug, language) or content_library.get_doc(slug)
+        if raw is None:
+            continue
+        page_language = str(raw.get("lang") or i18n.DEFAULT_LANG)
+        if page_language not in tokens_by_language:
+            tokens_by_language[page_language] = _content_tokens(page_language)
+        pages.append(content_library.resolve(raw, tokens_by_language[page_language]))
+    return pages
+
+
 def _content_versions(collection: str, slug: str, french: dict[str, Any]) -> dict[str, str]:
     """Les adresses d'une page de contenu dans chaque langue ou elle existe : chaque version
     d'une page traduite annonce toutes les autres ; une page seulement francaise, aucune."""
@@ -14228,6 +14245,9 @@ def docs_index_public(request: Request) -> HTMLResponse:
         _public_template_context(
             request,
             sections=sections,
+            first_steps=_public_help_pages(("ajouter-un-projet", "lire-le-rapport", "verifier-une-correction")),
+            correction_guides=_public_help_pages(("corriger-dans-wordpress", "fix-pack-sans-depot", "corrections-automatiques")),
+            total_docs=sum(len(section["pages"]) for section in sections),
             canonical_url=_public_url(request, i18n.localized_path("/docs", lang)),
             meta_description=i18n.tr_current(
                 "Documentation {app_name} : prise en main, crawl, anomalies, corrections "
